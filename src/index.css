@@ -1,14 +1,83 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * AIMS OS — CSS Variable overrides for shadcn/ui
+ *
+ * Maps shadcn's CSS variable names to the AIMS OS Semantic Color Tokens (Dark mode).
+ * Source: Figma v6rmYKA2zmyXWOahlxLOeI — "Semantic Color Tokens", Dark mode.
+ *
+ * AIMS OS is dark-first — both :root and .dark use the same dark-mode values.
+ * To support a light theme in the future, add a separate .light block.
+ */
+
 @layer base {
+  :root,
+  .dark {
+    /* ── Page backgrounds ─────────────────────────────────────── */
+    --background:          #0A0E1A;   /* canvas */
+    --card:                #0D1120;   /* node / card surface */
+    --card-foreground:     #ffffff99; /* text/body */
+    --popover:             #141b2ad9; /* surface/floating/default */
+    --popover-foreground:  #ffffffcc; /* text/title */
+
+    /* ── Foreground / Text ────────────────────────────────────── */
+    --foreground:          #ffffffcc; /* text/title */
+
+    /* ── Primary (blue) ──────────────────────────────────────── */
+    --primary:             #2b7fff;   /* surface/primary/emphasis */
+    --primary-foreground:  #ffffff;
+
+    /* ── Secondary (subtle neutral) ─────────────────────────── */
+    --secondary:           #ffffff14; /* surface/neutral/default */
+    --secondary-foreground:#ffffffcc; /* text/title */
+
+    /* ── Muted ───────────────────────────────────────────────── */
+    --muted:               #ffffff0d; /* surface/neutral/subtle */
+    --muted-foreground:    #ffffff99; /* text/subtitle */
+
+    /* ── Accent ──────────────────────────────────────────────── */
+    --accent:              #2b7fff14; /* surface/primary/more-subtle */
+    --accent-foreground:   #2b7fff;   /* text/link */
+
+    /* ── Destructive (error) ─────────────────────────────────── */
+    --destructive:         #e05252;   /* surface/error/default */
+    --destructive-foreground: #ffffff;
+
+    /* ── Borders & Inputs ────────────────────────────────────── */
+    --border:              #ffffff1a; /* border/neutral/default */
+    --input:               #ffffff1a; /* border/neutral/default */
+    --ring:                #2b7fff;   /* border/primary/default */
+
+    /* ── Radius (maps to Radius-M from DS) ───────────────────── */
+    --radius:              0.5rem;    /* 8px = Radius-M */
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    --sidebar:             #0D1120;
+    --sidebar-foreground:  #ffffffcc;
+    --sidebar-primary:     #2b7fff;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent:      #2b7fff14;
+    --sidebar-accent-foreground:  #2b7fff;
+    --sidebar-border:      #ffffff1a;
+    --sidebar-ring:        #2b7fff;
+  }
+
   html {
     font-family: "Inter", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    @apply font-sans;
   }
 
   body {
-    @apply bg-canvas text-text-primary;
+    @apply bg-canvas text-text-title;
+  }
+
+  * {
+    border-color: #ffffff1a; /* border/neutral/default */
   }
 }
