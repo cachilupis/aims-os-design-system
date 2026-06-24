@@ -22,10 +22,11 @@ import {
   type TableColumn,
 } from "@/components/ui/table"
 import { Topbar, TopbarButton, type TopbarAction, type WorkspaceItem } from "@/components/ui/topbar"
+import { Sidebar, DEFAULT_SIDEBAR_ITEMS, type SidebarItem } from "@/components/ui/sidebar"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "button" | "input" | "textarea" | "card-container" | "tag" | "menu-item" | "highlight-icon" | "select" | "checkbox" | "toggle" | "table" | "topbar" | "icons" | "typography" | "colors"
+type SectionId = "home" | "button" | "input" | "textarea" | "card-container" | "tag" | "menu-item" | "highlight-icon" | "select" | "checkbox" | "toggle" | "table" | "topbar" | "sidebar" | "icons" | "typography" | "colors"
 type SpecModal = "button" | "input" | "textarea" | "card-container" | "tag" | "menu-item" | "highlight-icon" | "select" | "checkbox" | "toggle" | "table" | "topbar" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -90,6 +91,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "toggle",       label: "Toggle",          group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
   { id: "table",        label: "Table",           group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
   { id: "topbar",       label: "Topbar",          group: "Components",  description: "Global navigation bar · 2 variants (Default/Tablet) · workspace, search, action buttons, profile" },
+  { id: "sidebar",      label: "Sidebar",         group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
   { id: "icons",      label: "Icons",      group: "Foundations", description: "141 icons mapped from Material Design DS to Lucide · 12 semantic categories" },
   { id: "typography", label: "Typography", group: "Foundations", description: "Type scale DS → Tailwind · Display, Title, Subtitle, Body, Label, Caption, Link" },
   { id: "colors",     label: "Colors",     group: "Foundations", description: "Primitive palette + 162 semantic tokens · light & dark mode · Surface, Border, Text, Icon, Badge" },
@@ -6410,6 +6412,168 @@ const actions: TopbarAction[] = [
   )
 }
 
+// ── SidebarPage ────────────────────────────────────────────────────────────
+
+function SidebarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [activeId, setActiveId]   = useState("agents")
+  const [collapsed, setCollapsed] = useState(false)
+  const [customItems]             = useState<SidebarItem[]>(DEFAULT_SIDEBAR_ITEMS)
+
+  void openSpec // spec modal not yet defined for sidebar
+
+  return (
+    <div className="flex flex-col gap-[32px] px-[32px] py-[24px]">
+      {/* Header */}
+      <div className="flex flex-col gap-[4px]">
+        <h1 className="text-[22px] font-bold text-[var(--foreground)]">Sidebar</h1>
+        <p className="text-[14px] text-[var(--field-supporting)]">
+          Vertical navigation rail · 2 states: Expanded (250px) / Collapsed (56px) · always dark background
+        </p>
+      </div>
+
+      {/* Live demo */}
+      <section className="flex flex-col gap-[16px]">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">
+          Live demo
+        </h2>
+
+        {/* Controls */}
+        <div className="flex items-center gap-[12px]">
+          <button
+            onClick={() => setCollapsed(c => !c)}
+            className="text-[12px] font-medium px-[12px] py-[6px] rounded-[6px] transition-colors"
+            style={{
+              background: "var(--btn-secondary-bg)",
+              border: "1px solid var(--btn-secondary-border)",
+              color: "var(--foreground)",
+            }}
+          >
+            {collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          </button>
+          <span className="text-[12px] text-[var(--field-supporting)]">
+            Current state: <strong className="text-[var(--foreground)]">{collapsed ? "Collapsed (56px)" : "Expanded (250px)"}</strong>
+          </span>
+        </div>
+
+        {/* Demo frame */}
+        <div
+          className="flex overflow-hidden rounded-[12px]"
+          style={{ height: 480, border: "1px solid var(--table-border)" }}
+        >
+          <Sidebar
+            items={customItems}
+            activeId={activeId}
+            onItemClick={setActiveId}
+            defaultCollapsed={collapsed}
+            onCollapseChange={setCollapsed}
+            key={collapsed ? "collapsed" : "expanded"}
+          />
+          {/* Fake content area */}
+          <div
+            className="flex flex-1 items-center justify-center"
+            style={{ background: "var(--canvas)" }}
+          >
+            <div className="flex flex-col items-center gap-[8px]">
+              <p className="text-[13px] font-semibold text-[var(--foreground)]">
+                {customItems.find(i => i.id === activeId)?.label ?? "—"} page
+              </p>
+              <p className="text-[12px] text-[var(--field-supporting)]">
+                Content area — click nav items to switch active state
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Side by side: both states */}
+      <section className="flex flex-col gap-[16px]">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">
+          Both variants
+        </h2>
+        <div className="flex gap-[24px]">
+          {/* Expanded */}
+          <div className="flex flex-col gap-[8px]">
+            <p className="text-[11px] font-semibold text-[var(--field-supporting)]">Expanded — 250px</p>
+            <div style={{ height: 320 }}>
+              <Sidebar activeId="agents" defaultCollapsed={false} />
+            </div>
+          </div>
+          {/* Collapsed */}
+          <div className="flex flex-col gap-[8px]">
+            <p className="text-[11px] font-semibold text-[var(--field-supporting)]">Collapsed — 56px</p>
+            <div style={{ height: 320 }}>
+              <Sidebar activeId="agents" defaultCollapsed={true} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Specs */}
+      <section className="flex flex-col gap-[12px]">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">
+          Specs
+        </h2>
+        <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
+                {["Property", "Expanded", "Collapsed"].map(h => (
+                  <th key={h} className="text-left px-[14px] py-[10px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["Width",            "250px",              "56px"              ],
+                ["Container radius", "16px",               "8px"               ],
+                ["Background",       "#000000",            "#000000"           ],
+                ["Padding",          "8px all sides",      "8px all sides"     ],
+                ["Nav item height",  "24px",               "24px (icon only)"  ],
+                ["Nav items gap",    "16px",               "16px"              ],
+                ["Icon color",       "#80AFFF (default)",  "#80AFFF (default)" ],
+                ["Icon hover color", "#FFFFFF",            "#FFFFFF"           ],
+                ["Active bg",        "radial gradient",    "radial gradient"   ],
+                ["Hover row bg",     "rgba(42,42,42,1)",   "rgba(42,42,42,1)"  ],
+                ["Text",             "12px Semi Bold #FFF","—"                 ],
+              ].map(([prop, exp, col]) => (
+                <tr key={prop} style={{ borderBottom: "1px solid var(--table-border)" }}>
+                  <td className="px-[14px] py-[10px] font-medium text-[var(--foreground)]">{prop}</td>
+                  <td className="px-[14px] py-[10px] font-mono text-[var(--field-supporting)]">{exp}</td>
+                  <td className="px-[14px] py-[10px] font-mono text-[var(--field-supporting)]">{col}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Usage */}
+      <section className="flex flex-col gap-[12px]">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">
+          Usage
+        </h2>
+        <div className="rounded-[8px] p-[16px] font-mono text-[12px] leading-[1.7] text-[var(--field-supporting)]"
+          style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)" }}>
+          <span className="text-purple-400">import</span>{" "}
+          {"{ Sidebar, DEFAULT_SIDEBAR_ITEMS } "}<span className="text-purple-400">from</span>{" "}
+          <span className="text-green-400">"@/components/ui/sidebar"</span><br /><br />
+          {"// Basic usage"}<br />
+          {"<"}<span className="text-blue-400">Sidebar</span>
+          {" activeId="}<span className="text-green-400">"agents"</span>{" />"}<br /><br />
+          {"// Controlled collapse + custom items"}<br />
+          {"<"}<span className="text-blue-400">Sidebar</span><br />
+          {"  items="}{"{customItems}"}<br />
+          {"  activeId="}{"{activeId}"}<br />
+          {"  onItemClick="}{"{setActiveId}"}<br />
+          {"  defaultCollapsed="}{"{false}"}<br />
+          {"  onCollapseChange="}{"{setCollapsed}"}<br />
+          {"/>"}
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function IconsPage() {
   const [tab,    setTab]    = useState<"reference" | "overview">("reference")
   const [search, setSearch] = useState("")
@@ -6895,9 +7059,9 @@ function ThemeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => vo
   )
 }
 
-// ── Sidebar ────────────────────────────────────────────────────────────────
+// ── AppNav ─────────────────────────────────────────────────────────────────
 
-function Sidebar({ active, onSelect, search, onSearch, isDark, onToggle }: {
+function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
   active: SectionId; onSelect: (id: SectionId) => void
   search: string; onSearch: (v: string) => void
   isDark: boolean; onToggle: () => void
@@ -6999,7 +7163,7 @@ export default function App() {
 
   return (
     <div className={`${theme} flex h-screen overflow-hidden text-[var(--foreground)]`} style={{ background: canvasBg }}>
-      <Sidebar
+      <AppNav
         active={active}
         onSelect={id => { setActive(id); setSearch("") }}
         search={search} onSearch={handleSearch}
@@ -7020,6 +7184,7 @@ export default function App() {
           {active === "toggle"          && <TogglePage        openSpec={setSpecModal} />}
           {active === "table"           && <TablePage         openSpec={setSpecModal} />}
           {active === "topbar"          && <TopbarPage        openSpec={setSpecModal} />}
+          {active === "sidebar"         && <SidebarPage       openSpec={setSpecModal} />}
           {active === "icons"           && <IconsPage />}
           {active === "typography"      && <TypographyPage />}
           {active === "colors"          && <ColorsPage />}
