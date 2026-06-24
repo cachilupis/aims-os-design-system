@@ -1814,6 +1814,129 @@ function ProgressTab() {
         </div>
       </div>
 
+      {/* ── How PMs will prototype ──────────────────────────────── */}
+      <div className="flex flex-col gap-[20px]">
+        <div>
+          <h2 className="text-[18px] font-semibold text-[var(--foreground)]">How PMs will prototype with this DS</h2>
+          <p className="text-[13px] text-[var(--field-supporting)] mt-[4px]">
+            No Figma skills, no coding knowledge, no design tools required.
+            The entire workflow happens through a conversation with Claude — the component library
+            is the bridge between what you describe and what gets generated.
+          </p>
+        </div>
+
+        {/* One-time setup vs day-to-day */}
+        <div className="grid grid-cols-2 gap-[12px]">
+          <div className="rounded-[10px] p-[16px] flex flex-col gap-[10px]"
+            style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)" }}>
+            <div className="flex items-center gap-[8px]">
+              <span className="text-[11px] font-semibold px-[8px] py-[2px] rounded-[4px]"
+                style={{ background: "var(--tag-neutral-bg)", color: "var(--tag-neutral-fg)" }}>
+                One-time setup · 5 min
+              </span>
+            </div>
+            {[
+              { n: "1", text: "Get access to the GitHub repo (link shared with team)." },
+              { n: "2", text: "Open Claude Code in terminal — one command to install." },
+              { n: "3", text: "Point Claude at the repo. The CLAUDE.md file does this automatically." },
+              { n: "4", text: "Done. Claude now knows every available component and how to use it." },
+            ].map(s => (
+              <div key={s.n} className="flex items-start gap-[10px]">
+                <span className="flex items-center justify-center shrink-0 w-[20px] h-[20px] rounded-full text-[10px] font-bold mt-[1px]"
+                  style={{ background: "var(--tag-neutral-bg)", color: "var(--tag-neutral-fg)" }}>
+                  {s.n}
+                </span>
+                <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">{s.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-[10px] p-[16px] flex flex-col gap-[10px]"
+            style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--primary)" }}>
+            <div className="flex items-center gap-[8px]">
+              <span className="text-[11px] font-semibold px-[8px] py-[2px] rounded-[4px]"
+                style={{ background: "var(--primary)", color: "#fff" }}>
+                Every prototype session · ~10–30 min
+              </span>
+            </div>
+            {[
+              { n: "1", text: `Describe the screen in plain English: "I need a settings page with a sidebar, a user table with filters, and a modal to edit each row."` },
+              { n: "2", text: "Claude reads the component library and generates the screen using real DS components — not approximations." },
+              { n: "3", text: "Preview opens instantly in the browser. Interactive states, dark/light mode, all built in." },
+              { n: "4", text: `Iterate with natural language: "Make the table selectable," "Add an empty state when no users," "Use the DS error toast."` },
+            ].map(s => (
+              <div key={s.n} className="flex items-start gap-[10px]">
+                <span className="flex items-center justify-center shrink-0 w-[20px] h-[20px] rounded-full text-[10px] font-bold mt-[1px]"
+                  style={{ background: "var(--primary)", color: "#fff" }}>
+                  {s.n}
+                </span>
+                <p className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{s.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Without vs With comparison */}
+        <div className="rounded-[10px] overflow-hidden border border-[var(--table-border)]">
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <div className="p-[14px] flex flex-col gap-[8px]"
+              style={{ borderRight: "1px solid var(--table-border)", background: "var(--table-bg)" }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+                style={{ color: "var(--tag-error-fg, #d32f2f)" }}>
+                Without this repository
+              </p>
+              {[
+                "Claude invents its own components each session — different every time.",
+                "Colors, spacing, and typography are approximated, not DS-accurate.",
+                "Every prototype needs manual Figma cleanup before sharing.",
+                "No single source of truth — each PM generates different-looking screens.",
+                `Design debt accumulates: screens that "look right" but don't match the DS.`,
+              ].map((t, i) => (
+                <div key={i} className="flex items-start gap-[8px]">
+                  <span className="shrink-0 mt-[3px] text-[10px]" style={{ color: "var(--tag-error-fg, #d32f2f)" }}>✕</span>
+                  <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">{t}</p>
+                </div>
+              ))}
+            </div>
+            <div className="p-[14px] flex flex-col gap-[8px]" style={{ background: "var(--table-bg)" }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+                style={{ color: "var(--tag-success-fg)" }}>
+                With this repository
+              </p>
+              {[
+                "Claude picks from the built component list — consistent across every session.",
+                "Every value (color, spacing, radius) comes directly from Figma DS tokens.",
+                "Prototypes are shareable immediately — no cleanup needed.",
+                "All PMs generate screens from the same components — the same result every time.",
+                "Screens are implementation-ready: a developer can open the code and use it.",
+              ].map((t, i) => (
+                <div key={i} className="flex items-start gap-[8px]">
+                  <span className="shrink-0 mt-[3px] text-[10px]" style={{ color: "var(--tag-success-fg)" }}>✓</span>
+                  <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">{t}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* The only constraint */}
+        <div className="rounded-[8px] p-[14px] flex items-start gap-[12px]"
+          style={{ background: "var(--tag-alert-bg)", border: "1px solid var(--tag-alert-bg)" }}>
+          <span className="text-[16px] shrink-0" style={{ lineHeight: 1.2 }}>⚠</span>
+          <div>
+            <p className="text-[13px] font-semibold" style={{ color: "var(--tag-alert-fg)" }}>
+              The only constraint: you can only use components that are already built
+            </p>
+            <p className="text-[12px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+              If you ask Claude to generate a screen with a Date Picker and it hasn't been built yet,
+              Claude will either skip it or improvise — breaking the consistency guarantee.
+              That is why the component list below matters: each addition directly expands
+              what can be prototyped.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* ── Completed components ────────────────────────────────── */}
       <div className="flex flex-col gap-[12px]">
         <h2 className="text-[18px] font-semibold text-[var(--foreground)]">
@@ -1915,43 +2038,79 @@ function ProgressTab() {
       {/* ── Timeline reality ────────────────────────────────────── */}
       <div className="rounded-[10px] p-[20px] flex flex-col gap-[14px]"
         style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)" }}>
-        <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Realistic timeline estimate</h2>
-        <div className="grid grid-cols-3 gap-[12px]">
-          {[
-            {
-              label: "Focused sessions / week",
-              value: "3–5",
-              sub: "~2–3h per session",
-              note: "Parallel with normal design work",
-            },
-            {
-              label: "Hours available / week",
-              value: "~8–12h",
-              sub: `of ~${hoursRemaining}h remaining`,
-              note: "Figma inspection + build + review",
-            },
-            {
-              label: "Estimated completion",
-              value: "~5–6 months",
-              sub: "for a complete, production-ready DS",
-              note: "Adjusted as velocity increases",
-            },
-          ].map(t => (
-            <div key={t.label} className="flex flex-col gap-[4px] p-[14px] rounded-[8px]"
-              style={{ background: "var(--card-bg)", border: "1px solid var(--table-border)" }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[var(--field-supporting)]">{t.label}</p>
-              <p className="text-[24px] font-bold text-[var(--foreground)]">{t.value}</p>
-              <p className="text-[11px] text-[var(--field-supporting)]">{t.sub}</p>
-              <p className="text-[10px] mt-[4px]" style={{ color: "var(--primary)", opacity: 0.8 }}>{t.note}</p>
+        <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Timeline — two milestones that matter</h2>
+
+        {/* Milestone 1 — Prototype-ready */}
+        <div className="rounded-[10px] overflow-hidden border-2" style={{ borderColor: "var(--primary)" }}>
+          <div className="flex items-center justify-between px-[16px] py-[10px]"
+            style={{ background: "var(--tag-informative-bg)" }}>
+            <div className="flex items-center gap-[10px]">
+              <span className="text-[11px] font-semibold px-[8px] py-[2px] rounded-[4px]"
+                style={{ background: "var(--primary)", color: "#fff" }}>
+                Milestone 1 — Priority
+              </span>
+              <span className="text-[14px] font-semibold text-[var(--foreground)]">
+                Prototype-ready MVP
+              </span>
             </div>
-          ))}
+            <span className="text-[22px] font-bold" style={{ color: "var(--primary)" }}>2–4 weeks</span>
+          </div>
+          <div className="p-[16px] flex flex-col gap-[10px]" style={{ background: "var(--table-bg)" }}>
+            <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">
+              With <strong className="text-[var(--foreground)]">~18–20 core components</strong>, PMs can
+              prototype the majority of AIMS OS screens immediately. The 6–8 components remaining to reach
+              this milestone (Sidebar, Modal, Tabs, Toast, Breadcrumb, Radio, Empty State) represent
+              ~24h of work — achievable in 2–4 weeks at current pace.
+            </p>
+            <div className="flex flex-wrap gap-[6px]">
+              {["Sidebar", "Modal / Dialog", "Tabs", "Toast", "Breadcrumb", "Radio Button", "Empty State"].map(c => (
+                <span key={c} className="text-[11px] font-medium px-[8px] py-[2px] rounded-[4px]"
+                  style={{ background: "var(--tag-informative-bg)", color: "var(--tag-informative-fg)" }}>
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
-        <p className="text-[12px] text-[var(--field-supporting)] leading-[1.6] pt-[4px]" style={{ borderTop: "1px solid var(--table-border)" }}>
-          <strong className="text-[var(--foreground)]">Why this timeline is non-negotiable:</strong>{" "}
-          Each component is not just a visual copy — it requires reading the original Figma DS via API,
-          extracting exact tokens, implementing all interactive states in TypeScript, and documenting
-          it for the team to use. Rushing this produces components that look right but break under real
-          usage. The investment now removes the need to fix inconsistencies in every future prototype.
+
+        {/* Milestone 2 — Full DS */}
+        <div className="rounded-[10px] overflow-hidden border" style={{ borderColor: "var(--table-border)" }}>
+          <div className="flex items-center justify-between px-[16px] py-[10px]"
+            style={{ background: "var(--table-header-bg)" }}>
+            <div className="flex items-center gap-[10px]">
+              <span className="text-[11px] font-semibold px-[8px] py-[2px] rounded-[4px]"
+                style={{ background: "var(--tag-neutral-bg)", color: "var(--tag-neutral-fg)" }}>
+                Milestone 2
+              </span>
+              <span className="text-[14px] font-semibold text-[var(--foreground)]">
+                Full DS — all ~{totalAll} components
+              </span>
+            </div>
+            <span className="text-[22px] font-bold text-[var(--foreground)]">3–4 months</span>
+          </div>
+          <div className="p-[16px] grid grid-cols-3 gap-[12px]">
+            {[
+              { label: "Current pace",       value: "3–5 sessions/wk", note: "~8–12h / week" },
+              { label: "Hours remaining",    value: `~${hoursRemaining}h`,      note: "across ~41 components" },
+              { label: "Accelerator",        value: "Daily sessions",  note: "cuts timeline to ~2 months" },
+            ].map(t => (
+              <div key={t.label} className="flex flex-col gap-[4px] p-[12px] rounded-[8px]"
+                style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)" }}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--field-supporting)]">{t.label}</p>
+                <p className="text-[16px] font-bold text-[var(--foreground)]">{t.value}</p>
+                <p className="text-[10px] text-[var(--field-supporting)]">{t.note}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-[12px] text-[var(--field-supporting)] leading-[1.6] pt-[2px]" style={{ borderTop: "1px solid var(--table-border)" }}>
+          <strong className="text-[var(--foreground)]">The key distinction:</strong>{" "}
+          Milestone 1 (prototype-ready) is the urgent priority — it unblocks the team's ability to generate
+          consistent screens immediately. Milestone 2 (full DS) is the long-term foundation that ensures
+          every corner of the product has a reusable, token-accurate component.
+          Both milestones are built from the same process — each component added to Milestone 1
+          is also a step toward Milestone 2.
         </p>
       </div>
 
