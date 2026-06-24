@@ -15,9 +15,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // ─── Canvas / Base backgrounds (DS design constants) ─────────────────
-        canvas:    "#0A0E1A",   // Main app background  →  bg-canvas
-        "node-bg": "#0D1120",  // Node / card background
+        // ─── Canvas / Base backgrounds (dynamic — changes with .dark / .light) ──
+        canvas:    "var(--canvas)",   // bg-canvas → follows theme class
+        "node-bg": "var(--surface)", // bg-node-bg → follows theme class
 
         // ─── Surface ─────────────────────────────────────────────────────────
         surface: {

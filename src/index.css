@@ -6,57 +6,43 @@
 @tailwind utilities;
 
 /*
- * AIMS OS — CSS Variable overrides for shadcn/ui
+ * AIMS OS — CSS Variable overrides
+ * Source: Figma v6rmYKA2zmyXWOahlxLOeI — "Semantic Color Tokens"
  *
- * Maps shadcn's CSS variable names to the AIMS OS Semantic Color Tokens (Dark mode).
- * Source: Figma v6rmYKA2zmyXWOahlxLOeI — "Semantic Color Tokens", Dark mode.
- *
- * AIMS OS is dark-first — both :root and .dark use the same dark-mode values.
- * To support a light theme in the future, add a separate .light block.
+ * Every hardcoded color in components must trace back to a token here.
+ * Dark-mode values live in :root/.dark; light-mode overrides in .light.
  */
 
 @layer base {
+  /* ── Dark mode (default) ─────────────────────────────────────────────── */
   :root,
   .dark {
-    /* ── Page backgrounds ─────────────────────────────────────── */
-    --background:          #0A0E1A;   /* canvas */
-    --card:                #0D1120;   /* node / card surface */
-    --card-foreground:     #ffffff99; /* text/body */
-    --popover:             #141b2ad9; /* surface/floating/default */
-    --popover-foreground:  #ffffffcc; /* text/title */
+    /* Canvas / surface */
+    --canvas:              #0A0E1A;
+    --surface:             #0D1120;
+    --surface-raised:      #131C2E;
 
-    /* ── Foreground / Text ────────────────────────────────────── */
-    --foreground:          #ffffffcc; /* text/title */
-
-    /* ── Primary (blue) ──────────────────────────────────────── */
-    --primary:             #2b7fff;   /* surface/primary/emphasis */
+    /* shadcn tokens */
+    --background:          #0A0E1A;
+    --card:                #0D1120;
+    --card-foreground:     #ffffff99;
+    --popover:             #141b2ad9;
+    --popover-foreground:  #ffffffcc;
+    --foreground:          #ffffffcc;
+    --primary:             #2b7fff;
     --primary-foreground:  #ffffff;
-
-    /* ── Secondary (subtle neutral) ─────────────────────────── */
-    --secondary:           #ffffff14; /* surface/neutral/default */
-    --secondary-foreground:#ffffffcc; /* text/title */
-
-    /* ── Muted ───────────────────────────────────────────────── */
-    --muted:               #ffffff0d; /* surface/neutral/subtle */
-    --muted-foreground:    #ffffff99; /* text/subtitle */
-
-    /* ── Accent ──────────────────────────────────────────────── */
-    --accent:              #2b7fff14; /* surface/primary/more-subtle */
-    --accent-foreground:   #2b7fff;   /* text/link */
-
-    /* ── Destructive (error) ─────────────────────────────────── */
-    --destructive:         #e05252;   /* surface/error/default */
+    --secondary:           #ffffff14;
+    --secondary-foreground:#ffffffcc;
+    --muted:               #ffffff0d;
+    --muted-foreground:    #ffffff99;
+    --accent:              #2b7fff14;
+    --accent-foreground:   #2b7fff;
+    --destructive:         #e05252;
     --destructive-foreground: #ffffff;
-
-    /* ── Borders & Inputs ────────────────────────────────────── */
-    --border:              #ffffff1a; /* border/neutral/default */
-    --input:               #ffffff1a; /* border/neutral/default */
-    --ring:                #2b7fff;   /* border/primary/default */
-
-    /* ── Radius (maps to Radius-M from DS) ───────────────────── */
-    --radius:              0.5rem;    /* 8px = Radius-M */
-
-    /* ── Sidebar ─────────────────────────────────────────────── */
+    --border:              #ffffff1a;
+    --input:               #ffffff1a;
+    --ring:                #2b7fff;
+    --radius:              0.5rem;
     --sidebar:             #0D1120;
     --sidebar-foreground:  #ffffffcc;
     --sidebar-primary:     #2b7fff;
@@ -65,6 +51,599 @@
     --sidebar-accent-foreground:  #2b7fff;
     --sidebar-border:      #ffffff1a;
     --sidebar-ring:        #2b7fff;
+
+    /* ── Field (Input / Textarea) — neutral states ──── */
+    /* Source: Figma v6rmYKA2zmyXWOahlxLOeI Semantic Color Tokens — Dark mode */
+    --field-bg:              rgba(255,255,255,0.1);   /* Surface/Neutral/White dark  = White/10  */
+    --field-border:          rgba(255,255,255,0.1);   /* Border/Neutral/Default dark = White/10  */
+    --field-border-hover:    rgba(255,255,255,0.2);   /* Border/Neutral/Darker dark  = White/20  */
+    --field-border-focus:    #2b7fff;                 /* Border/Primary/Default dark             */
+    --field-text:            rgba(255,255,255,0.6);   /* Text/Subtitle dark          = White/60  */
+    --field-placeholder:     rgba(255,255,255,0.3);   /* Text/Disabled dark          = White/30  */
+    --field-label:           rgba(255,255,255,0.6);   /* Text/Subtitle dark          = White/60  */
+    --field-supporting:      rgba(255,255,255,0.6);   /* Text/Body dark              = White/60  */
+    --field-icon:            rgba(255,255,255,0.3);   /* Text/Disabled dark          = White/30  */
+
+    /* ── Field — scrollbar ───────────────────────────── */
+    --field-scrollbar-track: rgba(255,255,255,0.08);  /* Surface/Neutral/Default dark = White/8  */
+    --field-scrollbar-thumb: rgba(255,255,255,0.2);   /* Surface/Neutral/Emphasis dark= White/20 */
+
+    /* ── Field — validation state borders ───────────── */
+    /* Border/Error/Lighter dark  */ --field-border-error:    #fb2c36;
+    /* Border/Success/Default dark*/ --field-border-success:  rgba(0,201,80,0.3);
+    /* Border/Alert/Default dark  */ --field-border-alert:    #fbbf24;
+
+    /* ── Field — validation state text + icon colors ── */
+    /* Text/Error dark            */ --field-text-error:      #ff6467;
+    /* Text/Success dark          */ --field-text-success:    #6ee7b7;
+    /* Text/Alert dark            */ --field-text-alert:      #fcd34d;
+
+    /* ── Button tokens — dark ───────────────────────── */
+    /* Primary  : Border/Primary/Default dark = #2b7fff — Text/Negative (#ffffff) hardcoded in component */
+    --btn-primary-bg:          #2b7fff;
+    --btn-primary-hover-bg:    #002f80;  /* DS Hover fill — dark navy */
+    --btn-primary-active-bg:   #001a5c;
+    --btn-primary-ring:        #2b7fff;
+
+    /* Secondary: Surface/Neutral/White dark + Border/Neutral/Default dark */
+    --btn-secondary-bg:          rgba(255,255,255,0.1);    /* Surface/Neutral/White dark  = White/10  */
+    --btn-secondary-fg:          rgba(255,255,255,0.6);    /* Text/Label dark             = White/60  */
+    --btn-secondary-border:      rgba(255,255,255,0.1);    /* Border/Neutral/Default dark = White/10  */
+    --btn-secondary-hover-bg:    rgba(255,255,255,0.08);   /* Surface/Neutral/Default dark = White/8  */
+    --btn-secondary-hover-bd:    rgba(255,255,255,0.2);    /* Surface/Neutral/Emphasis dark = White/20 */
+    --btn-secondary-focus-bd:    rgba(255,255,255,0.15);   /* Border/Neutral/Lighter dark = White/15  */
+    --btn-secondary-disabled-bg: rgba(255,255,255,0.05);   /* Surface/Neutral/Subtle dark = White/5   */
+    --btn-secondary-disabled-bd: rgba(255,255,255,0.15);   /* Border/Neutral/Lighter dark = White/15  */
+    --btn-secondary-disabled-fg: rgba(255,255,255,0.3);    /* Text/Disabled dark          = White/30  */
+    --btn-secondary-active-bg:   rgba(255,255,255,0.2);
+    --btn-secondary-ring:        rgba(255,255,255,0.25);
+
+    /* Tertiary : text-only, no border */
+    --btn-tertiary-fg:           rgba(255,255,255,0.6);    /* Text/Label dark = White/60  */
+    --btn-tertiary-hover-bg:     rgba(255,255,255,0.05);   /* Surface/Neutral/Subtle dark = White/5   */
+    --btn-tertiary-focus-bg:     rgba(255,255,255,0.08);   /* Surface/Neutral/Default dark = White/8  */
+    --btn-tertiary-active-bg:    rgba(255,255,255,0.149);
+
+    /* Warning  : destructive red dark — Text/Negative (#ffffff) hardcoded in component */
+    --btn-warning-bg:          #e05252;
+    --btn-warning-hover-bg:    #ff6467;
+    --btn-warning-active-bg:   #c03030;
+    --btn-warning-ring:        #e05252;
+
+    /* Positive : success green — Text/Negative (#ffffff) hardcoded in component */
+    --btn-positive-bg:         #00a07e;
+    --btn-positive-hover-bg:   #003328;
+    --btn-positive-active-bg:  #001f18;
+    --btn-positive-ring:       #00a07e;
+
+    /* Main Action: gradient stays hardcoded — CSS vars can't be
+       interpolated inside Tailwind arbitrary gradient strings */
+
+    /* ── Card Container tokens — dark ───────────────────── */
+    /* Default / White Opacity — Surface/Neutral/White dark + Border/Neutral/Lighter dark */
+    --card-default-bg:              rgba(255,255,255,0.1);   /* Surface/Neutral/White dark      = White/10  */
+    --card-default-border:          rgba(255,255,255,0.15);  /* Border/Neutral/Lighter dark     = White/15  */
+    --card-default-hover-bd:        rgba(255,255,255,0.1);   /* Border/Neutral/Default dark     = White/10  */
+    --card-default-selected-bd:     #2b7fff;                 /* Border/Primary/Default dark                 */
+
+    /* Primary — Surface/Primary/More Subtle dark + Border/Primary/Lighter dark */
+    --card-primary-bg:              rgba(43,127,255,0.08);   /* Surface/Primary/More Subtle dark            */
+    --card-primary-border:          rgba(43,127,255,0.1);    /* Border/Primary/Lighter dark                 */
+    --card-primary-hover-bd:        #2b7fff;                 /* Border/Primary/Default dark                 */
+    --card-primary-selected-bd:     #2b7fff;                 /* Border/Primary/Default dark                 */
+
+    /* Green — Surface/Success/More Subtle dark + Border/Success/Default dark */
+    --card-green-bg:                #0a1f1a;                 /* Surface/Success/More Subtle dark            */
+    --card-green-border:            rgba(0,201,80,0.3);      /* Border/Success/Default dark                 */
+    --card-green-hover-bd:          #34d399;                 /* Border/Success/Lighter dark                 */
+    --card-green-selected-bd:       #34d399;                 /* Border/Success/Lighter dark                 */
+
+    /* Reed — Surface/Card/Reed BG dark + Border/Error/Lighter dark */
+    --card-reed-bg:                 rgba(251,44,54,0.1);     /* Surface/Card/Reed BG Stop0 dark             */
+    --card-reed-border:             #fb2c36;                 /* Border/Error/Lighter dark                   */
+    --card-reed-hover-bd:           #fb2c36;                 /* Border/Error/Lighter dark                   */
+    --card-reed-selected-bd:        #fb2c36;                 /* Border/Error/Lighter dark (DS: same as default, width 1px) */
+
+    /* Orange — Surface/Alert/More Subtle dark + Border/Alert/Subtle dark */
+    --card-orange-bg:               #281e00;                 /* Surface/Alert/More Subtle dark              */
+    --card-orange-border:           #2d1a08;                 /* Border/Alert/Subtle dark                    */
+    --card-orange-hover-bd:         #f59e0b;                 /* Border/Alert/Lighter dark                   */
+    --card-orange-selected-bd:      #fbbf24;                 /* Border/Alert/Default dark                   */
+
+    /* Yellow — Surface/Yellow/More Subtle dark + Border/Yellow/Lighter dark */
+    --card-yellow-bg:               #281e00;                 /* Surface/Yellow/More Subtle dark             */
+    --card-yellow-border:           #f59e0b;                 /* Border/Yellow/Lighter dark                  */
+    --card-yellow-hover-bd:         #fbbf24;                 /* Border/Yellow/Default dark                  */
+    --card-yellow-selected-bd:      #fcd34d;                 /* Border/Yellow/Darker dark                   */
+
+    /* Purple — Surface/Purple/More Subtle dark + Border/Purple/Lighter dark */
+    --card-purple-bg:               #120520;                 /* Surface/Purple/More Subtle dark             */
+    --card-purple-border:           rgba(173,70,255,0.2);    /* Border/Purple/Lighter dark                  */
+    --card-purple-hover-bd:         #a855f7;                 /* Border/Purple/Default dark                  */
+    --card-purple-selected-bd:      #d8b4fe;                 /* Border/Purple/Darker dark                   */
+
+    /* Light Blue — Surface/Light Blue/More Subtle dark + Border/Light Blue/Lighter dark */
+    --card-lightblue-bg:            #071828;                 /* Surface/Light Blue/More Subtle dark         */
+    --card-lightblue-border:        rgba(81,162,255,0.2);    /* Border/Light Blue/Lighter dark              */
+    --card-lightblue-hover-bd:      #38bdf8;                 /* Border/Light Blue/Default dark              */
+    --card-lightblue-selected-bd:   #7dd3fc;                 /* Border/Light Blue/Darker dark               */
+
+    /* Lime Green — Surface/Lime Green/More Subtle dark + Border/LimeGreen/Lighter dark */
+    --card-limegreen-bg:            #111a04;                 /* Surface/Lime Green/More Subtle dark         */
+    --card-limegreen-border:        rgba(189,238,73,0.2);    /* Border/LimeGreen/Lighter dark               */
+    --card-limegreen-hover-bd:      #84cc16;                 /* Border/LimeGreen/Default dark               */
+    --card-limegreen-selected-bd:   #bdee49;                 /* Border/LimeGreen/Darker dark                */
+
+    /* ── Card Container — hover shadows (dark mode only) ─── */
+    /* DS effect: ambient shadow (8,8,16,0) + tight glow (0,0,4,1) + soft glow (0,0,14,0) */
+    /* Opacities dialed back from raw DS values (0.9/0.4) to match the subtle appearance */
+    /* shown in the DS visual state examples (tight: 0.4, soft: 0.15). */
+    --card-default-hover-shadow:      8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(255,255,255,0.4), 0 0 14px 0px rgba(255,255,255,0.15);
+    --card-whiteopacity-hover-shadow: 8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(255,255,255,0.4), 0 0 14px 0px rgba(255,255,255,0.15);
+    --card-primary-hover-shadow:      8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(33,115,255,0.4),  0 0 14px 0px rgba(33,115,255,0.15);
+    --card-green-hover-shadow:        8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(0,201,79,0.4),    0 0 14px 0px rgba(0,201,79,0.15);
+    --card-reed-hover-shadow:         8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(250,43,54,0.4),   0 0 14px 0px rgba(250,43,54,0.15);
+    --card-orange-hover-shadow:       8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(237,107,3,0.4),   0 0 14px 0px rgba(237,107,3,0.15);
+    --card-yellow-hover-shadow:       8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(252,199,0,0.4),   0 0 14px 0px rgba(252,199,0,0.15);
+    --card-purple-hover-shadow:       8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(173,69,255,0.4),  0 0 14px 0px rgba(173,69,255,0.15);
+    --card-lightblue-hover-shadow:    8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(82,163,255,0.4),  0 0 14px 0px rgba(82,163,255,0.15);
+    --card-limegreen-hover-shadow:    8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(189,237,74,0.4),  0 0 14px 0px rgba(189,237,74,0.15);
+    --card-dashed-hover-shadow:       8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(33,115,255,0.4),  0 0 14px 0px rgba(33,115,255,0.15);
+
+    /* ── Tag Component — dark ───────────────────────────────────────────── */
+    --tag-success-bg:     #0a1f1a;                 /* Dark/Success/15     */
+    --tag-success-bd:     #34d399;                 /* Dark/Success/20     */
+    --tag-success-fg:     #6ee7b7;                 /* Dark/Success-Light/100 */
+
+    --tag-secondary-bg:   rgba(255,255,255,0.10);  /* White/10            */
+    --tag-secondary-bd:   rgba(255,255,255,0.10);  /* White/10            */
+    --tag-secondary-fg:   rgba(255,255,255,0.60);  /* White/60            */
+
+    --tag-primary-bg:     #155dfc;                 /* Dark/Primary-Deep/100 */
+    --tag-primary-fg:     #ffffff;                 /* White/100           */
+
+    --tag-informative-bg: rgba(21,93,252,0.15);    /* Dark/Primary-Deep/15 */
+    --tag-informative-bd: #2b7fff;                 /* Dark/Primary/100    */
+    --tag-informative-fg: rgba(255,255,255,0.80);  /* White/80            */
+
+    --tag-error-bg:       #2d1515;                 /* Dark/Error/5        */
+    --tag-error-bd:       #e05252;                 /* Dark/Error/20       */
+    --tag-error-fg:       #ff6467;                 /* Dark/Error-Light/100 */
+
+    --tag-alert-bg:       #281e00;                 /* Dark/Alert/5        */
+    --tag-alert-bd:       #f59e0b;                 /* Dark/Alert/20       */
+    --tag-alert-fg:       #fcd34d;                 /* Dark/Alert/100      */
+
+    --tag-limegreen-bg:   #111a04;                 /* Dark/Lime/5         */
+    --tag-limegreen-bd:   #84cc16;                 /* Dark/Lime/30        */
+    --tag-limegreen-fg:   #bdef49;                 /* Lime Green/400      */
+
+    --tag-yellow-bg:      #281e00;                 /* Dark/Alert/5        */
+    --tag-yellow-bd:      #fbbf24;                 /* Dark/Alert/30       */
+    --tag-yellow-fg:      #fcd34d;                 /* Dark/Alert/100      */
+
+    --tag-purple-bg:      #120520;                 /* Dark/Purple/5       */
+    --tag-purple-bd:      #a855f7;                 /* Dark/Purple/30      */
+    --tag-purple-fg:      #d8b4fe;                 /* Dark/Purple/100     */
+
+    --tag-lightblue-bg:   #071828;                 /* Dark/LightBlue/5    */
+    --tag-lightblue-bd:   #38bdf8;                 /* Dark/LightBlue/30   */
+    --tag-lightblue-fg:   #7dd3fc;                 /* Dark/LightBlue/100  */
+
+    --tag-neutral-bg:     rgba(255,255,255,0.08);  /* White/8             */
+    --tag-neutral-bd:     rgba(255,255,255,0.10);  /* White/10            */
+    --tag-neutral-fg:     rgba(255,255,255,0.60);  /* White/60            */
+
+    /* ── Menu / Dropdown tokens — dark ──────────────────────────────────── */
+    /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · node 4762:7152                */
+    /* Variables resolved: Surface/Floating/Default dark = rgba(20,27,42,0.85) */
+    --menu-bg:           rgba(20,27,42,0.85);    /* Surface/Floating/Default dark  VariableID:13469:2 mode 12277:1  */
+    --menu-item-hover:   rgba(32,42,62,0.90);    /* Surface/Floating/Hover dark    VariableID:13469:3 mode 12277:1  */
+    --menu-item-text:    rgba(255,255,255,0.60); /* Text/Subtitle dark   = White/60                                 */
+    --menu-item-subtext: rgba(255,255,255,0.60); /* Text/Body dark       = White/60                                 */
+    --menu-item-disabled:rgba(255,255,255,0.30); /* Text/Disabled dark   = White/30                                 */
+    --menu-item-icon:    rgba(255,255,255,0.50); /* Icon/Neutral/Dark dark = White/50                               */
+    --menu-divider:      rgba(255,255,255,0.08); /* Surface/Neutral/Default dark                                    */
+    --menu-section-text: rgba(255,255,255,0.40); /* Text/Caption dark                                               */
+
+    /* ── Highlight Icon — dark mode ── */
+    --hi-informative-bg:       rgba(33, 115, 255, 0.14);
+    --hi-success-bg:           rgba(0, 169, 127, 0.14);
+    --hi-alert-bg:             rgba(217, 119, 6, 0.14);
+    --hi-error-bg:             rgba(220, 38, 38, 0.14);
+    --hi-neutral-bg:           rgba(255, 255, 255, 0.08);
+    --hi-yellow-bg:            rgba(202, 138, 4, 0.14);
+    --hi-lime-bg:              rgba(101, 163, 13, 0.14);
+    --hi-purple-bg:            rgba(124, 58, 237, 0.14);
+    --hi-lightblue-bg:         rgba(2, 132, 199, 0.14);
+    /* Icon / Dark variant */
+    --hi-informative-icon:     #A8C8FF;
+    --hi-success-icon:         #70EDD8;
+    --hi-alert-icon:           #FFC070;
+    --hi-error-icon:           #FF9898;
+    --hi-neutral-icon:         rgba(255, 255, 255, 0.70);
+    --hi-yellow-icon:          #FFE070;
+    --hi-lime-icon:            #C4F060;
+    --hi-purple-icon:          #D4A0FF;
+    --hi-lightblue-icon:       #80DCFF;
+    /* Icon / Default (softer) variant */
+    --hi-informative-icon-soft: rgba(168, 200, 255, 0.60);
+    --hi-success-icon-soft:     rgba(112, 237, 216, 0.60);
+    --hi-alert-icon-soft:       rgba(255, 192, 112, 0.60);
+    --hi-error-icon-soft:       rgba(255, 152, 152, 0.60);
+    --hi-neutral-icon-soft:     rgba(255, 255, 255, 0.40);
+    --hi-yellow-icon-soft:      rgba(255, 224, 112, 0.60);
+    --hi-lime-icon-soft:        rgba(196, 240, 96, 0.60);
+    --hi-purple-icon-soft:      rgba(212, 160, 255, 0.60);
+    --hi-lightblue-icon-soft:   rgba(128, 220, 255, 0.60);
+
+    /* ── Checkbox — dark ─────────────────────────────── */
+    --checkbox-ripple:           rgba(255,255,255,0.06);  /* hover bg unchecked  */
+    --checkbox-ripple-checked:   rgba(43,127,255,0.14);   /* hover bg checked    */
+    --checkbox-checked-dim:      rgba(43,127,255,0.50);   /* checked + disabled  */
+
+    /* ── Toggle — dark ───────────────────────────────── */
+    --toggle-track-off:          rgba(255,255,255,0.08);  /* Surface/Neutral/Default dark  */
+    --toggle-border-off:         rgba(255,255,255,0.30);  /* Border/Neutral/Lighter dark   */
+    --toggle-thumb-off:          rgba(255,255,255,0.60);  /* Text/Subtitle dark            */
+    --toggle-track-on:           #2b7fff;                 /* Border/Primary/Default dark   */
+    --toggle-thumb-on:           #ffffff;
+    --toggle-track-off-disabled: rgba(255,255,255,0.05);
+    --toggle-border-off-disabled: rgba(255,255,255,0.15);
+    --toggle-track-on-disabled:  rgba(43,127,255,0.40);
+    --toggle-thumb-disabled:     rgba(255,255,255,0.20);
+
+    /* ── Table — dark ────────────────────────────────── */
+    /* Source: 👩‍💻 Developer Reference — Table (node 13859:2959) + Dark Mode Preview (node 13859:2932) */
+    /*   Surface/Neutral/White dark     = rgba(255,255,255,0.10) → row bg (header + body, same token)  */
+    /*   Surface/Neutral/Default dark   = rgba(255,255,255,0.08) → checkbox / row hover bg             */
+    /*   Surface/Primary/More Subtle dk = rgba(43,127,255,0.08)  → selected row bg                     */
+    /*   Text/Subtitle dark             = rgba(255,255,255,0.60) → header column text                  */
+    /*   Text/Body dark                 = rgba(255,255,255,0.60) → row cell text                       */
+    --table-bg:               rgba(255,255,255,0.10);   /* Surface/Neutral/White dark = White/10        */
+    --table-header-bg:        rgba(255,255,255,0.10);   /* Surface/Neutral/White dark (same as body)    */
+    --table-border:           rgba(255,255,255,0.08);   /* Border/Neutral/Lighter dark                  */
+    --table-header-text:      rgba(255,255,255,0.60);   /* Text/Subtitle dark                           */
+    --table-cell-text:        rgba(255,255,255,0.60);   /* Text/Body dark                               */
+    --table-row-hover-bg:     rgba(255,255,255,0.08);   /* Surface/Neutral/Default dark                 */
+    --table-row-selected-bg:  rgba(43,127,255,0.08);    /* Surface/Primary/More Subtle dark             */
+
+    /* ── Topbar — dark ─────────────────────────────────────────── */
+    /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Dev Reference 12706:849 + Dark Mode frame 12684:252150 */
+    --topbar-text:             rgba(255,255,255,0.60);   /* Text/Subtitle dark            = White/60    */
+    --topbar-text-secondary:   rgba(255,255,255,0.50);   /* Text/Body dark                = White/50    */
+    --topbar-icon:             rgba(255,255,255,0.70);   /* Icon/Neutral/Dark dark        = White/70    */
+    --topbar-workspace-border: rgba(43,127,255,0.20);    /* Border/Primary/Subtle dark                  */
+    --topbar-divider:          rgba(255,255,255,0.08);   /* Border/Neutral/Subtle dark    = White/8     */
+    --topbar-btn-hover-bg:     rgba(255,255,255,0.08);   /* Surface/Neutral/Hover dark    = White/8     */
+    --topbar-btn-focus-bg:     rgba(255,255,255,0.12);   /* Surface/Neutral/Default dark  = White/12    */
+    --topbar-search-bg:        rgba(255,255,255,0.10);   /* Surface/Neutral/White dark    = White/10    */
+    --topbar-search-border:    rgba(255,255,255,0.10);   /* Border/Neutral/Default dark   = White/10    */
+    --topbar-badge-bg:         rgba(255,100,103,1.00);   /* Error/Notification dark                     */
+    --topbar-avatar-ring:      rgba(43,127,255,0.30);    /* Border/Primary/Lighter dark                 */
+    --topbar-zone-hover-bg:    rgba(255,255,255,0.04);   /* Zone frame hover bg dark                    */
+    --topbar-zone-hover-bd:    rgba(43,127,255,0.45);    /* Zone frame hover border dark                */
+    --topbar-menu-bg:          rgba(22,22,22,1.00);      /* Dropdown bg dark = Surface/Neutral/Elevated */
+    --topbar-menu-border:      rgba(255,255,255,0.10);   /* Dropdown border dark                        */
+    --topbar-menu-item-hover:  rgba(255,255,255,0.06);   /* Menu item hover dark                        */
+    --topbar-menu-item-sel:    rgba(33,115,255,0.15);    /* Menu item selected dark                     */
+    --topbar-menu-text:        rgba(255,255,255,0.80);   /* Menu item label dark                        */
+    --topbar-menu-text-dim:    rgba(255,255,255,0.45);   /* Menu secondary text dark                    */
+    --topbar-menu-tag-act-bg:  rgba(33,115,255,0.20);    /* "Active" workspace tag bg dark              */
+    --topbar-menu-tag-act-fg:  rgba(43,127,255,1.00);    /* "Active" workspace tag text dark            */
+    --topbar-menu-tag-bg:      rgba(255,255,255,0.08);   /* Default workspace tag bg dark               */
+    --topbar-menu-tag-fg:      rgba(255,255,255,0.45);   /* Default workspace tag text dark             */
+  }
+
+  /* ── Light mode ──────────────────────────────────────────────────────── */
+  .light {
+    --canvas:              #F0F2F8;
+    --surface:             #FFFFFF;
+    --surface-raised:      #F5F7FC;
+
+    --background:          #F0F2F8;
+    --card:                #FFFFFF;
+    --card-foreground:     #5c5c5c;
+    --popover:             #FFFFFF;
+    --popover-foreground:  #1a1a1a;
+    --foreground:          #1a1a1a;
+    --primary:             #2173ff;
+    --primary-foreground:  #ffffff;
+    --secondary:           #00000008;
+    --secondary-foreground:#2a2a2a;
+    --muted:               #00000005;
+    --muted-foreground:    #5c5c5c;
+    --accent:              #2173ff14;
+    --accent-foreground:   #2173ff;
+    --destructive:         #d32f2f;
+    --destructive-foreground: #ffffff;
+    --border:              rgba(0,0,0,0.1);
+    --input:               rgba(0,0,0,0.1);
+    --ring:                #2173ff;
+    --radius:              0.5rem;
+    --sidebar:             #FFFFFF;
+    --sidebar-foreground:  #1a1a1a;
+    --sidebar-primary:     #2173ff;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent:      #2173ff14;
+    --sidebar-accent-foreground:  #2173ff;
+    --sidebar-border:      rgba(0,0,0,0.08);
+    --sidebar-ring:        #2173ff;
+
+    /* ── Field — neutral states ─────────────────────── */
+    /* Source: Figma v6rmYKA2zmyXWOahlxLOeI Semantic Color Tokens — Primary mode */
+    --field-bg:              #ffffff;                 /* Surface/Neutral/White light  */
+    --field-border:          #5c5c5c;                 /* Border/Neutral/Default light */
+    --field-border-hover:    #2a2a2a;                 /* Border/Neutral/Darker light  */
+    --field-border-focus:    #2173ff;                 /* Border/Primary/Default light */
+    --field-text:            #2a2a2a;                 /* Text/Subtitle light          */
+    --field-placeholder:     #bababa;                 /* Text/Disabled light          */
+    --field-label:           #2a2a2a;                 /* Text/Subtitle light          */
+    --field-supporting:      #5c5c5c;                 /* Text/Body light              */
+    --field-icon:            #bababa;                 /* Text/Disabled light          */
+
+    /* ── Field — scrollbar ───────────────────────────── */
+    --field-scrollbar-track: #f2f2f2;                 /* Surface/Neutral/Default light */
+    --field-scrollbar-thumb: #d9d9d9;                 /* Surface/Neutral/Emphasis light */
+
+    /* ── Field — validation state borders ───────────── */
+    /* Border/Error/Lighter light  */ --field-border-error:    #d32f2f;
+    /* Border/Success/Default light*/ --field-border-success:  #00a07e;
+    /* Border/Alert/Default light  */ --field-border-alert:    #ed6c02;
+
+    /* ── Field — validation state text + icon colors ── */
+    /* Text/Error light            */ --field-text-error:      #5f2120;
+    /* Text/Success light          */ --field-text-success:    #003328;
+    /* Text/Alert light            */ --field-text-alert:      #663c00;
+
+    /* ── Button tokens — light ──────────────────────── */
+    /* Primary  : Border/Primary/Default light = #2173ff — Text/Negative (#ffffff) hardcoded in component */
+    --btn-primary-bg:          #2173ff;
+    --btn-primary-hover-bg:    #002f80;  /* DS Hover fill — same dark navy */
+    --btn-primary-active-bg:   #001a5c;
+    --btn-primary-ring:        #2173ff;
+
+    /* Secondary */
+    --btn-secondary-bg:          #ffffff;    /* Surface/Neutral/White light  = Gray/100  */
+    --btn-secondary-fg:          #2a2a2a;    /* Text/Label light             = Gray/700  */
+    --btn-secondary-border:      #5c5c5c;    /* Border/Neutral/Default light = Gray/600  */
+    --btn-secondary-hover-bg:    #f2f2f2;    /* Surface/Neutral/Default light = Gray/300 */
+    --btn-secondary-hover-bd:    #d9d9d9;    /* Surface/Neutral/Emphasis light = Gray/400 */
+    --btn-secondary-focus-bd:    #bababa;    /* Border/Neutral/Lighter light = Gray/500  */
+    --btn-secondary-disabled-bg: #fafafa;    /* Surface/Neutral/Subtle light = Gray/200  */
+    --btn-secondary-disabled-bd: #bababa;    /* Border/Neutral/Lighter light = Gray/500  */
+    --btn-secondary-disabled-fg: #bababa;    /* Text/Disabled light          = Gray/500  */
+    --btn-secondary-active-bg:   rgba(0,0,0,0.078);
+    --btn-secondary-ring:        rgba(0,0,0,0.15);
+
+    /* Tertiary */
+    --btn-tertiary-fg:           #2a2a2a;    /* Text/Label light = Gray/700   */
+    --btn-tertiary-hover-bg:     #fafafa;    /* Surface/Neutral/Subtle light = Gray/200  */
+    --btn-tertiary-focus-bg:     #f2f2f2;    /* Surface/Neutral/Default light = Gray/300 */
+    --btn-tertiary-active-bg:    #ebebeb;    /* no DS ref — step below Gray/300 */
+
+    /* Warning  : destructive red light — Text/Negative (#ffffff) hardcoded in component */
+    --btn-warning-bg:          #d32f2f;
+    --btn-warning-hover-bg:    #b91c1c;
+    --btn-warning-active-bg:   #991b1b;
+    --btn-warning-ring:        #d32f2f;
+
+    /* Positive — Text/Negative (#ffffff) hardcoded in component */
+    --btn-positive-bg:         #00a07e;
+    --btn-positive-hover-bg:   #003328;
+    --btn-positive-active-bg:  #001f18;
+    --btn-positive-ring:       #00a07e;
+
+    /* ── Card Container tokens — light ──────────────────── */
+    /* Default / White Opacity — Surface/Neutral/White light + Border/Neutral/Lighter light */
+    --card-default-bg:              #ffffff;                 /* Surface/Neutral/White light     = Gray/100  */
+    --card-default-border:          #bababa;                 /* Border/Neutral/Lighter light    = Gray/500  */
+    --card-default-hover-bd:        #5c5c5c;                 /* Border/Neutral/Default light    = Gray/600  */
+    --card-default-selected-bd:     #2173ff;                 /* Border/Primary/Default light                */
+
+    /* Primary — Surface/Primary/More Subtle light + Border/Primary/Lighter light */
+    --card-primary-bg:              #f6f9ff;                 /* Surface/Primary/More Subtle light           */
+    --card-primary-border:          #80afff;                 /* Border/Primary/Lighter light                */
+    --card-primary-hover-bd:        #2173ff;                 /* Border/Primary/Default light                */
+    --card-primary-selected-bd:     #2173ff;                 /* Border/Primary/Default light                */
+
+    /* Green — Surface/Success/More Subtle light + Border/Success/Default light */
+    --card-green-bg:                #e5fdf8;                 /* Surface/Success/More Subtle light           */
+    --card-green-border:            #00a07e;                 /* Border/Success/Default light                */
+    --card-green-hover-bd:          #009978;                 /* Border/Success/Lighter light                */
+    --card-green-selected-bd:       #009978;                 /* Border/Success/Lighter light                */
+
+    /* Reed — Surface/Card/Reed BG light + Border/Error/Lighter light */
+    --card-reed-bg:                 #fdeded;                 /* Surface/Card/Reed BG Stop0 light            */
+    --card-reed-border:             #d32f2f;                 /* Border/Error/Lighter light                  */
+    --card-reed-hover-bd:           #d32f2f;                 /* Border/Error/Lighter light                  */
+    --card-reed-selected-bd:        #d32f2f;                 /* Border/Error/Lighter light (DS: same as default, width 1px) */
+
+    /* Orange — Surface/Alert/More Subtle light + Border/Alert/Subtle light */
+    --card-orange-bg:               #fff4e5;                 /* Surface/Alert/More Subtle light             */
+    --card-orange-border:           #edc6a6;                 /* Border/Alert/Subtle light                   */
+    --card-orange-hover-bd:         #b25102;                 /* Border/Alert/Lighter light                  */
+    --card-orange-selected-bd:      #ed6c02;                 /* Border/Alert/Default light                  */
+
+    /* Yellow — Surface/Yellow/More Subtle light + Border/Yellow/Lighter light */
+    --card-yellow-bg:               #fffaf0;                 /* Surface/Yellow/More Subtle light            */
+    --card-yellow-border:           #edc6a6;                 /* Border/Yellow/Lighter light                 */
+    --card-yellow-hover-bd:         #ed6c02;                 /* Border/Yellow/Default light                 */
+    --card-yellow-selected-bd:      #663c00;                 /* Border/Yellow/Darker light                  */
+
+    /* Purple — Surface/Purple/More Subtle light + Border/Purple/Lighter light */
+    --card-purple-bg:               #f3e9fd;                 /* Surface/Purple/More Subtle light            */
+    --card-purple-border:           #cfa7f9;                 /* Border/Purple/Lighter light                 */
+    --card-purple-hover-bd:         #7b27ed;                 /* Border/Purple/Default light                 */
+    --card-purple-selected-bd:      #2c075c;                 /* Border/Purple/Darker light                  */
+
+    /* Light Blue — Surface/Light Blue/More Subtle light + Border/Light Blue/Lighter light */
+    --card-lightblue-bg:            #e5f8ff;                 /* Surface/Light Blue/More Subtle light        */
+    --card-lightblue-border:        #99e5f9;                 /* Border/Light Blue/Lighter light             */
+    --card-lightblue-hover-bd:      #00b5d9;                 /* Border/Light Blue/Default light             */
+    --card-lightblue-selected-bd:   #02445a;                 /* Border/Light Blue/Darker light              */
+
+    /* Lime Green — Surface/Lime Green/More Subtle light + Border/LimeGreen/Lighter light */
+    --card-limegreen-bg:            #f9fee5;                 /* Surface/Lime Green/More Subtle light        */
+    --card-limegreen-border:        #d4f381;                 /* Border/LimeGreen/Lighter light              */
+    --card-limegreen-hover-bd:      #a0da1d;                 /* Border/LimeGreen/Default light              */
+    --card-limegreen-selected-bd:   #3e5c0a;                 /* Border/LimeGreen/Darker light               */
+
+    /* Card hover shadows — none in light mode (glow is a dark-mode-only DS effect) */
+    --card-default-hover-shadow:      none;
+    --card-whiteopacity-hover-shadow: none;
+    --card-primary-hover-shadow:      none;
+    --card-green-hover-shadow:        none;
+    --card-reed-hover-shadow:         none;
+    --card-orange-hover-shadow:       none;
+    --card-yellow-hover-shadow:       none;
+    --card-purple-hover-shadow:       none;
+    --card-lightblue-hover-shadow:    none;
+    --card-limegreen-hover-shadow:    none;
+    --card-dashed-hover-shadow:       none;
+
+    /* ── Tag Component — light ──────────────────────────────────────────── */
+    --tag-success-bg:     #e5fdf8;                 /* Green/100           */
+    --tag-success-bd:     #009978;                 /* Green/600           */
+    --tag-success-fg:     #003328;                 /* Text/Success light  */
+
+    --tag-secondary-bg:   #ffffff;                 /* Gray/100            */
+    --tag-secondary-bd:   #5c5c5c;                 /* Gray/600            */
+    --tag-secondary-fg:   #2a2a2a;                 /* Text/Subtitle light */
+
+    --tag-primary-bg:     #2173ff;                 /* Primary/500         */
+    --tag-primary-fg:     #ffffff;                 /* Text/Negative       */
+
+    --tag-informative-bg: #e9f1ff;                 /* Primary/200         */
+    --tag-informative-bd: #2173ff;                 /* Primary/500         */
+    --tag-informative-fg: #001740;                 /* Text/Info light     */
+
+    --tag-error-bg:       #fdeded;                 /* Red/100             */
+    --tag-error-bd:       #992222;                 /* Red/500             */
+    --tag-error-fg:       #5f2120;                 /* Text/Error light    */
+
+    --tag-alert-bg:       #ffeedb;                 /* Orange/200          */
+    --tag-alert-bd:       #b25102;                 /* Orange/600          */
+    --tag-alert-fg:       #663c00;                 /* Text/Alert light    */
+
+    --tag-limegreen-bg:   #f9fee5;                 /* Lime Green/100      */
+    --tag-limegreen-bd:   #a0da1d;                 /* Lime Green/500      */
+    --tag-limegreen-fg:   #3e5c0a;                 /* Text/LimeGreen light */
+
+    --tag-yellow-bg:      #fffaf0;                 /* Yellow/100          */
+    --tag-yellow-bd:      #ed6c02;                 /* Orange/500          */
+    --tag-yellow-fg:      #663c00;                 /* Text/Yellow light   */
+
+    --tag-purple-bg:      #f3e9fd;                 /* Purple/100          */
+    --tag-purple-bd:      #7b27ed;                 /* Purple/500          */
+    --tag-purple-fg:      #4a1282;                 /* Text/Purple light   */
+
+    --tag-lightblue-bg:   #e5f8ff;                 /* Light Blue/100      */
+    --tag-lightblue-bd:   #00b5d9;                 /* Light Blue/500      */
+    --tag-lightblue-fg:   #0c4a6e;                 /* Text/Light Blue light */
+
+    --tag-neutral-bg:     #f2f2f2;                 /* Gray/300            */
+    --tag-neutral-bd:     #5c5c5c;                 /* Gray/600            */
+    --tag-neutral-fg:     #2a2a2a;                 /* Text/Subtitle light */
+
+    /* ── Menu / Dropdown tokens — light ─────────────────────────────────── */
+    /* Variables resolved from Figma Primitives (light mode = collection 4461:3) */
+    --menu-bg:           rgba(255,255,255,0.92); /* Surface/Floating/Default light  VariableID:13469:2  */
+    --menu-item-hover:   rgba(242,242,242,0.95); /* Surface/Floating/Hover light    VariableID:13469:3  */
+    --menu-item-text:    #2A2A2A;                /* Text/Subtitle light = Gray/700  VariableID:4465:4468 */
+    --menu-item-subtext: #5C5C5C;                /* Text/Body light     = Gray/600  VariableID:4465:4469 */
+    --menu-item-disabled:#BABABA;                /* Text/Disabled light = Gray/500  VariableID:4465:4472 */
+    --menu-item-icon:    #5C5C5C;                /* Icon/Neutral/Dark   = Gray/600  VariableID:4465:4510 */
+    --menu-divider:      #f2f2f2;                /* Surface/Neutral/Default light                        */
+    --menu-section-text: #9ca3af;                /* Text/Caption light                                   */
+
+    /* ── Highlight Icon — light mode (exact DS values from Figma) ── */
+    --hi-informative-bg:       #E9F1FF;  /* Primary/100 · VariableID:4461:2592   */
+    --hi-success-bg:           #CBFFF4;  /* Success/50  · VariableID:8541:11928  */
+    --hi-alert-bg:             #FFEEDB;  /* Alert/50    · VariableID:4465:2666   */
+    --hi-error-bg:             #FDEDED;  /* Error/50    · VariableID:4465:2662   */
+    --hi-neutral-bg:           #F2F2F2;  /* Gray/100                              */
+    --hi-yellow-bg:            #FFEEDB;  /* Yellow/50   · same hex as alert       */
+    --hi-lime-bg:              #E7F9B5;  /* Lime/50                               */
+    --hi-purple-bg:            #E4CEFC;  /* Purple/100                            */
+    --hi-lightblue-bg:         #CCF1FF;  /* LightBlue/100                         */
+    /* Icon / Dark variant (exact DS colors · VariableIDs in comments) */
+    --hi-informative-icon:     #001740;  /* VariableID:4465:4514  */
+    --hi-success-icon:         #003328;  /* VariableID:4567:4619  */
+    --hi-alert-icon:           #663C00;  /* VariableID:4567:4618  */
+    --hi-error-icon:           #5F2120;  /* VariableID:4567:4620  */
+    --hi-neutral-icon:         #2A2A2A;  /* VariableID:4465:4589  */
+    --hi-yellow-icon:          #5C3500;  /* VariableID:8539:40814 */
+    --hi-lime-icon:            #3E5C0A;  /* VariableID:8539:40885 */
+    --hi-purple-icon:          #2C075C;  /* VariableID:8539:40955 */
+    --hi-lightblue-icon:       #02445A;  /* VariableID:8540:41021 */
+    /* Icon / Default (softer) variant */
+    --hi-informative-icon-soft: #2173FF;
+    --hi-success-icon-soft:     #059669;
+    --hi-alert-icon-soft:       #D97706;
+    --hi-error-icon-soft:       #DC2626;
+    --hi-neutral-icon-soft:     #6B7280;
+    --hi-yellow-icon-soft:      #CA8A04;
+    --hi-lime-icon-soft:        #65A30D;
+    --hi-purple-icon-soft:      #7C3AED;
+    --hi-lightblue-icon-soft:   #0284C7;
+
+    /* ── Checkbox — light ────────────────────────────── */
+    --checkbox-ripple:           rgba(242,242,242,0.80);  /* hover bg unchecked  */
+    --checkbox-ripple-checked:   rgba(233,241,255,1.00);  /* hover bg checked    */
+    --checkbox-checked-dim:      #80afff;                 /* checked + disabled  */
+
+    /* ── Toggle — light ──────────────────────────────── */
+    --toggle-track-off:          rgba(242,242,242,1.00);  /* Surface/Neutral/Subtle light  */
+    --toggle-border-off:         rgba(92,92,92,1.00);     /* Border/Neutral/Default light  */
+    --toggle-thumb-off:          rgba(42,42,42,1.00);     /* Text/Subtitle light           */
+    --toggle-track-on:           #2173ff;                 /* Border/Primary/Default light  */
+    --toggle-thumb-on:           #ffffff;
+    --toggle-track-off-disabled: rgba(242,242,242,1.00);
+    --toggle-border-off-disabled: rgba(186,186,186,1.00);
+    --toggle-track-on-disabled:  #80afff;
+    --toggle-thumb-disabled:     rgba(186,186,186,1.00);
+
+    /* ── Table — light ───────────────────────────────── */
+    /* Source: 👩‍💻 Developer Reference — Table (node 13859:2959) + component fillVars inspection       */
+    /*   Surface/Neutral/White light    = #ffffff         → row bg (header + body use same token)     */
+    /*   Surface/Neutral/Default light  = #f2f2f2         → checkbox / row hover bg                   */
+    /*   Surface/Primary/More Subtle lt = #f6f9ff         → selected row bg (rgba(246,249,255,1))     */
+    /*   Text/Subtitle light            = #2a2a2a         → header column text (darker, hierarchy)    */
+    /*   Text/Body light                = #5c5c5c         → row cell text                             */
+    --table-bg:               #ffffff;                  /* Surface/Neutral/White light                */
+    --table-header-bg:        #ffffff;                  /* Surface/Neutral/White light (same as body) */
+    --table-border:           rgba(0,0,0,0.08);         /* Border/Neutral/Lighter light               */
+    --table-header-text:      #2a2a2a;                  /* Text/Subtitle light = Gray/700             */
+    --table-cell-text:        #5c5c5c;                  /* Text/Body light = Gray/600                 */
+    --table-row-hover-bg:     #f2f2f2;                  /* Surface/Neutral/Default light              */
+    --table-row-selected-bg:  rgba(246,249,255,1.00);   /* Surface/Primary/More Subtle light = #f6f9ff */
+
+    /* ── Topbar — light ────────────────────────────────────────── */
+    /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Dev Reference 12706:849 + Light Mode frame 12684:252030 */
+    --topbar-text:             rgba(42,42,42,1.00);      /* Text/Subtitle light           = Gray/700   */
+    --topbar-text-secondary:   rgba(92,92,92,1.00);      /* Text/Body light               = Gray/600   */
+    --topbar-icon:             rgba(92,92,92,1.00);      /* Icon/Neutral/Dark light       = Gray/600   */
+    --topbar-workspace-border: rgba(233,241,255,1.00);   /* Border/Primary/Subtle light   = #e9f1ff    */
+    --topbar-divider:          rgba(242,242,242,1.00);   /* Border/Neutral/Subtle light   = #f2f2f2    */
+    --topbar-btn-hover-bg:     rgba(250,250,250,1.00);   /* Surface/Neutral/Hover light   = #fafafa    */
+    --topbar-btn-focus-bg:     rgba(242,242,242,1.00);   /* Surface/Neutral/Default light = #f2f2f2    */
+    --topbar-search-bg:        rgba(255,255,255,1.00);   /* Surface/Neutral/White light   = #ffffff    */
+    --topbar-search-border:    rgba(186,186,186,1.00);   /* Border/Neutral/Lighter light  = Gray/500   */
+    --topbar-badge-bg:         rgba(211,47,47,1.00);     /* Error/Notification light      = #d32f2f    */
+    --topbar-avatar-ring:      rgba(128,175,255,1.00);   /* Border/Primary/Lighter light  = #80afff    */
+    --topbar-zone-hover-bg:    rgba(0,0,0,0.03);         /* Zone frame hover bg light                   */
+    --topbar-zone-hover-bd:    rgba(43,127,255,0.45);    /* Zone frame hover border light               */
+    --topbar-menu-bg:          rgba(255,255,255,1.00);   /* Dropdown bg light                           */
+    --topbar-menu-border:      rgba(0,0,0,0.10);         /* Dropdown border light                       */
+    --topbar-menu-item-hover:  rgba(0,0,0,0.04);         /* Menu item hover light                       */
+    --topbar-menu-item-sel:    rgba(233,241,255,1.00);   /* Menu item selected light                    */
+    --topbar-menu-text:        rgba(42,42,42,1.00);      /* Menu item label light                       */
+    --topbar-menu-text-dim:    rgba(92,92,92,1.00);      /* Menu secondary text light                   */
+    --topbar-menu-tag-act-bg:  rgba(233,241,255,1.00);   /* "Active" workspace tag bg light             */
+    --topbar-menu-tag-act-fg:  rgba(43,127,255,1.00);    /* "Active" workspace tag text light           */
+    --topbar-menu-tag-bg:      rgba(0,0,0,0.06);         /* Default workspace tag bg light              */
+    --topbar-menu-tag-fg:      rgba(92,92,92,1.00);      /* Default workspace tag text light            */
   }
 
   html {
@@ -72,12 +651,70 @@
     -webkit-font-smoothing: antialiased;
     @apply font-sans;
   }
+}
+
+/*
+ * Button text-color override — outside @layer + !important.
+ * Primary, Warning, Positive, and Main Action always use Text/Negative (#ffffff)
+ * in both Primary and Dark DS modes. These variants use !text-white in the component
+ * (Tailwind !important modifier). This rule is a belt-and-suspenders backup.
+ */
+.\!text-white[data-slot="button"] {
+  color: #ffffff !important;
+}
+
+/*
+ * Card Container — Dashed variant
+ * CSS border-dashed uses browser-determined dash lengths (~3× border-width).
+ * To match the DS exactly (dashPattern [8, 8] at 0.5px weight), we use
+ * repeating-linear-gradient per side. CSS variables are supported here.
+ * Note: gradients don't curve with border-radius — corners fill in slightly,
+ * which is visually identical to how CSS border-dashed handles corners.
+ */
+.card-dashed-border {
+  border: none !important;
+  background-image:
+    repeating-linear-gradient(to right, var(--card-default-border) 0px, var(--card-default-border) 8px, transparent 8px, transparent 16px),
+    repeating-linear-gradient(to right, var(--card-default-border) 0px, var(--card-default-border) 8px, transparent 8px, transparent 16px),
+    repeating-linear-gradient(to bottom, var(--card-default-border) 0px, var(--card-default-border) 8px, transparent 8px, transparent 16px),
+    repeating-linear-gradient(to bottom, var(--card-default-border) 0px, var(--card-default-border) 8px, transparent 8px, transparent 16px);
+  background-size: 100% 0.5px, 100% 0.5px, 0.5px 100%, 0.5px 100%;
+  background-position: 0 0, 0 100%, 100% 0, 0 0;
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+}
+
+.card-dashed-border:hover {
+  background-image:
+    repeating-linear-gradient(to right, var(--card-default-hover-bd) 0px, var(--card-default-hover-bd) 8px, transparent 8px, transparent 16px),
+    repeating-linear-gradient(to right, var(--card-default-hover-bd) 0px, var(--card-default-hover-bd) 8px, transparent 8px, transparent 16px),
+    repeating-linear-gradient(to bottom, var(--card-default-hover-bd) 0px, var(--card-default-hover-bd) 8px, transparent 8px, transparent 16px),
+    repeating-linear-gradient(to bottom, var(--card-default-hover-bd) 0px, var(--card-default-hover-bd) 8px, transparent 8px, transparent 16px);
+  background-size: 100% 1px, 100% 1px, 1px 100%, 1px 100%;
+}
+
+.card-dashed-border[data-selected="true"] {
+  background-image:
+    repeating-linear-gradient(to right, var(--card-default-selected-bd) 0px, var(--card-default-selected-bd) 8px, transparent 8px, transparent 16px),
+    repeating-linear-gradient(to right, var(--card-default-selected-bd) 0px, var(--card-default-selected-bd) 8px, transparent 8px, transparent 16px),
+    repeating-linear-gradient(to bottom, var(--card-default-selected-bd) 0px, var(--card-default-selected-bd) 8px, transparent 8px, transparent 16px),
+    repeating-linear-gradient(to bottom, var(--card-default-selected-bd) 0px, var(--card-default-selected-bd) 8px, transparent 8px, transparent 16px);
+  background-size: 100% 1px, 100% 1px, 1px 100%, 1px 100%;
+}
+
+@layer base {
 
   body {
-    @apply bg-canvas text-text-title;
+    background-color: var(--canvas);
+    color: var(--foreground);
   }
 
   * {
-    border-color: #ffffff1a; /* border/neutral/default */
+    border-color: var(--border);
   }
+
+  /* DS-styled scrollbar for textarea — colors from Surface/Neutral/Default|Emphasis */
+  textarea::-webkit-scrollbar        { width: 4px; }
+  textarea::-webkit-scrollbar-track  { background: var(--field-scrollbar-track); border-radius: 100px; }
+  textarea::-webkit-scrollbar-thumb  { background: var(--field-scrollbar-thumb); border-radius: 100px; }
+  textarea::-webkit-scrollbar-thumb:hover { background: var(--field-border-hover); }
 }
