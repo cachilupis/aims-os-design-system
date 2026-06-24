@@ -333,6 +333,17 @@
     --topbar-menu-tag-act-fg:  rgba(43,127,255,1.00);    /* "Active" workspace tag text dark            */
     --topbar-menu-tag-bg:      rgba(255,255,255,0.08);   /* Default workspace tag bg dark               */
     --topbar-menu-tag-fg:      rgba(255,255,255,0.45);   /* Default workspace tag text dark             */
+
+    /* ── Sidebar — dark ──────────────────────────────────────────────────── */
+    /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Sidebar page · variable bindings resolved */
+    --sb-bg:               rgba(15,23,43,1);          /* Surface/Neutral/Black dark   → #0F172B       */
+    --sb-icon-default:     rgba(128,175,255,0.90);    /* Icon/Primary/Lighter dark    → #80AFFF 90%   */
+    --sb-icon-active:      rgba(255,255,255,0.70);    /* Icon/Neutral/Light dark      → White/70      */
+    --sb-text:             rgba(255,255,255,1);       /* Text/Negative dark           → White/100     */
+    --sb-row-hover:        rgba(255,255,255,0.20);    /* Surface/Neutral/Darker dark  → White/20      */
+    --sb-icon-hover-bg:    rgba(15,23,43,1);          /* Surface/Neutral/Black dark   (icon hover bg) */
+    --sb-separator:        rgba(255,255,255,0.15);    /* Border/Neutral/Lighter dark  → White/15      */
+    --sb-chevron-active:   rgba(233,241,255,1);       /* Icon/Primary/Subtle          → Primary/300   */
   }
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
@@ -644,6 +655,17 @@
     --topbar-menu-tag-act-fg:  rgba(43,127,255,1.00);    /* "Active" workspace tag text light           */
     --topbar-menu-tag-bg:      rgba(0,0,0,0.06);         /* Default workspace tag bg light              */
     --topbar-menu-tag-fg:      rgba(92,92,92,1.00);      /* Default workspace tag text light            */
+
+    /* ── Sidebar — light ─────────────────────────────────────────────────── */
+    /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Sidebar page · variable bindings resolved */
+    --sb-bg:               rgba(0,0,0,1);             /* Surface/Neutral/Black light  → #000000       */
+    --sb-icon-default:     rgba(128,175,255,1);       /* Icon/Primary/Lighter light   → #80AFFF       */
+    --sb-icon-active:      rgba(255,255,255,1);       /* Icon/Neutral/Light light     → White/100     */
+    --sb-text:             rgba(255,255,255,1);       /* Text/Negative light          → White/100     */
+    --sb-row-hover:        rgba(42,42,42,1);          /* Surface/Neutral/Darker light → #2A2A2A       */
+    --sb-icon-hover-bg:    rgba(0,0,0,1);             /* Surface/Neutral/Black light  (icon hover bg) */
+    --sb-separator:        rgba(186,186,186,1);       /* Border/Neutral/Lighter light → Gray/500      */
+    --sb-chevron-active:   rgba(233,241,255,1);       /* Icon/Primary/Subtle          → Primary/300   */
   }
 
   html {
