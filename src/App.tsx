@@ -1589,14 +1589,385 @@ function EvidenceCard({ badge, badgeColor, title, what, says, why, links }: {
   )
 }
 
+// ── Progress tab data ──────────────────────────────────────────────────────
+
+const DONE_COMPONENTS = [
+  { name: "Button",        complexity: "Complex", hours: 4,  note: "8 variants · 3 sizes · 5 states · icon positions" },
+  { name: "Checkbox",      complexity: "Simple",  hours: 2,  note: "2 sizes · checked / indeterminate / disabled" },
+  { name: "Input",         complexity: "Medium",  hours: 3,  note: "2 sizes · error · supporting text · leading icon" },
+  { name: "Textarea",      complexity: "Simple",  hours: 2,  note: "resize handle · character count · error state" },
+  { name: "Select",        complexity: "Medium",  hours: 3,  note: "dropdown list · placeholder · error · disabled" },
+  { name: "Toggle",        complexity: "Simple",  hours: 2,  note: "2 sizes · on/off labels · disabled" },
+  { name: "Tag",           complexity: "Simple",  hours: 2,  note: "10 semantic colors · 2 sizes · removable" },
+  { name: "MenuItem",      complexity: "Medium",  hours: 3,  note: "leading icon · avatar · badge · shortcut · 2 sizes" },
+  { name: "HighlightIcon", complexity: "Simple",  hours: 2,  note: "6 semantic colors · round / square shape" },
+  { name: "CardContainer", complexity: "Simple",  hours: 2,  note: "3 elevation levels · dark/light surfaces" },
+  { name: "Table",         complexity: "Complex", hours: 6,  note: "2 sizes · selectable rows · 5 cell helpers" },
+  { name: "Topbar",        complexity: "Complex", hours: 7,  note: "2 variants · workspace dropdown · profile menu · IA button" },
+] as const
+
+const REMAINING_PHASES = [
+  {
+    phase: "Navigation & Layout",
+    status: "in-progress" as const,
+    items: [
+      { name: "Sidebar",        complexity: "Complex", hours: 6 },
+      { name: "Breadcrumb",     complexity: "Simple",  hours: 2 },
+      { name: "Tabs",           complexity: "Medium",  hours: 3 },
+      { name: "Pagination",     complexity: "Medium",  hours: 3 },
+    ],
+  },
+  {
+    phase: "Feedback & Overlays",
+    status: "pending" as const,
+    items: [
+      { name: "Modal / Dialog",   complexity: "Complex", hours: 5 },
+      { name: "Toast",            complexity: "Medium",  hours: 3 },
+      { name: "Tooltip",          complexity: "Medium",  hours: 3 },
+      { name: "Alert / Banner",   complexity: "Simple",  hours: 2 },
+      { name: "Progress Bar",     complexity: "Simple",  hours: 2 },
+      { name: "Skeleton Loader",  complexity: "Medium",  hours: 3 },
+    ],
+  },
+  {
+    phase: "Input & Selection",
+    status: "pending" as const,
+    items: [
+      { name: "Radio Button",   complexity: "Simple",  hours: 2 },
+      { name: "Slider",         complexity: "Medium",  hours: 3 },
+      { name: "Date Picker",    complexity: "Complex", hours: 7 },
+      { name: "File Upload",    complexity: "Complex", hours: 5 },
+      { name: "Multi-select",   complexity: "Complex", hours: 5 },
+      { name: "Search Field",   complexity: "Medium",  hours: 3 },
+    ],
+  },
+  {
+    phase: "Data & Display",
+    status: "pending" as const,
+    items: [
+      { name: "Metric Card",  complexity: "Medium",  hours: 3 },
+      { name: "Empty State",  complexity: "Medium",  hours: 3 },
+      { name: "Avatar",       complexity: "Simple",  hours: 2 },
+      { name: "Badge",        complexity: "Simple",  hours: 2 },
+      { name: "Data Widget",  complexity: "Complex", hours: 5 },
+    ],
+  },
+  {
+    phase: "Workflow & Nodes",
+    status: "pending" as const,
+    items: [
+      { name: "Node Config / Text Input",    complexity: "Medium",  hours: 3 },
+      { name: "Node Config / Select",        complexity: "Medium",  hours: 3 },
+      { name: "Node Config / Toggle",        complexity: "Simple",  hours: 2 },
+      { name: "Node Config / Slider",        complexity: "Medium",  hours: 3 },
+      { name: "Node Config / Code Block",    complexity: "Complex", hours: 5 },
+      { name: "Node Config / File Input",    complexity: "Complex", hours: 5 },
+      { name: "Node Config / Multi-Select",  complexity: "Complex", hours: 5 },
+      { name: "Filters Slideout",            complexity: "Complex", hours: 6 },
+      { name: "Workflow Builder UI",         complexity: "Complex", hours: 8 },
+    ],
+  },
+  {
+    phase: "Remaining DS Pages",
+    status: "pending" as const,
+    items: [
+      { name: "Remaining ~18 components", complexity: "Mixed", hours: 65 },
+    ],
+  },
+] as const
+
+function ProgressTab() {
+  const totalDone      = DONE_COMPONENTS.length                                  // 12
+  const totalRemaining = REMAINING_PHASES.reduce((s, p) => s + p.items.length, 0)
+  const totalAll       = totalDone + totalRemaining                              // ~53
+
+  const hoursInvested  = DONE_COMPONENTS.reduce((s, c) => s + c.hours, 0)       // 38h
+  const hoursRemaining = REMAINING_PHASES.reduce(
+    (s, p) => s + p.items.reduce((ps, i) => ps + i.hours, 0), 0
+  )
+  const hoursTotal     = hoursInvested + hoursRemaining
+
+  const pctDone        = Math.round((totalDone / totalAll) * 100)
+
+  const complexityColor: Record<string, string> = {
+    Simple:  "var(--tag-success-bg)",
+    Medium:  "var(--tag-informative-bg)",
+    Complex: "var(--tag-purple-bg)",
+    Mixed:   "var(--tag-alert-bg)",
+  }
+  const complexityText: Record<string, string> = {
+    Simple:  "var(--tag-success-fg)",
+    Medium:  "var(--tag-informative-fg)",
+    Complex: "var(--tag-purple-fg)",
+    Mixed:   "var(--tag-alert-fg)",
+  }
+
+  const BUILD_STEPS = [
+    { step: "1", label: "DS Inspection",      time: "30–45 min", desc: "Read all variants, states, spacing, tokens directly from Figma via MCP API. Verify dark mode values." },
+    { step: "2", label: "Token Extraction",   time: "20–30 min", desc: "Map every DS variable to a CSS custom property. Verify light and dark values. Add to index.css." },
+    { step: "3", label: "Implementation",     time: "60–90 min", desc: "TypeScript component with all variants, states, sub-components, and accessibility attributes." },
+    { step: "4", label: "Documentation Page", time: "45–60 min", desc: "4-tab page: Overview · Variants · Playground (live controls) · Reference (token table + code snippet)." },
+    { step: "5", label: "QA & Iteration",     time: "20–30 min", desc: "Visual comparison against DS, spacing corrections, edge cases, dark/light mode verification." },
+  ]
+
+  return (
+    <div className="flex flex-col gap-[40px]">
+
+      {/* ── Hero stats ─────────────────────────────────────────── */}
+      <div className="flex flex-col gap-[16px]">
+        <div>
+          <h2 className="text-[20px] font-semibold text-[var(--foreground)]">Build Progress</h2>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            Real-time tracking of every component — time invested, complexity, and what remains.
+            This section exists to set honest expectations: a faithful design system implementation is
+            a significant engineering effort, not a one-time shortcut.
+          </p>
+        </div>
+
+        {/* 4 stat cards */}
+        <div className="grid grid-cols-4 gap-[12px]">
+          {[
+            { label: "Components built",    value: `${totalDone}`,          sub: `of ~${totalAll} total`,         color: "var(--tag-success-bg)",      textColor: "var(--tag-success-fg)" },
+            { label: "Overall progress",    value: `${pctDone}%`,           sub: "by component count",            color: "var(--tag-informative-bg)",  textColor: "var(--tag-informative-fg)" },
+            { label: "Hours invested",      value: `~${hoursInvested}h`,    sub: "Figma inspection + dev + docs",  color: "var(--tag-purple-bg)",        textColor: "var(--tag-purple-fg)" },
+            { label: "Hours remaining",     value: `~${hoursRemaining}h`,   sub: `~${hoursTotal}h total estimated`, color: "var(--tag-alert-bg)",         textColor: "var(--tag-alert-fg)" },
+          ].map(s => (
+            <div key={s.label} className="rounded-[10px] p-[16px] flex flex-col gap-[6px]"
+              style={{ background: s.color }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+                style={{ color: s.textColor }}>{s.label}</p>
+              <p className="text-[28px] font-bold leading-none" style={{ color: s.textColor }}>{s.value}</p>
+              <p className="text-[11px]" style={{ color: s.textColor, opacity: 0.75 }}>{s.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Progress bar */}
+        <div className="flex flex-col gap-[8px]">
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] font-semibold text-[var(--foreground)]">
+              {totalDone} of ~{totalAll} components complete
+            </span>
+            <span className="text-[12px] text-[var(--field-supporting)]">{pctDone}%</span>
+          </div>
+          <div className="w-full h-[8px] rounded-full overflow-hidden" style={{ background: "var(--field-border)" }}>
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${pctDone}%`,
+                background: "linear-gradient(90deg, var(--primary) 0%, rgba(9,226,171,1) 100%)",
+              }}
+            />
+          </div>
+          <p className="text-[11px] text-[var(--field-supporting)]">
+            Note: component count is an estimate. The DS has 57 documented pages; several pages contain
+            multiple component sets, bringing the realistic total to ~{totalAll} buildable components.
+          </p>
+        </div>
+      </div>
+
+      {/* ── What each component actually requires ──────────────── */}
+      <div className="flex flex-col gap-[16px]">
+        <div>
+          <h2 className="text-[18px] font-semibold text-[var(--foreground)]">What building one component actually requires</h2>
+          <p className="text-[13px] text-[var(--field-supporting)] mt-[4px]">
+            Every component goes through these 5 steps — regardless of how "simple" it looks visually.
+            This is why a component cannot be done in 10 minutes.
+          </p>
+        </div>
+        <div className="flex flex-col gap-[2px]">
+          {BUILD_STEPS.map((s, i) => (
+            <div key={s.step}
+              className="flex items-start gap-[16px] p-[14px] rounded-[8px]"
+              style={{ background: i % 2 === 0 ? "var(--surface-raised)" : "transparent" }}
+            >
+              <div className="flex items-center justify-center shrink-0 w-[24px] h-[24px] rounded-full text-[11px] font-bold"
+                style={{ background: "var(--primary)", color: "#fff" }}>
+                {s.step}
+              </div>
+              <div className="flex-1 flex flex-col gap-[2px]">
+                <div className="flex items-center gap-[10px]">
+                  <span className="text-[13px] font-semibold text-[var(--foreground)]">{s.label}</span>
+                  <span className="text-[11px] font-medium px-[8px] py-[2px] rounded-[4px]"
+                    style={{ background: "var(--tag-neutral-bg)", color: "var(--tag-neutral-fg)" }}>
+                    {s.time}
+                  </span>
+                </div>
+                <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-[8px] p-[14px] flex items-start gap-[12px]"
+          style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bg)" }}>
+          <span className="text-[18px]" style={{ lineHeight: 1 }}>⏱</span>
+          <div>
+            <p className="text-[13px] font-semibold" style={{ color: "var(--primary)" }}>
+              Average per component: 3–7 hours
+            </p>
+            <p className="text-[12px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+              Simple components (Toggle, Checkbox) take ~2–3h. Medium components (Input, Select) take ~3–4h.
+              Complex components with multiple sub-parts (Table, Topbar, Sidebar) take 5–8h each.
+              This is design + engineering work happening simultaneously — not just copy-pasting styles.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Completed components ────────────────────────────────── */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[18px] font-semibold text-[var(--foreground)]">
+          Completed — {totalDone} components · ~{hoursInvested}h invested
+        </h2>
+        <div className="rounded-[10px] overflow-hidden border border-[var(--table-border)]">
+          {/* Header */}
+          <div className="grid px-[16px] py-[10px] border-b border-[var(--table-border)]"
+            style={{ gridTemplateColumns: "1fr 100px 60px", background: "var(--table-header-bg)" }}>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--table-header-text)]">Component</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--table-header-text)]">Complexity</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--table-header-text)] text-right">Hours</span>
+          </div>
+          {DONE_COMPONENTS.map((c, i) => (
+            <div key={c.name}
+              className="grid px-[16px] py-[10px] items-center"
+              style={{
+                gridTemplateColumns: "1fr 100px 60px",
+                borderBottom: i < DONE_COMPONENTS.length - 1 ? "1px solid var(--table-border)" : "none",
+                background: "var(--table-bg)",
+              }}>
+              <div className="flex flex-col gap-[2px]">
+                <div className="flex items-center gap-[8px]">
+                  <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: "var(--tag-success-fg)" }} />
+                  <span className="text-[13px] font-medium text-[var(--foreground)]">{c.name}</span>
+                </div>
+                <span className="text-[11px] text-[var(--field-supporting)] pl-[14px]">{c.note}</span>
+              </div>
+              <span className="text-[11px] font-medium px-[8px] py-[3px] rounded-[4px] w-fit"
+                style={{ background: complexityColor[c.complexity], color: complexityText[c.complexity] }}>
+                {c.complexity}
+              </span>
+              <span className="text-[13px] font-semibold text-right" style={{ color: "var(--foreground)" }}>
+                {c.hours}h
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Remaining by phase ──────────────────────────────────── */}
+      <div className="flex flex-col gap-[16px]">
+        <h2 className="text-[18px] font-semibold text-[var(--foreground)]">
+          Remaining — ~{totalRemaining} components · ~{hoursRemaining}h estimated
+        </h2>
+        <div className="flex flex-col gap-[12px]">
+          {REMAINING_PHASES.map(phase => {
+            const phaseHours = phase.items.reduce((s, i) => s + i.hours, 0)
+            const isNext = phase.status === "in-progress"
+            return (
+              <div key={phase.phase} className="rounded-[10px] overflow-hidden border"
+                style={{ borderColor: isNext ? "var(--primary)" : "var(--table-border)" }}>
+                {/* Phase header */}
+                <div className="flex items-center justify-between px-[16px] py-[10px]"
+                  style={{ background: isNext ? "var(--tag-informative-bg)" : "var(--table-header-bg)" }}>
+                  <div className="flex items-center gap-[8px]">
+                    <span className="text-[11px] font-semibold px-[8px] py-[2px] rounded-[4px]"
+                      style={{
+                        background: isNext ? "var(--primary)" : "var(--tag-neutral-bg)",
+                        color: isNext ? "#fff" : "var(--tag-neutral-fg)",
+                      }}>
+                      {isNext ? "▶ Up Next" : "Pending"}
+                    </span>
+                    <span className="text-[13px] font-semibold text-[var(--foreground)]">{phase.phase}</span>
+                  </div>
+                  <span className="text-[12px] text-[var(--field-supporting)]">
+                    {phase.items.length} components · ~{phaseHours}h
+                  </span>
+                </div>
+                {/* Phase items */}
+                <div className="divide-y divide-[var(--table-border)]">
+                  {phase.items.map(item => (
+                    <div key={item.name} className="flex items-center justify-between px-[16px] py-[8px]"
+                      style={{ background: "var(--table-bg)" }}>
+                      <div className="flex items-center gap-[8px]">
+                        <span className="w-[6px] h-[6px] rounded-full shrink-0 opacity-30"
+                          style={{ background: "var(--foreground)" }} />
+                        <span className="text-[13px] text-[var(--table-cell-text)]">{item.name}</span>
+                      </div>
+                      <div className="flex items-center gap-[8px]">
+                        <span className="text-[11px] font-medium px-[6px] py-[2px] rounded-[4px]"
+                          style={{ background: complexityColor[item.complexity], color: complexityText[item.complexity] }}>
+                          {item.complexity}
+                        </span>
+                        <span className="text-[12px] font-semibold w-[32px] text-right"
+                          style={{ color: "var(--field-supporting)" }}>
+                          ~{item.hours}h
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Timeline reality ────────────────────────────────────── */}
+      <div className="rounded-[10px] p-[20px] flex flex-col gap-[14px]"
+        style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)" }}>
+        <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Realistic timeline estimate</h2>
+        <div className="grid grid-cols-3 gap-[12px]">
+          {[
+            {
+              label: "Focused sessions / week",
+              value: "3–5",
+              sub: "~2–3h per session",
+              note: "Parallel with normal design work",
+            },
+            {
+              label: "Hours available / week",
+              value: "~8–12h",
+              sub: `of ~${hoursRemaining}h remaining`,
+              note: "Figma inspection + build + review",
+            },
+            {
+              label: "Estimated completion",
+              value: "~5–6 months",
+              sub: "for a complete, production-ready DS",
+              note: "Adjusted as velocity increases",
+            },
+          ].map(t => (
+            <div key={t.label} className="flex flex-col gap-[4px] p-[14px] rounded-[8px]"
+              style={{ background: "var(--card-bg)", border: "1px solid var(--table-border)" }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[var(--field-supporting)]">{t.label}</p>
+              <p className="text-[24px] font-bold text-[var(--foreground)]">{t.value}</p>
+              <p className="text-[11px] text-[var(--field-supporting)]">{t.sub}</p>
+              <p className="text-[10px] mt-[4px]" style={{ color: "var(--primary)", opacity: 0.8 }}>{t.note}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-[12px] text-[var(--field-supporting)] leading-[1.6] pt-[4px]" style={{ borderTop: "1px solid var(--table-border)" }}>
+          <strong className="text-[var(--foreground)]">Why this timeline is non-negotiable:</strong>{" "}
+          Each component is not just a visual copy — it requires reading the original Figma DS via API,
+          extracting exact tokens, implementing all interactive states in TypeScript, and documenting
+          it for the team to use. Rushing this produces components that look right but break under real
+          usage. The investment now removes the need to fix inconsistencies in every future prototype.
+        </p>
+      </div>
+
+    </div>
+  )
+}
+
 function HomePage() {
-  const [tab, setTab] = useState<"overview" | "problem" | "solution" | "evidence">("overview")
+  const [tab, setTab] = useState<"overview" | "problem" | "solution" | "evidence" | "progress">("overview")
 
   const homeTabs = [
     { id: "overview",  label: "Overview" },
     { id: "problem",   label: "The Problem" },
     { id: "solution",  label: "The Solution" },
     { id: "evidence",  label: "Evidence" },
+    { id: "progress",  label: "Progress & Time" },
   ] as const
 
   return (
@@ -2009,6 +2380,8 @@ function HomePage() {
                   </DocSection>
           </>
         )}
+
+        {tab === "progress" && <ProgressTab />}
 
       </div>
     </div>
