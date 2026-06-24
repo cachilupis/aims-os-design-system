@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
 import { ChevronDown, Search, Menu, Settings, LogOut, HelpCircle, X, SlidersHorizontal, LayoutGrid, Sparkle, Radio, MessageSquare, Users, Shield, Bookmark, Briefcase, Plus, UserPlus, Zap, Globe, Clock } from "lucide-react"
+import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { cn } from "@/lib/utils"
 
 /**
@@ -300,9 +301,9 @@ function RightMenu({
 
 // ── Global Search ─────────────────────────────────────────────────────────
 // DS: Figma 15394:15568 · Global Search - menu COMPONENT_SET · 700×600px
-// 5 variants: Default · No results · Search results scroll · Search few results · Loading
-// Positioned: fixed overlay, centered ~10% from top, backdrop rgba(0,0,0,0.45)
-// Always light-toned panel (white/near-white bg) regardless of app theme.
+// Surface: rgba(255/22,255/22,255/22,0.92) + backdrop-filter:blur(16px) — frosted floating card
+// Filters card: Figma 15396:25505 · same blur spec · radius 8
+// 5 variants: Default · No results · Search results · Few results · Loading
 
 type SearchFilter = "all" | "agents" | "channels" | "conversations" | "people" | "policies" | "tickets" | "workspaces"
 
@@ -323,6 +324,18 @@ export type GlobalSearchProps = {
   onResultClick?:  (item: SearchResultItem) => void
 }
 
+// DS type → HighlightIcon variant + lucide icon
+const TYPE_HI: Record<string, { variant: HighlightIconVariant; Icon: React.FC<{ size: number; strokeWidth: number }> }> = {
+  agents:        { variant: "purple",     Icon: Sparkle        },
+  network:       { variant: "informative",Icon: Globe          },
+  tickets:       { variant: "alert",      Icon: Bookmark       },
+  policies:      { variant: "success",    Icon: Shield         },
+  people:        { variant: "informative",Icon: Users          },
+  channels:      { variant: "light-blue", Icon: Radio          },
+  conversations: { variant: "informative",Icon: MessageSquare  },
+  workspaces:    { variant: "neutral",    Icon: Briefcase      },
+}
+
 const SEARCH_FILTERS: { id: SearchFilter; label: string; Icon: React.FC<{ size: number; strokeWidth: number }> }[] = [
   { id: "all",           label: "All",           Icon: LayoutGrid    },
   { id: "agents",        label: "Agents",        Icon: Sparkle       },
@@ -334,46 +347,133 @@ const SEARCH_FILTERS: { id: SearchFilter; label: string; Icon: React.FC<{ size: 
   { id: "workspaces",    label: "Workspaces",    Icon: Briefcase     },
 ]
 
-const TYPE_ICON: Record<string, { Icon: React.FC<{ size: number; strokeWidth: number }>; bg: string; color: string }> = {
-  agents:        { Icon: Sparkle,       bg: "rgba(237,233,254,1)", color: "rgba(109,40,217,1)"  },
-  network:       { Icon: Globe,         bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
-  tickets:       { Icon: Bookmark,      bg: "rgba(254,243,199,1)", color: "rgba(180,83,9,1)"    },
-  policies:      { Icon: Shield,        bg: "rgba(220,252,231,1)", color: "rgba(21,128,61,1)"   },
-  people:        { Icon: Users,         bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
-  channels:      { Icon: Radio,         bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
-  conversations: { Icon: MessageSquare, bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
-  workspaces:    { Icon: Briefcase,     bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
-}
-
-const DEFAULT_SUGGESTED_ACTIONS = [
-  { Icon: Plus,    label: "Create work item" },
-  { Icon: UserPlus, label: "Invite member"   },
-  { Icon: Zap,     label: "New automation"   },
+const DEFAULT_SUGGESTED: { variant: HighlightIconVariant; Icon: React.FC<{ size: number; strokeWidth: number }>; label: string }[] = [
+  { variant: "informative", Icon: Plus,    label: "Create work item" },
+  { variant: "success",     Icon: UserPlus,label: "Invite member"    },
+  { variant: "purple",      Icon: Zap,     label: "New automation"   },
 ]
 
 const DEFAULT_RECENT: SearchResultItem[] = [
-  { id: "1", title: "Lead triage",                            subtitle: "Network · 8 agents · 96.6%",          type: "network",  timeAgo: "1h ago"  },
-  { id: "2", title: "Sammy - Service Desk",                   subtitle: "Agent · in workspace",                type: "agents",   timeAgo: "2h ago"  },
-  { id: "3", title: "Multi-tenant agent rollout - PRD-459",   subtitle: "Ticket · open · Edgarda Sierra",      type: "tickets",  timeAgo: "3h ago"  },
-  { id: "4", title: "PII redaction - P-2025",                 subtitle: "Policy · draft · Miguel Torres",      type: "policies", timeAgo: "3h ago"  },
-  { id: "5", title: "Thomas Gonzales",                        subtitle: "Person · Owner · thomas@aimsos.ai",   type: "people",   timeAgo: "5h ago"  },
+  { id: "1", title: "Lead triage",                          subtitle: "Network · 8 agents · 96.6%",        type: "network",  timeAgo: "1h ago" },
+  { id: "2", title: "Sammy - Service Desk",                 subtitle: "Agent · in workspace",              type: "agents",   timeAgo: "2h ago" },
+  { id: "3", title: "Multi-tenant agent rollout · PRD-459", subtitle: "Ticket · open · Edgarda Sierra",    type: "tickets",  timeAgo: "3h ago" },
+  { id: "4", title: "PII redaction · P-2025",               subtitle: "Policy · draft · Miguel Torres",    type: "policies", timeAgo: "3h ago" },
+  { id: "5", title: "Thomas Gonzales",                      subtitle: "Person · Owner · thomas@aimsos.ai", type: "people",   timeAgo: "5h ago" },
 ]
+
+// ── Shared frosted-glass panel style ──────────────────────────────────────
+// DS spec: fill rgba(255,255,255,0.92) + BACKGROUND_BLUR radius:16 (dark: rgba(22,22,22,0.92))
+const PANEL_STYLE: React.CSSProperties = {
+  background:    "var(--gs-bg)",
+  backdropFilter:"blur(16px)",
+  WebkitBackdropFilter: "blur(16px)",
+  border:        "1px solid var(--gs-border)",
+  borderRadius:  8,
+}
+
+// ── Filters Card ─────────────────────────────────────────────────────────
+// DS: Figma 15396:25505 · 298×320px · same frosted surface · pill toggle chips
+// Sections: Type, Owner, Status — selected chip: filled blue, unselected: outline pill
+
+const FILTER_SECTIONS = [
+  { label: "Type",   options: ["Agents","Networks","Tickets","Policies","People","Channels","Conversations","Workspaces"] },
+  { label: "Owner",  options: ["Me","Edgardo Sierra","Sarah Chen","Marcus Reid"] },
+  { label: "Status", options: ["Active","Draft","Open","In Progress","Done","Archived"] },
+]
+
+function FiltersCard({ onClose, onApply }: { onClose: () => void; onApply?: (sel: Record<string, string[]>) => void }) {
+  const [selected, setSelected] = useState<Record<string, string[]>>({})
+
+  const toggle = (section: string, option: string) => {
+    setSelected(prev => {
+      const cur = prev[section] ?? []
+      return { ...prev, [section]: cur.includes(option) ? cur.filter(o => o !== option) : [...cur, option] }
+    })
+  }
+
+  const hasAny = Object.values(selected).some(arr => arr.length > 0)
+
+  return (
+    <div
+      className="absolute left-0 top-[calc(100%+4px)] z-[110] flex flex-col"
+      style={{ ...PANEL_STYLE, width: 298, boxShadow: "0 8px 32px rgba(0,0,0,0.24)" }}
+      onMouseDown={e => e.stopPropagation()}
+    >
+      {FILTER_SECTIONS.map((sec, si) => (
+        <div key={sec.label} className={cn("px-[16px] pt-[12px]", si < FILTER_SECTIONS.length - 1 ? "pb-[8px]" : "pb-[4px]")}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.06em] mb-[8px]"
+            style={{ color: "var(--gs-section-label)" }}>{sec.label}</p>
+          <div className="flex flex-wrap gap-[6px]">
+            {sec.options.map(opt => {
+              const active = (selected[sec.label] ?? []).includes(opt)
+              return (
+                <button
+                  key={opt}
+                  onClick={() => toggle(sec.label, opt)}
+                  className="text-[12px] font-medium px-[12px] rounded-full transition-colors"
+                  style={{
+                    height: 26,
+                    background: active ? "rgba(33,115,255,1)" : "transparent",
+                    color:      active ? "#ffffff" : "var(--gs-text-dim)",
+                    border:     active ? "1.5px solid rgba(33,115,255,1)" : "1.5px solid var(--gs-border)",
+                  }}
+                >
+                  {opt}
+                </button>
+              )
+            })}
+          </div>
+          {si < FILTER_SECTIONS.length - 1 && (
+            <div className="mt-[12px]" style={{ height: 1, background: "var(--gs-divider)" }} />
+          )}
+        </div>
+      ))}
+
+      {/* CTA row */}
+      <div className="flex items-center justify-end gap-[8px] px-[16px] py-[12px]"
+        style={{ borderTop: "1px solid var(--gs-divider)" }}>
+        <button
+          onClick={() => { setSelected({}); onClose() }}
+          className="text-[12px] font-medium px-[12px] py-[5px] rounded-[6px] transition-opacity hover:opacity-70"
+          style={{ color: "var(--gs-text-dim)" }}
+        >
+          Clear all
+        </button>
+        <button
+          onClick={() => { onApply?.(selected); onClose() }}
+          className="text-[12px] font-semibold px-[14px] py-[5px] rounded-[6px] transition-opacity hover:opacity-85"
+          style={{ background: hasAny ? "rgba(33,115,255,1)" : "var(--gs-chip-inactive-bg)", color: hasAny ? "#ffffff" : "var(--gs-text-dim)" }}
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Result / suggestion row ───────────────────────────────────────────────
+// Uses HighlightIcon size="sm" with DS variant per entity type
 
 function ResultRow({ item, onResultClick }: { item: SearchResultItem; onResultClick?: (i: SearchResultItem) => void }) {
   const [hovered, setHovered] = useState(false)
-  const meta = TYPE_ICON[item.type] ?? { Icon: Globe, bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)" }
+  const meta = TYPE_HI[item.type] ?? { variant: "informative" as HighlightIconVariant, Icon: Globe }
   return (
     <button
       onClick={() => onResultClick?.(item)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="w-full flex items-center gap-[12px] px-[16px] py-[8px] text-left transition-colors"
-      style={{ background: hovered ? "var(--gs-row-hover)" : "transparent" }}
+      style={{
+        background:    hovered ? "var(--gs-row-hover)" : "transparent",
+        backdropFilter: hovered ? "blur(16px)" : undefined,
+      }}
     >
-      <div className="w-[24px] h-[24px] rounded-[4px] flex items-center justify-center shrink-0"
-        style={{ background: meta.bg }}>
-        <meta.Icon size={14} strokeWidth={1.75} />
-      </div>
+      <HighlightIcon
+        size="sm"
+        variant={meta.variant}
+        iconColor="dark"
+        icon={<meta.Icon size={14} strokeWidth={1.75} />}
+      />
       <div className="flex-1 min-w-0">
         <div className="text-[13px] font-medium truncate" style={{ color: "var(--gs-text)" }}>{item.title}</div>
         <div className="text-[11px] truncate" style={{ color: "var(--gs-text-dim)" }}>{item.subtitle}</div>
@@ -398,16 +498,15 @@ export function GlobalSearch({
 }: GlobalSearchProps) {
   const [query,        setQuery]       = useState("")
   const [activeFilter, setActiveFilter] = useState<SearchFilter>("all")
+  const [filtersOpen,  setFiltersOpen]  = useState(false)
   const inputRef  = useRef<HTMLInputElement>(null)
   const panelRef  = useRef<HTMLDivElement>(null)
 
-  // Focus input when overlay opens
   useEffect(() => {
     if (open) { setTimeout(() => inputRef.current?.focus(), 50) }
-    else       { setQuery(""); setActiveFilter("all") }
+    else       { setQuery(""); setActiveFilter("all"); setFiltersOpen(false) }
   }, [open])
 
-  // Close on Escape
   const handleKey = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose()
   }, [onClose])
@@ -416,7 +515,6 @@ export function GlobalSearch({
     return () => document.removeEventListener("keydown", handleKey)
   }, [handleKey])
 
-  // Close on backdrop click
   const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!panelRef.current?.contains(e.target as Node)) onClose()
   }
@@ -430,29 +528,24 @@ export function GlobalSearch({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center pt-[80px]"
-      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }}
+      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
       onMouseDown={handleBackdrop}
     >
       <div
         ref={panelRef}
         className="flex flex-col overflow-hidden"
-        style={{
-          width: 700, maxHeight: 600,
-          background:   "var(--gs-bg)",
-          border:       "1px solid var(--gs-border)",
-          borderRadius: 8,
-          boxShadow:    "0 16px 48px rgba(0,0,0,0.32)",
-        }}
+        style={{ ...PANEL_STYLE, width: 700, maxHeight: 600, boxShadow: "0 20px 60px rgba(0,0,0,0.36)" }}
       >
-        {/* ── Search input row ─────────────────────────────────── */}
-        <div className="flex items-center gap-[12px] px-[16px]" style={{ height: 56, borderBottom: "1px solid var(--gs-divider)" }}>
+        {/* ── Search input ─────────────────────────────────────── */}
+        <div className="flex items-center gap-[12px] px-[16px]"
+          style={{ height: 56, borderBottom: "1px solid var(--gs-divider)" }}>
           <Search size={16} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--gs-text-dim)" }} />
           <input
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search agents, networks, tickets, policies, people…"
-            className="flex-1 bg-transparent outline-none text-[13px]"
+            className="flex-1 bg-transparent outline-none text-[13px] placeholder:text-[var(--gs-text-dim)]"
             style={{ color: "var(--gs-text)" }}
           />
           {query && (
@@ -460,38 +553,43 @@ export function GlobalSearch({
               <X size={14} strokeWidth={1.75} style={{ color: "var(--gs-text-dim)" }} />
             </button>
           )}
-          <div
-            className="shrink-0 flex items-center gap-[4px] px-[8px] rounded-[6px]"
-            style={{ height: 24, background: "var(--gs-kbd-bg)" }}
-          >
+          <div className="shrink-0 flex items-center px-[8px] rounded-[5px]"
+            style={{ height: 22, background: "var(--gs-kbd-bg)" }}>
             <span className="text-[11px] font-medium" style={{ color: "var(--gs-kbd-fg)" }}>esc</span>
           </div>
         </div>
 
-        {/* ── Filter chips row ──────────────────────────────────── */}
-        <div className="flex items-center gap-[8px] px-[12px]" style={{ height: 40, borderBottom: "1px solid var(--gs-divider)", overflowX: "auto" }}>
-          <button className="shrink-0 w-[24px] h-[24px] flex items-center justify-center rounded-[6px] transition-colors hover:opacity-70"
-            style={{ color: "var(--gs-text-dim)" }}>
+        {/* ── Filter chips row ─────────────────────────────────── */}
+        <div className="relative flex items-center gap-[6px] px-[12px]"
+          style={{ height: 40, borderBottom: "1px solid var(--gs-divider)", overflowX: "auto" }}>
+          <button
+            onClick={() => setFiltersOpen(v => !v)}
+            className="shrink-0 w-[24px] h-[24px] flex items-center justify-center rounded-[6px] transition-colors"
+            style={{
+              background: filtersOpen ? "rgba(33,115,255,0.12)" : "transparent",
+              color: filtersOpen ? "rgba(33,115,255,1)" : "var(--gs-text-dim)",
+            }}
+          >
             <SlidersHorizontal size={14} strokeWidth={1.75} />
           </button>
           {SEARCH_FILTERS.map(f => {
             const isActive = activeFilter === f.id
             return (
-              <button
-                key={f.id}
-                onClick={() => setActiveFilter(f.id)}
+              <button key={f.id} onClick={() => setActiveFilter(f.id)}
                 className="shrink-0 flex items-center gap-[4px] px-[10px] rounded-full text-[12px] font-medium transition-colors"
                 style={{
                   height: 22,
                   background: isActive ? "rgba(33,115,255,1)" : "var(--gs-chip-inactive-bg)",
                   color:      isActive ? "#ffffff"             : "var(--gs-chip-inactive-fg)",
-                }}
-              >
-                <f.Icon size={12} strokeWidth={1.75} />
+                }}>
+                <f.Icon size={11} strokeWidth={1.75} />
                 {f.label}
               </button>
             )
           })}
+          {filtersOpen && (
+            <FiltersCard onClose={() => setFiltersOpen(false)} />
+          )}
         </div>
 
         {/* ── Content area ─────────────────────────────────────── */}
@@ -499,13 +597,13 @@ export function GlobalSearch({
 
           {/* Loading */}
           {loading && (
-            <div className="flex flex-col gap-[2px] py-[8px]">
-              {[120, 160, 100, 140, 90].map((w, i) => (
+            <div className="flex flex-col py-[8px]">
+              {[160, 120, 180, 140, 100].map((w, i) => (
                 <div key={i} className="flex items-center gap-[12px] px-[16px] py-[8px]">
                   <div className="w-[24px] h-[24px] rounded-[4px] animate-pulse" style={{ background: "var(--gs-chip-inactive-bg)" }} />
                   <div className="flex-1 flex flex-col gap-[6px]">
-                    <div className="h-[10px] rounded-[4px] animate-pulse" style={{ width: w, background: "var(--gs-chip-inactive-bg)" }} />
-                    <div className="h-[8px] rounded-[4px] animate-pulse" style={{ width: w * 0.7, background: "var(--gs-chip-inactive-bg)" }} />
+                    <div className="h-[10px] rounded-[3px] animate-pulse" style={{ width: w, background: "var(--gs-chip-inactive-bg)" }} />
+                    <div className="h-[8px] rounded-[3px] animate-pulse" style={{ width: w * 0.65, background: "var(--gs-chip-inactive-bg)" }} />
                   </div>
                 </div>
               ))}
@@ -514,87 +612,67 @@ export function GlobalSearch({
 
           {/* No results */}
           {noResults && !loading && (
-            <div className="flex flex-col items-center justify-center gap-[8px] py-[48px]">
+            <div className="flex flex-col items-center justify-center gap-[8px] py-[56px]">
               <p className="text-[14px] font-semibold" style={{ color: "var(--gs-text)" }}>No matches found</p>
               <p className="text-[12px]" style={{ color: "var(--gs-text-dim)" }}>Try fewer words or different keywords</p>
               {activeFilter !== "all" && (
-                <button
-                  onClick={() => setActiveFilter("all")}
+                <button onClick={() => setActiveFilter("all")}
                   className="mt-[8px] text-[12px] font-medium px-[16px] py-[6px] rounded-[6px] transition-opacity hover:opacity-80"
-                  style={{ background: "var(--gs-chip-inactive-bg)", color: "var(--gs-text)" }}
-                >
+                  style={{ background: "var(--gs-chip-inactive-bg)", color: "var(--gs-text)" }}>
                   Clear filters
                 </button>
               )}
             </div>
           )}
 
-          {/* Search results */}
+          {/* Results */}
           {hasQuery && hasResults && !loading && (
             <div className="py-[8px]">
-              {results!.map(item => (
-                <ResultRow key={item.id} item={item} onResultClick={onResultClick} />
-              ))}
+              {results!.map(item => <ResultRow key={item.id} item={item} onResultClick={onResultClick} />)}
             </div>
           )}
 
-          {/* Default state — suggested actions + recent searches */}
+          {/* Default — suggested actions + recent */}
           {!hasQuery && !loading && (
             <>
-              {/* Suggested actions */}
               <div className="pt-[8px]">
-                <div className="px-[16px] pb-[4px]">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em]"
-                    style={{ color: "var(--gs-section-label)" }}>Suggested actions</span>
-                </div>
-                {DEFAULT_SUGGESTED_ACTIONS.map(action => (
-                  <button
-                    key={action.label}
-                    className="w-full flex items-center gap-[12px] px-[16px] py-[10px] text-left transition-colors hover:bg-[var(--gs-row-hover)]"
-                  >
-                    <div className="w-[24px] h-[24px] rounded-[4px] flex items-center justify-center shrink-0"
-                      style={{ background: "var(--gs-action-icon-bg)" }}>
-                      <action.Icon size={14} strokeWidth={1.75} style={{ color: "var(--gs-text-dim)" }} />
-                    </div>
+                <p className="px-[16px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
+                  style={{ color: "var(--gs-section-label)" }}>Suggested actions</p>
+                {DEFAULT_SUGGESTED.map(action => (
+                  <button key={action.label}
+                    className="w-full flex items-center gap-[12px] px-[16px] py-[8px] text-left transition-colors hover:bg-[var(--gs-row-hover)]">
+                    <HighlightIcon
+                      size="sm"
+                      variant={action.variant}
+                      iconColor="dark"
+                      icon={<action.Icon size={14} strokeWidth={1.75} />}
+                    />
                     <span className="text-[13px] font-medium" style={{ color: "var(--gs-text)" }}>{action.label}</span>
                   </button>
                 ))}
               </div>
 
-              {/* Divider */}
               <div className="mx-[16px] my-[4px]" style={{ height: 1, background: "var(--gs-divider)" }} />
 
-              {/* Recent searches */}
               <div className="pb-[8px]">
-                <div className="px-[16px] pt-[8px] pb-[4px]">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em]"
-                    style={{ color: "var(--gs-section-label)" }}>Recent searches</span>
-                </div>
-                {recentSearches.map(item => (
-                  <ResultRow key={item.id} item={item} onResultClick={onResultClick} />
-                ))}
+                <p className="px-[16px] pt-[8px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
+                  style={{ color: "var(--gs-section-label)" }}>Recent searches</p>
+                {recentSearches.map(item => <ResultRow key={item.id} item={item} onResultClick={onResultClick} />)}
               </div>
             </>
           )}
         </div>
 
-        {/* ── Bottom bar — keyboard hints ───────────────────────── */}
-        <div
-          className="flex items-center gap-[12px] px-[16px] shrink-0"
-          style={{ height: 36, borderTop: "1px solid var(--gs-divider)" }}
-        >
-          {[["↑↓", "Navigate"], ["↵", "Open"]].map(([key, label]) => (
-            <div key={label} className="flex items-center gap-[6px]">
+        {/* ── Bottom bar ───────────────────────────────────────── */}
+        <div className="flex items-center gap-[12px] px-[16px] shrink-0"
+          style={{ height: 36, borderTop: "1px solid var(--gs-divider)" }}>
+          {[["↑↓","Navigate"],["↵","Open"],["esc","Close"]].map(([key, label]) => (
+            <div key={label} className="flex items-center gap-[5px]">
               <span className="px-[6px] rounded-[4px] text-[11px] font-medium"
                 style={{ background: "var(--gs-kbd-bg)", color: "var(--gs-kbd-fg)" }}>{key}</span>
               <span className="text-[11px]" style={{ color: "var(--gs-text-meta)" }}>{label}</span>
             </div>
           ))}
-          <div className="flex items-center gap-[6px]">
-            <span className="px-[6px] rounded-[4px] text-[11px] font-medium"
-              style={{ background: "var(--gs-kbd-bg)", color: "var(--gs-kbd-fg)" }}>esc</span>
-            <span className="text-[11px]" style={{ color: "var(--gs-text-meta)" }}>Close</span>
-          </div>
         </div>
       </div>
     </div>

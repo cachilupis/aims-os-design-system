@@ -347,7 +347,7 @@
 
     /* ── Global Search overlay — dark ───────────────────────────────────── */
     /* Source: Figma 15394:15568 · Global Search - menu COMPONENT_SET       */
-    --gs-bg:               rgba(22,22,22,1);          /* Surface/Neutral/Elevated dark                */
+    --gs-bg:               rgba(22,22,22,0.92);        /* Surface/Neutral/Elevated dark · 0.92 for blur */
     --gs-border:           rgba(255,255,255,0.10);    /* Border/Neutral/Default dark                  */
     --gs-input-bg:         rgba(255,255,255,0.06);    /* Surface/Neutral/Hover dark                   */
     --gs-input-border:     rgba(255,255,255,0.12);    /* Border/Neutral/Lighter dark                  */
