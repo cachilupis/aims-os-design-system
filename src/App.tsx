@@ -22,7 +22,7 @@ import {
   type TableColumn,
 } from "@/components/ui/table"
 import { Topbar, TopbarButton, type TopbarAction, type WorkspaceItem } from "@/components/ui/topbar"
-import { Sidebar, DEFAULT_SIDEBAR_ITEMS, type SidebarItem } from "@/components/ui/sidebar"
+import { Sidebar, DEFAULT_SIDEBAR_ITEMS } from "@/components/ui/sidebar"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -6415,104 +6415,135 @@ const actions: TopbarAction[] = [
 // ── SidebarPage ────────────────────────────────────────────────────────────
 
 function SidebarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
-  const [activeId, setActiveId]   = useState("agents")
+  const [activeId, setActiveId] = useState("agents")
   const [collapsed, setCollapsed] = useState(false)
-  const [customItems]             = useState<SidebarItem[]>(DEFAULT_SIDEBAR_ITEMS)
 
-  void openSpec // spec modal not yet defined for sidebar
+  void openSpec
+
+  const STATES = [
+    { label: "Default", desc: "Icon in Icon/Primary/Lighter (#80AFFF). No background. No shadow.", icon: "Home",    bg: "transparent",   shadow: "none",                                      iconColor: "rgba(128,175,255,1)" },
+    { label: "Hover",   desc: "Icon button bg = Surface/Neutral/Black (container color). Blue glow shadow rgba(33,115,255,0.50) blur:20.", icon: "Home", bg: "var(--sb-bg)", shadow: "0px 0px 20px 0px rgba(33,115,255,0.50)", iconColor: "rgba(255,255,255,0.70)" },
+    { label: "Active",  desc: "Gradient fill (Main Action) + teal shadow rgba(82,163,255,0.38) offset(8,8) blur:20.", icon: "Sparkle", bg: "radial-gradient(circle at 61% 68%, rgba(33,115,255,1) 29%, rgba(9,226,171,1) 61%)", shadow: "8px 8px 20px 0px rgba(82,163,255,0.38)", iconColor: "#ffffff" },
+  ]
 
   return (
-    <div className="flex flex-col gap-[32px] px-[32px] py-[24px]">
-      {/* Header */}
-      <div className="flex flex-col gap-[4px]">
+    <div className="flex flex-col gap-[40px] px-[32px] py-[24px]">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-[6px]">
         <h1 className="text-[22px] font-bold text-[var(--foreground)]">Sidebar</h1>
-        <p className="text-[14px] text-[var(--field-supporting)]">
-          Vertical navigation rail · 2 states: Expanded (250px) / Collapsed (56px) · always dark background
+        <p className="text-[14px] text-[var(--field-supporting)] leading-[1.6]">
+          Vertical navigation rail for primary app sections. Always renders on a dark background regardless of light/dark mode.
+          Two states: <strong className="text-[var(--foreground)]">Expanded (250px)</strong> shows icon + label,
+          <strong className="text-[var(--foreground)]"> Collapsed (56px)</strong> shows icon only with tooltips on hover.
         </p>
       </div>
 
-      {/* Live demo */}
+      {/* ── Live demo ── */}
       <section className="flex flex-col gap-[16px]">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">
-          Live demo
-        </h2>
-
-        {/* Controls */}
-        <div className="flex items-center gap-[12px]">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Live demo</h2>
           <button
             onClick={() => setCollapsed(c => !c)}
             className="text-[12px] font-medium px-[12px] py-[6px] rounded-[6px] transition-colors"
-            style={{
-              background: "var(--btn-secondary-bg)",
-              border: "1px solid var(--btn-secondary-border)",
-              color: "var(--foreground)",
-            }}
+            style={{ background: "var(--btn-secondary-bg)", border: "1px solid var(--btn-secondary-border)", color: "var(--foreground)" }}
           >
-            {collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            {collapsed ? "→ Expand" : "← Collapse"}
           </button>
-          <span className="text-[12px] text-[var(--field-supporting)]">
-            Current state: <strong className="text-[var(--foreground)]">{collapsed ? "Collapsed (56px)" : "Expanded (250px)"}</strong>
-          </span>
         </div>
 
-        {/* Demo frame */}
-        <div
-          className="flex overflow-hidden rounded-[12px]"
-          style={{ height: 480, border: "1px solid var(--table-border)" }}
-        >
+        <div className="flex overflow-hidden rounded-[12px]" style={{ height: 400, border: "1px solid var(--table-border)" }}>
           <Sidebar
-            items={customItems}
+            items={DEFAULT_SIDEBAR_ITEMS}
             activeId={activeId}
             onItemClick={setActiveId}
             defaultCollapsed={collapsed}
             onCollapseChange={setCollapsed}
-            key={collapsed ? "collapsed" : "expanded"}
           />
-          {/* Fake content area */}
-          <div
-            className="flex flex-1 items-center justify-center"
-            style={{ background: "var(--canvas)" }}
-          >
-            <div className="flex flex-col items-center gap-[8px]">
-              <p className="text-[13px] font-semibold text-[var(--foreground)]">
-                {customItems.find(i => i.id === activeId)?.label ?? "—"} page
-              </p>
-              <p className="text-[12px] text-[var(--field-supporting)]">
-                Content area — click nav items to switch active state
-              </p>
-            </div>
+          <div className="flex flex-1 items-center justify-center flex-col gap-[6px]" style={{ background: "var(--canvas)" }}>
+            <p className="text-[13px] font-semibold text-[var(--foreground)]">
+              {DEFAULT_SIDEBAR_ITEMS.find(i => i.id === activeId)?.label} page
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)]">
+              {collapsed ? "Hover icons to see tooltips" : "Click any nav item to switch section"}
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Side by side: both states */}
+      {/* ── Both variants side by side ── */}
       <section className="flex flex-col gap-[16px]">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">
-          Both variants
-        </h2>
-        <div className="flex gap-[24px]">
-          {/* Expanded */}
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Variants</h2>
+        <div className="flex gap-[32px] items-start">
           <div className="flex flex-col gap-[8px]">
-            <p className="text-[11px] font-semibold text-[var(--field-supporting)]">Expanded — 250px</p>
-            <div style={{ height: 320 }}>
-              <Sidebar activeId="agents" defaultCollapsed={false} />
-            </div>
+            <p className="text-[11px] font-semibold text-[var(--field-supporting)] uppercase tracking-[0.06em]">Expanded — 250px</p>
+            <div style={{ height: 220 }}><Sidebar activeId="agents" defaultCollapsed={false} /></div>
           </div>
-          {/* Collapsed */}
           <div className="flex flex-col gap-[8px]">
-            <p className="text-[11px] font-semibold text-[var(--field-supporting)]">Collapsed — 56px</p>
-            <div style={{ height: 320 }}>
-              <Sidebar activeId="agents" defaultCollapsed={true} />
-            </div>
+            <p className="text-[11px] font-semibold text-[var(--field-supporting)] uppercase tracking-[0.06em]">Collapsed — 56px · hover for tooltip</p>
+            <div style={{ height: 220 }}><Sidebar activeId="agents" defaultCollapsed={true} /></div>
           </div>
         </div>
       </section>
 
-      {/* Specs */}
+      {/* ── Button states ── */}
+      <section className="flex flex-col gap-[16px]">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Button states (Sidebar Buttons DS)</h2>
+        <div className="grid grid-cols-3 gap-[12px]">
+          {STATES.map(s => (
+            <div key={s.label} className="flex flex-col gap-[12px] p-[16px] rounded-[10px]"
+              style={{ background: "var(--table-bg)", border: "1px solid var(--table-border)" }}>
+              {/* Preview on dark bg — sidebar is always dark */}
+              <div className="flex items-center justify-center rounded-[8px] py-[20px]" style={{ background: "#000" }}>
+                <div
+                  className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px]"
+                  style={{ background: s.bg, boxShadow: s.shadow, padding: 4 }}
+                >
+                  {(() => {
+                    const Icon = (LucideIcons as unknown as Record<string, LucideIcon>)[s.icon]
+                    return Icon ? <Icon size={16} strokeWidth={1.75} color={s.iconColor} /> : null
+                  })()}
+                </div>
+              </div>
+              <div className="flex flex-col gap-[4px]">
+                <p className="text-[12px] font-semibold text-[var(--foreground)]">{s.label}</p>
+                <p className="text-[11px] text-[var(--field-supporting)] leading-[1.5]">{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── When to use ── */}
+      <section className="flex flex-col gap-[16px]">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">When to use each state</h2>
+        <div className="flex flex-col gap-[8px]">
+          {[
+            { variant: "Expanded", when: "Default app state — enough horizontal space, first visit, or when labels aid orientation.", avoid: "Don't keep expanded when screen width is below 1280px. Don't put more than 7 items." },
+            { variant: "Collapsed", when: "Maximum content area needed. User is familiar with the icons. Narrow viewports (1024–1280px).", avoid: "Always show tooltips on hover — never show icon-only without a tooltip fallback." },
+            { variant: "Active state", when: "The section the user is currently viewing. Only one item active at a time.", avoid: "Don't use active on parent items when a sub-item is active — highlight the most specific level." },
+          ].map(r => (
+            <div key={r.variant} className="flex gap-[12px] p-[14px] rounded-[8px]"
+              style={{ background: "var(--table-bg)", border: "1px solid var(--table-border)" }}>
+              <div className="shrink-0 w-[80px]">
+                <span className="text-[11px] font-semibold text-[var(--foreground)]">{r.variant}</span>
+              </div>
+              <div className="flex flex-col gap-[4px]">
+                <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">
+                  <span className="text-[var(--tag-success-fg)] font-medium">Use: </span>{r.when}
+                </p>
+                <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">
+                  <span className="text-[var(--tag-error-fg)] font-medium">Avoid: </span>{r.avoid}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Specs table ── */}
       <section className="flex flex-col gap-[12px]">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">
-          Specs
-        </h2>
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Specs</h2>
         <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
           <table className="w-full text-[12px]">
             <thead>
@@ -6524,22 +6555,28 @@ function SidebarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </thead>
             <tbody>
               {[
-                ["Width",            "250px",              "56px"              ],
-                ["Container radius", "16px",               "8px"               ],
-                ["Background",       "#000000",            "#000000"           ],
-                ["Padding",          "8px all sides",      "8px all sides"     ],
-                ["Nav item height",  "24px",               "24px (icon only)"  ],
-                ["Nav items gap",    "16px",               "16px"              ],
-                ["Icon color",       "#80AFFF (default)",  "#80AFFF (default)" ],
-                ["Icon hover color", "#FFFFFF",            "#FFFFFF"           ],
-                ["Active bg",        "radial gradient",    "radial gradient"   ],
-                ["Hover row bg",     "rgba(42,42,42,1)",   "rgba(42,42,42,1)"  ],
-                ["Text",             "12px Semi Bold #FFF","—"                 ],
-              ].map(([prop, exp, col]) => (
-                <tr key={prop} style={{ borderBottom: "1px solid var(--table-border)" }}>
-                  <td className="px-[14px] py-[10px] font-medium text-[var(--foreground)]">{prop}</td>
-                  <td className="px-[14px] py-[10px] font-mono text-[var(--field-supporting)]">{exp}</td>
-                  <td className="px-[14px] py-[10px] font-mono text-[var(--field-supporting)]">{col}</td>
+                ["Width",               "250px",                        "56px"                  ],
+                ["Container bg dark",   "rgba(15,23,43,1) #0F172B",     "rgba(15,23,43,1)"      ],
+                ["Container bg light",  "rgba(0,0,0,1) #000000",        "rgba(0,0,0,1)"         ],
+                ["Container radius",    "16px",                         "8px"                   ],
+                ["Padding",             "8px",                          "8px"                   ],
+                ["Nav items gap",       "16px",                         "16px"                  ],
+                ["Icon button size",    "24×24px · padding 4px",        "24×24px · padding 4px" ],
+                ["Icon button radius",  "8px",                          "8px"                   ],
+                ["Icon default",        "Icon/Primary/Lighter #80AFFF", "#80AFFF"               ],
+                ["Icon hover/active",   "Icon/Neutral/Light white",     "white"                 ],
+                ["Row hover bg dark",   "Surface/Neutral/Darker White/20","—"                   ],
+                ["Row hover bg light",  "Surface/Neutral/Darker #2A2A2A","—"                   ],
+                ["Active gradient",     "Radial: blue→teal @29%→61%",   "Same"                  ],
+                ["Active shadow",       "rgba(82,163,255,0.38) 8,8 blur:20","Same"              ],
+                ["Hover shadow",        "rgba(33,115,255,0.50) 0,0 blur:20","Same"              ],
+                ["Tooltip (collapsed)", "—",                            "Dark pill on hover"    ],
+                ["Text",                "12px Semi Bold white",         "—"                     ],
+              ].map(([prop, exp, col], i, arr) => (
+                <tr key={prop} style={{ borderBottom: i < arr.length-1 ? "1px solid var(--table-border)" : "none" }}>
+                  <td className="px-[14px] py-[9px] font-medium text-[var(--foreground)]">{prop}</td>
+                  <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{exp}</td>
+                  <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{col}</td>
                 </tr>
               ))}
             </tbody>
@@ -6547,29 +6584,36 @@ function SidebarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         </div>
       </section>
 
-      {/* Usage */}
+      {/* ── Usage code ── */}
       <section className="flex flex-col gap-[12px]">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">
-          Usage
-        </h2>
-        <div className="rounded-[8px] p-[16px] font-mono text-[12px] leading-[1.7] text-[var(--field-supporting)]"
-          style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)" }}>
-          <span className="text-purple-400">import</span>{" "}
-          {"{ Sidebar, DEFAULT_SIDEBAR_ITEMS } "}<span className="text-purple-400">from</span>{" "}
-          <span className="text-green-400">"@/components/ui/sidebar"</span><br /><br />
-          {"// Basic usage"}<br />
-          {"<"}<span className="text-blue-400">Sidebar</span>
-          {" activeId="}<span className="text-green-400">"agents"</span>{" />"}<br /><br />
-          {"// Controlled collapse + custom items"}<br />
-          {"<"}<span className="text-blue-400">Sidebar</span><br />
-          {"  items="}{"{customItems}"}<br />
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Usage</h2>
+        <div className="rounded-[8px] p-[16px] font-mono text-[12px] leading-[1.8]"
+          style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)", color: "var(--field-supporting)" }}>
+          <span style={{ color: "#c792ea" }}>import</span>{" "}
+          {"{ Sidebar, DEFAULT_SIDEBAR_ITEMS, type SidebarItem } "}<span style={{ color: "#c792ea" }}>from</span>{" "}
+          <span style={{ color: "#c3e88d" }}>"@/components/ui/sidebar"</span><br /><br />
+
+          <span style={{ color: "#697098" }}>{"// 1. Basic — uses default AIMS OS nav items"}</span><br />
+          {"<"}<span style={{ color: "#82aaff" }}>Sidebar</span>
+          {" activeId="}<span style={{ color: "#c3e88d" }}>"agents"</span>{" onItemClick="}{"{setActiveId}"}{" />"}<br /><br />
+
+          <span style={{ color: "#697098" }}>{"// 2. Custom items"}</span><br />
+          {"const items: SidebarItem[] = ["}<br />
+          {"  { id: "}<span style={{ color: "#c3e88d" }}>"dashboard"</span>{", label: "}<span style={{ color: "#c3e88d" }}>"Dashboard"</span>{", icon: "}<span style={{ color: "#c3e88d" }}>"LayoutDashboard"</span>{" },"}<br />
+          {"  { id: "}<span style={{ color: "#c3e88d" }}>"reports"</span>{", label: "}<span style={{ color: "#c3e88d" }}>"Reports"</span>{", icon: "}<span style={{ color: "#c3e88d" }}>"BarChart2"</span>{", hasChildren: true },"}<br />
+          {"]"}<br /><br />
+
+          <span style={{ color: "#697098" }}>{"// 3. Controlled collapse state"}</span><br />
+          {"<"}<span style={{ color: "#82aaff" }}>Sidebar</span><br />
+          {"  items="}{"{items}"}<br />
           {"  activeId="}{"{activeId}"}<br />
           {"  onItemClick="}{"{setActiveId}"}<br />
-          {"  defaultCollapsed="}{"{false}"}<br />
+          {"  defaultCollapsed="}{"{isNarrow}"}<br />
           {"  onCollapseChange="}{"{setCollapsed}"}<br />
           {"/>"}
         </div>
       </section>
+
     </div>
   )
 }
