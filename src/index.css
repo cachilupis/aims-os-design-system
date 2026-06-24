@@ -344,6 +344,24 @@
     --sb-icon-hover-bg:    rgba(15,23,43,1);          /* Surface/Neutral/Black dark   (icon hover bg) */
     --sb-separator:        rgba(255,255,255,0.15);    /* Border/Neutral/Lighter dark  → White/15      */
     --sb-chevron-active:   rgba(233,241,255,1);       /* Icon/Primary/Subtle          → Primary/300   */
+
+    /* ── Global Search overlay — dark ───────────────────────────────────── */
+    /* Source: Figma 15394:15568 · Global Search - menu COMPONENT_SET       */
+    --gs-bg:               rgba(22,22,22,1);          /* Surface/Neutral/Elevated dark                */
+    --gs-border:           rgba(255,255,255,0.10);    /* Border/Neutral/Default dark                  */
+    --gs-input-bg:         rgba(255,255,255,0.06);    /* Surface/Neutral/Hover dark                   */
+    --gs-input-border:     rgba(255,255,255,0.12);    /* Border/Neutral/Lighter dark                  */
+    --gs-divider:          rgba(255,255,255,0.08);    /* Border/Neutral/Subtle dark                   */
+    --gs-text:             rgba(255,255,255,0.85);    /* Text/Primary dark                            */
+    --gs-text-dim:         rgba(255,255,255,0.45);    /* Text/Secondary dark                          */
+    --gs-text-meta:        rgba(255,255,255,0.35);    /* Text/Tertiary dark                           */
+    --gs-section-label:    rgba(255,255,255,0.30);    /* Section header label dark                    */
+    --gs-row-hover:        rgba(255,255,255,0.06);    /* Row hover dark                               */
+    --gs-chip-inactive-bg: rgba(255,255,255,0.08);    /* Chip inactive bg dark                        */
+    --gs-chip-inactive-fg: rgba(255,255,255,0.70);    /* Chip inactive text dark                      */
+    --gs-action-icon-bg:   rgba(255,255,255,0.06);    /* Suggested action icon bg dark                */
+    --gs-kbd-bg:           rgba(255,255,255,0.08);    /* Keyboard shortcut pill dark                  */
+    --gs-kbd-fg:           rgba(255,255,255,0.40);    /* Keyboard shortcut text dark                  */
   }
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
@@ -666,6 +684,23 @@
     --sb-icon-hover-bg:    rgba(0,0,0,1);             /* Surface/Neutral/Black light  (icon hover bg) */
     --sb-separator:        rgba(186,186,186,1);       /* Border/Neutral/Lighter light → Gray/500      */
     --sb-chevron-active:   rgba(233,241,255,1);       /* Icon/Primary/Subtle          → Primary/300   */
+
+    /* ── Global Search overlay — light ──────────────────────────────────── */
+    --gs-bg:               rgba(255,255,255,0.97);    /* Surface/Neutral/White light                  */
+    --gs-border:           rgba(0,0,0,0.10);          /* Border/Neutral/Default light                 */
+    --gs-input-bg:         rgba(248,249,250,1);       /* Surface/Neutral/Subtle light                 */
+    --gs-input-border:     rgba(186,186,186,1);       /* Border/Neutral/Lighter light → Gray/500      */
+    --gs-divider:          rgba(0,0,0,0.07);          /* Border/Neutral/Subtle light                  */
+    --gs-text:             rgba(42,42,42,1);           /* Text/Primary light           → Gray/700      */
+    --gs-text-dim:         rgba(92,92,92,1);           /* Text/Secondary light         → Gray/600      */
+    --gs-text-meta:        rgba(140,140,140,1);        /* Text/Tertiary light          → Gray/500      */
+    --gs-section-label:    rgba(92,92,92,1);           /* Section header label light                   */
+    --gs-row-hover:        rgba(0,0,0,0.04);           /* Row hover light                              */
+    --gs-chip-inactive-bg: rgba(242,242,242,1);        /* Chip inactive bg light       → Gray/200      */
+    --gs-chip-inactive-fg: rgba(42,42,42,1);           /* Chip inactive text light     → Gray/700      */
+    --gs-action-icon-bg:   rgba(246,249,255,1);        /* Suggested action icon bg light               */
+    --gs-kbd-bg:           rgba(242,242,242,1);        /* Keyboard shortcut pill light                 */
+    --gs-kbd-fg:           rgba(92,92,92,1);           /* Keyboard shortcut text light                 */
   }
 
   html {

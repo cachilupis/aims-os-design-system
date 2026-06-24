@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, type ReactNode } from "react"
-import { ChevronDown, Search, Menu, Settings, LogOut, HelpCircle } from "lucide-react"
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
+import { ChevronDown, Search, Menu, Settings, LogOut, HelpCircle, X, SlidersHorizontal, LayoutGrid, Sparkle, Radio, MessageSquare, Users, Shield, Bookmark, Briefcase, Plus, UserPlus, Zap, Globe, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
@@ -298,6 +298,309 @@ function RightMenu({
   )
 }
 
+// ── Global Search ─────────────────────────────────────────────────────────
+// DS: Figma 15394:15568 · Global Search - menu COMPONENT_SET · 700×600px
+// 5 variants: Default · No results · Search results scroll · Search few results · Loading
+// Positioned: fixed overlay, centered ~10% from top, backdrop rgba(0,0,0,0.45)
+// Always light-toned panel (white/near-white bg) regardless of app theme.
+
+type SearchFilter = "all" | "agents" | "channels" | "conversations" | "people" | "policies" | "tickets" | "workspaces"
+
+export type SearchResultItem = {
+  id:       string
+  title:    string
+  subtitle: string
+  type:     string
+  timeAgo?: string
+}
+
+export type GlobalSearchProps = {
+  open:           boolean
+  onClose:        () => void
+  recentSearches?: SearchResultItem[]
+  results?:        SearchResultItem[]
+  loading?:        boolean
+  onResultClick?:  (item: SearchResultItem) => void
+}
+
+const SEARCH_FILTERS: { id: SearchFilter; label: string; Icon: React.FC<{ size: number; strokeWidth: number }> }[] = [
+  { id: "all",           label: "All",           Icon: LayoutGrid    },
+  { id: "agents",        label: "Agents",        Icon: Sparkle       },
+  { id: "channels",      label: "Channels",      Icon: Radio         },
+  { id: "conversations", label: "Conversations", Icon: MessageSquare },
+  { id: "people",        label: "People",        Icon: Users         },
+  { id: "policies",      label: "Policies",      Icon: Shield        },
+  { id: "tickets",       label: "Tickets",       Icon: Bookmark      },
+  { id: "workspaces",    label: "Workspaces",    Icon: Briefcase     },
+]
+
+const TYPE_ICON: Record<string, { Icon: React.FC<{ size: number; strokeWidth: number }>; bg: string; color: string }> = {
+  agents:        { Icon: Sparkle,       bg: "rgba(237,233,254,1)", color: "rgba(109,40,217,1)"  },
+  network:       { Icon: Globe,         bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
+  tickets:       { Icon: Bookmark,      bg: "rgba(254,243,199,1)", color: "rgba(180,83,9,1)"    },
+  policies:      { Icon: Shield,        bg: "rgba(220,252,231,1)", color: "rgba(21,128,61,1)"   },
+  people:        { Icon: Users,         bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
+  channels:      { Icon: Radio,         bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
+  conversations: { Icon: MessageSquare, bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
+  workspaces:    { Icon: Briefcase,     bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)"   },
+}
+
+const DEFAULT_SUGGESTED_ACTIONS = [
+  { Icon: Plus,    label: "Create work item" },
+  { Icon: UserPlus, label: "Invite member"   },
+  { Icon: Zap,     label: "New automation"   },
+]
+
+const DEFAULT_RECENT: SearchResultItem[] = [
+  { id: "1", title: "Lead triage",                            subtitle: "Network · 8 agents · 96.6%",          type: "network",  timeAgo: "1h ago"  },
+  { id: "2", title: "Sammy - Service Desk",                   subtitle: "Agent · in workspace",                type: "agents",   timeAgo: "2h ago"  },
+  { id: "3", title: "Multi-tenant agent rollout - PRD-459",   subtitle: "Ticket · open · Edgarda Sierra",      type: "tickets",  timeAgo: "3h ago"  },
+  { id: "4", title: "PII redaction - P-2025",                 subtitle: "Policy · draft · Miguel Torres",      type: "policies", timeAgo: "3h ago"  },
+  { id: "5", title: "Thomas Gonzales",                        subtitle: "Person · Owner · thomas@aimsos.ai",   type: "people",   timeAgo: "5h ago"  },
+]
+
+function ResultRow({ item, onResultClick }: { item: SearchResultItem; onResultClick?: (i: SearchResultItem) => void }) {
+  const [hovered, setHovered] = useState(false)
+  const meta = TYPE_ICON[item.type] ?? { Icon: Globe, bg: "rgba(219,234,254,1)", color: "rgba(29,78,216,1)" }
+  return (
+    <button
+      onClick={() => onResultClick?.(item)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="w-full flex items-center gap-[12px] px-[16px] py-[8px] text-left transition-colors"
+      style={{ background: hovered ? "var(--gs-row-hover)" : "transparent" }}
+    >
+      <div className="w-[24px] h-[24px] rounded-[4px] flex items-center justify-center shrink-0"
+        style={{ background: meta.bg }}>
+        <meta.Icon size={14} strokeWidth={1.75} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-medium truncate" style={{ color: "var(--gs-text)" }}>{item.title}</div>
+        <div className="text-[11px] truncate" style={{ color: "var(--gs-text-dim)" }}>{item.subtitle}</div>
+      </div>
+      {item.timeAgo && (
+        <div className="flex items-center gap-[4px] shrink-0">
+          <Clock size={11} strokeWidth={1.75} style={{ color: "var(--gs-text-meta)" }} />
+          <span className="text-[11px]" style={{ color: "var(--gs-text-meta)" }}>{item.timeAgo}</span>
+        </div>
+      )}
+    </button>
+  )
+}
+
+export function GlobalSearch({
+  open,
+  onClose,
+  recentSearches = DEFAULT_RECENT,
+  results,
+  loading = false,
+  onResultClick,
+}: GlobalSearchProps) {
+  const [query,        setQuery]       = useState("")
+  const [activeFilter, setActiveFilter] = useState<SearchFilter>("all")
+  const inputRef  = useRef<HTMLInputElement>(null)
+  const panelRef  = useRef<HTMLDivElement>(null)
+
+  // Focus input when overlay opens
+  useEffect(() => {
+    if (open) { setTimeout(() => inputRef.current?.focus(), 50) }
+    else       { setQuery(""); setActiveFilter("all") }
+  }, [open])
+
+  // Close on Escape
+  const handleKey = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose()
+  }, [onClose])
+  useEffect(() => {
+    document.addEventListener("keydown", handleKey)
+    return () => document.removeEventListener("keydown", handleKey)
+  }, [handleKey])
+
+  // Close on backdrop click
+  const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!panelRef.current?.contains(e.target as Node)) onClose()
+  }
+
+  if (!open) return null
+
+  const hasQuery   = query.trim().length > 0
+  const hasResults = results && results.length > 0
+  const noResults  = hasQuery && !loading && results !== undefined && results.length === 0
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-[80px]"
+      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }}
+      onMouseDown={handleBackdrop}
+    >
+      <div
+        ref={panelRef}
+        className="flex flex-col overflow-hidden"
+        style={{
+          width: 700, maxHeight: 600,
+          background:   "var(--gs-bg)",
+          border:       "1px solid var(--gs-border)",
+          borderRadius: 8,
+          boxShadow:    "0 16px 48px rgba(0,0,0,0.32)",
+        }}
+      >
+        {/* ── Search input row ─────────────────────────────────── */}
+        <div className="flex items-center gap-[12px] px-[16px]" style={{ height: 56, borderBottom: "1px solid var(--gs-divider)" }}>
+          <Search size={16} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--gs-text-dim)" }} />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search agents, networks, tickets, policies, people…"
+            className="flex-1 bg-transparent outline-none text-[13px]"
+            style={{ color: "var(--gs-text)" }}
+          />
+          {query && (
+            <button onClick={() => setQuery("")} className="shrink-0 transition-opacity hover:opacity-70">
+              <X size={14} strokeWidth={1.75} style={{ color: "var(--gs-text-dim)" }} />
+            </button>
+          )}
+          <div
+            className="shrink-0 flex items-center gap-[4px] px-[8px] rounded-[6px]"
+            style={{ height: 24, background: "var(--gs-kbd-bg)" }}
+          >
+            <span className="text-[11px] font-medium" style={{ color: "var(--gs-kbd-fg)" }}>esc</span>
+          </div>
+        </div>
+
+        {/* ── Filter chips row ──────────────────────────────────── */}
+        <div className="flex items-center gap-[8px] px-[12px]" style={{ height: 40, borderBottom: "1px solid var(--gs-divider)", overflowX: "auto" }}>
+          <button className="shrink-0 w-[24px] h-[24px] flex items-center justify-center rounded-[6px] transition-colors hover:opacity-70"
+            style={{ color: "var(--gs-text-dim)" }}>
+            <SlidersHorizontal size={14} strokeWidth={1.75} />
+          </button>
+          {SEARCH_FILTERS.map(f => {
+            const isActive = activeFilter === f.id
+            return (
+              <button
+                key={f.id}
+                onClick={() => setActiveFilter(f.id)}
+                className="shrink-0 flex items-center gap-[4px] px-[10px] rounded-full text-[12px] font-medium transition-colors"
+                style={{
+                  height: 22,
+                  background: isActive ? "rgba(33,115,255,1)" : "var(--gs-chip-inactive-bg)",
+                  color:      isActive ? "#ffffff"             : "var(--gs-chip-inactive-fg)",
+                }}
+              >
+                <f.Icon size={12} strokeWidth={1.75} />
+                {f.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ── Content area ─────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex flex-col gap-[2px] py-[8px]">
+              {[120, 160, 100, 140, 90].map((w, i) => (
+                <div key={i} className="flex items-center gap-[12px] px-[16px] py-[8px]">
+                  <div className="w-[24px] h-[24px] rounded-[4px] animate-pulse" style={{ background: "var(--gs-chip-inactive-bg)" }} />
+                  <div className="flex-1 flex flex-col gap-[6px]">
+                    <div className="h-[10px] rounded-[4px] animate-pulse" style={{ width: w, background: "var(--gs-chip-inactive-bg)" }} />
+                    <div className="h-[8px] rounded-[4px] animate-pulse" style={{ width: w * 0.7, background: "var(--gs-chip-inactive-bg)" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* No results */}
+          {noResults && !loading && (
+            <div className="flex flex-col items-center justify-center gap-[8px] py-[48px]">
+              <p className="text-[14px] font-semibold" style={{ color: "var(--gs-text)" }}>No matches found</p>
+              <p className="text-[12px]" style={{ color: "var(--gs-text-dim)" }}>Try fewer words or different keywords</p>
+              {activeFilter !== "all" && (
+                <button
+                  onClick={() => setActiveFilter("all")}
+                  className="mt-[8px] text-[12px] font-medium px-[16px] py-[6px] rounded-[6px] transition-opacity hover:opacity-80"
+                  style={{ background: "var(--gs-chip-inactive-bg)", color: "var(--gs-text)" }}
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Search results */}
+          {hasQuery && hasResults && !loading && (
+            <div className="py-[8px]">
+              {results!.map(item => (
+                <ResultRow key={item.id} item={item} onResultClick={onResultClick} />
+              ))}
+            </div>
+          )}
+
+          {/* Default state — suggested actions + recent searches */}
+          {!hasQuery && !loading && (
+            <>
+              {/* Suggested actions */}
+              <div className="pt-[8px]">
+                <div className="px-[16px] pb-[4px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em]"
+                    style={{ color: "var(--gs-section-label)" }}>Suggested actions</span>
+                </div>
+                {DEFAULT_SUGGESTED_ACTIONS.map(action => (
+                  <button
+                    key={action.label}
+                    className="w-full flex items-center gap-[12px] px-[16px] py-[10px] text-left transition-colors hover:bg-[var(--gs-row-hover)]"
+                  >
+                    <div className="w-[24px] h-[24px] rounded-[4px] flex items-center justify-center shrink-0"
+                      style={{ background: "var(--gs-action-icon-bg)" }}>
+                      <action.Icon size={14} strokeWidth={1.75} style={{ color: "var(--gs-text-dim)" }} />
+                    </div>
+                    <span className="text-[13px] font-medium" style={{ color: "var(--gs-text)" }}>{action.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Divider */}
+              <div className="mx-[16px] my-[4px]" style={{ height: 1, background: "var(--gs-divider)" }} />
+
+              {/* Recent searches */}
+              <div className="pb-[8px]">
+                <div className="px-[16px] pt-[8px] pb-[4px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em]"
+                    style={{ color: "var(--gs-section-label)" }}>Recent searches</span>
+                </div>
+                {recentSearches.map(item => (
+                  <ResultRow key={item.id} item={item} onResultClick={onResultClick} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Bottom bar — keyboard hints ───────────────────────── */}
+        <div
+          className="flex items-center gap-[12px] px-[16px] shrink-0"
+          style={{ height: 36, borderTop: "1px solid var(--gs-divider)" }}
+        >
+          {[["↑↓", "Navigate"], ["↵", "Open"]].map(([key, label]) => (
+            <div key={label} className="flex items-center gap-[6px]">
+              <span className="px-[6px] rounded-[4px] text-[11px] font-medium"
+                style={{ background: "var(--gs-kbd-bg)", color: "var(--gs-kbd-fg)" }}>{key}</span>
+              <span className="text-[11px]" style={{ color: "var(--gs-text-meta)" }}>{label}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-[6px]">
+            <span className="px-[6px] rounded-[4px] text-[11px] font-medium"
+              style={{ background: "var(--gs-kbd-bg)", color: "var(--gs-kbd-fg)" }}>esc</span>
+            <span className="text-[11px]" style={{ color: "var(--gs-text-meta)" }}>Close</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── TopbarButton — exported for layout shells ─────────────────────────────
 // DS COMPONENT_SET 8603:52851: 24×24 button, two visual variants:
 //   "default"  → Type=Tertiary · transparent bg · DS hover/focus tokens
@@ -395,6 +698,7 @@ export function Topbar({
 
   const [leftMenuOpen,  setLeftMenuOpen]  = useState(false)
   const [rightMenuOpen, setRightMenuOpen] = useState(false)
+  const [searchOpen,    setSearchOpen]    = useState(false)
   const leftRef  = useRef<HTMLDivElement>(null)
   const rightRef = useRef<HTMLDivElement>(null)
 
@@ -490,7 +794,7 @@ export function Topbar({
               border:       "1px solid var(--topbar-search-border)",
               borderRadius: 6,
             }}
-            onClick={onSearchFocus}
+            onClick={() => { setSearchOpen(true); onSearchFocus?.() }}
           >
             <Search
               size={12} strokeWidth={1.75} className="shrink-0"
@@ -584,6 +888,9 @@ export function Topbar({
 
       {/* ── Bottom divider — Border/Neutral/Subtle ──────────────── */}
       <div className="flex-1 border-b" style={{ borderColor: "var(--topbar-divider)" }} />
+
+      {/* ── Global Search overlay ─────────────────────────────────── */}
+      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
 
     </header>
   )
