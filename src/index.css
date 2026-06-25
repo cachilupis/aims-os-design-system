@@ -345,23 +345,25 @@
     --sb-separator:        rgba(255,255,255,0.15);    /* Border/Neutral/Lighter dark  → White/15      */
     --sb-chevron-active:   rgba(233,241,255,1);       /* Icon/Primary/Subtle          → Primary/300   */
 
-    /* ── Global Search overlay — dark ───────────────────────────────────── */
-    /* Source: Figma 15394:15568 · Global Search - menu COMPONENT_SET       */
-    --gs-bg:               rgba(22,22,22,0.92);        /* Surface/Neutral/Elevated dark · 0.92 for blur */
-    --gs-border:           rgba(255,255,255,0.10);    /* Border/Neutral/Default dark                  */
-    --gs-input-bg:         rgba(255,255,255,0.06);    /* Surface/Neutral/Hover dark                   */
-    --gs-input-border:     rgba(255,255,255,0.12);    /* Border/Neutral/Lighter dark                  */
-    --gs-divider:          rgba(255,255,255,0.08);    /* Border/Neutral/Subtle dark                   */
-    --gs-text:             rgba(255,255,255,0.85);    /* Text/Primary dark                            */
-    --gs-text-dim:         rgba(255,255,255,0.45);    /* Text/Secondary dark                          */
-    --gs-text-meta:        rgba(255,255,255,0.35);    /* Text/Tertiary dark                           */
-    --gs-section-label:    rgba(255,255,255,0.30);    /* Section header label dark                    */
-    --gs-row-hover:        rgba(255,255,255,0.06);    /* Row hover dark                               */
-    --gs-chip-inactive-bg: rgba(255,255,255,0.08);    /* Chip inactive bg dark                        */
-    --gs-chip-inactive-fg: rgba(255,255,255,0.70);    /* Chip inactive text dark                      */
-    --gs-action-icon-bg:   rgba(255,255,255,0.06);    /* Suggested action icon bg dark                */
-    --gs-kbd-bg:           rgba(255,255,255,0.08);    /* Keyboard shortcut pill dark                  */
-    --gs-kbd-fg:           rgba(255,255,255,0.40);    /* Keyboard shortcut text dark                  */
+    /* ── Global Search overlay — dark mode ──────────────────────────────── */
+    /* Surface/Floating dark = rgba(16,22,40) + BACKGROUND_BLUR radius:16  */
+    --gs-bg:               rgba(16, 22, 40, 0.94);   /* Surface/Floating dark — #10162A + blur        */
+    --gs-border:           rgba(255,255,255,0.08);   /* Border/Neutral/Subtle dark  = White/8          */
+    --gs-input-bg:         rgba(255,255,255,0.06);   /* Surface/Neutral/Default dark = White/6         */
+    --gs-input-border:     rgba(255,255,255,0.12);   /* Border/Neutral/Default dark  = White/12        */
+    --gs-divider:          rgba(255,255,255,0.06);   /* Border/Neutral/Subtle dark   = White/6         */
+    --gs-text:             rgba(255,255,255,0.90);   /* Text/Primary dark            = White/90        */
+    --gs-text-dim:         rgba(255,255,255,0.55);   /* Text/Secondary dark          = White/55        */
+    --gs-text-meta:        rgba(255,255,255,0.35);   /* Text/Meta dark               = White/35        */
+    --gs-section-label:    rgba(255,255,255,0.40);   /* Section label dark           = White/40        */
+    --gs-row-hover:        rgba(255,255,255,0.05);   /* Row hover dark               = White/5         */
+    --gs-chip-inactive-bg: rgba(255,255,255,0.08);   /* Chip inactive bg dark        = White/8         */
+    --gs-chip-inactive-fg: rgba(255,255,255,0.70);   /* Chip inactive text dark      = White/70        */
+    --gs-action-icon-bg:   rgba(33,115,255,0.12);    /* Suggested action icon bg dark — primary/12    */
+    --gs-kbd-bg:           rgba(255,255,255,0.08);   /* Keyboard shortcut pill dark  = White/8         */
+    --gs-kbd-fg:           rgba(255,255,255,0.40);   /* Keyboard shortcut text dark  = White/40        */
+    --gs-filters-col-bg:   rgba(255,255,255,0.02);   /* FiltersCard left column bg — subtle separation */
+    --gs-chip-border:      rgba(255,255,255,0.20);   /* Pill chip outline border dark = White/20       */
   }
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
@@ -701,6 +703,8 @@
     --gs-action-icon-bg:   rgba(246,249,255,1);        /* Suggested action icon bg light               */
     --gs-kbd-bg:           rgba(242,242,242,1);        /* Keyboard shortcut pill light                 */
     --gs-kbd-fg:           rgba(92,92,92,1);           /* Keyboard shortcut text light                 */
+    --gs-filters-col-bg:   rgba(0,0,0,0.02);           /* FiltersCard left column bg light             */
+    --gs-chip-border:      rgba(0,0,0,0.15);           /* Pill chip outline border light               */
   }
 
   html {

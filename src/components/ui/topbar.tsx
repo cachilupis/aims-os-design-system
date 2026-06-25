@@ -362,18 +362,19 @@ const DEFAULT_RECENT: SearchResultItem[] = [
 ]
 
 // ── Shared frosted-glass panel style ──────────────────────────────────────
-// DS spec: fill rgba(255,255,255,0.92) + BACKGROUND_BLUR radius:16 (dark: rgba(22,22,22,0.92))
+// DS spec: rgba(255,255,255,0.92) + BACKGROUND_BLUR radius:16 — always light, both modes
 const PANEL_STYLE: React.CSSProperties = {
-  background:    "var(--gs-bg)",
-  backdropFilter:"blur(16px)",
-  WebkitBackdropFilter: "blur(16px)",
-  border:        "1px solid var(--gs-border)",
-  borderRadius:  8,
+  background:          "var(--gs-bg)",
+  backdropFilter:      "saturate(180%) blur(16px)",
+  WebkitBackdropFilter:"saturate(180%) blur(16px)",
+  border:              "1px solid var(--gs-border)",
+  borderRadius:        8,
 }
 
 // ── Filters Card ─────────────────────────────────────────────────────────
-// DS: Figma 15396:25505 · 298×320px · same frosted surface · pill toggle chips
-// Sections: Type, Owner, Status — selected chip: filled blue, unselected: outline pill
+// DS: Figma 15396:25505 · 298px panel · left column inside content area
+// Sections: Type, Owner, Status — pill chips; selected=blue filled, unselected=outline
+// Appears as split left panel (not dropdown) — same frosted surface as main panel
 
 const FILTER_SECTIONS = [
   { label: "Type",   options: ["Agents","Networks","Tickets","Policies","People","Channels","Conversations","Workspaces"] },
@@ -381,28 +382,29 @@ const FILTER_SECTIONS = [
   { label: "Status", options: ["Active","Draft","Open","In Progress","Done","Archived"] },
 ]
 
-function FiltersCard({ onClose, onApply }: { onClose: () => void; onApply?: (sel: Record<string, string[]>) => void }) {
+function FiltersCard({
+  onApply,
+}: {
+  onApply?: (sel: Record<string, string[]>) => void
+}) {
   const [selected, setSelected] = useState<Record<string, string[]>>({})
 
-  const toggle = (section: string, option: string) => {
+  const toggle = (section: string, option: string) =>
     setSelected(prev => {
       const cur = prev[section] ?? []
       return { ...prev, [section]: cur.includes(option) ? cur.filter(o => o !== option) : [...cur, option] }
     })
-  }
 
   const hasAny = Object.values(selected).some(arr => arr.length > 0)
 
   return (
-    <div
-      className="absolute left-0 top-[calc(100%+4px)] z-[110] flex flex-col"
-      style={{ ...PANEL_STYLE, width: 298, boxShadow: "0 8px 32px rgba(0,0,0,0.24)" }}
-      onMouseDown={e => e.stopPropagation()}
-    >
+    <div className="flex flex-col h-full overflow-y-auto">
       {FILTER_SECTIONS.map((sec, si) => (
-        <div key={sec.label} className={cn("px-[16px] pt-[12px]", si < FILTER_SECTIONS.length - 1 ? "pb-[8px]" : "pb-[4px]")}>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.06em] mb-[8px]"
-            style={{ color: "var(--gs-section-label)" }}>{sec.label}</p>
+        <div key={sec.label} className="px-[16px] pt-[14px] pb-[10px]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.06em] mb-[10px]"
+            style={{ color: "var(--gs-section-label)" }}>
+            {sec.label}
+          </p>
           <div className="flex flex-wrap gap-[6px]">
             {sec.options.map(opt => {
               const active = (selected[sec.label] ?? []).includes(opt)
@@ -410,12 +412,12 @@ function FiltersCard({ onClose, onApply }: { onClose: () => void; onApply?: (sel
                 <button
                   key={opt}
                   onClick={() => toggle(sec.label, opt)}
-                  className="text-[12px] font-medium px-[12px] rounded-full transition-colors"
+                  className="text-[12px] font-medium px-[12px] rounded-full transition-all"
                   style={{
-                    height: 26,
+                    height:     26,
                     background: active ? "rgba(33,115,255,1)" : "transparent",
                     color:      active ? "#ffffff" : "var(--gs-text-dim)",
-                    border:     active ? "1.5px solid rgba(33,115,255,1)" : "1.5px solid var(--gs-border)",
+                    border:     `1.5px solid ${active ? "rgba(33,115,255,1)" : "var(--gs-chip-border)"}`,
                   }}
                 >
                   {opt}
@@ -424,25 +426,31 @@ function FiltersCard({ onClose, onApply }: { onClose: () => void; onApply?: (sel
             })}
           </div>
           {si < FILTER_SECTIONS.length - 1 && (
-            <div className="mt-[12px]" style={{ height: 1, background: "var(--gs-divider)" }} />
+            <div className="mt-[14px]" style={{ height: 1, background: "var(--gs-divider)" }} />
           )}
         </div>
       ))}
 
-      {/* CTA row */}
-      <div className="flex items-center justify-end gap-[8px] px-[16px] py-[12px]"
-        style={{ borderTop: "1px solid var(--gs-divider)" }}>
+      {/* Spacer + CTA row pinned to bottom */}
+      <div className="flex-1" />
+      <div
+        className="flex items-center justify-end gap-[8px] px-[16px] py-[12px] shrink-0"
+        style={{ borderTop: "1px solid var(--gs-divider)" }}
+      >
         <button
-          onClick={() => { setSelected({}); onClose() }}
+          onClick={() => setSelected({})}
           className="text-[12px] font-medium px-[12px] py-[5px] rounded-[6px] transition-opacity hover:opacity-70"
           style={{ color: "var(--gs-text-dim)" }}
         >
           Clear all
         </button>
         <button
-          onClick={() => { onApply?.(selected); onClose() }}
+          onClick={() => onApply?.(selected)}
           className="text-[12px] font-semibold px-[14px] py-[5px] rounded-[6px] transition-opacity hover:opacity-85"
-          style={{ background: hasAny ? "rgba(33,115,255,1)" : "var(--gs-chip-inactive-bg)", color: hasAny ? "#ffffff" : "var(--gs-text-dim)" }}
+          style={{
+            background: hasAny ? "rgba(33,115,255,1)" : "var(--gs-chip-inactive-bg)",
+            color:      hasAny ? "#ffffff" : "var(--gs-text-dim)",
+          }}
         >
           Done
         </button>
@@ -560,13 +568,13 @@ export function GlobalSearch({
         </div>
 
         {/* ── Filter chips row ─────────────────────────────────── */}
-        <div className="relative flex items-center gap-[6px] px-[12px]"
-          style={{ height: 40, borderBottom: "1px solid var(--gs-divider)", overflowX: "auto" }}>
+        <div className="flex items-center gap-[6px] px-[12px]"
+          style={{ height: 40, borderBottom: "1px solid var(--gs-divider)", overflowX: "auto", flexShrink: 0 }}>
           <button
             onClick={() => setFiltersOpen(v => !v)}
             className="shrink-0 w-[24px] h-[24px] flex items-center justify-center rounded-[6px] transition-colors"
             style={{
-              background: filtersOpen ? "rgba(33,115,255,0.12)" : "transparent",
+              background: filtersOpen ? "rgba(33,115,255,0.10)" : "transparent",
               color: filtersOpen ? "rgba(33,115,255,1)" : "var(--gs-text-dim)",
             }}
           >
@@ -576,91 +584,101 @@ export function GlobalSearch({
             const isActive = activeFilter === f.id
             return (
               <button key={f.id} onClick={() => setActiveFilter(f.id)}
-                className="shrink-0 flex items-center gap-[4px] px-[10px] rounded-full text-[12px] font-medium transition-colors"
+                className="shrink-0 flex items-center gap-[4px] px-[10px] rounded-full text-[12px] font-medium transition-all"
                 style={{
-                  height: 22,
+                  height:     22,
                   background: isActive ? "rgba(33,115,255,1)" : "var(--gs-chip-inactive-bg)",
-                  color:      isActive ? "#ffffff"             : "var(--gs-chip-inactive-fg)",
+                  color:      isActive ? "#ffffff"            : "var(--gs-chip-inactive-fg)",
                 }}>
                 <f.Icon size={11} strokeWidth={1.75} />
                 {f.label}
               </button>
             )
           })}
-          {filtersOpen && (
-            <FiltersCard onClose={() => setFiltersOpen(false)} />
-          )}
         </div>
 
-        {/* ── Content area ─────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
+        {/* ── Content area — splits horizontally when filters open ─ */}
+        {/* DS Figma 15394:16244: FiltersCard (298px) left + results right */}
+        <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
 
-          {/* Loading */}
-          {loading && (
-            <div className="flex flex-col py-[8px]">
-              {[160, 120, 180, 140, 100].map((w, i) => (
-                <div key={i} className="flex items-center gap-[12px] px-[16px] py-[8px]">
-                  <div className="w-[24px] h-[24px] rounded-[4px] animate-pulse" style={{ background: "var(--gs-chip-inactive-bg)" }} />
-                  <div className="flex-1 flex flex-col gap-[6px]">
-                    <div className="h-[10px] rounded-[3px] animate-pulse" style={{ width: w, background: "var(--gs-chip-inactive-bg)" }} />
-                    <div className="h-[8px] rounded-[3px] animate-pulse" style={{ width: w * 0.65, background: "var(--gs-chip-inactive-bg)" }} />
+          {/* Filters panel — left column, 298px — DS Figma 15396:25505 */}
+          {filtersOpen && (
+            <div
+              className="shrink-0 flex flex-col"
+              style={{
+                width: 298,
+                borderRight: "1px solid var(--gs-divider)",
+                background: "var(--gs-filters-col-bg)",
+              }}
+            >
+              <FiltersCard onApply={() => setFiltersOpen(false)} />
+            </div>
+          )}
+
+          {/* Results column */}
+          <div className="flex-1 overflow-y-auto">
+
+            {/* Loading */}
+            {loading && (
+              <div className="flex flex-col py-[8px]">
+                {[160, 120, 180, 140, 100].map((w, i) => (
+                  <div key={i} className="flex items-center gap-[12px] px-[16px] py-[8px]">
+                    <div className="w-[24px] h-[24px] rounded-[4px] animate-pulse" style={{ background: "var(--gs-chip-inactive-bg)" }} />
+                    <div className="flex-1 flex flex-col gap-[6px]">
+                      <div className="h-[10px] rounded-[3px] animate-pulse" style={{ width: w, background: "var(--gs-chip-inactive-bg)" }} />
+                      <div className="h-[8px] rounded-[3px] animate-pulse" style={{ width: w * 0.65, background: "var(--gs-chip-inactive-bg)" }} />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* No results */}
-          {noResults && !loading && (
-            <div className="flex flex-col items-center justify-center gap-[8px] py-[56px]">
-              <p className="text-[14px] font-semibold" style={{ color: "var(--gs-text)" }}>No matches found</p>
-              <p className="text-[12px]" style={{ color: "var(--gs-text-dim)" }}>Try fewer words or different keywords</p>
-              {activeFilter !== "all" && (
-                <button onClick={() => setActiveFilter("all")}
-                  className="mt-[8px] text-[12px] font-medium px-[16px] py-[6px] rounded-[6px] transition-opacity hover:opacity-80"
-                  style={{ background: "var(--gs-chip-inactive-bg)", color: "var(--gs-text)" }}>
-                  Clear filters
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Results */}
-          {hasQuery && hasResults && !loading && (
-            <div className="py-[8px]">
-              {results!.map(item => <ResultRow key={item.id} item={item} onResultClick={onResultClick} />)}
-            </div>
-          )}
-
-          {/* Default — suggested actions + recent */}
-          {!hasQuery && !loading && (
-            <>
-              <div className="pt-[8px]">
-                <p className="px-[16px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
-                  style={{ color: "var(--gs-section-label)" }}>Suggested actions</p>
-                {DEFAULT_SUGGESTED.map(action => (
-                  <button key={action.label}
-                    className="w-full flex items-center gap-[12px] px-[16px] py-[8px] text-left transition-colors hover:bg-[var(--gs-row-hover)]">
-                    <HighlightIcon
-                      size="sm"
-                      variant={action.variant}
-                      iconColor="dark"
-                      icon={<action.Icon size={14} strokeWidth={1.75} />}
-                    />
-                    <span className="text-[13px] font-medium" style={{ color: "var(--gs-text)" }}>{action.label}</span>
-                  </button>
                 ))}
               </div>
+            )}
 
-              <div className="mx-[16px] my-[4px]" style={{ height: 1, background: "var(--gs-divider)" }} />
-
-              <div className="pb-[8px]">
-                <p className="px-[16px] pt-[8px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
-                  style={{ color: "var(--gs-section-label)" }}>Recent searches</p>
-                {recentSearches.map(item => <ResultRow key={item.id} item={item} onResultClick={onResultClick} />)}
+            {/* No results */}
+            {noResults && !loading && (
+              <div className="flex flex-col items-center justify-center gap-[8px] py-[56px]">
+                <p className="text-[14px] font-semibold" style={{ color: "var(--gs-text)" }}>No matches found</p>
+                <p className="text-[12px]" style={{ color: "var(--gs-text-dim)" }}>Try fewer words or different keywords</p>
+                {activeFilter !== "all" && (
+                  <button onClick={() => setActiveFilter("all")}
+                    className="mt-[8px] text-[12px] font-medium px-[16px] py-[6px] rounded-[6px] transition-opacity hover:opacity-80"
+                    style={{ background: "var(--gs-chip-inactive-bg)", color: "var(--gs-text)" }}>
+                    Clear filters
+                  </button>
+                )}
               </div>
-            </>
-          )}
+            )}
+
+            {/* Results */}
+            {hasQuery && hasResults && !loading && (
+              <div className="py-[8px]">
+                {results!.map(item => <ResultRow key={item.id} item={item} onResultClick={onResultClick} />)}
+              </div>
+            )}
+
+            {/* Default — suggested actions + recent */}
+            {!hasQuery && !loading && (
+              <>
+                <div className="pt-[8px]">
+                  <p className="px-[16px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
+                    style={{ color: "var(--gs-section-label)" }}>Suggested actions</p>
+                  {DEFAULT_SUGGESTED.map(action => (
+                    <button key={action.label}
+                      className="w-full flex items-center gap-[12px] px-[16px] py-[8px] text-left transition-colors hover:bg-[var(--gs-row-hover)]">
+                      <HighlightIcon size="sm" variant={action.variant} iconColor="dark"
+                        icon={<action.Icon size={14} strokeWidth={1.75} />} />
+                      <span className="text-[13px] font-medium" style={{ color: "var(--gs-text)" }}>{action.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="mx-[16px] my-[4px]" style={{ height: 1, background: "var(--gs-divider)" }} />
+                <div className="pb-[8px]">
+                  <p className="px-[16px] pt-[8px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
+                    style={{ color: "var(--gs-section-label)" }}>Recent searches</p>
+                  {recentSearches.map(item => <ResultRow key={item.id} item={item} onResultClick={onResultClick} />)}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── Bottom bar ───────────────────────────────────────── */}
