@@ -21,7 +21,7 @@ import {
   TableCellMenu,
   type TableColumn,
 } from "@/components/ui/table"
-import { Topbar, TopbarButton, type TopbarAction, type WorkspaceItem } from "@/components/ui/topbar"
+import { Topbar, TopbarButton, TopbarLeftMenu, TopbarRightMenu, GlobalSearch, type TopbarAction, type WorkspaceItem, type ThemeMode } from "@/components/ui/topbar"
 import { Sidebar, DEFAULT_SIDEBAR_ITEMS } from "@/components/ui/sidebar"
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -5992,8 +5992,11 @@ function LucidePreview({ name }: { name: string }) {
 
 // ── TopbarPage ─────────────────────────────────────────────────────────────
 
-function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
-  const [tab, setTab] = useState<"overview" | "variants" | "playground" | "reference">("overview")
+function TopbarPage({ openSpec, onAppThemeChange }: { openSpec: (s: SpecModal) => void; onAppThemeChange?: (isDark: boolean) => void }) {
+  const [tab, setTab] = useState<"overview" | "variants" | "sub-components" | "playground" | "reference">("overview")
+  const [gsPreviewOpen, setGsPreviewOpen] = useState(false)
+  const [demoThemeMode, setDemoThemeMode] = useState<ThemeMode>("dark")
+  const [demoSelectedTenantId, setDemoSelectedTenantId] = useState("t-1")
 
   // Playground controls
   const [pgVariant,  setPgVariant]  = useState<"default" | "tablet">("default")
@@ -6001,7 +6004,7 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [coName,     setCoName]     = useState("AIMS OS")
   const [uName,      setUName]      = useState("Michael O.")
   const [searchPH,   setSearchPH]   = useState("Search…")
-  const [showBadge,  setShowBadge]  = useState(true)
+  const [showBadge,  setShowBadge]  = useState(false)
 
   // DS: IA-icon is a single 4-point diamond sparkle → Sparkle (singular), not Sparkles (multiple)
   const SparkleIcon  = (LucideIcons as unknown as Record<string,LucideIcon>)["Sparkle"]
@@ -6020,10 +6023,23 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   ]
 
   const demoWorkspaces: WorkspaceItem[] = [
-    { id: "ws-1", name: "Product Design", tag: "Active" },
-    { id: "ws-2", name: "Engineering",    tag: "Member" },
-    { id: "ws-3", name: "Marketing",      tag: "Member" },
+    { id: "ws-1", name: "Product Design", description: "UI/UX & Design Systems", tag: "Active" },
+    { id: "ws-2", name: "Engineering",    description: "Frontend & Backend",      tag: "Member" },
+    { id: "ws-3", name: "Marketing",      description: "Growth & Brand",          tag: "Member" },
   ]
+
+  const demoTenants: WorkspaceItem[] = [
+    { id: "t-1", name: "AIMS OS",        description: "Main organization",       tag: "Active" },
+    { id: "t-2", name: "Acme Corp",      description: "Client workspace",        tag: "Member" },
+    { id: "t-3", name: "Sandbox",        description: "Testing environment",     tag: "Member" },
+  ]
+
+  const demoCompanyName = demoTenants.find(t => t.id === demoSelectedTenantId)?.name ?? "AIMS OS"
+
+  function handleThemeChange(mode: ThemeMode) {
+    setDemoThemeMode(mode)
+    if (mode !== "auto") onAppThemeChange?.(mode === "dark")
+  }
 
   const tokenRows = [
     { cssVar: "--topbar-text",             dsToken: "Text/Subtitle",           role: "Workspace name",           light: "rgba(42,42,42,1)",    dark: "rgba(255,255,255,0.60)" },
@@ -6040,7 +6056,7 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   ]
 
   const PreviewWrap = ({ children }: { children: React.ReactNode }) => (
-    <div className="rounded-[8px] overflow-hidden border border-[var(--border)]">
+    <div className="bg-[var(--canvas)]">
       {children}
     </div>
   )
@@ -6060,10 +6076,11 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
       <TabBar
         tabs={[
-          { id: "overview",   label: "Overview"   },
-          { id: "variants",   label: "Variants"   },
-          { id: "playground", label: "Playground" },
-          { id: "reference",  label: "Reference"  },
+          { id: "overview",        label: "Overview"        },
+          { id: "variants",        label: "Variants"        },
+          { id: "sub-components",  label: "Sub-components"  },
+          { id: "playground",      label: "Playground"      },
+          { id: "reference",       label: "Reference"       },
         ]}
         active={tab}
         onChange={id => setTab(id as typeof tab)}
@@ -6081,11 +6098,16 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <PreviewWrap>
                 <Topbar
                   workspaceName="Product Design"
-                  companyName="AIMS OS"
+                  companyName={demoCompanyName}
                   userName="Michael O."
                   userEmail="michael@aimsos.ai"
                   workspaces={demoWorkspaces}
                   selectedWorkspaceId="ws-1"
+                  tenants={demoTenants}
+                  selectedTenantId={demoSelectedTenantId}
+                  onTenantSelect={(id) => { setDemoSelectedTenantId(id); setCoName(demoTenants.find(t => t.id === id)?.name ?? coName) }}
+                  themeMode={demoThemeMode}
+                  onThemeChange={handleThemeChange}
                   actions={defaultActions}
                 />
               </PreviewWrap>
@@ -6167,7 +6189,21 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">36px — standard 3-zone layout. Left zone 140px.</p>
               </div>
               <PreviewWrap>
-                <Topbar workspaceName="Product Design" companyName="AIMS OS" userName="Michael O." actions={defaultActions} variant="default" />
+                <Topbar
+                  workspaceName="Product Design"
+                  companyName={demoCompanyName}
+                  userName="Michael O."
+                  userEmail="michael@aimsos.ai"
+                  workspaces={demoWorkspaces}
+                  selectedWorkspaceId="ws-1"
+                  tenants={demoTenants}
+                  selectedTenantId={demoSelectedTenantId}
+                  onTenantSelect={(id) => { setDemoSelectedTenantId(id); setCoName(demoTenants.find(t => t.id === id)?.name ?? coName) }}
+                  themeMode={demoThemeMode}
+                  onThemeChange={handleThemeChange}
+                  actions={defaultActions}
+                  variant="default"
+                />
               </PreviewWrap>
             </div>
 
@@ -6177,7 +6213,21 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">34px — adds hamburger button to left zone (172px). Used at viewports below 1024px.</p>
               </div>
               <PreviewWrap>
-                <Topbar workspaceName="Product Design" companyName="AIMS OS" userName="Michael O." userEmail="michael@aimsos.ai" workspaces={demoWorkspaces} selectedWorkspaceId="ws-1" actions={defaultActions} variant="tablet" />
+                <Topbar
+                  workspaceName="Product Design"
+                  companyName={demoCompanyName}
+                  userName="Michael O."
+                  userEmail="michael@aimsos.ai"
+                  workspaces={demoWorkspaces}
+                  selectedWorkspaceId="ws-1"
+                  tenants={demoTenants}
+                  selectedTenantId={demoSelectedTenantId}
+                  onTenantSelect={(id) => { setDemoSelectedTenantId(id); setCoName(demoTenants.find(t => t.id === id)?.name ?? coName) }}
+                  themeMode={demoThemeMode}
+                  onThemeChange={handleThemeChange}
+                  actions={defaultActions}
+                  variant="tablet"
+                />
               </PreviewWrap>
             </div>
 
@@ -6189,11 +6239,16 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <PreviewWrap>
                 <Topbar
                   workspaceName="Product Design"
-                  companyName="AIMS OS"
+                  companyName={demoCompanyName}
                   userName="Michael O."
+                  userEmail="michael@aimsos.ai"
                   workspaces={demoWorkspaces}
                   selectedWorkspaceId="ws-1"
-                  userEmail="michael@aimsos.ai"
+                  tenants={demoTenants}
+                  selectedTenantId={demoSelectedTenantId}
+                  onTenantSelect={(id) => { setDemoSelectedTenantId(id); setCoName(demoTenants.find(t => t.id === id)?.name ?? coName) }}
+                  themeMode={demoThemeMode}
+                  onThemeChange={handleThemeChange}
                   actions={[
                     { icon: SparkleIcon ? <SparkleIcon size={16} strokeWidth={2} /> : null, label: "AI Assistant", variant: "primary" as const },
                     { icon: BellIcon ? <BellIcon size={16} strokeWidth={1.75} /> : null, label: "Notifications", badge: true },
@@ -6201,6 +6256,198 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   ]}
                 />
               </PreviewWrap>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Sub-components ────────────────────────────────────────── */}
+        {tab === "sub-components" && (
+          <div className="flex flex-col gap-[48px]">
+
+            {/* ── Global Search ───────────────────────────────────────── */}
+            <div className="flex flex-col gap-[16px]">
+              <div className="flex items-start justify-between gap-[12px]">
+                <div>
+                  <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Global Search</h2>
+                  <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">
+                    Full-screen frosted glass overlay. Opens on click of the center search trigger.
+                    DS node 15394:15568 · 700×600px.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setGsPreviewOpen(true)}
+                  className="shrink-0 flex items-center gap-[6px] px-[14px] h-[32px] rounded-[6px] text-[12px] font-semibold transition-opacity hover:opacity-85 cursor-pointer"
+                  style={{ background: "var(--primary)", color: "#fff" }}
+                >
+                  Open preview →
+                </button>
+              </div>
+
+              {/* States grid */}
+              <div className="grid grid-cols-3 gap-[10px]">
+                {[
+                  { state: "Default",        desc: "Suggested actions + recent searches. Shown when no query and no filters applied." },
+                  { state: "Loading",        desc: "5 skeleton rows while results are being fetched. Set loading={true}." },
+                  { state: "No results",     desc: "SearchX icon + message + optional 'Clear filters' link. Requires results=[] with a query." },
+                  { state: "Search results", desc: "HighlightIcon rows per entity type. Shown when results array has items." },
+                  { state: "Filters open",   desc: "FiltersCard floats at left:48 top:68 within the panel. 3 sections: Type · Owner · Status." },
+                  { state: "Filters applied",desc: "Applied filters appear as DS Tag chips (informative · purple · success) inside the input row." },
+                ].map(item => (
+                  <div
+                    key={item.state}
+                    className="rounded-[8px] p-[12px] flex flex-col gap-[4px]"
+                    style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}
+                  >
+                    <p className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{item.state}</p>
+                    <p className="text-[11px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Anatomy */}
+              <div className="rounded-[8px] p-[16px] flex flex-col gap-[8px]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
+                <p className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Anatomy — 700×600px panel</p>
+                <div className="flex flex-col gap-[4px]">
+                  {[
+                    ["56px", "Input row", "Search icon · Filter tag chips · Text input · ESC shortcut pill"],
+                    ["40px", "Filter chips row", "SlidersHorizontal toggle · Type filter chips (all · agents · channels…)"],
+                    ["auto", "Content area", "Scrollable zone — default state / loading / results / no-results"],
+                    ["36px", "Bottom bar", "Keyboard shortcuts: ↑↓ Navigate · ↵ Enter/Open"],
+                    ["floating", "FiltersCard", "298px overlay · 3 sections (Type · Owner · Status) · Applies filter Tags"],
+                  ].map(([height, name, detail]) => (
+                    <div key={name} className="flex items-start gap-[10px]">
+                      <span className="shrink-0 text-[11px] font-mono w-[56px] text-right" style={{ color: "var(--primary)" }}>{height}</span>
+                      <span className="shrink-0 text-[11px] font-semibold w-[128px]" style={{ color: "var(--foreground)" }}>{name}</span>
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{detail}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: "var(--border)" }} />
+
+            {/* ── Workspace Switcher (Left Menu) ───────────────────────── */}
+            <div className="flex flex-col gap-[16px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Workspace Switcher</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">
+                  Dropdown from the left zone. Lists all workspaces the user belongs to.
+                  DS node 15251:5395 · 320px wide.
+                </p>
+              </div>
+              <div className="flex gap-[24px] items-start">
+                {/* Live demo */}
+                <TopbarLeftMenu
+                  isStatic
+                  workspaces={demoWorkspaces}
+                  selectedId="ws-1"
+                />
+
+                {/* Anatomy + props */}
+                <div className="flex-1 flex flex-col gap-[12px]">
+                  <div className="rounded-[8px] p-[14px] flex flex-col gap-[6px]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
+                    <p className="text-[12px] font-semibold mb-[4px]" style={{ color: "var(--foreground)" }}>Anatomy</p>
+                    {[
+                      ["28px",  "Section header",   "\"Workspaces\" label · 10px Semi Bold · uppercased"],
+                      ["56px",  "Workspace row",    "24px avatar + name (14px) + description (12px) + Tag neutral/active"],
+                      ["40px",  "Footer CTA",       "'+ New workspace' · primary color · border-top"],
+                    ].map(([h, name, detail]) => (
+                      <div key={name} className="flex items-start gap-[8px]">
+                        <span className="shrink-0 text-[11px] font-mono w-[36px] text-right" style={{ color: "var(--primary)" }}>{h}</span>
+                        <span className="shrink-0 text-[11px] font-semibold w-[120px]" style={{ color: "var(--foreground)" }}>{name}</span>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-[8px] p-[14px] flex flex-col gap-[4px]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
+                    <p className="text-[12px] font-semibold mb-[4px]" style={{ color: "var(--foreground)" }}>Key props (on Topbar)</p>
+                    {[
+                      ["workspaces",          "WorkspaceItem[]",  "Required to enable the dropdown"],
+                      ["selectedWorkspaceId", "string",           "Highlights the active workspace"],
+                      ["onWorkspaceSelect",   "(id) => void",     "Fires on row click"],
+                    ].map(([prop, type, note]) => (
+                      <div key={prop} className="flex items-start gap-[8px]">
+                        <code className="shrink-0 text-[11px] w-[148px]" style={{ color: "var(--primary)" }}>{prop}</code>
+                        <span className="shrink-0 text-[11px] font-mono w-[100px]" style={{ color: "var(--field-supporting)" }}>{type}</span>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{note}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: "var(--border)" }} />
+
+            {/* ── Profile Menu (Right Menu) ────────────────────────────── */}
+            <div className="flex flex-col gap-[16px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Profile Menu</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">
+                  Dropdown from the user avatar (rightmost element). Shows account info, tenant,
+                  preferences, and sign-out. DS node 15349:23474 · 320px wide.
+                </p>
+              </div>
+              <div className="flex gap-[24px] items-start">
+                {/* Live demo */}
+                <TopbarRightMenu
+                  isStatic
+                  userName="Michael O."
+                  userEmail="michael@aimsos.ai"
+                  companyName={demoCompanyName}
+                  tenants={demoTenants}
+                  selectedTenantId={demoSelectedTenantId}
+                  onTenantSelect={setDemoSelectedTenantId}
+                  themeMode={demoThemeMode}
+                  onThemeChange={handleThemeChange}
+                />
+
+                {/* Anatomy + props */}
+                <div className="flex-1 flex flex-col gap-[12px]">
+                  <div className="rounded-[8px] p-[14px] flex flex-col gap-[6px]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
+                    <p className="text-[12px] font-semibold mb-[4px]" style={{ color: "var(--foreground)" }}>Anatomy</p>
+                    {[
+                      ["50px",  "Account info",        "24px avatar + name (14px) + email (10px)"],
+                      ["—",     "Divider",              "1px separator"],
+                      ["78px",  "Workspace section",   "Label row (28px) + tenant row (50px: avatar + name + 'Owner')"],
+                      ["—",     "Divider",              "1px separator"],
+                      ["40px",  "Profile & prefs",      "User icon"],
+                      ["40px",  "Notifications prefs",  "Bell icon"],
+                      ["44px",  "Theme toggle",         "Moon/Sun + 'Theme' label + Light/Dark pill button"],
+                      ["40px",  "Help & docs",          "HelpCircle icon"],
+                      ["—",     "Divider",              "1px separator"],
+                      ["40px",  "Sign out",             "LogOut icon · destructive red text"],
+                    ].map(([h, name, detail]) => (
+                      <div key={name} className="flex items-start gap-[8px]">
+                        <span className="shrink-0 text-[11px] font-mono w-[36px] text-right" style={{ color: "var(--primary)" }}>{h}</span>
+                        <span className="shrink-0 text-[11px] font-semibold w-[140px]" style={{ color: "var(--foreground)" }}>{name}</span>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-[8px] p-[14px] flex flex-col gap-[4px]" style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
+                    <p className="text-[12px] font-semibold mb-[4px]" style={{ color: "var(--foreground)" }}>Key props (on Topbar)</p>
+                    {[
+                      ["userName",       "string",      "Displayed in account row"],
+                      ["userEmail",      "string",      "Secondary line in account row"],
+                      ["companyName",    "string",      "Tenant name in workspace section"],
+                      ["isDark",         "boolean",     "Controls Moon/Sun icon + pill label"],
+                      ["onThemeToggle",  "() => void",  "Fires on clicking the Light/Dark pill"],
+                      ["onProfileClick", "() => void",  "Fires additionally when avatar is clicked"],
+                    ].map(([prop, type, note]) => (
+                      <div key={prop} className="flex items-start gap-[8px]">
+                        <code className="shrink-0 text-[11px] w-[120px]" style={{ color: "var(--primary)" }}>{prop}</code>
+                        <span className="shrink-0 text-[11px] font-mono w-[80px]" style={{ color: "var(--field-supporting)" }}>{type}</span>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{note}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
           </div>
@@ -6221,6 +6468,11 @@ function TopbarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 workspaces={demoWorkspaces}
                 selectedWorkspaceId="ws-1"
                 userEmail="michael@aimsos.ai"
+                tenants={demoTenants}
+                selectedTenantId={demoSelectedTenantId}
+                onTenantSelect={(id) => { setDemoSelectedTenantId(id); setCoName(demoTenants.find(t => t.id === id)?.name ?? coName) }}
+                themeMode={demoThemeMode}
+                onThemeChange={handleThemeChange}
                 actions={[
                   { icon: SparkleIcon ? <SparkleIcon size={16} strokeWidth={2} /> : null, label: "AI Assistant", variant: "primary" as const },
                   { icon: BellIcon ? <BellIcon size={16} strokeWidth={1.75} /> : null, label: "Notifications", badge: showBadge },
@@ -6408,6 +6660,10 @@ const actions: TopbarAction[] = [
         )}
 
       </div>
+
+      {/* Global Search preview overlay — controlled by sub-components tab */}
+      <GlobalSearch open={gsPreviewOpen} onClose={() => setGsPreviewOpen(false)} />
+
     </div>
   )
 }
@@ -7227,7 +7483,7 @@ export default function App() {
           {active === "checkbox"        && <CheckboxPage      openSpec={setSpecModal} />}
           {active === "toggle"          && <TogglePage        openSpec={setSpecModal} />}
           {active === "table"           && <TablePage         openSpec={setSpecModal} />}
-          {active === "topbar"          && <TopbarPage        openSpec={setSpecModal} />}
+          {active === "topbar"          && <TopbarPage        openSpec={setSpecModal} onAppThemeChange={(dark) => setIsDark(dark)} />}
           {active === "sidebar"         && <SidebarPage       openSpec={setSpecModal} />}
           {active === "icons"           && <IconsPage />}
           {active === "typography"      && <TypographyPage />}

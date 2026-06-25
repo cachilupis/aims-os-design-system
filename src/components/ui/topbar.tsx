@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
-import { ChevronDown, Search, Menu, Settings, LogOut, HelpCircle, X, SlidersHorizontal, LayoutGrid, Sparkle, Radio, MessageSquare, Users, Shield, Bookmark, Briefcase, Plus, UserPlus, Zap, Globe, Clock } from "lucide-react"
+import { ChevronDown, Search, SearchX, Menu, LogOut, HelpCircle, X, SlidersHorizontal, LayoutGrid, Sparkle, Radio, MessageSquare, Users, Shield, Bookmark, Briefcase, Plus, UserPlus, Zap, Globe, Clock, Bell, User, Moon, Sun } from "lucide-react"
 import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highlight-icon"
+import { Tag, type TagVariant } from "@/components/ui/tag"
 import { cn } from "@/lib/utils"
 
 /**
@@ -32,10 +33,11 @@ import { cn } from "@/lib/utils"
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type WorkspaceItem = {
-  id:         string
-  name:       string
-  avatarSrc?: string
-  tag?:       "Active" | "Member" | string
+  id:          string
+  name:        string
+  description?: string
+  avatarSrc?:  string
+  tag?:        "Active" | "Member" | string
 }
 
 export type TopbarAction = {
@@ -65,6 +67,13 @@ export type TopbarProps = {
   userEmail?:           string
   userAvatarSrc?:       string
   onProfileClick?:      () => void
+  tenants?:             WorkspaceItem[]
+  selectedTenantId?:    string
+  onTenantSelect?:      (id: string) => void
+  themeMode?:           ThemeMode
+  onThemeChange?:       (mode: ThemeMode) => void
+  isDark?:              boolean
+  onThemeToggle?:       () => void
   variant?:             TopbarVariant
   onMenuClick?:         () => void
   className?:           string
@@ -117,184 +126,556 @@ function TopbarAvatar({
 }
 
 // ── Internal: Left Menu — workspace switcher dropdown ─────────────────────
-// DS: Left Menu - Topbar COMPONENT_SET 15251:5363 · 320px wide
+// DS: Left Menu - Topbar 15251:5395 · 320×332px · VERTICAL gap:0
+// Row structure: Avatar 24px + text stack (name 14px w:500 + desc 12px w:500) + Tag (neutral)
+// Selected row bg: --topbar-menu-item-sel · Default: transparent
 
-function LeftMenu({
+export function TopbarLeftMenu({
   workspaces,
   selectedId,
   onSelect,
+  pos,
+  isStatic = false,
 }: {
   workspaces:  WorkspaceItem[]
   selectedId?: string
   onSelect?:   (id: string) => void
+  pos?:        { top: number; left: number }
+  isStatic?:   boolean
 }) {
   return (
     <div
-      className="absolute left-0 top-[calc(100%+4px)] w-[320px] rounded-[10px] overflow-hidden z-50"
       style={{
-        background: "var(--topbar-menu-bg)",
-        border:     "1px solid var(--topbar-menu-border)",
-        boxShadow:  "0 8px 24px rgba(0,0,0,0.28)",
+        position:     isStatic ? "relative" : (pos ? "fixed" : "absolute"),
+        top:          isStatic ? undefined   : (pos ? pos.top : "calc(100% + 4px)"),
+        left:         isStatic ? undefined   : (pos ? pos.left : 0),
+        zIndex:       isStatic ? undefined   : 9999,
+        width:              320,
+        background:         "var(--menu-bg)",
+        backdropFilter:     "saturate(180%) blur(16px)",
+        WebkitBackdropFilter: "saturate(180%) blur(16px)",
+        border:             "1px solid var(--menu-divider)",
+        borderRadius:       8,
+        boxShadow:          "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)",
+        overflow:           "hidden",
       }}
     >
-      {/* Section header */}
-      <div className="px-[12px] pt-[12px] pb-[6px]">
+      {/* ── Section header row — 28px ─────────────────── */}
+      <div
+        className="flex items-center px-[16px]"
+        style={{ height: 28 }}
+      >
         <span
-          className="text-[10px] font-semibold uppercase tracking-[0.06em]"
+          className="text-[10px] font-semibold uppercase tracking-[0.07em]"
           style={{ color: "var(--topbar-menu-text-dim)" }}
         >
           Workspaces
         </span>
       </div>
 
-      {/* Workspace list */}
-      <div className="px-[6px] pb-[6px]">
-        {workspaces.map(ws => {
-          const isSelected = ws.id === selectedId
-          return (
-            <button
-              key={ws.id}
-              onClick={() => onSelect?.(ws.id)}
-              className="w-full flex items-center gap-[8px] px-[8px] py-[6px] rounded-[6px] text-left transition-colors cursor-pointer"
-              style={{ background: isSelected ? "var(--topbar-menu-item-sel)" : "transparent" }}
-              onMouseEnter={e => {
-                if (!isSelected) (e.currentTarget as HTMLElement).style.background = "var(--topbar-menu-item-hover)"
-              }}
-              onMouseLeave={e => {
-                if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent"
-              }}
-            >
-              <TopbarAvatar name={ws.name} src={ws.avatarSrc} size={24} />
+      {/* ── Workspace rows — 56px each ────────────────── */}
+      {workspaces.map(ws => {
+        const isSelected = ws.id === selectedId
+        return (
+          <button
+            key={ws.id}
+            onClick={() => onSelect?.(ws.id)}
+            className="w-full flex items-center text-left transition-colors cursor-pointer"
+            style={{
+              height:     56,
+              gap:        16,
+              padding:    "8px 16px",
+              background: isSelected ? "var(--topbar-menu-item-sel)" : "transparent",
+            }}
+            onMouseEnter={e => {
+              if (!isSelected) (e.currentTarget as HTMLElement).style.background = "var(--menu-item-hover)"
+            }}
+            onMouseLeave={e => {
+              if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent"
+            }}
+          >
+            {/* Avatar 24×24 */}
+            <TopbarAvatar name={ws.name} src={ws.avatarSrc} size={24} />
+
+            {/* Text stack: name 14px w:500 + description 12px w:500 */}
+            <div className="flex-1 flex flex-col gap-[2px] min-w-0">
               <span
-                className="flex-1 text-[12px] font-medium truncate"
-                style={{ color: "var(--topbar-menu-text)" }}
+                className="text-[14px] font-medium leading-[1.3] truncate"
+                style={{ color: isSelected ? "var(--topbar-menu-text)" : "var(--topbar-menu-text)" }}
               >
                 {ws.name}
               </span>
-              {ws.tag && (
+              {ws.description && (
                 <span
-                  className="text-[10px] font-medium px-[6px] py-[2px] rounded-[4px] shrink-0"
-                  style={{
-                    background: ws.tag === "Active"
-                      ? "var(--topbar-menu-tag-act-bg)"
-                      : "var(--topbar-menu-tag-bg)",
-                    color: ws.tag === "Active"
-                      ? "var(--topbar-menu-tag-act-fg)"
-                      : "var(--topbar-menu-tag-fg)",
-                  }}
+                  className="text-[12px] font-medium leading-[1.3] truncate"
+                  style={{ color: "var(--topbar-menu-text-dim)" }}
                 >
-                  {ws.tag}
+                  {ws.description}
                 </span>
               )}
-              {isSelected && (
-                <span
-                  className="w-[6px] h-[6px] rounded-full shrink-0"
-                  style={{ background: "var(--primary)" }}
-                />
-              )}
-            </button>
-          )
-        })}
-      </div>
+            </div>
 
-      {/* Footer: create workspace */}
+            {/* Tag — neutral for all, matching DS "Tag" neutral chips */}
+            {ws.tag && (
+              <Tag variant="neutral" size="sm" className="shrink-0">
+                {ws.tag}
+              </Tag>
+            )}
+          </button>
+        )
+      })}
+
+      {/* ── Footer: new workspace ─────────────────────── */}
       <div
-        className="px-[12px] py-[10px] border-t"
-        style={{ borderColor: "var(--topbar-menu-border)" }}
+        className="flex items-center px-[16px]"
+        style={{ height: 40, borderTop: "1px solid var(--menu-divider)" }}
       >
         <button
-          className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-70"
+          className="flex items-center gap-[6px] text-[12px] font-medium transition-opacity hover:opacity-70 cursor-pointer"
           style={{ color: "var(--primary)" }}
         >
-          + Create workspace
+          <Plus size={12} strokeWidth={2.5} />
+          New workspace
         </button>
       </div>
     </div>
   )
 }
 
-// ── Internal: Right Menu — profile dropdown ────────────────────────────────
+// ── Internal: Right Menu — profile + tenant dropdown ──────────────────────
+// DS: Right menu - Topbar 15349:23474 · 320×332px · VERTICAL gap:0
+// Theme row: Theme-icon + "Theme" label + [Auto 52×28] [Sun 24×24] [Moon 24×24]
+// Tenant row: current tenant + Chevron-down (28×28) → expands tenant list
 
-function RightMenu({
+export type ThemeMode = "auto" | "light" | "dark"
+
+export function TopbarRightMenu({
   userName,
   userEmail,
   userAvatarSrc,
+  companyName,
+  companyAvatarSrc,
+  tenants        = [],
+  selectedTenantId,
+  onTenantSelect,
+  themeMode,
+  onThemeChange,
+  isDark,
+  onThemeToggle,
+  pos,
+  isStatic = false,
 }: {
-  userName?:     string
-  userEmail?:    string
-  userAvatarSrc?: string
+  userName?:         string
+  userEmail?:        string
+  userAvatarSrc?:    string
+  companyName?:      string
+  companyAvatarSrc?: string
+  tenants?:          WorkspaceItem[]
+  selectedTenantId?: string
+  onTenantSelect?:   (id: string) => void
+  themeMode?:        ThemeMode
+  onThemeChange?:    (mode: ThemeMode) => void
+  isDark?:           boolean
+  onThemeToggle?:    () => void
+  pos?:              { top: number; right: number }
+  isStatic?:         boolean
 }) {
-  const menuItems = [
-    { icon: <Settings size={14} strokeWidth={1.75} />,    label: "Settings"       },
-    { icon: <HelpCircle size={14} strokeWidth={1.75} />,  label: "Help & Support" },
-  ]
+  const [tenantExpanded, setTenantExpanded] = useState(false)
+  const [tenantSearch, setTenantSearch] = useState("")
+  const [themeHover, setThemeHover] = useState<"auto" | "light" | "dark" | null>(null)
+  const filteredTenants = tenants.filter(t =>
+    t.name.toLowerCase().includes(tenantSearch.toLowerCase())
+  )
+  // Derive active theme: prefer explicit themeMode, fallback to isDark boolean
+  const activeTheme: ThemeMode = themeMode ?? (isDark ? "dark" : "light")
+  // DS row: HORIZONTAL gap:16 pad:T8R16B8L16
+  const MenuRow = ({
+    icon,
+    label,
+    height = 40,
+    right,
+  }: {
+    icon:    React.ReactNode
+    label:   string
+    height?: number
+    right?:  React.ReactNode
+  }) => (
+    <button
+      className="w-full flex items-center text-left transition-colors cursor-pointer"
+      style={{ height, gap: 16, padding: "8px 16px" }}
+      onMouseEnter={e => (e.currentTarget.style.background = "var(--menu-item-hover)")}
+      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+    >
+      <span className="shrink-0" style={{ color: "var(--topbar-menu-text-dim)", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {icon}
+      </span>
+      <span className="flex-1 text-[14px] font-medium" style={{ color: "var(--topbar-menu-text)" }}>
+        {label}
+      </span>
+      {right}
+    </button>
+  )
+
+  const Divider = () => (
+    <div style={{ height: 1, background: "var(--menu-divider)" }} />
+  )
 
   return (
     <div
-      className="absolute right-0 top-[calc(100%+4px)] w-[220px] rounded-[10px] overflow-hidden z-50"
       style={{
-        background: "var(--topbar-menu-bg)",
-        border:     "1px solid var(--topbar-menu-border)",
-        boxShadow:  "0 8px 24px rgba(0,0,0,0.28)",
+        position:             isStatic ? "relative" : (pos ? "fixed" : "absolute"),
+        top:                  isStatic ? undefined   : (pos ? pos.top : "calc(100% + 4px)"),
+        right:                isStatic ? undefined   : (pos ? pos.right : 0),
+        zIndex:               isStatic ? undefined   : 9999,
+        width:                320,
+        background:           "var(--menu-bg)",
+        backdropFilter:       "saturate(180%) blur(16px)",
+        WebkitBackdropFilter: "saturate(180%) blur(16px)",
+        border:               "1px solid var(--menu-divider)",
+        borderRadius:         8,
+        boxShadow:            "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)",
+        overflow:             "hidden",
       }}
     >
-      {/* User info */}
-      <div className="flex items-center gap-[10px] px-[12px] py-[12px]">
-        <TopbarAvatar name={userName || ""} src={userAvatarSrc} size={32} />
-        <div className="flex-1 min-w-0">
-          <div
-            className="text-[12px] font-semibold truncate"
+      {/* ── 1. Account info (50px) ──────────────────── */}
+      <div
+        className="flex items-center"
+        style={{ height: 50, gap: 16, padding: "8px 16px" }}
+      >
+        <TopbarAvatar name={userName || ""} src={userAvatarSrc} size={24} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <span
+            className="text-[14px] font-medium leading-[1.3] truncate"
             style={{ color: "var(--topbar-menu-text)" }}
           >
             {userName || "User"}
-          </div>
+          </span>
           {userEmail && (
-            <div
-              className="text-[11px] truncate mt-[1px]"
+            <span
+              className="text-[10px] font-medium leading-[1.3] truncate mt-[1px]"
               style={{ color: "var(--topbar-menu-text-dim)" }}
             >
               {userEmail}
-            </div>
+            </span>
           )}
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="mx-[8px] h-[1px]" style={{ background: "var(--topbar-menu-border)" }} />
+      <Divider />
 
-      {/* Menu items */}
-      <div className="px-[6px] py-[6px]">
-        {menuItems.map(item => (
-          <button
-            key={item.label}
-            className="w-full flex items-center gap-[8px] px-[8px] py-[7px] rounded-[6px] text-left transition-colors cursor-pointer"
-            style={{ color: "var(--topbar-menu-text)" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "var(--topbar-menu-item-hover)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+      {/* ── 2. Workspace section ─────────────────────── */}
+      <div
+        style={{
+          display:       "flex",
+          flexDirection: "column",
+          gap:           tenantExpanded && tenants.length > 0 ? 4 : 0,
+        }}
+      >
+        {/* Label + current tenant */}
+        <div>
+          {/* Section label 28px — shows count when expanded */}
+          <div className="flex items-center px-[16px]" style={{ height: 28 }}>
+            <span
+              className="text-[10px] font-semibold uppercase tracking-[0.07em]"
+              style={{ color: "var(--topbar-menu-text-dim)" }}
+            >
+              {tenantExpanded && tenants.length > 0
+                ? `Workspace (${tenants.length})`
+                : "Workspace"}
+            </span>
+          </div>
+
+          {/* Current tenant row 50px */}
+          <div
+            className="flex items-center"
+            style={{ height: 50, gap: 16, padding: "8px 16px" }}
           >
-            <span style={{ color: "var(--topbar-menu-text-dim)" }}>{item.icon}</span>
-            <span className="text-[12px] font-medium">{item.label}</span>
-          </button>
-        ))}
+            <TopbarAvatar name={companyName || ""} src={companyAvatarSrc} size={24} />
+            <div className="flex-1 flex flex-col min-w-0">
+              <span
+                className="text-[14px] font-medium leading-[1.3] truncate"
+                style={{ color: "var(--topbar-menu-text)" }}
+              >
+                {companyName || "Company"}
+              </span>
+              <span
+                className="text-[10px] font-medium leading-[1.3] mt-[1px]"
+                style={{ color: "var(--topbar-menu-text-dim)" }}
+              >
+                Owner
+              </span>
+            </div>
+            {tenants.length > 0 && (
+              <button
+                onClick={() => {
+                  const next = !tenantExpanded
+                  setTenantExpanded(next)
+                  if (!next) setTenantSearch("")
+                }}
+                className="shrink-0 flex items-center justify-center rounded-[6px] transition-all cursor-pointer"
+                style={{
+                  width:      28, height: 28,
+                  background: tenantExpanded ? "var(--menu-item-hover)" : "transparent",
+                  color:      "var(--topbar-menu-text-dim)",
+                }}
+                aria-label={tenantExpanded ? "Collapse tenants" : "Expand tenants"}
+              >
+                <ChevronDown
+                  size={14} strokeWidth={1.75}
+                  className={cn("transition-transform duration-150", tenantExpanded && "rotate-180")}
+                />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Expanded sub-card: search + filtered tenant list */}
+        {tenantExpanded && tenants.length > 0 && (
+          <div
+            style={{
+              margin:       "0 8px",
+              borderRadius: 8,
+              overflow:     "hidden",
+              boxShadow:    "8px 8px 8px rgba(0,0,0,0.08)",
+              border:       "1px solid var(--menu-divider)",
+            }}
+          >
+            {/* Search input */}
+            <div
+              style={{
+                background: "var(--menu-bg)",
+                padding:    "4px 16px",
+              }}
+            >
+              <div
+                className="flex items-center"
+                style={{
+                  border:       "0.5px solid var(--topbar-menu-text-dim)",
+                  borderRadius: 8,
+                  height:       32,
+                  gap:          4,
+                  padding:      "0 12px",
+                }}
+              >
+                <Search
+                  size={14} strokeWidth={1.75}
+                  style={{ color: "var(--topbar-menu-text-dim)", flexShrink: 0 }}
+                />
+                <input
+                  value={tenantSearch}
+                  onChange={e => setTenantSearch(e.target.value)}
+                  placeholder="Search"
+                  autoFocus
+                  className="flex-1 bg-transparent border-0 outline-none text-[14px] font-medium placeholder:font-medium"
+                  style={{
+                    color: "var(--topbar-menu-text)",
+                    fontFamily: "inherit",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Tenant rows — 40px each, 24px avatar, name only */}
+            <div style={{ maxHeight: 192, overflowY: "auto" }}>
+              {filteredTenants.length > 0 ? filteredTenants.map(t => {
+                const isSel = t.id === selectedTenantId
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      onTenantSelect?.(t.id)
+                      setTenantExpanded(false)
+                      setTenantSearch("")
+                    }}
+                    className="w-full flex items-center text-left cursor-pointer transition-colors"
+                    style={{
+                      height:     40,
+                      gap:        8,
+                      padding:    "8px 16px",
+                      background: isSel ? "var(--topbar-menu-item-sel)" : "var(--menu-bg)",
+                    }}
+                    onMouseEnter={e => {
+                      if (!isSel) (e.currentTarget as HTMLElement).style.background = "var(--menu-item-hover)"
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background =
+                        isSel ? "var(--topbar-menu-item-sel)" : "var(--menu-bg)"
+                    }}
+                  >
+                    <TopbarAvatar name={t.name} src={t.avatarSrc} size={24} />
+                    <span
+                      className="flex-1 min-w-0 text-[14px] font-medium truncate"
+                      style={{ color: "var(--topbar-menu-text)" }}
+                    >
+                      {t.name}
+                    </span>
+                    {isSel && (
+                      <div
+                        className="shrink-0 w-[6px] h-[6px] rounded-full"
+                        style={{ background: "var(--primary)" }}
+                      />
+                    )}
+                  </button>
+                )
+              }) : (
+                <div
+                  className="flex items-center justify-center"
+                  style={{ height: 40 }}
+                >
+                  <span className="text-[13px]" style={{ color: "var(--topbar-menu-text-dim)" }}>
+                    No results
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Divider */}
-      <div className="mx-[8px] h-[1px]" style={{ background: "var(--topbar-menu-border)" }} />
+      <Divider />
 
-      {/* Sign out */}
-      <div className="px-[6px] py-[6px]">
-        <button
-          className="w-full flex items-center gap-[8px] px-[8px] py-[7px] rounded-[6px] text-left transition-colors cursor-pointer"
-          style={{ color: "var(--topbar-menu-text)" }}
-          onMouseEnter={e => (e.currentTarget.style.background = "var(--topbar-menu-item-hover)")}
-          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+      {/* ── 3. Menu items ───────────────────────────── */}
+      <MenuRow icon={<User size={14} strokeWidth={1.75} />} label="Profile & preferences" />
+      <MenuRow icon={<Bell size={14} strokeWidth={1.75} />} label="Notifications preferences" />
+
+      {/* ── Theme row (44px) — DS: [Theme-icon][Theme label][Auto 52×28][Sun 24×24][Moon 24×24] */}
+      <div className="flex items-center" style={{ height: 44, gap: 16, padding: "8px 16px" }}>
+        <span className="shrink-0" style={{ color: "var(--topbar-menu-text-dim)", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Moon size={14} strokeWidth={1.75} />
+        </span>
+        <span className="flex-1 text-[14px] font-medium" style={{ color: "var(--topbar-menu-text)" }}>
+          Theme
+        </span>
+
+        {/* Three-button selector: Auto (52×28) + Sun (24×24) + Moon (24×24) */}
+        <div
+          className="flex items-center"
+          style={{
+            gap:          4,
+            padding:      "2px",
+            borderRadius: 8,
+            background:   "var(--menu-item-hover)",
+            border:       "1px solid var(--menu-divider)",
+          }}
         >
-          <span style={{ color: "var(--topbar-menu-text-dim)" }}>
-            <LogOut size={14} strokeWidth={1.75} />
-          </span>
-          <span className="text-[12px] font-medium">Sign out</span>
-        </button>
+          {/* Auto */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => onThemeChange?.("auto")}
+              onMouseEnter={() => setThemeHover("auto")}
+              onMouseLeave={() => setThemeHover(null)}
+              className="flex items-center justify-center rounded-[6px] transition-colors cursor-pointer text-[12px] font-medium"
+              style={{
+                height:     24, padding: "0 10px",
+                background: activeTheme === "auto" ? "var(--topbar-menu-item-sel)" : "transparent",
+                color:      activeTheme === "auto" ? "var(--primary)" : "var(--topbar-menu-text-dim)",
+              }}
+            >
+              Auto
+            </button>
+            {themeHover === "auto" && (
+              <div
+                role="tooltip"
+                className="absolute pointer-events-none"
+                style={{
+                  bottom: "calc(100% + 5px)", left: "50%", transform: "translateX(-50%)",
+                  whiteSpace: "nowrap", zIndex: 10,
+                  background: "rgba(22,22,22,1)", border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 6, padding: "3px 8px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                }}
+              >
+                <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.90)" }}>Automatic</span>
+              </div>
+            )}
+          </div>
+
+          {/* Light */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => { onThemeChange?.("light"); if (isDark) onThemeToggle?.() }}
+              onMouseEnter={() => setThemeHover("light")}
+              onMouseLeave={() => setThemeHover(null)}
+              className="flex items-center justify-center rounded-[6px] transition-colors cursor-pointer"
+              style={{
+                width:      24, height: 24,
+                background: activeTheme === "light" ? "var(--topbar-menu-item-sel)" : "transparent",
+                color:      activeTheme === "light" ? "var(--primary)" : "var(--topbar-menu-text-dim)",
+              }}
+              aria-label="Light theme"
+            >
+              <Sun size={13} strokeWidth={1.75} />
+            </button>
+            {themeHover === "light" && (
+              <div
+                role="tooltip"
+                className="absolute pointer-events-none"
+                style={{
+                  bottom: "calc(100% + 5px)", left: "50%", transform: "translateX(-50%)",
+                  whiteSpace: "nowrap", zIndex: 10,
+                  background: "rgba(22,22,22,1)", border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 6, padding: "3px 8px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                }}
+              >
+                <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.90)" }}>Light</span>
+              </div>
+            )}
+          </div>
+
+          {/* Dark */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => { onThemeChange?.("dark"); if (!isDark) onThemeToggle?.() }}
+              onMouseEnter={() => setThemeHover("dark")}
+              onMouseLeave={() => setThemeHover(null)}
+              className="flex items-center justify-center rounded-[6px] transition-colors cursor-pointer"
+              style={{
+                width:      24, height: 24,
+                background: activeTheme === "dark" ? "var(--topbar-menu-item-sel)" : "transparent",
+                color:      activeTheme === "dark" ? "var(--primary)" : "var(--topbar-menu-text-dim)",
+              }}
+              aria-label="Dark theme"
+            >
+              <Moon size={13} strokeWidth={1.75} />
+            </button>
+            {themeHover === "dark" && (
+              <div
+                role="tooltip"
+                className="absolute pointer-events-none"
+                style={{
+                  bottom: "calc(100% + 5px)", left: "50%", transform: "translateX(-50%)",
+                  whiteSpace: "nowrap", zIndex: 10,
+                  background: "rgba(22,22,22,1)", border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 6, padding: "3px 8px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                }}
+              >
+                <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.90)" }}>Dark</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      <MenuRow icon={<HelpCircle size={14} strokeWidth={1.75} />} label="Help & docs" />
+
+      <Divider />
+
+      {/* ── 4. Sign out ─────────────────────────────── */}
+      <button
+        className="w-full flex items-center text-left transition-colors cursor-pointer"
+        style={{ height: 40, gap: 16, padding: "8px 16px" }}
+        onMouseEnter={e => (e.currentTarget.style.background = "rgba(239,68,68,0.07)")}
+        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+      >
+        <span className="shrink-0" style={{ color: "rgba(239,68,68,0.65)", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <LogOut size={14} strokeWidth={1.75} />
+        </span>
+        <span className="text-[14px] font-medium" style={{ color: "rgba(239,68,68,0.85)" }}>
+          Sign out
+        </span>
+      </button>
     </div>
   )
 }
@@ -354,27 +735,123 @@ const DEFAULT_SUGGESTED: { variant: HighlightIconVariant; Icon: React.FC<{ size:
 ]
 
 const DEFAULT_RECENT: SearchResultItem[] = [
-  { id: "1", title: "Lead triage",                          subtitle: "Network · 8 agents · 96.6%",        type: "network",  timeAgo: "1h ago" },
-  { id: "2", title: "Sammy - Service Desk",                 subtitle: "Agent · in workspace",              type: "agents",   timeAgo: "2h ago" },
-  { id: "3", title: "Multi-tenant agent rollout · PRD-459", subtitle: "Ticket · open · Edgarda Sierra",    type: "tickets",  timeAgo: "3h ago" },
-  { id: "4", title: "PII redaction · P-2025",               subtitle: "Policy · draft · Miguel Torres",    type: "policies", timeAgo: "3h ago" },
-  { id: "5", title: "Thomas Gonzales",                      subtitle: "Person · Owner · thomas@aimsos.ai", type: "people",   timeAgo: "5h ago" },
+  { id: "r1", title: "Lead triage",                          subtitle: "Network · 8 agents · 96.6%",        type: "network",  timeAgo: "1h ago" },
+  { id: "r2", title: "Sammy - Service Desk",                 subtitle: "Agent · in workspace",              type: "agents",   timeAgo: "2h ago" },
+  { id: "r3", title: "Multi-tenant agent rollout · PRD-459", subtitle: "Ticket · open · Edgarda Sierra",    type: "tickets",  timeAgo: "3h ago" },
+  { id: "r4", title: "PII redaction · P-2025",               subtitle: "Policy · draft · Miguel Torres",    type: "policies", timeAgo: "3h ago" },
+  { id: "r5", title: "Thomas Gonzales",                      subtitle: "Person · Owner · thomas@aimsos.ai", type: "people",   timeAgo: "5h ago" },
 ]
 
-// ── Shared frosted-glass panel style ──────────────────────────────────────
-// DS spec: rgba(255,255,255,0.92) + BACKGROUND_BLUR radius:16 — always light, both modes
-const PANEL_STYLE: React.CSSProperties = {
-  background:          "var(--gs-bg)",
-  backdropFilter:      "saturate(180%) blur(16px)",
-  WebkitBackdropFilter:"saturate(180%) blur(16px)",
-  border:              "1px solid var(--gs-border)",
-  borderRadius:        8,
+// Full mock dataset — used for internal filtering when no `results` prop is provided
+const MOCK_ALL_RESULTS: SearchResultItem[] = [
+  { id: "a1", title: "Sammy — Service Desk",        subtitle: "Agent · active · workspace: Product",          type: "agents",        timeAgo: "2h ago"  },
+  { id: "a2", title: "Lead Qualifier Bot",           subtitle: "Agent · active · 94.2% accuracy",              type: "agents",        timeAgo: "1d ago"  },
+  { id: "a3", title: "Onboarding Assistant",         subtitle: "Agent · draft · workspace: Engineering",        type: "agents",        timeAgo: "3d ago"  },
+  { id: "a4", title: "Escalation Router",            subtitle: "Agent · paused · workspace: Support",           type: "agents",        timeAgo: "5d ago"  },
+  { id: "n1", title: "Lead triage",                  subtitle: "Network · 8 agents · 96.6% success rate",      type: "network",       timeAgo: "1h ago"  },
+  { id: "n2", title: "Customer support flow",        subtitle: "Network · 12 agents · 89.1% success rate",     type: "network",       timeAgo: "2d ago"  },
+  { id: "n3", title: "Outbound SDR sequence",        subtitle: "Network · 5 agents · 78.4% success rate",      type: "network",       timeAgo: "4d ago"  },
+  { id: "t1", title: "Multi-tenant rollout · PRD-459", subtitle: "Ticket · open · Edgarda Sierra",             type: "tickets",       timeAgo: "3h ago"  },
+  { id: "t2", title: "Rate limiting on API · PRD-521", subtitle: "Ticket · in progress · Marcus Reid",         type: "tickets",       timeAgo: "1d ago"  },
+  { id: "t3", title: "Dashboard permissions audit",  subtitle: "Ticket · done · Sarah Chen",                   type: "tickets",       timeAgo: "5d ago"  },
+  { id: "t4", title: "SSO integration · PRD-512",    subtitle: "Ticket · open · Thomas Gonzales",              type: "tickets",       timeAgo: "2d ago"  },
+  { id: "p1", title: "PII redaction · P-2025",       subtitle: "Policy · draft · Miguel Torres",               type: "policies",      timeAgo: "3h ago"  },
+  { id: "p2", title: "Data retention · P-2024",      subtitle: "Policy · active · Michael O.",                 type: "policies",      timeAgo: "2d ago"  },
+  { id: "p3", title: "Access control · P-2023",      subtitle: "Policy · active · Sarah Chen",                 type: "policies",      timeAgo: "1w ago"  },
+  { id: "pe1", title: "Thomas Gonzales",             subtitle: "Person · Owner · thomas@aimsos.ai",            type: "people",        timeAgo: "5h ago"  },
+  { id: "pe2", title: "Sarah Chen",                  subtitle: "Person · Member · sarah@aimsos.ai",            type: "people",        timeAgo: "1d ago"  },
+  { id: "pe3", title: "Marcus Reid",                 subtitle: "Person · Admin · marcus@aimsos.ai",            type: "people",        timeAgo: "3d ago"  },
+  { id: "pe4", title: "Edgarda Sierra",              subtitle: "Person · Member · edgarda@aimsos.ai",          type: "people",        timeAgo: "2d ago"  },
+  { id: "c1",  title: "Support Chat",                subtitle: "Channel · active · 234 conversations",         type: "channels",      timeAgo: "30m ago" },
+  { id: "c2",  title: "Sales Inbox",                 subtitle: "Channel · active · 89 conversations",          type: "channels",      timeAgo: "1h ago"  },
+  { id: "c3",  title: "Onboarding Emails",           subtitle: "Channel · paused · 12 conversations",          type: "channels",      timeAgo: "3d ago"  },
+  { id: "cv1", title: "Onboarding flow Q&A",         subtitle: "Conversation · resolved · 12 messages",        type: "conversations", timeAgo: "2h ago"  },
+  { id: "cv2", title: "API integration support",     subtitle: "Conversation · open · 5 messages",             type: "conversations", timeAgo: "4h ago"  },
+  { id: "cv3", title: "Billing inquiry — Acme Corp", subtitle: "Conversation · escalated · 19 messages",       type: "conversations", timeAgo: "1d ago"  },
+  { id: "w1",  title: "Product Design",              subtitle: "Workspace · 8 members · active",                type: "workspaces",    timeAgo: "1h ago"  },
+  { id: "w2",  title: "Engineering",                 subtitle: "Workspace · 15 members · active",               type: "workspaces",    timeAgo: "3h ago"  },
+  { id: "w3",  title: "Marketing",                   subtitle: "Workspace · 6 members · active",                type: "workspaces",    timeAgo: "2d ago"  },
+]
+
+// Type key normalisation: filter chip id → type value used in SearchResultItem
+const FILTER_TYPE_MAP: Record<string, string> = {
+  agents: "agents", channels: "channels", conversations: "conversations",
+  people: "people", policies: "policies", tickets: "tickets",
+  workspaces: "workspaces", networks: "network",
+}
+// FiltersCard "Type" option label → type value
+const CARD_TYPE_MAP: Record<string, string> = {
+  Agents: "agents", Networks: "network", Tickets: "tickets",
+  Policies: "policies", People: "people", Channels: "channels",
+  Conversations: "conversations", Workspaces: "workspaces",
 }
 
-// ── Filters Card ─────────────────────────────────────────────────────────
-// DS: Figma 15396:25505 · 298px panel · left column inside content area
-// Sections: Type, Owner, Status — pill chips; selected=blue filled, unselected=outline
-// Appears as split left panel (not dropdown) — same frosted surface as main panel
+// ── Shared frosted-glass panel style (theme-adaptive) ─────────────────────
+// Dark mode: dark surface rgba(16,22,40,0.94) · Light mode: white rgba(255,255,255,0.97)
+const PANEL_STYLE: React.CSSProperties = {
+  background:           "var(--gs-bg)",
+  backdropFilter:       "saturate(180%) blur(16px)",
+  WebkitBackdropFilter: "saturate(180%) blur(16px)",
+  border:               "1px solid var(--gs-border)",
+  borderRadius:         8,
+}
+
+// ── Filter Tag — DS Tag component with per-section color + remove button ──
+// ── Skeleton row — mirrors ResultRow layout with shimmer placeholders ────────
+function SkeletonRow({ titleW = "55%", subtitleW = "38%" }: { titleW?: string; subtitleW?: string }) {
+  return (
+    <div className="flex items-center gap-[12px] px-[16px] py-[8px]">
+      <div
+        className="shrink-0 rounded-[8px] animate-pulse"
+        style={{ width: 32, height: 32, background: "var(--gs-chip-inactive-bg)" }}
+      />
+      <div className="flex-1 flex flex-col gap-[7px]">
+        <div
+          className="rounded-full animate-pulse"
+          style={{ height: 11, width: titleW, background: "var(--gs-chip-inactive-bg)" }}
+        />
+        <div
+          className="rounded-full animate-pulse"
+          style={{ height: 9, width: subtitleW, background: "var(--gs-chip-inactive-bg)", opacity: 0.55 }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// Each filter section maps to a different DS Tag variant so pills are visually distinct.
+const FILTER_TAG_VARIANTS: Record<string, TagVariant> = {
+  "Type":   "informative",   // blue  — Primary/Informative
+  "Owner":  "purple",        // purple
+  "Status": "success",       // green
+}
+
+function FilterTag({ label, section, onRemove }: { label: string; section: string; onRemove: () => void }) {
+  const variant: TagVariant = FILTER_TAG_VARIANTS[section] ?? "informative"
+  return (
+    <Tag
+      variant={variant}
+      size="sm"
+      className="shrink-0 whitespace-nowrap cursor-default"
+      trailingIcon={
+        <button
+          onClick={e => { e.stopPropagation(); onRemove() }}
+          className="flex items-center justify-center rounded-full transition-opacity hover:opacity-60"
+          style={{ width: 12, height: 12, color: "currentColor" }}
+        >
+          <X size={9} strokeWidth={2.5} />
+        </button>
+      }
+    >
+      {label}
+    </Tag>
+  )
+}
+
+// ── Filters Card ──────────────────────────────────────────────────────────
+// DS: Figma 15396:25505 · 298×320px · ALWAYS light/white surface (both themes)
+// Floats as absolute overlay over the GS panel — NOT an inline section
+// Position relative to GS panel: left=48px top=68px (Figma node 15394:18422)
 
 const FILTER_SECTIONS = [
   { label: "Type",   options: ["Agents","Networks","Tickets","Policies","People","Channels","Conversations","Workspaces"] },
@@ -398,26 +875,43 @@ function FiltersCard({
   const hasAny = Object.values(selected).some(arr => arr.length > 0)
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      {FILTER_SECTIONS.map((sec, si) => (
-        <div key={sec.label} className="px-[16px] pt-[14px] pb-[10px]">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.06em] mb-[10px]"
-            style={{ color: "var(--gs-section-label)" }}>
+    <div
+      style={{
+        width:                298,
+        background:           "var(--fc-bg)",
+        backdropFilter:       "saturate(180%) blur(5px)",
+        WebkitBackdropFilter: "saturate(180%) blur(5px)",
+        border:               "1px solid var(--fc-border)",
+        borderRadius:         8,
+        padding:              12,
+        display:              "flex",
+        flexDirection:        "column",
+        gap:                  12,
+        boxShadow:            "0 8px 32px rgba(0,0,0,0.18)",
+      }}
+    >
+      {/* Filter sections — no dividers, just gap from parent */}
+      {FILTER_SECTIONS.map(sec => (
+        <div key={sec.label} className="flex flex-col" style={{ gap: 8 }}>
+          <p
+            className="text-[10px] font-semibold uppercase tracking-[0.07em]"
+            style={{ color: "var(--fc-label)", lineHeight: 1 }}
+          >
             {sec.label}
           </p>
-          <div className="flex flex-wrap gap-[6px]">
+          <div className="flex flex-wrap" style={{ gap: 8 }}>
             {sec.options.map(opt => {
               const active = (selected[sec.label] ?? []).includes(opt)
               return (
                 <button
                   key={opt}
                   onClick={() => toggle(sec.label, opt)}
-                  className="text-[12px] font-medium px-[12px] rounded-full transition-all"
+                  className="text-[12px] font-medium rounded-full leading-5 cursor-pointer transition-colors"
                   style={{
-                    height:     26,
-                    background: active ? "rgba(33,115,255,1)" : "transparent",
-                    color:      active ? "#ffffff" : "var(--gs-text-dim)",
-                    border:     `1.5px solid ${active ? "rgba(33,115,255,1)" : "var(--gs-chip-border)"}`,
+                    padding:    "0 8px",
+                    background: active ? "rgba(33,115,255,1)" : "var(--fc-chip-bg)",
+                    color:      active ? "#ffffff"            : "var(--fc-chip-fg)",
+                    border:     active ? "none" : `1px solid var(--fc-chip-bd)`,
                   }}
                 >
                   {opt}
@@ -425,31 +919,32 @@ function FiltersCard({
               )
             })}
           </div>
-          {si < FILTER_SECTIONS.length - 1 && (
-            <div className="mt-[14px]" style={{ height: 1, background: "var(--gs-divider)" }} />
-          )}
         </div>
       ))}
 
-      {/* Spacer + CTA row pinned to bottom */}
-      <div className="flex-1" />
-      <div
-        className="flex items-center justify-end gap-[8px] px-[16px] py-[12px] shrink-0"
-        style={{ borderTop: "1px solid var(--gs-divider)" }}
-      >
+      {/* CTA row — no separator, flush with last section */}
+      <div className="flex items-center justify-end" style={{ gap: 8 }}>
         <button
           onClick={() => setSelected({})}
-          className="text-[12px] font-medium px-[12px] py-[5px] rounded-[6px] transition-opacity hover:opacity-70"
-          style={{ color: "var(--gs-text-dim)" }}
+          className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-70"
+          style={{
+            height:     28,
+            padding:    "4px 12px",
+            borderRadius: 4,
+            color:      "var(--fc-cta-clear)",
+          }}
         >
           Clear all
         </button>
         <button
-          onClick={() => onApply?.(selected)}
-          className="text-[12px] font-semibold px-[14px] py-[5px] rounded-[6px] transition-opacity hover:opacity-85"
+          onClick={() => { onApply?.(selected) }}
+          className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-90"
           style={{
-            background: hasAny ? "rgba(33,115,255,1)" : "var(--gs-chip-inactive-bg)",
-            color:      hasAny ? "#ffffff" : "var(--gs-text-dim)",
+            height:     28,
+            padding:    "4px 12px",
+            borderRadius: 8,
+            background: hasAny ? "rgba(33,115,255,1)" : "rgba(33,115,255,0.50)",
+            color:      hasAny ? "#ffffff" : "rgba(242,242,242,1)",
           }}
         >
           Done
@@ -504,24 +999,102 @@ export function GlobalSearch({
   loading = false,
   onResultClick,
 }: GlobalSearchProps) {
-  const [query,        setQuery]       = useState("")
-  const [activeFilter, setActiveFilter] = useState<SearchFilter>("all")
-  const [filtersOpen,  setFiltersOpen]  = useState(false)
-  const inputRef  = useRef<HTMLInputElement>(null)
-  const panelRef  = useRef<HTMLDivElement>(null)
+  const [query,          setQuery]          = useState("")
+  const [activeFilter,   setActiveFilter]   = useState<SearchFilter>("all")
+  const [filtersOpen,    setFiltersOpen]     = useState(false)
+  const [appliedFilters, setAppliedFilters] = useState<Record<string, string[]>>({})
 
+  // Internal async state — used when no `results` prop is provided (uncontrolled mode)
+  const [internalResults, setInternalResults] = useState<SearchResultItem[] | undefined>(undefined)
+  const [internalLoading, setInternalLoading] = useState(false)
+  const isControlled = results !== undefined
+
+  const inputRef       = useRef<HTMLInputElement>(null)
+  const panelRef       = useRef<HTMLDivElement>(null)
+  const filtersCardRef = useRef<HTMLDivElement>(null)
+  const slidersBtnRef  = useRef<HTMLButtonElement>(null)
+
+  // Focus input on open, reset all state on close
   useEffect(() => {
-    if (open) { setTimeout(() => inputRef.current?.focus(), 50) }
-    else       { setQuery(""); setActiveFilter("all"); setFiltersOpen(false) }
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 50)
+    } else {
+      setQuery(""); setActiveFilter("all"); setFiltersOpen(false)
+      setAppliedFilters({}); setInternalResults(undefined); setInternalLoading(false)
+    }
   }, [open])
 
+  // ── Internal filtering (uncontrolled mode) ────────────────────────────────
+  // When query, activeFilter or appliedFilters change, filter MOCK_ALL_RESULTS.
+  // Filter chips (activeFilter) apply instantly; text query shows skeleton first.
+  useEffect(() => {
+    if (isControlled) return
+
+    const q           = query.trim().toLowerCase()
+    const hasQ        = q.length > 0
+    const hasF        = activeFilter !== "all"
+    const cardTypes   = (appliedFilters["Type"] ?? []).map(l => CARD_TYPE_MAP[l]).filter(Boolean)
+    const hasCardType = cardTypes.length > 0
+    const isIdle      = !hasQ && !hasF && !hasCardType
+
+    if (isIdle) { setInternalResults(undefined); setInternalLoading(false); return }
+
+    // Skeleton delay only for text input; filter-only changes are instant
+    const delay = hasQ ? 380 : 0
+    if (hasQ) setInternalLoading(true)
+
+    const timer = setTimeout(() => {
+      let filtered = MOCK_ALL_RESULTS
+
+      // 1. Chip filter (activeFilter)
+      if (hasF) {
+        const mapped = FILTER_TYPE_MAP[activeFilter]
+        if (mapped) filtered = filtered.filter(r => r.type === mapped)
+      }
+
+      // 2. FiltersCard Type section
+      if (hasCardType) {
+        filtered = filtered.filter(r => cardTypes.includes(r.type))
+      }
+
+      // 3. Text query (title + subtitle)
+      if (hasQ) {
+        filtered = filtered.filter(r =>
+          r.title.toLowerCase().includes(q) || r.subtitle.toLowerCase().includes(q)
+        )
+      }
+
+      setInternalResults(filtered)
+      setInternalLoading(false)
+    }, delay)
+
+    return () => clearTimeout(timer)
+  }, [query, activeFilter, appliedFilters, isControlled])
+
+  // Escape key: first closes FiltersCard if open, then closes GlobalSearch
   const handleKey = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape") onClose()
-  }, [onClose])
+    if (e.key === "Escape") {
+      if (filtersOpen) setFiltersOpen(false)
+      else onClose()
+    }
+  }, [onClose, filtersOpen])
   useEffect(() => {
     document.addEventListener("keydown", handleKey)
     return () => document.removeEventListener("keydown", handleKey)
   }, [handleKey])
+
+  // Close FiltersCard when clicking outside it (but not on the sliders button)
+  useEffect(() => {
+    if (!filtersOpen) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node
+      const inCard    = filtersCardRef.current?.contains(target)
+      const inSliders = slidersBtnRef.current?.contains(target)
+      if (!inCard && !inSliders) setFiltersOpen(false)
+    }
+    const t = setTimeout(() => document.addEventListener("mousedown", handler), 0)
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", handler) }
+  }, [filtersOpen])
 
   const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!panelRef.current?.contains(e.target as Node)) onClose()
@@ -529,9 +1102,25 @@ export function GlobalSearch({
 
   if (!open) return null
 
-  const hasQuery   = query.trim().length > 0
-  const hasResults = results && results.length > 0
-  const noResults  = hasQuery && !loading && results !== undefined && results.length === 0
+  // Resolve effective state (controlled vs uncontrolled)
+  const effectiveResults  = isControlled ? results   : internalResults
+  const effectiveLoading  = isControlled ? loading   : internalLoading
+
+  const hasQuery          = query.trim().length > 0
+  const hasResults        = effectiveResults && effectiveResults.length > 0
+  const hasAppliedFilters = Object.values(appliedFilters).some(arr => arr.length > 0)
+  const isFiltering       = hasQuery || hasAppliedFilters || activeFilter !== "all"
+  const noResults         = isFiltering && !effectiveLoading && effectiveResults !== undefined && effectiveResults.length === 0
+
+  const removeAppliedFilter = (section: string, value: string) => {
+    setAppliedFilters(prev => {
+      const next = (prev[section] ?? []).filter(v => v !== value)
+      const updated = { ...prev }
+      if (next.length === 0) delete updated[section]
+      else updated[section] = next
+      return updated
+    })
+  }
 
   return (
     <div
@@ -541,55 +1130,94 @@ export function GlobalSearch({
     >
       <div
         ref={panelRef}
-        className="flex flex-col overflow-hidden"
-        style={{ ...PANEL_STYLE, width: 700, maxHeight: 600, boxShadow: "0 20px 60px rgba(0,0,0,0.36)" }}
+        className="relative flex flex-col overflow-hidden"
+        style={{ ...PANEL_STYLE, width: 700, height: 600, boxShadow: "0 20px 60px rgba(0,0,0,0.36)" }}
       >
-        {/* ── Search input ─────────────────────────────────────── */}
-        <div className="flex items-center gap-[12px] px-[16px]"
-          style={{ height: 56, borderBottom: "1px solid var(--gs-divider)" }}>
+        {/* ── Search input row ─────────────────────────────────────
+            When filters are applied, tags appear inline before the cursor.
+            DS variants 2–5 show "Type: Network ×" style chips in the input. */}
+        <div
+          className="flex items-center gap-[8px] px-[16px]"
+          style={{ minHeight: 56, flexShrink: 0, borderBottom: "1px solid var(--gs-divider)" }}
+        >
           <Search size={16} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--gs-text-dim)" }} />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search agents, networks, tickets, policies, people…"
-            className="flex-1 bg-transparent outline-none text-[13px] placeholder:text-[var(--gs-text-dim)]"
-            style={{ color: "var(--gs-text)" }}
-          />
-          {query && (
-            <button onClick={() => setQuery("")} className="shrink-0 transition-opacity hover:opacity-70">
+
+          {/* Tags + text input in a scrollable row */}
+          <div
+            className="flex-1 flex items-center gap-[6px] min-w-0 overflow-x-auto"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {Object.entries(appliedFilters).flatMap(([section, vals]) =>
+              vals.map(val => (
+                <FilterTag
+                  key={`${section}:${val}`}
+                  label={`${section}: ${val}`}
+                  section={section}
+                  onRemove={() => removeAppliedFilter(section, val)}
+                />
+              ))
+            )}
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={hasAppliedFilters ? "Search…" : "Search agents, networks, tickets, policies, people…"}
+              className="bg-transparent outline-none text-[13px] placeholder:text-[var(--gs-text-dim)] shrink-0"
+              style={{ color: "var(--gs-text)", flex: "1 0 100px", minWidth: 100 }}
+            />
+          </div>
+
+          {/* Clear all (query + filters) */}
+          {(query || hasAppliedFilters) && (
+            <button
+              onClick={() => { setQuery(""); setAppliedFilters({}) }}
+              className="shrink-0 transition-opacity hover:opacity-70"
+            >
               <X size={14} strokeWidth={1.75} style={{ color: "var(--gs-text-dim)" }} />
             </button>
           )}
-          <div className="shrink-0 flex items-center px-[8px] rounded-[5px]"
-            style={{ height: 22, background: "var(--gs-kbd-bg)" }}>
+
+          {/* esc shortcut pill */}
+          <div
+            className="shrink-0 flex items-center px-[8px] rounded-[5px]"
+            style={{ height: 22, background: "var(--gs-kbd-bg)" }}
+          >
             <span className="text-[11px] font-medium" style={{ color: "var(--gs-kbd-fg)" }}>esc</span>
           </div>
         </div>
 
-        {/* ── Filter chips row ─────────────────────────────────── */}
-        <div className="flex items-center gap-[6px] px-[12px]"
-          style={{ height: 40, borderBottom: "1px solid var(--gs-divider)", overflowX: "auto", flexShrink: 0 }}>
+        {/* ── Filter chips row ──────────────────────────────────── */}
+        <div
+          className="flex items-center gap-[6px] px-[12px]"
+          style={{ height: 40, borderBottom: "1px solid var(--gs-divider)", overflowX: "auto", flexShrink: 0, scrollbarWidth: "none" }}
+        >
+          {/* Sliders icon — toggles FiltersCard overlay */}
           <button
+            ref={slidersBtnRef}
             onClick={() => setFiltersOpen(v => !v)}
             className="shrink-0 w-[24px] h-[24px] flex items-center justify-center rounded-[6px] transition-colors"
             style={{
               background: filtersOpen ? "rgba(33,115,255,0.10)" : "transparent",
-              color: filtersOpen ? "rgba(33,115,255,1)" : "var(--gs-text-dim)",
+              color:      filtersOpen ? "rgba(33,115,255,1)"    : "var(--gs-text-dim)",
             }}
           >
             <SlidersHorizontal size={14} strokeWidth={1.75} />
           </button>
+
+          {/* Type filter chips */}
           {SEARCH_FILTERS.map(f => {
             const isActive = activeFilter === f.id
             return (
-              <button key={f.id} onClick={() => setActiveFilter(f.id)}
+              <button
+                key={f.id}
+                onClick={() => setActiveFilter(f.id)}
                 className="shrink-0 flex items-center gap-[4px] px-[10px] rounded-full text-[12px] font-medium transition-all"
                 style={{
                   height:     22,
                   background: isActive ? "rgba(33,115,255,1)" : "var(--gs-chip-inactive-bg)",
                   color:      isActive ? "#ffffff"            : "var(--gs-chip-inactive-fg)",
-                }}>
+                }}
+              >
                 <f.Icon size={11} strokeWidth={1.75} />
                 {f.label}
               </button>
@@ -597,102 +1225,195 @@ export function GlobalSearch({
           })}
         </div>
 
-        {/* ── Content area — splits horizontally when filters open ─ */}
-        {/* DS Figma 15394:16244: FiltersCard (298px) left + results right */}
-        <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+        {/* ── Content area ──────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
 
-          {/* Filters panel — left column, 298px — DS Figma 15396:25505 */}
-          {filtersOpen && (
-            <div
-              className="shrink-0 flex flex-col"
-              style={{
-                width: 298,
-                borderRight: "1px solid var(--gs-divider)",
-                background: "var(--gs-filters-col-bg)",
-              }}
-            >
-              <FiltersCard onApply={() => setFiltersOpen(false)} />
+          {/* Loading — skeleton rows that mirror ResultRow layout */}
+          {effectiveLoading && (
+            <div className="py-[8px]">
+              <SkeletonRow titleW="52%" subtitleW="36%" />
+              <SkeletonRow titleW="64%" subtitleW="42%" />
+              <SkeletonRow titleW="48%" subtitleW="30%" />
+              <SkeletonRow titleW="70%" subtitleW="45%" />
+              <SkeletonRow titleW="58%" subtitleW="38%" />
             </div>
           )}
 
-          {/* Results column */}
-          <div className="flex-1 overflow-y-auto">
+          {/* No results — DS variant 2: icon + heading + subtext + clear link */}
+          {noResults && !effectiveLoading && (
+            <div className="flex flex-col items-center justify-center gap-[12px] py-[56px]">
+              <div
+                className="w-[48px] h-[48px] flex items-center justify-center rounded-[12px]"
+                style={{ background: "var(--gs-chip-inactive-bg)" }}
+              >
+                <SearchX size={22} strokeWidth={1.5} style={{ color: "var(--gs-text-dim)" }} />
+              </div>
+              <div className="text-center">
+                <p className="text-[15px] font-semibold" style={{ color: "var(--gs-text)" }}>
+                  No matches found
+                </p>
+                <p className="text-[13px] mt-[4px]" style={{ color: "var(--gs-text-dim)" }}>
+                  Try fewer words or different keywords
+                </p>
+              </div>
+              {(hasAppliedFilters || activeFilter !== "all") && (
+                <button
+                  onClick={() => { setAppliedFilters({}); setActiveFilter("all") }}
+                  className="text-[13px] font-medium transition-opacity hover:opacity-70"
+                  style={{ color: "var(--primary)" }}
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
 
-            {/* Loading */}
-            {loading && (
-              <div className="flex flex-col py-[8px]">
-                {[160, 120, 180, 140, 100].map((w, i) => (
-                  <div key={i} className="flex items-center gap-[12px] px-[16px] py-[8px]">
-                    <div className="w-[24px] h-[24px] rounded-[4px] animate-pulse" style={{ background: "var(--gs-chip-inactive-bg)" }} />
-                    <div className="flex-1 flex flex-col gap-[6px]">
-                      <div className="h-[10px] rounded-[3px] animate-pulse" style={{ width: w, background: "var(--gs-chip-inactive-bg)" }} />
-                      <div className="h-[8px] rounded-[3px] animate-pulse" style={{ width: w * 0.65, background: "var(--gs-chip-inactive-bg)" }} />
-                    </div>
-                  </div>
+          {/* Search results — DS variants 3 & 4 */}
+          {isFiltering && hasResults && !effectiveLoading && (
+            <div className="py-[8px]">
+              {effectiveResults!.map(item => (
+                <ResultRow key={item.id} item={item} onResultClick={onResultClick} />
+              ))}
+            </div>
+          )}
+
+          {/* Default state — suggested actions + recent searches (DS variant 1) */}
+          {!isFiltering && !effectiveLoading && (
+            <>
+              <div className="pt-[8px]">
+                <p
+                  className="px-[16px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
+                  style={{ color: "var(--gs-section-label)" }}
+                >
+                  Suggested actions
+                </p>
+                {DEFAULT_SUGGESTED.map(action => (
+                  <button
+                    key={action.label}
+                    className="w-full flex items-center gap-[12px] px-[16px] py-[9px] text-left transition-colors hover:bg-[var(--gs-row-hover)]"
+                  >
+                    <HighlightIcon
+                      size="sm"
+                      variant={action.variant}
+                      iconColor="dark"
+                      icon={<action.Icon size={14} strokeWidth={1.75} />}
+                    />
+                    <span className="text-[13px] font-medium" style={{ color: "var(--gs-text)" }}>
+                      {action.label}
+                    </span>
+                  </button>
                 ))}
               </div>
-            )}
 
-            {/* No results */}
-            {noResults && !loading && (
-              <div className="flex flex-col items-center justify-center gap-[8px] py-[56px]">
-                <p className="text-[14px] font-semibold" style={{ color: "var(--gs-text)" }}>No matches found</p>
-                <p className="text-[12px]" style={{ color: "var(--gs-text-dim)" }}>Try fewer words or different keywords</p>
-                {activeFilter !== "all" && (
-                  <button onClick={() => setActiveFilter("all")}
-                    className="mt-[8px] text-[12px] font-medium px-[16px] py-[6px] rounded-[6px] transition-opacity hover:opacity-80"
-                    style={{ background: "var(--gs-chip-inactive-bg)", color: "var(--gs-text)" }}>
-                    Clear filters
-                  </button>
-                )}
+              <div className="mx-[16px] my-[4px]" style={{ height: 1, background: "var(--gs-divider)" }} />
+
+              <div className="pb-[8px]">
+                <p
+                  className="px-[16px] pt-[8px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
+                  style={{ color: "var(--gs-section-label)" }}
+                >
+                  Recent searches
+                </p>
+                {recentSearches.map(item => (
+                  <ResultRow key={item.id} item={item} onResultClick={onResultClick} />
+                ))}
               </div>
-            )}
+            </>
+          )}
+        </div>
 
-            {/* Results */}
-            {hasQuery && hasResults && !loading && (
-              <div className="py-[8px]">
-                {results!.map(item => <ResultRow key={item.id} item={item} onResultClick={onResultClick} />)}
-              </div>
-            )}
-
-            {/* Default — suggested actions + recent */}
-            {!hasQuery && !loading && (
-              <>
-                <div className="pt-[8px]">
-                  <p className="px-[16px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
-                    style={{ color: "var(--gs-section-label)" }}>Suggested actions</p>
-                  {DEFAULT_SUGGESTED.map(action => (
-                    <button key={action.label}
-                      className="w-full flex items-center gap-[12px] px-[16px] py-[8px] text-left transition-colors hover:bg-[var(--gs-row-hover)]">
-                      <HighlightIcon size="sm" variant={action.variant} iconColor="dark"
-                        icon={<action.Icon size={14} strokeWidth={1.75} />} />
-                      <span className="text-[13px] font-medium" style={{ color: "var(--gs-text)" }}>{action.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="mx-[16px] my-[4px]" style={{ height: 1, background: "var(--gs-divider)" }} />
-                <div className="pb-[8px]">
-                  <p className="px-[16px] pt-[8px] pb-[4px] text-[10px] font-semibold uppercase tracking-[0.06em]"
-                    style={{ color: "var(--gs-section-label)" }}>Recent searches</p>
-                  {recentSearches.map(item => <ResultRow key={item.id} item={item} onResultClick={onResultClick} />)}
-                </div>
-              </>
-            )}
+        {/* ── Bottom bar ───────────────────────────────────────────
+            DS: "↑↓ Navigate" always; "↩ Enter" only when results exist */}
+        <div
+          className="flex items-center justify-between px-[16px] shrink-0"
+          style={{ height: 36, borderTop: "1px solid var(--gs-divider)" }}
+        >
+          <div className="flex items-center gap-[5px]">
+            <span
+              className="px-[6px] rounded-[4px] text-[11px] font-medium"
+              style={{ background: "var(--gs-kbd-bg)", color: "var(--gs-kbd-fg)" }}
+            >
+              ↑↓
+            </span>
+            <span className="text-[11px]" style={{ color: "var(--gs-text-meta)" }}>Navigate</span>
           </div>
+          {(hasResults || (!hasQuery && !hasAppliedFilters)) && (
+            <div className="flex items-center gap-[5px]">
+              <span
+                className="px-[6px] rounded-[4px] text-[11px] font-medium"
+                style={{ background: "var(--gs-kbd-bg)", color: "var(--gs-kbd-fg)" }}
+              >
+                ↵
+              </span>
+              <span className="text-[11px]" style={{ color: "var(--gs-text-meta)" }}>
+                {hasResults ? "Open" : "Enter"}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* ── Bottom bar ───────────────────────────────────────── */}
-        <div className="flex items-center gap-[12px] px-[16px] shrink-0"
-          style={{ height: 36, borderTop: "1px solid var(--gs-divider)" }}>
-          {[["↑↓","Navigate"],["↵","Open"],["esc","Close"]].map(([key, label]) => (
-            <div key={label} className="flex items-center gap-[5px]">
-              <span className="px-[6px] rounded-[4px] text-[11px] font-medium"
-                style={{ background: "var(--gs-kbd-bg)", color: "var(--gs-kbd-fg)" }}>{key}</span>
-              <span className="text-[11px]" style={{ color: "var(--gs-text-meta)" }}>{label}</span>
-            </div>
-          ))}
-        </div>
+        {/* ── FiltersCard — floating absolute overlay ───────────────
+            DS Figma 15394:18422: node is a SIBLING to the GS panel at depth=1
+            in the app frame, positioned at x=418/y=218 (GS panel at x=370/y=150)
+            → relative to panel: left=48px top=68px · always white surface */}
+        {filtersOpen && (
+          <div
+            ref={filtersCardRef}
+            className="absolute"
+            style={{ top: 68, left: 48, zIndex: 20 }}
+            onMouseDown={e => e.stopPropagation()}
+          >
+            <FiltersCard
+              onApply={(sel) => {
+                setAppliedFilters(sel)
+                setFiltersOpen(false)
+              }}
+            />
+          </div>
+        )}
       </div>
+    </div>
+  )
+}
+
+// ── TopbarTooltip — appears below topbar elements ────────────────────────
+// DS Hover examples (8603:53715): dark pill, optional subtitle, no arrow.
+// Title: 11px Medium rgba(255,255,255,0.90)
+// Subtitle (optional): 10px Regular rgba(255,255,255,0.55)
+function TopbarTooltip({
+  title,
+  subtitle,
+  visible,
+}: {
+  title: string
+  subtitle?: string
+  visible: boolean
+}) {
+  if (!visible) return null
+  return (
+    <div
+      role="tooltip"
+      className="absolute pointer-events-none z-50"
+      style={{
+        top: "calc(100% + 6px)",
+        left: "50%",
+        transform: "translateX(-50%)",
+        whiteSpace: "nowrap",
+        background: "rgba(22,22,22,1)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        borderRadius: 6,
+        padding: subtitle ? "5px 10px" : "3px 8px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+      }}
+    >
+      <span className="text-[11px] font-medium block" style={{ color: "rgba(255,255,255,0.90)" }}>
+        {title}
+      </span>
+      {subtitle && (
+        <span className="text-[10px] block mt-[1px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+          {subtitle}
+        </span>
+      )}
     </div>
   )
 }
@@ -715,23 +1436,58 @@ export function TopbarButton({
   variant?:  "default" | "primary"
   onClick?:  (e: React.MouseEvent) => void
 }) {
+  const [hovered, setHovered] = useState(false)
+
   if (variant === "primary") {
     return (
+      <div
+        className="relative"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <button
+          aria-label={label}
+          onClick={onClick}
+          className="relative w-[24px] h-[24px] flex items-center justify-center shrink-0 cursor-pointer transition-opacity hover:opacity-85 focus-visible:outline-none"
+          style={{
+            background:   "radial-gradient(circle at 61% 68%, rgba(33,115,255,1) 29%, rgba(9,226,171,1) 61%)",
+            borderRadius: 8,
+            boxShadow:    "4px 8px 12px 8px rgba(9,226,171,0.16)",
+          }}
+        >
+          <span style={{ color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {icon}
+          </span>
+          {badge && (
+            <span
+              className="absolute top-0 right-0 w-[8px] h-[8px] rounded-full"
+              style={{ background: "var(--topbar-badge-bg)" }}
+            />
+          )}
+        </button>
+        <TopbarTooltip title={label} visible={hovered} />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <button
         aria-label={label}
         onClick={onClick}
-        className="relative w-[24px] h-[24px] flex items-center justify-center shrink-0 cursor-pointer transition-opacity hover:opacity-85 focus-visible:outline-none"
-        style={{
-          // DS: Type=Main Action · GRADIENT_RADIAL center≈(61%,68%) · stops @29%→@61%
-          background:   "radial-gradient(circle at 61% 68%, rgba(33,115,255,1) 29%, rgba(9,226,171,1) 61%)",
-          borderRadius: 8,
-          // DS: DROP_SHADOW · teal glow · offset(4,8) blur:12 spread:8 · rgba(9,226,171,0.16)
-          boxShadow:    "4px 8px 12px 8px rgba(9,226,171,0.16)",
-        }}
+        className={cn(
+          "relative w-[24px] h-[24px] flex items-center justify-center rounded-[4px] shrink-0",
+          "text-[var(--topbar-icon)]",
+          "hover:bg-[var(--topbar-btn-hover-bg)]",
+          "focus-visible:bg-[var(--topbar-btn-focus-bg)] outline-none",
+          "transition-colors cursor-pointer",
+        )}
       >
-        <span style={{ color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {icon}
-        </span>
+        {icon}
         {badge && (
           <span
             className="absolute top-0 right-0 w-[8px] h-[8px] rounded-full"
@@ -739,29 +1495,8 @@ export function TopbarButton({
           />
         )}
       </button>
-    )
-  }
-
-  return (
-    <button
-      aria-label={label}
-      onClick={onClick}
-      className={cn(
-        "relative w-[24px] h-[24px] flex items-center justify-center rounded-[4px] shrink-0",
-        "text-[var(--topbar-icon)]",
-        "hover:bg-[var(--topbar-btn-hover-bg)]",
-        "focus-visible:bg-[var(--topbar-btn-focus-bg)] outline-none",
-        "transition-colors cursor-pointer",
-      )}
-    >
-      {icon}
-      {badge && (
-        <span
-          className="absolute top-0 right-0 w-[8px] h-[8px] rounded-full"
-          style={{ background: "var(--topbar-badge-bg)" }}
-        />
-      )}
-    </button>
+      <TopbarTooltip title={label} visible={hovered} />
+    </div>
   )
 }
 
@@ -784,6 +1519,13 @@ export function Topbar({
   userEmail,
   userAvatarSrc,
   onProfileClick,
+  tenants              = [],
+  selectedTenantId,
+  onTenantSelect,
+  themeMode,
+  onThemeChange,
+  isDark,
+  onThemeToggle,
   variant              = "default",
   onMenuClick,
   className,
@@ -795,6 +1537,11 @@ export function Topbar({
   const [leftMenuOpen,  setLeftMenuOpen]  = useState(false)
   const [rightMenuOpen, setRightMenuOpen] = useState(false)
   const [searchOpen,    setSearchOpen]    = useState(false)
+  const [leftMenuPos,   setLeftMenuPos]   = useState<{ top: number; left: number } | null>(null)
+  const [rightMenuPos,  setRightMenuPos]  = useState<{ top: number; right: number } | null>(null)
+  const [wsHover,       setWsHover]       = useState(false)
+  const [searchHover,   setSearchHover]   = useState(false)
+  const [profileHover,  setProfileHover]  = useState(false)
   const leftRef  = useRef<HTMLDivElement>(null)
   const rightRef = useRef<HTMLDivElement>(null)
 
@@ -826,6 +1573,8 @@ export function Topbar({
               paddingLeft:   4, paddingRight: 4,
               paddingTop:    2, paddingBottom: 2,
             }}
+            onMouseEnter={() => setWsHover(true)}
+            onMouseLeave={() => setWsHover(false)}
           >
             {isTablet && (
               <button
@@ -845,6 +1594,10 @@ export function Topbar({
               className="flex items-center gap-[6px] flex-1 min-w-0 cursor-pointer"
               onClick={() => {
                 if (workspaces.length > 0) {
+                  if (!leftMenuOpen && leftRef.current) {
+                    const r = leftRef.current.getBoundingClientRect()
+                    setLeftMenuPos({ top: r.bottom + 4, left: r.left })
+                  }
                   setLeftMenuOpen(v => !v)
                   setRightMenuOpen(false)
                 } else {
@@ -867,20 +1620,30 @@ export function Topbar({
             </button>
           </div>
 
+          <TopbarTooltip
+            title="Workspace"
+            subtitle="Move across studios"
+            visible={wsHover && !leftMenuOpen}
+          />
           {leftMenuOpen && workspaces.length > 0 && (
-            <LeftMenu
+            <TopbarLeftMenu
               workspaces={workspaces}
               selectedId={selectedWorkspaceId}
               onSelect={id => {
                 onWorkspaceSelect?.(id)
                 setLeftMenuOpen(false)
               }}
+              pos={leftMenuPos ?? undefined}
             />
           )}
         </div>
 
         {/* CENTER ZONE — search trigger ─────────────────────────── */}
-        <div className="w-[250px] h-[24px] shrink-0">
+        <div
+          className="w-[250px] h-[24px] shrink-0 relative"
+          onMouseEnter={() => setSearchHover(true)}
+          onMouseLeave={() => setSearchHover(false)}
+        >
           <div
             role="button"
             aria-label={searchPlaceholder}
@@ -903,6 +1666,11 @@ export function Topbar({
               {searchPlaceholder}
             </span>
           </div>
+          <TopbarTooltip
+            title="Global search"
+            subtitle="Search across apps, agents, and data"
+            visible={searchHover && !searchOpen}
+          />
         </div>
 
         {/* RIGHT ZONE ──────────────────────────────────────────────── */}
@@ -957,24 +1725,46 @@ export function Topbar({
                   {companyName}
                 </span>
               </button>
-              <button
-                className="shrink-0 cursor-pointer rounded-full transition-all hover:ring-1 hover:ring-[var(--topbar-avatar-ring)]"
-                onClick={() => {
-                  setRightMenuOpen(v => !v)
-                  setLeftMenuOpen(false)
-                  onProfileClick?.()
-                }}
-                aria-label="Profile menu"
+              <div
+                className="relative shrink-0 flex items-center"
+                onMouseEnter={() => setProfileHover(true)}
+                onMouseLeave={() => setProfileHover(false)}
               >
-                <TopbarAvatar name={userName} src={userAvatarSrc} />
-              </button>
+                <button
+                  className="flex items-center justify-center cursor-pointer rounded-full transition-all hover:ring-1 hover:ring-[var(--topbar-avatar-ring)]"
+                  style={{ width: 16, height: 16 }}
+                  onClick={() => {
+                    if (!rightMenuOpen && rightRef.current) {
+                      const r = rightRef.current.getBoundingClientRect()
+                      setRightMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+                    }
+                    setRightMenuOpen(v => !v)
+                    setLeftMenuOpen(false)
+                    onProfileClick?.()
+                  }}
+                  aria-label="Profile menu"
+                >
+                  <TopbarAvatar name={userName} src={userAvatarSrc} />
+                </button>
+                <TopbarTooltip title="Profile & account" visible={profileHover && !rightMenuOpen} />
+              </div>
             </div>
 
             {rightMenuOpen && (
-              <RightMenu
+              <TopbarRightMenu
                 userName={userName}
                 userEmail={userEmail}
                 userAvatarSrc={userAvatarSrc}
+                companyName={companyName}
+                companyAvatarSrc={companyAvatarSrc}
+                tenants={tenants}
+                selectedTenantId={selectedTenantId}
+                onTenantSelect={onTenantSelect}
+                themeMode={themeMode}
+                onThemeChange={onThemeChange}
+                isDark={isDark}
+                onThemeToggle={onThemeToggle}
+                pos={rightMenuPos ?? undefined}
               />
             )}
           </div>

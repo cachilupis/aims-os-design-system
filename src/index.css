@@ -364,6 +364,16 @@
     --gs-kbd-fg:           rgba(255,255,255,0.40);   /* Keyboard shortcut text dark  = White/40        */
     --gs-filters-col-bg:   rgba(255,255,255,0.02);   /* FiltersCard left column bg — subtle separation */
     --gs-chip-border:      rgba(255,255,255,0.20);   /* Pill chip outline border dark = White/20       */
+
+    /* ── FiltersCard floating panel (Global Search) ─────────────────── */
+    --fc-bg:               rgba(20, 26, 46, 0.98);   /* Dark surface — slightly lighter than GS panel  */
+    --fc-border:           rgba(255,255,255,0.10);   /* Border/Neutral/Default dark                    */
+    --fc-divider:          rgba(255,255,255,0.07);   /* Section divider dark                           */
+    --fc-label:            rgba(255,255,255,0.45);   /* Section header label dark                      */
+    --fc-chip-bg:          transparent;              /* Inactive chip background dark                  */
+    --fc-chip-bd:          rgba(255,255,255,0.18);   /* Inactive chip border dark                      */
+    --fc-chip-fg:          rgba(255,255,255,0.75);   /* Inactive chip text dark                        */
+    --fc-cta-clear:        rgba(255,255,255,0.50);   /* "Clear all" text dark                          */
   }
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
@@ -705,6 +715,16 @@
     --gs-kbd-fg:           rgba(92,92,92,1);           /* Keyboard shortcut text light                 */
     --gs-filters-col-bg:   rgba(0,0,0,0.02);           /* FiltersCard left column bg light             */
     --gs-chip-border:      rgba(0,0,0,0.15);           /* Pill chip outline border light               */
+
+    /* ── FiltersCard floating panel (Global Search) ─────────────────── */
+    --fc-bg:               rgba(255,255,255,0.97);    /* Light surface                                  */
+    --fc-border:           rgba(0,0,0,0.10);          /* Border/Neutral/Default light                   */
+    --fc-divider:          rgba(0,0,0,0.08);          /* Section divider light                          */
+    --fc-label:            rgba(92,92,92,1);          /* Section header label light                     */
+    --fc-chip-bg:          transparent;               /* Inactive chip bg light                         */
+    --fc-chip-bd:          rgba(0,0,0,0.18);          /* Inactive chip border light                     */
+    --fc-chip-fg:          rgba(42,42,42,1);          /* Inactive chip text light                       */
+    --fc-cta-clear:        rgba(92,92,92,1);          /* "Clear all" text light                         */
   }
 
   html {
