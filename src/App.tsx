@@ -9105,6 +9105,18 @@ function FiltersInteractivePlayground() {
           <div className="w-[200px] shrink-0">
             <Input
               leftIcon={<LucideIcons.Search className="w-[14px] h-[14px]" />}
+              rightIcon={
+                searchVal ? (
+                  <button
+                    className="flex items-center justify-center hover:opacity-70 transition-opacity"
+                    onClick={() => setSearchVal("")}
+                    aria-label="Clear search"
+                    tabIndex={-1}
+                  >
+                    <LucideIcons.X className="w-[14px] h-[14px]" />
+                  </button>
+                ) : undefined
+              }
               placeholder="Search"
               value={searchVal}
               onChange={e => setSearchVal(e.target.value)}

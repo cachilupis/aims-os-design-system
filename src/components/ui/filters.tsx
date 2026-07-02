@@ -143,6 +143,18 @@ export function Filters({
               <div className="w-[200px] shrink-0">
                 <Input
                   leftIcon={<Search className="w-[14px] h-[14px]" />}
+                  rightIcon={
+                    searchValue ? (
+                      <button
+                        className="flex items-center justify-center hover:opacity-70 transition-opacity"
+                        onClick={() => onSearchChange?.("")}
+                        aria-label="Clear search"
+                        tabIndex={-1}
+                      >
+                        <X className="w-[14px] h-[14px]" />
+                      </button>
+                    ) : undefined
+                  }
                   placeholder={searchPlaceholder}
                   value={searchValue ?? ""}
                   onChange={e => onSearchChange?.(e.target.value)}
