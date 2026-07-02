@@ -1,6 +1,7 @@
 import { Search, X, ChevronDown, SlidersHorizontal, ArrowDown, LayoutGrid, LayoutList } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tag } from "@/components/ui/tag"
+import { Input } from "@/components/ui/input"
 
 /**
  * Filters Bar — AIMS OS Design System
@@ -9,13 +10,15 @@ import { Tag } from "@/components/ui/tag"
  * Horizontal 40px bar combining a search input, up to 5 filter chips,
  * an "All filters" control, sort direction, sort label, and grid/list toggle.
  *
- * Two compact modes driven by `compact` + `compactCount`:
- *   compact=true, compactCount=0  → S Variant: Search + "All filters" only
- *   compact=true, compactCount>0  → S Variant Filters Apply: "Filters N" badge + "Clear Filters"
+ * Sorting (DS node 7996:5555):
+ *   ArrowDown button (28×28, radius-4px) · 24px gap · label text · 8px gap · ChevronDown button
+ *
+ * Search (DS node 7996:5357):
+ *   Full Input component (TextField), leftIcon=Search, interactive
  *
  * Token family: --fi-*
- *   inactive chip:  --fi-chip-bg / --fi-chip-border / --fi-chip-text / --fi-chip-icon
- *   active chip:    --fi-chip-active-bg / --fi-chip-active-border / --fi-chip-active-text / --fi-chip-active-icon
+ *   inactive chip:  --field-bg / --field-border / --field-text / --field-icon
+ *   active chip:    --fi-chip-active-bg / --fi-chip-active-border / --fi-chip-active-text
  *   clear text:     --fi-clear-text / --fi-clear-hover
  *   badge:          --fi-badge-bg / --fi-badge-text
  *   view toggle:    --fi-view-active-bg / --fi-view-active-icon / --fi-view-icon
@@ -23,26 +26,28 @@ import { Tag } from "@/components/ui/tag"
  */
 
 export type FilterSlot = {
-  placeholder: string    // label shown when no value is selected (e.g. "Type", "Owner")
-  value?: string         // if set, chip renders as active with this value + × dismiss
+  placeholder: string
+  value?: string
   onRemove?: () => void
   onOpen?: () => void
 }
 
 export type FiltersProps = {
-  compact?: boolean        // S Variant — shows only Search + "All filters" button
-  compactCount?: number    // > 0 → S Variant Filters Apply: badge instead of search
-  showSearch?: boolean     // default: true
+  compact?: boolean
+  compactCount?: number
+  showSearch?: boolean
   searchPlaceholder?: string
-  slots?: FilterSlot[]     // up to 5 filter chips
+  searchValue?: string
+  onSearchChange?: (value: string) => void
+  slots?: FilterSlot[]
   showClearFilters?: boolean
   onClearFilters?: () => void
-  showAllFilters?: boolean // default: true — "All filters ☰" pill button
+  showAllFilters?: boolean
   onAllFiltersClick?: () => void
-  showSort?: boolean       // default: true — sort arrow + sort label
-  sortLabel?: string       // default: "Name"
+  showSort?: boolean
+  sortLabel?: string
   onSortClick?: () => void
-  showViewToggle?: boolean // default: true — grid/list icon buttons
+  showViewToggle?: boolean
   viewMode?: "grid" | "list"
   onViewModeChange?: (mode: "grid" | "list") => void
   className?: string
@@ -54,18 +59,18 @@ const CHIP_BASE =
 function AllFiltersButton({ onClick }: { onClick?: () => void }) {
   return (
     <button
-      className="inline-flex items-center gap-[6px] h-[40px] px-[12px] rounded-full border text-[13px] font-medium transition-colors shrink-0"
+      className="inline-flex items-center gap-[6px] h-[40px] px-[16px] rounded-full border text-[14px] font-medium transition-colors shrink-0"
       style={{
-        background:   "var(--fi-chip-bg)",
-        borderColor:  "var(--fi-chip-border)",
-        color:        "var(--fi-chip-text)",
+        background:  "var(--field-bg)",
+        borderColor: "var(--field-border)",
+        color:       "var(--field-text)",
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = "var(--fi-chip-hover-bg)" }}
-      onMouseLeave={e => { e.currentTarget.style.background = "var(--fi-chip-bg)" }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--field-border-hover)" }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--field-border)" }}
       onClick={onClick}
     >
       All filters
-      <SlidersHorizontal className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--fi-chip-icon)" }} />
+      <SlidersHorizontal className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--field-icon)" }} />
     </button>
   )
 }
@@ -75,6 +80,8 @@ export function Filters({
   compactCount      = 0,
   showSearch        = true,
   searchPlaceholder = "Search",
+  searchValue,
+  onSearchChange,
   slots             = [],
   showClearFilters  = false,
   onClearFilters,
@@ -105,9 +112,9 @@ export function Filters({
             <button
               className={cn(CHIP_BASE, "shrink-0 gap-[6px]")}
               style={{
-                background:  "var(--fi-chip-bg)",
-                borderColor: "var(--fi-chip-border)",
-                color:       "var(--fi-chip-text)",
+                background:  "var(--field-bg)",
+                borderColor: "var(--field-border)",
+                color:       "var(--field-text)",
               }}
             >
               Filters
@@ -131,22 +138,16 @@ export function Filters({
           </>
         ) : (
           <>
-            {/* Search input */}
+            {/* Search — DS TextField with Search leftIcon, interactive */}
             {showSearch && (
-              <div
-                className="inline-flex items-center gap-[6px] h-[40px] px-[10px] rounded-[8px] border-[0.5px] w-[140px] shrink-0"
-                style={{
-                  background:  "var(--field-bg)",
-                  borderColor: "var(--field-border)",
-                }}
-              >
-                <Search className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--field-icon)" }} />
-                <span
-                  className="text-[13px] font-medium truncate"
-                  style={{ color: "var(--field-placeholder)" }}
-                >
-                  {searchPlaceholder}
-                </span>
+              <div className="w-[200px] shrink-0">
+                <Input
+                  leftIcon={<Search className="w-[14px] h-[14px]" />}
+                  placeholder={searchPlaceholder}
+                  value={searchValue ?? ""}
+                  onChange={e => onSearchChange?.(e.target.value)}
+                  size="default"
+                />
               </div>
             )}
 
@@ -158,7 +159,7 @@ export function Filters({
             {/* Normal mode: filter chips */}
             {!compact && slots.map((slot, i) =>
               slot.value ? (
-                /* Active chip — value as Tag informative sm; X lives inside Tag trailingIcon */
+                /* Active chip */
                 <div
                   key={i}
                   className={cn(CHIP_BASE, "pr-[6px] shrink-0")}
@@ -194,7 +195,7 @@ export function Filters({
                   </button>
                 </div>
               ) : (
-                /* Inactive dropdown chip — matches Select/Input tokens */
+                /* Inactive dropdown chip — matches Input/Select tokens */
                 <button
                   key={i}
                   className={cn(CHIP_BASE, "shrink-0")}
@@ -229,66 +230,62 @@ export function Filters({
         )}
       </div>
 
-      {/* ── Right controls (shrinks) ──────────────────────────────────────── */}
-      <div className="flex items-center gap-[4px] shrink-0">
+      {/* ── Right controls ─────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-[8px] shrink-0">
+
         {/* "All filters" pill — normal mode only */}
         {!compact && showAllFilters && (
-          <div className="mr-[4px]">
-            <AllFiltersButton onClick={onAllFiltersClick} />
+          <AllFiltersButton onClick={onAllFiltersClick} />
+        )}
+
+        {/* Sorting — DS node 7996:5555
+            ArrowDown button (28×28) · 24px gap · sort label text · ChevronDown button */}
+        {showSort && (
+          <div className="flex items-center gap-[24px] shrink-0">
+            <button
+              className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] transition-colors"
+              style={{ color: "var(--fi-sort-icon)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--fi-chip-bg)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
+              onClick={onSortClick}
+              aria-label="Toggle sort direction"
+            >
+              <ArrowDown className="w-[16px] h-[16px]" />
+            </button>
+            <button
+              className="inline-flex items-center gap-[8px] text-[14px] font-medium transition-opacity hover:opacity-80 shrink-0"
+              style={{ color: "var(--fi-sort-text)" }}
+              onClick={onSortClick}
+            >
+              {sortLabel}
+              <ChevronDown className="w-[13px] h-[13px] shrink-0" style={{ color: "var(--fi-sort-icon)" }} />
+            </button>
           </div>
         )}
 
-        {/* Sort direction arrow */}
-        {showSort && (
-          <button
-            className="flex items-center justify-center w-[32px] h-[40px] transition-opacity hover:opacity-80"
-            style={{ color: "var(--fi-sort-icon)" }}
-            onClick={onSortClick}
-            aria-label="Sort direction"
-          >
-            <ArrowDown className="w-[16px] h-[16px]" />
-          </button>
-        )}
-
-        {/* Sort label dropdown */}
-        {showSort && (
-          <button
-            className="inline-flex items-center gap-[4px] h-[40px] px-[4px] text-[13px] font-medium transition-opacity hover:opacity-80"
-            style={{ color: "var(--fi-sort-text)" }}
-            onClick={onSortClick}
-          >
-            {sortLabel}
-            <ChevronDown className="w-[13px] h-[13px] shrink-0" style={{ color: "var(--fi-sort-icon)" }} />
-          </button>
-        )}
-
-        {/* Grid / List view toggle */}
+        {/* Grid / List view toggle
+            Active:   --fi-view-active-bg fill, no border
+            Inactive: --field-bg + --field-border 1px (DS exact) */}
         {showViewToggle && (
-          <div className="flex items-center ml-[4px]">
-            <button
-              className="flex items-center justify-center w-[32px] h-[32px] rounded-[6px] transition-colors"
-              style={{
-                background: viewMode === "grid" ? "var(--fi-view-active-bg)"   : "transparent",
-                color:      viewMode === "grid" ? "var(--fi-view-active-icon)" : "var(--fi-view-icon)",
-              }}
-              onClick={() => onViewModeChange?.("grid")}
-              aria-label="Grid view"
-              aria-pressed={viewMode === "grid"}
-            >
-              <LayoutGrid className="w-[16px] h-[16px]" />
-            </button>
-            <button
-              className="flex items-center justify-center w-[32px] h-[32px] rounded-[6px] transition-colors"
-              style={{
-                background: viewMode === "list" ? "var(--fi-view-active-bg)"   : "transparent",
-                color:      viewMode === "list" ? "var(--fi-view-active-icon)" : "var(--fi-view-icon)",
-              }}
-              onClick={() => onViewModeChange?.("list")}
-              aria-label="List view"
-              aria-pressed={viewMode === "list"}
-            >
-              <LayoutList className="w-[16px] h-[16px]" />
-            </button>
+          <div className="flex items-center gap-[4px]">
+            {(["grid", "list"] as const).map(m => (
+              <button
+                key={m}
+                className="flex items-center justify-center w-[32px] h-[32px] rounded-[6px] border transition-colors"
+                style={{
+                  background:  viewMode === m ? "var(--fi-view-active-bg)"   : "var(--field-bg)",
+                  borderColor: viewMode === m ? "transparent"                : "var(--field-border)",
+                  color:       viewMode === m ? "var(--fi-view-active-icon)" : "var(--fi-view-icon)",
+                }}
+                onClick={() => onViewModeChange?.(m)}
+                aria-label={`${m === "grid" ? "Grid" : "List"} view`}
+                aria-pressed={viewMode === m}
+              >
+                {m === "grid"
+                  ? <LayoutGrid className="w-[16px] h-[16px]" />
+                  : <LayoutList className="w-[16px] h-[16px]" />}
+              </button>
+            ))}
           </div>
         )}
       </div>

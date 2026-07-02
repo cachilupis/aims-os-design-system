@@ -8770,6 +8770,7 @@ function FiltersInteractivePlayground() {
   // Filters applied from the All Filters slideout — shown as tags below the bar
   const [slideoutApplied, setSlideoutApplied] = useState<{ label: string; value: string }[]>([])
   const [hovered,    setHovered]    = useState<string | null>(null)
+  const [searchVal,  setSearchVal]  = useState("")
 
   const CHIP_DEFS: { placeholder: string; kind: "single" | "multi" | "priority" | "date"; options: string[] }[] = [
     { placeholder: "Type",     kind: "single",   options: ["Product", "Engineering", "Design", "Operations"] },
@@ -9100,11 +9101,14 @@ function FiltersInteractivePlayground() {
         {/* Bar row */}
         <div className="flex items-center gap-[8px] px-[16px] h-[56px]" style={{ flexWrap: "nowrap", minWidth: 0 }}>
 
-          {/* Search field */}
-          <div className="inline-flex items-center gap-[6px] h-[40px] px-[10px] rounded-[8px] border-[0.5px] w-[150px] shrink-0"
-            style={{ background: "var(--field-bg)", borderColor: "var(--field-border)" }}>
-            <LucideIcons.Search className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--field-icon)" }} />
-            <span className="text-[13px] font-medium" style={{ color: "var(--field-placeholder)" }}>Search</span>
+          {/* Search field — DS TextField (interactive) */}
+          <div className="w-[200px] shrink-0">
+            <Input
+              leftIcon={<LucideIcons.Search className="w-[14px] h-[14px]" />}
+              placeholder="Search"
+              value={searchVal}
+              onChange={e => setSearchVal(e.target.value)}
+            />
           </div>
 
           {/* Filter chips with floating dropdowns */}
@@ -9152,28 +9156,31 @@ function FiltersInteractivePlayground() {
 
           <div className="flex-1 min-w-0" />
 
-          {/* All filters */}
+          {/* All filters — DS exact: --field-* tokens, pill, px-16px */}
           <button
-            className="inline-flex items-center gap-[6px] h-[40px] px-[12px] rounded-full border text-[13px] font-medium transition-colors shrink-0"
-            style={{ background: "var(--fi-chip-bg)", borderColor: "var(--fi-chip-border)", color: "var(--fi-chip-text)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--fi-chip-hover-bg)" }}
-            onMouseLeave={e => { e.currentTarget.style.background = "var(--fi-chip-bg)" }}
+            className="inline-flex items-center gap-[6px] h-[40px] px-[16px] rounded-full border text-[14px] font-medium transition-colors shrink-0"
+            style={{ background: "var(--field-bg)", borderColor: "var(--field-border)", color: "var(--field-text)" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--field-border-hover)" }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--field-border)" }}
             onClick={() => { setSlideout(true); setOpenChip(null); setSortOpen(false) }}>
             All filters
-            <LucideIcons.SlidersHorizontal className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--fi-chip-icon)" }} />
+            <LucideIcons.SlidersHorizontal className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--field-icon)" }} />
           </button>
 
-          {/* Sort */}
+          {/* Sort — DS node 7996:5555: ArrowDown 28×28 · 24px gap · label · ChevronDown */}
           {showSort && (
-            <div className="relative flex items-center shrink-0">
-              <button className="flex items-center justify-center w-[32px] h-[40px] transition-opacity hover:opacity-80"
+            <div className="relative flex items-center gap-[24px] shrink-0">
+              <button
+                className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] transition-colors"
                 style={{ color: "var(--fi-sort-icon)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--fi-chip-bg)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
                 onClick={() => { setSortOpen(v => !v); setOpenChip(null) }}
-                aria-label="Sort direction">
+                aria-label="Toggle sort direction">
                 <LucideIcons.ArrowDown className="w-[16px] h-[16px]" />
               </button>
               <button
-                className="inline-flex items-center gap-[4px] h-[40px] px-[4px] text-[13px] font-medium transition-opacity hover:opacity-80"
+                className="inline-flex items-center gap-[8px] text-[14px] font-medium transition-opacity hover:opacity-80"
                 style={{ color: "var(--fi-sort-text)" }}
                 onClick={() => { setSortOpen(v => !v); setOpenChip(null) }}>
                 {sortValue}
@@ -9194,15 +9201,16 @@ function FiltersInteractivePlayground() {
             </div>
           )}
 
-          {/* View toggle */}
+          {/* View toggle — inactive: --field-bg + --field-border 1px (DS exact) */}
           {showView && (
-            <div className="flex items-center shrink-0">
+            <div className="flex items-center gap-[4px] shrink-0">
               {(["grid", "list"] as const).map(m => (
                 <button key={m}
-                  className="flex items-center justify-center w-[32px] h-[32px] rounded-[6px] transition-colors"
+                  className="flex items-center justify-center w-[32px] h-[32px] rounded-[6px] border transition-colors"
                   style={{
-                    background: viewMode === m ? "var(--fi-view-active-bg)"   : "transparent",
-                    color:      viewMode === m ? "var(--fi-view-active-icon)" : "var(--fi-view-icon)",
+                    background:  viewMode === m ? "var(--fi-view-active-bg)"   : "var(--field-bg)",
+                    borderColor: viewMode === m ? "transparent"                : "var(--field-border)",
+                    color:       viewMode === m ? "var(--fi-view-active-icon)" : "var(--fi-view-icon)",
                   }}
                   onClick={() => setViewMode(m)}
                   aria-label={`${m} view`}>
