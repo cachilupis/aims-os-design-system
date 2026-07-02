@@ -428,12 +428,12 @@
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
   .light {
-    --canvas:              #F0F2F8;
-    --surface:             #FFFFFF;
-    --surface-raised:      #F5F7FC;
+    --canvas:              #E4ECF7;   /* richer blue-gray base for visible gradient */
+    --surface:             #F2F7FF;   /* subtle brand-blue tint instead of flat white */
+    --surface-raised:      #EBF2FF;   /* elevated with blue tint for depth */
 
-    --background:          #F0F2F8;
-    --card:                #FFFFFF;
+    --background:          #E4ECF7;
+    --card:                #F8FBFF;   /* very slight blue-tinted card surface */
     --card-foreground:     #5c5c5c;
     --popover:             #FFFFFF;
     --popover-foreground:  #1a1a1a;
@@ -442,23 +442,23 @@
     --primary-foreground:  #ffffff;
     --secondary:           #00000008;
     --secondary-foreground:#2a2a2a;
-    --muted:               #00000005;
+    --muted:               #0000000a;
     --muted-foreground:    #5c5c5c;
     --accent:              #2173ff14;
     --accent-foreground:   #2173ff;
     --destructive:         #d32f2f;
     --destructive-foreground: #ffffff;
-    --border:              rgba(0,0,0,0.1);
-    --input:               rgba(0,0,0,0.1);
+    --border:              rgba(33,115,255,0.13);  /* subtle brand-blue border */
+    --input:               rgba(0,0,0,0.10);
     --ring:                #2173ff;
     --radius:              0.5rem;
-    --sidebar:             #FFFFFF;
+    --sidebar:             #F2F7FF;
     --sidebar-foreground:  #1a1a1a;
     --sidebar-primary:     #2173ff;
     --sidebar-primary-foreground: #ffffff;
     --sidebar-accent:      #2173ff14;
     --sidebar-accent-foreground:  #2173ff;
-    --sidebar-border:      rgba(0,0,0,0.08);
+    --sidebar-border:      rgba(33,115,255,0.12);
     --sidebar-ring:        #2173ff;
 
     /* ── Field — neutral states ─────────────────────── */
@@ -580,18 +580,18 @@
     --card-limegreen-hover-bd:      #a0da1d;                 /* Border/LimeGreen/Default light              */
     --card-limegreen-selected-bd:   #3e5c0a;                 /* Border/LimeGreen/Darker light               */
 
-    /* Card hover shadows — none in light mode (glow is a dark-mode-only DS effect) */
-    --card-default-hover-shadow:      none;
-    --card-whiteopacity-hover-shadow: none;
-    --card-primary-hover-shadow:      none;
-    --card-green-hover-shadow:        none;
-    --card-reed-hover-shadow:         none;
-    --card-orange-hover-shadow:       none;
-    --card-yellow-hover-shadow:       none;
-    --card-purple-hover-shadow:       none;
-    --card-lightblue-hover-shadow:    none;
-    --card-limegreen-hover-shadow:    none;
-    --card-dashed-hover-shadow:       none;
+    /* Card hover shadows — light mode glass elevation with brand-colored glows */
+    --card-default-hover-shadow:      0 8px 24px rgba(33,115,255,0.12), 0 2px 6px rgba(0,0,0,0.06);
+    --card-whiteopacity-hover-shadow: 0 8px 24px rgba(33,115,255,0.12), 0 2px 6px rgba(0,0,0,0.06);
+    --card-primary-hover-shadow:      0 8px 24px rgba(33,115,255,0.20), 0 0 12px rgba(33,115,255,0.12);
+    --card-green-hover-shadow:        0 8px 24px rgba(0,160,126,0.16), 0 2px 6px rgba(0,0,0,0.05);
+    --card-reed-hover-shadow:         0 8px 24px rgba(211,47,47,0.16), 0 2px 6px rgba(0,0,0,0.05);
+    --card-orange-hover-shadow:       0 8px 24px rgba(237,108,2,0.16), 0 2px 6px rgba(0,0,0,0.05);
+    --card-yellow-hover-shadow:       0 8px 24px rgba(237,108,2,0.12), 0 2px 6px rgba(0,0,0,0.04);
+    --card-purple-hover-shadow:       0 8px 24px rgba(123,39,237,0.16), 0 2px 6px rgba(0,0,0,0.05);
+    --card-lightblue-hover-shadow:    0 8px 24px rgba(0,181,217,0.16), 0 2px 6px rgba(0,0,0,0.05);
+    --card-limegreen-hover-shadow:    0 8px 24px rgba(160,218,29,0.14), 0 2px 6px rgba(0,0,0,0.04);
+    --card-dashed-hover-shadow:       0 8px 24px rgba(33,115,255,0.10), 0 2px 6px rgba(0,0,0,0.04);
 
     /* ── Tag Component — light ──────────────────────────────────────────── */
     --tag-success-bg:     #e5fdf8;                 /* Green/100           */
@@ -702,9 +702,9 @@
     /*   Surface/Primary/More Subtle lt = #f6f9ff         → selected row bg (rgba(246,249,255,1))     */
     /*   Text/Subtitle light            = #2a2a2a         → header column text (darker, hierarchy)    */
     /*   Text/Body light                = #5c5c5c         → row cell text                             */
-    --table-bg:               #ffffff;                  /* Surface/Neutral/White light                */
-    --table-header-bg:        #ffffff;                  /* Surface/Neutral/White light (same as body) */
-    --table-border:           rgba(0,0,0,0.08);         /* Border/Neutral/Lighter light               */
+    --table-bg:               #F8FBFF;                  /* Blue-tinted surface for glass feel         */
+    --table-header-bg:        #EEF5FF;                  /* Slightly deeper tint for header contrast   */
+    --table-border:           rgba(33,115,255,0.10);    /* Brand-blue subtle border                   */
     --table-header-text:      #2a2a2a;                  /* Text/Subtitle light = Gray/700             */
     --table-cell-text:        #5c5c5c;                  /* Text/Body light = Gray/600                 */
     --table-row-hover-bg:     #f2f2f2;                  /* Surface/Neutral/Default light              */

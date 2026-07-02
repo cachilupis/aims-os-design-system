@@ -395,11 +395,14 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
 
         return (
           <div
-            className="flex flex-col gap-[6px] px-[8px] py-[8px] rounded-[8px]"
+            className={cn(
+              "flex flex-col gap-[6px] px-[8px] py-[8px] rounded-[8px]",
+              !isLong && "self-start"  // adapt to text width when short; full-width when long
+            )}
             style={{ background: "var(--tag-purple-bg)", border: "1px solid var(--tag-purple-bd)" }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Header row: sparkle · label · inline-text (short/collapsed) · chevron */}
+            {/* Header row: sparkle · label · inline-text (short/collapsed) · [view more] · chevron */}
             <div className="flex items-center gap-[6px] min-h-[20px]">
               <SparkleIcon size={16} strokeWidth={1.75} style={{ color: "var(--tag-purple-fg)", flexShrink: 0 }} />
               {ai.showLabel !== false && (
@@ -410,32 +413,44 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
                   <span className="text-[13px]" style={{ color: "var(--tag-purple-fg)" }}>·</span>
                 </>
               )}
-              {/* Inline detail: always shown when short; shown collapsed (truncated) when long+collapsed */}
+              {/* Inline detail: always shown when short; truncated when long+collapsed */}
               {(!isLong || !aiExpanded) && (
                 <span
-                  className="text-[12px] font-medium flex-1 min-w-0"
+                  className={cn("text-[12px] font-medium", isLong ? "flex-1 min-w-0" : "shrink-0")}
                   style={{
                     color:        "var(--muted-foreground)",
                     overflow:     isLong && !aiExpanded ? "hidden"    : undefined,
                     textOverflow: isLong && !aiExpanded ? "ellipsis"  : undefined,
-                    whiteSpace:   isLong && !aiExpanded ? "nowrap"    : undefined,
+                    whiteSpace:   isLong && !aiExpanded ? "nowrap"    : "nowrap",
                   }}
                 >
                   {lines[0]}
                 </span>
               )}
               {isLong && aiExpanded && <div className="flex-1" />}
+              {/* Right controls: View more (expanded only) + chevron */}
               {isLong && (
-                <button
-                  onClick={e => { e.stopPropagation(); setAiExpanded(v => !v) }}
-                  className="shrink-0 w-[20px] h-[20px] flex items-center justify-center rounded-[4px] transition-opacity hover:opacity-70"
-                  style={{ color: "var(--tag-purple-fg)" }}
-                >
-                  {aiExpanded
-                    ? (ChevronUpIcon   && <ChevronUpIcon   size={15} strokeWidth={1.75} />)
-                    : (ChevronDownIcon && <ChevronDownIcon size={15} strokeWidth={1.75} />)
-                  }
-                </button>
+                <div className="flex items-center gap-[6px] shrink-0">
+                  {aiExpanded && ai.viewMore && (
+                    <button
+                      className="text-[12px] font-medium px-[10px] h-[24px] rounded-[4px] transition-opacity hover:opacity-70"
+                      style={{ color: "var(--foreground)" }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      View more
+                    </button>
+                  )}
+                  <button
+                    onClick={e => { e.stopPropagation(); setAiExpanded(v => !v) }}
+                    className="shrink-0 w-[20px] h-[20px] flex items-center justify-center rounded-[4px] transition-opacity hover:opacity-70"
+                    style={{ color: "var(--tag-purple-fg)" }}
+                  >
+                    {aiExpanded
+                      ? (ChevronUpIcon   && <ChevronUpIcon   size={15} strokeWidth={1.75} />)
+                      : (ChevronDownIcon && <ChevronDownIcon size={15} strokeWidth={1.75} />)
+                    }
+                  </button>
+                </div>
               )}
             </div>
 
@@ -452,14 +467,6 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
                     </span>
                   </div>
                 ))}
-                {ai.viewMore && (
-                  <button
-                    className="text-left text-[12px] font-medium mt-[4px] transition-opacity hover:opacity-70"
-                    style={{ color: "var(--tag-purple-fg)" }}
-                  >
-                    View more →
-                  </button>
-                )}
               </div>
             )}
           </div>

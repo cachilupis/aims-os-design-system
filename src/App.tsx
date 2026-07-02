@@ -7348,6 +7348,13 @@ export function MyList() {
             High-density list row for entities — conversations, tickets, tasks.
             Supports icon highlight, avatar, primary/secondary meta, AI insight, description, and tag clusters.
           </p>
+          <div
+            className="flex items-center gap-[8px] mt-[10px] px-[12px] py-[8px] rounded-[8px] text-[12px] font-medium"
+            style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)", color: "var(--tag-informative-fg)" }}
+          >
+            <span style={{ fontSize: 14 }}>📐</span>
+            <span><strong>Container:</strong> Always wrap <code className="font-mono text-[11px]">EntityList</code> in a <code className="font-mono text-[11px]">CardContainer size="sm"</code> (size S — 12px padding, 8px radius, 0.5px border). This is the standard shell for list views in the AIMS OS DS.</span>
+          </div>
         </div>
         <SpecButton onClick={() => openSpec("entity-list")} />
       </div>
@@ -7384,8 +7391,8 @@ export function MyList() {
                 {[
                   { label: "Top row — title + primary meta", desc: "Checkbox (opt) → icon highlight → avatar → title (16px SemiBold) → meta bullets → pinned tag | right: actions → divider → state tag → timestamp → menu." },
                   { label: "Body — description", desc: "Collapsible multi-line text (14px Medium). ChevronDown/Up toggle at right. Hidden by default when defaultDescExpanded=false." },
-                  { label: "AI insight row", desc: "Full-width purple pill: Sparkle icon + 'AI {action}' label + separator + detail text. Only renders when aiInsight prop is set." },
-                  { label: "Bottom row — secondary meta + tags", desc: "Left: icon+label pairs with bullet separators (from 2nd onward). Right: light-blue Tag cluster." },
+                  { label: "AI insight row", desc: "Purple pill: Sparkle icon + 'AI {action}' label + separator + detail. Width adapts to text when short; full-width when long (bullet list). 'View more' appears inline at right when expanded." },
+                  { label: "Bottom row — secondary meta + tags", desc: "Left: icon+label pairs with bullet separators. Use 'icon-text' for full labels, 'icon' for compact icon-only mode (tooltip on hover). Right: light-blue Tag cluster." },
                 ].map(item => (
                   <div
                     key={item.label}
@@ -7414,6 +7421,7 @@ export function MyList() {
                     "Use aiInsight when the system has an automated diagnosis or recommendation — keeps AI context inline.",
                     "Use secondaryMeta for secondary counts (time, attachments, views) — icon-only is fine when widely understood.",
                     "Use pinned + error Tag to highlight rows requiring immediate attention.",
+                    "Always wrap EntityList in a CardContainer size S — this is the standard container for list views.",
                   ].map((t, i) => (
                     <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
                       <span className="shrink-0">·</span>{t}
@@ -10907,8 +10915,8 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
     return map
   }, [filtered])
 
-  const glassBg     = isDark ? "rgba(8,10,20,0.88)"     : "rgba(248,249,251,0.94)"
-  const glassBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"
+  const glassBg     = isDark ? "rgba(8,10,20,0.88)"     : "rgba(242,247,255,0.72)"
+  const glassBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(33,115,255,0.15)"
 
   return (
     <aside
@@ -10994,7 +11002,7 @@ export default function App() {
 
   const canvasBg = isDark
     ? "radial-gradient(ellipse 900px 700px at -5% -5%, rgba(33,115,255,0.13), transparent), radial-gradient(ellipse 800px 600px at 105% 105%, rgba(9,226,171,0.09), transparent), var(--canvas)"
-    : "radial-gradient(ellipse 900px 700px at -5% -5%, rgba(33,115,255,0.06), transparent), radial-gradient(ellipse 800px 600px at 105% 105%, rgba(9,226,171,0.04), transparent), var(--canvas)"
+    : "radial-gradient(ellipse 1200px 900px at -8% -8%, rgba(33,115,255,0.24), transparent), radial-gradient(ellipse 1000px 750px at 108% 108%, rgba(9,226,171,0.18), transparent), radial-gradient(ellipse 700px 500px at 50% 100%, rgba(33,115,255,0.08), transparent), var(--canvas)"
 
   return (
     <div className={`${theme} flex h-screen overflow-hidden text-[var(--foreground)]`} style={{ background: canvasBg }}>
