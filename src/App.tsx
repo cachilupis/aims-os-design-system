@@ -31,7 +31,7 @@ import { FiltersSlideout } from "@/components/ui/filters-slideout"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
+type SectionId = "home" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
 type SpecModal = "button" | "card-container" | "checkbox" | "entity-list" | "filters" | "highlight-icon" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -104,7 +104,8 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "topbar",          label: "Topbar",            group: "Components",  description: "Global navigation bar · 2 variants (Default/Tablet) · workspace, search, action buttons, profile" },
   // Foundations — alphabetical by label
   { id: "breakpoints", label: "Breakpoints", group: "Foundations", description: "5-tier responsive system · XL/L/M/S/XS · column grid, gutter and margin specs per breakpoint · sidebar behavior rules" },
-  { id: "colors",      label: "Colors",      group: "Foundations", description: "Primitive palette + 162 semantic tokens · light & dark mode · Surface, Border, Text, Icon, Badge" },
+  { id: "colors",        label: "Colors",         group: "Foundations", description: "Primitive palette + 162 semantic tokens · light & dark mode · Surface, Border, Text, Icon, Badge" },
+  { id: "corner-radius", label: "Corner Radius",  group: "Foundations", description: "8-token radius scale · none/XS/S/M/L/XL/XXL/Full · component mapping · do/don't guidelines" },
   { id: "icons",       label: "Icons",       group: "Foundations", description: "141 icons mapped from Material Design DS to Lucide · 12 semantic categories" },
   { id: "typography",  label: "Typography",  group: "Foundations", description: "Type scale DS → Tailwind · Display, Title, Subtitle, Body, Label, Caption, Link" },
 ]
@@ -10498,6 +10499,240 @@ function BreakpointsPage() {
   )
 }
 
+// ── Corner Radius data (Figma DS node 4495:1311) ─────────────────────────────
+
+const CR_TOKENS = [
+  { token: "Radius-none", css: "--radius-none", tw: "rounded-none",  px: 0,   desc: "Sharp corners or to explicitly remove rounding",                  usage: "Tables, dividers, sidebar, topbar" },
+  { token: "Radius-XS",   css: "--radius-xs",   tw: "rounded-xs",    px: 2,   desc: "Very subtle rounding for dense UI or minimal styling",            usage: "Checkbox, subtle micro-elements" },
+  { token: "Radius-S",    css: "--radius-s",    tw: "rounded-sm",    px: 4,   desc: "Default radius for small elements",                              usage: "Tags, badges, tooltips, compact chips" },
+  { token: "Radius-M",    css: "--radius-m",    tw: "rounded-md",    px: 8,   desc: "Default for most interactive components",                         usage: "Buttons, inputs, cards, alerts, dropdowns" },
+  { token: "Radius-L",    css: "--radius-l",    tw: "rounded-lg",    px: 16,  desc: "Used for containers, modals, panels with softer design",          usage: "Modals, sheets, large containers" },
+  { token: "Radius-XL",   css: "--radius-xl",   tw: "rounded-xl",    px: 24,  desc: "Large surfaces like banners, hero sections or overlaid cards",    usage: "Hero sections, overlaid cards, banners" },
+  { token: "Radius-XXL",  css: "--radius-xxl",  tw: "rounded-2xl",   px: 32,  desc: "Sections or nested cards in highly visual layouts",              usage: "Sections, nested cards in visual layouts" },
+  { token: "Radius-Full", css: "--radius-full",  tw: "rounded-full",  px: 100, desc: "Pill shapes, avatars, circular buttons or tag containers",        usage: "Pill buttons, avatars, toggles, progress bars" },
+]
+
+const CR_MAPPING = [
+  { component: "Button (Pill=No)",     token: "Radius-M",    px: 8,   note: "Default CTA, secondary, and ghost buttons" },
+  { component: "Button (Pill=Yes)",    token: "Radius-Full", px: 100, note: "Pill-style buttons and floating action buttons" },
+  { component: "Text Input / Search",  token: "Radius-M",    px: 8,   note: "All text field variants (S, M, L sizes)" },
+  { component: "Tag / Badge",          token: "Radius-S",    px: 4,   note: "Status tags, filter chips, and badge indicators" },
+  { component: "Filter Chip",          token: "Radius-Full", px: 100, note: "Dropdown filter pills in filter bars" },
+  { component: "Card Container",       token: "Radius-M",    px: 8,   note: "All card variants (Default, Highlight, Summary)" },
+  { component: "Modal / Sheet",        token: "Radius-L",    px: 16,  note: "Dialogs, bottom sheets, and side panels" },
+  { component: "Tooltip",              token: "Radius-S",    px: 4,   note: "Hover tooltips and contextual popovers" },
+  { component: "Dropdown / Select",    token: "Radius-M",    px: 8,   note: "Menu containers and select dropdowns" },
+  { component: "Alert / Banner",       token: "Radius-M",    px: 8,   note: "Inline alerts, toasts, and notification banners" },
+  { component: "Avatar",               token: "Radius-Full", px: 100, note: "User avatars and profile picture containers" },
+  { component: "Highlight Icon",       token: "Radius-M",    px: 8,   note: "Icon containers in lists, headers, and cards" },
+  { component: "Sidebar",              token: "Radius-none", px: 0,   note: "Full-height navigation sidebar" },
+  { component: "Topbar",               token: "Radius-none", px: 0,   note: "Full-width top navigation bar" },
+  { component: "Table",                token: "Radius-none", px: 0,   note: "Data tables, grid cells, and dividers" },
+  { component: "Progress Bar",         token: "Radius-Full", px: 100, note: "Track and fill of progress indicators" },
+  { component: "Checkbox",             token: "Radius-XS",   px: 2,   note: "Checkbox border radius (unchecked state)" },
+  { component: "Toggle / Switch",      token: "Radius-Full", px: 100, note: "Toggle track and thumb" },
+]
+
+const CR_DO = [
+  "Use Radius-M (8px) for most interactive components: buttons, cards, inputs.",
+  "Use Radius-Full (100px) for pill buttons, avatars, toggles, and progress bars.",
+  "Use Radius-L (16px) for containers, panels, modals, and sheets.",
+  "Use Radius-none (0px) for tables, dividers, and full-bleed layout sections.",
+  "Apply radius tokens consistently — never hardcode pixel values in components.",
+  "Use the same token across all instances of the same component type.",
+]
+const CR_DONT = [
+  "Mix multiple radius values within the same component family.",
+  "Apply Radius-XL or XXL to small components (< 40px) — results in oval distortion.",
+  "Use sharp corners (Radius-none) on interactive elements without intentional reason.",
+  "Override radius tokens with raw pixel values in component instances.",
+  "Apply different radius to each corner unless creating an intentional directional shape.",
+  "Use Radius-Full on rectangular containers — reserve it for circular/pill shapes.",
+]
+const CR_A11Y = [
+  "Rounded corners do not affect WCAG contrast requirements — radius is a visual affordance, not a contrast concern.",
+  "Radius-Full on small elements (< 24px) may create circular shapes — ensure the icon or label inside remains legible.",
+  "Avoid using Radius-none on focusable interactive elements — a visible shape boundary aids keyboard and screen reader users.",
+  "Pill-shaped components (Radius-Full) must have sufficient padding so the label is not clipped by the rounded edges.",
+  "Do not rely on corner shape alone to communicate interactivity — pair with color, label, and focus ring.",
+]
+
+function CornerRadiusPage() {
+  return (
+    <div className="flex flex-col gap-[40px]">
+
+      {/* Header */}
+      <div>
+        <h1 className="text-[24px] font-semibold" style={{ color: "var(--foreground)" }}>Corner Radius</h1>
+        <p className="text-[14px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+          8-token radius scale from Figma DS node{" "}
+          <code className="text-[12px] font-mono px-[5px] py-[1px] rounded-[4px]" style={{ background: "var(--field-border)" }}>4495:1311</code>.
+          Applied via CSS variables and Tailwind classes — never hardcode pixel values.
+        </p>
+      </div>
+
+      {/* Token scale — visual showcase */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Token scale</h2>
+        <div className="grid grid-cols-4 gap-[10px]">
+          {CR_TOKENS.map(t => {
+            const clampedPx = Math.min(t.px, 32) // cap visual at 32px so Full doesn't distort the 64px box
+            return (
+              <div
+                key={t.token}
+                className="flex flex-col gap-[14px] p-[16px] rounded-[8px]"
+                style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}
+              >
+                {/* Visual preview */}
+                <div className="flex items-center justify-center h-[72px]">
+                  <div
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: t.px >= 100 ? "100px" : `${t.px}px`,
+                      background: "linear-gradient(135deg, rgba(43,127,255,0.18) 0%, rgba(9,226,171,0.18) 100%)",
+                      border: "1.5px solid rgba(43,127,255,0.35)",
+                    }}
+                  />
+                </div>
+
+                {/* Token name + value */}
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex items-baseline justify-between gap-[4px]">
+                    <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{t.token}</span>
+                    <span className="text-[12px] font-mono font-semibold" style={{ color: "var(--fi-view-active-bg)" }}>
+                      {t.px >= 100 ? "100px" : `${t.px}px`}
+                    </span>
+                  </div>
+                  <code className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>{t.css}</code>
+                  <p className="text-[11px] leading-[1.4] mt-[2px]" style={{ color: "var(--field-supporting)" }}>{t.desc}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Component mapping table */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Component mapping</h2>
+        <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                {["Component", "Token", "Value", "Notes"].map(h => (
+                  <th key={h} className="text-left px-[14px] py-[10px] font-semibold text-[11px] uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {CR_MAPPING.map((row, i) => (
+                <tr key={i} style={{
+                  borderBottom: i < CR_MAPPING.length - 1 ? "0.5px solid var(--field-border)" : "none",
+                  background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                }}>
+                  <td className="px-[14px] py-[11px] font-medium" style={{ color: "var(--foreground)" }}>{row.component}</td>
+                  <td className="px-[14px] py-[11px]">
+                    <code className="text-[12px] font-mono" style={{ color: "var(--fi-view-active-bg)" }}>{row.token}</code>
+                  </td>
+                  <td className="px-[14px] py-[11px] font-mono text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                    {row.px >= 100 ? "100px" : `${row.px}px`}
+                  </td>
+                  <td className="px-[14px] py-[11px] text-[12px]" style={{ color: "var(--field-supporting)" }}>{row.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Do / Don't */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Usage guidelines</h2>
+        <div className="grid grid-cols-2 gap-[12px]">
+          {/* Do */}
+          <div className="flex flex-col gap-[8px] rounded-[8px] p-[16px]" style={{ background: "rgba(110,231,183,0.06)", border: "0.5px solid rgba(110,231,183,0.2)" }}>
+            <span className="text-[12px] font-semibold" style={{ color: "#6ee7b7" }}>✓ Do</span>
+            <div className="flex flex-col gap-[8px]">
+              {CR_DO.map((rule, i) => (
+                <div key={i} className="flex items-start gap-[8px]">
+                  <span className="text-[13px] shrink-0 mt-[1px]" style={{ color: "#6ee7b7" }}>·</span>
+                  <span className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{rule}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Don't */}
+          <div className="flex flex-col gap-[8px] rounded-[8px] p-[16px]" style={{ background: "rgba(255,100,103,0.06)", border: "0.5px solid rgba(255,100,103,0.2)" }}>
+            <span className="text-[12px] font-semibold" style={{ color: "#ff6467" }}>✕ Don't</span>
+            <div className="flex flex-col gap-[8px]">
+              {CR_DONT.map((rule, i) => (
+                <div key={i} className="flex items-start gap-[8px]">
+                  <span className="text-[13px] shrink-0 mt-[1px]" style={{ color: "#ff6467" }}>·</span>
+                  <span className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{rule}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Design tokens reference */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Design tokens</h2>
+        <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                {["Token", "Value", "CSS Variable", "Tailwind", "Used in"].map(h => (
+                  <th key={h} className="text-left px-[14px] py-[10px] font-semibold text-[11px] uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {CR_TOKENS.map((t, i) => (
+                <tr key={t.token} style={{
+                  borderBottom: i < CR_TOKENS.length - 1 ? "0.5px solid var(--field-border)" : "none",
+                  background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                }}>
+                  <td className="px-[14px] py-[11px] font-medium" style={{ color: "var(--foreground)" }}>{t.token}</td>
+                  <td className="px-[14px] py-[11px] font-mono font-semibold text-[12px]" style={{ color: "var(--fi-view-active-bg)" }}>
+                    {t.px >= 100 ? "100px" : `${t.px}px`}
+                  </td>
+                  <td className="px-[14px] py-[11px]">
+                    <code className="text-[12px] font-mono" style={{ color: "var(--field-supporting)" }}>{t.css}</code>
+                  </td>
+                  <td className="px-[14px] py-[11px]">
+                    <code className="text-[12px] font-mono" style={{ color: "var(--field-supporting)" }}>{t.tw}</code>
+                  </td>
+                  <td className="px-[14px] py-[11px] text-[12px]" style={{ color: "var(--field-supporting)" }}>{t.usage}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Accessibility */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Accessibility</h2>
+        <div className="flex flex-col gap-[6px]">
+          {CR_A11Y.map((note, i) => (
+            <div key={i} className="flex items-start gap-[10px] rounded-[8px] px-[14px] py-[11px]"
+              style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+              <span className="text-[11px] font-bold shrink-0 mt-[1px]" style={{ color: "var(--fi-view-active-bg)" }}>
+                A{i + 1}
+              </span>
+              <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{note}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
 function ColorsPage() {
   const [tab,    setTab]    = useState<"primitives"|"semantic">("primitives")
   const [copied, setCopied] = useState<string|null>(null)
@@ -10689,20 +10924,24 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
         className="flex items-center gap-[10px] px-[16px] py-[18px] border-b"
         style={{ borderColor: glassBorder }}
       >
-        <div
-          className="w-[28px] h-[28px] rounded-[7px] shrink-0 flex items-center justify-center"
-          style={{ background: "radial-gradient(ellipse 140% 160% at 25% 25%, #2173ff, #09e2ab)" }}
+        {/* AIMS OS isotype — gradient "A" mark, sourced from brand assets */}
+        <svg
+          width="26" height="21" viewBox="0 0 234 187" fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="shrink-0"
+          aria-label="AIMS OS"
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <rect x="1" y="1" width="5" height="5" rx="1.5" fill="white" fillOpacity="0.9" />
-            <rect x="8" y="1" width="5" height="5" rx="1.5" fill="white" fillOpacity="0.6" />
-            <rect x="1" y="8" width="5" height="5" rx="1.5" fill="white" fillOpacity="0.6" />
-            <rect x="8" y="8" width="5" height="5" rx="1.5" fill="white" fillOpacity="0.3" />
-          </svg>
-        </div>
+          <defs>
+            <linearGradient id="aims-nav-grad" x1="189.036" y1="47.0792" x2="91.8984" y2="213.621" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#09E2AB" />
+              <stop offset="1" stopColor="#1B72FF" />
+            </linearGradient>
+          </defs>
+          <path d="M232.854 166.743L146.1 16.7697C140.025 6.26923 129.146 0 117 0C104.854 0 93.9747 6.26923 87.8998 16.7697L1.14583 166.743C-0.381945 169.385 -0.381945 172.64 1.14583 175.285C2.67361 177.927 5.50109 179.556 8.55665 179.556H51.9318C54.991 179.556 57.8149 177.927 59.3426 175.285L95.307 113.11L123.861 162.472H108.735C105.889 158.003 100.9 155.021 95.2129 155.021C86.3793 155.021 79.1929 162.194 79.1929 171.011C79.1929 179.827 86.3793 187 95.2129 187C100.9 187 105.889 184.019 108.735 179.549H138.682C141.741 179.549 144.565 177.92 146.093 175.278C147.621 172.637 147.621 169.381 146.093 166.736L102.721 91.7583C101.194 89.1169 98.3662 87.4873 95.3106 87.4873C92.2514 87.4873 89.4276 89.1169 87.8998 91.7583L46.9937 162.472H23.3819L102.725 25.3118C105.705 20.1591 111.041 17.0841 117 17.0841C122.959 17.0841 128.295 20.1591 131.275 25.3118L210.618 162.472H187.006L131.177 65.9588C132.35 63.7365 133.02 61.2144 133.02 58.5332C133.02 49.7166 125.834 42.544 117 42.544C108.166 42.544 100.98 49.7166 100.98 58.5332C100.98 67.1295 107.819 74.1467 116.352 74.49L174.657 175.282C176.185 177.923 179.013 179.553 182.068 179.553H225.443C228.503 179.553 231.326 177.923 232.854 175.282C234.382 172.644 234.382 169.388 232.854 166.743Z" fill="url(#aims-nav-grad)" />
+        </svg>
         <div>
-          <p className="text-[13px] font-semibold text-[var(--foreground)] leading-none">AIMS OS</p>
-          <p className="text-[10px] text-[var(--field-supporting)] leading-none mt-[2px]">Design System</p>
+          <p className="text-[13px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>AIMS OS</p>
+          <p className="text-[10px] leading-none mt-[3px]" style={{ color: "var(--field-supporting)" }}>Design System</p>
         </div>
       </div>
       <div className="px-[12px] py-[12px] border-b" style={{ borderColor: glassBorder }}>
@@ -10786,6 +11025,7 @@ export default function App() {
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "filters"         && <FiltersPage         openSpec={setSpecModal} />}
           {active === "breakpoints"     && <BreakpointsPage />}
+          {active === "corner-radius"   && <CornerRadiusPage />}
           {active === "icons"           && <IconsPage />}
           {active === "typography"      && <TypographyPage />}
           {active === "colors"          && <ColorsPage />}
