@@ -8753,20 +8753,22 @@ function InformativeCardPage({ openSpec }: { openSpec: (s: SpecModal) => void })
 // ── FiltersInteractivePlayground ──────────────────────────────────────────────
 
 function FiltersInteractivePlayground() {
-  const [openChip,   setOpenChip]   = useState<number | null>(null)
-  const [sortOpen,   setSortOpen]   = useState(false)
-  const [sortValue,  setSortValue]  = useState("Name")
-  const [singleVals, setSingleVals] = useState<Record<number, string>>({})
-  const [multiSets,  setMultiSets]  = useState<Record<number, Set<string>>>({})
-  const [slideout,   setSlideout]   = useState(false)
-  const [numChips,   setNumChips]   = useState(3)
-  const [showSort,   setShowSort]   = useState(true)
-  const [showView,   setShowView]   = useState(true)
-  const [viewMode,   setViewMode]   = useState<"grid" | "list">("grid")
-  const [datePreset, setDatePreset] = useState("")
-  const [calDate,    setCalDate]    = useState<Date | null>(null)
-  const [calMonth,   setCalMonth]   = useState(new Date().getMonth())
-  const [calYear,    setCalYear]    = useState(new Date().getFullYear())
+  const [openChip,        setOpenChip]        = useState<number | null>(null)
+  const [sortOpen,        setSortOpen]        = useState(false)
+  const [sortValue,       setSortValue]       = useState("Name")
+  const [singleVals,      setSingleVals]      = useState<Record<number, string>>({})
+  const [multiSets,       setMultiSets]       = useState<Record<number, Set<string>>>({})
+  const [slideout,        setSlideout]        = useState(false)
+  const [numChips,        setNumChips]        = useState(3)
+  const [showSort,        setShowSort]        = useState(true)
+  const [showView,        setShowView]        = useState(true)
+  const [viewMode,        setViewMode]        = useState<"grid" | "list">("grid")
+  const [datePreset,      setDatePreset]      = useState("")
+  const [calDate,         setCalDate]         = useState<Date | null>(null)
+  const [calMonth,        setCalMonth]        = useState(new Date().getMonth())
+  const [calYear,         setCalYear]         = useState(new Date().getFullYear())
+  // Filters applied from the All Filters slideout — shown as tags below the bar
+  const [slideoutApplied, setSlideoutApplied] = useState<{ label: string; value: string }[]>([])
   const [hovered,    setHovered]    = useState<string | null>(null)
 
   const CHIP_DEFS: { placeholder: string; kind: "single" | "multi" | "priority" | "date"; options: string[] }[] = [
@@ -8825,13 +8827,15 @@ function FiltersInteractivePlayground() {
 
   function clearAll() {
     setSingleVals({}); setMultiSets({}); setDatePreset(""); setCalDate(null); setOpenChip(null)
+    setSlideoutApplied([])
   }
 
   const hasActive = CHIP_DEFS.slice(0, numChips).some((_, i) => getChipVals(i).length > 0)
 
-  const activeFilters = CHIP_DEFS.slice(0, numChips).flatMap((def, i) =>
-    getChipVals(i).map(val => ({ label: def.placeholder, value: val, onRemove: () => removeVal(i, val) }))
-  )
+  const slideoutActiveFilters = slideoutApplied.map(f => ({
+    ...f,
+    onRemove: () => setSlideoutApplied(prev => prev.filter(x => !(x.label === f.label && x.value === f.value))),
+  }))
 
   // Calendar helpers
   const calDays = () => {
@@ -9214,14 +9218,14 @@ function FiltersInteractivePlayground() {
           )}
         </div>
 
-        {/* Applied filters summary row */}
-        {hasActive && (
+        {/* Applied filters from All Filters slideout — quick chip values show inside the chip itself */}
+        {slideoutApplied.length > 0 && (
           <div className="flex flex-wrap items-center gap-[6px] px-[16px] py-[10px]"
             style={{ borderTop: "1px solid var(--field-border)" }}>
             <span className="text-[11px] font-semibold uppercase tracking-wider shrink-0"
               style={{ color: "var(--field-supporting)" }}>Applied:</span>
-            {activeFilters.map((f, idx) => (
-              <Tag key={`af-${idx}`} variant="informative" size="sm"
+            {slideoutActiveFilters.map((f, idx) => (
+              <Tag key={`sf-${idx}`} variant="informative" size="sm"
                 trailingIcon={
                   <button className="flex items-center justify-center hover:opacity-70 transition-opacity ml-[1px]"
                     onClick={f.onRemove} aria-label={`Remove ${f.value}`}>
@@ -9235,7 +9239,7 @@ function FiltersInteractivePlayground() {
               style={{ color: "var(--fi-clear-text)" }}
               onMouseEnter={e => { e.currentTarget.style.color = "var(--fi-clear-hover)" }}
               onMouseLeave={e => { e.currentTarget.style.color = "var(--fi-clear-text)" }}
-              onClick={clearAll}>
+              onClick={() => setSlideoutApplied([])}>
               Clear all
             </button>
           </div>
@@ -9246,8 +9250,16 @@ function FiltersInteractivePlayground() {
         isOpen={slideout}
         onClose={() => setSlideout(false)}
         onClearAll={clearAll}
-        onApply={() => setSlideout(false)}
-        activeFilters={activeFilters}
+        onApply={() => {
+          // Simulate applying filters from the slideout
+          setSlideoutApplied([
+            { label: "Department", value: "Engineering" },
+            { label: "Date range", value: "Last 30 days" },
+            { label: "Priority",   value: "High" },
+          ])
+          setSlideout(false)
+        }}
+        activeFilters={slideoutActiveFilters}
       />
     </div>
   )
