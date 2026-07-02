@@ -10168,9 +10168,129 @@ const BP_RULES = [
   "Don't create new breakpoint values outside the defined system — all layouts must conform to XL/L/M/S/XS.",
 ]
 
+// Renders a single device thumbnail at an arbitrary pixel scale
+function BpThumb({ bp, scale, isActive, onClick }: {
+  bp: typeof BP_TIERS[0]; scale: number; isActive: boolean; onClick: () => void
+}) {
+  const W  = Math.round(bp.canvasW * scale)
+  const H  = Math.round(bp.canvasH * scale)
+  const tH = Math.max(3, Math.round(48 * scale))
+  const sW = Math.round(bp.sidebar * scale)
+  const mW = Math.max(2, Math.round(bp.margin * scale))
+  const gW = Math.max(1, Math.round(bp.gutter * scale))
+  return (
+    <button
+      onClick={onClick}
+      title={`${bp.name} · ${bp.canvasW}×${bp.canvasH}px`}
+      style={{
+        width: W, height: H, borderRadius: 3, overflow: "hidden", flexShrink: 0, cursor: "pointer",
+        border:   isActive ? `2px solid ${bp.color}` : "1.5px solid var(--field-border)",
+        opacity:  isActive ? 1 : 0.5,
+        transition: "all 0.15s",
+      }}
+    >
+      {/* Topbar */}
+      <div style={{ height: tH, background: bp.color, width: "100%", opacity: isActive ? 0.85 : 0.45 }} />
+      {/* Body */}
+      <div style={{ display: "flex", height: H - tH, background: "rgba(0,0,0,0.2)" }}>
+        {sW > 0 && <div style={{ width: sW, background: bp.color + "30", flexShrink: 0 }} />}
+        <div style={{ flex: 1, display: "flex", paddingLeft: mW, paddingRight: mW, paddingTop: 2, gap: gW }}>
+          {Array.from({ length: bp.cols }).map((_, ci) => (
+            <div key={ci} style={{ flex: 1, background: bp.color + (isActive ? "28" : "14"), borderRadius: 1 }} />
+          ))}
+        </div>
+      </div>
+    </button>
+  )
+}
+
+// Renders the large annotated device mockup for the detail panel
+function BpAnnotatedMockup({ bp }: { bp: typeof BP_TIERS[0] }) {
+  const isPortrait = bp.canvasH > bp.canvasW
+  const MOCKUP_W   = isPortrait ? 150 : 340
+  const MOCKUP_H   = Math.round(MOCKUP_W / bp.canvasW * bp.canvasH)
+  const sc         = MOCKUP_W / bp.canvasW
+  const tH  = Math.max(10, Math.round(48 * sc))
+  const sW  = Math.round(bp.sidebar * sc)
+  const mW  = Math.max(5, Math.round(bp.margin * sc))
+  const gW  = Math.max(1, Math.round(bp.gutter * sc))
+  const bH  = MOCKUP_H - tH
+
+  return (
+    <div className="flex flex-col gap-[10px] shrink-0">
+      {/* Device frame */}
+      <div style={{ width: MOCKUP_W, height: MOCKUP_H, borderRadius: 6, overflow: "hidden", border: `2px solid ${bp.border}`, flexShrink: 0 }}>
+        {/* Topbar */}
+        <div style={{ height: tH, background: bp.color + "99", borderBottom: `1px solid ${bp.border}` }}>
+          <div className="flex items-center gap-[3px] h-full px-[6px]">
+            {[0.5, 0.35, 0.2].map((o, k) => (
+              <div key={k} style={{ width: Math.max(3, tH * 0.35), height: Math.max(3, tH * 0.35), borderRadius: "50%", background: `rgba(255,255,255,${o})` }} />
+            ))}
+          </div>
+        </div>
+        {/* Body */}
+        <div style={{ display: "flex", height: bH }}>
+          {/* Sidebar */}
+          {sW > 0 && (
+            <div style={{ width: sW, background: bp.color + "28", borderRight: `1px solid ${bp.border}`, flexShrink: 0, paddingTop: 4 }}>
+              {Array.from({ length: Math.min(7, Math.floor(bH / (sW * 1.4))) }).map((_, k) => (
+                <div key={k} style={{ width: sW * 0.55, height: sW * 0.38, background: bp.color + "55", borderRadius: 2, margin: "3px auto" }} />
+              ))}
+            </div>
+          )}
+          {/* Content area */}
+          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+            {/* Left margin */}
+            <div style={{ width: mW, background: bp.color + "18", flexShrink: 0, borderRight: `1px dashed ${bp.color}50` }} />
+            {/* Columns */}
+            <div style={{ flex: 1, display: "flex", gap: gW, padding: `${Math.max(4, 10 * sc)}px 0 ${Math.max(4, 10 * sc)}px` }}>
+              {Array.from({ length: bp.cols }).map((_, ci) => (
+                <div key={ci} style={{ flex: 1, background: bp.color + "20", borderRadius: Math.max(1, 3 * sc), border: `0.5px solid ${bp.color}35`, height: "45%" }} />
+              ))}
+            </div>
+            {/* Right margin */}
+            <div style={{ width: mW, background: bp.color + "18", flexShrink: 0, borderLeft: `1px dashed ${bp.color}50` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Annotation bar: margin / cols+gutter / margin */}
+      <div className="flex text-[9px] font-semibold" style={{ width: MOCKUP_W, paddingLeft: sW }}>
+        <div style={{ width: mW, color: bp.color, textAlign: "center", overflow: "visible", whiteSpace: "nowrap", transform: "translateX(-25%)" }}>
+          ←{bp.margin}px
+        </div>
+        <div style={{ flex: 1, color: "var(--field-supporting)", textAlign: "center" }}>
+          {bp.cols} cols · {bp.gutter}px gutter
+        </div>
+        <div style={{ width: mW, color: bp.color, textAlign: "center", overflow: "visible", whiteSpace: "nowrap", transform: "translateX(25%)" }}>
+          {bp.margin}px→
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-[8px]">
+        {[
+          { color: bp.color + "99", label: "Topbar" },
+          ...(bp.sidebar > 0 ? [{ color: bp.color + "28", label: `Sidebar ${bp.sidebar}px` }] : []),
+          { color: bp.color + "18", label: `Margin ${bp.margin}px` },
+          { color: bp.color + "20", label: `${bp.cols} columns` },
+        ].map(l => (
+          <div key={l.label} className="flex items-center gap-[4px]">
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color, flexShrink: 0 }} />
+            <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{l.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function BreakpointsPage() {
-  const [activeBp, setActiveBp] = useState<string | null>(null)
-  const focused = activeBp ? BP_TIERS.find(b => b.id === activeBp) : null
+  const [activeBp, setActiveBp] = useState<string>("l")
+  const focused = BP_TIERS.find(b => b.id === activeBp)!
+
+  // Scale thumbnails so XL = 224px wide
+  const THUMB_SCALE = 224 / 1920
 
   return (
     <div className="flex flex-col gap-[40px]">
@@ -10185,70 +10305,95 @@ function BreakpointsPage() {
         </p>
       </div>
 
-      {/* Visual scale */}
-      <div className="flex flex-col gap-[12px]">
-        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Viewport scale</h2>
-        <div className="relative h-[48px] rounded-[8px] overflow-hidden" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-          {BP_TIERS.map((bp, i) => {
-            const totalSpan = 1920
-            const spanPx = bp.max != null ? bp.max - (bp.min ?? 0) + 1 : (bp.min != null ? totalSpan - bp.min : totalSpan)
-            const pct = (spanPx / totalSpan) * 100
+      {/* ── Device comparison + detail ───────────────────────────────────── */}
+      <div className="flex flex-col gap-[0px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em] mb-[16px]" style={{ color: "var(--field-supporting)" }}>
+          Device sizes — click to inspect
+        </h2>
+
+        {/* Thumbnail shelf: all 5 devices at the same absolute scale, aligned to bottom */}
+        <div
+          className="flex items-end gap-[16px] px-[24px] pt-[20px] pb-[16px] rounded-t-[10px] overflow-x-auto"
+          style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", borderBottom: "none" }}
+        >
+          {BP_TIERS.map(bp => {
+            const W = Math.round(bp.canvasW * THUMB_SCALE)
+            const H = Math.round(bp.canvasH * THUMB_SCALE)
+            const isActive = activeBp === bp.id
             return (
-              <button
-                key={bp.id}
-                className="absolute top-0 h-full flex items-center justify-center text-[11px] font-semibold transition-opacity"
-                style={{
-                  left:   `${(((bp.min ?? 0) / totalSpan) * 100).toFixed(2)}%`,
-                  width:  `${pct.toFixed(2)}%`,
-                  background:  activeBp === bp.id ? bp.color : bp.bg,
-                  color:       activeBp === bp.id ? "#fff" : bp.color,
-                  borderRight: i < BP_TIERS.length - 1 ? `1px solid var(--field-border)` : "none",
-                  opacity:     activeBp && activeBp !== bp.id ? 0.4 : 1,
-                }}
-                onClick={() => setActiveBp(prev => prev === bp.id ? null : bp.id)}
-              >
-                {bp.label}
-              </button>
+              <div key={bp.id} className="flex flex-col items-center gap-[8px] shrink-0">
+                <BpThumb bp={bp} scale={THUMB_SCALE} isActive={isActive} onClick={() => setActiveBp(bp.id)} />
+                <div className="flex flex-col items-center gap-[1px]">
+                  <span className="text-[11px] font-bold" style={{ color: isActive ? bp.color : "var(--field-supporting)" }}>
+                    {bp.label}
+                  </span>
+                  <span className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>
+                    {bp.canvasW} × {bp.canvasH}
+                  </span>
+                  <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>
+                    {W} × {H}px shown
+                  </span>
+                </div>
+              </div>
             )
           })}
+          {/* Scale legend */}
+          <div className="ml-auto flex items-end pb-[2px] shrink-0">
+            <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>
+              All devices at 1:{Math.round(1 / THUMB_SCALE)}× scale
+            </span>
+          </div>
         </div>
-        <div className="flex justify-between text-[11px]" style={{ color: "var(--field-supporting)" }}>
-          <span>0px</span>
-          <span>600px</span>
-          <span>1280px</span>
-          <span>1440px</span>
-          <span>1920px</span>
+
+        {/* Detail panel — always visible, updates on click */}
+        <div
+          className="rounded-b-[10px] p-[20px] flex gap-[28px] items-start"
+          style={{ background: focused.bg, border: `0.5px solid ${focused.border}`, borderTop: `2px solid ${focused.color}` }}
+        >
+          {/* Annotated mockup */}
+          <BpAnnotatedMockup bp={focused} />
+
+          {/* Specs */}
+          <div className="flex flex-col gap-[14px] flex-1 min-w-0">
+            {/* Title row */}
+            <div className="flex items-center gap-[10px]">
+              <span
+                className="inline-flex items-center justify-center h-[26px] px-[10px] rounded-[6px] text-[12px] font-bold"
+                style={{ background: focused.color, color: "#fff" }}
+              >
+                {focused.label}
+              </span>
+              <span className="text-[16px] font-semibold" style={{ color: focused.color }}>{focused.name}</span>
+              <span className="text-[12px] font-mono ml-auto shrink-0" style={{ color: "var(--field-supporting)" }}>
+                {focused.min != null ? (focused.max != null ? `${focused.min}–${focused.max}px` : `≥ ${focused.min}px`) : `< ${focused.max}px`}
+              </span>
+            </div>
+
+            <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{focused.note}</p>
+
+            {/* Spec grid */}
+            <div className="grid grid-cols-3 gap-[8px]">
+              {[
+                { label: "Canvas size",  value: `${focused.canvasW} × ${focused.canvasH}px` },
+                { label: "Columns",      value: `${focused.cols} columns` },
+                { label: "Gutter",       value: `${focused.gutter}px between cols` },
+                { label: "H. Margin",    value: `${focused.margin}px each side` },
+                { label: "Sidebar",      value: focused.sidebar > 0 ? `${focused.sidebar}px${focused.id === "s" ? " · toggleable" : " · fixed"}` : "Hidden · alt nav required" },
+                { label: "Topbar",       value: "48px · full width" },
+              ].map(s => (
+                <div
+                  key={s.label}
+                  className="flex flex-col gap-[3px] rounded-[8px] px-[12px] py-[10px]"
+                  style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>{s.label}</span>
+                  <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{s.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Detail card when a BP is selected */}
-      {focused && (
-        <div className="rounded-[10px] p-[20px] flex flex-col gap-[16px]" style={{ background: focused.bg, border: `1px solid ${focused.border}` }}>
-          <div className="flex items-start justify-between gap-[16px]">
-            <div className="flex flex-col gap-[4px]">
-              <span className="text-[16px] font-semibold" style={{ color: focused.color }}>{focused.label} — {focused.name}</span>
-              <span className="text-[13px]" style={{ color: "var(--field-supporting)" }}>{focused.note}</span>
-            </div>
-            <div className="text-[12px] font-mono shrink-0" style={{ color: focused.color }}>
-              {focused.min != null ? `≥ ${focused.min}px` : ""}{focused.max != null ? ` → ${focused.max}px` : ""}
-            </div>
-          </div>
-          <div className="grid grid-cols-5 gap-[8px]">
-            {[
-              { label: "Canvas",  value: `${focused.canvasW} × ${focused.canvasH}px` },
-              { label: "Columns", value: `${focused.cols}` },
-              { label: "Gutter",  value: `${focused.gutter}px` },
-              { label: "Margin",  value: `${focused.margin}px` },
-              { label: "Sidebar", value: focused.sidebar > 0 ? `${focused.sidebar}px` : "Hidden" },
-            ].map(s => (
-              <div key={s.label} className="flex flex-col gap-[4px] rounded-[8px] px-[12px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>{s.label}</span>
-                <span className="text-[15px] font-semibold" style={{ color: "var(--foreground)" }}>{s.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Grid spec table */}
       <div className="flex flex-col gap-[12px]">
@@ -10268,10 +10413,10 @@ function BreakpointsPage() {
                   key={bp.id}
                   className="cursor-pointer transition-colors"
                   style={{
-                    background:  activeBp === bp.id ? bp.bg : i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                    background:   activeBp === bp.id ? bp.bg : i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
                     borderBottom: i < BP_TIERS.length - 1 ? "0.5px solid var(--field-border)" : "none",
                   }}
-                  onClick={() => setActiveBp(prev => prev === bp.id ? null : bp.id)}
+                  onClick={() => setActiveBp(bp.id)}
                 >
                   <td className="px-[14px] py-[12px]">
                     <span className="inline-flex items-center justify-center w-[28px] h-[22px] rounded-[4px] text-[11px] font-bold"
@@ -10280,7 +10425,7 @@ function BreakpointsPage() {
                     </span>
                   </td>
                   <td className="px-[14px] py-[12px] font-mono text-[12px]" style={{ color: "var(--foreground)" }}>
-                    {bp.min != null ? `≥ ${bp.min}px` : ""}{bp.max != null ? `${bp.min != null ? " → " : "< "}${bp.max}px` : ""}
+                    {bp.min != null ? `≥ ${bp.min}px` : ""}{bp.max != null ? `${bp.min != null ? " – " : "< "}${bp.max}px` : ""}
                   </td>
                   <td className="px-[14px] py-[12px] font-mono text-[12px]" style={{ color: "var(--field-supporting)" }}>{bp.canvasW} × {bp.canvasH}</td>
                   <td className="px-[14px] py-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{bp.cols}</td>
@@ -10293,29 +10438,6 @@ function BreakpointsPage() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Layout grid visualizer */}
-      <div className="flex flex-col gap-[12px]">
-        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Column grid preview</h2>
-        <div className="flex gap-[8px] flex-wrap">
-          {BP_TIERS.map(bp => {
-            const cols = bp.cols
-            return (
-              <div key={bp.id} className="flex flex-col gap-[8px] flex-1 min-w-[140px]">
-                <span className="text-[11px] font-semibold" style={{ color: bp.color }}>{bp.label} — {cols} cols</span>
-                <div className="flex gap-[2px] h-[40px]">
-                  {Array.from({ length: cols }).map((_, ci) => (
-                    <div key={ci} className="flex-1 rounded-[2px]" style={{ background: bp.bg, border: `0.5px solid ${bp.border}` }} />
-                  ))}
-                </div>
-                <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
-                  {bp.gutter}px gutter · {bp.margin}px margin
-                </span>
-              </div>
-            )
-          })}
         </div>
       </div>
 
