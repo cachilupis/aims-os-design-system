@@ -1,4 +1,6 @@
 import { type ReactNode } from "react"
+import * as LucideIcons from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
@@ -29,7 +31,8 @@ export type HighlightIconSize  = "lg" | "md" | "sm"
 export type HighlightIconColor = "dark" | "default"
 
 type HighlightIconProps = {
-  icon:        ReactNode
+  icon?:       ReactNode           // pass a ReactNode OR use iconName
+  iconName?:   string              // Lucide icon name — resolved automatically
   variant?:    HighlightIconVariant
   size?:       HighlightIconSize
   iconColor?:  HighlightIconColor
@@ -83,10 +86,20 @@ const SIZE: Record<HighlightIconSize, { box: string; icon: string; radius: strin
   sm: { box: "w-[24px] h-[24px]", icon: "w-[16px] h-[16px]", radius: "rounded-[4px]" },
 }
 
+// ── Icon resolver ─────────────────────────────────────────────────────────
+
+function resolveLucideIcon(name?: string): LucideIcon | null {
+  if (!name) return null
+  const candidate = (LucideIcons as Record<string, unknown>)[name]
+  // Lucide icons are React.forwardRef objects (typeof === "object"), not plain functions
+  return candidate != null ? (candidate as LucideIcon) : null
+}
+
 // ── Component ─────────────────────────────────────────────────────────────
 
 function HighlightIcon({
   icon,
+  iconName,
   variant   = "informative",
   size      = "md",
   iconColor = "dark",
@@ -95,6 +108,10 @@ function HighlightIcon({
   const { box, icon: iconClass, radius } = SIZE[size]
   const bg      = BG_VAR[variant]
   const iconClr = iconColor === "dark" ? ICON_DARK_VAR[variant] : ICON_DEFAULT_VAR[variant]
+
+  const ResolvedIcon = resolveLucideIcon(iconName)
+  // Pass iconClass so the icon fills the correct size slot regardless of Lucide defaults
+  const renderedIcon = icon ?? (ResolvedIcon ? <ResolvedIcon className={iconClass} /> : null)
 
   return (
     <span
@@ -110,7 +127,7 @@ function HighlightIcon({
       style={{ background: bg, color: iconClr }}
     >
       <span className={cn("flex items-center justify-center", iconClass)}>
-        {icon}
+        {renderedIcon}
       </span>
     </span>
   )

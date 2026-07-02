@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, type CSSProperties } from "react"
 import * as LucideIcons from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -23,11 +23,16 @@ import {
 } from "@/components/ui/table"
 import { Topbar, TopbarButton, TopbarLeftMenu, TopbarRightMenu, GlobalSearch, type TopbarAction, type WorkspaceItem, type ThemeMode } from "@/components/ui/topbar"
 import { Sidebar, DEFAULT_SIDEBAR_ITEMS } from "@/components/ui/sidebar"
+import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "@/components/ui/entity-list"
+import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
+import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
+import { Filters, type FilterSlot } from "@/components/ui/filters"
+import { FiltersSlideout } from "@/components/ui/filters-slideout"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "button" | "input" | "textarea" | "card-container" | "tag" | "menu-item" | "highlight-icon" | "select" | "checkbox" | "toggle" | "table" | "topbar" | "sidebar" | "icons" | "typography" | "colors"
-type SpecModal = "button" | "input" | "textarea" | "card-container" | "tag" | "menu-item" | "highlight-icon" | "select" | "checkbox" | "toggle" | "table" | "topbar" | null
+type SectionId = "home" | "button" | "input" | "textarea" | "card-container" | "tag" | "menu-item" | "highlight-icon" | "select" | "checkbox" | "toggle" | "table" | "topbar" | "sidebar" | "entity-list" | "modal-dialog" | "informative-card" | "filters" | "icons" | "typography" | "colors"
+type SpecModal = "button" | "input" | "textarea" | "card-container" | "tag" | "menu-item" | "highlight-icon" | "select" | "checkbox" | "toggle" | "table" | "topbar" | "sidebar" | "entity-list" | "modal-dialog" | "informative-card" | "filters" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -92,6 +97,10 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "table",        label: "Table",           group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
   { id: "topbar",       label: "Topbar",          group: "Components",  description: "Global navigation bar · 2 variants (Default/Tablet) · workspace, search, action buttons, profile" },
   { id: "sidebar",      label: "Sidebar",         group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
+  { id: "entity-list",  label: "Entity List",   group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
+  { id: "modal-dialog",     label: "Modal Dialog",     group: "Components",  description: "2 variants: Confirmation (centered, max 900px) and Content (left-aligned, max 900px). Icon, title, description, slot, informative card, CTA pair." },
+  { id: "informative-card", label: "Informative Card", group: "Components",  description: "Horizontal notice surface. 5 semantic states · 3 sizes · optional description + CTA. Uses --ic-* token family." },
+  { id: "filters",          label: "Filters",          group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
   { id: "icons",      label: "Icons",      group: "Foundations", description: "141 icons mapped from Material Design DS to Lucide · 12 semantic categories" },
   { id: "typography", label: "Typography", group: "Foundations", description: "Type scale DS → Tailwind · Display, Title, Subtitle, Body, Label, Caption, Link" },
   { id: "colors",     label: "Colors",     group: "Foundations", description: "Primitive palette + 162 semantic tokens · light & dark mode · Surface, Border, Text, Icon, Badge" },
@@ -1058,6 +1067,237 @@ const TOPBAR_SPEC = {
   ],
 }
 
+const INFORMATIVE_CARD_SPEC = {
+  name: "Informational Card",
+  figmaNodeId: "8057:1259",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=8057-1259",
+  description: "Horizontal notice surface combining icon + title + optional description + optional CTA pair. Uses --ic-* token family (separate from --hi-*). 5 semantic states × 3 sizes.",
+  properties: [
+    { name: "state",        type: "Variant", values: ["informative","alert","error","success","neutral"], default: '"informative"' },
+    { name: "size",         type: "Variant", values: ["sm","md","lg"],                                   default: '"md"' },
+    { name: "title",        type: "string",  values: ["any string"],  default: "required",  note: "Primary message text — 14px semibold" },
+    { name: "description",  type: "string",  values: ["any string"],  default: "undefined", note: "Optional secondary line below title — 14px medium" },
+    { name: "cta",          type: "object",  values: ["{ label, onClick? }"], default: "undefined", note: "Primary action button (Button primary sm), right-aligned" },
+    { name: "ctaSecondary", type: "object",  values: ["{ label, onClick? }"], default: "undefined", note: "Secondary action button (Button secondary sm), left of primary" },
+    { name: "icon",         type: "ReactNode", values: ["any"],        default: "undefined", note: "Overrides default state icon" },
+    { name: "className",    type: "string",  values: ["any string"],   default: "undefined" },
+  ],
+  sizes: [
+    { size: "S", padding: "8px",  height: "auto", notes: "Compact inline use" },
+    { size: "M", padding: "16px", height: "auto", notes: "Default — modal dialog, forms" },
+    { size: "L", padding: "24px", height: "auto", notes: "Expanded surface, standalone sections" },
+  ],
+  typography: [
+    { element: "Title",       family: "Inter", size: "14px", weight: "Semi Bold (600)", lineHeight: "1.2", variable: "--ic-{state}-text" },
+    { element: "Description", family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.4", variable: "--ic-{state}-text" },
+  ],
+  states: [
+    { name: "Informative", borderWidth: "0", tokens: [
+      { role: "Background", variable: "Surface/Primary/Subtle",  varId: "", light: "#E9F1FF",              dark: "rgba(33,115,255,0.12)"  },
+      { role: "Icon",       variable: "Icon/Primary/Default",    varId: "", light: "#2173FF",              dark: "#A8C8FF"                },
+      { role: "Text",       variable: "Text/Info",               varId: "", light: "#001740",              dark: "#A8C8FF"                },
+    ]},
+    { name: "Alert", borderWidth: "0", tokens: [
+      { role: "Background", variable: "Surface/Warning/Subtle",  varId: "", light: "#FFF4E5",              dark: "rgba(237,108,2,0.12)"   },
+      { role: "Icon",       variable: "Icon/Alert/Default",      varId: "", light: "#ED6C02",              dark: "#FFC070"                },
+      { role: "Text",       variable: "Text/Alert",              varId: "", light: "#663C00",              dark: "#fcd34d"                },
+    ]},
+    { name: "Error", borderWidth: "0", tokens: [
+      { role: "Background", variable: "Surface/Error/Subtle",    varId: "", light: "#FDEDED",              dark: "rgba(220,38,38,0.12)"   },
+      { role: "Icon",       variable: "Icon/Error/Default",      varId: "", light: "#992222",              dark: "#FF9898"                },
+      { role: "Text",       variable: "Text/Error",              varId: "", light: "#5F2120",              dark: "#ff6467"                },
+    ]},
+    { name: "Success", borderWidth: "0", tokens: [
+      { role: "Background", variable: "Surface/Success/Subtle",  varId: "", light: "#E5FDF8",              dark: "rgba(0,169,127,0.12)"   },
+      { role: "Icon",       variable: "Icon/Success/Default",    varId: "", light: "#00A07E",              dark: "#70EDD8"                },
+      { role: "Text",       variable: "Text/Success",            varId: "", light: "#003328",              dark: "#70EDD8"                },
+    ]},
+    { name: "Neutral", borderWidth: "0", tokens: [
+      { role: "Background", variable: "Surface/Neutral/Default", varId: "", light: "#F2F2F2",              dark: "rgba(255,255,255,0.08)" },
+      { role: "Icon",       variable: "Icon/Neutral/Dark",       varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.70)" },
+      { role: "Text",       variable: "Text/Primary",            varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.70)" },
+    ]},
+  ],
+}
+
+const FILTERS_SPEC = {
+  name: "Filters",
+  figmaNodeId: "7996:4655",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7996-4655",
+  description: "Horizontal 40px filter bar for narrowing large datasets. 8 state variants, up to 5 filter chips, sorting control, grid/list view toggle. Chip label truncated at 14 characters with tooltip on hover. Token family --fi-*.",
+  properties: [
+    { name: "compact",          type: "Boolean",  values: ["true","false"],                              default: "false",      note: "S Variant — shows only Search + All Filters button" },
+    { name: "compactCount",     type: "number",   values: ["0","1","2+"],                                default: "0",          note: "> 0 → S Variant Filters Apply: shows Filters badge with count" },
+    { name: "showSearch",       type: "Boolean",  values: ["true","false"],                              default: "true",       note: "Renders the 140px search input on the left" },
+    { name: "searchPlaceholder",type: "string",   values: ["any string"],                                default: '"Search"' },
+    { name: "slots",            type: "FilterSlot[]", values: ["{ placeholder, value?, onRemove?, onOpen? }[]"], default: "[]", note: "Up to 5 filter chips. value set → active chip with × dismiss" },
+    { name: "showClearFilters", type: "Boolean",  values: ["true","false"],                              default: "false",      note: "Shows 'Clear Filters' text link after the chips" },
+    { name: "onClearFilters",   type: "function", values: ["() => void"],                                default: "undefined" },
+    { name: "showAllFilters",   type: "Boolean",  values: ["true","false"],                              default: "true",       note: "Shows 'All filters' pill button in the right controls" },
+    { name: "showSort",         type: "Boolean",  values: ["true","false"],                              default: "true",       note: "Sort direction arrow + sort label dropdown" },
+    { name: "sortLabel",        type: "string",   values: ["any string"],                                default: '"Name"' },
+    { name: "showViewToggle",   type: "Boolean",  values: ["true","false"],                              default: "true",       note: "Grid/List icon toggle buttons" },
+    { name: "viewMode",         type: "Variant",  values: ["grid","list"],                               default: '"grid"' },
+    { name: "onViewModeChange", type: "function", values: ["(mode: 'grid' | 'list') => void"],           default: "undefined" },
+    { name: "className",        type: "string",   values: ["any string"],                                default: "undefined" },
+  ],
+  sizes: [
+    { size: "Fixed", height: "40px", layout: "flex row, full-width", notes: "Height is always 40px; width fills the container" },
+  ],
+  typography: [
+    { element: "Chip label",    family: "Inter", size: "13px", weight: "Medium (500)",    lineHeight: "1", variable: "--fi-chip-text / --fi-chip-active-text" },
+    { element: "Clear Filters", family: "Inter", size: "13px", weight: "Medium (500)",    lineHeight: "1", variable: "--fi-clear-text" },
+    { element: "Sort label",    family: "Inter", size: "13px", weight: "Medium (500)",    lineHeight: "1", variable: "--fi-sort-text" },
+  ],
+  states: [
+    { name: "Default chip (inactive)", borderWidth: "1px", tokens: [
+      { role: "Background", variable: "Surface/Neutral/Subtle",  varId: "", light: "rgba(250,250,250,1)",     dark: "rgba(255,255,255,0.05)" },
+      { role: "Border",     variable: "Border/Neutral/Lighter",  varId: "", light: "rgba(186,186,186,1)",     dark: "rgba(255,255,255,0.15)" },
+      { role: "Text",       variable: "Text/Subtitle",           varId: "", light: "#2a2a2a",                 dark: "rgba(255,255,255,0.70)" },
+      { role: "Icon",       variable: "Icon/Neutral",            varId: "", light: "rgba(0,0,0,0.40)",        dark: "rgba(255,255,255,0.40)" },
+    ]},
+    { name: "Active chip (selected value)", borderWidth: "1px", tokens: [
+      { role: "Background", variable: "Surface/Primary/Subtle",  varId: "", light: "rgba(33,115,255,0.06)",   dark: "rgba(43,127,255,0.08)" },
+      { role: "Border",     variable: "Border/Primary/Default",  varId: "", light: "#2173ff",                 dark: "#2b7fff" },
+      { role: "Text",       variable: "Text/Info",               varId: "", light: "#2173ff",                 dark: "#A8C8FF" },
+      { role: "Icon (×)",   variable: "Icon/Primary/Darker",     varId: "", light: "#2173ff",                 dark: "rgba(168,200,255,0.80)" },
+    ]},
+  ],
+}
+
+const MODAL_DIALOG_SPEC = {
+  name: "Modal Dialog",
+  figmaNodeId: "13753:29038",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=13753-29038",
+  description: "Focused overlay for confirmations and structured content. Fixed scrim + blur backdrop. Two layout variants × 5 semantic tones × independent icon and card state overrides.",
+  properties: [
+    { name: "variant",       type: "Variant", values: ["confirmation","content"],                           default: '"confirmation"', note: "Confirmation = centered column; Content = left-aligned row" },
+    { name: "tone",          type: "Variant", values: ["default","warning","error","alert","success"],      default: '"default"',      note: "Sets iconVariant + infoCardState together; both can be overridden" },
+    { name: "showIcon",      type: "Boolean", values: ["true","false"],                                     default: "true" },
+    { name: "iconName",      type: "string",  values: ["Lucide icon name"],                                 default: '"Info"',        note: "Any Lucide icon name — e.g. Sparkles, Trash2, Shield" },
+    { name: "iconVariant",   type: "Variant", values: ["informative","success","alert","error","neutral","yellow","lime","purple","light-blue"], default: "from tone", note: "Overrides tone for the HighlightIcon" },
+    { name: "title",         type: "string",  values: ["any string"],                                       default: "undefined" },
+    { name: "description",   type: "string",  values: ["any string"],                                       default: "undefined" },
+    { name: "slot",          type: "ReactNode",values: ["any"],                                             default: "undefined",     note: "Custom content rendered in rounded slot container" },
+    { name: "informativeCard",type: "string|boolean", values: ["string","true","false"],                   default: "undefined",     note: "true = default text; string = custom title for InformativeCard" },
+    { name: "infoCardState", type: "Variant", values: ["informative","alert","error","success","neutral"], default: "from tone",     note: "Overrides tone for the InformativeCard" },
+    { name: "ctaPrimary",    type: "object",  values: ["{ label, destructive?, onClick? }"],               default: "undefined" },
+    { name: "ctaSecondary",  type: "object",  values: ["{ label, onClick? }"],                             default: "undefined" },
+    { name: "showClose",     type: "Boolean", values: ["true","false"],                                     default: "true" },
+    { name: "embedded",      type: "Boolean", values: ["true","false"],                                     default: "false",         note: "Renders inline without overlay — used in docs previews" },
+  ],
+  sizes: [
+    { variant: "Confirmation", maxWidth: "900px", padding: "24px", layout: "flex-col centered",        notes: "Icon + title + desc centered; CTAs centered" },
+    { variant: "Content",      maxWidth: "900px", padding: "32px", layout: "flex-col left-aligned",    notes: "Icon + title inline row; CTAs right-aligned" },
+  ],
+  typography: [
+    { element: "Title",       family: "Inter", size: "20px", weight: "Semi Bold (600)", lineHeight: "1.2", variable: "--foreground"     },
+    { element: "Description", family: "Inter", size: "14px", weight: "Regular (400)",   lineHeight: "1.6", variable: "--field-supporting" },
+  ],
+  variants: [
+    { name: "Confirmation", description: "max-w-[900px] · p-[24px] · centered column layout", cssPrefix: "--modal", tokens: [
+      { role: "Surface",     variable: "Surface/Modal",         varId: "", light: "rgba(255,255,255,0.96)", dark: "rgba(18,20,30,0.96)" },
+      { role: "Border",      variable: "Border/Modal",          varId: "", light: "#BABABA",                dark: "rgba(255,255,255,0.15)" },
+      { role: "Scrim",       variable: "Overlay/Scrim",         varId: "", light: "rgba(0,0,0,0.40)",       dark: "rgba(0,0,0,0.60)" },
+      { role: "Slot bg",     variable: "Surface/Modal/Slot",    varId: "", light: "#F5F6FA",                dark: "rgba(255,255,255,0.05)" },
+      { role: "Close icon",  variable: "Icon/Neutral/Default",  varId: "", light: "#5C5C5C",                dark: "rgba(255,255,255,0.50)" },
+    ]},
+    { name: "Content", description: "max-w-[900px] · p-[32px] · left-aligned row layout", cssPrefix: "--modal", tokens: [
+      { role: "Surface",     variable: "Surface/Modal",         varId: "", light: "rgba(255,255,255,0.96)", dark: "rgba(18,20,30,0.96)" },
+      { role: "Border",      variable: "Border/Modal",          varId: "", light: "#BABABA",                dark: "rgba(255,255,255,0.15)" },
+    ]},
+  ],
+}
+
+const SIDEBAR_SPEC = {
+  name: "Sidebar",
+  figmaNodeId: "8572:42410",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=8572-42410",
+  description: "Vertical navigation rail. Always renders on a dark background regardless of mode. Expanded (250px) shows icon + label; Collapsed (56px) shows icon-only with tooltips.",
+  properties: [
+    { name: "items",       type: "Array",   values: ["SidebarItem[]"],       default: "required",  note: "{ id, label, icon: Lucide name, badge? }" },
+    { name: "activeId",    type: "string",  values: ["any item id"],         default: "undefined", note: "Highlights the active nav item with gradient + glow" },
+    { name: "onSelect",    type: "Function",values: ["(id: string) => void"],default: "undefined" },
+    { name: "collapsed",   type: "Boolean", values: ["true","false"],        default: "false",     note: "Collapsed = 56px icon-only rail" },
+    { name: "onCollapse",  type: "Function",values: ["() => void"],          default: "undefined", note: "Toggle callback for the collapse chevron button" },
+    { name: "className",   type: "string",  values: ["any string"],          default: "undefined" },
+  ],
+  sizes: [
+    { state: "Expanded",  width: "250px", iconSize: "24×24px", labelSize: "13px", gap: "4px",  notes: "Icon + text label, always dark bg" },
+    { state: "Collapsed", width: "56px",  iconSize: "24×24px", labelSize: "—",    gap: "—",    notes: "Icon only, tooltip on hover" },
+  ],
+  typography: [
+    { element: "Nav label",    family: "Inter", size: "13px", weight: "Medium (500)",    lineHeight: "1",   variable: "--sb-text" },
+    { element: "Section label",family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1",   variable: "--sb-section-text" },
+    { element: "Badge count",  family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1",   variable: "white" },
+  ],
+  states: [
+    { name: "Default", borderWidth: "0", tokens: [
+      { role: "Background",  variable: "Surface/Neutral/Black", varId: "", light: "#1A1A1A",              dark: "#1A1A1A" },
+      { role: "Icon",        variable: "Icon/Primary/Lighter",  varId: "", light: "rgba(128,175,255,1)",  dark: "rgba(128,175,255,1)" },
+      { role: "Label",       variable: "Text/Primary",          varId: "", light: "rgba(255,255,255,0.70)",dark: "rgba(255,255,255,0.70)" },
+    ]},
+    { name: "Hover", borderWidth: "0", tokens: [
+      { role: "Icon bg",     variable: "Surface/Neutral/Black", varId: "", light: "var(--sb-bg)",         dark: "var(--sb-bg)" },
+      { role: "Icon",        variable: "Icon/Neutral/Light",    varId: "", light: "rgba(255,255,255,0.70)",dark: "rgba(255,255,255,0.70)" },
+      { role: "Glow shadow", variable: "—",                     varId: "", light: "rgba(33,115,255,0.50) blur:20", dark: "rgba(33,115,255,0.50) blur:20" },
+    ]},
+    { name: "Active", borderWidth: "0", tokens: [
+      { role: "Icon bg",     variable: "Gradient/Main Action",  varId: "", light: "radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%)", dark: "radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%)" },
+      { role: "Icon",        variable: "Text/White",            varId: "", light: "#ffffff",              dark: "#ffffff" },
+      { role: "Teal shadow", variable: "—",                     varId: "", light: "rgba(82,163,255,0.38) offset(8,8) blur:20", dark: "rgba(82,163,255,0.38) offset(8,8) blur:20" },
+    ]},
+  ],
+}
+
+const ENTITY_LIST_SPEC = {
+  name: "Entity List",
+  figmaNodeId: "—",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS",
+  description: "High-density list row for entities — conversations, tickets, tasks. Composes icon highlight or avatar, primary meta, AI insight, description, secondary meta, tags, actions, and state tag.",
+  properties: [
+    { name: "items",           type: "Array",   values: ["EntityListItemData[]"],         default: "required" },
+    { name: "title",           type: "string",  values: ["any string"],                   default: "required",  note: "Primary label — 16px semibold" },
+    { name: "iconVariant",     type: "Variant", values: ["yellow","success","error","info","neutral","purple","light-blue"], default: "undefined", note: "HighlightIcon container color" },
+    { name: "iconName",        type: "string",  values: ["Lucide icon name"],             default: "undefined" },
+    { name: "avatarName",      type: "string",  values: ["any string"],                   default: "undefined", note: "Derives 2-letter initials; shown if no icon" },
+    { name: "primaryMeta",     type: "Array",   values: ["ELMetaItem[]"],                 default: "undefined", note: "{ iconName?, label?, tooltip?, tag? }" },
+    { name: "secondaryMeta",   type: "Array",   values: ["ELMetaItem[]"],                 default: "undefined", note: "Bottom-left row of icon+label pairs" },
+    { name: "description",     type: "string",  values: ["any string"],                   default: "undefined", note: "Collapsible body text" },
+    { name: "aiInsight",       type: "object",  values: ["{ action, detail, showLabel?, viewMore? }"], default: "undefined", note: "Purple AI callout with Sparkle icon" },
+    { name: "tags",            type: "Array",   values: ["{ label }[]"],                  default: "undefined" },
+    { name: "actions",         type: "Array",   values: ["ELAction[]"],                   default: "undefined", note: "{ label, variant: primary|secondary|tertiary }" },
+    { name: "state",           type: "object",  values: ["{ label, variant }"],           default: "undefined", note: "Semantic Tag shown right-side" },
+    { name: "timestamp",       type: "string",  values: ["any string"],                   default: "undefined" },
+    { name: "pinned",          type: "Boolean", values: ["true","false"],                 default: "false",     note: "Red Pin tag next to primary meta" },
+    { name: "showMenu",        type: "Boolean", values: ["true","false"],                 default: "false",     note: "3-dot kebab menu at far right" },
+    { name: "showCheckbox",    type: "Boolean", values: ["true","false"],                 default: "false",     note: "Leading checkbox for multi-select" },
+  ],
+  sizes: [
+    { density: "Default", minHeight: "72px",  padding: "t:12 r:16 b:12 l:16", notes: "With description expanded" },
+    { density: "Compact", minHeight: "48px",  padding: "t:8 r:16 b:8 l:16",   notes: "Title + meta only, no description" },
+  ],
+  typography: [
+    { element: "Title",       family: "Inter", size: "16px", weight: "Semi Bold (600)", lineHeight: "1.2" },
+    { element: "Description", family: "Inter", size: "13px", weight: "Regular (400)",   lineHeight: "1.5" },
+    { element: "Meta label",  family: "Inter", size: "12px", weight: "Regular (400)",   lineHeight: "1"   },
+    { element: "AI insight",  family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1.4" },
+  ],
+  states: [
+    { name: "Default",  borderWidth: "1px", tokens: [
+      { role: "Background", variable: "Surface/Neutral/White",   varId: "", light: "#ffffff",              dark: "rgba(255,255,255,0.04)" },
+      { role: "Border",     variable: "Border/Neutral/Lighter",  varId: "", light: "rgba(186,186,186,1)",  dark: "rgba(255,255,255,0.08)" },
+    ]},
+    { name: "Hover", borderWidth: "1px", tokens: [
+      { role: "Background", variable: "Surface/Neutral/Default", varId: "", light: "#F8F8F8",              dark: "rgba(255,255,255,0.07)" },
+    ]},
+    { name: "AI callout", borderWidth: "1px", tokens: [
+      { role: "Background", variable: "Surface/AI/Subtle",       varId: "", light: "rgba(103,76,186,0.06)",dark: "rgba(103,76,186,0.12)" },
+      { role: "Icon",       variable: "Icon/AI/Default",         varId: "", light: "#674CBC",              dark: "#A78BFA" },
+    ]},
+  ],
+}
+
 // ── Spec types ─────────────────────────────────────────────────────────────
 
 type SpecToken = { role: string; variable: string; varId?: string; light: string; dark: string }
@@ -1121,17 +1361,22 @@ function TabBar({ tabs, active, onChange }: {
 // ── Unified Spec Panel ─────────────────────────────────────────────────────
 
 function getSpec(id: NonNullable<SpecModal>): AnySpec {
-  if (id === "button")         return BUTTON_SPEC   as AnySpec
-  if (id === "input")          return INPUT_SPEC    as AnySpec
-  if (id === "textarea")       return TEXTAREA_SPEC as AnySpec
-  if (id === "tag")            return TAG_SPEC      as AnySpec
-  if (id === "menu-item")      return MENU_SPEC           as AnySpec
-  if (id === "highlight-icon") return HIGHLIGHT_ICON_SPEC as AnySpec
-  if (id === "select")         return SELECT_SPEC   as AnySpec
-  if (id === "checkbox")       return CHECKBOX_SPEC as AnySpec
-  if (id === "toggle")         return TOGGLE_SPEC   as AnySpec
-  if (id === "table")          return TABLE_SPEC    as AnySpec
-  if (id === "topbar")         return TOPBAR_SPEC   as AnySpec
+  if (id === "button")           return BUTTON_SPEC           as AnySpec
+  if (id === "input")            return INPUT_SPEC            as AnySpec
+  if (id === "textarea")         return TEXTAREA_SPEC         as AnySpec
+  if (id === "tag")              return TAG_SPEC              as AnySpec
+  if (id === "menu-item")        return MENU_SPEC             as AnySpec
+  if (id === "highlight-icon")   return HIGHLIGHT_ICON_SPEC   as AnySpec
+  if (id === "select")           return SELECT_SPEC           as AnySpec
+  if (id === "checkbox")         return CHECKBOX_SPEC         as AnySpec
+  if (id === "toggle")           return TOGGLE_SPEC           as AnySpec
+  if (id === "table")            return TABLE_SPEC            as AnySpec
+  if (id === "topbar")           return TOPBAR_SPEC           as AnySpec
+  if (id === "sidebar")          return SIDEBAR_SPEC          as AnySpec
+  if (id === "entity-list")      return ENTITY_LIST_SPEC      as AnySpec
+  if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
+  if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
+  if (id === "filters")          return FILTERS_SPEC          as AnySpec
   return CARD_SPEC as AnySpec
 }
 
@@ -1424,7 +1669,7 @@ function SpecButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="inline-flex items-center gap-[5px] text-[11px] font-medium text-[var(--field-supporting)] border border-[var(--field-border)] px-[8px] py-[4px] rounded hover:border-[var(--field-border-hover)] hover:text-[var(--foreground)] transition-colors"
+      className="inline-flex items-center gap-[5px] text-[11px] font-medium whitespace-nowrap text-[var(--field-supporting)] border border-[var(--field-border)] px-[8px] py-[4px] rounded hover:border-[var(--field-border-hover)] hover:text-[var(--foreground)] transition-colors shrink-0"
     >
       <SpecIcon /> View DS spec
     </button>
@@ -3917,10 +4162,10 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <p className="text-[11px] text-[var(--field-supporting)]">
                     Activo: <code className="font-mono text-[var(--foreground)]">{pgHiVariant}</code>
                   </p>
-                  <p className="text-[12px] font-medium text-[var(--field-supporting)] mt-[2px]">Ícono</p>
+                  <p className="text-[12px] font-medium text-[var(--field-supporting)] mt-[2px]">Icon</p>
                   <input
                     type="text"
-                    placeholder="Buscar ícono..."
+                    placeholder="Search icon..."
                     value={pgHiSearch}
                     onChange={e => setPgHiSearch(e.target.value)}
                     className="h-[32px] px-[8px] text-[12px] rounded-[6px] border border-[var(--field-border)] bg-[var(--field-bg)] text-[var(--field-text)] placeholder:text-[var(--field-supporting)] outline-none focus:border-[#2173ff] transition-colors"
@@ -3956,7 +4201,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     }
                   </div>
                   <p className="text-[11px] text-[var(--field-supporting)]">
-                    Ícono: <code className="font-mono text-[var(--foreground)]">{pgHiIcon}</code>
+                    Icon: <code className="font-mono text-[var(--foreground)]">{pgHiIcon}</code>
                   </p>
                 </div>
               )}
@@ -3976,7 +4221,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <p className="text-[12px] font-medium text-[var(--field-supporting)]">Button icon</p>
                   <input
                     type="text"
-                    placeholder="Buscar ícono..."
+                    placeholder="Search icon..."
                     value={pgBtnSearch}
                     onChange={e => setPgBtnSearch(e.target.value)}
                     className="h-[32px] px-[8px] text-[12px] rounded-[6px] border border-[var(--field-border)] bg-[var(--field-bg)] text-[var(--field-text)] placeholder:text-[var(--field-supporting)] outline-none focus:border-[#2173ff] transition-colors"
@@ -4171,10 +4416,10 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             </Row>
 
-            <Row label="7 · Custom action button — trailingElement acepta cualquier ícono">
+            <Row label="7 · Custom action button — trailingElement accepts any icon">
               <div className="flex flex-col gap-[16px]">
                 <p className="text-[12px] text-[var(--field-supporting)]">
-                  Mismo patrón que el dismiss pero con ícono de acción específica por ítem.
+                  Same pattern as dismiss but with an action-specific icon per item.
                   Pasa <code className="text-[11px] bg-[var(--field-border)] px-[4px] py-[1px] rounded">{"<Button variant=\"tertiary\" iconPosition=\"alone\" icon={<Icon/>}/>"}</code> a <code className="text-[11px] bg-[var(--field-border)] px-[4px] py-[1px] rounded">trailingElement</code>.
                 </p>
 
@@ -4230,7 +4475,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 {/* ── Dynamic picker ─── */}
                 <div className="flex flex-col gap-[8px] pt-[4px] border-t border-[var(--field-border)]">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">
-                    Prueba cualquier ícono de la librería
+                    Try any icon from the library
                   </p>
                   <div className="flex gap-[16px] items-start flex-wrap">
 
@@ -4238,7 +4483,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     <div className="flex flex-col gap-[6px]">
                       <input
                         type="text"
-                        placeholder="Buscar ícono..."
+                        placeholder="Search icon..."
                         value={row7Search}
                         onChange={e => setRow7Search(e.target.value)}
                         className="h-[32px] w-[172px] px-[8px] text-[12px] rounded-[6px] border border-[var(--field-border)] bg-[var(--field-bg)] text-[var(--field-text)] placeholder:text-[var(--field-supporting)] outline-none focus:border-[#2173ff] transition-colors"
@@ -4279,7 +4524,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     {/* Live preview */}
                     <div className="flex flex-col gap-[6px]">
                       <p className="text-[12px] text-[var(--field-supporting)]">
-                        Ícono activo: <code className="font-mono text-[11px] text-[var(--foreground)]">{row7Icon}</code>
+                        Active icon: <code className="font-mono text-[11px] text-[var(--foreground)]">{row7Icon}</code>
                       </p>
                       <Menu>
                         {UserIcon && (() => {
@@ -4287,7 +4532,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                           return (
                             <MenuItem
                               label="Custom action item"
-                              subtext="trailingElement — cualquier ícono"
+                              subtext="trailingElement — any icon"
                               leadingIcon={<UserIcon size={24} strokeWidth={1.75}/>}
                               trailingElement={
                                 DynIcon
@@ -5601,7 +5846,7 @@ function TablePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
               {isSelectable && (
                 <p className="text-[12px] text-[var(--field-supporting)] mt-[20px]">
-                  {selectedRows.size > 0 ? `${selectedRows.size} fila(s) seleccionada(s)` : "Sin selección"}
+                  {selectedRows.size > 0 ? `${selectedRows.size} row(s) selected` : "No selection"}
                 </p>
               )}
             </div>
@@ -5854,7 +6099,7 @@ function HighlightIconPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <p className="text-[12px] font-medium text-[var(--field-supporting)]">Icon</p>
                 <input
                   type="text"
-                  placeholder="Buscar ícono..."
+                  placeholder="Search icon..."
                   value={hiSearch}
                   onChange={e => setHiSearch(e.target.value)}
                   className="h-[32px] px-[8px] text-[12px] rounded-[6px] border border-[var(--field-border)] bg-[var(--field-bg)] text-[var(--field-text)] placeholder:text-[var(--field-supporting)] outline-none focus:border-[#2173ff] transition-colors"
@@ -6674,8 +6919,6 @@ function SidebarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [activeId, setActiveId] = useState("agents")
   const [collapsed, setCollapsed] = useState(false)
 
-  void openSpec
-
   const STATES = [
     { label: "Default", desc: "Icon in Icon/Primary/Lighter (#80AFFF). No background. No shadow.", icon: "Home",    bg: "transparent",   shadow: "none",                                      iconColor: "rgba(128,175,255,1)" },
     { label: "Hover",   desc: "Icon button bg = Surface/Neutral/Black (container color). Blue glow shadow rgba(33,115,255,0.50) blur:20.", icon: "Home", bg: "var(--sb-bg)", shadow: "0px 0px 20px 0px rgba(33,115,255,0.50)", iconColor: "rgba(255,255,255,0.70)" },
@@ -6686,13 +6929,16 @@ function SidebarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     <div className="flex flex-col gap-[40px] px-[32px] py-[24px]">
 
       {/* ── Header ── */}
-      <div className="flex flex-col gap-[6px]">
-        <h1 className="text-[22px] font-bold text-[var(--foreground)]">Sidebar</h1>
-        <p className="text-[14px] text-[var(--field-supporting)] leading-[1.6]">
-          Vertical navigation rail for primary app sections. Always renders on a dark background regardless of light/dark mode.
-          Two states: <strong className="text-[var(--foreground)]">Expanded (250px)</strong> shows icon + label,
-          <strong className="text-[var(--foreground)]"> Collapsed (56px)</strong> shows icon only with tooltips on hover.
-        </p>
+      <div className="flex items-start justify-between gap-[16px]">
+        <div className="flex flex-col gap-[6px]">
+          <h1 className="text-[22px] font-bold text-[var(--foreground)]">Sidebar</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] leading-[1.6]">
+            Vertical navigation rail for primary app sections. Always renders on a dark background regardless of light/dark mode.
+            Two states: <strong className="text-[var(--foreground)]">Expanded (250px)</strong> shows icon + label,
+            <strong className="text-[var(--foreground)]"> Collapsed (56px)</strong> shows icon only with tooltips on hover.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("sidebar")} />
       </div>
 
       {/* ── Live demo ── */}
@@ -6874,6 +7120,2656 @@ function SidebarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   )
 }
 
+// ── EntityListPage ──────────────────────────────────────────────────────────
+
+const DEMO_DESC_LONG  = "Discussed various financing options with the client including traditional loans, lease-to-own programs, and manufacturer financing. Client showed strong interest in the 0% APR promotion running through Q2."
+const DEMO_DESC_SHORT = "Follow-up call scheduled. Client requested brochures."
+
+const demoEntityItems: EntityListItemData[] = [
+  {
+    id: "1",
+    title: "Sarah Thompson",
+    iconVariant: "yellow", iconName: "Car",
+    avatarName: "ST",
+    primaryMeta: [
+      { iconName: "ShieldCheck", label: "Employee",            tooltip: "Client type" },
+      { iconName: "Briefcase",   label: "Green Solutions LLC", tooltip: "Company" },
+    ],
+    pinned: true,
+    actions: [
+      { label: "Reply",    variant: "primary" },
+      { label: "Reassign", variant: "secondary" },
+    ],
+    state:     { label: "Published", variant: "success" },
+    timestamp: "4h ago",
+    showMenu:  true,
+    description: DEMO_DESC_LONG,
+    aiInsight: {
+      action: "Escalated",
+      detail: [
+        "Billing issue sent to finance team — response expected within 24 hours.",
+        "Customer contacted via email with reference #2847.",
+        "Follow-up scheduled for tomorrow 10 AM with senior account manager.",
+        "Case flagged as high-priority — SLA clock running since 09:32 AM.",
+      ],
+      showLabel: true,
+    },
+    secondaryMeta: [
+      { iconName: "User",          label: "Agent: Mike R.", tooltip: "Assigned agent" },
+      { iconName: "Smile",         label: "Positive",       tooltip: "Sentiment" },
+      { iconName: "Paperclip",     label: "3 files",        tooltip: "Attachments" },
+      { iconName: "CheckCheck",    label: "Read",           tooltip: "Read status" },
+      { iconName: "Clock",         label: "4 mins",         tooltip: "Queue time" },
+      { iconName: "Eye",           label: "12 views",       tooltip: "Views" },
+      { iconName: "MessageSquare", label: "8 replies",      tooltip: "Messages" },
+    ],
+    tags: [{ label: "UCP" }, { label: "Sales" }, { label: "Risk" }, { label: "Service" }, { label: "Churn" }, { label: "Finance" }, { label: "Q2" }, { label: "Priority" }, { label: "VIP" }, { label: "Renewal" }],
+  },
+  {
+    id: "2",
+    title: "Ticket #4821 — Billing Dispute",
+    iconVariant: "error", iconName: "AlertCircle",
+    primaryMeta: [
+      { iconName: "User",  label: "Jorge M." },
+      { iconName: "Globe", label: "LATAM" },
+    ],
+    actions: [{ label: "Resolve", variant: "primary" }],
+    state:     { label: "Open", variant: "alert" },
+    timestamp: "2h ago",
+    showMenu: true,
+    secondaryMeta: [
+      { iconName: "Clock", label: "12 mins" },
+      { iconName: "MessageSquare" },
+      { iconName: "Paperclip" },
+    ],
+    tags: [{ label: "Billing" }, { label: "Escalated" }],
+  },
+  {
+    id: "3",
+    title: "Onboarding — Acme Corp",
+    iconVariant: "success", iconName: "CheckCircle",
+    avatarName: "AC",
+    primaryMeta: [
+      { iconName: "Briefcase", label: "Enterprise" },
+    ],
+    state:     { label: "In Progress", variant: "informative" },
+    timestamp: "Yesterday",
+    showMenu: true,
+    aiInsight: { action: "Suggested", detail: "Schedule follow-up call with IT admin before provisioning the SSO integration." },
+    secondaryMeta: [
+      { iconName: "Users" },
+      { iconName: "Link" },
+      { iconName: "Flag" },
+    ],
+    tags: [{ label: "Onboarding" }, { label: "Enterprise" }],
+  },
+]
+
+function EntityListPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "variants" | "playground" | "sub-components">("overview")
+
+  // Playground toggles
+  const [pgShowCheckbox,    setPgShowCheckbox]    = useState(false)
+  const [pgShowDesc,        setPgShowDesc]        = useState(true)
+  const [pgDescLong,        setPgDescLong]        = useState(true)
+  const [pgShowAI,          setPgShowAI]          = useState(true)
+  const [pgAiShowLabel,     setPgAiShowLabel]     = useState(true)
+  const [pgAiViewMore,      setPgAiViewMore]      = useState(false)
+  const [pgShowTags,      setPgShowTags]      = useState(true)
+  const [pgCtaPrimary,    setPgCtaPrimary]    = useState(true)
+  const [pgCtaSecondary,  setPgCtaSecondary]  = useState(true)
+  const [pgCtaTertiary,   setPgCtaTertiary]   = useState(false)
+  const [pgShowMenu,      setPgShowMenu]      = useState(true)
+  const [pgMetaCount,     setPgMetaCount]     = useState(2)
+  const [pgSecMetaMode,   setPgSecMetaMode]   = useState<"icon-text"|"icon">("icon-text")
+  const [pgTagsCount,     setPgTagsCount]     = useState(6)
+  const [pgSecMetaCount,  setPgSecMetaCount]  = useState(6)
+  const [pgShowIcon,      setPgShowIcon]      = useState(true)
+  const [pgIconVariant,   setPgIconVariant]   = useState<NonNullable<EntityListItemData["iconVariant"]>>("yellow")
+  const [pgShowAvatar,    setPgShowAvatar]    = useState(true)
+  const [pgStateVariant,  setPgStateVariant]  = useState<"success"|"error"|"alert"|"informative"|"neutral">("success")
+  const [pgPinned,        setPgPinned]        = useState(true)
+
+  const allMeta    = demoEntityItems[0].primaryMeta   ?? []
+  const allTags    = demoEntityItems[0].tags           ?? []
+  const allSecMeta = demoEntityItems[0].secondaryMeta ?? []
+
+  const pgActions: EntityListItemData["actions"] = [
+    ...(pgCtaPrimary   ? [{ label: "Reply",    variant: "primary"   as const }] : []),
+    ...(pgCtaSecondary ? [{ label: "Reassign", variant: "secondary" as const }] : []),
+    ...(pgCtaTertiary  ? [{ label: "Archive",  variant: "tertiary"  as const }] : []),
+  ]
+
+  const playgroundItem: EntityListItemData = {
+    ...demoEntityItems[0],
+    id:            "pg-1",
+    showCheckbox:  pgShowCheckbox,
+    description:         pgShowDesc ? (pgDescLong ? DEMO_DESC_LONG : DEMO_DESC_SHORT) : undefined,
+    aiInsight:           pgShowAI   ? { ...demoEntityItems[0].aiInsight!, showLabel: pgAiShowLabel, viewMore: pgAiViewMore, defaultExpanded: false } : undefined,
+    tags:                pgShowTags ? allTags.slice(0, pgTagsCount)  : undefined,
+    actions:             pgActions.length > 0 ? pgActions : undefined,
+    showMenu:            pgShowMenu,
+    primaryMeta:         allMeta.slice(0, pgMetaCount),
+    secondaryMeta:       allSecMeta.slice(0, pgSecMetaCount),
+    secondaryMetaMode:   pgSecMetaMode,
+    iconVariant:   pgShowIcon ? pgIconVariant : undefined,
+    iconName:      pgShowIcon ? demoEntityItems[0].iconName : undefined,
+    avatarName:    pgShowAvatar ? demoEntityItems[0].avatarName : undefined,
+    pinned:        pgPinned,
+    state:         { label: pgStateVariant.charAt(0).toUpperCase() + pgStateVariant.slice(1), variant: pgStateVariant },
+  }
+
+  const compactItems: EntityListItemData[] = [
+    { id: "c1", title: "Invoice #7823", iconVariant: "info", iconName: "FileText",
+      primaryMeta: [{ iconName: "User", label: "Maria G." }],
+      state: { label: "Pending", variant: "alert" }, timestamp: "1h ago", showMenu: true,
+      secondaryMeta: [{ iconName: "DollarSign", label: "$4,200" }, { iconName: "Clock", label: "3 days" }],
+      tags: [{ label: "Finance" }] },
+    { id: "c2", title: "Support #2241", iconVariant: "neutral", iconName: "MessageCircle",
+      primaryMeta: [{ iconName: "Globe", label: "EMEA" }],
+      state: { label: "Closed", variant: "neutral" }, timestamp: "3d ago", showMenu: true,
+      secondaryMeta: [{ iconName: "Clock", label: "22 mins" }, { iconName: "CheckCheck" }],
+      tags: [{ label: "Support" }, { label: "Closed" }] },
+  ]
+
+  const minimalItems: EntityListItemData[] = [
+    { id: "m1", title: "Q2 Strategy Review",
+      state: { label: "Draft", variant: "neutral" }, timestamp: "Today" },
+    { id: "m2", title: "Legal compliance audit",
+      state: { label: "Review", variant: "informative" }, timestamp: "Jun 10" },
+    { id: "m3", title: "Product roadmap v3",
+      state: { label: "Live", variant: "success" }, timestamp: "Jun 8" },
+  ]
+
+  const propRows = [
+    { prop: "items",          type: "EntityListItemData[]", default: "—",          desc: "Array of row data objects. Each item maps to one row in the list." },
+    { prop: "className",      type: "string",               default: "undefined",  desc: "Extra Tailwind / custom classes on the container div." },
+    { prop: "title",          type: "string",               default: "required",   desc: "Primary label displayed in the top-left of the row (16px semibold)." },
+    { prop: "iconVariant",    type: "yellow | success | error | info | neutral | purple | light-blue", default: "undefined", desc: "Color of the 24×24 icon highlight container." },
+    { prop: "iconName",       type: "string (Lucide)",      default: "undefined",  desc: "Lucide icon name rendered inside the icon highlight." },
+    { prop: "avatarName",     type: "string",               default: "undefined",  desc: "Name used to derive 2-letter initials for the circle avatar." },
+    { prop: "primaryMeta",    type: "ELMetaItem[]",         default: "undefined",  desc: "Meta items shown inline with the title: icon + optional label." },
+    { prop: "pinned",         type: "boolean",              default: "false",      desc: "Shows a red Pin tag next to the primary meta." },
+    { prop: "actions",        type: "ELAction[]",           default: "undefined",  desc: "Action buttons: primary / secondary / tertiary. Max 2–3 recommended." },
+    { prop: "state",          type: "{ label, variant }",  default: "undefined",  desc: "State Tag shown in the right zone. Variant maps to Tag semantic color." },
+    { prop: "timestamp",      type: "string",               default: "undefined",  desc: "Relative or absolute time string shown at far right." },
+    { prop: "description",    type: "string",               default: "undefined",  desc: "Collapsible body text. Expanded by defaultDescExpanded (default true)." },
+    { prop: "aiInsight",      type: "{ action, detail }",  default: "undefined",  desc: "Purple AI callout row with Sparkle icon, action label and detail text." },
+    { prop: "secondaryMeta",  type: "ELMetaItem[]",         default: "undefined",  desc: "Bottom-left row of icon+label pairs separated by bullet dots." },
+    { prop: "tags",           type: "{ label }[]",          default: "undefined",  desc: "Light-blue tags shown at the bottom-right of the row." },
+  ]
+
+  const codeSnippet = `import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
+
+const items: EntityListItemData[] = [
+  {
+    id: "1",
+    title: "Sarah Thompson",
+    iconVariant: "yellow",
+    iconName: "Car",
+    avatarName: "ST",
+    primaryMeta: [
+      { iconName: "ShieldCheck", label: "Employee" },
+      { iconName: "Briefcase",   label: "Green Solutions LLC" },
+    ],
+    pinned: true,
+    actions: [
+      { label: "Reply",    variant: "primary" },
+      { label: "Reassign", variant: "secondary" },
+    ],
+    state:     { label: "Published", variant: "success" },
+    timestamp: "4h ago",
+    showMenu:  true,
+    description: "...",
+    defaultDescExpanded: true,
+    aiInsight: { action: "Escalated", detail: "Billing issue sent to finance team." },
+    secondaryMeta: [
+      { iconName: "Clock", label: "4 mins" },
+      { iconName: "Eye" },
+    ],
+    tags: [{ label: "UCP" }, { label: "Sales" }],
+  },
+]
+
+export function MyList() {
+  return <EntityList items={items} />
+}`
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Entity List</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            High-density list row for entities — conversations, tickets, tasks.
+            Supports icon highlight, avatar, primary/secondary meta, AI insight, description, and tag clusters.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("entity-list")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",        label: "Overview"        },
+          { id: "variants",        label: "Variants"        },
+          { id: "sub-components",  label: "Sub-components"  },
+          { id: "playground",      label: "Playground"      },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Overview ─────────────────────────────────────────────────── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Live preview */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Preview</h2>
+              <CardContainer size="sm">
+                <EntityList items={[demoEntityItems[0]]} />
+              </CardContainer>
+            </div>
+
+            {/* Anatomy */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Anatomy</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                {[
+                  { label: "Top row — title + primary meta", desc: "Checkbox (opt) → icon highlight → avatar → title (16px SemiBold) → meta bullets → pinned tag | right: actions → divider → state tag → timestamp → menu." },
+                  { label: "Body — description", desc: "Collapsible multi-line text (14px Medium). ChevronDown/Up toggle at right. Hidden by default when defaultDescExpanded=false." },
+                  { label: "AI insight row", desc: "Full-width purple pill: Sparkle icon + 'AI {action}' label + separator + detail text. Only renders when aiInsight prop is set." },
+                  { label: "Bottom row — secondary meta + tags", desc: "Left: icon+label pairs with bullet separators (from 2nd onward). Right: light-blue Tag cluster." },
+                ].map(item => (
+                  <div
+                    key={item.label}
+                    className="rounded-[8px] p-[14px] flex flex-col gap-[6px]"
+                    style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)" }}
+                  >
+                    <p className="text-[12px] font-semibold" style={{ color: "var(--primary)" }}>{item.label}</p>
+                    <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Use for dense entity feeds: conversations, tickets, tasks, leads — any list where context per row matters.",
+                    "Use primaryMeta to show the most-scanned key attributes (role, org, region) right next to the title.",
+                    "Use aiInsight when the system has an automated diagnosis or recommendation — keeps AI context inline.",
+                    "Use secondaryMeta for secondary counts (time, attachments, views) — icon-only is fine when widely understood.",
+                    "Use pinned + error Tag to highlight rows requiring immediate attention.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Don't use for simple flat lists where a Table with sortable columns is a better fit.",
+                    "Don't add more than 2–3 action buttons — the right zone has limited horizontal budget.",
+                    "Don't combine both iconHighlight and avatar on the same row — pick one identity marker.",
+                    "Don't add more than 6–8 tags per row — use a '+N more' label for overflow.",
+                    "Don't disable the description collapse if rows are very tall — always allow the user to hide it.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Code */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Code</h2>
+              <pre
+                className="rounded-[8px] p-[16px] overflow-x-auto text-[12px] leading-[1.7] font-mono"
+                style={{ background: "var(--surface)", border: "1px solid var(--table-border)", color: "var(--field-supporting)" }}
+              >
+                {codeSnippet}
+              </pre>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Variants ──────────────────────────────────────────────────── */}
+        {tab === "variants" && (
+          <div className="flex flex-col gap-[40px]">
+
+            {/* Full */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Full — all slots populated</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">Icon + avatar + meta + description + AI insight + tags</p>
+              </div>
+              <div className="flex flex-col gap-[8px]">
+                {demoEntityItems.map(item => (
+                  <CardContainer key={item.id} size="sm">
+                    <EntityList items={[item]} />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+
+            {/* Compact */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Compact — no description, no AI insight</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">Top row + secondary meta + tags only</p>
+              </div>
+              <div className="flex flex-col gap-[8px]">
+                {compactItems.map(item => (
+                  <CardContainer key={item.id} size="sm">
+                    <EntityList items={[item]} />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+
+            {/* Minimal */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Minimal — title + state + timestamp</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">No icon, no meta, no tags — simplest readable form</p>
+              </div>
+              <div className="flex flex-col gap-[8px]">
+                {minimalItems.map(item => (
+                  <CardContainer key={item.id} size="sm">
+                    <EntityList items={[item]} />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+
+            {/* Card container states */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Card container states</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">Error and alert variants of the card container — used to surface critical or time-sensitive rows</p>
+              </div>
+              <div className="flex flex-col gap-[8px]">
+                <CardContainer size="sm" variant="reed">
+                  <EntityList items={[{
+                    id: "state-error",
+                    title: "Ticket #4821 — Billing Dispute",
+                    iconVariant: "error", iconName: "AlertCircle",
+                    primaryMeta: [
+                      { iconName: "User", label: "Jorge M.", tooltip: "Assigned to" },
+                      { iconName: "Globe", label: "LATAM", tooltip: "Region" },
+                    ],
+                    actions: [{ label: "Resolve", variant: "primary" }],
+                    state: { label: "Critical", variant: "error" },
+                    timestamp: "2h ago",
+                    showMenu: true,
+                    secondaryMeta: [
+                      { iconName: "Clock", label: "12 mins", tooltip: "Queue time" },
+                      { iconName: "MessageSquare", label: "8 replies", tooltip: "Messages" },
+                    ],
+                    tags: [{ label: "Billing" }, { label: "Escalated" }],
+                  }]} />
+                </CardContainer>
+                <CardContainer size="sm" variant="orange">
+                  <EntityList items={[{
+                    id: "state-alert",
+                    title: "Onboarding — Acme Corp",
+                    iconVariant: "info", iconName: "FileText",
+                    primaryMeta: [
+                      { iconName: "Briefcase", label: "Enterprise", tooltip: "Plan" },
+                      { iconName: "Calendar",  label: "Due Jun 20", tooltip: "Due date" },
+                    ],
+                    actions: [{ label: "Review", variant: "primary" }],
+                    state: { label: "At risk", variant: "alert" },
+                    timestamp: "Yesterday",
+                    showMenu: true,
+                    secondaryMeta: [
+                      { iconName: "Users",     label: "4 pending",  tooltip: "Pending tasks" },
+                      { iconName: "AlertTriangle", label: "Blocked", tooltip: "Status" },
+                    ],
+                    tags: [{ label: "Onboarding" }, { label: "Blocked" }],
+                  }]} />
+                </CardContainer>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Sub-components ────────────────────────────────────────────── */}
+        {tab === "sub-components" && (
+          <div className="flex flex-col gap-[24px]">
+
+            {(() => {
+              const SubCard = ({
+                label,
+                definition,
+                capitalization,
+                children,
+              }: {
+                label:          string
+                definition:     string
+                capitalization: string
+                children:       React.ReactNode
+              }) => (
+                <div
+                  className="rounded-[10px] overflow-hidden"
+                  style={{ border: "1px solid var(--table-border)" }}
+                >
+                  {/* Preview zone */}
+                  <div
+                    className="w-full flex items-center justify-center px-[24px] py-[20px]"
+                    style={{ background: "var(--canvas)", minHeight: 72 }}
+                  >
+                    <div className="w-full">{children}</div>
+                  </div>
+                  {/* Divider */}
+                  <div style={{ height: 1, background: "var(--table-border)" }} />
+                  {/* Info zone */}
+                  <div
+                    className="px-[16px] py-[14px] flex flex-col gap-[6px]"
+                    style={{ background: "var(--surface)" }}
+                  >
+                    <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{label}</p>
+                    <p className="text-[12px] leading-[1.6]" style={{ color: "var(--muted-foreground)" }}>{definition}</p>
+                    <p className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>
+                      <span className="font-semibold">Capitalization:</span> {capitalization}
+                    </p>
+                  </div>
+                </div>
+              )
+
+              return (
+                <>
+                  {/* 1 — Original Component */}
+                  <SubCard
+                    label="Full row"
+                    definition="Complete entity list row with all slots active: icon, avatar, primary meta, description, AI insight, secondary meta, and tags. Reference point for evaluating density and visual hierarchy."
+                    capitalization="Title 16px / SemiBold · Primary meta 12px / Medium · Timestamp 12px / Medium · Description 14px / Medium · Tags 11px / Medium"
+                  >
+                    <CardContainer size="sm">
+                      <EntityList items={[demoEntityItems[0]]} />
+                    </CardContainer>
+                  </SubCard>
+
+                  {/* 2 — Icono */}
+                  <SubCard
+                    label="Icono"
+                    definition="24×24px square with 4px radius that visually identifies the entity type through semantic color and a Lucide icon. Available in 7 color variants — each maps to a --hi-*-bg / --hi-*-icon token pair."
+                    capitalization="— (no text content)"
+                  >
+                    <div className="flex items-center gap-[12px] flex-wrap">
+                      {(["yellow","success","error","info","neutral","purple","light-blue"] as const).map(v => (
+                        <div key={v} className="flex flex-col items-center gap-[8px]">
+                          <ELIconHighlight
+                            variant={v}
+                            iconName={v === "yellow" ? "Car" : v === "success" ? "CheckCircle" : v === "error" ? "AlertCircle" : v === "info" ? "FileText" : v === "neutral" ? "MessageCircle" : v === "purple" ? "Sparkles" : "Globe"}
+                          />
+                          <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </SubCard>
+
+                  {/* 3 — Checkbox */}
+                  <SubCard
+                    label="Checkbox"
+                    definition="16×16px checkbox at the far left of the row. Enabled with showCheckbox=true — enables multi-select for bulk actions. Click does not propagate the row's onClick event."
+                    capitalization="— (no text content)"
+                  >
+                    <div className="flex flex-col gap-[8px]">
+                      <CardContainer size="sm">
+                        <EntityList items={[{ ...demoEntityItems[0], id: "cb-1", showCheckbox: true, checked: false, description: undefined, aiInsight: undefined, secondaryMeta: undefined, tags: undefined }]} />
+                      </CardContainer>
+                      <CardContainer size="sm">
+                        <EntityList items={[{ ...demoEntityItems[1], id: "cb-2", showCheckbox: true, checked: true, description: undefined, aiInsight: undefined }]} />
+                      </CardContainer>
+                    </div>
+                  </SubCard>
+
+                  {/* 4 — Empty state (Emp) */}
+                  <SubCard
+                    label="Empty state"
+                    definition="Empty container state when there are no entities to display — either because there is no data, or no item passes the active filter. Communicates absence without visual noise."
+                    capitalization="Message 14px / Medium / Sentence case · Hint 12px / Regular / Sentence case"
+                  >
+                    <div
+                      className="w-full flex flex-col items-center justify-center gap-[8px] py-[32px] rounded-[8px]"
+                      style={{ border: "1px solid var(--table-border)", background: "var(--table-bg)" }}
+                    >
+                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ opacity: 0.25, color: "var(--muted-foreground)" }}>
+                        <rect x="4" y="8" width="24" height="4" rx="2" fill="currentColor"/>
+                        <rect x="4" y="15" width="16" height="4" rx="2" fill="currentColor"/>
+                        <rect x="4" y="22" width="20" height="4" rx="2" fill="currentColor"/>
+                      </svg>
+                      <p className="text-[14px] font-medium" style={{ color: "var(--muted-foreground)" }}>No entities found</p>
+                      <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Adjust your filters or create a new entity</p>
+                    </div>
+                  </SubCard>
+
+                  {/* 5 — Avatar */}
+                  <SubCard
+                    label="Avatar"
+                    definition="24×24px circle showing initials (max 2 letters, first letter of each word in the name) or a profile image. 1.5px semi-transparent blue ring. Appears alongside the icon when avatarName is defined."
+                    capitalization="Initials 9px / Bold / UPPERCASE"
+                  >
+                    <div className="flex items-center gap-[16px] flex-wrap">
+                      {[
+                        { name: "Sarah Thompson" },
+                        { name: "Jorge M." },
+                        { name: "Acme Corp" },
+                        { name: "Rafael Díaz" },
+                        { name: "AI" },
+                      ].map(a => (
+                        <div key={a.name} className="flex flex-col items-center gap-[8px]">
+                          <ELAvatar name={a.name} />
+                          <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>{a.name.split(" ").slice(0,2).map((w:string)=>w[0]).join("").toUpperCase()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </SubCard>
+
+                  {/* 6 — AI Insight */}
+                  <SubCard
+                    label="AI Insight"
+                    definition="Purple horizontal bar that surfaces diagnostics and recommendations generated by the system. The Sparkle icon signals the AI origin. Only shown when aiInsight is defined on the item."
+                    capitalization="Action 14px / Medium / Sentence case · Detail 12px / Medium / Sentence case"
+                  >
+                    <CardContainer size="sm">
+                      <EntityList items={[{
+                        id: "ai-1",
+                        title: "Sarah Thompson",
+                        iconVariant: "yellow", iconName: "Car",
+                        timestamp: "4h ago",
+                        aiInsight: {
+                          action: "Escalated",
+                          detail: [
+                            "Billing issue sent to finance team — response expected within 24 hours.",
+                            "Customer contacted via email with reference #2847.",
+                            "Follow-up scheduled for tomorrow 10 AM.",
+                          ],
+                        },
+                      }]} />
+                    </CardContainer>
+                  </SubCard>
+
+                  {/* 7 — Description */}
+                  <SubCard
+                    label="Description"
+                    definition="Collapsible text area. When text is shorter than 120 characters no chevron is shown. For long text, chevron-down collapses to a truncated single line; chevron-up expands the full text (max 1,200 characters)."
+                    capitalization="14px / Medium / Sentence case"
+                  >
+                    <div className="flex flex-col gap-[8px]">
+                      <div className="flex gap-[6px] items-center mb-[4px]">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>Short text — no chevron</span>
+                      </div>
+                      <CardContainer size="sm">
+                        <EntityList items={[{
+                          id: "desc-short",
+                          title: "Support #2241",
+                          iconVariant: "neutral", iconName: "MessageCircle",
+                          timestamp: "3d ago",
+                          description: DEMO_DESC_SHORT,
+                        }]} />
+                      </CardContainer>
+                      <div className="flex gap-[6px] items-center mt-[8px] mb-[4px]">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>Long text — collapsed (chevron-down)</span>
+                      </div>
+                      <CardContainer size="sm">
+                        <EntityList items={[{
+                          id: "desc-collapsed",
+                          title: "Sarah Thompson",
+                          iconVariant: "yellow", iconName: "Car",
+                          avatarName: "ST",
+                          timestamp: "4h ago",
+                          description: DEMO_DESC_LONG,
+                          defaultDescExpanded: false,
+                        }]} />
+                      </CardContainer>
+                      <div className="flex gap-[6px] items-center mt-[8px] mb-[4px]">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>Long text — expanded (chevron-up)</span>
+                      </div>
+                      <CardContainer size="sm">
+                        <EntityList items={[{
+                          id: "desc-expanded",
+                          title: "Sarah Thompson",
+                          iconVariant: "yellow", iconName: "Car",
+                          avatarName: "ST",
+                          timestamp: "4h ago",
+                          description: DEMO_DESC_LONG,
+                          defaultDescExpanded: true,
+                        }]} />
+                      </CardContainer>
+                    </div>
+                  </SubCard>
+                </>
+              )
+            })()}
+
+          </div>
+        )}
+
+        {/* ── Playground ────────────────────────────────────────────────── */}
+        {tab === "playground" && (
+          <div className="flex flex-col gap-[24px]">
+
+            {/* Preview — shown first so it's immediately visible */}
+            <div className="flex flex-col gap-[10px]">
+              <h2 className="text-[14px] font-semibold text-[var(--foreground)]">Preview</h2>
+              <CardContainer size="sm">
+                <EntityList items={[playgroundItem]} />
+              </CardContainer>
+            </div>
+
+            {/* Controls */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[14px] font-semibold text-[var(--foreground)]">Controls</h2>
+
+              {/* ── Toggles ── */}
+              {(() => {
+                const Tog = ({ label, val, set }: { label: string; val: boolean; set: (v: boolean) => void }) => (
+                  <button
+                    onClick={() => set(!val)}
+                    className="flex items-center gap-[6px] px-[9px] py-[6px] rounded-[7px] text-[11px] font-medium transition-colors"
+                    style={{
+                      background: val ? "var(--tag-informative-bg)" : "var(--table-bg)",
+                      border:     `1px solid ${val ? "var(--tag-informative-bd)" : "var(--table-border)"}`,
+                      color:      val ? "var(--primary)" : "var(--field-supporting)",
+                    }}
+                  >
+                    <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: val ? "var(--primary)" : "var(--field-supporting)", opacity: val ? 1 : 0.3 }} />
+                    {label}
+                  </button>
+                )
+                const SectionLabel = ({ children }: { children: string }) => (
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.07em] mb-[6px]" style={{ color: "var(--field-supporting)" }}>{children}</p>
+                )
+                return (
+                  <div className="flex flex-col gap-[12px]">
+                    {/* Slots */}
+                    <div>
+                      <SectionLabel>Slots</SectionLabel>
+                      <div className="grid grid-cols-4 gap-[6px]">
+                        <Tog label="Checkbox"      val={pgShowCheckbox}  set={setPgShowCheckbox}  />
+                        <Tog label="Icon"          val={pgShowIcon}      set={setPgShowIcon}      />
+                        <Tog label="Avatar"        val={pgShowAvatar}    set={setPgShowAvatar}    />
+                        <Tog label="Pinned"        val={pgPinned}        set={setPgPinned}        />
+                        <Tog label="CTA Primary"   val={pgCtaPrimary}    set={setPgCtaPrimary}    />
+                        <Tog label="CTA Secondary" val={pgCtaSecondary}  set={setPgCtaSecondary}  />
+                        <Tog label="CTA Tertiary"  val={pgCtaTertiary}   set={setPgCtaTertiary}   />
+                        <Tog label="Menu"          val={pgShowMenu}      set={setPgShowMenu}      />
+                        <Tog label="Tags (right)"  val={pgShowTags}      set={setPgShowTags}      />
+                      </div>
+                    </div>
+                    {/* Description */}
+                    <div>
+                      <SectionLabel>Description</SectionLabel>
+                      <div className="flex gap-[6px] flex-wrap">
+                        <Tog label="Show"          val={pgShowDesc}  set={setPgShowDesc}  />
+                        <Tog label="Long text (chevron)" val={pgDescLong} set={setPgDescLong} />
+                      </div>
+                    </div>
+                    {/* AI Summary */}
+                    <div>
+                      <SectionLabel>AI Summary</SectionLabel>
+                      <div className="flex gap-[6px] flex-wrap">
+                        <Tog label="Show"             val={pgShowAI}       set={setPgShowAI}       />
+                        <Tog label="«AI …» label"     val={pgAiShowLabel}  set={setPgAiShowLabel}  />
+                        <Tog label="View more"        val={pgAiViewMore}   set={setPgAiViewMore}   />
+                      </div>
+                      <p className="text-[10px] mt-[5px]" style={{ color: "var(--field-supporting)" }}>
+                        Bullet list con 4 items — collapsed por default, chevron para expandir
+                      </p>
+                    </div>
+                    {/* Secondary meta mode */}
+                    <div>
+                      <SectionLabel>Secondary meta mode</SectionLabel>
+                      <div className="flex gap-[6px]">
+                        {(["icon-text","icon"] as const).map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setPgSecMetaMode(m)}
+                            className="flex items-center gap-[6px] px-[9px] py-[6px] rounded-[7px] text-[11px] font-medium"
+                            style={{
+                              background: pgSecMetaMode === m ? "var(--tag-informative-bg)" : "var(--table-bg)",
+                              border:     `1px solid ${pgSecMetaMode === m ? "var(--tag-informative-bd)" : "var(--table-border)"}`,
+                              color:      pgSecMetaMode === m ? "var(--primary)" : "var(--field-supporting)",
+                            }}
+                          >
+                            <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: pgSecMetaMode === m ? "var(--primary)" : "var(--field-supporting)", opacity: pgSecMetaMode === m ? 1 : 0.3 }} />
+                            {m === "icon-text" ? "Icon + text" : "Icon only (tooltip on hover)"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* ── Counters ── */}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.07em] mb-[6px]" style={{ color: "var(--field-supporting)" }}>Count</p>
+                <div className="grid grid-cols-3 gap-[8px]">
+                  {([
+                    { label: "Primary meta",    val: pgMetaCount,    set: setPgMetaCount,    min: 0, max: 2                 },
+                    { label: "Secondary meta",  val: pgSecMetaCount, set: setPgSecMetaCount, min: 0, max: allSecMeta.length },
+                    { label: "Tags (right)",    val: pgTagsCount,    set: setPgTagsCount,    min: 0, max: allTags.length    },
+                  ] as { label: string; val: number; set: React.Dispatch<React.SetStateAction<number>>; min: number; max: number }[]).map(ctrl => (
+                    <div
+                      key={ctrl.label}
+                      className="flex items-center justify-between gap-[8px] px-[12px] py-[9px] rounded-[8px]"
+                      style={{ background: "var(--table-bg)", border: "1px solid var(--table-border)" }}
+                    >
+                      <span className="text-[12px] font-medium truncate" style={{ color: "var(--field-supporting)" }}>{ctrl.label}</span>
+                      <div className="flex items-center gap-[6px] shrink-0">
+                        <button
+                          onClick={() => ctrl.set(v => Math.max(ctrl.min, v - 1))}
+                          className="w-[22px] h-[22px] flex items-center justify-center rounded-[4px] text-[14px] font-medium"
+                          style={{ background: "var(--muted)", color: "var(--foreground)" }}
+                        >−</button>
+                        <span className="w-[18px] text-center text-[12px] font-semibold tabular-nums" style={{ color: "var(--foreground)" }}>{ctrl.val}</span>
+                        <button
+                          onClick={() => ctrl.set(v => Math.min(ctrl.max, v + 1))}
+                          className="w-[22px] h-[22px] flex items-center justify-center rounded-[4px] text-[14px] font-medium"
+                          style={{ background: "var(--muted)", color: "var(--foreground)" }}
+                        >+</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Icon variant ── */}
+              {pgShowIcon && (
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.06em] mb-[8px]" style={{ color: "var(--field-supporting)" }}>Icon variant</p>
+                  <div className="flex flex-wrap gap-[8px]">
+                    {(["yellow","success","error","info","neutral","purple","light-blue"] as const).map(v => (
+                      <button
+                        key={v}
+                        onClick={() => setPgIconVariant(v)}
+                        className="flex items-center gap-[7px] px-[10px] py-[6px] rounded-[8px] text-[12px] font-medium transition-colors"
+                        style={{
+                          background: pgIconVariant === v ? "var(--tag-informative-bg)" : "var(--table-bg)",
+                          border:     `1px solid ${pgIconVariant === v ? "var(--tag-informative-bd)" : "var(--table-border)"}`,
+                          color:      pgIconVariant === v ? "var(--primary)" : "var(--field-supporting)",
+                        }}
+                      >
+                        <ELIconHighlight
+                          variant={v}
+                          iconName={v === "yellow" ? "Car" : v === "success" ? "CheckCircle" : v === "error" ? "AlertCircle" : v === "info" ? "FileText" : v === "neutral" ? "MessageCircle" : v === "purple" ? "Sparkles" : "Globe"}
+                        />
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── State tag variant ── */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.06em] mb-[8px]" style={{ color: "var(--field-supporting)" }}>Tag state</p>
+                <div className="flex flex-wrap gap-[8px]">
+                  {(["success","informative","alert","error","neutral"] as const).map(v => (
+                    <button
+                      key={v}
+                      onClick={() => setPgStateVariant(v)}
+                      className="flex items-center gap-[7px] px-[10px] py-[6px] rounded-[8px] text-[12px] font-medium transition-colors"
+                      style={{
+                        background: pgStateVariant === v ? "var(--tag-informative-bg)" : "var(--table-bg)",
+                        border:     `1px solid ${pgStateVariant === v ? "var(--tag-informative-bd)" : "var(--table-border)"}`,
+                        color:      pgStateVariant === v ? "var(--primary)" : "var(--field-supporting)",
+                      }}
+                    >
+                      <Tag variant={v === "neutral" ? "secondary" : v} size="sm">{v.charAt(0).toUpperCase() + v.slice(1)}</Tag>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Prop table */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <div
+                className="rounded-[8px] overflow-hidden"
+                style={{ border: "1px solid var(--table-border)" }}
+              >
+                {/* Header */}
+                <div
+                  className="grid text-[11px] font-semibold uppercase tracking-[0.05em] px-[16px] py-[10px]"
+                  style={{
+                    background: "var(--table-header-bg)",
+                    color: "var(--table-header-text)",
+                    gridTemplateColumns: "180px 260px 110px 1fr",
+                    borderBottom: "1px solid var(--table-border)",
+                  }}
+                >
+                  <span>Prop</span>
+                  <span>Type</span>
+                  <span>Default</span>
+                  <span>Description</span>
+                </div>
+                {propRows.map((row, i) => (
+                  <div
+                    key={row.prop}
+                    className="grid items-start px-[16px] py-[10px] text-[12px]"
+                    style={{
+                      gridTemplateColumns: "180px 260px 110px 1fr",
+                      background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                      borderBottom: i < propRows.length - 1 ? "1px solid var(--table-border)" : "none",
+                      color: "var(--field-supporting)",
+                    }}
+                  >
+                    <span className="font-mono font-semibold" style={{ color: "var(--foreground)" }}>{row.prop}</span>
+                    <span className="font-mono" style={{ color: "var(--muted-foreground)", wordBreak: "break-all" }}>{row.type}</span>
+                    <span className="font-mono opacity-60">{row.default}</span>
+                    <span className="leading-[1.6]">{row.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
+// ── ModalDialogPage ──────────────────────────────────────────────────────────
+
+function ModalDialogPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "variants" | "playground">("overview")
+
+  // Playground state
+  const [pgOpen,        setPgOpen]        = useState(false)
+  const [pgVariant,     setPgVariant]     = useState<ModalVariant>("confirmation")
+  const [pgShowIcon,    setPgShowIcon]    = useState(true)
+  const [pgShowTitle,   setPgShowTitle]   = useState(true)
+  const [pgShowDesc,    setPgShowDesc]    = useState(true)
+  const [pgShowSlot,    setPgShowSlot]    = useState(false)
+  const [pgShowInfo,    setPgShowInfo]    = useState(false)
+  const [pgShowPrimary, setPgShowPrimary] = useState(true)
+  const [pgShowSec,     setPgShowSec]     = useState(true)
+  const [pgDestructive,    setPgDestructive]    = useState(false)
+  const [pgTone,           setPgTone]           = useState<ModalTone>("default")
+  const [pgIconVariant,    setPgIconVariant]    = useState<HighlightIconVariant>("informative")
+  const [pgIconName,       setPgIconName]       = useState("Sparkles")
+  const [pgInfoVariant,    setPgInfoVariant]    = useState<InformativeCardState>("informative")
+  const [pgShowClose,      setPgShowClose]      = useState(true)
+
+  // Overview "try it" modal
+  const [overviewOpen, setOverviewOpen] = useState(false)
+
+  const anatomyCards = [
+    { label: "Close button",     desc: "Ghost × in the top-right corner. Absolute positioned at top-4 right-4. Always shown unless showClose=false. Closes on click." },
+    { label: "Icon area",        desc: "Confirmation: 48px centered circle. Content: 40px inline with title. Background = modal-icon-bg token. Fallback icon: Info." },
+    { label: "Header",           desc: "Confirmation: title + description center-aligned below icon. Content: icon + title + description left-aligned in a row." },
+    { label: "Content zone",     desc: "slot: ReactNode — rendered in a rounded container with slot-bg. informativeCard: blue pill with ⓘ icon above the CTAs." },
+    { label: "CTA row",          desc: "Confirmation: buttons centered. Content: buttons right-aligned. Secondary + Primary pair. Destructive=true → red Warning button." },
+  ]
+
+  return (
+    <div className="flex flex-col gap-0">
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Modal Dialog</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            Focused overlay for confirmations and structured content. Two layout variants —
+            Confirmation and Content. Scrim + blur backdrop. 5 semantic tones.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("modal-dialog")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "variants",   label: "Variants"   },
+          { id: "playground", label: "Playground" },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Overview ─────────────────────────────────────────────────────── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Live preview trigger */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Preview</h2>
+              <div
+                className="rounded-[10px] p-[24px] flex flex-col items-center gap-[16px]"
+                style={{ background: "var(--surface)", border: "1px solid var(--table-border)" }}
+              >
+                <p className="text-[13px] text-[var(--field-supporting)] text-center">
+                  The modal opens over the content with scrim + blur. Click outside or × to close.
+                </p>
+                <Button variant="primary" onClick={() => setOverviewOpen(true)}>
+                  Open Modal Dialog
+                </Button>
+                <div
+                  className="w-full rounded-[10px] overflow-hidden"
+                  style={{ border: "1px solid var(--table-border)" }}
+                >
+                  <ModalDialog embedded isOpen={true} onClose={() => {}}
+                    variant="confirmation"
+                    iconName="Sparkles"
+                    title="Confirm your action"
+                    description="This will affect all linked resources in your workspace. Once confirmed, this action cannot be undone."
+                    informativeCard="Review all linked items before confirming — this action cannot be reversed."
+                    ctaPrimary={{ label: "Confirm" }}
+                    ctaSecondary={{ label: "Cancel" }}
+                  />
+                </div>
+              </div>
+              <ModalDialog
+                isOpen={overviewOpen}
+                onClose={() => setOverviewOpen(false)}
+                variant="confirmation"
+                iconName="Sparkles"
+                title="Confirm your action"
+                description="This will affect all linked resources in your workspace. Once confirmed, this action cannot be undone."
+                informativeCard="Review all linked items before confirming — this action cannot be reversed."
+                ctaPrimary={{ label: "Confirm", onClick: () => setOverviewOpen(false) }}
+                ctaSecondary={{ label: "Cancel", onClick: () => setOverviewOpen(false) }}
+              />
+            </div>
+
+            {/* Anatomy */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Anatomy</h2>
+              <div className="grid grid-cols-2 gap-[10px] xl:grid-cols-3">
+                {anatomyCards.map(c => (
+                  <div
+                    key={c.label}
+                    className="rounded-[8px] p-[14px] flex flex-col gap-[6px]"
+                    style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)" }}
+                  >
+                    <p className="text-[12px] font-semibold" style={{ color: "var(--primary)" }}>{c.label}</p>
+                    <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>{c.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "To confirm destructive actions: delete, overwrite, revoke access.",
+                    "When the user needs additional context before making a decision.",
+                    "To display structured content that requires immediate attention (slot).",
+                    "Use informativeCard when the action is irreversible — never omit it on destructive flows.",
+                    "Confirmation for simple Yes/No questions; Content for flows with data or forms.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Not for passive informational messages — use Toast or Banner instead.",
+                    "Do not chain modals — one modal at a time, never modal over modal.",
+                    "Not for long forms — if the slot needs scroll, use a page or drawer.",
+                    "Do not omit the Secondary CTA (Cancel) when the action is destructive.",
+                    "Do not use the Confirmation variant to display tables or long lists.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Props */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <div className="rounded-[10px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Prop", "Type", "Default", "Description"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] font-semibold" style={{ color: "var(--table-header-text)" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { prop: "isOpen",          type: "boolean",                  def: "required", desc: "Controls visibility. Triggers enter/exit animation." },
+                      { prop: "onClose",         type: "() => void",               def: "required", desc: "Called when scrim is clicked or close button pressed." },
+                      { prop: "variant",         type: '"confirmation" | "content"', def: '"confirmation"', desc: "Layout: centered icon+title (confirmation) or left-aligned row (content)." },
+                      { prop: "tone",            type: '"default" | "warning" | "error" | "alert" | "success"', def: '"default"', desc: "Icon circle color. Uses DS --hi-* variables. error/warning for destructive, alert for reversible risk, success for positive confirmation." },
+                      { prop: "showIcon",        type: "boolean",                  def: "true",     desc: "Show the icon circle in the header. Falls back to Info icon if iconName is unset." },
+                      { prop: "iconName",        type: "string (Lucide)",           def: "Info",     desc: "Lucide icon name rendered inside the icon circle." },
+                      { prop: "title",           type: "string",                   def: "undefined", desc: "Bold heading text. Center-aligned in Confirmation; left-aligned in Content." },
+                      { prop: "description",     type: "string",                   def: "undefined", desc: "Supporting paragraph below the title." },
+                      { prop: "slot",            type: "ReactNode",                def: "undefined", desc: "Custom content area rendered in a rounded container above the informative card." },
+                      { prop: "informativeCard", type: "string | boolean",         def: "undefined", desc: "Blue ⓘ pill. true = default text; string = custom text." },
+                      { prop: "ctaPrimary",      type: "{ label, destructive?, onClick? }", def: "undefined", desc: "Primary action. destructive=true renders a red Warning button." },
+                      { prop: "ctaSecondary",    type: "{ label, onClick? }",      def: "undefined", desc: "Secondary/cancel action. Outline button." },
+                      { prop: "showClose",       type: "boolean",                  def: "true",     desc: "Show the × close button in the top-right corner." },
+                      { prop: "embedded",        type: "boolean",                  def: "false",    desc: "Static inline render — no overlay, no animation. For documentation previews." },
+                    ].map(row => (
+                      <tr key={row.prop} style={{ borderBottom: "1px solid var(--table-border)", background: "var(--table-bg)" }}>
+                        <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.prop}</td>
+                        <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--muted-foreground)" }}>{row.type}</td>
+                        <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.def}</td>
+                        <td className="px-[14px] py-[10px] leading-[1.5]" style={{ color: "var(--table-cell-text)" }}>{row.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Variants ─────────────────────────────────────────────────────── */}
+        {tab === "variants" && (
+          <div className="flex flex-col gap-[40px]">
+
+            {/* Confirmation Modal */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Confirmation Modal</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">
+                  Centered layout — icon on top, title and description centered, CTAs centered. Max 900px.
+                </p>
+              </div>
+              <div className="rounded-[10px] overflow-hidden p-[24px]" style={{ border: "1px solid var(--table-border)", background: "var(--surface)" }}>
+                <ModalDialog embedded isOpen={true} onClose={() => {}}
+                  variant="confirmation"
+                  iconName="AlertCircle"
+                  title="Confirm your action"
+                  description="This will affect all linked resources in your workspace. Once confirmed, this action cannot be undone."
+                  ctaPrimary={{ label: "Confirm" }}
+                  ctaSecondary={{ label: "Cancel" }}
+                />
+              </div>
+            </div>
+
+            {/* Modal with Content */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Modal with Content</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">
+                  Horizontal layout — icon + title left-aligned. Slot for custom content. CTAs right-aligned. Max 900px.
+                </p>
+              </div>
+              <div className="rounded-[10px] overflow-hidden p-[24px]" style={{ border: "1px solid var(--table-border)", background: "var(--surface)" }}>
+                <ModalDialog embedded isOpen={true} onClose={() => {}}
+                  variant="content"
+                  iconName="FileText"
+                  title="Export Report"
+                  description="Choose the format and date range for your export. The file will be sent to your email."
+                  slot={
+                    <div className="flex flex-col gap-[12px]">
+                      <div className="flex flex-col gap-[4px]">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Format</p>
+                        <div className="flex gap-[8px]">
+                          {["CSV", "XLSX", "PDF"].map(f => (
+                            <div key={f} className="px-[12px] py-[6px] rounded-[6px] text-[12px] font-medium" style={{ background: f === "CSV" ? "var(--tag-informative-bg)" : "var(--table-bg)", border: `1px solid ${f === "CSV" ? "var(--tag-informative-bd)" : "var(--table-border)"}`, color: f === "CSV" ? "var(--primary)" : "var(--field-supporting)" }}>{f}</div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-[4px]">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Date range</p>
+                        <div className="rounded-[6px] px-[12px] py-[8px] text-[12px]" style={{ background: "var(--table-bg)", border: "1px solid var(--table-border)", color: "var(--field-supporting)" }}>Jan 1, 2026 — Jun 30, 2026</div>
+                      </div>
+                    </div>
+                  }
+                  ctaPrimary={{ label: "Export" }}
+                  ctaSecondary={{ label: "Cancel" }}
+                />
+              </div>
+            </div>
+
+            {/* With Informative Card */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">With Informative Card</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">
+                  La informative card aparece encima de los CTAs. Siempre recomendado en acciones irreversibles.
+                </p>
+              </div>
+              <div className="rounded-[10px] overflow-hidden p-[24px]" style={{ border: "1px solid var(--table-border)", background: "var(--surface)" }}>
+                <ModalDialog embedded isOpen={true} onClose={() => {}}
+                  variant="confirmation"
+                  tone="error"
+                  iconName="Trash2"
+                  title="Delete this workflow?"
+                  description="Removing this workflow will disconnect all linked automations and cannot be undone."
+                  informativeCard="All active runs will be cancelled immediately and cannot be recovered."
+                  ctaPrimary={{ label: "Delete", destructive: true }}
+                  ctaSecondary={{ label: "Cancel" }}
+                />
+              </div>
+            </div>
+
+            {/* Destructive */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Destructive action</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">
+                  CTA Primary with destructive=true → red Warning button. Always paired with informativeCard. DS: never omit on destructive actions.
+                </p>
+              </div>
+              <div className="rounded-[10px] overflow-hidden p-[24px]" style={{ border: "1px solid var(--table-border)", background: "var(--surface)" }}>
+                <ModalDialog embedded isOpen={true} onClose={() => {}}
+                  variant="confirmation"
+                  tone="error"
+                  iconName="AlertTriangle"
+                  title="Discard this Workflow?"
+                  description="You will lose all unsaved changes to this workflow. This action cannot be undone."
+                  informativeCard="All active runs associated with this workflow will be stopped immediately."
+                  ctaPrimary={{ label: "Discard", destructive: true }}
+                  ctaSecondary={{ label: "Keep editing" }}
+                />
+              </div>
+            </div>
+
+            {/* No icon */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Without icon</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">showIcon=false — title and description without the icon area.</p>
+              </div>
+              <div className="rounded-[10px] overflow-hidden p-[24px]" style={{ border: "1px solid var(--table-border)", background: "var(--surface)" }}>
+                <ModalDialog embedded isOpen={true} onClose={() => {}}
+                  variant="confirmation"
+                  showIcon={false}
+                  title="Are you sure?"
+                  description="This will remove the selected items from the list permanently."
+                  ctaPrimary={{ label: "Yes, remove" }}
+                  ctaSecondary={{ label: "Cancel" }}
+                />
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Playground ───────────────────────────────────────────────────── */}
+        {tab === "playground" && (
+          <div className="flex flex-col gap-[20px]">
+
+            {/* Controls */}
+            <div className="rounded-md border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
+              <CtrlGroup
+                label="Variant"
+                options={[
+                  { label: "Confirmation", value: "confirmation" },
+                  { label: "Content",      value: "content"      },
+                ]}
+                value={pgVariant}
+                onChange={setPgVariant}
+              />
+              <CtrlGroup
+                label="Tone"
+                options={[
+                  { label: "Default",  value: "default"  },
+                  { label: "Warning",  value: "warning"  },
+                  { label: "Error",    value: "error"    },
+                  { label: "Alert",    value: "alert"    },
+                  { label: "Success",  value: "success"  },
+                ]}
+                value={pgTone}
+                onChange={setPgTone}
+              />
+              <CtrlToggle label="Show Icon"         value={pgShowIcon}    onChange={setPgShowIcon}    />
+              {pgShowIcon && (<>
+                <CtrlGroup
+                  label="Icon variant"
+                  options={[
+                    { label: "Informative", value: "informative" },
+                    { label: "Success",     value: "success"     },
+                    { label: "Alert",       value: "alert"       },
+                    { label: "Error",       value: "error"       },
+                    { label: "Neutral",     value: "neutral"     },
+                    { label: "Yellow",      value: "yellow"      },
+                    { label: "Lime",        value: "lime"        },
+                    { label: "Purple",      value: "purple"      },
+                    { label: "Light Blue",  value: "light-blue"  },
+                  ]}
+                  value={pgIconVariant}
+                  onChange={setPgIconVariant}
+                />
+                <CtrlGroup
+                  label="Icon"
+                  options={[
+                    { label: "Sparkles",      value: "Sparkles"      },
+                    { label: "Info",          value: "Info"          },
+                    { label: "AlertCircle",   value: "AlertCircle"   },
+                    { label: "AlertTriangle", value: "AlertTriangle" },
+                    { label: "CheckCircle2",  value: "CheckCircle2"  },
+                    { label: "Trash2",        value: "Trash2"        },
+                    { label: "FileText",      value: "FileText"      },
+                    { label: "Shield",        value: "Shield"        },
+                    { label: "Bell",          value: "Bell"          },
+                    { label: "Settings",      value: "Settings"      },
+                  ]}
+                  value={pgIconName}
+                  onChange={setPgIconName}
+                />
+              </>)}
+              <CtrlToggle label="Title"             value={pgShowTitle}   onChange={setPgShowTitle}   />
+              <CtrlToggle label="Description"       value={pgShowDesc}    onChange={setPgShowDesc}    />
+              {pgVariant === "content" && (
+                <CtrlToggle label="Slot (content)"  value={pgShowSlot}    onChange={setPgShowSlot}    />
+              )}
+              <CtrlToggle label="Informative Card"  value={pgShowInfo}    onChange={setPgShowInfo}    />
+              {pgShowInfo && (
+                <CtrlGroup
+                  label="Card state"
+                  options={[
+                    { label: "Informative", value: "informative" },
+                    { label: "Alert",       value: "alert"       },
+                    { label: "Error",       value: "error"       },
+                    { label: "Success",     value: "success"     },
+                    { label: "Neutral",     value: "neutral"     },
+                  ]}
+                  value={pgInfoVariant}
+                  onChange={setPgInfoVariant}
+                />
+              )}
+              <CtrlToggle label="CTA Primary"       value={pgShowPrimary} onChange={setPgShowPrimary} />
+              <CtrlToggle label="CTA Secondary"     value={pgShowSec}     onChange={setPgShowSec}     />
+              {pgShowPrimary && (
+                <CtrlToggle label="Destructive"     value={pgDestructive} onChange={setPgDestructive} />
+              )}
+              <CtrlToggle label="Close button"      value={pgShowClose}   onChange={setPgShowClose}   />
+            </div>
+
+            {/* Trigger */}
+            <div
+              className="rounded-md border border-dashed border-[var(--field-border)] p-[20px] flex flex-col items-center gap-[12px] min-h-[100px] justify-center"
+            >
+              <p className="text-[12px] text-[var(--field-supporting)]">Click to open the modal with the current configuration</p>
+              <Button variant="primary" onClick={() => setPgOpen(true)}>Launch Modal</Button>
+            </div>
+
+            {/* The live modal */}
+            <ModalDialog
+              isOpen={pgOpen}
+              onClose={() => setPgOpen(false)}
+              variant={pgVariant}
+              tone={pgTone}
+              iconVariant={pgShowIcon ? pgIconVariant : undefined}
+              infoCardState={pgShowInfo ? pgInfoVariant : undefined}
+              showIcon={pgShowIcon}
+              iconName={pgShowIcon ? pgIconName : undefined}
+              title={pgShowTitle ? (pgDestructive ? "Delete this item?" : pgVariant === "content" ? "Review and confirm" : "Confirm your action") : undefined}
+              description={pgShowDesc ? (pgDestructive ? "This action is irreversible. All data associated with this item will be permanently removed." : "This will affect all linked resources in your workspace. Please review before continuing.") : undefined}
+              slot={pgShowSlot && pgVariant === "content" ? (
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>Custom content area</p>
+                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Forms, data tables, lists, or any structured content can be rendered here via the slot prop.</p>
+                </div>
+              ) : undefined}
+              informativeCard={pgShowInfo ? (pgDestructive ? "All associated runs and automations will be stopped and cannot be recovered." : "Please review all details carefully. Some changes may take a few minutes to propagate.") : undefined}
+              ctaPrimary={pgShowPrimary ? { label: pgDestructive ? "Delete" : "Confirm", destructive: pgDestructive, onClick: () => setPgOpen(false) } : undefined}
+              ctaSecondary={pgShowSec ? { label: "Cancel", onClick: () => setPgOpen(false) } : undefined}
+              showClose={pgShowClose}
+            />
+
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
+// ── InformativeCardPage ───────────────────────────────────────────────────────
+
+function InformativeCardPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab,           setTab]           = useState<"overview" | "playground" | "reference">("overview")
+  const [pgState,       setPgState]       = useState<InformativeCardState>("informative")
+  const [pgSize,        setPgSize]        = useState<InformativeCardSize>("md")
+  const [pgShowDesc,    setPgShowDesc]    = useState(false)
+  const [pgShowCta,     setPgShowCta]     = useState(false)
+  const [pgShowCtaSec,  setPgShowCtaSec]  = useState(false)
+
+  const IC_STATES: InformativeCardState[] = ["informative", "alert", "error", "success", "neutral"]
+  const IC_SIZES:  InformativeCardSize[]  = ["sm", "md", "lg"]
+
+  const STATE_TITLES: Record<InformativeCardState, string> = {
+    informative: "Your workspace is being synced",
+    alert:       "Action required before continuing",
+    error:       "Something went wrong with this step",
+    success:     "Changes saved successfully",
+    neutral:     "No active configuration found",
+  }
+  const STATE_DESCS: Record<InformativeCardState, string> = {
+    informative: "This may take a few minutes depending on the size of your workspace.",
+    alert:       "Please review the pending items below before proceeding with this action.",
+    error:       "Check your connection settings and try again. Contact support if the issue persists.",
+    success:     "All linked resources have been updated and are now in sync.",
+    neutral:     "Set up a configuration to start using this feature in your workflows.",
+  }
+
+  return (
+    <div className="flex flex-col gap-0">
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Informative Card</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            Horizontal surface that combines icon + title + optional description + optional CTA pair.
+            5 semantic states × 3 sizes. Token family <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">--ic-*</code> separate from HighlightIcon.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("informative-card")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "playground", label: "Playground" },
+          { id: "reference",  label: "Reference"  },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Overview ───────────────────────────────────────────────────────── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* States */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">5 estados — Size M</h2>
+              <div className="flex flex-col gap-[8px]">
+                {IC_STATES.map(s => (
+                  <InformativeCard
+                    key={s}
+                    state={s}
+                    size="md"
+                    title={STATE_TITLES[s]}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Sizes */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">3 sizes — Estado Informative</h2>
+              <div className="flex flex-col gap-[8px]">
+                {IC_SIZES.map(sz => (
+                  <div key={sz} className="flex items-center gap-[12px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider w-[20px] text-[var(--field-supporting)]">{sz}</span>
+                    <InformativeCard
+                      state="informative"
+                      size={sz}
+                      title={sz === "sm" ? "Compact notice" : sz === "md" ? "Standard inline message" : "Expanded informative surface with more breathing room"}
+                      className="flex-1"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* With description + CTA */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Con description y CTA</h2>
+              <div className="flex flex-col gap-[8px]">
+                <InformativeCard
+                  state="alert"
+                  size="md"
+                  title="Action required before continuing"
+                  description="Please review the pending items below before proceeding with this action."
+                />
+                <InformativeCard
+                  state="error"
+                  size="md"
+                  title="Failed to connect to the service"
+                  description="Check your connection settings and try again."
+                  cta={{ label: "Retry" }}
+                />
+              </div>
+            </div>
+
+            {/* Usage */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Inside a Modal Dialog to warn about irreversible actions.",
+                    "As an inline notice in forms or configuration panels.",
+                    "To display the status of a process (success, error, in progress).",
+                    "When the message needs to remain visible while the user acts.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Not as a substitute for a Toast — toasts are transient, this component persists.",
+                    "Do not stack more than 2 in the same view.",
+                    "Do not use the neutral state for error or alert messages — use the correct semantic state.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Playground ─────────────────────────────────────────────────────── */}
+        {tab === "playground" && (
+          <div className="flex flex-col gap-[20px]">
+
+            {/* Controls */}
+            <div className="rounded-md border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
+              <CtrlGroup
+                label="State"
+                options={[
+                  { label: "Informative", value: "informative" },
+                  { label: "Alert",       value: "alert"       },
+                  { label: "Error",       value: "error"       },
+                  { label: "Success",     value: "success"     },
+                  { label: "Neutral",     value: "neutral"     },
+                ]}
+                value={pgState}
+                onChange={setPgState}
+              />
+              <CtrlGroup
+                label="Size"
+                options={[
+                  { label: "SM", value: "sm" },
+                  { label: "MD", value: "md" },
+                  { label: "LG", value: "lg" },
+                ]}
+                value={pgSize}
+                onChange={setPgSize}
+              />
+              <CtrlToggle label="Description"   value={pgShowDesc}   onChange={setPgShowDesc}   />
+              <CtrlToggle label="CTA Primary"  value={pgShowCta}    onChange={setPgShowCta}    />
+              <CtrlToggle label="CTA Secondary" value={pgShowCtaSec} onChange={setPgShowCtaSec} />
+            </div>
+
+            {/* Live preview */}
+            <div
+              className="rounded-md border border-[var(--field-border)] p-[24px] flex flex-col gap-[12px]"
+              style={{ background: "var(--surface)" }}
+            >
+              <InformativeCard
+                state={pgState}
+                size={pgSize}
+                title={STATE_TITLES[pgState]}
+                description={pgShowDesc ? STATE_DESCS[pgState] : undefined}
+                cta={pgShowCta ? { label: pgState === "error" ? "Retry" : "Confirm" } : undefined}
+                ctaSecondary={pgShowCtaSec ? { label: "Dismiss" } : undefined}
+              />
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Reference ──────────────────────────────────────────────────────── */}
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[24px]">
+
+            <div className="flex flex-col gap-[8px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Prop","Type","Default","Description"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] text-[12px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { prop: "state",       type: "InformativeCardState", def: '"informative"', desc: "Color theme: informative · alert · error · success · neutral" },
+                      { prop: "size",        type: "InformativeCardSize",  def: '"md"',          desc: "Padding size: sm (8px) · md (16px) · lg (24px)" },
+                      { prop: "title",       type: "string",               def: "—",             desc: "Required. Primary message text (14px semibold)." },
+                      { prop: "description", type: "string",               def: "undefined",     desc: "Optional secondary line below the title (14px medium)." },
+                      { prop: "cta",          type: "{ label, onClick? }", def: "undefined",     desc: "Primary action button (Button primary sm), right-most." },
+                      { prop: "ctaSecondary", type: "{ label, onClick? }", def: "undefined",     desc: "Secondary action button (Button secondary sm), left of primary — matches DS CTA pair." },
+                      { prop: "icon",         type: "ReactNode",            def: "undefined",     desc: "Overrides the default state icon (AlertTriangle, Info, etc.)." },
+                      { prop: "className",   type: "string",               def: "undefined",     desc: "Extra classes applied to the root element." },
+                    ].map(row => (
+                      <tr key={row.prop} style={{ borderBottom: "1px solid var(--table-border)" }}>
+                        <td className="px-[14px] py-[10px] font-mono text-[12px]" style={{ color: "var(--primary)" }}>{row.prop}</td>
+                        <td className="px-[14px] py-[10px] font-mono text-[12px] text-[var(--field-supporting)]">{row.type}</td>
+                        <td className="px-[14px] py-[10px] font-mono text-[12px] text-[var(--field-supporting)]">{row.def}</td>
+                        <td className="px-[14px] py-[10px] text-[var(--field-supporting)]">{row.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[8px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Token family <code className="text-[14px] font-mono">--ic-*</code></h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["State","--ic-*-bg","--ic-*-icon","--ic-*-text"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] text-[12px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { state: "informative", bg: "#E9F1FF",  icon: "#2173FF", text: "#001740"  },
+                      { state: "alert",       bg: "#FFF4E5",  icon: "#ED6C02", text: "#663C00"  },
+                      { state: "error",       bg: "#FDEDED",  icon: "#992222", text: "#5F2120"  },
+                      { state: "success",     bg: "#E5FDF8",  icon: "#00A07E", text: "#003328"  },
+                      { state: "neutral",     bg: "#F2F2F2",  icon: "#2A2A2A", text: "#2A2A2A"  },
+                    ].map(row => (
+                      <tr key={row.state} style={{ borderBottom: "1px solid var(--table-border)" }}>
+                        <td className="px-[14px] py-[10px] capitalize font-medium" style={{ color: "var(--foreground)" }}>{row.state}</td>
+                        <td className="px-[14px] py-[10px]">
+                          <span className="flex items-center gap-[6px]">
+                            <span className="w-[12px] h-[12px] rounded-[3px] border border-[var(--field-border)]" style={{ background: row.bg }} />
+                            <code className="text-[11px] font-mono text-[var(--field-supporting)]">{row.bg}</code>
+                          </span>
+                        </td>
+                        <td className="px-[14px] py-[10px]">
+                          <span className="flex items-center gap-[6px]">
+                            <span className="w-[12px] h-[12px] rounded-[3px] border border-[var(--field-border)]" style={{ background: row.icon }} />
+                            <code className="text-[11px] font-mono text-[var(--field-supporting)]">{row.icon}</code>
+                          </span>
+                        </td>
+                        <td className="px-[14px] py-[10px]">
+                          <span className="flex items-center gap-[6px]">
+                            <span className="w-[12px] h-[12px] rounded-[3px] border border-[var(--field-border)]" style={{ background: row.text }} />
+                            <code className="text-[11px] font-mono text-[var(--field-supporting)]">{row.text}</code>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[12px] text-[var(--field-supporting)]">
+                Dark mode values are defined separately in <code className="font-mono">index.css</code> under <code className="font-mono">:root</code> (dark) and <code className="font-mono">.light</code>.
+                The token family <code className="font-mono">--ic-*</code> is independent from <code className="font-mono">--hi-*</code> (HighlightIcon).
+              </p>
+            </div>
+
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
+// ── FiltersInteractivePlayground ──────────────────────────────────────────────
+
+function FiltersInteractivePlayground() {
+  const [openChip,   setOpenChip]   = useState<number | null>(null)
+  const [sortOpen,   setSortOpen]   = useState(false)
+  const [sortValue,  setSortValue]  = useState("Name")
+  const [singleVals, setSingleVals] = useState<Record<number, string>>({})
+  const [multiSets,  setMultiSets]  = useState<Record<number, Set<string>>>({})
+  const [slideout,   setSlideout]   = useState(false)
+  const [numChips,   setNumChips]   = useState(3)
+  const [showSort,   setShowSort]   = useState(true)
+  const [showView,   setShowView]   = useState(true)
+  const [viewMode,   setViewMode]   = useState<"grid" | "list">("grid")
+  const [datePreset, setDatePreset] = useState("")
+  const [calDate,    setCalDate]    = useState<Date | null>(null)
+  const [calMonth,   setCalMonth]   = useState(new Date().getMonth())
+  const [calYear,    setCalYear]    = useState(new Date().getFullYear())
+  const [hovered,    setHovered]    = useState<string | null>(null)
+
+  const CHIP_DEFS: { placeholder: string; kind: "single" | "multi" | "priority" | "date"; options: string[] }[] = [
+    { placeholder: "Type",     kind: "single",   options: ["Product", "Engineering", "Design", "Operations"] },
+    { placeholder: "Owner",    kind: "multi",    options: ["Alice B.", "Bob C.", "Carol D.", "David E.", "Eve F."] },
+    { placeholder: "Modified", kind: "date",     options: [] },
+    { placeholder: "Status",   kind: "multi",    options: ["Active", "Draft", "Archived", "Pending", "Review"] },
+    { placeholder: "Priority", kind: "priority", options: [] },
+  ]
+
+  const PRIORITY_OPTS = [
+    { label: "Critical", color: "#ef4444" },
+    { label: "High",     color: "#f97316" },
+    { label: "Medium",   color: "#f59e0b" },
+    { label: "Low",      color: "#22c55e" },
+  ]
+
+  const SORT_OPTS  = ["Name", "Date modified", "Date created", "Priority", "Owner"]
+  const DATE_PRE   = ["Today", "Yesterday", "Last 7 days", "Last 30 days", "This month", "Custom range"]
+  const MONTHS     = ["January","February","March","April","May","June","July","August","September","October","November","December"]
+  const DAYS_SHORT = ["Su","Mo","Tu","We","Th","Fr","Sa"]
+
+  function getChipVals(i: number): string[] {
+    const def = CHIP_DEFS[i]
+    if (def.kind === "single") return singleVals[i] ? [singleVals[i]] : []
+    if (def.kind === "date") {
+      if (datePreset === "Custom range" && calDate) {
+        return [calDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })]
+      }
+      return datePreset ? [datePreset] : []
+    }
+    const set = multiSets[i]
+    return set ? [...set] : []
+  }
+
+  function removeVal(i: number, val: string) {
+    const def = CHIP_DEFS[i]
+    if (def.kind === "single") {
+      setSingleVals(v => { const n = {...v}; delete n[i]; return n })
+    } else if (def.kind === "date") {
+      if (val === (calDate ? calDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : datePreset)) {
+        setDatePreset(""); setCalDate(null)
+      } else { setDatePreset(""); setCalDate(null) }
+    } else {
+      setMultiSets(v => { const s = new Set(v[i] || []); s.delete(val); return {...v, [i]: s} })
+    }
+  }
+
+  function clearChip(i: number) {
+    const def = CHIP_DEFS[i]
+    if (def.kind === "single") { setSingleVals(v => { const n = {...v}; delete n[i]; return n }) }
+    else if (def.kind === "date") { setDatePreset(""); setCalDate(null) }
+    else { setMultiSets(v => { const n = {...v}; delete n[i]; return n }) }
+    if (openChip === i) setOpenChip(null)
+  }
+
+  function clearAll() {
+    setSingleVals({}); setMultiSets({}); setDatePreset(""); setCalDate(null); setOpenChip(null)
+  }
+
+  const hasActive = CHIP_DEFS.slice(0, numChips).some((_, i) => getChipVals(i).length > 0)
+
+  const activeFilters = CHIP_DEFS.slice(0, numChips).flatMap((def, i) =>
+    getChipVals(i).map(val => ({ label: def.placeholder, value: val, onRemove: () => removeVal(i, val) }))
+  )
+
+  // Calendar helpers
+  const calDays = () => {
+    const first = new Date(calYear, calMonth, 1).getDay()
+    const last  = new Date(calYear, calMonth + 1, 0).getDate()
+    const days: (number | null)[] = []
+    for (let i = 0; i < first; i++) days.push(null)
+    for (let d = 1; d <= last; d++) days.push(d)
+    return days
+  }
+  const prevMo = () => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y-1) } else setCalMonth(m => m-1) }
+  const nextMo = () => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y+1) } else setCalMonth(m => m+1) }
+
+  // Render content inside an active chip
+  function renderChipFace(i: number) {
+    const vals = getChipVals(i)
+    const def  = CHIP_DEFS[i]
+    if (vals.length === 0) return (
+      <>
+        <span className="text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--fi-chip-text)" }}>
+          {def.placeholder}
+        </span>
+        <LucideIcons.ChevronDown className="w-[13px] h-[13px] shrink-0" style={{ color: "var(--fi-chip-icon)" }} />
+      </>
+    )
+    const visible  = vals.slice(0, 2)
+    const overflow = vals.length - 2
+    return (
+      <>
+        {visible.map(v => (
+          <Tag key={v} variant="informative" size="sm"
+            trailingIcon={
+              <button className="flex items-center justify-center hover:opacity-70 transition-opacity ml-[1px]"
+                onClick={e => { e.stopPropagation(); removeVal(i, v) }} aria-label={`Remove ${v}`}>
+                <LucideIcons.X className="w-[9px] h-[9px]" />
+              </button>
+            }
+          >
+            {v.length > 11 ? `${v.slice(0, 11)}…` : v}
+          </Tag>
+        ))}
+        {overflow > 0 && (
+          <span className="inline-flex items-center justify-center min-w-[22px] h-[18px] px-[5px] rounded-full text-[11px] font-semibold leading-none shrink-0"
+            style={{ background: "var(--fi-badge-bg)", color: "var(--fi-badge-text)" }}>
+            +{overflow}
+          </span>
+        )}
+        <LucideIcons.ChevronDown className="w-[13px] h-[13px] shrink-0" style={{ color: "var(--fi-chip-active-icon)" }} />
+      </>
+    )
+  }
+
+  // Menu item row helper
+  function menuRow(key: string, content: React.ReactNode, onClick: () => void) {
+    return (
+      <div key={key}
+        className="flex items-center gap-[10px] h-[36px] px-[12px] cursor-pointer rounded-[6px] mx-[4px] transition-colors"
+        style={{ background: hovered === key ? "var(--menu-item-hover)" : "transparent" }}
+        onMouseEnter={() => setHovered(key)} onMouseLeave={() => setHovered(null)}
+        onClick={onClick}
+      >
+        {content}
+      </div>
+    )
+  }
+
+  function radio(active: boolean) {
+    return (
+      <span className="w-[15px] h-[15px] rounded-full border-2 flex items-center justify-center shrink-0"
+        style={{ borderColor: active ? "var(--primary)" : "var(--field-border)" }}>
+        {active && <span className="w-[6px] h-[6px] rounded-full" style={{ background: "var(--primary)" }} />}
+      </span>
+    )
+  }
+
+  // Render floating dropdown content for each chip kind
+  function renderDropdown(i: number) {
+    const def = CHIP_DEFS[i]
+    const today = new Date()
+
+    if (def.kind === "single") {
+      const cur = singleVals[i]
+      return (
+        <div className="py-[4px]">
+          {def.options.map(opt => menuRow(`s-${i}-${opt}`,
+            <>{radio(cur === opt)}<span className="text-[13px]" style={{ color: "var(--menu-item-text)" }}>{opt}</span></>,
+            () => { setSingleVals(v => ({...v, [i]: opt})); setOpenChip(null) }
+          ))}
+        </div>
+      )
+    }
+
+    if (def.kind === "multi") {
+      const set = multiSets[i] || new Set<string>()
+      return (
+        <div className="py-[4px]">
+          {def.options.map(opt => menuRow(`m-${i}-${opt}`,
+            <>
+              <Checkbox size="sm" checked={set.has(opt)} onChange={() => {}} />
+              <span className="text-[13px]" style={{ color: "var(--menu-item-text)" }}>{opt}</span>
+            </>,
+            () => setMultiSets(v => { const s = new Set(v[i] || []); s.has(opt) ? s.delete(opt) : s.add(opt); return {...v, [i]: s} })
+          ))}
+        </div>
+      )
+    }
+
+    if (def.kind === "priority") {
+      const set = multiSets[i] || new Set<string>()
+      return (
+        <div className="py-[4px]">
+          {PRIORITY_OPTS.map(p => menuRow(`p-${i}-${p.label}`,
+            <>
+              <Checkbox size="sm" checked={set.has(p.label)} onChange={() => {}} />
+              <span className="w-[8px] h-[8px] rounded-full shrink-0" style={{ background: p.color }} />
+              <span className="text-[13px]" style={{ color: "var(--menu-item-text)" }}>{p.label}</span>
+            </>,
+            () => setMultiSets(v => { const s = new Set(v[i] || []); s.has(p.label) ? s.delete(p.label) : s.add(p.label); return {...v, [i]: s} })
+          ))}
+        </div>
+      )
+    }
+
+    if (def.kind === "date") {
+      const days = calDays()
+      return (
+        <div>
+          <div className="py-[4px]">
+            {DATE_PRE.map(pre => menuRow(`d-${pre}`,
+              <>{radio(datePreset === pre)}<span className="text-[13px]" style={{ color: "var(--menu-item-text)" }}>{pre}</span></>,
+              () => { setDatePreset(pre); if (pre !== "Custom range") setOpenChip(null) }
+            ))}
+          </div>
+          {/* Mini dark-mode calendar */}
+          {datePreset === "Custom range" && (
+            <div className="px-[10px] pb-[12px] pt-[4px]">
+              <div className="rounded-[8px] overflow-hidden"
+                style={{ border: "1px solid var(--menu-divider)", background: "var(--surface)" }}>
+                {/* Month nav */}
+                <div className="flex items-center justify-between px-[10px] h-[38px]"
+                  style={{ borderBottom: "1px solid var(--menu-divider)" }}>
+                  <button className="w-[24px] h-[24px] flex items-center justify-center rounded-[4px] transition-colors"
+                    style={{ color: "var(--menu-item-text)" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-item-hover)" }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent" }}
+                    onClick={prevMo}>
+                    <LucideIcons.ChevronLeft className="w-[13px] h-[13px]" />
+                  </button>
+                  <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>
+                    {MONTHS[calMonth].slice(0, 3)} {calYear}
+                  </span>
+                  <button className="w-[24px] h-[24px] flex items-center justify-center rounded-[4px] transition-colors"
+                    style={{ color: "var(--menu-item-text)" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-item-hover)" }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent" }}
+                    onClick={nextMo}>
+                    <LucideIcons.ChevronRight className="w-[13px] h-[13px]" />
+                  </button>
+                </div>
+                {/* Day headers */}
+                <div className="grid grid-cols-7 px-[6px] pt-[6px] pb-[2px]">
+                  {DAYS_SHORT.map(d => (
+                    <div key={d} className="text-center text-[10px] font-semibold py-[2px]"
+                      style={{ color: "var(--field-supporting)" }}>{d}</div>
+                  ))}
+                </div>
+                {/* Day cells */}
+                <div className="grid grid-cols-7 px-[6px] pb-[8px] gap-y-[1px]">
+                  {days.map((d, idx) => {
+                    const isSel = d && calDate &&
+                      d === calDate.getDate() && calMonth === calDate.getMonth() && calYear === calDate.getFullYear()
+                    const isToday = d && d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear()
+                    const hk = `cal-${idx}`
+                    return (
+                      <button key={idx}
+                        className="w-[28px] h-[26px] mx-auto flex items-center justify-center rounded-[4px] text-[11px] transition-colors"
+                        style={{
+                          background: isSel ? "var(--primary)" : hovered === hk && d ? "var(--menu-item-hover)" : "transparent",
+                          color: isSel ? "#fff" : isToday ? "var(--primary)" : d ? "var(--foreground)" : "transparent",
+                          fontWeight: isToday && !isSel ? "700" : undefined,
+                          cursor: d ? "pointer" : "default",
+                        }}
+                        onMouseEnter={() => d && setHovered(hk)}
+                        onMouseLeave={() => setHovered(null)}
+                        onClick={() => { if (d) { setCalDate(new Date(calYear, calMonth, d)); setOpenChip(null) } }}
+                        disabled={!d}>
+                        {d ?? ""}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+    return null
+  }
+
+  // Shared floating card style
+  const floatStyle: CSSProperties = {
+    background:            "var(--menu-bg)",
+    backdropFilter:        "blur(10px)",
+    WebkitBackdropFilter:  "blur(10px)",
+    boxShadow:             "0 8px 32px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.16)",
+    border:                "1px solid var(--menu-divider)",
+    borderRadius:          "8px",
+    overflow:              "hidden",
+  }
+
+  // Dropdown header
+  function dropHeader(title: string, hasVals: boolean, onClear: () => void) {
+    return (
+      <div className="flex items-center justify-between px-[12px] h-[40px] shrink-0"
+        style={{ borderBottom: "1px solid var(--menu-divider)" }}>
+        <span className="text-[11px] font-semibold uppercase tracking-wider"
+          style={{ color: "var(--menu-section-text)" }}>{title}</span>
+        <div className="flex items-center gap-[8px]">
+          {hasVals && (
+            <button className="text-[11px] font-medium transition-opacity hover:opacity-70"
+              style={{ color: "var(--fi-clear-text)" }}
+              onClick={e => { e.stopPropagation(); onClear() }}>
+              Clear
+            </button>
+          )}
+          <button className="w-[22px] h-[22px] flex items-center justify-center rounded-[4px] transition-colors"
+            style={{ color: "var(--menu-item-icon)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--menu-item-hover)" }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent" }}
+            onClick={() => setOpenChip(null)}>
+            <LucideIcons.X className="w-[12px] h-[12px]" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-[20px]">
+      {/* Click-outside overlay — closes any open dropdown */}
+      {(openChip !== null || sortOpen) && (
+        <div className="fixed inset-0 z-40"
+          onClick={() => { setOpenChip(null); setSortOpen(false) }} />
+      )}
+
+      {/* Controls */}
+      <div className="rounded-[8px] border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
+        <CtrlGroup
+          label="Quick filter chips"
+          options={[
+            { label: "1", value: "1" }, { label: "2", value: "2" }, { label: "3", value: "3" },
+            { label: "4", value: "4" }, { label: "5", value: "5" },
+          ]}
+          value={String(numChips)}
+          onChange={v => { setNumChips(Number(v)); setOpenChip(null) }}
+        />
+        <CtrlToggle label="Show sort" value={showSort} onChange={setShowSort} />
+        <CtrlToggle label="Show view toggle" value={showView} onChange={setShowView} />
+      </div>
+
+      {/* ── Filter bar container ─────────────────────────────────────────── */}
+      <div className="rounded-[8px]" style={{ border: "1px solid var(--field-border)", background: "var(--surface)" }}>
+
+        {/* Bar row */}
+        <div className="flex items-center gap-[8px] px-[16px] h-[56px]" style={{ flexWrap: "nowrap", minWidth: 0 }}>
+
+          {/* Search field */}
+          <div className="inline-flex items-center gap-[6px] h-[40px] px-[10px] rounded-[8px] border w-[150px] shrink-0"
+            style={{ background: "var(--fi-chip-bg)", borderColor: "var(--fi-chip-border)" }}>
+            <LucideIcons.Search className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--fi-chip-icon)" }} />
+            <span className="text-[13px] font-medium" style={{ color: "var(--fi-chip-icon)" }}>Search</span>
+          </div>
+
+          {/* Filter chips with floating dropdowns */}
+          {CHIP_DEFS.slice(0, numChips).map((def, i) => {
+            const vals     = getChipVals(i)
+            const isActive = vals.length > 0
+            const isOpen   = openChip === i
+            return (
+              <div key={i} className="relative shrink-0">
+                <button
+                  className="inline-flex items-center gap-[5px] h-[40px] px-[8px] rounded-[8px] border text-[13px] font-medium select-none transition-colors"
+                  style={{
+                    background:  isActive ? "var(--fi-chip-active-bg)" : "var(--fi-chip-bg)",
+                    borderColor: isActive || isOpen ? "var(--fi-chip-active-border)" : "var(--fi-chip-border)",
+                  }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--fi-chip-hover-bg)" }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "var(--fi-chip-bg)" }}
+                  onClick={() => { setSortOpen(false); setOpenChip(prev => prev === i ? null : i) }}
+                >
+                  {renderChipFace(i)}
+                </button>
+
+                {/* Floating dropdown */}
+                {isOpen && (
+                  <div className="absolute top-[calc(100%+6px)] left-0 z-50 w-[260px]"
+                    style={{ ...floatStyle, maxHeight: "360px", overflowY: "auto" }}>
+                    {dropHeader(def.placeholder, isActive, () => clearChip(i))}
+                    {renderDropdown(i)}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Clear filters */}
+          {hasActive && (
+            <button className="text-[13px] font-medium transition-colors shrink-0"
+              style={{ color: "var(--fi-clear-text)" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--fi-clear-hover)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = "var(--fi-clear-text)" }}
+              onClick={clearAll}>
+              Clear Filters
+            </button>
+          )}
+
+          <div className="flex-1 min-w-0" />
+
+          {/* All filters */}
+          <button
+            className="inline-flex items-center gap-[6px] h-[40px] px-[12px] rounded-full border text-[13px] font-medium transition-colors shrink-0"
+            style={{ background: "var(--fi-chip-bg)", borderColor: "var(--fi-chip-border)", color: "var(--fi-chip-text)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--fi-chip-hover-bg)" }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--fi-chip-bg)" }}
+            onClick={() => { setSlideout(true); setOpenChip(null); setSortOpen(false) }}>
+            All filters
+            <LucideIcons.SlidersHorizontal className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--fi-chip-icon)" }} />
+          </button>
+
+          {/* Sort */}
+          {showSort && (
+            <div className="relative flex items-center shrink-0">
+              <button className="flex items-center justify-center w-[32px] h-[40px] transition-opacity hover:opacity-80"
+                style={{ color: "var(--fi-sort-icon)" }}
+                onClick={() => { setSortOpen(v => !v); setOpenChip(null) }}
+                aria-label="Sort direction">
+                <LucideIcons.ArrowDown className="w-[16px] h-[16px]" />
+              </button>
+              <button
+                className="inline-flex items-center gap-[4px] h-[40px] px-[4px] text-[13px] font-medium transition-opacity hover:opacity-80"
+                style={{ color: "var(--fi-sort-text)" }}
+                onClick={() => { setSortOpen(v => !v); setOpenChip(null) }}>
+                {sortValue}
+                <LucideIcons.ChevronDown className="w-[13px] h-[13px] shrink-0" style={{ color: "var(--fi-sort-icon)" }} />
+              </button>
+              {sortOpen && (
+                <div className="absolute top-[calc(100%+6px)] right-0 z-50 w-[200px]"
+                  style={{ ...floatStyle }}>
+                  {dropHeader("Sort by", false, () => {})}
+                  <div className="py-[4px]">
+                    {SORT_OPTS.map(opt => menuRow(`srt-${opt}`,
+                      <>{radio(sortValue === opt)}<span className="text-[13px]" style={{ color: "var(--menu-item-text)" }}>{opt}</span></>,
+                      () => { setSortValue(opt); setSortOpen(false) }
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* View toggle */}
+          {showView && (
+            <div className="flex items-center shrink-0">
+              {(["grid", "list"] as const).map(m => (
+                <button key={m}
+                  className="flex items-center justify-center w-[32px] h-[32px] rounded-[6px] transition-colors"
+                  style={{
+                    background: viewMode === m ? "var(--fi-view-active-bg)"   : "transparent",
+                    color:      viewMode === m ? "var(--fi-view-active-icon)" : "var(--fi-view-icon)",
+                  }}
+                  onClick={() => setViewMode(m)}
+                  aria-label={`${m} view`}>
+                  {m === "grid"
+                    ? <LucideIcons.LayoutGrid className="w-[16px] h-[16px]" />
+                    : <LucideIcons.LayoutList className="w-[16px] h-[16px]" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Applied filters summary row */}
+        {hasActive && (
+          <div className="flex flex-wrap items-center gap-[6px] px-[16px] py-[10px]"
+            style={{ borderTop: "1px solid var(--field-border)" }}>
+            <span className="text-[11px] font-semibold uppercase tracking-wider shrink-0"
+              style={{ color: "var(--field-supporting)" }}>Applied:</span>
+            {activeFilters.map((f, idx) => (
+              <Tag key={`af-${idx}`} variant="informative" size="sm"
+                trailingIcon={
+                  <button className="flex items-center justify-center hover:opacity-70 transition-opacity ml-[1px]"
+                    onClick={f.onRemove} aria-label={`Remove ${f.value}`}>
+                    <LucideIcons.X className="w-[9px] h-[9px]" />
+                  </button>
+                }>
+                {f.label}: {f.value.length > 13 ? `${f.value.slice(0, 13)}…` : f.value}
+              </Tag>
+            ))}
+            <button className="text-[12px] font-medium transition-colors ml-[2px]"
+              style={{ color: "var(--fi-clear-text)" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--fi-clear-hover)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = "var(--fi-clear-text)" }}
+              onClick={clearAll}>
+              Clear all
+            </button>
+          </div>
+        )}
+      </div>
+
+      <FiltersSlideout
+        isOpen={slideout}
+        onClose={() => setSlideout(false)}
+        onClearAll={clearAll}
+        onApply={() => setSlideout(false)}
+        activeFilters={activeFilters}
+      />
+    </div>
+  )
+}
+
+// ── FiltersPage ───────────────────────────────────────────────────────────────
+
+function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab,              setTab]              = useState<"overview" | "playground" | "slideout" | "reference">("overview")
+  const [pgCompact,        setPgCompact]        = useState(false)
+  const [pgCompactCount,   setPgCompactCount]   = useState(0)
+  const [pgShowClearFilters, setPgShowClearFilters] = useState(false)
+  const [pgShowAllFilters, setPgShowAllFilters] = useState(true)
+  const [pgShowSort,       setPgShowSort]       = useState(true)
+  const [pgShowView,       setPgShowView]       = useState(true)
+  const [pgViewMode,       setPgViewMode]       = useState<"grid" | "list">("grid")
+  const [pgActiveSlot,     setPgActiveSlot]     = useState<number | null>(null)
+  const [pgSlideoutOpen,   setPgSlideoutOpen]   = useState(false)
+
+  const DEFAULT_SLOTS: FilterSlot[] = [
+    { placeholder: "Type"     },
+    { placeholder: "Owner"    },
+    { placeholder: "Modified" },
+    { placeholder: "Filter 4" },
+  ]
+
+  const ACTIVE_SLOTS: FilterSlot[] = [
+    { placeholder: "Type"     },
+    { placeholder: "Owner",   value: "John Smith" },
+    { placeholder: "Modified" },
+    { placeholder: "Filter 4" },
+  ]
+
+  const pgSlots = pgCompact
+    ? []
+    : (pgActiveSlot !== null
+        ? DEFAULT_SLOTS.map((s, i) => i === pgActiveSlot ? { ...s, value: "John Smith" } : s)
+        : DEFAULT_SLOTS)
+
+  return (
+    <div className="flex flex-col gap-0">
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Filters</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            Horizontal 40px filter bar for narrowing large datasets. 8 state variants · up to 5 filter chips ·
+            selected value shown as <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">Tag informative sm</code> ·
+            label truncated at 14 chars. "All filters" opens a 380px slideout with 12 section types.
+            Token family{" "}
+            <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">--fi-*</code>.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("filters")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "playground", label: "Playground" },
+          { id: "slideout",   label: "Slideout"   },
+          { id: "reference",  label: "Reference"  },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Overview ─────────────────────────────────────────────────────── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[40px]">
+
+            {/* State variants */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">State variants</h2>
+              <p className="text-[13px] text-[var(--field-supporting)] -mt-[4px]">8 variants from the DS — all 40px tall, full-width.</p>
+
+              <div className="flex flex-col gap-[16px]">
+
+                {/* S Variant */}
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">S Variant</span>
+                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
+                    <Filters compact showSearch showSort showViewToggle showAllFilters />
+                  </div>
+                </div>
+
+                {/* S Variant Filters Apply */}
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">S Variant — Filters Apply</span>
+                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
+                    <Filters compact compactCount={1} showSort showViewToggle />
+                  </div>
+                </div>
+
+                {/* Default */}
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Default</span>
+                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
+                    <Filters showSearch slots={DEFAULT_SLOTS} showSort showViewToggle showAllFilters />
+                  </div>
+                </div>
+
+                {/* Owner 1 — active filter chip */}
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Owner 1 — active chip</span>
+                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
+                    <Filters
+                      showSearch
+                      slots={ACTIVE_SLOTS}
+                      showClearFilters
+                      showSort showViewToggle showAllFilters
+                    />
+                  </div>
+                </div>
+
+                {/* Modified Active */}
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Modified Active</span>
+                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
+                    <Filters
+                      showSearch={false}
+                      slots={[
+                        { placeholder: "Type"     },
+                        { placeholder: "Owner"    },
+                        { placeholder: "Modified", value: "Last 7 Days" },
+                        { placeholder: "Filter 4" },
+                      ]}
+                      showClearFilters
+                      showSort showViewToggle showAllFilters
+                    />
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Anatomy */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Anatomy</h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["#","Element","Description"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] text-[12px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { n: "1", el: "Filter Row Container",   desc: "Horizontal flex container, 40px tall, fills available width." },
+                      { n: "2", el: "Search Input",           desc: "140px inline search field with magnifier icon." },
+                      { n: "3", el: "Filter Chip (inactive)", desc: "Pill-shaped dropdown button. Label + chevron. Neutral border." },
+                      { n: "4", el: "Filter Chip (active)",   desc: "Active chip with selected value + × dismiss + chevron. Blue border." },
+                      { n: "5", el: "Filter Label",           desc: "Truncated at 14 characters. Full value shown in tooltip on hover/focus." },
+                      { n: "6", el: "× Remove Icon",          desc: "Removes the active filter from the set." },
+                      { n: "7", el: "Clear Filters",          desc: "Text link that appears when any filter is active." },
+                      { n: "8", el: "All filters button",     desc: "Pill with SlidersHorizontal icon. Opens full filter panel." },
+                      { n: "9", el: "Sort controls",          desc: "Arrow direction toggle + sort field label dropdown." },
+                      { n: "10", el: "View toggle",           desc: "Grid / List icon buttons. Active state uses primary blue fill." },
+                    ].map((row, i) => (
+                      <tr key={row.n} style={{ background: i % 2 === 1 ? "rgba(255,255,255,0.025)" : undefined, borderBottom: "1px solid var(--table-border)" }}>
+                        <td className="px-[14px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{row.n}</td>
+                        <td className="px-[14px] py-[10px] font-medium text-[13px]" style={{ color: "var(--foreground)" }}>{row.el}</td>
+                        <td className="px-[14px] py-[10px] text-[13px]" style={{ color: "var(--field-supporting)" }}>{row.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Use when users need to narrow large datasets (tables, grids, lists) by one or more criteria.",
+                    "Apply when filter options are finite and known — categories, owners, statuses, types.",
+                    "Use the chip-based filter row when screen space allows multiple active filters to be visible simultaneously.",
+                    "Enable the Sorting control when column-level sorting complements filter-based refinement.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Don't use filters when the dataset has fewer than ~10 items — sorting is usually sufficient.",
+                    "Avoid if filter criteria are dynamic and unknown at design time; use free-text search instead.",
+                    "Don't show filters without a visible reset/clear-all mechanism when multiple filters can be applied.",
+                    "Don't combine with in-row inline editing without a clear visual separation between editable and filter state.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Playground ───────────────────────────────────────────────────── */}
+        {tab === "playground" && <FiltersInteractivePlayground />}
+
+        {/* ── Slideout ─────────────────────────────────────────────────────── */}
+        {tab === "slideout" && (
+          <div className="flex flex-col gap-[40px]">
+
+            {/* Overview */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">All filters panel</h2>
+              <p className="text-[13px]" style={{ color: "var(--field-supporting)" }}>
+                Triggered by the "All filters" button in the Filters bar. 380px right-side slideout with
+                sticky header, scrollable body, and sticky footer. Contains 12 section types — each
+                with 4 state variants (expanded/collapsed × active/inactive).
+              </p>
+              <div className="flex flex-col gap-[8px]">
+                <button
+                  className="inline-flex items-center gap-[8px] h-[40px] px-[16px] rounded-[8px] border text-[13px] font-medium self-start transition-colors"
+                  style={{
+                    background:  "var(--fi-chip-bg)",
+                    borderColor: "var(--fi-chip-border)",
+                    color:       "var(--fi-chip-text)",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--fi-chip-hover-bg)" }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "var(--fi-chip-bg)" }}
+                  onClick={() => setPgSlideoutOpen(true)}
+                >
+                  Open "All filters" panel →
+                </button>
+                <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                  Click to open the live 380px slideout panel with all 12 filter section types.
+                </p>
+              </div>
+              <FiltersSlideout
+                isOpen={pgSlideoutOpen}
+                onClose={() => setPgSlideoutOpen(false)}
+                onClearAll={() => {}}
+                onApply={() => setPgSlideoutOpen(false)}
+              />
+            </div>
+
+            {/* Active indicator rules */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Active indicator rules</h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Section type","Figma node","Active indicator","Pattern"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] text-[12px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { type: "Sort",          node: "11971:775", indicator: "None",      pattern: "Always has a value — no clear needed" },
+                      { type: "Toggle List",   node: "13848:405", indicator: "{x} badge", pattern: "Shows count of toggled-on items. 'Show N more ▼' expander." },
+                      { type: "Multi Select",  node: "13848:477", indicator: "{x} badge", pattern: "Shows count of checked items. 'Show N more ▼' expander." },
+                      { type: "Priority",      node: "13851:366", indicator: "{x} badge", pattern: "Shows count of checked priorities (Critical · High · Medium · Low)." },
+                      { type: "Date Presets",  node: "13851:482", indicator: "{x} badge", pattern: "Shows 1 when any preset is selected. Radio — single selection only." },
+                      { type: "Numeric Range", node: "13852:471", indicator: '"Clear"',   pattern: "Appears when min or max field has a value." },
+                      { type: "Search Select", node: "13996:2054", indicator: "{x} badge", pattern: "Shows count of checked items. Filters list via search input." },
+                      { type: "Single Select", node: "14056:459", indicator: '"Clear"',   pattern: "Appears when a non-default option is selected." },
+                      { type: "Chip Select",   node: "11971:786", indicator: '"Clear"',   pattern: "Appears when ≥1 chip selected. '+N more' hides overflow chips." },
+                      { type: "Assignment",    node: "14091:418", indicator: '"Clear"',   pattern: "Appears when ≥1 assignee selected. '+N' shows overflow count." },
+                      { type: "Date & Time",   node: "14094:432", indicator: '"Clear"',   pattern: "Appears when From or To field has a value." },
+                      { type: "AI Insights",   node: "14095:506", indicator: '"Clear"',   pattern: "Appears when any status chip or Alert Level is non-default." },
+                    ].map((row, i) => (
+                      <tr key={row.type} style={{ background: i % 2 === 1 ? "rgba(255,255,255,0.025)" : undefined, borderBottom: "1px solid var(--table-border)" }}>
+                        <td className="px-[14px] py-[10px] font-medium text-[13px]" style={{ color: "var(--foreground)" }}>{row.type}</td>
+                        <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.node}</td>
+                        <td className="px-[14px] py-[10px]">
+                          {row.indicator === "None" ? (
+                            <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>—</span>
+                          ) : row.indicator === '"Clear"' ? (
+                            <span className="text-[13px] font-medium" style={{ color: "var(--primary)" }}>Clear</span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-[5px] rounded-full text-[11px] font-semibold"
+                              style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)", color: "var(--tag-informative-fg)" }}
+                            >
+                              {"{2}"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-[14px] py-[10px] text-[12px]" style={{ color: "var(--field-supporting)" }}>{row.pattern}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Edge cases */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Edge cases — Filter bar chips</h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Case","Behavior","Visual"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] text-[12px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      {
+                        case: "14-char truncation",
+                        behavior: 'Values longer than 14 chars are sliced at index 14 and appended with "..." inside the Tag.',
+                        example: <span className="inline-flex gap-[4px] items-center"><span className="inline-flex items-center h-[20px] px-[8px] rounded-[8px] border text-[12px] font-medium" style={{ background: "var(--tag-informative-bg)", borderColor: "var(--tag-informative-bd)", color: "var(--tag-informative-fg)" }}>Last 7 days -- a...</span></span>,
+                      },
+                      {
+                        case: "Tag as value",
+                        behavior: 'The active chip always renders its value as Tag informative sm inside the chip shell. The chip provides the 40px container; the Tag provides the informative pill.',
+                        example: <span className="inline-flex gap-[4px] items-center"><span className="inline-flex items-center h-[20px] px-[8px] rounded-[8px] border text-[12px] font-medium" style={{ background: "var(--tag-informative-bg)", borderColor: "var(--tag-informative-bd)", color: "var(--tag-informative-fg)" }}>John Smith</span></span>,
+                      },
+                      {
+                        case: "x dismiss",
+                        behavior: "The x button calls onRemove() on the FilterSlot. The consumer manages state -- the chip reverts to inactive after removal.",
+                        example: null,
+                      },
+                      {
+                        case: "Clear Filters link",
+                        behavior: "Appears when showClearFilters=true. Should be set by the consumer when any slot has an active value. Calls onClearFilters() to reset all.",
+                        example: null,
+                      },
+                      {
+                        case: "Compact S variant",
+                        behavior: "compact=true hides all chips and shows only Search + All filters. When compactCount>0, shows badge count instead of search.",
+                        example: null,
+                      },
+                    ].map((row, i) => (
+                      <tr key={row.case} style={{ background: i % 2 === 1 ? "rgba(255,255,255,0.025)" : undefined, borderBottom: "1px solid var(--table-border)" }}>
+                        <td className="px-[14px] py-[10px] font-medium text-[13px]" style={{ color: "var(--foreground)" }}>{row.case}</td>
+                        <td className="px-[14px] py-[10px] text-[12px]" style={{ color: "var(--field-supporting)" }}>{row.behavior}</td>
+                        <td className="px-[14px] py-[10px]">{row.example ?? <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>—</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Slideout props */}
+            <div className="flex flex-col gap-[8px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">FiltersSlideout props</h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Prop","Type","Description"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] text-[12px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { prop: "isOpen",     type: "boolean",      desc: "Controls whether the panel is visible. Animates in/out on change." },
+                      { prop: "onClose",    type: "() => void",   desc: "Called when X button, Cancel, or the overlay is clicked." },
+                      { prop: "onApply",    type: "() => void?",  desc: "Called when 'Apply filters' is clicked (before onClose)." },
+                      { prop: "onClearAll", type: "() => void?",  desc: "Called when 'Clear all' in the header is clicked." },
+                      { prop: "className",  type: "string?",      desc: "Extra classes on the panel element (not the overlay)." },
+                    ].map((row, i) => (
+                      <tr key={row.prop} style={{ background: i % 2 === 1 ? "rgba(255,255,255,0.025)" : undefined, borderBottom: "1px solid var(--table-border)" }}>
+                        <td className="px-[14px] py-[10px] font-mono text-[12px]" style={{ color: "var(--primary)" }}>{row.prop}</td>
+                        <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.type}</td>
+                        <td className="px-[14px] py-[10px] text-[12px]" style={{ color: "var(--foreground)" }}>{row.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Reference ────────────────────────────────────────────────────── */}
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[24px]">
+
+            <div className="flex flex-col gap-[8px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Prop","Type","Default","Description"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] text-[12px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { prop: "compact",           type: "boolean",            def: "false",       desc: "S Variant — shows only Search + All Filters." },
+                      { prop: "compactCount",      type: "number",             def: "0",           desc: "> 0 → S Variant Filters Apply: Filters badge with count instead of search." },
+                      { prop: "showSearch",        type: "boolean",            def: "true",        desc: "Renders the 140px search input on the left side." },
+                      { prop: "searchPlaceholder", type: "string",             def: '"Search"',    desc: "Placeholder text inside the search input." },
+                      { prop: "slots",             type: "FilterSlot[]",       def: "[]",          desc: "Up to 5 filter chips. If value is set, chip is active with × dismiss." },
+                      { prop: "showClearFilters",  type: "boolean",            def: "false",       desc: "Shows 'Clear Filters' text link after the chips." },
+                      { prop: "onClearFilters",    type: "() => void",         def: "undefined",   desc: "Called when 'Clear Filters' is clicked." },
+                      { prop: "showAllFilters",    type: "boolean",            def: "true",        desc: "Shows 'All filters ☰' pill button in right controls." },
+                      { prop: "onAllFiltersClick", type: "() => void",         def: "undefined",   desc: "Called when All Filters button is clicked." },
+                      { prop: "showSort",          type: "boolean",            def: "true",        desc: "Shows sort direction arrow + sort label dropdown." },
+                      { prop: "sortLabel",         type: "string",             def: '"Name"',      desc: "Label shown in the sort dropdown button." },
+                      { prop: "showViewToggle",    type: "boolean",            def: "true",        desc: "Shows Grid/List icon toggle buttons." },
+                      { prop: "viewMode",          type: '"grid" | "list"',    def: '"grid"',      desc: "Active view mode. Grid icon is highlighted in primary blue." },
+                      { prop: "onViewModeChange",  type: "(mode) => void",     def: "undefined",   desc: "Called when a view toggle button is clicked." },
+                      { prop: "className",         type: "string",             def: "undefined",   desc: "Extra classes applied to the root element." },
+                    ].map((row, i) => (
+                      <tr key={row.prop} style={{ background: i % 2 === 1 ? "rgba(255,255,255,0.025)" : undefined, borderBottom: "1px solid var(--table-border)" }}>
+                        <td className="px-[14px] py-[10px] font-mono text-[12px]" style={{ color: "var(--primary)" }}>{row.prop}</td>
+                        <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.type}</td>
+                        <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.def}</td>
+                        <td className="px-[14px] py-[10px] text-[12px]"          style={{ color: "var(--foreground)" }}>{row.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* FilterSlot type */}
+            <div className="flex flex-col gap-[8px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">FilterSlot type</h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Field","Type","Description"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] text-[12px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { field: "placeholder", type: "string",      desc: 'Label shown when no value is selected (e.g. "Type", "Owner").' },
+                      { field: "value",       type: "string?",     desc: "If set, chip renders as active with this value + × dismiss icon." },
+                      { field: "onRemove",    type: "() => void?", desc: "Called when the × dismiss icon is clicked." },
+                      { field: "onOpen",      type: "() => void?", desc: "Called when the chip or its chevron is clicked." },
+                    ].map((row, i) => (
+                      <tr key={row.field} style={{ background: i % 2 === 1 ? "rgba(255,255,255,0.025)" : undefined, borderBottom: "1px solid var(--table-border)" }}>
+                        <td className="px-[14px] py-[10px] font-mono text-[12px]" style={{ color: "var(--primary)" }}>{row.field}</td>
+                        <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.type}</td>
+                        <td className="px-[14px] py-[10px] text-[12px]"          style={{ color: "var(--foreground)" }}>{row.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Token table */}
+            <div className="flex flex-col gap-[8px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">CSS tokens — <code className="text-[14px] font-mono">--fi-*</code></h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--surface)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Token","DS source","Light","Dark"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] text-[12px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { token: "--fi-chip-bg",            ds: "Surface/Neutral/Subtle",  light: "rgba(250,250,250,1)",     dark: "rgba(255,255,255,0.05)" },
+                      { token: "--fi-chip-border",        ds: "Border/Neutral/Lighter",  light: "rgba(186,186,186,1)",     dark: "rgba(255,255,255,0.15)" },
+                      { token: "--fi-chip-text",          ds: "Text/Subtitle",           light: "#2a2a2a",                 dark: "rgba(255,255,255,0.70)" },
+                      { token: "--fi-chip-icon",          ds: "Icon/Neutral",            light: "rgba(0,0,0,0.40)",        dark: "rgba(255,255,255,0.40)" },
+                      { token: "--fi-chip-active-bg",     ds: "Surface/Primary/Subtle",  light: "rgba(33,115,255,0.06)",   dark: "rgba(43,127,255,0.08)"  },
+                      { token: "--fi-chip-active-border", ds: "Border/Primary/Default",  light: "#2173ff",                 dark: "#2b7fff"                },
+                      { token: "--fi-chip-active-text",   ds: "Text/Info",               light: "#2173ff",                 dark: "#A8C8FF"                },
+                      { token: "--fi-chip-active-icon",   ds: "Icon/Primary/Darker",     light: "#2173ff",                 dark: "rgba(168,200,255,0.80)" },
+                      { token: "--fi-badge-bg",           ds: "Border/Primary/Default",  light: "#2173ff",                 dark: "#2b7fff"                },
+                      { token: "--fi-view-active-bg",     ds: "Border/Primary/Default",  light: "#2173ff",                 dark: "#2b7fff"                },
+                      { token: "--fi-sort-text",          ds: "Text/Subtitle",           light: "rgba(0,0,0,0.65)",        dark: "rgba(255,255,255,0.65)" },
+                    ].map((row, i) => (
+                      <tr key={row.token} style={{ background: i % 2 === 1 ? "rgba(255,255,255,0.025)" : undefined, borderBottom: "1px solid var(--table-border)" }}>
+                        <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.token}</td>
+                        <td className="px-[14px] py-[10px] text-[12px]"          style={{ color: "var(--field-supporting)" }}>{row.ds}</td>
+                        <td className="px-[14px] py-[10px]">
+                          <span className="flex items-center gap-[6px]">
+                            <span className="w-[12px] h-[12px] rounded-[3px] border border-[var(--field-border)]" style={{ background: row.light }} />
+                            <code className="text-[11px] font-mono text-[var(--field-supporting)]">{row.light}</code>
+                          </span>
+                        </td>
+                        <td className="px-[14px] py-[10px]">
+                          <span className="flex items-center gap-[6px]">
+                            <span className="w-[12px] h-[12px] rounded-[3px] border border-[var(--field-border)]" style={{ background: row.dark }} />
+                            <code className="text-[11px] font-mono text-[var(--field-supporting)]">{row.dark}</code>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
 function IconsPage() {
   const [tab,    setTab]    = useState<"reference" | "overview">("reference")
   const [search, setSearch] = useState("")
@@ -6902,8 +9798,8 @@ function IconsPage() {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Icons</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
-            {ICON_TOTAL} icons mapped from Material Design (Figma DS) to Lucide. Misma semántica, distinta familia.{" "}
-            Importar de{" "}
+            {ICON_TOTAL} icons mapped from Material Design (Figma DS) to Lucide. Same semantics, different family.{" "}
+            Import from{" "}
             <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">
               lucide-react
             </code>.
@@ -6933,7 +9829,7 @@ function IconsPage() {
               </span>
               <input
                 type="text"
-                placeholder="Buscar por nombre DS o nombre Lucide…"
+                placeholder="Search by DS name or Lucide name…"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className={[
@@ -7036,12 +9932,12 @@ function IconsPage() {
 
             {/* Usage snippets */}
             <div className="flex flex-col gap-[16px]">
-              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Cómo usar</h2>
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">How to use</h2>
               <div className="flex flex-col gap-[10px]">
                 {[
-                  { label: "Import por nombre",               code: `import { ChevronDown } from "lucide-react"` },
-                  { label: "Uso estándar",                    code: `<ChevronDown size={20} strokeWidth={1.75} />` },
-                  { label: "Como prop de componente",         code: `<Button icon={<Plus size={16} />}>Add</Button>` },
+                  { label: "Import by name",           code: `import { ChevronDown } from "lucide-react"` },
+                  { label: "Standard usage",           code: `<ChevronDown size={20} strokeWidth={1.75} />` },
+                  { label: "As a component prop",      code: `<Button icon={<Plus size={16} />}>Add</Button>` },
                 ].map(item => (
                   <div key={item.label} className="flex flex-col gap-[4px]">
                     <span className="text-[12px] text-[var(--field-supporting)]">{item.label}</span>
@@ -7055,7 +9951,7 @@ function IconsPage() {
 
             {/* Category index */}
             <div className="flex flex-col gap-[16px]">
-              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Categorías</h2>
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Categories</h2>
               <div className="grid grid-cols-1 gap-[6px] md:grid-cols-2">
                 {ICON_CATEGORIES.map(cat => (
                   <div key={cat.id} className="flex items-center gap-[12px] px-[12px] py-[10px] rounded-[8px] border border-[var(--field-border)]">
@@ -7093,9 +9989,9 @@ function TypographyPage() {
       <div className="mb-[28px]">
         <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Typography</h1>
         <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
-          Escala tipográfica del DS mapeada a clases Tailwind. Fuente:{" "}
+          DS typographic scale mapped to Tailwind classes. Font:{" "}
           <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">Inter</code>.
-          Todos los tamaños definidos en <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">tailwind.config.js</code> como{" "}
+          All sizes defined in <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">tailwind.config.js</code> as{" "}
           <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">text-type-*</code>.
         </p>
       </div>
@@ -7218,16 +10114,16 @@ function ColorsPage() {
       <div className="mb-[28px]">
         <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Colors</h1>
         <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
-          Paleta primitiva + {SEMANTIC_GROUPS.reduce((n,g) => n + g.tokens.length, 0)} tokens semánticos del DS.
-          Tokens aplicados en el código como <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">var(--token-name)</code>{" "}
-          en <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">index.css</code>.
+          Primitive palette + {SEMANTIC_GROUPS.reduce((n,g) => n + g.tokens.length, 0)} semantic tokens from the DS.
+          Applied in code as <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">var(--token-name)</code>{" "}
+          in <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">index.css</code>.
         </p>
       </div>
 
       <TabBar
         tabs={[
-          { id:"primitives", label:"Primitivos" },
-          { id:"semantic",   label:"Semánticos"  },
+          { id:"primitives", label:"Primitives" },
+          { id:"semantic",   label:"Semantic"    },
         ]}
         active={tab}
         onChange={id => setTab(id as typeof tab)}
@@ -7470,7 +10366,7 @@ export default function App() {
         isDark={isDark} onToggle={() => setIsDark(d => !d)}
       />
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-[900px] px-[48px] py-[40px] mx-auto">
+        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" ? "max-w-[1100px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
           {active === "button"          && <ButtonPage        openSpec={setSpecModal} />}
           {active === "input"           && <InputPage         openSpec={setSpecModal} />}
@@ -7485,6 +10381,10 @@ export default function App() {
           {active === "table"           && <TablePage         openSpec={setSpecModal} />}
           {active === "topbar"          && <TopbarPage        openSpec={setSpecModal} onAppThemeChange={(dark) => setIsDark(dark)} />}
           {active === "sidebar"         && <SidebarPage       openSpec={setSpecModal} />}
+          {active === "entity-list"     && <EntityListPage    openSpec={setSpecModal} />}
+          {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
+          {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
+          {active === "filters"         && <FiltersPage         openSpec={setSpecModal} />}
           {active === "icons"           && <IconsPage />}
           {active === "typography"      && <TypographyPage />}
           {active === "colors"          && <ColorsPage />}
