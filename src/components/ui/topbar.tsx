@@ -1711,11 +1711,37 @@ export function Topbar({
                 paddingLeft: 4, paddingRight: 4,
                 paddingTop:  2, paddingBottom: 2,
               }}
+              onClick={() => {
+                if (!rightMenuOpen && rightRef.current) {
+                  const r = rightRef.current.getBoundingClientRect()
+                  setRightMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+                }
+                setRightMenuOpen(v => !v)
+                setLeftMenuOpen(false)
+                onProfileClick?.()
+              }}
+              aria-label="Open profile menu"
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  if (!rightMenuOpen && rightRef.current) {
+                    const r = rightRef.current.getBoundingClientRect()
+                    setRightMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+                  }
+                  setRightMenuOpen(v => !v)
+                  setLeftMenuOpen(false)
+                }
+              }}
             >
-              <button
-                className="flex items-center gap-[4px] flex-1 min-w-0 cursor-pointer"
-                onClick={onCompanyClick}
+              <div
+                className="flex items-center gap-[4px] flex-1 min-w-0"
+                onClick={e => { e.stopPropagation(); onCompanyClick?.() }}
+                role="button"
                 aria-label="Switch company"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === "Enter") { e.stopPropagation(); onCompanyClick?.() }}}
               >
                 <TopbarAvatar name={companyName} src={companyAvatarSrc} />
                 <span
@@ -1724,28 +1750,18 @@ export function Topbar({
                 >
                   {companyName}
                 </span>
-              </button>
+              </div>
               <div
                 className="relative shrink-0 flex items-center"
                 onMouseEnter={() => setProfileHover(true)}
                 onMouseLeave={() => setProfileHover(false)}
               >
-                <button
-                  className="flex items-center justify-center cursor-pointer rounded-full transition-all hover:ring-1 hover:ring-[var(--topbar-avatar-ring)]"
+                <div
+                  className="flex items-center justify-center rounded-full transition-all hover:ring-1 hover:ring-[var(--topbar-avatar-ring)]"
                   style={{ width: 16, height: 16 }}
-                  onClick={() => {
-                    if (!rightMenuOpen && rightRef.current) {
-                      const r = rightRef.current.getBoundingClientRect()
-                      setRightMenuPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
-                    }
-                    setRightMenuOpen(v => !v)
-                    setLeftMenuOpen(false)
-                    onProfileClick?.()
-                  }}
-                  aria-label="Profile menu"
                 >
                   <TopbarAvatar name={userName} src={userAvatarSrc} />
-                </button>
+                </div>
                 <TopbarTooltip title="Profile & account" visible={profileHover && !rightMenuOpen} />
               </div>
             </div>

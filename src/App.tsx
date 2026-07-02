@@ -31,7 +31,7 @@ import { FiltersSlideout } from "@/components/ui/filters-slideout"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
+type SectionId = "home" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
 type SpecModal = "button" | "card-container" | "checkbox" | "entity-list" | "filters" | "highlight-icon" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -85,6 +85,7 @@ const ExternalIcon = () => (
 const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: string }[] = [
   { id: "home",            label: "Why this approach", group: "Overview",    description: "Alignment doc: why a component repository is the foundation for consistent AI prototypes" },
   // Components — alphabetical by label
+  { id: "avatar",          label: "Avatar",            group: "Components",  description: "User & workspace avatars · 4 sizes (S/M/L/XL) · 6 color variants · initials fallback · stacked group" },
   { id: "button",          label: "Button",            group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
   { id: "card-container",  label: "Card Container",    group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
@@ -3897,7 +3898,22 @@ function TagPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </div>
         )}
 
-        {tab === "reference" && (
+        {tab === "reference" && (() => {
+          const RCheckCircle2   = (LucideIcons as unknown as Record<string, LucideIcon>)["CheckCircle2"]
+          const RCircleX        = (LucideIcons as unknown as Record<string, LucideIcon>)["CircleX"]
+          const RAlertTriangle  = (LucideIcons as unknown as Record<string, LucideIcon>)["AlertTriangle"]
+          const RInfo           = (LucideIcons as unknown as Record<string, LucideIcon>)["Info"]
+          const RSparkles       = (LucideIcons as unknown as Record<string, LucideIcon>)["Sparkles"]
+          const RTag            = (LucideIcons as unknown as Record<string, LucideIcon>)["Tag"]
+          const RLeaf           = (LucideIcons as unknown as Record<string, LucideIcon>)["Leaf"]
+          const RStar           = (LucideIcons as unknown as Record<string, LucideIcon>)["Star"]
+          const RGem            = (LucideIcons as unknown as Record<string, LucideIcon>)["Gem"]
+          const RGlobe          = (LucideIcons as unknown as Record<string, LucideIcon>)["Globe"]
+          const RCircle         = (LucideIcons as unknown as Record<string, LucideIcon>)["Circle"]
+          const RX              = (LucideIcons as unknown as Record<string, LucideIcon>)["X"]
+          const ic = (sz: number) => ({ size: sz, strokeWidth: 2 as const })
+          const dismiss = <RX {...ic(9)} />
+          return (
           <div className="flex flex-col gap-[24px]">
             <Row label="All variants — Size M">
               {TAG_VARIANTS.map(v => (
@@ -3910,57 +3926,65 @@ function TagPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               ))}
             </Row>
             <Row label="With leading icon — Size M">
-              <Tag variant="success"     leadingIcon={<TagCheckIcon />}>Completed</Tag>
-              <Tag variant="error"       leadingIcon={<TagDotIcon />}>Failed</Tag>
-              <Tag variant="alert"       leadingIcon={<TagDotIcon />}>Pending</Tag>
-              <Tag variant="informative" leadingIcon={<TagDotIcon />}>Category</Tag>
-              <Tag variant="primary"     leadingIcon={<TagDotIcon />}>Active</Tag>
-              <Tag variant="secondary"   leadingIcon={<TagDotIcon />}>Label</Tag>
+              {RCheckCircle2  && <Tag variant="success"     leadingIcon={<RCheckCircle2  {...ic(10)} />}>Completed</Tag>}
+              {RCircleX       && <Tag variant="error"       leadingIcon={<RCircleX       {...ic(10)} />}>Failed</Tag>}
+              {RAlertTriangle && <Tag variant="alert"       leadingIcon={<RAlertTriangle {...ic(10)} />}>Review</Tag>}
+              {RInfo          && <Tag variant="informative" leadingIcon={<RInfo          {...ic(10)} />}>Category</Tag>}
+              {RSparkles      && <Tag variant="primary"     leadingIcon={<RSparkles      {...ic(10)} />}>AI</Tag>}
+              {RTag           && <Tag variant="secondary"   leadingIcon={<RTag           {...ic(10)} />}>Label</Tag>}
+              {RLeaf          && <Tag variant="limeGreen"   leadingIcon={<RLeaf          {...ic(10)} />}>Eco</Tag>}
+              {RStar          && <Tag variant="yellow"      leadingIcon={<RStar          {...ic(10)} />}>Featured</Tag>}
+              {RGem           && <Tag variant="purple"      leadingIcon={<RGem           {...ic(10)} />}>Premium</Tag>}
+              {RGlobe         && <Tag variant="lightBlue"   leadingIcon={<RGlobe         {...ic(10)} />}>Global</Tag>}
+              {RCircle        && <Tag variant="neutral"     leadingIcon={<RCircle        {...ic(10)} />}>Neutral</Tag>}
             </Row>
             <Row label="With trailing icon (×) — Size M">
-              <Tag variant="success"     trailingIcon={<TagXIcon />}>Completed</Tag>
-              <Tag variant="error"       trailingIcon={<TagXIcon />}>Failed</Tag>
-              <Tag variant="alert"       trailingIcon={<TagXIcon />}>Pending</Tag>
-              <Tag variant="informative" trailingIcon={<TagXIcon />}>Category</Tag>
-              <Tag variant="primary"     trailingIcon={<TagXIcon />}>Active</Tag>
-              <Tag variant="secondary"   trailingIcon={<TagXIcon />}>Label</Tag>
+              {RX && <>
+                <Tag variant="success"     trailingIcon={dismiss}>Completed</Tag>
+                <Tag variant="error"       trailingIcon={dismiss}>Failed</Tag>
+                <Tag variant="alert"       trailingIcon={dismiss}>Review</Tag>
+                <Tag variant="informative" trailingIcon={dismiss}>Category</Tag>
+                <Tag variant="primary"     trailingIcon={dismiss}>AI</Tag>
+                <Tag variant="secondary"   trailingIcon={dismiss}>Label</Tag>
+              </>}
             </Row>
             <Row label="Both icons — Size M">
-              <Tag variant="success"     leadingIcon={<TagCheckIcon />} trailingIcon={<TagXIcon />}>Completed</Tag>
-              <Tag variant="error"       leadingIcon={<TagDotIcon />}   trailingIcon={<TagXIcon />}>Failed</Tag>
-              <Tag variant="alert"       leadingIcon={<TagDotIcon />}   trailingIcon={<TagXIcon />}>Pending</Tag>
-              <Tag variant="informative" leadingIcon={<TagDotIcon />}   trailingIcon={<TagXIcon />}>Category</Tag>
-              <Tag variant="primary"     leadingIcon={<TagDotIcon />}   trailingIcon={<TagXIcon />}>Active</Tag>
-              <Tag variant="secondary"   leadingIcon={<TagDotIcon />}   trailingIcon={<TagXIcon />}>Label</Tag>
+              {RCheckCircle2 && RX && <Tag variant="success"     leadingIcon={<RCheckCircle2  {...ic(10)} />} trailingIcon={dismiss}>Completed</Tag>}
+              {RCircleX      && RX && <Tag variant="error"       leadingIcon={<RCircleX       {...ic(10)} />} trailingIcon={dismiss}>Failed</Tag>}
+              {RAlertTriangle && RX && <Tag variant="alert"      leadingIcon={<RAlertTriangle {...ic(10)} />} trailingIcon={dismiss}>Review</Tag>}
+              {RInfo         && RX && <Tag variant="informative" leadingIcon={<RInfo          {...ic(10)} />} trailingIcon={dismiss}>Category</Tag>}
+              {RSparkles     && RX && <Tag variant="primary"     leadingIcon={<RSparkles      {...ic(10)} />} trailingIcon={dismiss}>AI</Tag>}
+              {RTag          && RX && <Tag variant="secondary"   leadingIcon={<RTag           {...ic(10)} />} trailingIcon={dismiss}>Label</Tag>}
             </Row>
-            <Row label="Icon only (Just icon=Yes) — Size M">
-              <Tag variant="success"     leadingIcon={<TagCheckIcon />} />
-              <Tag variant="error"       leadingIcon={<TagDotIcon />} />
-              <Tag variant="alert"       leadingIcon={<TagDotIcon />} />
-              <Tag variant="informative" leadingIcon={<TagDotIcon />} />
-              <Tag variant="primary"     leadingIcon={<TagDotIcon />} />
-              <Tag variant="secondary"   leadingIcon={<TagDotIcon />} />
-              <Tag variant="limeGreen"   leadingIcon={<TagDotIcon />} />
-              <Tag variant="yellow"      leadingIcon={<TagDotIcon />} />
-              <Tag variant="purple"      leadingIcon={<TagDotIcon />} />
-              <Tag variant="lightBlue"   leadingIcon={<TagDotIcon />} />
-              <Tag variant="neutral"     leadingIcon={<TagDotIcon />} />
+            <Row label="Icon only — Size M">
+              {RCheckCircle2  && <Tag variant="success"     leadingIcon={<RCheckCircle2  {...ic(10)} />} />}
+              {RCircleX       && <Tag variant="error"       leadingIcon={<RCircleX       {...ic(10)} />} />}
+              {RAlertTriangle && <Tag variant="alert"       leadingIcon={<RAlertTriangle {...ic(10)} />} />}
+              {RInfo          && <Tag variant="informative" leadingIcon={<RInfo          {...ic(10)} />} />}
+              {RSparkles      && <Tag variant="primary"     leadingIcon={<RSparkles      {...ic(10)} />} />}
+              {RTag           && <Tag variant="secondary"   leadingIcon={<RTag           {...ic(10)} />} />}
+              {RLeaf          && <Tag variant="limeGreen"   leadingIcon={<RLeaf          {...ic(10)} />} />}
+              {RStar          && <Tag variant="yellow"      leadingIcon={<RStar          {...ic(10)} />} />}
+              {RGem           && <Tag variant="purple"      leadingIcon={<RGem           {...ic(10)} />} />}
+              {RGlobe         && <Tag variant="lightBlue"   leadingIcon={<RGlobe         {...ic(10)} />} />}
+              {RCircle        && <Tag variant="neutral"     leadingIcon={<RCircle        {...ic(10)} />} />}
             </Row>
             <Row label="Icon only — Size S">
-              <Tag variant="success"     leadingIcon={<TagCheckIcon />} size="sm" />
-              <Tag variant="error"       leadingIcon={<TagDotIcon />}   size="sm" />
-              <Tag variant="alert"       leadingIcon={<TagDotIcon />}   size="sm" />
-              <Tag variant="informative" leadingIcon={<TagDotIcon />}   size="sm" />
-              <Tag variant="primary"     leadingIcon={<TagDotIcon />}   size="sm" />
-              <Tag variant="secondary"   leadingIcon={<TagDotIcon />}   size="sm" />
+              {RCheckCircle2  && <Tag variant="success"     leadingIcon={<RCheckCircle2  {...ic(9)} />} size="sm" />}
+              {RCircleX       && <Tag variant="error"       leadingIcon={<RCircleX       {...ic(9)} />} size="sm" />}
+              {RAlertTriangle && <Tag variant="alert"       leadingIcon={<RAlertTriangle {...ic(9)} />} size="sm" />}
+              {RInfo          && <Tag variant="informative" leadingIcon={<RInfo          {...ic(9)} />} size="sm" />}
+              {RSparkles      && <Tag variant="primary"     leadingIcon={<RSparkles      {...ic(9)} />} size="sm" />}
+              {RTag           && <Tag variant="secondary"   leadingIcon={<RTag           {...ic(9)} />} size="sm" />}
             </Row>
             <Row label="Disabled — Size M">
-              {TAG_VARIANTS.map(v => (
-                <Tag key={v.variant} variant={v.variant} disabled leadingIcon={<TagDotIcon />}>{v.label}</Tag>
+              {RCheckCircle2  && TAG_VARIANTS.map(v => (
+                <Tag key={v.variant} variant={v.variant} disabled leadingIcon={<RCheckCircle2 {...ic(10)} />}>{v.label}</Tag>
               ))}
             </Row>
           </div>
-        )}
+          )
+        })()}
       </div>
     </div>
   )
@@ -4054,8 +4078,62 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
       <div className="flex flex-col gap-[40px] pt-[32px]">
 
         {/* ── Overview ─────────────────────────────────────────────────── */}
-        {tab === "overview" && (
+        {tab === "overview" && (() => {
+          const OvUserIcon     = (LucideIcons as unknown as Record<string, LucideIcon>)["User"]
+          const OvSettingsIcon = (LucideIcons as unknown as Record<string, LucideIcon>)["Settings"]
+          const OvLogOutIcon   = (LucideIcons as unknown as Record<string, LucideIcon>)["LogOut"]
+          const OvEditIcon     = (LucideIcons as unknown as Record<string, LucideIcon>)["Pencil"]
+          const OvCopyIcon     = (LucideIcons as unknown as Record<string, LucideIcon>)["Copy"]
+          const OvFolderIcon   = (LucideIcons as unknown as Record<string, LucideIcon>)["Folder"]
+          const OvTrashIcon    = (LucideIcons as unknown as Record<string, LucideIcon>)["Trash2"]
+          const OvBellIcon     = (LucideIcons as unknown as Record<string, LucideIcon>)["Bell"]
+          const OvStarIcon     = (LucideIcons as unknown as Record<string, LucideIcon>)["Star"]
+          return (
           <div className="flex flex-col gap-[24px]">
+            {/* Live examples */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Examples</h2>
+              <div
+                className="rounded-[8px] border border-[var(--field-border)] p-[20px] flex flex-wrap gap-[32px] items-start"
+              >
+                {/* Account / profile menu */}
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Account menu</p>
+                  <Menu>
+                    <MenuSection label="Workspace" />
+                    {OvSettingsIcon && <MenuItem label="Settings" leadingIcon={<OvSettingsIcon size={24} strokeWidth={1.75}/>} />}
+                    {OvBellIcon     && <MenuItem label="Notifications" leadingIcon={<OvBellIcon size={24} strokeWidth={1.75}/>} trailingElement={<Tag size="sm" variant="informative">3</Tag>} />}
+                    {OvUserIcon     && <MenuItem label="Team members"  leadingIcon={<OvUserIcon size={24} strokeWidth={1.75}/>} />}
+                    <MenuDivider />
+                    {OvLogOutIcon   && <MenuItem label="Sign out" leadingIcon={<OvLogOutIcon size={24} strokeWidth={1.75}/>} />}
+                  </Menu>
+                </div>
+                {/* Context menu */}
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Context menu</p>
+                  <Menu>
+                    {OvEditIcon   && <MenuItem label="Rename"    leadingIcon={<OvEditIcon   size={24} strokeWidth={1.75}/>} />}
+                    {OvCopyIcon   && <MenuItem label="Duplicate" leadingIcon={<OvCopyIcon   size={24} strokeWidth={1.75}/>} state="focus" />}
+                    {OvFolderIcon && <MenuItem label="Move to…"  leadingIcon={<OvFolderIcon size={24} strokeWidth={1.75}/>} />}
+                    {OvStarIcon   && <MenuItem label="Favourite" leadingIcon={<OvStarIcon   size={24} strokeWidth={1.75}/>} />}
+                    <MenuDivider />
+                    {OvTrashIcon  && <MenuItem label="Delete"    leadingIcon={<OvTrashIcon  size={24} strokeWidth={1.75}/>} />}
+                  </Menu>
+                </div>
+                {/* Size S compact */}
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Size S — compact</p>
+                  <Menu>
+                    {OvEditIcon   && <MenuItem label="Edit"      size="sm" leadingIcon={<OvEditIcon   size={16} strokeWidth={1.75}/>} />}
+                    {OvCopyIcon   && <MenuItem label="Copy link" size="sm" leadingIcon={<OvCopyIcon   size={16} strokeWidth={1.75}/>} state="focus" />}
+                    {OvFolderIcon && <MenuItem label="Archive"   size="sm" leadingIcon={<OvFolderIcon size={16} strokeWidth={1.75}/>} />}
+                    <MenuDivider />
+                    {OvTrashIcon  && <MenuItem label="Delete"    size="sm" leadingIcon={<OvTrashIcon  size={16} strokeWidth={1.75}/>} />}
+                  </Menu>
+                </div>
+              </div>
+            </div>
+
             <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Patterns</h2>
             <div className="grid grid-cols-1 gap-[12px] md:grid-cols-2">
               {MENU_PATTERNS.map(p => (
@@ -4102,7 +4180,8 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {/* ── Playground ───────────────────────────────────────────────── */}
         {tab === "playground" && (
@@ -4715,6 +4794,293 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Avatar Page ───────────────────────────────────────────────────────────
+
+const AVATAR_SIZE_SPECS = [
+  { key: "sm",  label: "S",   px: 20, fs: 8,  desc: "Table cells, compact lists" },
+  { key: "md",  label: "M",   px: 24, fs: 9,  desc: "Default UI, nav, dropdowns" },
+  { key: "lg",  label: "L",   px: 32, fs: 12, desc: "Entity headers, cards" },
+  { key: "xl",  label: "XL",  px: 40, fs: 15, desc: "Profile views, hero sections" },
+] as const
+
+const AVATAR_COLOR_SPECS = [
+  { key: "blue",   label: "Blue",   bg: "var(--tag-informative-bg)", fg: "var(--tag-informative-fg)" },
+  { key: "green",  label: "Green",  bg: "var(--tag-success-bg)",     fg: "var(--tag-success-fg)"     },
+  { key: "purple", label: "Purple", bg: "var(--tag-purple-bg)",      fg: "var(--tag-purple-fg)"      },
+  { key: "orange", label: "Orange", bg: "var(--tag-alert-bg)",       fg: "var(--tag-alert-fg)"       },
+  { key: "teal",   label: "Teal",   bg: "var(--tag-lightblue-bg)",   fg: "var(--tag-lightblue-fg)"   },
+  { key: "lime",   label: "Lime",   bg: "var(--tag-limegreen-bg)",   fg: "var(--tag-limegreen-fg)"   },
+] as const
+
+type AvatarColorKey = typeof AVATAR_COLOR_SPECS[number]["key"]
+type AvatarSizeKey  = typeof AVATAR_SIZE_SPECS[number]["key"]
+
+function AvatarCircle({
+  name,
+  colorKey,
+  sizeKey,
+  src,
+}: {
+  name: string
+  colorKey?: AvatarColorKey
+  sizeKey?: AvatarSizeKey
+  src?: string
+}) {
+  const sizeSpec  = AVATAR_SIZE_SPECS.find(s => s.key === sizeKey) ?? AVATAR_SIZE_SPECS[1]
+  const colorSpec = colorKey
+    ? AVATAR_COLOR_SPECS.find(c => c.key === colorKey) ?? AVATAR_COLOR_SPECS[0]
+    : AVATAR_COLOR_SPECS[name.charCodeAt(0) % AVATAR_COLOR_SPECS.length]
+  const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
+  return (
+    <div
+      className="flex items-center justify-center shrink-0 rounded-full overflow-hidden"
+      style={{
+        width: sizeSpec.px, height: sizeSpec.px,
+        background: src ? undefined : colorSpec.bg,
+        color: colorSpec.fg,
+        fontSize: sizeSpec.fs, fontWeight: 700, lineHeight: 1,
+      }}
+    >
+      {src
+        ? <img src={src} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : initials
+      }
+    </div>
+  )
+}
+
+const DEMO_NAMES = ["Sarah Chen", "Marco Rivera", "Aisha Johnson", "Chris Park", "Luna Kim", "Rafael Torres"]
+
+function AvatarPage() {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+  const [pgSize,  setPgSize]  = useState<AvatarSizeKey>("md")
+  const [pgColor, setPgColor] = useState<AvatarColorKey>("blue")
+  const [pgName,  setPgName]  = useState("Sarah Chen")
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Avatar</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            Circular badge representing a user or workspace. Displays a photo or falls back to two-letter initials. 4 sizes, 6 auto-assigned color variants derived from the user's name. Used in table cells, dropdowns, topbar, and entity headers.
+          </p>
+        </div>
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "playground", label: "Playground" },
+          { id: "reference",  label: "Reference"  },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Overview ───────────────────────────────────────────────── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[24px]">
+            {/* Color variants */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Color variants</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                Color is auto-assigned based on the first character of the name — no manual selection required. 6 variants ensure visual diversity in user lists.
+              </p>
+              <div className="rounded-[8px] border border-[var(--field-border)] p-[20px]">
+                <div className="flex flex-wrap gap-[20px] items-end">
+                  {AVATAR_COLOR_SPECS.map((c, i) => (
+                    <div key={c.key} className="flex flex-col items-center gap-[8px]">
+                      <AvatarCircle name={DEMO_NAMES[i]} colorKey={c.key} sizeKey="lg" />
+                      <div className="flex flex-col items-center gap-[2px]">
+                        <span className="text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{c.label}</span>
+                        <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{DEMO_NAMES[i].split(" ").map(w => w[0]).join("")}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Size scale */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Size scale</h2>
+              <div className="rounded-[8px] border border-[var(--field-border)] p-[20px]">
+                <div className="flex flex-wrap gap-[32px] items-end">
+                  {AVATAR_SIZE_SPECS.map(s => (
+                    <div key={s.key} className="flex flex-col items-center gap-[8px]">
+                      <AvatarCircle name="Sarah Chen" sizeKey={s.key} colorKey="blue" />
+                      <div className="flex flex-col items-center gap-[1px]">
+                        <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{s.label} · {s.px}px</span>
+                        <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{s.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Stacked group */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Stacked group</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                Used in table cells to show collaborators. Avatars overlap by 25% of their size. An overflow counter (+N) appears when the list is truncated.
+              </p>
+              <div className="rounded-[8px] border border-[var(--field-border)] p-[20px] flex gap-[32px] flex-wrap items-center">
+                {([3, 5, 8] as const).map(count => (
+                  <div key={count} className="flex flex-col gap-[8px] items-start">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--field-supporting)" }}>
+                      {count > 5 ? `${count} members, max 4 shown` : `${count} members`}
+                    </span>
+                    <div className="flex items-center">
+                      {DEMO_NAMES.slice(0, Math.min(count, 4)).map((name, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            marginLeft: i > 0 ? -6 : 0,
+                            zIndex: 10 - i,
+                            borderRadius: "50%",
+                            boxShadow: "0 0 0 1.5px var(--background)",
+                            display: "inline-flex", flexShrink: 0,
+                          }}
+                        >
+                          <AvatarCircle name={name} sizeKey="md" />
+                        </div>
+                      ))}
+                      {count > 4 && (
+                        <div
+                          style={{
+                            width: 24, height: 24, borderRadius: "50%",
+                            marginLeft: -6,
+                            background: "var(--tag-neutral-bg)", color: "var(--tag-neutral-fg)",
+                            fontSize: 9, fontWeight: 700, lineHeight: 1,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            boxShadow: "0 0 0 1.5px var(--background)", flexShrink: 0,
+                          }}
+                        >
+                          +{count - 4}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Anatomy */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Anatomy</h2>
+              <div className="rounded-[8px] border border-[var(--field-border)] p-[20px] flex flex-wrap gap-[32px]">
+                <div className="flex flex-col gap-[4px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Shape</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">Circle — border-radius: 100%</p>
+                </div>
+                <div className="flex flex-col gap-[4px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Content</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">Photo (object-fit: cover) or 2-letter initials</p>
+                </div>
+                <div className="flex flex-col gap-[4px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Color logic</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">name.charCodeAt(0) % 6 — deterministic, no manual selection</p>
+                </div>
+                <div className="flex flex-col gap-[4px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Tokens</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">--tag-*-bg / --tag-*-fg (reuses Tag color ramp)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Playground ─────────────────────────────────────────────── */}
+        {tab === "playground" && (
+          <div className="flex flex-col gap-[20px]">
+            <div className="rounded-md border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
+              <CtrlGroup
+                label="Size"
+                options={AVATAR_SIZE_SPECS.map(s => ({ label: `${s.label} — ${s.px}px`, value: s.key }))}
+                value={pgSize}
+                onChange={v => setPgSize(v as AvatarSizeKey)}
+              />
+              <CtrlGroup
+                label="Color"
+                options={AVATAR_COLOR_SPECS.map(c => ({ label: c.label, value: c.key }))}
+                value={pgColor}
+                onChange={v => setPgColor(v as AvatarColorKey)}
+              />
+              <div className="flex flex-col gap-[6px]">
+                <p className="text-[12px] font-medium text-[var(--field-supporting)]">Name (for initials)</p>
+                <input
+                  type="text"
+                  value={pgName}
+                  onChange={e => setPgName(e.target.value)}
+                  placeholder="First Last"
+                  className="h-[32px] px-[8px] text-[12px] rounded-[6px] border border-[var(--field-border)] bg-[var(--field-bg)] text-[var(--field-text)] placeholder:text-[var(--field-supporting)] outline-none focus:border-[#2173ff] transition-colors"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-center min-h-[120px] rounded-md border border-[var(--field-border)] border-dashed">
+              <AvatarCircle name={pgName || "?"} sizeKey={pgSize} colorKey={pgColor} />
+            </div>
+          </div>
+        )}
+
+        {/* ── Reference ──────────────────────────────────────────────── */}
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[24px]">
+            <Row label="All color variants — Size M (24px)">
+              {AVATAR_COLOR_SPECS.map((c, i) => (
+                <AvatarCircle key={c.key} name={DEMO_NAMES[i]} colorKey={c.key} sizeKey="md" />
+              ))}
+            </Row>
+            <Row label="All color variants — Size L (32px)">
+              {AVATAR_COLOR_SPECS.map((c, i) => (
+                <AvatarCircle key={c.key} name={DEMO_NAMES[i]} colorKey={c.key} sizeKey="lg" />
+              ))}
+            </Row>
+            <Row label="All color variants — Size XL (40px)">
+              {AVATAR_COLOR_SPECS.map((c, i) => (
+                <AvatarCircle key={c.key} name={DEMO_NAMES[i]} colorKey={c.key} sizeKey="xl" />
+              ))}
+            </Row>
+            <Row label="All sizes — Blue variant">
+              {AVATAR_SIZE_SPECS.map(s => (
+                <div key={s.key} className="flex flex-col items-center gap-[4px]">
+                  <AvatarCircle name="Sarah Chen" colorKey="blue" sizeKey={s.key} />
+                  <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{s.label} {s.px}px</span>
+                </div>
+              ))}
+            </Row>
+            <Row label="Stacked group — Size M (max 4 + overflow)">
+              <div className="flex items-center">
+                {DEMO_NAMES.slice(0, 4).map((name, i) => (
+                  <div key={i} style={{ marginLeft: i > 0 ? -6 : 0, zIndex: 10 - i, borderRadius: "50%", boxShadow: "0 0 0 1.5px var(--background)", display: "inline-flex", flexShrink: 0 }}>
+                    <AvatarCircle name={name} sizeKey="md" />
+                  </div>
+                ))}
+                <div style={{ width: 24, height: 24, borderRadius: "50%", marginLeft: -6, background: "var(--tag-neutral-bg)", color: "var(--tag-neutral-fg)", fontSize: 9, fontWeight: 700, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 0 1.5px var(--background)", flexShrink: 0 }}>
+                  +{DEMO_NAMES.length - 4}
+                </div>
+              </div>
+            </Row>
+            <Row label="Auto color from name — deterministic assignment">
+              {DEMO_NAMES.map(name => (
+                <div key={name} className="flex flex-col items-center gap-[4px]">
+                  <AvatarCircle name={name} sizeKey="md" />
+                  <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{name.split(" ")[0]}</span>
+                </div>
+              ))}
+            </Row>
+          </div>
+        )}
+
       </div>
     </div>
   )
@@ -5421,22 +5787,14 @@ const TABLE_ORDERS: Order[] = [
 ]
 
 function StatusTag({ value }: { value: string }) {
-  const map: Record<string, { bg: string; color: string }> = {
-    Active:   { bg: "var(--tag-success-bg)",     color: "var(--tag-success-fg)"     },
-    Inactive: { bg: "var(--tag-neutral-bg)",     color: "var(--tag-neutral-fg)"     },
-    Pending:  { bg: "var(--tag-alert-bg)",       color: "var(--tag-alert-fg)"       },
-    Paid:     { bg: "var(--tag-success-bg)",     color: "var(--tag-success-fg)"     },
-    Draft:    { bg: "var(--tag-secondary-bg)",   color: "var(--tag-secondary-fg)"   },
+  const variantMap: Record<string, TagVariant> = {
+    Active:   "success",
+    Inactive: "secondary",
+    Pending:  "alert",
+    Paid:     "success",
+    Draft:    "secondary",
   }
-  const style = map[value] ?? map["Inactive"]
-  return (
-    <span
-      className="inline-flex items-center px-[8px] py-[2px] rounded-[6px] text-[12px] font-medium"
-      style={{ background: style.bg, color: style.color }}
-    >
-      {value}
-    </span>
-  )
+  return <Tag variant={variantMap[value] ?? "secondary"} size="sm">{value}</Tag>
 }
 
 const CONTACT_COLUMNS: TableColumn<Contact>[] = [
@@ -11015,6 +11373,7 @@ export default function App() {
       <main className="flex-1 overflow-y-auto">
         <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" ? "max-w-[1100px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
+          {active === "avatar"          && <AvatarPage />}
           {active === "button"          && <ButtonPage        openSpec={setSpecModal} />}
           {active === "input"           && <InputPage         openSpec={setSpecModal} />}
           {active === "textarea"        && <TextareaPage      openSpec={setSpecModal} />}

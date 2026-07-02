@@ -57,49 +57,6 @@ function SidebarTooltip({ label, visible }: { label: string; visible: boolean })
   )
 }
 
-// ── Icon button — the 24×24 button used for collapsed nav items and toggle
-// Exact spec: padding 4px → 16×16 icon centered · cornerRadius 8
-// States: Default (no bg) · Hover (sb-bg + blue glow) · Active (gradient + teal glow)
-function IconBtn({
-  iconName,
-  label,
-  isActive = false,
-  showTooltip = false,
-  onClick,
-}: {
-  iconName: string
-  label: string
-  isActive?: boolean
-  showTooltip?: boolean
-  onClick?: () => void
-}) {
-  const [hovered, setHovered] = useState(false)
-
-  const iconColor = isActive || hovered ? "var(--sb-icon-active)" : "var(--sb-icon-default)"
-
-  let bg     = "transparent"
-  let shadow = "none"
-  if (isActive) { bg = ACTIVE_GRADIENT; shadow = ACTIVE_SHADOW }
-  else if (hovered) { bg = "var(--sb-icon-hover-bg)"; shadow = HOVER_SHADOW }
-
-  return (
-    <div className="relative" style={{ width: 24, height: 24 }}>
-      <button
-        onClick={onClick}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        aria-label={label}
-        title={undefined}           // we use our own tooltip
-        className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] transition-all duration-150 focus-visible:outline-none"
-        style={{ background: bg, boxShadow: shadow, padding: 4 }}
-      >
-        <NavIcon name={iconName} size={16} color={iconColor} />
-      </button>
-      {showTooltip && <SidebarTooltip label={label} visible={hovered} />}
-    </div>
-  )
-}
-
 export const DEFAULT_SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "home",        label: "Home",        icon: "Home" },
   { id: "agents",      label: "Agents",      icon: "Sparkle" },
@@ -107,6 +64,135 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "knowledge",   label: "Knowledge",   icon: "LayoutGrid", hasChildren: true },
   { id: "contacts",    label: "Contacts",    icon: "User" },
 ]
+
+// ── Unified nav item — handles both collapsed (icon-only) and expanded (icon+label) states
+function SidebarNavItem({
+  item,
+  isActive,
+  collapsed,
+  onItemClick,
+}: {
+  item: SidebarItem
+  isActive: boolean
+  collapsed: boolean
+  onItemClick?: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  const iconColor = isActive || hovered ? "var(--sb-icon-active)" : "var(--sb-icon-default)"
+  let iconBg = "transparent", iconShadow = "none"
+  if (isActive) { iconBg = ACTIVE_GRADIENT; iconShadow = ACTIVE_SHADOW }
+  else if (hovered) { iconBg = "var(--sb-icon-hover-bg)"; iconShadow = HOVER_SHADOW }
+
+  return (
+    <button
+      onClick={onItemClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      aria-label={item.label}
+      className="flex items-center rounded-[8px] transition-colors duration-150 focus-visible:outline-none shrink-0"
+      style={{
+        width: "100%",
+        height: 24,
+        background: !isActive && hovered && !collapsed ? "var(--sb-row-hover)" : "transparent",
+        justifyContent: collapsed ? "center" : "space-between",
+        paddingLeft: 0,
+        paddingRight: collapsed ? 0 : 4,
+      }}
+    >
+      {/* Left: icon button + label */}
+      <div className="flex items-center" style={{ gap: collapsed ? 0 : 8 }}>
+        {/* Icon button */}
+        <div className="relative shrink-0" style={{ width: 24, height: 24 }}>
+          <div
+            className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] transition-all duration-150"
+            style={{ background: iconBg, boxShadow: iconShadow, padding: 4 }}
+          >
+            <NavIcon name={item.icon} size={16} color={iconColor} />
+          </div>
+          {collapsed && <SidebarTooltip label={item.label} visible={hovered} />}
+        </div>
+
+        {/* Label — fades in after expand, fades out before collapse */}
+        <span
+          className="text-[12px] font-semibold leading-none whitespace-nowrap"
+          style={{
+            color: "var(--sb-text)",
+            overflow: "hidden",
+            display: "block",
+            opacity: collapsed ? 0 : 1,
+            maxWidth: collapsed ? 0 : 170,
+            transition: collapsed
+              ? "opacity 100ms ease, max-width 100ms ease"
+              : "opacity 150ms ease 160ms, max-width 160ms ease 80ms",
+          }}
+        >
+          {item.label}
+        </span>
+      </div>
+
+      {/* Chevron for items with children */}
+      {!collapsed && item.hasChildren && (
+        <div
+          className="w-[16px] h-[16px] flex items-center justify-center shrink-0"
+          style={{
+            opacity: collapsed ? 0 : 1,
+            transition: collapsed ? "opacity 80ms ease" : "opacity 140ms ease 180ms",
+          }}
+        >
+          <NavIcon
+            name="ChevronRight"
+            size={16}
+            color={isActive ? "var(--sb-chevron-active)" : "var(--sb-icon-default)"}
+          />
+        </div>
+      )}
+    </button>
+  )
+}
+
+// ── Toggle button row — always at the top, changes icon based on collapsed state
+function SidebarToggleRow({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean
+  onToggle: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const iconColor = hovered ? "var(--sb-icon-active)" : "var(--sb-icon-default)"
+  const iconBg    = hovered ? "var(--sb-icon-hover-bg)" : "transparent"
+  const iconShadow = hovered ? HOVER_SHADOW : "none"
+
+  return (
+    <div
+      className="flex items-center shrink-0"
+      style={{
+        height: 24,
+        justifyContent: collapsed ? "center" : "flex-end",
+        width: "100%",
+      }}
+    >
+      <div className="relative" style={{ width: 24, height: 24 }}>
+        <button
+          onClick={onToggle}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] transition-all duration-150 focus-visible:outline-none"
+          style={{ background: iconBg, boxShadow: iconShadow, padding: 4 }}
+        >
+          <NavIcon
+            name={collapsed ? "PanelLeftOpen" : "PanelLeftClose"}
+            size={16}
+            color={iconColor}
+          />
+        </button>
+        {collapsed && <SidebarTooltip label="Expand sidebar" visible={hovered} />}
+      </div>
+    </div>
+  )
+}
 
 export function Sidebar({
   items = DEFAULT_SIDEBAR_ITEMS,
@@ -118,7 +204,6 @@ export function Sidebar({
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
 
-  // keep internal state in sync if prop changes (controlled use)
   const prevDefault = useRef(defaultCollapsed)
   useEffect(() => {
     if (prevDefault.current !== defaultCollapsed) {
@@ -133,160 +218,41 @@ export function Sidebar({
     onCollapseChange?.(next)
   }
 
-  // ── Collapsed ─────────────────────────────────────────────────────────────
-  // Width 56px · inner container 40×full · radius 8 · padding 8
-  if (collapsed) {
-    return (
-      <div
-        className={`flex flex-col shrink-0 h-full ${className}`}
-        style={{ width: 56, padding: 8 }}
-      >
-        <div
-          className="flex flex-col items-center gap-[16px]"
-          style={{
-            background: "var(--sb-bg)",
-            borderRadius: 8,
-            padding: 8,
-            boxShadow: CONTAINER_SHADOW,
-            height: "100%",
-          }}
-        >
-          {/* Expand / panel toggle */}
-          <IconBtn
-            iconName="PanelLeftOpen"
-            label="Expand sidebar"
-            showTooltip
-            onClick={toggle}
-          />
-
-          {/* Nav items — icon only, with tooltip */}
-          {items.map(item => (
-            <IconBtn
-              key={item.id}
-              iconName={item.icon}
-              label={item.label}
-              isActive={item.id === activeId}
-              showTooltip
-              onClick={() => onItemClick?.(item.id)}
-            />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // ── Expanded ──────────────────────────────────────────────────────────────
-  // Width 250px · inner container 234×full · radius 16 · padding 8
   return (
     <div
       className={`flex flex-col shrink-0 h-full ${className}`}
-      style={{ width: 250, padding: 8 }}
+      style={{
+        width: collapsed ? 56 : 250,
+        padding: 8,
+        overflow: "hidden",
+        transition: "width 280ms cubic-bezier(0.4, 0, 0.2, 1)",
+      }}
     >
       <div
         className="flex flex-col gap-[16px]"
         style={{
           background: "var(--sb-bg)",
-          borderRadius: 16,
+          borderRadius: collapsed ? 8 : 16,
           padding: 8,
           boxShadow: CONTAINER_SHADOW,
           height: "100%",
+          alignItems: collapsed ? "center" : "stretch",
+          transition: "border-radius 280ms cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
-        {items.map((item, index) => (
-          <ExpandedNavItem
+        {/* Toggle row — always at top, always visible */}
+        <SidebarToggleRow collapsed={collapsed} onToggle={toggle} />
+
+        {items.map((item) => (
+          <SidebarNavItem
             key={item.id}
             item={item}
             isActive={item.id === activeId}
-            isFirst={index === 0}
-            onItemClick={onItemClick}
-            onToggleCollapse={toggle}
+            collapsed={collapsed}
+            onItemClick={() => onItemClick?.(item.id)}
           />
         ))}
       </div>
     </div>
-  )
-}
-
-// ── Expanded nav item row
-// Height 24px · gap 8 · padding-right 4
-// Icon button (24×24, p:4, r:8) + label (12px SemiBold white) + optional right element
-function ExpandedNavItem({
-  item,
-  isActive,
-  isFirst,
-  onItemClick,
-  onToggleCollapse,
-}: {
-  item: SidebarItem
-  isActive: boolean
-  isFirst: boolean
-  onItemClick?: (id: string) => void
-  onToggleCollapse: () => void
-}) {
-  const [rowHovered, setRowHovered] = useState(false)
-
-  // Icon button states
-  const iconBg     = isActive ? ACTIVE_GRADIENT : rowHovered ? "var(--sb-icon-hover-bg)" : "transparent"
-  const iconShadow = isActive ? ACTIVE_SHADOW    : rowHovered ? HOVER_SHADOW              : "none"
-  const iconColor  = isActive || rowHovered ? "var(--sb-icon-active)" : "var(--sb-icon-default)"
-
-  // Row bg: only hover state has a fill (not active — active is icon-only gradient)
-  const rowBg = !isActive && rowHovered ? "var(--sb-row-hover)" : "transparent"
-
-  return (
-    <button
-      onClick={() => onItemClick?.(item.id)}
-      onMouseEnter={() => setRowHovered(true)}
-      onMouseLeave={() => setRowHovered(false)}
-      aria-label={item.label}
-      className="flex items-center w-full h-[24px] rounded-[8px] transition-all duration-150 focus-visible:outline-none"
-      style={{
-        background: rowBg,
-        paddingRight: 4,
-        paddingLeft: 0,
-        gap: 8,
-        justifyContent: "space-between",
-      }}
-    >
-      {/* Left: icon button + label */}
-      <div className="flex items-center gap-[8px]">
-        {/* Icon button — 24×24, padding 4, radius 8 */}
-        <div
-          className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] shrink-0 transition-all duration-150"
-          style={{ background: iconBg, boxShadow: iconShadow, padding: 4 }}
-        >
-          <NavIcon name={item.icon} size={16} color={iconColor} />
-        </div>
-
-        {/* Label — 12px Semi Bold, always white (sidebar is always dark) */}
-        <span
-          className="text-[12px] font-semibold leading-none whitespace-nowrap"
-          style={{ color: "var(--sb-text)" }}
-        >
-          {item.label}
-        </span>
-      </div>
-
-      {/* Right element */}
-      {isFirst ? (
-        // First item carries the collapse toggle (□) — stop propagation so row click doesn't fire
-        <button
-          onClick={e => { e.stopPropagation(); onToggleCollapse() }}
-          aria-label="Collapse sidebar"
-          onMouseEnter={e => e.stopPropagation()}
-          className="w-[16px] h-[16px] flex items-center justify-center shrink-0 transition-opacity hover:opacity-70 focus-visible:outline-none"
-        >
-          <NavIcon name="PanelLeftClose" size={16} color="var(--sb-icon-default)" />
-        </button>
-      ) : item.hasChildren ? (
-        <div className="w-[16px] h-[16px] flex items-center justify-center shrink-0">
-          <NavIcon
-            name="ChevronRight"
-            size={16}
-            color={isActive ? "var(--sb-chevron-active)" : "var(--sb-icon-default)"}
-          />
-        </div>
-      ) : null}
-    </button>
   )
 }

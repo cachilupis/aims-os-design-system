@@ -91,9 +91,11 @@ export function ModalDialog({
   const resolvedInfoState   = infoCardState ?? INFO_TONE_MAP[tone]
 
   const cardTransition = embedded ? {} : {
-    transform:  show ? "scale(1)" : "scale(0.95)",
+    transform:  show ? "scale(1) translateY(0px)" : "scale(0.96) translateY(16px)",
     opacity:    show ? 1 : 0,
-    transition: `opacity ${show ? "200ms" : "150ms"} ease-${show ? "out" : "in"}, transform ${show ? "200ms" : "150ms"} ease-${show ? "out" : "in"}`,
+    transition: show
+      ? "opacity 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 320ms cubic-bezier(0.16, 1, 0.3, 1)"
+      : "opacity 160ms cubic-bezier(0.4, 0, 1, 1), transform 200ms cubic-bezier(0.4, 0, 1, 1)",
   }
 
   const card = (
