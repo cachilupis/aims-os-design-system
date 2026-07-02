@@ -31,8 +31,8 @@ import { FiltersSlideout } from "@/components/ui/filters-slideout"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "button" | "input" | "textarea" | "card-container" | "tag" | "menu-item" | "highlight-icon" | "select" | "checkbox" | "toggle" | "table" | "topbar" | "sidebar" | "entity-list" | "modal-dialog" | "informative-card" | "filters" | "icons" | "typography" | "colors"
-type SpecModal = "button" | "input" | "textarea" | "card-container" | "tag" | "menu-item" | "highlight-icon" | "select" | "checkbox" | "toggle" | "table" | "topbar" | "sidebar" | "entity-list" | "modal-dialog" | "informative-card" | "filters" | null
+type SectionId = "home" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
+type SpecModal = "button" | "card-container" | "checkbox" | "entity-list" | "filters" | "highlight-icon" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -83,27 +83,30 @@ const ExternalIcon = () => (
 // ── Nav data ──────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: string }[] = [
-  { id: "home",            label: "Why this approach",group: "Overview",    description: "Alignment doc: why a component repository is the foundation for consistent AI prototypes" },
-  { id: "button",          label: "Button",           group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
-  { id: "input",           label: "Input",            group: "Components",  description: "Single-line text field · 2 sizes · 5 validation states · icon slots" },
-  { id: "textarea",        label: "Text Description", group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
-  { id: "card-container",  label: "Card Container",   group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
-  { id: "tag",             label: "Tag",              group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
-  { id: "menu-item",      label: "Menu / Dropdown", group: "Components",  description: "Dropdown list panel · 2 sizes · 4 states · leading icon, subtext, dividers, section headers" },
-  { id: "highlight-icon", label: "Highlight Icon",  group: "Components",  description: "Rounded semantic icon container · 3 sizes · 9 color variants · used as leading slot in Menu items" },
-  { id: "select",       label: "Select",          group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
-  { id: "checkbox",     label: "Checkbox",        group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
-  { id: "toggle",       label: "Toggle",          group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
-  { id: "table",        label: "Table",           group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
-  { id: "topbar",       label: "Topbar",          group: "Components",  description: "Global navigation bar · 2 variants (Default/Tablet) · workspace, search, action buttons, profile" },
-  { id: "sidebar",      label: "Sidebar",         group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
-  { id: "entity-list",  label: "Entity List",   group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
-  { id: "modal-dialog",     label: "Modal Dialog",     group: "Components",  description: "2 variants: Confirmation (centered, max 900px) and Content (left-aligned, max 900px). Icon, title, description, slot, informative card, CTA pair." },
-  { id: "informative-card", label: "Informative Card", group: "Components",  description: "Horizontal notice surface. 5 semantic states · 3 sizes · optional description + CTA. Uses --ic-* token family." },
-  { id: "filters",          label: "Filters",          group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
-  { id: "icons",      label: "Icons",      group: "Foundations", description: "141 icons mapped from Material Design DS to Lucide · 12 semantic categories" },
-  { id: "typography", label: "Typography", group: "Foundations", description: "Type scale DS → Tailwind · Display, Title, Subtitle, Body, Label, Caption, Link" },
-  { id: "colors",     label: "Colors",     group: "Foundations", description: "Primitive palette + 162 semantic tokens · light & dark mode · Surface, Border, Text, Icon, Badge" },
+  { id: "home",            label: "Why this approach", group: "Overview",    description: "Alignment doc: why a component repository is the foundation for consistent AI prototypes" },
+  // Components — alphabetical by label
+  { id: "button",          label: "Button",            group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
+  { id: "card-container",  label: "Card Container",    group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
+  { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
+  { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
+  { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
+  { id: "highlight-icon",  label: "Highlight Icon",    group: "Components",  description: "Rounded semantic icon container · 3 sizes · 9 color variants · used as leading slot in Menu items" },
+  { id: "informative-card",label: "Informative Card",  group: "Components",  description: "Horizontal notice surface. 5 semantic states · 3 sizes · optional description + CTA. Uses --ic-* token family." },
+  { id: "input",           label: "Input",             group: "Components",  description: "Single-line text field · 2 sizes · 5 validation states · icon slots" },
+  { id: "menu-item",       label: "Menu / Dropdown",   group: "Components",  description: "Dropdown list panel · 2 sizes · 4 states · leading icon, subtext, dividers, section headers" },
+  { id: "modal-dialog",    label: "Modal Dialog",      group: "Components",  description: "2 variants: Confirmation (centered, max 900px) and Content (left-aligned, max 900px). Icon, title, description, slot, informative card, CTA pair." },
+  { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
+  { id: "sidebar",         label: "Sidebar",           group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
+  { id: "table",           label: "Table",             group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
+  { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
+  { id: "textarea",        label: "Text Description",  group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
+  { id: "toggle",          label: "Toggle",            group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
+  { id: "topbar",          label: "Topbar",            group: "Components",  description: "Global navigation bar · 2 variants (Default/Tablet) · workspace, search, action buttons, profile" },
+  // Foundations — alphabetical by label
+  { id: "breakpoints", label: "Breakpoints", group: "Foundations", description: "5-tier responsive system · XL/L/M/S/XS · column grid, gutter and margin specs per breakpoint · sidebar behavior rules" },
+  { id: "colors",      label: "Colors",      group: "Foundations", description: "Primitive palette + 162 semantic tokens · light & dark mode · Surface, Border, Text, Icon, Badge" },
+  { id: "icons",       label: "Icons",       group: "Foundations", description: "141 icons mapped from Material Design DS to Lucide · 12 semantic categories" },
+  { id: "typography",  label: "Typography",  group: "Foundations", description: "Type scale DS → Tailwind · Display, Title, Subtitle, Body, Label, Caption, Link" },
 ]
 
 // ── DS Spec data (sourced directly from Figma — source of truth) ──────────
@@ -10108,6 +10111,271 @@ function ColorDot({ hex, size = 32 }: { hex: string | null; size?: number }) {
   )
 }
 
+// ── Breakpoints data ─────────────────────────────────────────────────────────
+
+const BP_TIERS = [
+  {
+    id: "xl", label: "XL", name: "XL Desktop",
+    min: 1920, max: null, canvasW: 1920, canvasH: 1080,
+    cols: 12, gutter: 24, margin: 80, sidebar: 80,
+    color: "#2b7fff", bg: "rgba(43,127,255,0.12)", border: "rgba(43,127,255,0.3)",
+    note: "Information-dense views (UCP, dashboards). Design here first.",
+  },
+  {
+    id: "l", label: "L", name: "L Desktop",
+    min: 1440, max: 1919, canvasW: 1440, canvasH: 900,
+    cols: 12, gutter: 24, margin: 32, sidebar: 80,
+    color: "#6ee7b7", bg: "rgba(110,231,183,0.10)", border: "rgba(110,231,183,0.25)",
+    note: "Standard baseline for most business workflows.",
+  },
+  {
+    id: "m", label: "M", name: "M Laptop",
+    min: 1280, max: 1439, canvasW: 1280, canvasH: 832,
+    cols: 12, gutter: 16, margin: 24, sidebar: 80,
+    color: "#fcd34d", bg: "rgba(252,211,77,0.10)", border: "rgba(252,211,77,0.25)",
+    note: "MacBook Pro / Air target. Test all views here.",
+  },
+  {
+    id: "s", label: "S", name: "S Tablet",
+    min: 600, max: 1279, canvasW: 744, canvasH: 1113,
+    cols: 8, gutter: 16, margin: 24, sidebar: 80,
+    color: "#d8b4fe", bg: "rgba(216,180,254,0.10)", border: "rgba(216,180,254,0.25)",
+    note: "Tablet portrait. Sidebar toggleable (overlay or push).",
+  },
+  {
+    id: "xs", label: "XS", name: "Mobile",
+    min: null, max: 599, canvasW: 375, canvasH: 812,
+    cols: 4, gutter: 12, margin: 16, sidebar: 0,
+    color: "#fb923c", bg: "rgba(251,146,60,0.10)", border: "rgba(251,146,60,0.25)",
+    note: "Mobile. No sidebar — provide alternate navigation.",
+  },
+]
+
+const BP_CONTEXT = [
+  { view: "UCP / Unified Consumer Profile", primary: "XL",  also: "L, M",  note: "Dense multi-panel — sidebar always fixed." },
+  { view: "Dashboard / Table view",         primary: "L",   also: "XL, M", note: "Most users on business laptops." },
+  { view: "Grid view (Cards)",              primary: "L",   also: "XL, M, S", note: "Card grid reflows — test column wrapping." },
+  { view: "List view",                      primary: "L",   also: "M, S",  note: "Simpler layout but sidebar toggles at S." },
+  { view: "Settings / Admin",               primary: "L",   also: "M",     note: "Power-user views — tablet rare." },
+]
+
+const BP_RULES = [
+  "Design at XL (1920px) first for information-dense views like UCP and dashboards.",
+  "Use L (1440px) as the standard baseline for most business workflows.",
+  "Test all views at M (1280px) to ensure compatibility with MacBook Pro and Air users.",
+  "Design S (600–1279px) layouts for tablet — use toggle sidebar and reduce columns from 12 to 8.",
+  "Don't apply XL padding (80px) at smaller breakpoints — use the specified margin per tier.",
+  "Don't create new breakpoint values outside the defined system — all layouts must conform to XL/L/M/S/XS.",
+]
+
+function BreakpointsPage() {
+  const [activeBp, setActiveBp] = useState<string | null>(null)
+  const focused = activeBp ? BP_TIERS.find(b => b.id === activeBp) : null
+
+  return (
+    <div className="flex flex-col gap-[40px]">
+
+      {/* Header */}
+      <div>
+        <h1 className="text-[24px] font-semibold" style={{ color: "var(--foreground)" }}>Breakpoints</h1>
+        <p className="text-[14px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+          5-tier responsive system sourced from Figma DS node{" "}
+          <code className="text-[12px] font-mono px-[5px] py-[1px] rounded-[4px]" style={{ background: "var(--field-border)" }}>6729:35011</code>.
+          All layouts must conform to these tiers — no custom breakpoint values.
+        </p>
+      </div>
+
+      {/* Visual scale */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Viewport scale</h2>
+        <div className="relative h-[48px] rounded-[8px] overflow-hidden" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+          {BP_TIERS.map((bp, i) => {
+            const totalSpan = 1920
+            const spanPx = bp.max != null ? bp.max - (bp.min ?? 0) + 1 : (bp.min != null ? totalSpan - bp.min : totalSpan)
+            const pct = (spanPx / totalSpan) * 100
+            return (
+              <button
+                key={bp.id}
+                className="absolute top-0 h-full flex items-center justify-center text-[11px] font-semibold transition-opacity"
+                style={{
+                  left:   `${(((bp.min ?? 0) / totalSpan) * 100).toFixed(2)}%`,
+                  width:  `${pct.toFixed(2)}%`,
+                  background:  activeBp === bp.id ? bp.color : bp.bg,
+                  color:       activeBp === bp.id ? "#fff" : bp.color,
+                  borderRight: i < BP_TIERS.length - 1 ? `1px solid var(--field-border)` : "none",
+                  opacity:     activeBp && activeBp !== bp.id ? 0.4 : 1,
+                }}
+                onClick={() => setActiveBp(prev => prev === bp.id ? null : bp.id)}
+              >
+                {bp.label}
+              </button>
+            )
+          })}
+        </div>
+        <div className="flex justify-between text-[11px]" style={{ color: "var(--field-supporting)" }}>
+          <span>0px</span>
+          <span>600px</span>
+          <span>1280px</span>
+          <span>1440px</span>
+          <span>1920px</span>
+        </div>
+      </div>
+
+      {/* Detail card when a BP is selected */}
+      {focused && (
+        <div className="rounded-[10px] p-[20px] flex flex-col gap-[16px]" style={{ background: focused.bg, border: `1px solid ${focused.border}` }}>
+          <div className="flex items-start justify-between gap-[16px]">
+            <div className="flex flex-col gap-[4px]">
+              <span className="text-[16px] font-semibold" style={{ color: focused.color }}>{focused.label} — {focused.name}</span>
+              <span className="text-[13px]" style={{ color: "var(--field-supporting)" }}>{focused.note}</span>
+            </div>
+            <div className="text-[12px] font-mono shrink-0" style={{ color: focused.color }}>
+              {focused.min != null ? `≥ ${focused.min}px` : ""}{focused.max != null ? ` → ${focused.max}px` : ""}
+            </div>
+          </div>
+          <div className="grid grid-cols-5 gap-[8px]">
+            {[
+              { label: "Canvas",  value: `${focused.canvasW} × ${focused.canvasH}px` },
+              { label: "Columns", value: `${focused.cols}` },
+              { label: "Gutter",  value: `${focused.gutter}px` },
+              { label: "Margin",  value: `${focused.margin}px` },
+              { label: "Sidebar", value: focused.sidebar > 0 ? `${focused.sidebar}px` : "Hidden" },
+            ].map(s => (
+              <div key={s.label} className="flex flex-col gap-[4px] rounded-[8px] px-[12px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>{s.label}</span>
+                <span className="text-[15px] font-semibold" style={{ color: "var(--foreground)" }}>{s.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Grid spec table */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Grid specification</h2>
+        <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                {["Tier", "Viewport", "Canvas", "Columns", "Gutter", "Margin", "Sidebar"].map(h => (
+                  <th key={h} className="text-left px-[14px] py-[10px] font-semibold text-[11px] uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {BP_TIERS.map((bp, i) => (
+                <tr
+                  key={bp.id}
+                  className="cursor-pointer transition-colors"
+                  style={{
+                    background:  activeBp === bp.id ? bp.bg : i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                    borderBottom: i < BP_TIERS.length - 1 ? "0.5px solid var(--field-border)" : "none",
+                  }}
+                  onClick={() => setActiveBp(prev => prev === bp.id ? null : bp.id)}
+                >
+                  <td className="px-[14px] py-[12px]">
+                    <span className="inline-flex items-center justify-center w-[28px] h-[22px] rounded-[4px] text-[11px] font-bold"
+                      style={{ background: bp.bg, color: bp.color, border: `0.5px solid ${bp.border}` }}>
+                      {bp.label}
+                    </span>
+                  </td>
+                  <td className="px-[14px] py-[12px] font-mono text-[12px]" style={{ color: "var(--foreground)" }}>
+                    {bp.min != null ? `≥ ${bp.min}px` : ""}{bp.max != null ? `${bp.min != null ? " → " : "< "}${bp.max}px` : ""}
+                  </td>
+                  <td className="px-[14px] py-[12px] font-mono text-[12px]" style={{ color: "var(--field-supporting)" }}>{bp.canvasW} × {bp.canvasH}</td>
+                  <td className="px-[14px] py-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{bp.cols}</td>
+                  <td className="px-[14px] py-[12px]" style={{ color: "var(--foreground)" }}>{bp.gutter}px</td>
+                  <td className="px-[14px] py-[12px]" style={{ color: "var(--foreground)" }}>{bp.margin}px</td>
+                  <td className="px-[14px] py-[12px]" style={{ color: "var(--field-supporting)" }}>
+                    {bp.sidebar > 0 ? `${bp.sidebar}px${bp.id === "s" ? " (toggle)" : ""}` : "Hidden"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Layout grid visualizer */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Column grid preview</h2>
+        <div className="flex gap-[8px] flex-wrap">
+          {BP_TIERS.map(bp => {
+            const cols = bp.cols
+            return (
+              <div key={bp.id} className="flex flex-col gap-[8px] flex-1 min-w-[140px]">
+                <span className="text-[11px] font-semibold" style={{ color: bp.color }}>{bp.label} — {cols} cols</span>
+                <div className="flex gap-[2px] h-[40px]">
+                  {Array.from({ length: cols }).map((_, ci) => (
+                    <div key={ci} className="flex-1 rounded-[2px]" style={{ background: bp.bg, border: `0.5px solid ${bp.border}` }} />
+                  ))}
+                </div>
+                <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                  {bp.gutter}px gutter · {bp.margin}px margin
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Context map */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Primary breakpoint by view type</h2>
+        <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                {["View type", "Primary", "Also test", "Note"].map(h => (
+                  <th key={h} className="text-left px-[14px] py-[10px] font-semibold text-[11px] uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {BP_CONTEXT.map((row, i) => {
+                const tier = BP_TIERS.find(b => b.label === row.primary)
+                return (
+                  <tr key={i} style={{
+                    borderBottom: i < BP_CONTEXT.length - 1 ? "0.5px solid var(--field-border)" : "none",
+                    background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                  }}>
+                    <td className="px-[14px] py-[12px] font-medium" style={{ color: "var(--foreground)" }}>{row.view}</td>
+                    <td className="px-[14px] py-[12px]">
+                      <span className="inline-flex items-center justify-center w-[28px] h-[22px] rounded-[4px] text-[11px] font-bold"
+                        style={{ background: tier?.bg, color: tier?.color, border: `0.5px solid ${tier?.border}` }}>
+                        {row.primary}
+                      </span>
+                    </td>
+                    <td className="px-[14px] py-[12px] text-[12px]" style={{ color: "var(--field-supporting)" }}>{row.also}</td>
+                    <td className="px-[14px] py-[12px] text-[12px]" style={{ color: "var(--field-supporting)" }}>{row.note}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Key rules */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Key rules</h2>
+        <div className="flex flex-col gap-[6px]">
+          {BP_RULES.map((rule, i) => (
+            <div key={i} className="flex items-start gap-[10px] rounded-[8px] px-[14px] py-[11px]"
+              style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+              <span className="text-[12px] font-bold shrink-0 mt-[1px]" style={{ color: "var(--fi-view-active-bg)" }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{rule}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
 function ColorsPage() {
   const [tab,    setTab]    = useState<"primitives"|"semantic">("primitives")
   const [copied, setCopied] = useState<string|null>(null)
@@ -10395,6 +10663,7 @@ export default function App() {
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "filters"         && <FiltersPage         openSpec={setSpecModal} />}
+          {active === "breakpoints"     && <BreakpointsPage />}
           {active === "icons"           && <IconsPage />}
           {active === "typography"      && <TypographyPage />}
           {active === "colors"          && <ColorsPage />}
