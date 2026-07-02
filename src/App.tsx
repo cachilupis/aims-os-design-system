@@ -9257,14 +9257,6 @@ function FiltersInteractivePlayground() {
 
 function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab,              setTab]              = useState<"overview" | "playground" | "slideout" | "reference">("overview")
-  const [pgCompact,        setPgCompact]        = useState(false)
-  const [pgCompactCount,   setPgCompactCount]   = useState(0)
-  const [pgShowClearFilters, setPgShowClearFilters] = useState(false)
-  const [pgShowAllFilters, setPgShowAllFilters] = useState(true)
-  const [pgShowSort,       setPgShowSort]       = useState(true)
-  const [pgShowView,       setPgShowView]       = useState(true)
-  const [pgViewMode,       setPgViewMode]       = useState<"grid" | "list">("grid")
-  const [pgActiveSlot,     setPgActiveSlot]     = useState<number | null>(null)
   const [pgSlideoutOpen,   setPgSlideoutOpen]   = useState(false)
 
   const DEFAULT_SLOTS: FilterSlot[] = [
@@ -9281,11 +9273,6 @@ function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     { placeholder: "Filter 4" },
   ]
 
-  const pgSlots = pgCompact
-    ? []
-    : (pgActiveSlot !== null
-        ? DEFAULT_SLOTS.map((s, i) => i === pgActiveSlot ? { ...s, value: "John Smith" } : s)
-        : DEFAULT_SLOTS)
 
   return (
     <div className="flex flex-col gap-0">
