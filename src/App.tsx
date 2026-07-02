@@ -8855,10 +8855,10 @@ function FiltersInteractivePlayground() {
     const def  = CHIP_DEFS[i]
     if (vals.length === 0) return (
       <>
-        <span className="text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--fi-chip-text)" }}>
+        <span className="text-[13px] font-medium whitespace-nowrap" style={{ color: "var(--field-text)" }}>
           {def.placeholder}
         </span>
-        <LucideIcons.ChevronDown className="w-[13px] h-[13px] shrink-0" style={{ color: "var(--fi-chip-icon)" }} />
+        <LucideIcons.ChevronDown className="w-[13px] h-[13px] shrink-0" style={{ color: "var(--field-icon)" }} />
       </>
     )
     const visible  = vals.slice(0, 2)
@@ -8878,10 +8878,7 @@ function FiltersInteractivePlayground() {
           </Tag>
         ))}
         {overflow > 0 && (
-          <span className="inline-flex items-center justify-center min-w-[22px] h-[18px] px-[5px] rounded-full text-[11px] font-semibold leading-none shrink-0"
-            style={{ background: "var(--fi-badge-bg)", color: "var(--fi-badge-text)" }}>
-            +{overflow}
-          </span>
+          <Tag variant="informative" size="sm">+{overflow}</Tag>
         )}
         <LucideIcons.ChevronDown className="w-[13px] h-[13px] shrink-0" style={{ color: "var(--fi-chip-active-icon)" }} />
       </>
@@ -9104,10 +9101,10 @@ function FiltersInteractivePlayground() {
         <div className="flex items-center gap-[8px] px-[16px] h-[56px]" style={{ flexWrap: "nowrap", minWidth: 0 }}>
 
           {/* Search field */}
-          <div className="inline-flex items-center gap-[6px] h-[40px] px-[10px] rounded-[8px] border w-[150px] shrink-0"
-            style={{ background: "var(--fi-chip-bg)", borderColor: "var(--fi-chip-border)" }}>
-            <LucideIcons.Search className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--fi-chip-icon)" }} />
-            <span className="text-[13px] font-medium" style={{ color: "var(--fi-chip-icon)" }}>Search</span>
+          <div className="inline-flex items-center gap-[6px] h-[40px] px-[10px] rounded-[8px] border-[0.5px] w-[150px] shrink-0"
+            style={{ background: "var(--field-bg)", borderColor: "var(--field-border)" }}>
+            <LucideIcons.Search className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--field-icon)" }} />
+            <span className="text-[13px] font-medium" style={{ color: "var(--field-placeholder)" }}>Search</span>
           </div>
 
           {/* Filter chips with floating dropdowns */}
@@ -9118,13 +9115,13 @@ function FiltersInteractivePlayground() {
             return (
               <div key={i} className="relative shrink-0">
                 <button
-                  className="inline-flex items-center gap-[5px] h-[40px] px-[8px] rounded-[8px] border text-[13px] font-medium select-none transition-colors"
+                  className="inline-flex items-center gap-[5px] h-[40px] px-[8px] rounded-[8px] border-[0.5px] text-[13px] font-medium select-none transition-colors"
                   style={{
-                    background:  isActive ? "var(--fi-chip-active-bg)" : "var(--fi-chip-bg)",
-                    borderColor: isActive || isOpen ? "var(--fi-chip-active-border)" : "var(--fi-chip-border)",
+                    background:  isActive ? "var(--fi-chip-active-bg)" : "var(--field-bg)",
+                    borderColor: isActive || isOpen ? "var(--fi-chip-active-border)" : "var(--field-border)",
                   }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--fi-chip-hover-bg)" }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "var(--fi-chip-bg)" }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = "var(--field-border-hover)" }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = "var(--field-border)" }}
                   onClick={() => { setSortOpen(false); setOpenChip(prev => prev === i ? null : i) }}
                 >
                   {renderChipFace(i)}
@@ -9224,17 +9221,21 @@ function FiltersInteractivePlayground() {
             style={{ borderTop: "1px solid var(--field-border)" }}>
             <span className="text-[11px] font-semibold uppercase tracking-wider shrink-0"
               style={{ color: "var(--field-supporting)" }}>Applied:</span>
-            {slideoutActiveFilters.map((f, idx) => (
-              <Tag key={`sf-${idx}`} variant="informative" size="sm"
-                trailingIcon={
-                  <button className="flex items-center justify-center hover:opacity-70 transition-opacity ml-[1px]"
-                    onClick={f.onRemove} aria-label={`Remove ${f.value}`}>
-                    <LucideIcons.X className="w-[9px] h-[9px]" />
-                  </button>
-                }>
-                {f.label}: {f.value.length > 13 ? `${f.value.slice(0, 13)}…` : f.value}
-              </Tag>
-            ))}
+            {slideoutActiveFilters.map((f, idx) => {
+              const palette = ["informative", "purple", "success", "alert", "lightBlue", "limeGreen"] as const
+              const variant = palette[idx % palette.length]
+              return (
+                <Tag key={`sf-${idx}`} variant={variant} size="sm"
+                  trailingIcon={
+                    <button className="flex items-center justify-center hover:opacity-70 transition-opacity ml-[1px]"
+                      onClick={f.onRemove} aria-label={`Remove ${f.value}`}>
+                      <LucideIcons.X className="w-[9px] h-[9px]" />
+                    </button>
+                  }>
+                  {f.label}: {f.value.length > 13 ? `${f.value.slice(0, 13)}…` : f.value}
+                </Tag>
+              )
+            })}
             <button className="text-[12px] font-medium transition-colors ml-[2px]"
               style={{ color: "var(--fi-clear-text)" }}
               onMouseEnter={e => { e.currentTarget.style.color = "var(--fi-clear-hover)" }}
@@ -10355,7 +10356,7 @@ export default function App() {
         isDark={isDark} onToggle={() => setIsDark(d => !d)}
       />
       <main className="flex-1 overflow-y-auto">
-        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" ? "max-w-[1100px]" : "max-w-[900px]"}`}>
+        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" ? "max-w-[1100px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
           {active === "button"          && <ButtonPage        openSpec={setSpecModal} />}
           {active === "input"           && <InputPage         openSpec={setSpecModal} />}
