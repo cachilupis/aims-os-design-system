@@ -9319,56 +9319,46 @@ function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 {/* S Variant */}
                 <div className="flex flex-col gap-[6px]">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">S Variant</span>
-                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
-                    <Filters compact showSearch showSort showViewToggle showAllFilters />
-                  </div>
+                  <Filters compact showSearch showSort showViewToggle showAllFilters />
                 </div>
 
                 {/* S Variant Filters Apply */}
                 <div className="flex flex-col gap-[6px]">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">S Variant — Filters Apply</span>
-                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
-                    <Filters compact compactCount={1} showSort showViewToggle />
-                  </div>
+                  <Filters compact compactCount={1} showSort showViewToggle />
                 </div>
 
                 {/* Default */}
                 <div className="flex flex-col gap-[6px]">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Default</span>
-                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
-                    <Filters showSearch slots={DEFAULT_SLOTS} showSort showViewToggle showAllFilters />
-                  </div>
+                  <Filters showSearch slots={DEFAULT_SLOTS} showSort showViewToggle showAllFilters />
                 </div>
 
                 {/* Owner 1 — active filter chip */}
                 <div className="flex flex-col gap-[6px]">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Owner 1 — active chip</span>
-                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
-                    <Filters
-                      showSearch
-                      slots={ACTIVE_SLOTS}
-                      showClearFilters
-                      showSort showViewToggle showAllFilters
-                    />
-                  </div>
+                  <Filters
+                    showSearch
+                    slots={ACTIVE_SLOTS}
+                    showClearFilters
+                    showSort showViewToggle showAllFilters
+                  />
                 </div>
 
                 {/* Modified Active */}
                 <div className="flex flex-col gap-[6px]">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Modified Active</span>
-                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
-                    <Filters
-                      showSearch={false}
-                      slots={[
-                        { placeholder: "Type"     },
-                        { placeholder: "Owner"    },
-                        { placeholder: "Modified", value: "Last 7 Days" },
-                        { placeholder: "Filter 4" },
-                      ]}
-                      showClearFilters
-                      showSort showViewToggle showAllFilters
-                    />
-                  </div>
+                  <Filters
+                    showSearch={false}
+                    slots={[
+                      { placeholder: "Type"     },
+                      { placeholder: "Owner"    },
+                      { placeholder: "Modified", value: "Last 7 Days" },
+                      { placeholder: "Filter 4" },
+                    ]}
+                    showClearFilters
+                    showSort showViewToggle showAllFilters
+                  />
                 </div>
 
               </div>

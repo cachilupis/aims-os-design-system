@@ -49,7 +49,7 @@ export type FiltersProps = {
 }
 
 const CHIP_BASE =
-  "inline-flex items-center gap-[6px] h-[40px] px-[8px] rounded-[8px] border text-[13px] font-medium transition-colors select-none"
+  "inline-flex items-center gap-[6px] h-[40px] px-[8px] rounded-[8px] border-[0.5px] text-[13px] font-medium transition-colors select-none"
 
 function AllFiltersButton({ onClick }: { onClick?: () => void }) {
   return (
@@ -134,16 +134,16 @@ export function Filters({
             {/* Search input */}
             {showSearch && (
               <div
-                className="inline-flex items-center gap-[6px] h-[40px] px-[10px] rounded-[8px] border w-[140px] shrink-0"
+                className="inline-flex items-center gap-[6px] h-[40px] px-[10px] rounded-[8px] border-[0.5px] w-[140px] shrink-0"
                 style={{
-                  background:  "var(--fi-chip-bg)",
-                  borderColor: "var(--fi-chip-border)",
+                  background:  "var(--field-bg)",
+                  borderColor: "var(--field-border)",
                 }}
               >
-                <Search className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--fi-chip-icon)" }} />
+                <Search className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--field-icon)" }} />
                 <span
                   className="text-[13px] font-medium truncate"
-                  style={{ color: "var(--fi-chip-icon)" }}
+                  style={{ color: "var(--field-placeholder)" }}
                 >
                   {searchPlaceholder}
                 </span>
@@ -194,21 +194,21 @@ export function Filters({
                   </button>
                 </div>
               ) : (
-                /* Inactive dropdown chip */
+                /* Inactive dropdown chip — matches Select/Input tokens */
                 <button
                   key={i}
                   className={cn(CHIP_BASE, "shrink-0")}
                   style={{
-                    background:  "var(--fi-chip-bg)",
-                    borderColor: "var(--fi-chip-border)",
-                    color:       "var(--fi-chip-text)",
+                    background:  "var(--field-bg)",
+                    borderColor: "var(--field-border)",
+                    color:       "var(--field-text)",
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "var(--fi-chip-hover-bg)" }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "var(--fi-chip-bg)" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--field-border-hover)" }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--field-border)" }}
                   onClick={slot.onOpen}
                 >
                   {slot.placeholder}
-                  <ChevronDown className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--fi-chip-icon)" }} />
+                  <ChevronDown className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--field-icon)" }} />
                 </button>
               )
             )}
