@@ -104,7 +104,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "sidebar",         label: "Sidebar",           group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
   { id: "table",           label: "Table",             group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
-  { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · active indicator · icon · info badge · 2 sizes (M/S) · disabled state" },
+  { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · active indicator · icon · 2 sizes (M/S) · disabled state" },
   { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
   { id: "textarea",        label: "Text Description",  group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
   { id: "toggle",          label: "Toggle",            group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
@@ -1774,9 +1774,9 @@ const TABS_SPEC = {
   name: "Tabs",
   figmaNodeId: "856:11281",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=856-11281",
-  description: "Horizontal tab bar for switching between related views. Active state shows primary-blue indicator + label color. Supports leading icon, info badge, and disabled state.",
+  description: "Horizontal tab bar for switching between related views. Active state shows primary-blue indicator + label color. Supports leading icon and disabled state.",
   properties: [
-    { name: "items",     type: "Array",    values: ["TabItem[]"],       default: "required",   note: "id · label · icon? · badge? · disabled?" },
+    { name: "items",     type: "Array",    values: ["TabItem[]"],       default: "required",   note: "id · label · icon? · disabled?" },
     { name: "activeId",  type: "String",   values: ["string"],          default: "required",   note: "ID of the currently selected tab" },
     { name: "onChange",  type: "Function", values: ["(id) => void"],    default: "required",   note: "Called when user clicks a non-disabled tab. Receives tab id." },
     { name: "size",      type: "Variant",  values: ["m", "s"],          default: "m",          note: "M: 14px / px-16 py-10 — S: 12px / px-12 py-8" },
@@ -1786,13 +1786,10 @@ const TABS_SPEC = {
     { element: "Tab M",     padding: "10×16px", gap: "6px", radius: "0px",   note: "Default · icon 16px · 14px label" },
     { element: "Tab S",     padding: "8×12px",  gap: "4px", radius: "0px",   note: "Compact · icon 14px · 12px label" },
     { element: "Indicator", padding: "—",       gap: "—",   radius: "—",     note: "2px border-bottom · active tab only · mb-[-1px] overlap" },
-    { element: "Badge M",   padding: "0×5px",   gap: "—",   radius: "100px", note: "h-16px min-w-16px · 10px/600 text" },
-    { element: "Badge S",   padding: "0×4px",   gap: "—",   radius: "100px", note: "h-14px min-w-14px · 9px/600 text" },
   ],
   typography: [
-    { element: "Label M", family: "Inter", size: "14px", weight: "Medium (500)",   lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
-    { element: "Label S", family: "Inter", size: "12px", weight: "Medium (500)",   lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
-    { element: "Badge",   family: "Inter", size: "10px", weight: "SemiBold (600)", lineHeight: "1",   variable: "--tag-informative-fg",           note: "Info badge text" },
+    { element: "Label M", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
+    { element: "Label S", family: "Inter", size: "12px", weight: "Medium (500)", lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
   ],
 }
 
@@ -2357,7 +2354,7 @@ const DONE_COMPONENTS = [
   { name: "Filters",         complexity: "Complex", hours: 6,  note: "Filter bar + Slideout · 8 states · all-filters · sort · grid/list" },
   { name: "Alert Banner",    complexity: "Simple",  hours: 2,  note: "3 states · optional CTA + dismiss · --ab-* token family" },
   { name: "Empty State",     complexity: "Medium",  hours: 3,  note: "Icon Highlight + title + desc + 1–2 CTAs · compact table/card variant · --es-* tokens" },
-  { name: "Tabs",            complexity: "Medium",  hours: 3,  note: "Active indicator · icon · info badge · 2 sizes M/S · disabled state · --tabs-hover-bg token" },
+  { name: "Tabs",            complexity: "Medium",  hours: 3,  note: "Active indicator · icon · 2 sizes M/S · disabled state · --tabs-hover-bg token" },
 ] as const
 
 const REMAINING_PHASES = [
@@ -7001,7 +6998,6 @@ function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pgActive,  setPgActive]  = useState("overview")
   const [pgSize,    setPgSize]    = useState<"m" | "s">("m")
   const [pgIcon,    setPgIcon]    = useState(true)
-  const [pgBadge,   setPgBadge]   = useState(false)
   const [pgDisabled,setPgDisabled]= useState(false)
 
   const ICONS_FOR_DEMO = [
@@ -7017,7 +7013,6 @@ function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     id,
     label:    BASE_LABELS[i],
     icon:     pgIcon ? ICONS_FOR_DEMO[i] : undefined,
-    badge:    pgBadge && id === "notes" ? 3 : undefined,
     disabled: pgDisabled && id === "settings",
   }))
 
@@ -7025,7 +7020,6 @@ function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     id,
     label:    BASE_LABELS[i],
     icon:     ICONS_FOR_DEMO[i],
-    badge:    id === "notes" ? 3 : undefined,
     disabled: id === "settings",
   }))
 
@@ -7046,7 +7040,7 @@ import { useState } from "react"
 const items: TabItem[] = [
   { id: "overview", label: "Overview", icon: User },
   { id: "activity", label: "Activity", icon: Clock },
-  { id: "notes",    label: "Notes",    icon: FileText, badge: 3 },
+  { id: "notes",    label: "Notes",    icon: FileText },
   { id: "settings", label: "Settings", icon: Settings },
 ]
 
@@ -7068,7 +7062,7 @@ export function MyTabBar() {
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Tabs</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
             Horizontal navigation bar for switching between related views within the same context.
-            Active tab shows a primary-blue bottom indicator and label. Supports icons, info badges, and disabled tabs.
+            Active tab shows a primary-blue bottom indicator and label. Supports icons and disabled tabs.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("tabs")} />
@@ -7123,14 +7117,14 @@ export function MyTabBar() {
 
           {/* Label only */}
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Label only · with badge</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Label only</p>
             <CardContainer size="sm">
               <Tabs activeId="all" onChange={() => {}}
                 items={[
-                  { id: "all",       label: "All Cases"  },
-                  { id: "open",      label: "Open",       badge: 8  },
-                  { id: "in-review", label: "In Review",  badge: 2  },
-                  { id: "closed",    label: "Closed",     badge: 47 },
+                  { id: "all",       label: "All Cases" },
+                  { id: "open",      label: "Open"      },
+                  { id: "in-review", label: "In Review" },
+                  { id: "closed",    label: "Closed"    },
                 ]}
               />
             </CardContainer>
@@ -7194,7 +7188,6 @@ export function MyTabBar() {
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[10px]">Options</p>
                 <div className="flex flex-col gap-[10px]">
                   <Tog label="Show icon"            val={pgIcon}      set={setPgIcon}      />
-                  <Tog label="Info badge (Notes)"   val={pgBadge}     set={setPgBadge}     />
                   <Tog label="Disabled (Settings)"  val={pgDisabled}  set={setPgDisabled}  />
                 </div>
               </div>
@@ -7290,8 +7283,6 @@ export function MyTabBar() {
                     { token: "--foreground",         role: "Hover text color",                dark: "rgba(255,255,255,0.8)", light: "#1a1a1a"              },
                     { token: "--field-border",       role: "Container track border",          dark: "rgba(255,255,255,0.1)", light: "#5c5c5c"              },
                     { token: "--tabs-hover-bg",      role: "Tab hover background",            dark: "rgba(43,127,255,0.07)", light: "rgba(33,115,255,0.06)"},
-                    { token: "--tag-informative-bg", role: "Info badge background",           dark: "(informative token)",  light: "(informative token)"  },
-                    { token: "--tag-informative-fg", role: "Info badge text",                 dark: "(informative token)",  light: "(informative token)"  },
                   ].map((r, i, a) => (
                     <tr key={r.token} style={{ borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : "none" }}>
                       <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{r.token}</td>
@@ -7322,8 +7313,6 @@ export function MyTabBar() {
                     { el: "Tab M",      pad: "10 × 16 px",  gap: "6 px",  font: "14px / 500",  note: "Default · icon 16px" },
                     { el: "Tab S",      pad: "8 × 12 px",   gap: "4 px",  font: "12px / 500",  note: "Compact · icon 14px" },
                     { el: "Indicator",  pad: "—",           gap: "—",     font: "—",           note: "2px bottom border · active tab · mb-[-1px]" },
-                    { el: "Badge M",    pad: "0 × 5 px",    gap: "—",     font: "10px / 600",  note: "h-16px · min-w-16px" },
-                    { el: "Badge S",    pad: "0 × 4 px",    gap: "—",     font: "9px / 600",   note: "h-14px · min-w-14px" },
                   ].map((r, i, a) => (
                     <tr key={r.el} style={{ borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : "none" }}>
                       <td className="px-[14px] py-[10px] font-medium text-[12px]" style={{ color: "var(--foreground)" }}>{r.el}</td>
