@@ -4,11 +4,13 @@
  * Horizontal tab bar with active indicator and optional leading icon.
  * Sizes: M (default, 14px / px-16 py-10) · S (12px / px-12 py-8)
  *
- * Tokens: --primary · --field-supporting · --foreground · --field-border · --tabs-hover-bg
+ * States:
+ *   Active   → border-b-2 + mb-[-1px] indicator overlaps container track · --primary color
+ *   Default  → no bottom border · --field-supporting color
+ *   Hover    → --tabs-hover-bg bg tint · --foreground text (brightens from muted)
+ *   Disabled → opacity-40 · no interaction
  *
- * Usage:
- *   <Tabs items={tabs} activeId={active} onChange={setActive} />
- *   Wrap in <CardContainer size="sm"> for the standard DS shell.
+ * Tokens: --primary · --field-supporting · --foreground · --field-border · --tabs-hover-bg
  */
 
 import { cn } from "@/lib/utils"
@@ -57,25 +59,25 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
             disabled={isDisabled}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "relative flex items-center border-b-2 mb-[-1px] transition-all duration-150",
+              "relative flex items-center font-medium transition-colors duration-150",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-1",
               sm
                 ? "gap-[4px] px-[12px] py-[8px] text-[12px]"
                 : "gap-[6px] px-[16px] py-[10px] text-[14px]",
-              isActive  ? "border-[var(--primary)]"    : "border-transparent",
-              !isActive && !isDisabled && "hover:bg-[var(--tabs-hover-bg)] cursor-pointer",
+              // Active: 2px indicator overlaps the container's 1px track via mb-[-1px]
+              isActive
+                ? "border-b-2 mb-[-1px] border-[var(--primary)] text-[var(--primary)]"
+                : "text-[var(--field-supporting)]",
+              // Hover on unselected: bg tint + text brightens — NO indicator line
+              !isActive && !isDisabled && "hover:bg-[var(--tabs-hover-bg)] hover:text-[var(--foreground)] cursor-pointer",
               isDisabled && "opacity-40 cursor-not-allowed",
             )}
-            style={{
-              color:      isActive ? "var(--primary)" : "var(--field-supporting)",
-              fontWeight: 500,
-            }}
           >
             {Icon && (
               <Icon
                 size={sm ? 14 : 16}
                 strokeWidth={1.75}
-                style={{ color: isActive ? "var(--primary)" : "var(--field-supporting)", flexShrink: 0 }}
+                aria-hidden
               />
             )}
             <span className="whitespace-nowrap">{tab.label}</span>
