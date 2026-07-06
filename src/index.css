@@ -372,7 +372,6 @@
     --priority-low:       #4ade80;   /* Priority dot Low dark     — green-400   */
     --gs-scrim:           rgba(0,0,0,0.45); /* Global Search backdrop scrim dark */
     --modal-icon-bg:      rgba(43,127,255,0.12);  /* Icon circle bg — primary/12 dark          */
-    --tabs-hover-bg:      rgba(43,127,255,0.07);  /* Tab item hover background dark             */
     --modal-icon-color:   #80afff;                /* Icon color — Primary/Lighter dark         */
     --modal-slot-bg:      rgba(255,255,255,0.04); /* Slot content zone bg                      */
     --modal-info-bg:      rgba(43,127,255,0.10);  /* Informative card bg — primary/10 dark     */
@@ -822,7 +821,6 @@
     --priority-low:       #22c55e;   /* Priority dot Low light     — green-500  */
     --gs-scrim:           rgba(0,0,0,0.25); /* Global Search backdrop scrim light */
     --modal-icon-bg:      #E9F1FF;               /* Icon circle bg — Primary/100 light         */
-    --tabs-hover-bg:      rgba(33,115,255,0.06);  /* Tab item hover background light            */
     --modal-icon-color:   #2173ff;               /* Icon color — Primary/Default light         */
     --modal-slot-bg:      #F5F6FA;               /* Slot content zone bg — surface raised      */
     --modal-info-bg:      #E9F1FF;               /* Informative card bg — Primary/100          */

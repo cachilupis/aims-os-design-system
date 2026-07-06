@@ -2354,7 +2354,7 @@ const DONE_COMPONENTS = [
   { name: "Filters",         complexity: "Complex", hours: 6,  note: "Filter bar + Slideout · 8 states · all-filters · sort · grid/list" },
   { name: "Alert Banner",    complexity: "Simple",  hours: 2,  note: "3 states · optional CTA + dismiss · --ab-* token family" },
   { name: "Empty State",     complexity: "Medium",  hours: 3,  note: "Icon Highlight + title + desc + 1–2 CTAs · compact table/card variant · --es-* tokens" },
-  { name: "Tabs",            complexity: "Medium",  hours: 3,  note: "Active indicator · icon · 2 sizes M/S · disabled state · --tabs-hover-bg token" },
+  { name: "Tabs",            complexity: "Medium",  hours: 3,  note: "Active indicator · icon · 2 sizes M/S · disabled state" },
 ] as const
 
 const REMAINING_PHASES = [
@@ -7369,7 +7369,7 @@ export function PageTabBar() {
                     { token: "--field-supporting",   role: "Inactive text + icon",            dark: "rgba(255,255,255,0.6)", light: "#5c5c5c"              },
                     { token: "--foreground",         role: "Hover text color",                dark: "rgba(255,255,255,0.8)", light: "#1a1a1a"              },
                     { token: "--field-border",       role: "Container track border",          dark: "rgba(255,255,255,0.1)", light: "#5c5c5c"              },
-                    { token: "--tabs-hover-bg",      role: "Tab hover background",            dark: "rgba(43,127,255,0.07)", light: "rgba(33,115,255,0.06)"},
+
                   ].map((r, i, a) => (
                     <tr key={r.token} style={{ borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : "none" }}>
                       <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{r.token}</td>

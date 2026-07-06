@@ -7,10 +7,10 @@
  * States:
  *   Active   → border-b-2 + mb-[-1px] indicator overlaps container track · --primary color
  *   Default  → no bottom border · --field-supporting color
- *   Hover    → --tabs-hover-bg bg tint · --foreground text (brightens from muted)
+ *   Hover    → --foreground text (brightens from muted) · no background
  *   Disabled → opacity-40 · no interaction
  *
- * Tokens: --primary · --field-supporting · --foreground · --field-border · --tabs-hover-bg
+ * Tokens: --primary · --field-supporting · --foreground · --field-border
  */
 
 import { cn } from "@/lib/utils"
@@ -68,8 +68,8 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
               isActive
                 ? "border-b-2 mb-[-1px] border-[var(--primary)] text-[var(--primary)]"
                 : "text-[var(--field-supporting)]",
-              // Hover on unselected: bg tint + text brightens — NO indicator line
-              !isActive && !isDisabled && "hover:bg-[var(--tabs-hover-bg)] hover:text-[var(--foreground)] cursor-pointer",
+              // Hover on unselected: text brightens — NO bg, NO indicator line
+              !isActive && !isDisabled && "hover:text-[var(--foreground)] cursor-pointer",
               isDisabled && "opacity-40 cursor-not-allowed",
             )}
           >
