@@ -104,7 +104,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "sidebar",         label: "Sidebar",           group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
   { id: "table",           label: "Table",             group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
-  { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · active indicator · icon · 2 sizes (M/S) · disabled state" },
+  { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · inside card or standalone · active indicator · icon · 2 sizes (M/S) · disabled state · use for in-context view switching, not page navigation" },
   { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
   { id: "textarea",        label: "Text Description",  group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
   { id: "toggle",          label: "Toggle",            group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
@@ -1774,7 +1774,7 @@ const TABS_SPEC = {
   name: "Tabs",
   figmaNodeId: "856:11281",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=856-11281",
-  description: "Horizontal tab bar for switching between related views. Active state shows primary-blue indicator + label color. Supports leading icon and disabled state.",
+  description: "Horizontal tab bar for switching between related views within the same context. Use inside CardContainer for card/panel nav, or standalone for page-level and modal-level switching. Active state: primary-blue indicator + label. Supports leading icon, disabled state, and two sizes (M/S).",
   properties: [
     { name: "items",     type: "Array",    values: ["TabItem[]"],       default: "required",   note: "id · label · icon? · disabled?" },
     { name: "activeId",  type: "String",   values: ["string"],          default: "required",   note: "ID of the currently selected tab" },
@@ -6998,6 +6998,7 @@ function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pgActive,  setPgActive]  = useState("overview")
   const [pgSize,    setPgSize]    = useState<"m" | "s">("m")
   const [pgIcon,    setPgIcon]    = useState(true)
+  const [pgCard,    setPgCard]    = useState(true)
   const [pgDisabled,setPgDisabled]= useState(false)
 
   const ICONS_FOR_DEMO = [
@@ -7041,16 +7042,24 @@ const items: TabItem[] = [
   { id: "overview", label: "Overview", icon: User },
   { id: "activity", label: "Activity", icon: Clock },
   { id: "notes",    label: "Notes",    icon: FileText },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "settings", label: "Settings", icon: Settings, disabled: true },
 ]
 
-export function MyTabBar() {
+// Pattern 1 — inside a card or panel (most common)
+export function CardTabBar() {
   const [active, setActive] = useState("overview")
-
   return (
     <CardContainer size="sm">
       <Tabs items={items} activeId={active} onChange={setActive} />
     </CardContainer>
+  )
+}
+
+// Pattern 2 — standalone at page / detail view / modal level
+export function PageTabBar() {
+  const [active, setActive] = useState("overview")
+  return (
+    <Tabs items={items} activeId={active} onChange={setActive} />
   )
 }`
 
@@ -7086,10 +7095,34 @@ export function MyTabBar() {
 
           {/* Preview */}
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Preview</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Inside a card</p>
+            <p className="text-[12px] mb-[12px]" style={{ color: "var(--field-supporting)" }}>
+              Most common pattern — tabs as the nav header of a card or panel. Wrap with{" "}
+              <code className="font-mono text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface-raised)" }}>CardContainer</code>.
+            </p>
             <CardContainer size="sm">
               <Tabs items={demoItems} activeId="overview" onChange={() => {}} />
             </CardContainer>
+          </section>
+
+          {/* Standalone / page-level */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Standalone — page or section level</p>
+            <p className="text-[12px] mb-[12px]" style={{ color: "var(--field-supporting)" }}>
+              Tabs without a wrapper, placed at the top of a detail view, modal body, or full-width content area.{" "}
+              No <code className="font-mono text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface-raised)" }}>CardContainer</code> needed.
+            </p>
+            <div className="rounded-[8px] p-[20px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+              <Tabs
+                activeId="overview" onChange={() => {}}
+                items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i] }))}
+              />
+              <div className="mt-[20px] flex flex-col gap-[8px]">
+                {[80, 60, 72].map((w, i) => (
+                  <div key={i} className="h-[11px] rounded-[4px]" style={{ background: "var(--surface-raised)", width: `${w}%` }} />
+                ))}
+              </div>
+            </div>
           </section>
 
           {/* Sizes */}
@@ -7140,13 +7173,40 @@ export function MyTabBar() {
             </CardContainer>
           </section>
 
-          {/* Usage callout */}
-          <div className="flex items-center gap-[8px] px-[12px] py-[8px] rounded-[8px] text-[12px] font-medium mt-[-16px]"
-            style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)", color: "var(--tag-informative-fg)" }}
-          >
-            <span style={{ fontSize: 14 }}>📐</span>
-            <span><strong>Usage:</strong> Wrap <code className="font-mono text-[11px]">Tabs</code> in <code className="font-mono text-[11px]">CardContainer size="sm"</code>. The component renders only the tab bar — panel content lives below in the same container or a sibling element.</span>
-          </div>
+          {/* Usage guidelines */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
+            <div className="grid grid-cols-2 gap-[12px]">
+              <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#22c55e" }}>✓ Do</span>
+                <ul className="flex flex-col gap-[8px]">
+                  {[
+                    "Switch between related views within the same context.",
+                    "Keep tab labels concise — 1 to 3 words.",
+                    "Maintain exactly one active tab at all times.",
+                    "Use icons to reinforce meaning visually when helpful.",
+                    "Use size S in compact layouts or nested panels.",
+                  ].map((t, i) => (
+                    <li key={i} className="text-[12px]" style={{ color: "var(--foreground)" }}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#ef4444" }}>✕ Don't</span>
+                <ul className="flex flex-col gap-[8px]">
+                  {[
+                    "Use for sequential steps — use a Stepper instead.",
+                    "Use for navigation between pages — use Sidebar or Topbar.",
+                    "Exceed 5 tabs — the bar won't fit most containers.",
+                    "Mix icon and no-icon tabs in the same bar.",
+                    "Disable all tabs simultaneously.",
+                  ].map((t, i) => (
+                    <li key={i} className="text-[12px]" style={{ color: "var(--foreground)" }}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
 
           {/* Code snippet */}
           <section>
@@ -7162,9 +7222,15 @@ export function MyTabBar() {
       {/* ── Playground ──────────────────────────────────────────────── */}
       {tab === "playground" && (
         <div className="flex flex-col gap-[24px]">
-          <CardContainer size="sm">
-            <Tabs items={pgItems} activeId={pgActive} onChange={setPgActive} size={pgSize} />
-          </CardContainer>
+          {pgCard ? (
+            <CardContainer size="sm">
+              <Tabs items={pgItems} activeId={pgActive} onChange={setPgActive} size={pgSize} />
+            </CardContainer>
+          ) : (
+            <div className="rounded-[8px] p-[20px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+              <Tabs items={pgItems} activeId={pgActive} onChange={setPgActive} size={pgSize} />
+            </div>
+          )}
 
           <CardContainer size="sm">
             <div className="flex flex-col gap-[20px]">
@@ -7187,6 +7253,7 @@ export function MyTabBar() {
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[10px]">Options</p>
                 <div className="flex flex-col gap-[10px]">
+                  <Tog label="Card wrapper"         val={pgCard}      set={setPgCard}      />
                   <Tog label="Show icon"            val={pgIcon}      set={setPgIcon}      />
                   <Tog label="Disabled (Settings)"  val={pgDisabled}  set={setPgDisabled}  />
                 </div>
@@ -7199,6 +7266,27 @@ export function MyTabBar() {
       {/* ── Reference ──────────────────────────────────────────────── */}
       {tab === "reference" && (
         <div className="flex flex-col gap-[40px]">
+
+          {/* When to use — agent guidance */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">When to use</p>
+            <div className="flex flex-col gap-[10px]">
+              {[
+                { q: "Views inside a card or panel",      a: "Use Tabs inside CardContainer. The tab bar sits at the top edge; content renders below it in the same container." },
+                { q: "Page-level or section switcher",    a: "Use Tabs standalone (no wrapper). Place it at the top of the content area — e.g. a detail page, modal body, or sidebar panel." },
+                { q: "Sequential steps (Step 1 → 2 → 3)", a: "Don't use Tabs. Use a Stepper component — tabs don't communicate order or progress." },
+                { q: "Navigation between distinct pages", a: "Don't use Tabs. Use Sidebar or Topbar — tabs are for in-context switching, not route changes." },
+                { q: "Dense layout, secondary nav",       a: "Use Tabs with size='s' (12px, px-12 py-8) — keeps the bar compact without losing clarity." },
+                { q: "More than 5 items",                 a: "Avoid Tabs — the bar overflows most containers. Consider a Select dropdown or a scrollable nav instead." },
+              ].map((r, i, a) => (
+                <div key={i} className="flex gap-[16px] px-[14px] py-[12px] rounded-[6px]"
+                  style={{ background: "var(--surface-raised)", borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : undefined }}>
+                  <span className="text-[12px] font-medium flex-shrink-0 w-[220px]" style={{ color: "var(--foreground)" }}>{r.q}</span>
+                  <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{r.a}</span>
+                </div>
+              ))}
+            </div>
+          </section>
 
           {/* Props — TabsProps */}
           <section>
@@ -7246,11 +7334,10 @@ export function MyTabBar() {
                 </thead>
                 <tbody>
                   {[
-                    { field: "id",       type: "string",          def: "required", desc: "Unique identifier — matched against activeId and returned by onChange." },
-                    { field: "label",    type: "string",          def: "required", desc: "Tab label text. Keep concise — 1 to 3 words." },
-                    { field: "icon",     type: "LucideIcon",      def: "undefined", desc: "Optional leading icon. 16px (M) · 14px (S). Use to reinforce tab meaning." },
-                    { field: "badge",    type: "number | string", def: "undefined", desc: "Info badge shown after the label. Use for counts or alerts on that section." },
-                    { field: "disabled", type: "boolean",         def: "false",     desc: "Renders at 40% opacity, blocks interaction. Never disable all tabs at once." },
+                    { field: "id",       type: "string",     def: "required",  desc: "Unique identifier — matched against activeId and returned by onChange." },
+                    { field: "label",    type: "string",     def: "required",  desc: "Tab label text. Keep concise — 1 to 3 words." },
+                    { field: "icon",     type: "LucideIcon", def: "undefined", desc: "Optional leading icon. 16px (M) · 14px (S). Use to reinforce tab meaning." },
+                    { field: "disabled", type: "boolean",    def: "false",     desc: "Renders at 40% opacity, blocks interaction. Never disable all tabs at once." },
                   ].map((r, i, a) => (
                     <tr key={r.field} style={{ borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : "none" }}>
                       <td className="px-[14px] py-[10px] font-mono text-[12px]" style={{ color: "var(--primary)" }}>{r.field}</td>
