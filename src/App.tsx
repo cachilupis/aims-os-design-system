@@ -30,11 +30,12 @@ import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
 import { AlertBanner, type AlertBannerState } from "@/components/ui/alert-banner"
 import { EmptyState } from "@/components/ui/empty-state"
+import { Tabs, type TabItem } from "@/components/ui/tabs"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
-type SpecModal = "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
+type SpecModal = "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -103,6 +104,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "sidebar",         label: "Sidebar",           group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
   { id: "table",           label: "Table",             group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
+  { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · active indicator · icon · info badge · 2 sizes (M/S) · disabled state" },
   { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
   { id: "textarea",        label: "Text Description",  group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
   { id: "toggle",          label: "Toggle",            group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
@@ -1768,6 +1770,32 @@ function TabBar({ tabs, active, onChange }: {
   )
 }
 
+const TABS_SPEC = {
+  name: "Tabs",
+  figmaNodeId: "856:11281",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=856-11281",
+  description: "Horizontal tab bar for switching between related views. Active state shows primary-blue indicator + label color. Supports leading icon, info badge, and disabled state.",
+  properties: [
+    { name: "items",     type: "Array",    values: ["TabItem[]"],       default: "required",   note: "id · label · icon? · badge? · disabled?" },
+    { name: "activeId",  type: "String",   values: ["string"],          default: "required",   note: "ID of the currently selected tab" },
+    { name: "onChange",  type: "Function", values: ["(id) => void"],    default: "required",   note: "Called when user clicks a non-disabled tab. Receives tab id." },
+    { name: "size",      type: "Variant",  values: ["m", "s"],          default: "m",          note: "M: 14px / px-16 py-10 — S: 12px / px-12 py-8" },
+    { name: "className", type: "String",   values: ["string"],          default: "undefined",  note: "Extra Tailwind classes applied to the tablist container" },
+  ],
+  sizes: [
+    { element: "Tab M",     padding: "10×16px", gap: "6px", radius: "0px",   note: "Default · icon 16px · 14px label" },
+    { element: "Tab S",     padding: "8×12px",  gap: "4px", radius: "0px",   note: "Compact · icon 14px · 12px label" },
+    { element: "Indicator", padding: "—",       gap: "—",   radius: "—",     note: "2px border-bottom · active tab only · mb-[-1px] overlap" },
+    { element: "Badge M",   padding: "0×5px",   gap: "—",   radius: "100px", note: "h-16px min-w-16px · 10px/600 text" },
+    { element: "Badge S",   padding: "0×4px",   gap: "—",   radius: "100px", note: "h-14px min-w-14px · 9px/600 text" },
+  ],
+  typography: [
+    { element: "Label M", family: "Inter", size: "14px", weight: "Medium (500)",   lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
+    { element: "Label S", family: "Inter", size: "12px", weight: "Medium (500)",   lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
+    { element: "Badge",   family: "Inter", size: "10px", weight: "SemiBold (600)", lineHeight: "1",   variable: "--tag-informative-fg",           note: "Info badge text" },
+  ],
+}
+
 // ── Unified Spec Panel ─────────────────────────────────────────────────────
 
 function getSpec(id: NonNullable<SpecModal>): AnySpec {
@@ -1789,6 +1817,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
   if (id === "filters")          return FILTERS_SPEC          as AnySpec
   if (id === "empty-state")      return EMPTY_STATE_SPEC      as AnySpec
+  if (id === "tabs")             return TABS_SPEC             as AnySpec
   // Foundation pages
   if (id === "avatar")           return AVATAR_SPEC           as AnySpec
   if (id === "colors")           return COLORS_SPEC           as AnySpec
@@ -2328,6 +2357,7 @@ const DONE_COMPONENTS = [
   { name: "Filters",         complexity: "Complex", hours: 6,  note: "Filter bar + Slideout · 8 states · all-filters · sort · grid/list" },
   { name: "Alert Banner",    complexity: "Simple",  hours: 2,  note: "3 states · optional CTA + dismiss · --ab-* token family" },
   { name: "Empty State",     complexity: "Medium",  hours: 3,  note: "Icon Highlight + title + desc + 1–2 CTAs · compact table/card variant · --es-* tokens" },
+  { name: "Tabs",            complexity: "Medium",  hours: 3,  note: "Active indicator · icon · info badge · 2 sizes M/S · disabled state · --tabs-hover-bg token" },
 ] as const
 
 const REMAINING_PHASES = [
@@ -2336,7 +2366,6 @@ const REMAINING_PHASES = [
     status: "in-progress" as const,
     items: [
       { name: "Breadcrumb",     complexity: "Simple",  hours: 2 },
-      { name: "Tabs",           complexity: "Medium",  hours: 3 },
       { name: "Pagination",     complexity: "Medium",  hours: 3 },
     ],
   },
@@ -2395,11 +2424,11 @@ const REMAINING_PHASES = [
 ] as const
 
 function ProgressTab() {
-  const totalDone      = DONE_COMPONENTS.length                                  // 15
+  const totalDone      = DONE_COMPONENTS.length                                  // 20
   const totalRemaining = REMAINING_PHASES.reduce((s, p) => s + p.items.length, 0)
-  const totalAll       = totalDone + totalRemaining                              // ~43
+  const totalAll       = totalDone + totalRemaining                              // ~45
 
-  const hoursInvested  = DONE_COMPONENTS.reduce((s, c) => s + c.hours, 0)       // 52h
+  const hoursInvested  = DONE_COMPONENTS.reduce((s, c) => s + c.hours, 0)       // 73h
   const hoursRemaining = REMAINING_PHASES.reduce(
     (s, p) => s + p.items.reduce((ps, i) => ps + i.hours, 0), 0
   )
@@ -6961,6 +6990,355 @@ function CheckboxPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── TabsPage ─────────────────────────────────────────────────────────────────
+
+function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab]           = useState<"overview" | "playground" | "reference">("overview")
+  const [pgActive,  setPgActive]  = useState("overview")
+  const [pgSize,    setPgSize]    = useState<"m" | "s">("m")
+  const [pgIcon,    setPgIcon]    = useState(true)
+  const [pgBadge,   setPgBadge]   = useState(false)
+  const [pgDisabled,setPgDisabled]= useState(false)
+
+  const ICONS_FOR_DEMO = [
+    LucideIcons.User     as LucideIcon,
+    LucideIcons.Clock    as LucideIcon,
+    LucideIcons.FileText as LucideIcon,
+    LucideIcons.Settings as LucideIcon,
+  ]
+  const BASE_LABELS = ["Overview", "Activity", "Notes", "Settings"]
+  const BASE_IDS    = ["overview", "activity", "notes", "settings"]
+
+  const pgItems: TabItem[] = BASE_IDS.map((id, i) => ({
+    id,
+    label:    BASE_LABELS[i],
+    icon:     pgIcon ? ICONS_FOR_DEMO[i] : undefined,
+    badge:    pgBadge && id === "notes" ? 3 : undefined,
+    disabled: pgDisabled && id === "settings",
+  }))
+
+  const demoItems: TabItem[] = BASE_IDS.map((id, i) => ({
+    id,
+    label:    BASE_LABELS[i],
+    icon:     ICONS_FOR_DEMO[i],
+    badge:    id === "notes" ? 3 : undefined,
+    disabled: id === "settings",
+  }))
+
+  const Tog = ({ label, val, set }: { label: string; val: boolean; set: (v: boolean) => void }) => (
+    <label className="flex items-center gap-[8px] cursor-pointer select-none">
+      <div onClick={() => set(!val)} className="relative w-[32px] h-[18px] rounded-full transition-colors cursor-pointer flex-shrink-0" style={{ background: val ? "var(--primary)" : "var(--ctrl-inactive-bg)" }}>
+        <div className="absolute top-[2px] w-[14px] h-[14px] rounded-full transition-all" style={{ background: "#ffffff", left: val ? "16px" : "2px" }} />
+      </div>
+      <span className="text-[12px] font-medium" style={{ color: "var(--foreground)" }}>{label}</span>
+    </label>
+  )
+
+  const codeSnippet = `import { Tabs, type TabItem } from "@/components/ui/tabs"
+import { CardContainer } from "@/components/ui/card-container"
+import { User, Clock, FileText, Settings } from "lucide-react"
+import { useState } from "react"
+
+const items: TabItem[] = [
+  { id: "overview", label: "Overview", icon: User },
+  { id: "activity", label: "Activity", icon: Clock },
+  { id: "notes",    label: "Notes",    icon: FileText, badge: 3 },
+  { id: "settings", label: "Settings", icon: Settings },
+]
+
+export function MyTabBar() {
+  const [active, setActive] = useState("overview")
+
+  return (
+    <CardContainer size="sm">
+      <Tabs items={items} activeId={active} onChange={setActive} />
+    </CardContainer>
+  )
+}`
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Tabs</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
+            Horizontal navigation bar for switching between related views within the same context.
+            Active tab shows a primary-blue bottom indicator and label. Supports icons, info badges, and disabled tabs.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("tabs")} />
+      </div>
+
+      {/* Page nav */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ──────────────────────────────────────────────────── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+
+          {/* Preview */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Preview</p>
+            <CardContainer size="sm">
+              <Tabs items={demoItems} activeId="overview" onChange={() => {}} />
+            </CardContainer>
+          </section>
+
+          {/* Sizes */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Sizes</p>
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <p className="text-[11px] text-[var(--field-supporting)] mb-[8px]">Size M — default · 14px · px-16 py-10</p>
+                <CardContainer size="sm">
+                  <Tabs size="m" activeId="overview" onChange={() => {}}
+                    items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i] }))}
+                  />
+                </CardContainer>
+              </div>
+              <div>
+                <p className="text-[11px] text-[var(--field-supporting)] mb-[8px]">Size S — compact · 12px · px-12 py-8</p>
+                <CardContainer size="sm">
+                  <Tabs size="s" activeId="overview" onChange={() => {}}
+                    items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i] }))}
+                  />
+                </CardContainer>
+              </div>
+            </div>
+          </section>
+
+          {/* Label only */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Label only · with badge</p>
+            <CardContainer size="sm">
+              <Tabs activeId="all" onChange={() => {}}
+                items={[
+                  { id: "all",       label: "All Cases"  },
+                  { id: "open",      label: "Open",       badge: 8  },
+                  { id: "in-review", label: "In Review",  badge: 2  },
+                  { id: "closed",    label: "Closed",     badge: 47 },
+                ]}
+              />
+            </CardContainer>
+          </section>
+
+          {/* Disabled */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">With disabled tab</p>
+            <CardContainer size="sm">
+              <Tabs activeId="overview" onChange={() => {}}
+                items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i], disabled: id === "settings" }))}
+              />
+            </CardContainer>
+          </section>
+
+          {/* Usage callout */}
+          <div className="flex items-center gap-[8px] px-[12px] py-[8px] rounded-[8px] text-[12px] font-medium mt-[-16px]"
+            style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)", color: "var(--tag-informative-fg)" }}
+          >
+            <span style={{ fontSize: 14 }}>📐</span>
+            <span><strong>Usage:</strong> Wrap <code className="font-mono text-[11px]">Tabs</code> in <code className="font-mono text-[11px]">CardContainer size="sm"</code>. The component renders only the tab bar — panel content lives below in the same container or a sibling element.</span>
+          </div>
+
+          {/* Code snippet */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Code snippet</p>
+            <pre className="rounded-[8px] p-[16px] text-[12px] font-mono overflow-x-auto leading-[1.6]"
+              style={{ background: "var(--surface-raised)", color: "var(--foreground)", border: "0.5px solid var(--field-border)" }}>
+              <code>{codeSnippet}</code>
+            </pre>
+          </section>
+        </div>
+      )}
+
+      {/* ── Playground ──────────────────────────────────────────────── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[24px]">
+          <CardContainer size="sm">
+            <Tabs items={pgItems} activeId={pgActive} onChange={setPgActive} size={pgSize} />
+          </CardContainer>
+
+          <CardContainer size="sm">
+            <div className="flex flex-col gap-[20px]">
+              {/* Size */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[10px]">Size</p>
+                <div className="flex gap-[8px]">
+                  {(["m", "s"] as const).map(s => (
+                    <button key={s} onClick={() => setPgSize(s)}
+                      className="px-[14px] py-[6px] rounded-[6px] text-[12px] font-semibold transition-colors"
+                      style={{ background: pgSize === s ? "var(--primary)" : "var(--ctrl-inactive-bg)", color: pgSize === s ? "#ffffff" : "var(--field-supporting)" }}
+                    >
+                      {s.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Options */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[10px]">Options</p>
+                <div className="flex flex-col gap-[10px]">
+                  <Tog label="Show icon"            val={pgIcon}      set={setPgIcon}      />
+                  <Tog label="Info badge (Notes)"   val={pgBadge}     set={setPgBadge}     />
+                  <Tog label="Disabled (Settings)"  val={pgDisabled}  set={setPgDisabled}  />
+                </div>
+              </div>
+            </div>
+          </CardContainer>
+        </div>
+      )}
+
+      {/* ── Reference ──────────────────────────────────────────────── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[40px]">
+
+          {/* Props — TabsProps */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Props — Tabs</p>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--table-border)" }}>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--surface-raised)", borderBottom: "0.5px solid var(--table-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="text-left px-[14px] py-[10px] text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { prop: "items",     type: "TabItem[]",      def: "required",   desc: "Array of tab definitions. Each item maps to one tab button." },
+                    { prop: "activeId",  type: "string",         def: "required",   desc: "id of the currently selected tab. Controls indicator and label color." },
+                    { prop: "onChange",  type: "(id) => void",   def: "required",   desc: "Called when a non-disabled tab is clicked. Receives the tab id." },
+                    { prop: "size",      type: '"m" | "s"',      def: '"m"',        desc: "M: 14px · px-16 py-10. S: 12px · px-12 py-8. Use S for compact layouts." },
+                    { prop: "className", type: "string",         def: "undefined",  desc: "Extra Tailwind classes on the tablist container." },
+                  ].map((r, i, a) => (
+                    <tr key={r.prop} style={{ borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : "none" }}>
+                      <td className="px-[14px] py-[10px] font-mono text-[12px]" style={{ color: "var(--primary)" }}>{r.prop}</td>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{r.type}</td>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{r.def}</td>
+                      <td className="px-[14px] py-[10px] text-[12px]"           style={{ color: "var(--foreground)" }}>{r.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* TabItem type */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">TabItem type</p>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--table-border)" }}>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--surface-raised)", borderBottom: "0.5px solid var(--table-border)" }}>
+                    {["Field", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="text-left px-[14px] py-[10px] text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { field: "id",       type: "string",          def: "required", desc: "Unique identifier — matched against activeId and returned by onChange." },
+                    { field: "label",    type: "string",          def: "required", desc: "Tab label text. Keep concise — 1 to 3 words." },
+                    { field: "icon",     type: "LucideIcon",      def: "undefined", desc: "Optional leading icon. 16px (M) · 14px (S). Use to reinforce tab meaning." },
+                    { field: "badge",    type: "number | string", def: "undefined", desc: "Info badge shown after the label. Use for counts or alerts on that section." },
+                    { field: "disabled", type: "boolean",         def: "false",     desc: "Renders at 40% opacity, blocks interaction. Never disable all tabs at once." },
+                  ].map((r, i, a) => (
+                    <tr key={r.field} style={{ borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : "none" }}>
+                      <td className="px-[14px] py-[10px] font-mono text-[12px]" style={{ color: "var(--primary)" }}>{r.field}</td>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{r.type}</td>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{r.def}</td>
+                      <td className="px-[14px] py-[10px] text-[12px]"           style={{ color: "var(--foreground)" }}>{r.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Tokens */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Design tokens</p>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--table-border)" }}>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--surface-raised)", borderBottom: "0.5px solid var(--table-border)" }}>
+                    {["Token", "Role", "Dark value", "Light value"].map(h => (
+                      <th key={h} className="text-left px-[14px] py-[10px] text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { token: "--primary",            role: "Active text + indicator border",  dark: "#2b7fff",              light: "#2173ff"              },
+                    { token: "--field-supporting",   role: "Inactive text + icon",            dark: "rgba(255,255,255,0.6)", light: "#5c5c5c"              },
+                    { token: "--foreground",         role: "Hover text color",                dark: "rgba(255,255,255,0.8)", light: "#1a1a1a"              },
+                    { token: "--field-border",       role: "Container track border",          dark: "rgba(255,255,255,0.1)", light: "#5c5c5c"              },
+                    { token: "--tabs-hover-bg",      role: "Tab hover background",            dark: "rgba(43,127,255,0.07)", light: "rgba(33,115,255,0.06)"},
+                    { token: "--tag-informative-bg", role: "Info badge background",           dark: "(informative token)",  light: "(informative token)"  },
+                    { token: "--tag-informative-fg", role: "Info badge text",                 dark: "(informative token)",  light: "(informative token)"  },
+                  ].map((r, i, a) => (
+                    <tr key={r.token} style={{ borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : "none" }}>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{r.token}</td>
+                      <td className="px-[14px] py-[10px] text-[12px]"           style={{ color: "var(--foreground)" }}>{r.role}</td>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{r.dark}</td>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{r.light}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Sizes */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Sizes</p>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--table-border)" }}>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--surface-raised)", borderBottom: "0.5px solid var(--table-border)" }}>
+                    {["Element", "Padding", "Gap", "Font", "Notes"].map(h => (
+                      <th key={h} className="text-left px-[14px] py-[10px] text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { el: "Tab M",      pad: "10 × 16 px",  gap: "6 px",  font: "14px / 500",  note: "Default · icon 16px" },
+                    { el: "Tab S",      pad: "8 × 12 px",   gap: "4 px",  font: "12px / 500",  note: "Compact · icon 14px" },
+                    { el: "Indicator",  pad: "—",           gap: "—",     font: "—",           note: "2px bottom border · active tab · mb-[-1px]" },
+                    { el: "Badge M",    pad: "0 × 5 px",    gap: "—",     font: "10px / 600",  note: "h-16px · min-w-16px" },
+                    { el: "Badge S",    pad: "0 × 4 px",    gap: "—",     font: "9px / 600",   note: "h-14px · min-w-14px" },
+                  ].map((r, i, a) => (
+                    <tr key={r.el} style={{ borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : "none" }}>
+                      <td className="px-[14px] py-[10px] font-medium text-[12px]" style={{ color: "var(--foreground)" }}>{r.el}</td>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]"   style={{ color: "var(--field-supporting)" }}>{r.pad}</td>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]"   style={{ color: "var(--field-supporting)" }}>{r.gap}</td>
+                      <td className="px-[14px] py-[10px] font-mono text-[11px]"   style={{ color: "var(--field-supporting)" }}>{r.font}</td>
+                      <td className="px-[14px] py-[10px] text-[12px]"            style={{ color: "var(--field-supporting)" }}>{r.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
@@ -12969,6 +13347,7 @@ export default function App() {
           {active === "highlight-icon"  && <HighlightIconPage openSpec={setSpecModal} />}
           {active === "select"          && <SelectPage        openSpec={setSpecModal} />}
           {active === "checkbox"        && <CheckboxPage      openSpec={setSpecModal} />}
+          {active === "tabs"            && <TabsPage          openSpec={setSpecModal} />}
           {active === "toggle"          && <TogglePage        openSpec={setSpecModal} />}
           {active === "table"           && <TablePage         openSpec={setSpecModal} />}
           {active === "topbar"          && <TopbarPage        openSpec={setSpecModal} onAppThemeChange={(dark) => setIsDark(dark)} />}
