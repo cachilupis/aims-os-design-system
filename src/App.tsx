@@ -33,7 +33,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
+type SectionId = "home" | "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
 type SpecModal = "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -4293,20 +4293,20 @@ function TagPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         )}
 
         {tab === "reference" && (() => {
-          const RCheckCircle2   = (LucideIcons as unknown as Record<string, LucideIcon>)["CheckCircle2"]
-          const RCircleX        = (LucideIcons as unknown as Record<string, LucideIcon>)["CircleX"]
-          const RAlertTriangle  = (LucideIcons as unknown as Record<string, LucideIcon>)["AlertTriangle"]
-          const RInfo           = (LucideIcons as unknown as Record<string, LucideIcon>)["Info"]
-          const RSparkles       = (LucideIcons as unknown as Record<string, LucideIcon>)["Sparkles"]
-          const RTag            = (LucideIcons as unknown as Record<string, LucideIcon>)["Tag"]
-          const RLeaf           = (LucideIcons as unknown as Record<string, LucideIcon>)["Leaf"]
-          const RStar           = (LucideIcons as unknown as Record<string, LucideIcon>)["Star"]
-          const RGem            = (LucideIcons as unknown as Record<string, LucideIcon>)["Gem"]
-          const RGlobe          = (LucideIcons as unknown as Record<string, LucideIcon>)["Globe"]
-          const RCircle         = (LucideIcons as unknown as Record<string, LucideIcon>)["Circle"]
-          const RX              = (LucideIcons as unknown as Record<string, LucideIcon>)["X"]
+          const RCheckCircle2   = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["CheckCircle2"]
+          const RCircleX        = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["CircleX"]
+          const RAlertTriangle  = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["AlertTriangle"]
+          const RInfo           = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["Info"]
+          const RSparkles       = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["Sparkles"]
+          const RTag            = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["Tag"]
+          const RLeaf           = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["Leaf"]
+          const RStar           = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["Star"]
+          const RGem            = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["Gem"]
+          const RGlobe          = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["Globe"]
+          const RCircle         = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["Circle"]
+          const RX              = (LucideIcons as unknown as Record<string, LucideIcon | undefined>)["X"]
           const ic = (sz: number) => ({ size: sz, strokeWidth: 2 as const })
-          const dismiss = <RX {...ic(9)} />
+          const dismiss = RX ? <RX {...ic(9)} /> : null
           return (
           <div className="flex flex-col gap-[24px]">
             <Row label="All variants — Size M">
@@ -6132,7 +6132,7 @@ function EmptyStatePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pgCtaLabel,    setPgCtaLabel]    = useState("Start a conversation")
   const [pgShowCta2,    setPgShowCta2]    = useState(false)
   const [pgCta2Label,   setPgCta2Label]   = useState("Learn more")
-  const pgIcon = (LucideIcons as Record<string, LucideIcon>)[pgIconKey] as LucideIcon
+  const pgIcon = (LucideIcons as unknown as Record<string, LucideIcon>)[pgIconKey] as LucideIcon
 
   return (
     <div className="flex flex-col gap-0">
@@ -6193,7 +6193,7 @@ function EmptyStatePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                             color: pgIconKey === ic.key ? "var(--primary)" : "var(--field-supporting)",
                           }}
                         >
-                          {(() => { const I = (LucideIcons as Record<string, LucideIcon>)[ic.key] as LucideIcon; return <I size={16} strokeWidth={1.75} /> })()}
+                          {(() => { const I = (LucideIcons as unknown as Record<string, LucideIcon>)[ic.key] as LucideIcon; return <I size={16} strokeWidth={1.75} /> })()}
                         </button>
                       ))}
                     </div>
@@ -6298,7 +6298,7 @@ function EmptyStatePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   style={{ border: "1px solid var(--field-border)", background: "var(--field-bg)" }}
                 >
                   <EmptyState
-                    icon={demo.icon ? (LucideIcons as Record<string, LucideIcon>)[demo.icon] as LucideIcon : undefined}
+                    icon={demo.icon ? (LucideIcons as unknown as Record<string, LucideIcon>)[demo.icon] as LucideIcon : undefined}
                     showIcon={demo.showIcon}
                     title={demo.title}
                     description={demo.description}
@@ -6325,7 +6325,7 @@ function EmptyStatePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   { key: "date",   header: "Last updated" },
                 ]}
                 data={[]}
-                emptyIcon={(LucideIcons as Record<string, LucideIcon>)["SearchX"] as LucideIcon}
+                emptyIcon={(LucideIcons as unknown as Record<string, LucideIcon>)["SearchX"] as LucideIcon}
                 emptyTitle="No records found"
                 emptyDescription="Try adjusting your search or filters to see results."
                 emptyCtaLabel="Clear filters"
@@ -12438,7 +12438,6 @@ function CornerRadiusPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Token scale</h2>
         <div className="grid grid-cols-4 gap-[10px]">
           {CR_TOKENS.map(t => {
-            const clampedPx = Math.min(t.px, 32) // cap visual at 32px so Full doesn't distort the 64px box
             return (
               <div
                 key={t.token}
