@@ -59,7 +59,8 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
             disabled={isDisabled}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "relative flex items-center font-medium transition-colors duration-150 rounded-[8px]",
+              "relative flex items-center font-medium rounded-[8px]",
+              "transition-colors duration-200 ease-in-out",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-1",
               sm
                 ? "gap-[4px] px-[12px] py-[8px] text-[12px]"
@@ -67,22 +68,23 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
               isActive
                 ? "text-[var(--primary)]"
                 : "text-[var(--field-supporting)]",
-              // Hover: bg + text brighten. Indicator NOT added here — only on active.
               !isActive && !isDisabled && "hover:bg-[var(--tabs-hover-bg)] hover:text-[var(--foreground)] cursor-pointer",
               isDisabled && "opacity-40 cursor-not-allowed",
             )}
           >
             {/*
-              Active indicator as a separate absolutely-positioned span so it renders
-              as a straight 2px line and is NOT clipped by the button's rounded-[8px].
-              bottom-[-1px] makes it overlap the container's 1px border-b track.
+              Always rendered — opacity + translateY animate in/out so the indicator
+              "rises" into place rather than snapping. Not clipped by rounded-[8px]
+              because absolute children ignore parent border-radius without overflow:hidden.
             */}
-            {isActive && (
-              <span
-                className="absolute left-0 right-0 bottom-[-1px] h-[2px]"
-                style={{ background: "var(--primary)" }}
-              />
-            )}
+            <span
+              className={cn(
+                "absolute left-0 right-0 bottom-[-1px] h-[2px]",
+                "transition-[opacity,transform] duration-200 ease-out",
+                isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[2px]",
+              )}
+              style={{ background: "var(--primary)" }}
+            />
             {Icon && (
               <Icon
                 size={sm ? 14 : 16}
