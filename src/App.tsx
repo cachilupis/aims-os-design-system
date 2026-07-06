@@ -7369,6 +7369,7 @@ export function PageTabBar() {
                     { token: "--field-supporting",   role: "Inactive text + icon",            dark: "rgba(255,255,255,0.6)", light: "#5c5c5c"              },
                     { token: "--foreground",         role: "Hover text color",                dark: "rgba(255,255,255,0.8)", light: "#1a1a1a"              },
                     { token: "--field-border",       role: "Container track border",          dark: "rgba(255,255,255,0.1)", light: "#5c5c5c"              },
+                    { token: "--tabs-hover-bg",      role: "Tab hover background (Surface/Neutral/Subtle)", dark: "rgba(255,255,255,0.06)", light: "#fafafa" },
 
                   ].map((r, i, a) => (
                     <tr key={r.token} style={{ borderBottom: i < a.length - 1 ? "0.5px solid var(--table-border)" : "none" }}>

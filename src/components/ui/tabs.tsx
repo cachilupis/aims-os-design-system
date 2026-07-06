@@ -5,12 +5,12 @@
  * Sizes: M (default, 14px / px-16 py-10) · S (12px / px-12 py-8)
  *
  * States:
- *   Active   → border-b-2 + mb-[-1px] indicator overlaps container track · --primary color
- *   Default  → no bottom border · --field-supporting color
- *   Hover    → --foreground text (brightens from muted) · no background
+ *   Active   → 2px indicator span (absolute, not clipped by rounded-[8px]) · --primary color
+ *   Default  → no bg · --field-supporting color
+ *   Hover    → --tabs-hover-bg (Surface/Neutral/Subtle) · rounded-[8px] · --foreground text
  *   Disabled → opacity-40 · no interaction
  *
- * Tokens: --primary · --field-supporting · --foreground · --field-border
+ * Tokens: --primary · --field-supporting · --foreground · --field-border · --tabs-hover-bg
  */
 
 import { cn } from "@/lib/utils"
@@ -59,20 +59,30 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
             disabled={isDisabled}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "relative flex items-center font-medium transition-colors duration-150",
+              "relative flex items-center font-medium transition-colors duration-150 rounded-[8px]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-1",
               sm
                 ? "gap-[4px] px-[12px] py-[8px] text-[12px]"
                 : "gap-[6px] px-[16px] py-[10px] text-[14px]",
-              // Active: 2px indicator overlaps the container's 1px track via mb-[-1px]
               isActive
-                ? "border-b-2 mb-[-1px] border-[var(--primary)] text-[var(--primary)]"
+                ? "text-[var(--primary)]"
                 : "text-[var(--field-supporting)]",
-              // Hover on unselected: text brightens — NO bg, NO indicator line
-              !isActive && !isDisabled && "hover:text-[var(--foreground)] cursor-pointer",
+              // Hover: bg + text brighten. Indicator NOT added here — only on active.
+              !isActive && !isDisabled && "hover:bg-[var(--tabs-hover-bg)] hover:text-[var(--foreground)] cursor-pointer",
               isDisabled && "opacity-40 cursor-not-allowed",
             )}
           >
+            {/*
+              Active indicator as a separate absolutely-positioned span so it renders
+              as a straight 2px line and is NOT clipped by the button's rounded-[8px].
+              bottom-[-1px] makes it overlap the container's 1px border-b track.
+            */}
+            {isActive && (
+              <span
+                className="absolute left-0 right-0 bottom-[-1px] h-[2px]"
+                style={{ background: "var(--primary)" }}
+              />
+            )}
             {Icon && (
               <Icon
                 size={sm ? 14 : 16}

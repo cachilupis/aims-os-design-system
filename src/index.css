@@ -374,6 +374,7 @@
     --modal-icon-bg:      rgba(43,127,255,0.12);  /* Icon circle bg — primary/12 dark          */
     --modal-icon-color:   #80afff;                /* Icon color — Primary/Lighter dark         */
     --modal-slot-bg:      rgba(255,255,255,0.04); /* Slot content zone bg                      */
+    --tabs-hover-bg:      rgba(255,255,255,0.06); /* Tab hover · Surface/Neutral/Subtle dark    */
     --modal-info-bg:      rgba(43,127,255,0.10);  /* Informative card bg — primary/10 dark     */
     --modal-info-icon:    #80afff;                /* Info icon color                           */
     --modal-info-text:    rgba(128,175,255,0.90); /* Info text color                           */
@@ -823,6 +824,7 @@
     --modal-icon-bg:      #E9F1FF;               /* Icon circle bg — Primary/100 light         */
     --modal-icon-color:   #2173ff;               /* Icon color — Primary/Default light         */
     --modal-slot-bg:      #F5F6FA;               /* Slot content zone bg — surface raised      */
+    --tabs-hover-bg:      #fafafa;               /* Tab hover · Surface/Neutral/Subtle light   */
     --modal-info-bg:      #E9F1FF;               /* Informative card bg — Primary/100          */
     --modal-info-icon:    #2173ff;               /* Info icon color                            */
     --modal-info-text:    #001740;               /* Info text — Text/Info dark navy            */
