@@ -74,7 +74,7 @@ function SectionShell({
   title, expanded, onToggle, activeCount, hasClear, onClear, children
 }: SectionShellProps) {
   return (
-    <div style={{ borderBottom: "1px solid var(--field-border)" }}>
+    <div style={{ borderBottom: "1px solid var(--table-border)" }}>
       <button
         className="flex items-center justify-between w-full px-[16px] py-[14px]"
         onClick={onToggle}
@@ -232,10 +232,10 @@ function MultiSelectSectionContent({ options = DEFAULT_MULTI_OPTIONS }: { option
 // node 13851:366 — colored-dot checkboxes, {x} badge
 
 const PRIORITY_LEVELS = [
-  { label: "Critical", color: "#ef4444" },
-  { label: "High",     color: "#f97316" },
-  { label: "Medium",   color: "#f59e0b" },
-  { label: "Low",      color: "#22c55e" },
+  { label: "Critical", color: "var(--priority-critical)" },
+  { label: "High",     color: "var(--priority-high)" },
+  { label: "Medium",   color: "var(--priority-medium)" },
+  { label: "Low",      color: "var(--priority-low)" },
 ]
 
 function PrioritySectionContent() {
@@ -501,14 +501,14 @@ function ChipSelectSectionContent({ options = DEFAULT_CHIP_OPTIONS }: { options?
 // node 14091:418 — avatar circles + "+ Add", "Clear" text, "+N" overflow
 
 const MOCK_ASSIGNEES = [
-  { id: "ME", color: "#3b82f6" },
-  { id: "JS", color: "#f97316" },
-  { id: "AL", color: "#8b5cf6" },
-  { id: "RK", color: "#10b981" },
-  { id: "TM", color: "#ec4899" },
-  { id: "CA", color: "#f59e0b" },
-  { id: "BP", color: "#6366f1" },
-  { id: "LV", color: "#14b8a6" },
+  { id: "ME", color: "var(--av-col-blue-bg)" },
+  { id: "JS", color: "var(--av-col-orange-bg)" },
+  { id: "AL", color: "var(--av-col-purple-bg)" },
+  { id: "RK", color: "var(--av-col-green-bg)" },
+  { id: "TM", color: "var(--av-col-pink-bg)" },
+  { id: "CA", color: "var(--av-col-amber-bg)" },
+  { id: "BP", color: "var(--av-col-lightblue-bg)" },
+  { id: "LV", color: "var(--av-col-teal-bg)" },
 ]
 const AVATAR_VISIBLE = 5
 
@@ -546,7 +546,7 @@ function AssignmentSectionContent() {
         {overflow > 0 && (
           <span
             className="flex items-center justify-center w-[36px] h-[36px] rounded-full text-[12px] font-semibold"
-            style={{ background: "var(--field-border)", color: "var(--foreground)" }}
+            style={{ background: "var(--ctrl-inactive-bg)", color: "var(--foreground)" }}
           >
             +{overflow}
           </span>
@@ -696,17 +696,20 @@ export function FiltersSlideout({
   activeFilters,
   className,
 }: FiltersSlideoutProps) {
-  const [mounted, setMounted] = useState(false)
-  const [show,    setShow]    = useState(false)
+  const [mounted,  setMounted]  = useState(false)
+  const [show,     setShow]     = useState(false)
+  const [closing,  setClosing]  = useState(false)
 
   useEffect(() => {
     if (isOpen) {
+      setClosing(false)
       setMounted(true)
       const id = requestAnimationFrame(() => requestAnimationFrame(() => setShow(true)))
       return () => cancelAnimationFrame(id)
     } else {
+      setClosing(true)
       setShow(false)
-      const t = setTimeout(() => setMounted(false), 220)
+      const t = setTimeout(() => { setMounted(false); setClosing(false) }, 280)
       return () => clearTimeout(t)
     }
   }, [isOpen])
@@ -717,7 +720,7 @@ export function FiltersSlideout({
     <div
       className="fixed inset-0 z-50 flex justify-end"
       style={{
-        background:           show ? "rgba(0,0,0,0.40)" : "rgba(0,0,0,0)",
+        background:           show ? "var(--modal-scrim)" : "rgba(0,0,0,0)",
         backdropFilter:       show ? "blur(2px)" : "none",
         WebkitBackdropFilter: show ? "blur(2px)" : "none",
         transition:           "background 200ms ease, backdrop-filter 200ms ease",
@@ -729,16 +732,18 @@ export function FiltersSlideout({
         className={cn("flex flex-col h-full w-[380px] shadow-2xl", className)}
         style={{
           background:  "var(--surface)",
-          borderLeft:  "1px solid var(--field-border)",
+          borderLeft:  "1px solid var(--table-border)",
           transform:   show ? "translateX(0)" : "translateX(100%)",
-          transition:  "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)",
+          transition:  closing
+            ? "transform 200ms cubic-bezier(0.4, 0, 1, 1)"
+            : "transform 280ms cubic-bezier(0.16, 1, 0.3, 1)",
         }}
         onClick={e => e.stopPropagation()}
       >
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div
           className="flex items-center justify-between px-[16px] h-[56px] shrink-0"
-          style={{ borderBottom: "1px solid var(--field-border)" }}
+          style={{ borderBottom: "1px solid var(--table-border)" }}
         >
           <span className="text-[16px] font-semibold" style={{ color: "var(--foreground)" }}>
             Filters
@@ -767,7 +772,7 @@ export function FiltersSlideout({
 
           {/* Active filters row */}
           {activeFilters && activeFilters.length > 0 && (
-            <div className="px-[16px] py-[12px]" style={{ borderBottom: "1px solid var(--field-border)" }}>
+            <div className="px-[16px] py-[12px]" style={{ borderBottom: "1px solid var(--table-border)" }}>
               <div className="flex items-center justify-between mb-[8px]">
                 <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--field-supporting)" }}>
                   Applied filters
@@ -820,7 +825,7 @@ export function FiltersSlideout({
         {/* ── Footer ─────────────────────────────────────────────────────── */}
         <div
           className="flex items-center justify-end gap-[8px] px-[16px] py-[12px] shrink-0"
-          style={{ borderTop: "1px solid var(--field-border)" }}
+          style={{ borderTop: "1px solid var(--table-border)" }}
         >
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={() => { onApply?.(); onClose() }}>Apply filters</Button>

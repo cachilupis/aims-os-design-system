@@ -580,12 +580,12 @@ export function TopbarRightMenu({
                 style={{
                   bottom: "calc(100% + 5px)", left: "50%", transform: "translateX(-50%)",
                   whiteSpace: "nowrap", zIndex: 10,
-                  background: "rgba(22,22,22,1)", border: "1px solid rgba(255,255,255,0.12)",
+                  background: "var(--topbar-menu-bg)", border: "1px solid var(--gs-input-border)",
                   borderRadius: 6, padding: "3px 8px",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                 }}
               >
-                <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.90)" }}>Automatic</span>
+                <span className="text-[11px] font-medium" style={{ color: "var(--gs-text)" }}>Automatic</span>
               </div>
             )}
           </div>
@@ -613,12 +613,12 @@ export function TopbarRightMenu({
                 style={{
                   bottom: "calc(100% + 5px)", left: "50%", transform: "translateX(-50%)",
                   whiteSpace: "nowrap", zIndex: 10,
-                  background: "rgba(22,22,22,1)", border: "1px solid rgba(255,255,255,0.12)",
+                  background: "var(--topbar-menu-bg)", border: "1px solid var(--gs-input-border)",
                   borderRadius: 6, padding: "3px 8px",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                 }}
               >
-                <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.90)" }}>Light</span>
+                <span className="text-[11px] font-medium" style={{ color: "var(--gs-text)" }}>Light</span>
               </div>
             )}
           </div>
@@ -646,12 +646,12 @@ export function TopbarRightMenu({
                 style={{
                   bottom: "calc(100% + 5px)", left: "50%", transform: "translateX(-50%)",
                   whiteSpace: "nowrap", zIndex: 10,
-                  background: "rgba(22,22,22,1)", border: "1px solid rgba(255,255,255,0.12)",
+                  background: "var(--topbar-menu-bg)", border: "1px solid var(--gs-input-border)",
                   borderRadius: 6, padding: "3px 8px",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                 }}
               >
-                <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.90)" }}>Dark</span>
+                <span className="text-[11px] font-medium" style={{ color: "var(--gs-text)" }}>Dark</span>
               </div>
             )}
           </div>
@@ -666,13 +666,13 @@ export function TopbarRightMenu({
       <button
         className="w-full flex items-center text-left transition-colors cursor-pointer"
         style={{ height: 40, gap: 16, padding: "8px 16px" }}
-        onMouseEnter={e => (e.currentTarget.style.background = "rgba(239,68,68,0.07)")}
+        onMouseEnter={e => (e.currentTarget.style.background = "var(--signout-hover-bg)")}
         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
       >
-        <span className="shrink-0" style={{ color: "rgba(239,68,68,0.65)", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span className="shrink-0" style={{ color: "var(--signout-icon)", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <LogOut size={14} strokeWidth={1.75} />
         </span>
-        <span className="text-[14px] font-medium" style={{ color: "rgba(239,68,68,0.85)" }}>
+        <span className="text-[14px] font-medium" style={{ color: "var(--signout-text)" }}>
           Sign out
         </span>
       </button>
@@ -909,8 +909,8 @@ function FiltersCard({
                   className="text-[12px] font-medium rounded-full leading-5 cursor-pointer transition-colors"
                   style={{
                     padding:    "0 8px",
-                    background: active ? "rgba(33,115,255,1)" : "var(--fc-chip-bg)",
-                    color:      active ? "#ffffff"            : "var(--fc-chip-fg)",
+                    background: active ? "var(--primary)" : "var(--fc-chip-bg)",
+                    color:      active ? "#ffffff"        : "var(--fc-chip-fg)",
                     border:     active ? "none" : `1px solid var(--fc-chip-bd)`,
                   }}
                 >
@@ -943,8 +943,9 @@ function FiltersCard({
             height:     28,
             padding:    "4px 12px",
             borderRadius: 8,
-            background: hasAny ? "rgba(33,115,255,1)" : "rgba(33,115,255,0.50)",
-            color:      hasAny ? "#ffffff" : "rgba(242,242,242,1)",
+            background: hasAny ? "var(--primary)" : "var(--primary)",
+            color:      hasAny ? "#ffffff" : "rgba(255,255,255,0.50)",  /* TODO: needs --btn-primary-disabled-* token from Figma */
+            opacity:    hasAny ? 1 : 0.5,
           }}
         >
           Done
@@ -1125,7 +1126,7 @@ export function GlobalSearch({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center pt-[80px]"
-      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+      style={{ background: "var(--gs-scrim)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
       onMouseDown={handleBackdrop}
     >
       <div
@@ -1197,8 +1198,8 @@ export function GlobalSearch({
             onClick={() => setFiltersOpen(v => !v)}
             className="shrink-0 w-[24px] h-[24px] flex items-center justify-center rounded-[6px] transition-colors"
             style={{
-              background: filtersOpen ? "rgba(33,115,255,0.10)" : "transparent",
-              color:      filtersOpen ? "rgba(33,115,255,1)"    : "var(--gs-text-dim)",
+              background: filtersOpen ? "var(--fc-trigger-active-bg)" : "transparent",
+              color:      filtersOpen ? "var(--primary)"         : "var(--gs-text-dim)",
             }}
           >
             <SlidersHorizontal size={14} strokeWidth={1.75} />
@@ -1214,8 +1215,8 @@ export function GlobalSearch({
                 className="shrink-0 flex items-center gap-[4px] px-[10px] rounded-full text-[12px] font-medium transition-all"
                 style={{
                   height:     22,
-                  background: isActive ? "rgba(33,115,255,1)" : "var(--gs-chip-inactive-bg)",
-                  color:      isActive ? "#ffffff"            : "var(--gs-chip-inactive-fg)",
+                  background: isActive ? "var(--primary)" : "var(--gs-chip-inactive-bg)",
+                  color:      isActive ? "#ffffff"        : "var(--gs-chip-inactive-fg)",
                 }}
               >
                 <f.Icon size={11} strokeWidth={1.75} />
@@ -1399,18 +1400,18 @@ function TopbarTooltip({
         left: "50%",
         transform: "translateX(-50%)",
         whiteSpace: "nowrap",
-        background: "rgba(22,22,22,1)",
-        border: "1px solid rgba(255,255,255,0.12)",
+        background: "var(--topbar-menu-bg)",
+        border: "1px solid var(--gs-input-border)",
         borderRadius: 6,
         padding: subtitle ? "5px 10px" : "3px 8px",
         boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
       }}
     >
-      <span className="text-[11px] font-medium block" style={{ color: "rgba(255,255,255,0.90)" }}>
+      <span className="text-[11px] font-medium block" style={{ color: "var(--gs-text)" }}>
         {title}
       </span>
       {subtitle && (
-        <span className="text-[10px] block mt-[1px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <span className="text-[10px] block mt-[1px]" style={{ color: "var(--gs-text-dim)" }}>
           {subtitle}
         </span>
       )}

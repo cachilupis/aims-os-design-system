@@ -1,4 +1,4 @@
-import { useState, useMemo, type CSSProperties } from "react"
+import { useState, useEffect, useMemo, type CSSProperties } from "react"
 import * as LucideIcons from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -28,11 +28,13 @@ import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
+import { AlertBanner, type AlertBannerState } from "@/components/ui/alert-banner"
+import { EmptyState } from "@/components/ui/empty-state"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
-type SpecModal = "button" | "card-container" | "checkbox" | "entity-list" | "filters" | "highlight-icon" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | null
+type SectionId = "home" | "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
+type SpecModal = "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tag" | "textarea" | "toggle" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -83,8 +85,10 @@ const ExternalIcon = () => (
 // ── Nav data ──────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: string }[] = [
-  { id: "home",            label: "Why this approach", group: "Overview",    description: "Alignment doc: why a component repository is the foundation for consistent AI prototypes" },
+  { id: "home",            label: "DS Strategy",        group: "Overview",    description: "Alignment doc: why a component repository is the foundation for consistent AI prototypes" },
   // Components — alphabetical by label
+  { id: "alert-banner",    label: "Alert Banner",      group: "Components",  description: "Full-width contextual notice. 3 states: Error, Success, Alert · optional CTA + dismiss · adaptive dark/light tokens." },
+  { id: "empty-state",     label: "Empty State",       group: "Components",  description: "Zero-content placeholder. Icon Highlight + title + description + 1–2 CTA buttons. Compact variant for Tables and Cards." },
   { id: "avatar",          label: "Avatar",            group: "Components",  description: "User & workspace avatars · 4 sizes (S/M/L/XL) · 6 color variants · initials fallback · stacked group" },
   { id: "button",          label: "Button",            group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
   { id: "card-container",  label: "Card Container",    group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
@@ -1303,6 +1307,407 @@ const ENTITY_LIST_SPEC = {
   ],
 }
 
+const ALERT_BANNER_SPEC = {
+  name: "Alert Banner",
+  figmaNodeId: "119:5867",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=119-5867",
+  description: "Full-width contextual notice for system-level feedback. 3 semantic states — Error, Success, Alert — with optional CTA text button and dismiss (×) button.",
+  properties: [
+    { name: "state",       type: "Variant", values: ["error","success","alert"],            default: "error",     note: "Sets background, icon, and text tokens" },
+    { name: "title",       type: "Prop",    values: ["string"],                             default: "required",  note: "14px SemiBold — always required" },
+    { name: "description", type: "Prop",    values: ["string","undefined"],                 default: "undefined", note: "14px Medium, same state color as title" },
+    { name: "cta",         type: "Prop",    values: ["string","undefined"],                 default: "undefined", note: "CTA button label — shown when provided" },
+    { name: "onCta",       type: "Prop",    values: ["() => void","undefined"],             default: "undefined", note: "CTA click handler" },
+    { name: "onClose",     type: "Prop",    values: ["() => void","undefined"],             default: "undefined", note: "Renders dismiss × button when provided" },
+  ],
+  sizes: [
+    { element: "Container",    padding: "12px",   gap: "8px",  radius: "8px",  note: "Outer layout" },
+    { element: "Icon box",     padding: "4px",    gap: "—",    radius: "—",    note: "28×28px · icon 20px" },
+    { element: "Title",        padding: "—",      gap: "4px",  radius: "—",    note: "below → Description" },
+    { element: "CTA button",   padding: "12×4px", gap: "4px",  radius: "4px",  note: "text-only, no bg" },
+    { element: "Close button",  padding: "4px",   gap: "—",    radius: "4px",  note: "28×28px · icon 16px" },
+  ],
+  typography: [
+    { element: "Title",        family: "Inter", size: "14px", weight: "SemiBold (600)", lineHeight: "1.43" },
+    { element: "Description",  family: "Inter", size: "14px", weight: "Medium (500)",   lineHeight: "20px" },
+    { element: "CTA label",    family: "Inter", size: "12px", weight: "Medium (500)",   lineHeight: "20px" },
+  ],
+  variants: [
+    {
+      name: "Error",
+      description: "Connection failures · validation errors · destructive action failed",
+      cssPrefix: "--ab-error-*",
+      tokens: [
+        { role: "Background", variable: "--ab-error-bg",   light: "#fdeded",              dark: "#2d1515"               },
+        { role: "Icon",       variable: "--ab-error-icon",  light: "#992222",              dark: "#ff6467"               },
+        { role: "Text",       variable: "--ab-error-text",  light: "#5f2120",              dark: "#ff6467"               },
+      ],
+    },
+    {
+      name: "Success",
+      description: "Completed saves · confirmed actions · successful API calls",
+      cssPrefix: "--ab-success-*",
+      tokens: [
+        { role: "Background", variable: "--ab-success-bg",   light: "#e5fdf8",             dark: "#0a1f1a"               },
+        { role: "Icon",       variable: "--ab-success-icon",  light: "#009978",             dark: "#6ee7b7"               },
+        { role: "Text",       variable: "--ab-success-text",  light: "#003328",             dark: "#6ee7b7"               },
+      ],
+    },
+    {
+      name: "Alert",
+      description: "Warnings · expiring sessions · actions requiring attention",
+      cssPrefix: "--ab-alert-*",
+      tokens: [
+        { role: "Background", variable: "--ab-alert-bg",   light: "#ffeedb",               dark: "#2d1a08"               },
+        { role: "Icon",       variable: "--ab-alert-icon",  light: "#b45309",               dark: "#fcd34d"               },
+        { role: "Text",       variable: "--ab-alert-text",  light: "#663c00",               dark: "#fcd34d"               },
+      ],
+    },
+    {
+      name: "CTA + Close",
+      description: "Neutral Text/Label applied to the CTA and dismiss × across all states",
+      cssPrefix: "--ab-cta-*",
+      tokens: [
+        { role: "Text",       variable: "--ab-cta-text",  light: "rgba(0,0,0,0.55)",      dark: "rgba(255,255,255,0.60)" },
+      ],
+    },
+  ],
+}
+
+const EMPTY_STATE_SPEC = {
+  name: "Empty State",
+  figmaNodeId: "8419:24544",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=8419-24544",
+  description: "Zero-content placeholder for lists, tables, and views. Communicates absence and provides a clear next action. Anatomy: Icon Highlight → Title → Description → CTA buttons.",
+  properties: [
+    { name: "showIcon",    type: "Boolean", values: ["true","false"],    default: "true",   note: "Show/hide the Icon Highlight above the title" },
+    { name: "icon",        type: "LucideIcon", values: ["any Lucide icon"], default: "Inbox", note: "Pass the icon component as a prop" },
+    { name: "title",       type: "String",  values: ["any string"],       default: "—",      note: "Required. Keep it short and direct" },
+    { name: "description", type: "String",  values: ["any string"],       default: "—",      note: "Optional. Max ~440px wide, auto-wrapped" },
+    { name: "ctaLabel",    type: "String",  values: ["any string"],       default: "—",      note: "Primary action. Uses Button variant=primary" },
+    { name: "cta2Label",   type: "String",  values: ["any string"],       default: "—",      note: "Optional secondary action. Uses Button variant=secondary" },
+    { name: "className",   type: "String",  values: ["Tailwind classes"], default: "—",      note: "Compact variant: className='py-[40px] rounded-none'" },
+  ],
+  sizes: [
+    { context: "Default (standalone)",  padding: "64px / 24px",  radius: "16px (Radius-L)", gap: "24px (Spacing/6x)" },
+    { context: "Compact (in Table)",    padding: "48px / 24px",  radius: "none",            gap: "24px (Spacing/6x)" },
+    { context: "Compact (in Card)",     padding: "40px / 24px",  radius: "none",            gap: "24px (Spacing/6x)" },
+    { context: "Icon container",        padding: "8px (all)",    radius: "8px (Radius-M)",  gap: "— (40×40px total)" },
+  ],
+  typography: [
+    { element: "Title",       family: "Inter", size: "16px",  weight: "600 / SemiBold", lineHeight: "1.4" },
+    { element: "Description", family: "Inter", size: "14px",  weight: "500 / Medium",   lineHeight: "20px" },
+    { element: "CTA label",   family: "Inter", size: "14px",  weight: "600 / SemiBold", lineHeight: "20px" },
+  ],
+  variants: [
+    {
+      name: "Icon Highlight", description: "Rounded container behind the icon — Surface/Primary/More Subtle",
+      cssPrefix: "--card-primary-bg / --primary",
+      tokens: [
+        { role: "Icon bg",    variable: "--card-primary-bg", light: "#f6f9ff",               dark: "rgba(43,127,255,0.08)" },
+        { role: "Icon color", variable: "--primary",         light: "#2173ff",               dark: "#2b7fff" },
+      ],
+    },
+    {
+      name: "Text", description: "Title → Text/Title · Description → Text/Body",
+      cssPrefix: "--foreground / --field-supporting",
+      tokens: [
+        { role: "Title",       variable: "--foreground",       light: "#1a1a1a",             dark: "rgba(255,255,255,0.87)" },
+        { role: "Description", variable: "--field-supporting", light: "#5c5c5c",             dark: "rgba(255,255,255,0.60)" },
+      ],
+    },
+    {
+      name: "Primary CTA", description: "Delegates to Button variant=primary — Surface/Primary/Default",
+      cssPrefix: "--btn-primary-*",
+      tokens: [
+        { role: "Background", variable: "--btn-primary-bg",    light: "#2173ff",  dark: "#2b7fff" },
+        { role: "Text",       variable: "—",                   light: "#ffffff",  dark: "#ffffff" },
+      ],
+    },
+    {
+      name: "Secondary CTA", description: "Delegates to Button variant=secondary — Surface/Neutral/White",
+      cssPrefix: "--btn-secondary-*",
+      tokens: [
+        { role: "Background", variable: "--btn-secondary-bg",     light: "rgba(255,255,255,1)",  dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",     variable: "--btn-secondary-border", light: "rgba(0,0,0,0.10)",     dark: "rgba(255,255,255,0.10)" },
+        { role: "Text",       variable: "--btn-secondary-fg",     light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
+      ],
+    },
+  ],
+}
+
+// ── Foundation specs ───────────────────────────────────────────────────────
+
+const AVATAR_SPEC = {
+  name: "Avatar",
+  figmaNodeId: "4753:19229",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4753-19229",
+  description: "Circular user/workspace badge. Auto-assigns color from name hash. 3 styles × 7 colors × 5 sizes + selected ring state.",
+  properties: [
+    { name: "style",    type: "Variant", values: ["text","photo","empty"],                    default: "text" },
+    { name: "size",     type: "Variant", values: ["xs","sm","md","lg","xl"],                  default: "md" },
+    { name: "color",    type: "Variant", values: ["blue","green","orange","purple","cyan","lime","red","auto"], default: "auto", note: "auto = deterministic from name hash" },
+    { name: "selected", type: "Boolean", values: ["true","false"],                            default: "false" },
+    { name: "name",     type: "String",  values: ["any string"],                              default: "—", note: "Initials extracted: first letter of each word, max 2" },
+    { name: "src",      type: "String",  values: ["image URL"],                              default: "—", note: "Only used when style=photo" },
+  ],
+  sizes: [
+    { size: "xs", height: "20px", fontSize: "9px",  fontWeight: "700" },
+    { size: "sm", height: "24px", fontSize: "11px", fontWeight: "700" },
+    { size: "md", height: "32px", fontSize: "13px", fontWeight: "700" },
+    { size: "lg", height: "40px", fontSize: "15px", fontWeight: "700" },
+    { size: "xl", height: "48px", fontSize: "18px", fontWeight: "700" },
+  ],
+  typography: [
+    { element: "Initials (xs)", family: "Inter", size: "9px",  weight: "700 / ExtraBold", lineHeight: "1" },
+    { element: "Initials (sm)", family: "Inter", size: "11px", weight: "700 / ExtraBold", lineHeight: "1" },
+    { element: "Initials (md)", family: "Inter", size: "13px", weight: "700 / ExtraBold", lineHeight: "1" },
+    { element: "Initials (lg)", family: "Inter", size: "15px", weight: "700 / ExtraBold", lineHeight: "1" },
+    { element: "Initials (xl)", family: "Inter", size: "18px", weight: "700 / ExtraBold", lineHeight: "1" },
+  ],
+  variants: [
+    {
+      name: "Text / Blue", description: "Default color — #2173FF brand blue",
+      cssPrefix: "--avatar-blue-*",
+      tokens: [
+        { role: "Background", variable: "--avatar-blue-bg",   light: "#2173ff26", dark: "#2173ff33" },
+        { role: "Text",       variable: "--avatar-blue-text", light: "#2173ff",   dark: "#6fa8ff" },
+      ],
+    },
+    {
+      name: "Selected ring", description: "2px ring shown when selected=true",
+      cssPrefix: "--foreground",
+      tokens: [
+        { role: "Ring color", variable: "--foreground",        light: "#1a1a1a",   dark: "#f0f4ff" },
+        { role: "Ring width", variable: "—",                   light: "2px",       dark: "2px" },
+        { role: "Ring gap",   variable: "—",                   light: "2px",       dark: "2px" },
+      ],
+    },
+  ],
+}
+
+const COLORS_SPEC = {
+  name: "Colors",
+  figmaNodeId: "—",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS",
+  description: "Full token system: primitive palette (raw hex) + semantic layer (adaptive CSS vars). Dark mode is default; light activated via .light class on root.",
+  properties: [
+    { name: "mode",    type: "Variant", values: ["dark (default)","light"],         default: "dark",       note: "Switched via .light class on the root element" },
+    { name: "scope",   type: "Variant", values: ["primitives","semantic"],           default: "semantic",   note: "Primitives = fixed hex. Semantic = context-adaptive var()" },
+    { name: "surface", type: "Variant", values: ["canvas","surface","overlay"],      default: "canvas",     note: "Three surface elevation levels" },
+  ],
+  sizes: [
+    { token: "--foreground",           role: "Primary text",         light: "#1a1a1a",   dark: "#f0f4ff" },
+    { token: "--field-supporting",     role: "Secondary / muted",    light: "#5c5c5c",   dark: "rgba(255,255,255,0.5)" },
+    { token: "--canvas",               role: "App background",       light: "#f5f7ff",   dark: "#080a14" },
+    { token: "--surface",              role: "Card / panel surface",  light: "#ffffff",   dark: "#0e1120" },
+  ],
+  typography: [],
+  variants: [
+    {
+      name: "Foreground tokens", description: "Text and icon colors",
+      cssPrefix: "--foreground / --field-*",
+      tokens: [
+        { role: "Primary text",    variable: "--foreground",        light: "#1a1a1a",              dark: "#f0f4ff" },
+        { role: "Label / muted",   variable: "--field-label",       light: "#3d3d3d",              dark: "rgba(255,255,255,0.87)" },
+        { role: "Supporting",      variable: "--field-supporting",  light: "#5c5c5c",              dark: "rgba(255,255,255,0.5)" },
+        { role: "Placeholder",     variable: "--field-placeholder", light: "rgba(0,0,0,0.35)",     dark: "rgba(255,255,255,0.25)" },
+      ],
+    },
+    {
+      name: "Surface tokens", description: "Background and panel fills",
+      cssPrefix: "--canvas / --surface / --field-bg",
+      tokens: [
+        { role: "Canvas (app bg)",  variable: "--canvas",           light: "#f5f7ff",   dark: "#080a14" },
+        { role: "Surface",          variable: "--surface",          light: "#ffffff",   dark: "#0e1120" },
+        { role: "Field bg",         variable: "--field-bg",         light: "#f2f2f2",   dark: "rgba(255,255,255,0.06)" },
+        { role: "Field bg hover",   variable: "--field-bg-hover",   light: "#e8e8e8",   dark: "rgba(255,255,255,0.1)" },
+        { role: "Code bg",          variable: "--code-bg",          light: "#f0f0f5",   dark: "rgba(255,255,255,0.08)" },
+      ],
+    },
+    {
+      name: "Border tokens", description: "Stroke and divider colors",
+      cssPrefix: "--field-border / --table-border",
+      tokens: [
+        { role: "Field border",     variable: "--field-border",      light: "#5c5c5c",              dark: "rgba(255,255,255,0.1)" },
+        { role: "Border hover",     variable: "--field-border-hover",light: "#2173ff",              dark: "rgba(255,255,255,0.24)" },
+        { role: "Table border",     variable: "--table-border",      light: "rgba(0,0,0,0.09)",     dark: "rgba(255,255,255,0.07)" },
+      ],
+    },
+    {
+      name: "Semantic — Tag / Alert", description: "Status color tokens shared by Tags and Alert Banner",
+      cssPrefix: "--tag-*/--ab-*",
+      tokens: [
+        { role: "Error bg",         variable: "--tag-error-bg",      light: "#fdeded",   dark: "#2d1515" },
+        { role: "Error text",       variable: "--tag-error-fg",      light: "#5f2120",   dark: "#ff6467" },
+        { role: "Success bg",       variable: "--tag-success-bg",    light: "#e5fdf8",   dark: "#0a1f1a" },
+        { role: "Success text",     variable: "--tag-success-fg",    light: "#003328",   dark: "#6ee7b7" },
+        { role: "Alert bg",         variable: "--tag-alert-bg",      light: "#ffeedb",   dark: "#2d1a08" },
+        { role: "Alert text",       variable: "--tag-alert-fg",      light: "#663c00",   dark: "#fcd34d" },
+      ],
+    },
+  ],
+}
+
+const TYPOGRAPHY_SPEC = {
+  name: "Typography",
+  figmaNodeId: "—",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS",
+  description: "Inter-based type scale. All styles defined as Tailwind classes (text-type-*) in tailwind.config.js. Never use arbitrary font sizes — pick the nearest scale step.",
+  properties: [
+    { name: "family",   type: "String",  values: ["Inter"],                                   default: "Inter",  note: "Loaded via Google Fonts. No substitutes." },
+    { name: "category", type: "Variant", values: ["Display","Heading","Body","Caption","Label","Code"], default: "Body" },
+    { name: "weight",   type: "Variant", values: ["400 Regular","500 Medium","600 SemiBold","700 Bold","800 ExtraBold"], default: "500 Medium" },
+  ],
+  sizes: [
+    { style: "Display XL", size: "48px", weight: "800", lineHeight: "1.1",  tailwind: "text-type-display-xl" },
+    { style: "Display LG", size: "36px", weight: "800", lineHeight: "1.1",  tailwind: "text-type-display-lg" },
+    { style: "Display MD", size: "30px", weight: "700", lineHeight: "1.2",  tailwind: "text-type-display-md" },
+    { style: "Heading LG", size: "24px", weight: "600", lineHeight: "1.3",  tailwind: "text-type-heading-lg" },
+    { style: "Heading MD", size: "20px", weight: "600", lineHeight: "1.35", tailwind: "text-type-heading-md" },
+    { style: "Heading SM", size: "16px", weight: "600", lineHeight: "1.4",  tailwind: "text-type-heading-sm" },
+    { style: "Body LG",    size: "16px", weight: "400", lineHeight: "1.5",  tailwind: "text-type-body-lg" },
+    { style: "Body MD",    size: "14px", weight: "400", lineHeight: "1.5",  tailwind: "text-type-body-md" },
+    { style: "Body SM",    size: "13px", weight: "400", lineHeight: "1.5",  tailwind: "text-type-body-sm" },
+    { style: "Caption",    size: "12px", weight: "400", lineHeight: "1.5",  tailwind: "text-type-caption" },
+    { style: "Label",      size: "11px", weight: "500", lineHeight: "1.4",  tailwind: "text-type-label" },
+    { style: "Code",       size: "12px", weight: "400", lineHeight: "1.6",  tailwind: "font-mono" },
+  ],
+  typography: [
+    { element: "Display XL", family: "Inter", size: "48px", weight: "800 / ExtraBold", lineHeight: "1.1" },
+    { element: "Display LG", family: "Inter", size: "36px", weight: "800 / ExtraBold", lineHeight: "1.1" },
+    { element: "Display MD", family: "Inter", size: "30px", weight: "700 / Bold",      lineHeight: "1.2" },
+    { element: "Heading LG", family: "Inter", size: "24px", weight: "600 / SemiBold",  lineHeight: "1.3" },
+    { element: "Heading MD", family: "Inter", size: "20px", weight: "600 / SemiBold",  lineHeight: "1.35" },
+    { element: "Heading SM", family: "Inter", size: "16px", weight: "600 / SemiBold",  lineHeight: "1.4" },
+    { element: "Body LG",    family: "Inter", size: "16px", weight: "400 / Regular",   lineHeight: "1.5" },
+    { element: "Body MD",    family: "Inter", size: "14px", weight: "400 / Regular",   lineHeight: "1.5" },
+    { element: "Body SM",    family: "Inter", size: "13px", weight: "400 / Regular",   lineHeight: "1.5" },
+    { element: "Caption",    family: "Inter", size: "12px", weight: "400 / Regular",   lineHeight: "1.5" },
+    { element: "Label",      family: "Inter", size: "11px", weight: "500 / Medium",    lineHeight: "1.4" },
+    { element: "Code",       family: "monospace", size: "12px", weight: "400 / Regular", lineHeight: "1.6" },
+  ],
+  variants: [
+    {
+      name: "Color tokens for text", description: "Semantic vars to use for text depending on context",
+      cssPrefix: "--foreground / --field-*",
+      tokens: [
+        { role: "Primary",     variable: "--foreground",        light: "#1a1a1a",              dark: "#f0f4ff" },
+        { role: "Label",       variable: "--field-label",       light: "#3d3d3d",              dark: "rgba(255,255,255,0.87)" },
+        { role: "Supporting",  variable: "--field-supporting",  light: "#5c5c5c",              dark: "rgba(255,255,255,0.5)" },
+        { role: "Placeholder", variable: "--field-placeholder", light: "rgba(0,0,0,0.35)",     dark: "rgba(255,255,255,0.25)" },
+        { role: "Brand accent",variable: "--brand",             light: "#2173ff",              dark: "#4d8fff" },
+      ],
+    },
+  ],
+}
+
+const BREAKPOINTS_SPEC = {
+  name: "Breakpoints",
+  figmaNodeId: "6729:35011",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=6729-35011",
+  description: "5-tier responsive system. All layouts must use these breakpoints — no custom values. Defined as Tailwind screen keys: xs / sm / md / lg / xl.",
+  properties: [
+    { name: "tier",   type: "Variant", values: ["xs","sm","md","lg","xl"],           default: "lg" },
+    { name: "device", type: "Variant", values: ["Mobile","Tablet","Laptop","Desktop","Wide"], default: "Desktop" },
+  ],
+  sizes: [
+    { tier: "xs",  label: "Mobile",    minWidth: "0px",     maxWidth: "639px",   tailwind: "—" },
+    { tier: "sm",  label: "Tablet",    minWidth: "640px",   maxWidth: "767px",   tailwind: "sm:" },
+    { tier: "md",  label: "Laptop",    minWidth: "768px",   maxWidth: "1023px",  tailwind: "md:" },
+    { tier: "lg",  label: "Desktop",   minWidth: "1024px",  maxWidth: "1439px",  tailwind: "lg:" },
+    { tier: "xl",  label: "Wide",      minWidth: "1440px",  maxWidth: "∞",       tailwind: "xl:" },
+  ],
+  typography: [],
+  variants: [
+    {
+      name: "Tier color palette", description: "Each tier has an accent color used in the DS visualization",
+      cssPrefix: "—",
+      tokens: [
+        { role: "xs / Mobile",  variable: "—", light: "#f59e0b", dark: "#f59e0b" },
+        { role: "sm / Tablet",  variable: "—", light: "#10b981", dark: "#10b981" },
+        { role: "md / Laptop",  variable: "—", light: "#3b82f6", dark: "#3b82f6" },
+        { role: "lg / Desktop", variable: "—", light: "#8b5cf6", dark: "#8b5cf6" },
+        { role: "xl / Wide",    variable: "—", light: "#ec4899", dark: "#ec4899" },
+      ],
+    },
+  ],
+}
+
+const CORNER_RADIUS_SPEC = {
+  name: "Corner Radius",
+  figmaNodeId: "4495:1311",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4495-1311",
+  description: "8-step radius scale. Applied via --radius-* CSS variables and Tailwind classes. Never hardcode px radius values — always use the token.",
+  properties: [
+    { name: "step",   type: "Variant", values: ["none","xs","sm","md","lg","xl","2xl","full"], default: "md" },
+    { name: "usage",  type: "String",  values: ["badges","chips","buttons","cards","modals","avatars"],  default: "—", note: "Pick the step that matches the element's visual weight" },
+  ],
+  sizes: [
+    { token: "--radius-none", tailwind: "rounded-none", px: "0px",    usage: "Tables, flush containers" },
+    { token: "--radius-xs",   tailwind: "rounded-xs",   px: "2px",    usage: "Small tags, chips" },
+    { token: "--radius-sm",   tailwind: "rounded-sm",   px: "4px",    usage: "Inputs, small buttons" },
+    { token: "--radius-md",   tailwind: "rounded-md",   px: "6px",    usage: "Buttons, cards (default)" },
+    { token: "--radius-lg",   tailwind: "rounded-lg",   px: "8px",    usage: "Panels, modals" },
+    { token: "--radius-xl",   tailwind: "rounded-xl",   px: "12px",   usage: "Large cards, drawers" },
+    { token: "--radius-2xl",  tailwind: "rounded-2xl",  px: "16px",   usage: "Hero sections" },
+    { token: "--radius-full", tailwind: "rounded-full", px: "9999px", usage: "Avatars, pills, toggles" },
+  ],
+  typography: [],
+  variants: [
+    {
+      name: "CSS variables", description: "Applied in index.css — same value in both modes (radius is not adaptive)",
+      cssPrefix: "--radius-*",
+      tokens: [
+        { role: "None",  variable: "--radius-none", light: "0px",    dark: "0px" },
+        { role: "XS",    variable: "--radius-xs",   light: "2px",    dark: "2px" },
+        { role: "SM",    variable: "--radius-sm",   light: "4px",    dark: "4px" },
+        { role: "MD",    variable: "--radius-md",   light: "6px",    dark: "6px" },
+        { role: "LG",    variable: "--radius-lg",   light: "8px",    dark: "8px" },
+        { role: "XL",    variable: "--radius-xl",   light: "12px",   dark: "12px" },
+        { role: "2XL",   variable: "--radius-2xl",  light: "16px",   dark: "16px" },
+        { role: "Full",  variable: "--radius-full", light: "9999px", dark: "9999px" },
+      ],
+    },
+  ],
+}
+
+const ICONS_SPEC = {
+  name: "Icons",
+  figmaNodeId: "—",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS",
+  description: "Material Design icons (Figma DS) mapped to Lucide equivalents. Import from lucide-react. Default: size=16, strokeWidth=1.75. Semantic mapping documented in the Reference tab.",
+  properties: [
+    { name: "library",      type: "String",  values: ["lucide-react"],         default: "lucide-react", note: "import { IconName } from 'lucide-react'" },
+    { name: "size",         type: "Number",  values: ["12","14","16","18","20","24"], default: "16",  note: "Match container context — nav=16, action=18, hero=24" },
+    { name: "strokeWidth",  type: "Number",  values: ["1.5","1.75","2"],        default: "1.75", note: "1.75 is AIMS OS standard — do not use Lucide's default 2" },
+    { name: "color",        type: "String",  values: ["var(--foreground)","var(--field-supporting)","currentColor"], default: "currentColor" },
+  ],
+  sizes: [
+    { context: "Navigation item",   size: "16px", strokeWidth: "1.75", color: "var(--foreground)" },
+    { context: "Button (sm)",       size: "14px", strokeWidth: "1.75", color: "currentColor" },
+    { context: "Button (md)",       size: "16px", strokeWidth: "1.75", color: "currentColor" },
+    { context: "Action / toolbar",  size: "18px", strokeWidth: "1.75", color: "var(--foreground)" },
+    { context: "Alert Banner icon", size: "20px", strokeWidth: "1.75", color: "var(--ab-*-icon)" },
+    { context: "Highlight / hero",  size: "24px", strokeWidth: "1.5",  color: "var(--foreground)" },
+  ],
+  typography: [],
+  variants: [
+    {
+      name: "Color tokens for icons", description: "Use these semantic vars — never hardcode icon colors",
+      cssPrefix: "—",
+      tokens: [
+        { role: "Default",    variable: "--foreground",       light: "#1a1a1a",             dark: "#f0f4ff" },
+        { role: "Muted",      variable: "--field-supporting", light: "#5c5c5c",             dark: "rgba(255,255,255,0.5)" },
+        { role: "Brand",      variable: "--brand",            light: "#2173ff",             dark: "#4d8fff" },
+        { role: "Error",      variable: "--ab-error-icon",    light: "#992222",             dark: "#ff6467" },
+        { role: "Success",    variable: "--ab-success-icon",  light: "#009978",             dark: "#6ee7b7" },
+        { role: "Alert",      variable: "--ab-alert-icon",    light: "#b45309",             dark: "#fcd34d" },
+      ],
+    },
+  ],
+}
+
 // ── Spec types ─────────────────────────────────────────────────────────────
 
 type SpecToken = { role: string; variable: string; varId?: string; light: string; dark: string }
@@ -1378,16 +1783,36 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "table")            return TABLE_SPEC            as AnySpec
   if (id === "topbar")           return TOPBAR_SPEC           as AnySpec
   if (id === "sidebar")          return SIDEBAR_SPEC          as AnySpec
+  if (id === "alert-banner")     return ALERT_BANNER_SPEC     as AnySpec
   if (id === "entity-list")      return ENTITY_LIST_SPEC      as AnySpec
   if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
   if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
   if (id === "filters")          return FILTERS_SPEC          as AnySpec
+  if (id === "empty-state")      return EMPTY_STATE_SPEC      as AnySpec
+  // Foundation pages
+  if (id === "avatar")           return AVATAR_SPEC           as AnySpec
+  if (id === "colors")           return COLORS_SPEC           as AnySpec
+  if (id === "typography")       return TYPOGRAPHY_SPEC       as AnySpec
+  if (id === "breakpoints")      return BREAKPOINTS_SPEC      as AnySpec
+  if (id === "corner-radius")    return CORNER_RADIUS_SPEC    as AnySpec
+  if (id === "icons")            return ICONS_SPEC            as AnySpec
   return CARD_SPEC as AnySpec
 }
 
 function SpecPanel({ spec, onClose }: { spec: AnySpec; onClose: () => void }) {
   const hasTypography = spec.typography.length > 0
   const [tab, setTab] = useState<"props" | "tokens" | "sizes" | "typography">("props")
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setOpen(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  function handleClose() {
+    setOpen(false)
+    setTimeout(onClose, 300)
+  }
 
   const specTabs: { id: "props" | "tokens" | "sizes" | "typography"; label: string }[] = [
     { id: "props",  label: "Properties" },
@@ -1401,44 +1826,52 @@ function SpecPanel({ spec, onClose }: { spec: AnySpec; onClose: () => void }) {
     : (spec.variants ?? []).map(v => ({ name: v.name, meta: v.description,   tokens: v.tokens }))
 
   const glassStyle: React.CSSProperties = {
-    background: "rgba(8,10,20,0.92)",
+    background: "var(--modal-surface)",
     backdropFilter: "blur(24px) saturate(160%)",
     WebkitBackdropFilter: "blur(24px) saturate(160%)",
-    borderLeft: "1px solid rgba(255,255,255,0.07)",
+    borderLeft: "1px solid var(--modal-border)",
   }
 
   const rowBg = (i: number): React.CSSProperties =>
-    i % 2 === 1 ? { background: "rgba(255,255,255,0.025)" } : {}
+    i % 2 === 1 ? { background: "var(--row-alt-bg)" } : {}
 
-  const dividerStyle: React.CSSProperties = { borderColor: "rgba(255,255,255,0.07)" }
+  const dividerStyle: React.CSSProperties = { borderColor: "var(--table-border)" }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-[3px]" onClick={onClose} />
-      <div className="relative z-10 h-full w-full max-w-[700px] flex flex-col shadow-2xl" style={glassStyle}>
+      onClick={e => { if (e.target === e.currentTarget) handleClose() }}>
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-[3px] transition-opacity duration-300"
+        style={{ opacity: open ? 1 : 0 }}
+        onClick={handleClose}
+      />
+      <div
+        className="relative z-10 h-full w-full max-w-[700px] flex flex-col shadow-2xl"
+        style={{
+          ...glassStyle,
+          transform: open ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 300ms cubic-bezier(0.4,0,0.2,1)",
+        }}
+      >
 
         {/* Header */}
         <div className="shrink-0 px-[24px] pt-[20px] pb-0 flex items-start justify-between gap-[12px]">
           <div>
             <div className="flex items-center gap-[8px] flex-wrap">
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">{spec.name}</h2>
-              <a href={spec.figmaUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-[4px] text-[11px] text-[#2173ff] hover:underline">
-                Figma <ExternalIcon />
-              </a>
+              <FigmaLink href={spec.figmaUrl} />
             </div>
             <p className="text-[12px] text-[var(--field-supporting)] mt-[4px] max-w-[520px] leading-[1.6]">{spec.description}</p>
             <p className="text-[10px] font-mono mt-[3px] opacity-30 text-[var(--field-supporting)]">node: {spec.figmaNodeId}</p>
           </div>
-          <button onClick={onClose}
-            className="shrink-0 w-[28px] h-[28px] flex items-center justify-center rounded-md text-[var(--field-supporting)] hover:bg-white/[0.06] transition-colors">
+          <button onClick={handleClose}
+            className="shrink-0 w-[28px] h-[28px] flex items-center justify-center rounded-md text-[var(--field-supporting)] hover:bg-[var(--ctrl-inactive-bg)] transition-colors">
             <CloseIcon />
           </button>
         </div>
 
         {/* Tab bar */}
-        <div className="shrink-0 flex mt-[16px] px-[24px]" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="shrink-0 flex mt-[16px] px-[24px]" style={{ borderBottom: "1px solid var(--table-border)" }}>
           {specTabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={[
@@ -1457,10 +1890,10 @@ function SpecPanel({ spec, onClose }: { spec: AnySpec; onClose: () => void }) {
 
           {/* Properties */}
           {tab === "props" && (
-            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
               <table className="w-full text-[12px]">
                 <thead>
-                  <tr style={{ background: "rgba(255,255,255,0.05)", ...dividerStyle, borderBottomWidth: 1, borderBottomStyle: "solid" }}>
+                  <tr style={{ background: "var(--table-header-bg)", ...dividerStyle, borderBottomWidth: 1, borderBottomStyle: "solid" }}>
                     <th className="text-left px-[12px] py-[8px] font-semibold text-[var(--field-label)] w-[130px]">Property</th>
                     <th className="text-left px-[12px] py-[8px] font-semibold text-[var(--field-label)] w-[72px]">Type</th>
                     <th className="text-left px-[12px] py-[8px] font-semibold text-[var(--field-label)]">Values</th>
@@ -1478,7 +1911,7 @@ function SpecPanel({ spec, onClose }: { spec: AnySpec; onClose: () => void }) {
                         <div className="flex flex-wrap gap-[4px]">
                           {p.values.map(v => (
                             <span key={v} className={`text-[10px] px-[5px] py-[1px] rounded ${v === p.default ? "font-semibold text-[var(--foreground)]" : "text-[var(--field-supporting)]"}`}
-                              style={{ border: "1px solid rgba(255,255,255,0.1)" }}>{v}</span>
+                              style={{ border: "1px solid var(--table-border)" }}>{v}</span>
                           ))}
                         </div>
                         {p.note && <p className="text-[10px] text-[var(--field-supporting)] opacity-70 mt-[3px] italic">{p.note}</p>}
@@ -1493,10 +1926,10 @@ function SpecPanel({ spec, onClose }: { spec: AnySpec; onClose: () => void }) {
 
           {/* Dimensions */}
           {tab === "sizes" && (
-            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
               <table className="w-full text-[12px]">
                 <thead>
-                  <tr style={{ background: "rgba(255,255,255,0.05)", ...dividerStyle, borderBottomWidth: 1, borderBottomStyle: "solid" }}>
+                  <tr style={{ background: "var(--table-header-bg)", ...dividerStyle, borderBottomWidth: 1, borderBottomStyle: "solid" }}>
                     {Object.keys(spec.sizes[0]).map(k => (
                       <th key={k} className="text-left px-[12px] py-[8px] font-semibold text-[var(--field-label)] capitalize">{k.replace(/([A-Z])/g, " $1")}</th>
                     ))}
@@ -1517,10 +1950,10 @@ function SpecPanel({ spec, onClose }: { spec: AnySpec; onClose: () => void }) {
 
           {/* Typography */}
           {tab === "typography" && spec.typography.length > 0 && (
-            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
               <table className="w-full text-[12px]">
                 <thead>
-                  <tr style={{ background: "rgba(255,255,255,0.05)", ...dividerStyle, borderBottomWidth: 1, borderBottomStyle: "solid" }}>
+                  <tr style={{ background: "var(--table-header-bg)", ...dividerStyle, borderBottomWidth: 1, borderBottomStyle: "solid" }}>
                     {["Element","Family","Size","Weight","Line-height"].map(h => (
                       <th key={h} className="text-left px-[12px] py-[8px] font-semibold text-[var(--field-label)]">{h}</th>
                     ))}
@@ -1545,15 +1978,15 @@ function SpecPanel({ spec, onClose }: { spec: AnySpec; onClose: () => void }) {
           {tab === "tokens" && (
             <div className="flex flex-col gap-[12px]">
               {tokenGroups.map(g => (
-                <div key={g.name} className="rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div key={g.name} className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
                   <div className="px-[12px] py-[7px] flex items-center gap-[8px] flex-wrap"
-                    style={{ background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                    style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
                     <span className="text-[12px] font-semibold text-[var(--foreground)]">{g.name}</span>
                     <span className="text-[10px] font-mono text-[var(--field-supporting)] opacity-60">{g.meta}</span>
                   </div>
                   <table className="w-full text-[12px]">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                      <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
                         <th className="text-left px-[12px] py-[6px] font-semibold text-[var(--field-label)] w-[120px]">Role</th>
                         <th className="text-left px-[12px] py-[6px] font-semibold text-[var(--field-label)]">Variable</th>
                         <th className="text-left px-[12px] py-[6px] font-semibold text-[var(--field-label)] w-[150px]">Light</th>
@@ -1604,7 +2037,7 @@ function CtrlGroup<T extends string>({ label, options, value, onChange }: {
         {options.map(o => (
           <button key={o.value} onClick={() => onChange(o.value)}
             className={["px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors",
-              value === o.value ? "bg-[#2173ff] text-white" : "bg-[var(--field-bg)] border border-[var(--field-border)] text-[var(--field-label)] hover:border-[var(--field-border-hover)]",
+              value === o.value ? "bg-[#2173ff] text-white" : "bg-[var(--ctrl-inactive-bg)] border border-[var(--field-border)] text-[var(--field-label)] hover:border-[var(--field-border-hover)]",
             ].join(" ")}>
             {o.label}
           </button>
@@ -1678,6 +2111,37 @@ function SpecButton({ onClick }: { onClick: () => void }) {
     >
       <SpecIcon /> View DS spec
     </button>
+  )
+}
+
+function FigmaLogoIcon() {
+  return (
+    <svg width="10" height="15" viewBox="0 0 38 57" fill="none" aria-hidden="true">
+      <path fillRule="evenodd" clipRule="evenodd" d="M19 28.5C19 25.9804 20.0009 23.5641 21.7825 21.7825C23.5641 20.0009 25.9804 19 28.5 19C31.0196 19 33.4359 20.0009 35.2175 21.7825C36.9991 23.5641 38 25.9804 38 28.5C38 31.0196 36.9991 33.4359 35.2175 35.2175C33.4359 36.9991 31.0196 38 28.5 38C25.9804 38 23.5641 36.9991 21.7825 35.2175C20.0009 33.4359 19 31.0196 19 28.5Z" fill="#1ABCFE"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M0 47.5C0 44.9804 1.00089 42.5641 2.78249 40.7825C4.56408 39.0009 6.98044 38 9.5 38H19V47.5C19 50.0196 17.9991 52.4359 16.2175 54.2175C14.4359 55.9991 12.0196 57 9.5 57C6.98044 57 4.56408 55.9991 2.78249 54.2175C1.00089 52.4359 0 50.0196 0 47.5Z" fill="#0ACF83"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M19 0V19H28.5C31.0196 19 33.4359 17.9991 35.2175 16.2175C36.9991 14.4359 38 12.0196 38 9.5C38 6.98044 36.9991 4.56408 35.2175 2.78249C33.4359 1.00089 31.0196 0 28.5 0H19Z" fill="#FF7262"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M0 9.5C0 6.98044 1.00089 4.56408 2.78249 2.78249C4.56408 1.00089 6.98044 0 9.5 0H19V19H9.5C6.98044 19 4.56408 17.9991 2.78249 16.2175C1.00089 14.4359 0 12.0196 0 9.5Z" fill="#F24E1E"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M0 28.5C0 25.9804 1.00089 23.5641 2.78249 21.7825C4.56408 20.0009 6.98044 19 9.5 19H19V38H9.5C6.98044 38 4.56408 36.9991 2.78249 35.2175C1.00089 33.4359 0 31.0196 0 28.5Z" fill="#A259FF"/>
+    </svg>
+  )
+}
+
+function FigmaLink({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-[6px] text-[12px] font-semibold whitespace-nowrap border px-[10px] py-[5px] rounded-[6px] transition-all hover:brightness-110 shrink-0"
+      style={{
+        background: "var(--surface)",
+        borderColor: "var(--field-border-hover)",
+        color: "var(--foreground)",
+      }}
+    >
+      <FigmaLogoIcon />
+      View in Figma
+    </a>
   )
 }
 
@@ -1856,6 +2320,14 @@ const DONE_COMPONENTS = [
   { name: "CardContainer", complexity: "Simple",  hours: 2,  note: "3 elevation levels · dark/light surfaces" },
   { name: "Table",         complexity: "Complex", hours: 6,  note: "2 sizes · selectable rows · 5 cell helpers" },
   { name: "Topbar",        complexity: "Complex", hours: 7,  note: "2 variants · workspace dropdown · profile menu · IA button" },
+  { name: "Sidebar",       complexity: "Complex", hours: 6,  note: "Collapsible · animated expand/collapse · active gradient · tooltip" },
+  { name: "Modal Dialog",    complexity: "Complex", hours: 5,  note: "Confirmation + content variants · 5 tones · animate in/out" },
+  { name: "Avatar",          complexity: "Medium",  hours: 3,  note: "5 sizes · 3 styles · 7 color variants · selected state" },
+  { name: "Entity List",     complexity: "Complex", hours: 7,  note: "Icon/avatar leading · AI insight · tags · actions · state tag" },
+  { name: "Informative Card",complexity: "Medium",  hours: 3,  note: "5 semantic states · 3 sizes · optional CTA · --ic-* tokens" },
+  { name: "Filters",         complexity: "Complex", hours: 6,  note: "Filter bar + Slideout · 8 states · all-filters · sort · grid/list" },
+  { name: "Alert Banner",    complexity: "Simple",  hours: 2,  note: "3 states · optional CTA + dismiss · --ab-* token family" },
+  { name: "Empty State",     complexity: "Medium",  hours: 3,  note: "Icon Highlight + title + desc + 1–2 CTAs · compact table/card variant · --es-* tokens" },
 ] as const
 
 const REMAINING_PHASES = [
@@ -1863,7 +2335,6 @@ const REMAINING_PHASES = [
     phase: "Navigation & Layout",
     status: "in-progress" as const,
     items: [
-      { name: "Sidebar",        complexity: "Complex", hours: 6 },
       { name: "Breadcrumb",     complexity: "Simple",  hours: 2 },
       { name: "Tabs",           complexity: "Medium",  hours: 3 },
       { name: "Pagination",     complexity: "Medium",  hours: 3 },
@@ -1871,12 +2342,10 @@ const REMAINING_PHASES = [
   },
   {
     phase: "Feedback & Overlays",
-    status: "pending" as const,
+    status: "in-progress" as const,
     items: [
-      { name: "Modal / Dialog",   complexity: "Complex", hours: 5 },
       { name: "Toast",            complexity: "Medium",  hours: 3 },
       { name: "Tooltip",          complexity: "Medium",  hours: 3 },
-      { name: "Alert / Banner",   complexity: "Simple",  hours: 2 },
       { name: "Progress Bar",     complexity: "Simple",  hours: 2 },
       { name: "Skeleton Loader",  complexity: "Medium",  hours: 3 },
     ],
@@ -1898,8 +2367,6 @@ const REMAINING_PHASES = [
     status: "pending" as const,
     items: [
       { name: "Metric Card",  complexity: "Medium",  hours: 3 },
-      { name: "Empty State",  complexity: "Medium",  hours: 3 },
-      { name: "Avatar",       complexity: "Simple",  hours: 2 },
       { name: "Badge",        complexity: "Simple",  hours: 2 },
       { name: "Data Widget",  complexity: "Complex", hours: 5 },
     ],
@@ -1915,7 +2382,6 @@ const REMAINING_PHASES = [
       { name: "Node Config / Code Block",    complexity: "Complex", hours: 5 },
       { name: "Node Config / File Input",    complexity: "Complex", hours: 5 },
       { name: "Node Config / Multi-Select",  complexity: "Complex", hours: 5 },
-      { name: "Filters Slideout",            complexity: "Complex", hours: 6 },
       { name: "Workflow Builder UI",         complexity: "Complex", hours: 8 },
     ],
   },
@@ -1929,11 +2395,11 @@ const REMAINING_PHASES = [
 ] as const
 
 function ProgressTab() {
-  const totalDone      = DONE_COMPONENTS.length                                  // 12
+  const totalDone      = DONE_COMPONENTS.length                                  // 15
   const totalRemaining = REMAINING_PHASES.reduce((s, p) => s + p.items.length, 0)
-  const totalAll       = totalDone + totalRemaining                              // ~53
+  const totalAll       = totalDone + totalRemaining                              // ~43
 
-  const hoursInvested  = DONE_COMPONENTS.reduce((s, c) => s + c.hours, 0)       // 38h
+  const hoursInvested  = DONE_COMPONENTS.reduce((s, c) => s + c.hours, 0)       // 52h
   const hoursRemaining = REMAINING_PHASES.reduce(
     (s, p) => s + p.items.reduce((ps, i) => ps + i.hours, 0), 0
   )
@@ -1953,14 +2419,6 @@ function ProgressTab() {
     Complex: "var(--tag-purple-fg)",
     Mixed:   "var(--tag-alert-fg)",
   }
-
-  const BUILD_STEPS = [
-    { step: "1", label: "DS Inspection",      time: "30–45 min", desc: "Read all variants, states, spacing, tokens directly from Figma via MCP API. Verify dark mode values." },
-    { step: "2", label: "Token Extraction",   time: "20–30 min", desc: "Map every DS variable to a CSS custom property. Verify light and dark values. Add to index.css." },
-    { step: "3", label: "Implementation",     time: "60–90 min", desc: "TypeScript component with all variants, states, sub-components, and accessibility attributes." },
-    { step: "4", label: "Documentation Page", time: "45–60 min", desc: "4-tab page: Overview · Variants · Playground (live controls) · Reference (token table + code snippet)." },
-    { step: "5", label: "QA & Iteration",     time: "20–30 min", desc: "Visual comparison against DS, spacing corrections, edge cases, dark/light mode verification." },
-  ]
 
   return (
     <div className="flex flex-col gap-[40px]">
@@ -2002,7 +2460,7 @@ function ProgressTab() {
             </span>
             <span className="text-[12px] text-[var(--field-supporting)]">{pctDone}%</span>
           </div>
-          <div className="w-full h-[8px] rounded-full overflow-hidden" style={{ background: "var(--field-border)" }}>
+          <div className="w-full h-[8px] rounded-full overflow-hidden" style={{ background: "var(--ctrl-inactive-bg)" }}>
             <div
               className="h-full rounded-full transition-all"
               style={{
@@ -2018,52 +2476,15 @@ function ProgressTab() {
         </div>
       </div>
 
-      {/* ── What each component actually requires ──────────────── */}
-      <div className="flex flex-col gap-[16px]">
-        <div>
-          <h2 className="text-[18px] font-semibold text-[var(--foreground)]">What building one component actually requires</h2>
-          <p className="text-[13px] text-[var(--field-supporting)] mt-[4px]">
-            Every component goes through these 5 steps — regardless of how "simple" it looks visually.
-            This is why a component cannot be done in 10 minutes.
-          </p>
-        </div>
-        <div className="flex flex-col gap-[2px]">
-          {BUILD_STEPS.map((s, i) => (
-            <div key={s.step}
-              className="flex items-start gap-[16px] p-[14px] rounded-[8px]"
-              style={{ background: i % 2 === 0 ? "var(--surface-raised)" : "transparent" }}
-            >
-              <div className="flex items-center justify-center shrink-0 w-[24px] h-[24px] rounded-full text-[11px] font-bold"
-                style={{ background: "var(--primary)", color: "#fff" }}>
-                {s.step}
-              </div>
-              <div className="flex-1 flex flex-col gap-[2px]">
-                <div className="flex items-center gap-[10px]">
-                  <span className="text-[13px] font-semibold text-[var(--foreground)]">{s.label}</span>
-                  <span className="text-[11px] font-medium px-[8px] py-[2px] rounded-[4px]"
-                    style={{ background: "var(--tag-neutral-bg)", color: "var(--tag-neutral-fg)" }}>
-                    {s.time}
-                  </span>
-                </div>
-                <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">{s.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="rounded-[8px] p-[14px] flex items-start gap-[12px]"
-          style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bg)" }}>
-          <span className="text-[18px]" style={{ lineHeight: 1 }}>⏱</span>
-          <div>
-            <p className="text-[13px] font-semibold" style={{ color: "var(--primary)" }}>
-              Average per component: 3–7 hours
-            </p>
-            <p className="text-[12px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-              Simple components (Toggle, Checkbox) take ~2–3h. Medium components (Input, Select) take ~3–4h.
-              Complex components with multiple sub-parts (Table, Topbar, Sidebar) take 5–8h each.
-              This is design + engineering work happening simultaneously — not just copy-pasting styles.
-            </p>
-          </div>
-        </div>
+      {/* ── Compact build cost note ──────────────────────────────── */}
+      <div className="rounded-[8px] p-[12px] flex items-start gap-[10px]"
+        style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bg)" }}>
+        <span className="text-[16px] shrink-0" style={{ lineHeight: 1.2 }}>⏱</span>
+        <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+          <span className="font-semibold" style={{ color: "var(--primary)" }}>Each component: 3–7h.</span>{" "}
+          5 steps per component: Figma inspection (30–45 min) → token extraction → TypeScript implementation → 4-tab docs page → QA + dark/light verification.
+          Simple (Toggle, Checkbox) ≈ 2–3h. Complex (Table, Topbar, Sidebar) ≈ 5–8h.
+        </p>
       </div>
 
       {/* ── How PMs will prototype ──────────────────────────────── */}
@@ -2189,101 +2610,76 @@ function ProgressTab() {
         </div>
       </div>
 
-      {/* ── Completed components ────────────────────────────────── */}
-      <div className="flex flex-col gap-[12px]">
-        <h2 className="text-[18px] font-semibold text-[var(--foreground)]">
-          Completed — {totalDone} components · ~{hoursInvested}h invested
-        </h2>
-        <div className="rounded-[10px] overflow-hidden border border-[var(--table-border)]">
-          {/* Header */}
-          <div className="grid px-[16px] py-[10px] border-b border-[var(--table-border)]"
-            style={{ gridTemplateColumns: "1fr 100px 60px", background: "var(--table-header-bg)" }}>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--table-header-text)]">Component</span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--table-header-text)]">Complexity</span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--table-header-text)] text-right">Hours</span>
-          </div>
-          {DONE_COMPONENTS.map((c, i) => (
-            <div key={c.name}
-              className="grid px-[16px] py-[10px] items-center"
-              style={{
-                gridTemplateColumns: "1fr 100px 60px",
-                borderBottom: i < DONE_COMPONENTS.length - 1 ? "1px solid var(--table-border)" : "none",
-                background: "var(--table-bg)",
-              }}>
-              <div className="flex flex-col gap-[2px]">
-                <div className="flex items-center gap-[8px]">
-                  <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: "var(--tag-success-fg)" }} />
-                  <span className="text-[13px] font-medium text-[var(--foreground)]">{c.name}</span>
-                </div>
-                <span className="text-[11px] text-[var(--field-supporting)] pl-[14px]">{c.note}</span>
-              </div>
-              <span className="text-[11px] font-medium px-[8px] py-[3px] rounded-[4px] w-fit"
-                style={{ background: complexityColor[c.complexity], color: complexityText[c.complexity] }}>
-                {c.complexity}
-              </span>
-              <span className="text-[13px] font-semibold text-right" style={{ color: "var(--foreground)" }}>
-                {c.hours}h
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ── Components: Done vs Remaining side-by-side ──────────── */}
+      <div className="grid grid-cols-2 gap-[16px] items-start">
 
-      {/* ── Remaining by phase ──────────────────────────────────── */}
-      <div className="flex flex-col gap-[16px]">
-        <h2 className="text-[18px] font-semibold text-[var(--foreground)]">
-          Remaining — ~{totalRemaining} components · ~{hoursRemaining}h estimated
-        </h2>
-        <div className="flex flex-col gap-[12px]">
-          {REMAINING_PHASES.map(phase => {
-            const phaseHours = phase.items.reduce((s, i) => s + i.hours, 0)
-            const isNext = phase.status === "in-progress"
-            return (
-              <div key={phase.phase} className="rounded-[10px] overflow-hidden border"
-                style={{ borderColor: isNext ? "var(--primary)" : "var(--table-border)" }}>
-                {/* Phase header */}
-                <div className="flex items-center justify-between px-[16px] py-[10px]"
-                  style={{ background: isNext ? "var(--tag-informative-bg)" : "var(--table-header-bg)" }}>
-                  <div className="flex items-center gap-[8px]">
-                    <span className="text-[11px] font-semibold px-[8px] py-[2px] rounded-[4px]"
-                      style={{
-                        background: isNext ? "var(--primary)" : "var(--tag-neutral-bg)",
-                        color: isNext ? "#fff" : "var(--tag-neutral-fg)",
-                      }}>
-                      {isNext ? "▶ Up Next" : "Pending"}
-                    </span>
-                    <span className="text-[13px] font-semibold text-[var(--foreground)]">{phase.phase}</span>
-                  </div>
-                  <span className="text-[12px] text-[var(--field-supporting)]">
-                    {phase.items.length} components · ~{phaseHours}h
-                  </span>
+        {/* Completed */}
+        <div className="flex flex-col gap-[8px]">
+          <h2 className="text-[14px] font-semibold text-[var(--foreground)]">
+            Completed · {totalDone} components · ~{hoursInvested}h
+          </h2>
+          <div className="rounded-[8px] overflow-hidden border border-[var(--table-border)]">
+            <div className="grid px-[10px] py-[7px] border-b border-[var(--table-border)]"
+              style={{ gridTemplateColumns: "1fr 90px 36px", background: "var(--table-header-bg)" }}>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--table-header-text)]">Component</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--table-header-text)]">Type</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--table-header-text)] text-right">h</span>
+            </div>
+            {DONE_COMPONENTS.map((c, i) => (
+              <div key={c.name}
+                className="grid px-[10px] py-[6px] items-center"
+                style={{
+                  gridTemplateColumns: "1fr 90px 36px",
+                  borderBottom: i < DONE_COMPONENTS.length - 1 ? "1px solid var(--table-border)" : "none",
+                  background: "var(--table-bg)",
+                }}>
+                <div className="flex items-center gap-[6px]">
+                  <span className="w-[5px] h-[5px] rounded-full shrink-0" style={{ background: "var(--tag-success-fg)" }} />
+                  <span className="text-[12px] font-medium text-[var(--foreground)]">{c.name}</span>
                 </div>
-                {/* Phase items */}
-                <div className="divide-y divide-[var(--table-border)]">
-                  {phase.items.map(item => (
-                    <div key={item.name} className="flex items-center justify-between px-[16px] py-[8px]"
-                      style={{ background: "var(--table-bg)" }}>
-                      <div className="flex items-center gap-[8px]">
-                        <span className="w-[6px] h-[6px] rounded-full shrink-0 opacity-30"
-                          style={{ background: "var(--foreground)" }} />
-                        <span className="text-[13px] text-[var(--table-cell-text)]">{item.name}</span>
-                      </div>
-                      <div className="flex items-center gap-[8px]">
-                        <span className="text-[11px] font-medium px-[6px] py-[2px] rounded-[4px]"
-                          style={{ background: complexityColor[item.complexity], color: complexityText[item.complexity] }}>
-                          {item.complexity}
-                        </span>
-                        <span className="text-[12px] font-semibold w-[32px] text-right"
-                          style={{ color: "var(--field-supporting)" }}>
-                          ~{item.hours}h
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <span className="text-[10px] font-medium px-[5px] py-[1px] rounded-[3px] w-fit"
+                  style={{ background: complexityColor[c.complexity], color: complexityText[c.complexity] }}>
+                  {c.complexity}
+                </span>
+                <span className="text-[11px] text-right" style={{ color: "var(--field-supporting)" }}>{c.hours}h</span>
               </div>
-            )
-          })}
+            ))}
+          </div>
+        </div>
+
+        {/* Remaining */}
+        <div className="flex flex-col gap-[8px]">
+          <h2 className="text-[14px] font-semibold text-[var(--foreground)]">
+            Remaining · ~{totalRemaining} components · ~{hoursRemaining}h
+          </h2>
+          <div className="flex flex-col gap-[6px]">
+            {REMAINING_PHASES.map(phase => {
+              const phaseHours = phase.items.reduce((s, i) => s + i.hours, 0)
+              const isNext = phase.status === "in-progress"
+              return (
+                <div key={phase.phase} className="rounded-[8px] overflow-hidden border"
+                  style={{ borderColor: isNext ? "var(--primary)" : "var(--table-border)" }}>
+                  <div className="flex items-center justify-between px-[10px] py-[6px]"
+                    style={{ background: isNext ? "var(--tag-informative-bg)" : "var(--table-header-bg)" }}>
+                    <div className="flex items-center gap-[6px]">
+                      {isNext && <span className="w-[5px] h-[5px] rounded-full shrink-0" style={{ background: "var(--primary)" }} />}
+                      <span className="text-[12px] font-semibold text-[var(--foreground)]">{phase.phase}</span>
+                    </div>
+                    <span className="text-[11px] text-[var(--field-supporting)]">{phase.items.length} · ~{phaseHours}h</span>
+                  </div>
+                  <div className="px-[10px] py-[6px] flex flex-wrap gap-[4px]" style={{ background: "var(--table-bg)" }}>
+                    {phase.items.map(item => (
+                      <span key={item.name}
+                        className="text-[10px] px-[5px] py-[1px] rounded-[3px]"
+                        style={{ background: complexityColor[item.complexity], color: complexityText[item.complexity] }}>
+                        {item.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 
@@ -2309,13 +2705,11 @@ function ProgressTab() {
           </div>
           <div className="p-[16px] flex flex-col gap-[10px]" style={{ background: "var(--table-bg)" }}>
             <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">
-              With <strong className="text-[var(--foreground)]">~18–20 core components</strong>, PMs can
-              prototype the majority of AIMS OS screens immediately. The 6–8 components remaining to reach
-              this milestone (Sidebar, Modal, Tabs, Toast, Breadcrumb, Radio, Empty State) represent
-              ~24h of work — achievable in 2–4 weeks at current pace.
+              With <strong className="text-[var(--foreground)]">{totalDone} core components</strong> built — including Sidebar, Modal, and Avatar — PMs can already prototype most AIMS OS screens.
+              Adding the remaining 5 components (~13h) completes the MVP prototype kit.
             </p>
             <div className="flex flex-wrap gap-[6px]">
-              {["Sidebar", "Modal / Dialog", "Tabs", "Toast", "Breadcrumb", "Radio Button", "Empty State"].map(c => (
+              {["Tabs", "Toast", "Breadcrumb", "Radio Button", "Empty State"].map(c => (
                 <span key={c} className="text-[11px] font-medium px-[8px] py-[2px] rounded-[4px]"
                   style={{ background: "var(--tag-informative-bg)", color: "var(--tag-informative-fg)" }}>
                   {c}
@@ -2343,7 +2737,7 @@ function ProgressTab() {
           <div className="p-[16px] grid grid-cols-3 gap-[12px]">
             {[
               { label: "Current pace",       value: "3–5 sessions/wk", note: "~8–12h / week" },
-              { label: "Hours remaining",    value: `~${hoursRemaining}h`,      note: "across ~41 components" },
+              { label: "Hours remaining",    value: `~${hoursRemaining}h`,      note: `across ~${totalRemaining} components` },
               { label: "Accelerator",        value: "Daily sessions",  note: "cuts timeline to ~2 months" },
             ].map(t => (
               <div key={t.label} className="flex flex-col gap-[4px] p-[12px] rounded-[8px]"
@@ -4274,7 +4668,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                               "w-[28px] h-[28px] flex items-center justify-center rounded-[4px] transition-colors",
                               pgHiIcon === ic.lucide
                                 ? "bg-[#2173ff] text-white"
-                                : "text-[var(--field-supporting)] hover:bg-[var(--field-border)] hover:text-[var(--foreground)]",
+                                : "text-[var(--field-supporting)] hover:bg-[var(--ctrl-inactive-bg)] hover:text-[var(--foreground)]",
                             ].join(" ")}
                           >
                             <Ic size={14} strokeWidth={1.75}/>
@@ -4330,7 +4724,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                               "w-[28px] h-[28px] flex items-center justify-center rounded-[4px] transition-colors",
                               pgBtnIcon === ic.lucide
                                 ? "bg-[#2173ff] text-white"
-                                : "text-[var(--field-supporting)] hover:bg-[var(--field-border)] hover:text-[var(--foreground)]",
+                                : "text-[var(--field-supporting)] hover:bg-[var(--ctrl-inactive-bg)] hover:text-[var(--foreground)]",
                             ].join(" ")}
                           >
                             <Ic size={14} strokeWidth={1.75}/>
@@ -4503,7 +4897,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <div className="flex flex-col gap-[16px]">
                 <p className="text-[12px] text-[var(--field-supporting)]">
                   Same pattern as dismiss but with an action-specific icon per item.
-                  Pasa <code className="text-[11px] bg-[var(--field-border)] px-[4px] py-[1px] rounded">{"<Button variant=\"tertiary\" iconPosition=\"alone\" icon={<Icon/>}/>"}</code> a <code className="text-[11px] bg-[var(--field-border)] px-[4px] py-[1px] rounded">trailingElement</code>.
+                  Pasa <code className="text-[11px] bg-[var(--code-bg)] px-[4px] py-[1px] rounded">{"<Button variant=\"tertiary\" iconPosition=\"alone\" icon={<Icon/>}/>"}</code> a <code className="text-[11px] bg-[var(--code-bg)] px-[4px] py-[1px] rounded">trailingElement</code>.
                 </p>
 
                 {/* ── 4 semantic examples ─── */}
@@ -4593,7 +4987,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                                   "w-[28px] h-[28px] flex items-center justify-center rounded-[4px] transition-colors",
                                   isSelected
                                     ? "bg-[#2173ff] text-white"
-                                    : "text-[var(--field-supporting)] hover:bg-[var(--field-border)] hover:text-[var(--foreground)]",
+                                    : "text-[var(--field-supporting)] hover:bg-[var(--ctrl-inactive-bg)] hover:text-[var(--foreground)]",
                                 ].join(" ")}
                               >
                                 <Ic size={14} strokeWidth={1.75}/>
@@ -4801,66 +5195,413 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
 // ── Avatar Page ───────────────────────────────────────────────────────────
 
+const AVATAR_COLOR_KEYS = ["blue", "green", "red", "orange", "purple", "limegreen", "lightblue"] as const
+type AvatarColorKey = typeof AVATAR_COLOR_KEYS[number]
+
+function nameToAvatarColor(name: string): AvatarColorKey {
+  const h = name.split("").reduce((a, c) => ((a * 31) + c.charCodeAt(0)) >>> 0, 0)
+  return AVATAR_COLOR_KEYS[h % AVATAR_COLOR_KEYS.length]
+}
+
 const AVATAR_SIZE_SPECS = [
-  { key: "sm",  label: "S",   px: 20, fs: 8,  desc: "Table cells, compact lists" },
-  { key: "md",  label: "M",   px: 24, fs: 9,  desc: "Default UI, nav, dropdowns" },
-  { key: "lg",  label: "L",   px: 32, fs: 12, desc: "Entity headers, cards" },
-  { key: "xl",  label: "XL",  px: 40, fs: 15, desc: "Profile views, hero sections" },
+  { key: "xs",  label: "XS",  px: 8,  fs: 4,  chars: 1, desc: "Inline badges, compact indicators" },
+  { key: "sm",  label: "S",   px: 16, fs: 8,  chars: 1, desc: "Table cells, tight lists"           },
+  { key: "md",  label: "M",   px: 24, fs: 10, chars: 2, desc: "Default UI, nav, dropdowns"         },
+  { key: "lg",  label: "L",   px: 32, fs: 12, chars: 2, desc: "Entity headers, cards"              },
+  { key: "xxl", label: "XXL", px: 60, fs: 20, chars: 2, desc: "Profile views, hero sections"       },
 ] as const
 
-const AVATAR_COLOR_SPECS = [
-  { key: "blue",   label: "Blue",   bg: "var(--tag-informative-bg)", fg: "var(--tag-informative-fg)" },
-  { key: "green",  label: "Green",  bg: "var(--tag-success-bg)",     fg: "var(--tag-success-fg)"     },
-  { key: "purple", label: "Purple", bg: "var(--tag-purple-bg)",      fg: "var(--tag-purple-fg)"      },
-  { key: "orange", label: "Orange", bg: "var(--tag-alert-bg)",       fg: "var(--tag-alert-fg)"       },
-  { key: "teal",   label: "Teal",   bg: "var(--tag-lightblue-bg)",   fg: "var(--tag-lightblue-fg)"   },
-  { key: "lime",   label: "Lime",   bg: "var(--tag-limegreen-bg)",   fg: "var(--tag-limegreen-fg)"   },
-] as const
-
-type AvatarColorKey = typeof AVATAR_COLOR_SPECS[number]["key"]
-type AvatarSizeKey  = typeof AVATAR_SIZE_SPECS[number]["key"]
+type AvatarSizeKey = typeof AVATAR_SIZE_SPECS[number]["key"]
 
 function AvatarCircle({
   name,
-  colorKey,
   sizeKey,
+  avatarStyle = "text",
+  colorKey,
   src,
+  selected,
 }: {
   name: string
-  colorKey?: AvatarColorKey
   sizeKey?: AvatarSizeKey
+  avatarStyle?: "text" | "empty" | "photo"
+  colorKey?: AvatarColorKey
   src?: string
+  selected?: boolean
 }) {
-  const sizeSpec  = AVATAR_SIZE_SPECS.find(s => s.key === sizeKey) ?? AVATAR_SIZE_SPECS[1]
-  const colorSpec = colorKey
-    ? AVATAR_COLOR_SPECS.find(c => c.key === colorKey) ?? AVATAR_COLOR_SPECS[0]
-    : AVATAR_COLOR_SPECS[name.charCodeAt(0) % AVATAR_COLOR_SPECS.length]
-  const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
+  const sizeSpec = AVATAR_SIZE_SPECS.find(s => s.key === sizeKey) ?? AVATAR_SIZE_SPECS[2]
+  const initials = name.split(" ").map(w => w[0]).slice(0, sizeSpec.chars).join("").toUpperCase()
+  const resolvedColor = colorKey ?? nameToAvatarColor(name)
+
+  const bg = avatarStyle === "photo" ? undefined
+           : avatarStyle === "empty" ? "var(--tag-neutral-bg)"
+           : `var(--av-col-${resolvedColor}-bg)`
+
   return (
     <div
       className="flex items-center justify-center shrink-0 rounded-full overflow-hidden"
       style={{
         width: sizeSpec.px, height: sizeSpec.px,
-        background: src ? undefined : colorSpec.bg,
-        color: colorSpec.fg,
-        fontSize: sizeSpec.fs, fontWeight: 700, lineHeight: 1,
+        background: bg,
+        color: "#ffffff",
+        fontSize: sizeSpec.fs, fontWeight: 600, lineHeight: 1,
+        border: selected ? "1.5px solid #ffffff" : "1px solid var(--topbar-avatar-ring)",
+        boxShadow: selected ? "0 0 10px rgba(33,115,255,0.5)" : "none",
       }}
     >
-      {src
+      {avatarStyle === "photo" && src
         ? <img src={src} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : avatarStyle === "empty"
+        ? <svg width={Math.max(8, Math.round(sizeSpec.px * 0.48))} height={Math.max(8, Math.round(sizeSpec.px * 0.48))} viewBox="0 0 16 16" fill="none" opacity={0.45}>
+            <rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M1 11l4-4 3 3 3-3 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            <circle cx="11" cy="5.5" r="1.5" fill="currentColor"/>
+          </svg>
         : initials
       }
     </div>
   )
 }
 
+// ── AlertBannerPage ───────────────────────────────────────────────────────────
+
+function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab]         = useState<"overview" | "playground" | "reference">("overview")
+  const [pgState, setPgState] = useState<AlertBannerState>("error")
+  const [pgCta, setPgCta]     = useState(false)
+  const [pgDesc, setPgDesc]   = useState(true)
+  const [dismissed, setDismissed] = useState(false)
+
+  const STATES: AlertBannerState[] = ["error", "success", "alert"]
+
+  const OVERVIEW_ROWS: { state: AlertBannerState; title: string; description: string }[] = [
+    { state: "error",   title: "Unable to save changes",       description: "Your session may have expired. Please try again or refresh the page." },
+    { state: "success", title: "Changes saved successfully",   description: "All your updates have been applied and are now live." },
+    { state: "alert",   title: "Action required before July 8", description: "Your subscription expires soon. Renew now to avoid service interruption." },
+  ]
+
+  const pgTitle = {
+    error:   "Unable to save changes",
+    success: "Changes saved successfully",
+    alert:   "Action required before July 8",
+  }[pgState]
+
+  const pgDescription = {
+    error:   "Your session may have expired. Please try again or refresh the page.",
+    success: "All your updates have been applied and are now live.",
+    alert:   "Your subscription expires soon. Renew now to avoid service interruption.",
+  }[pgState]
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Alert Banner</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
+            Full-width contextual notice for system-level feedback. Three semantic states — Error, Success, Alert — with an optional CTA action and dismiss button.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("alert-banner")} />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{
+              color: tab === t ? "var(--primary)" : "var(--field-supporting)",
+              borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ─────────────────────────────────────────────────────────── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+          {/* All states */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">All states</p>
+            <div className="flex flex-col gap-[8px]">
+              {OVERVIEW_ROWS.map(r => (
+                <AlertBanner key={r.state} state={r.state} title={r.title} description={r.description} />
+              ))}
+            </div>
+          </section>
+
+          {/* With CTA */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">With CTA + dismiss</p>
+            <div className="flex flex-col gap-[8px]">
+              <AlertBanner state="error"   title="Unable to save changes"        description="Your session may have expired." cta="Retry"  onClose={() => {}} />
+              <AlertBanner state="success" title="Changes saved successfully"    description="All updates are now live."       cta="Review" onClose={() => {}} />
+              <AlertBanner state="alert"   title="Action required before July 8" description="Renew now to avoid interruption." cta="Renew" onClose={() => {}} />
+            </div>
+          </section>
+
+          {/* Title only */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Title only + dismiss</p>
+            <div className="flex flex-col gap-[8px]">
+              <AlertBanner state="error"   title="Connection failed"       onClose={() => {}} />
+              <AlertBanner state="success" title="Export complete"         onClose={() => {}} />
+              <AlertBanner state="alert"   title="Maintenance window soon" onClose={() => {}} />
+            </div>
+          </section>
+
+          {/* Usage */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
+            <div className="grid grid-cols-2 gap-[16px]">
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[#059669] uppercase tracking-widest">Use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["System-level action needed from the user", "Non-blocking status feedback (success, warning)", "Page-level validation errors after form submission", "Temporary notice that can be dismissed"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="text-[#059669] shrink-0">✓</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[#dc2626] uppercase tracking-widest">Don't use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["Inline field validation (use Input error state)", "Inline hints or helper text (use Input supporting)", "Critical alerts requiring user confirmation (use Modal)", "Marketing messages or promotions"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="text-[#dc2626] shrink-0">✕</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* ── Playground ───────────────────────────────────────────────────────── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[32px]">
+          {/* Live preview */}
+          <div className="rounded-[12px] border border-[var(--table-border)] bg-[var(--code-bg)] p-[32px] flex items-center justify-center min-h-[120px]">
+            {dismissed ? (
+              <div className="flex flex-col items-center gap-[12px]">
+                <p className="text-[13px] text-[var(--field-supporting)]">Banner dismissed</p>
+                <button
+                  onClick={() => setDismissed(false)}
+                  className="text-[12px] font-semibold text-[var(--primary)] hover:opacity-70 transition-opacity"
+                >
+                  Show again
+                </button>
+              </div>
+            ) : (
+              <div className="w-full max-w-[600px]">
+                <AlertBanner
+                  state={pgState}
+                  title={pgTitle}
+                  description={pgDesc ? pgDescription : undefined}
+                  cta={pgCta ? (pgState === "success" ? "Review" : pgState === "error" ? "Retry" : "Renew") : undefined}
+                  onCta={() => {}}
+                  onClose={() => setDismissed(true)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Controls */}
+          <div className="flex flex-col gap-[16px]">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Controls</p>
+            <div className="grid grid-cols-3 gap-[12px]">
+              {/* State */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)]">State</span>
+                <div className="flex flex-col gap-[4px]">
+                  {STATES.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { setPgState(s); setDismissed(false) }}
+                      className="flex items-center gap-[8px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-medium text-left transition-colors"
+                      style={{
+                        background: pgState === s ? "var(--ctrl-inactive-bg)" : "transparent",
+                        color: pgState === s ? "var(--foreground)" : "var(--field-supporting)",
+                        border: pgState === s ? "1px solid var(--table-border)" : "1px solid transparent",
+                      }}
+                    >
+                      <span className="w-[8px] h-[8px] rounded-full shrink-0" style={{
+                        background: s === "error" ? "var(--ab-error-icon)" : s === "success" ? "var(--ab-success-icon)" : "var(--ab-alert-icon)"
+                      }} />
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description toggle */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)]">Description</span>
+                <div className="flex flex-col gap-[4px]">
+                  {[true, false].map(v => (
+                    <button
+                      key={String(v)}
+                      onClick={() => setPgDesc(v)}
+                      className="flex items-center gap-[8px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-medium text-left transition-colors"
+                      style={{
+                        background: pgDesc === v ? "var(--ctrl-inactive-bg)" : "transparent",
+                        color: pgDesc === v ? "var(--foreground)" : "var(--field-supporting)",
+                        border: pgDesc === v ? "1px solid var(--table-border)" : "1px solid transparent",
+                      }}
+                    >
+                      {v ? "With description" : "Title only"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA toggle */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)]">CTA button</span>
+                <div className="flex flex-col gap-[4px]">
+                  {[false, true].map(v => (
+                    <button
+                      key={String(v)}
+                      onClick={() => setPgCta(v)}
+                      className="flex items-center gap-[8px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-medium text-left transition-colors"
+                      style={{
+                        background: pgCta === v ? "var(--ctrl-inactive-bg)" : "transparent",
+                        color: pgCta === v ? "var(--foreground)" : "var(--field-supporting)",
+                        border: pgCta === v ? "1px solid var(--table-border)" : "1px solid transparent",
+                      }}
+                    >
+                      {v ? "CTA: true" : "CTA: false"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div className="flex flex-col gap-[8px]">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Usage</p>
+            <pre className="rounded-[8px] bg-[var(--code-bg)] border border-[var(--table-border)] p-[16px] text-[12px] font-mono text-[var(--field-text)] overflow-x-auto leading-[1.7]">{`import { AlertBanner } from "@/components/ui/alert-banner"
+
+<AlertBanner
+  state="${pgState}"
+  title="${pgTitle}"${pgDesc ? `\n  description="..."` : ""}${pgCta ? `\n  cta="${pgState === "success" ? "Review" : pgState === "error" ? "Retry" : "Renew"}"` : ""}
+  onClose={() => setVisible(false)}
+/>`}</pre>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reference ────────────────────────────────────────────────────────── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[32px]">
+          {/* Props */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Component props</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[160px_120px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Prop", "Type", "Description"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["state",       '"error" | "success" | "alert"', 'Semantic variant. Default: "error"'],
+                ["title",       "string",                        "Required. Main message (SemiBold 14px)"],
+                ["description", "string?",                       "Optional supporting text below the title (80% opacity)"],
+                ["cta",         "string?",                       "Label for the optional tertiary CTA button"],
+                ["onCta",       "() => void",                    "Click handler for the CTA button"],
+                ["onClose",     "() => void",                    "Renders a dismiss (×) button when provided"],
+                ["className",   "string?",                       "Extra classes merged via cn()"],
+              ].map(([prop, type, desc], i) => (
+                <div key={prop} className="grid grid-cols-[160px_120px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[12px] text-[13px] font-mono text-[var(--primary)]">{prop}</div>
+                  <div className="px-[12px] py-[12px] text-[12px] font-mono text-[var(--field-supporting)]">{type}</div>
+                  <div className="px-[12px] py-[12px] text-[13px] text-[var(--field-text)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Tokens */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Design tokens — <code className="text-[var(--primary)]">--ab-{"{state}"}-{"{role}"}</code></p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[100px_200px_130px_130px] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["State", "Token", "Dark", "Light"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["error",   "--ab-error-bg",    "#2d1515",                "#fdeded"],
+                ["",        "--ab-error-bd",    "transparent",            "rgba(153,34,34,0.25)"],
+                ["",        "--ab-error-icon",  "#ff6467",                "#992222"],
+                ["",        "--ab-error-text",  "#ff6467",                "#5f2120"],
+                ["success", "--ab-success-bg",  "#0a1f1a",                "#e5fdf8"],
+                ["",        "--ab-success-bd",  "transparent",            "rgba(0,153,120,0.25)"],
+                ["",        "--ab-success-icon","#6ee7b7",                "#009978"],
+                ["",        "--ab-success-text","#6ee7b7",                "#003328"],
+                ["alert",   "--ab-alert-bg",    "#2d1a08",                "#ffeedb"],
+                ["",        "--ab-alert-bd",    "transparent",            "rgba(180,83,9,0.25)"],
+                ["",        "--ab-alert-icon",  "#fcd34d",                "#b45309"],
+                ["",        "--ab-alert-text",  "#fcd34d",                "#663c00"],
+                ["—",       "--ab-cta-text",    "rgba(255,255,255,0.60)", "rgba(0,0,0,0.55)"],
+              ].map(([state, token, dark, light], i) => (
+                <div key={token} className="grid grid-cols-[100px_200px_130px_130px] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{state}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{token}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{dark}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{light}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Anatomy */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Anatomy</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[160px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Element", "Description"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Container",    "Flex row · 12px padding · 8px gap · 8px radius · state bg + 1px border"],
+                ["Icon",         "16×16px Lucide icon · mt-2px baseline alignment · state icon color"],
+                ["Title",        "14px SemiBold · state text color · flex-1 to push actions right"],
+                ["Description",  "14px Medium · same text token at 80% opacity · optional"],
+                ["CTA button",   "13px SemiBold · no bg · state text color · 4px gap from close btn · optional"],
+                ["Close button", "20×20px · X icon 14px · state text color · always paired with onClose prop"],
+              ].map(([el, desc], i) => (
+                <div key={el} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[12px] text-[13px] font-semibold text-[var(--field-text)]">{el}</div>
+                  <div className="px-[12px] py-[12px] text-[13px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const DEMO_NAMES = ["Sarah Chen", "Marco Rivera", "Aisha Johnson", "Chris Park", "Luna Kim", "Rafael Torres"]
 
-function AvatarPage() {
-  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
-  const [pgSize,  setPgSize]  = useState<AvatarSizeKey>("md")
-  const [pgColor, setPgColor] = useState<AvatarColorKey>("blue")
-  const [pgName,  setPgName]  = useState("Sarah Chen")
+function AvatarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference" | "specs">("overview")
+  const [pgSize, setPgSize] = useState<AvatarSizeKey>("md")
+  const [pgAvatarStyle, setPgAvatarStyle] = useState<"text" | "empty">("text")
+  const [pgColor, setPgColor] = useState<AvatarColorKey | "auto">("auto")
+  const [pgSelected, setPgSelected] = useState(false)
+  const [pgName, setPgName] = useState("Sarah Chen")
 
   return (
     <div className="flex flex-col gap-0">
@@ -4868,8 +5609,12 @@ function AvatarPage() {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Avatar</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
-            Circular badge representing a user or workspace. Displays a photo or falls back to two-letter initials. 4 sizes, 6 auto-assigned color variants derived from the user's name. Used in table cells, dropdowns, topbar, and entity headers.
+            Circular badge representing a user or workspace. 3 style variants: Text (initials, 7 color variants auto-assigned from name), Photo (user image), Empty (neutral — no photo available). 5 sizes. Optional selected state for interactive contexts.
           </p>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          <SpecButton onClick={() => openSpec("avatar")} />
+          <FigmaLink href="https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4753-19229" />
         </div>
       </div>
 
@@ -4878,6 +5623,7 @@ function AvatarPage() {
           { id: "overview",   label: "Overview"   },
           { id: "playground", label: "Playground" },
           { id: "reference",  label: "Reference"  },
+          { id: "specs",      label: "Specs"      },
         ]}
         active={tab}
         onChange={id => setTab(id as typeof tab)}
@@ -4888,21 +5634,57 @@ function AvatarPage() {
         {/* ── Overview ───────────────────────────────────────────────── */}
         {tab === "overview" && (
           <div className="flex flex-col gap-[24px]">
+
+            {/* Style variants */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Style variants</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                Three variants cover all cases. Text is the default — always brand blue, never recolored. Empty signals that no photo is available. Photo displays the actual user image.
+              </p>
+              <div className="rounded-[8px] border border-[var(--field-border)] p-[20px]">
+                <div className="flex flex-wrap gap-[40px] items-start">
+                  {/* Text */}
+                  <div className="flex flex-col gap-[12px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--field-supporting)" }}>Text</span>
+                    <div className="flex gap-[12px] items-end">
+                      {DEMO_NAMES.slice(0, 4).map((name, i) => (
+                        <div key={i} className="flex flex-col items-center gap-[6px]">
+                          <AvatarCircle name={name} sizeKey="lg" avatarStyle="text" />
+                          <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{name.split(" ").map(w => w[0]).join("")}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>7 color variants · auto-assigned from name</p>
+                  </div>
+                  {/* Empty */}
+                  <div className="flex flex-col gap-[12px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--field-supporting)" }}>Empty</span>
+                    <div className="flex gap-[12px] items-end">
+                      {DEMO_NAMES.slice(0, 4).map((name, i) => (
+                        <div key={i} className="flex flex-col items-center gap-[6px]">
+                          <AvatarCircle name={name} sizeKey="lg" avatarStyle="empty" />
+                          <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>—</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>var(--tag-neutral-bg) · no photo available</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Color variants */}
             <div className="flex flex-col gap-[12px]">
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Color variants</h2>
               <p className="text-[13px] text-[var(--field-supporting)]">
-                Color is auto-assigned based on the first character of the name — no manual selection required. 6 variants ensure visual diversity in user lists.
+                Text style supports 7 colors — auto-assigned from the user's name hash so the same name always yields the same color. Pass <code className="text-[12px] bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">colorKey</code> to override explicitly. All colors pass white-text contrast in both light and dark mode.
               </p>
               <div className="rounded-[8px] border border-[var(--field-border)] p-[20px]">
                 <div className="flex flex-wrap gap-[20px] items-end">
-                  {AVATAR_COLOR_SPECS.map((c, i) => (
-                    <div key={c.key} className="flex flex-col items-center gap-[8px]">
-                      <AvatarCircle name={DEMO_NAMES[i]} colorKey={c.key} sizeKey="lg" />
-                      <div className="flex flex-col items-center gap-[2px]">
-                        <span className="text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{c.label}</span>
-                        <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{DEMO_NAMES[i].split(" ").map(w => w[0]).join("")}</span>
-                      </div>
+                  {AVATAR_COLOR_KEYS.map((color, i) => (
+                    <div key={color} className="flex flex-col items-center gap-[8px]">
+                      <AvatarCircle name={DEMO_NAMES[i % DEMO_NAMES.length]} sizeKey="lg" colorKey={color} />
+                      <span className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>{color}</span>
                     </div>
                   ))}
                 </div>
@@ -4912,17 +5694,46 @@ function AvatarPage() {
             {/* Size scale */}
             <div className="flex flex-col gap-[12px]">
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Size scale</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                5 sizes. XS and S show a single initial; M, L, and XXL show two initials.
+              </p>
               <div className="rounded-[8px] border border-[var(--field-border)] p-[20px]">
                 <div className="flex flex-wrap gap-[32px] items-end">
                   {AVATAR_SIZE_SPECS.map(s => (
                     <div key={s.key} className="flex flex-col items-center gap-[8px]">
-                      <AvatarCircle name="Sarah Chen" sizeKey={s.key} colorKey="blue" />
+                      <AvatarCircle name="Sarah Chen" sizeKey={s.key} />
                       <div className="flex flex-col items-center gap-[1px]">
                         <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{s.label} · {s.px}px</span>
                         <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{s.desc}</span>
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Selected state */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Selected state</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                The selected state is <strong style={{ color: "var(--foreground)", fontWeight: 600 }}>only available in interactive contexts</strong> where the user can actively choose an avatar — for example a user-picker, team assignment, or contact selector. In read-only contexts such as table cells, topbar, and entity headers, avatars are display-only and never enter the selected state.
+              </p>
+              <div className="rounded-[8px] border border-[var(--field-border)] p-[20px] flex gap-[40px] items-start flex-wrap">
+                <div className="flex flex-col gap-[12px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--field-supporting)" }}>Display-only (no selected)</span>
+                  <div className="flex gap-[12px]">
+                    {DEMO_NAMES.slice(0, 3).map(name => <AvatarCircle key={name} name={name} sizeKey="lg" />)}
+                  </div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Table cells · topbar · entity headers</p>
+                </div>
+                <div className="flex flex-col gap-[12px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--field-supporting)" }}>Interactive (selected available)</span>
+                  <div className="flex gap-[12px]">
+                    <AvatarCircle name="Sarah Chen" sizeKey="lg" />
+                    <AvatarCircle name="Marco Rivera" sizeKey="lg" selected />
+                    <AvatarCircle name="Aisha Johnson" sizeKey="lg" />
+                  </div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>User picker · team selector · contact list</p>
                 </div>
               </div>
             </div>
@@ -4979,20 +5790,28 @@ function AvatarPage() {
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Anatomy</h2>
               <div className="rounded-[8px] border border-[var(--field-border)] p-[20px] flex flex-wrap gap-[32px]">
                 <div className="flex flex-col gap-[4px]">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Shape</p>
-                  <p className="text-[12px] text-[var(--field-supporting)]">Circle — border-radius: 100%</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Text style bg</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">var(--av-col-{"{color}"}-bg) — 7 variants, auto from name hash</p>
                 </div>
                 <div className="flex flex-col gap-[4px]">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Content</p>
-                  <p className="text-[12px] text-[var(--field-supporting)]">Photo (object-fit: cover) or 2-letter initials</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Empty style bg</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">var(--tag-neutral-bg) = surface/neutral/default</p>
                 </div>
                 <div className="flex flex-col gap-[4px]">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Color logic</p>
-                  <p className="text-[12px] text-[var(--field-supporting)]">name.charCodeAt(0) % 6 — deterministic, no manual selection</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Text color</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">#ffffff, Inter SemiBold 600 — always white</p>
                 </div>
                 <div className="flex flex-col gap-[4px]">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Tokens</p>
-                  <p className="text-[12px] text-[var(--field-supporting)]">--tag-*-bg / --tag-*-fg (reuses Tag color ramp)</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Border</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">var(--topbar-avatar-ring) = Border/Primary/Lighter</p>
+                </div>
+                <div className="flex flex-col gap-[4px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Initials</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">XS/S → 1 character · M/L/XXL → 2 characters</p>
+                </div>
+                <div className="flex flex-col gap-[4px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Selected</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">White border + drop-shadow 0 0 10px rgba(33,115,255,0.5) — interactive contexts only</p>
                 </div>
               </div>
             </div>
@@ -5010,24 +5829,55 @@ function AvatarPage() {
                 onChange={v => setPgSize(v as AvatarSizeKey)}
               />
               <CtrlGroup
-                label="Color"
-                options={AVATAR_COLOR_SPECS.map(c => ({ label: c.label, value: c.key }))}
-                value={pgColor}
-                onChange={v => setPgColor(v as AvatarColorKey)}
+                label="Style"
+                options={[
+                  { label: "Text", value: "text" },
+                  { label: "Empty", value: "empty" },
+                ]}
+                value={pgAvatarStyle}
+                onChange={v => setPgAvatarStyle(v as "text" | "empty")}
               />
-              <div className="flex flex-col gap-[6px]">
-                <p className="text-[12px] font-medium text-[var(--field-supporting)]">Name (for initials)</p>
-                <input
-                  type="text"
-                  value={pgName}
-                  onChange={e => setPgName(e.target.value)}
-                  placeholder="First Last"
-                  className="h-[32px] px-[8px] text-[12px] rounded-[6px] border border-[var(--field-border)] bg-[var(--field-bg)] text-[var(--field-text)] placeholder:text-[var(--field-supporting)] outline-none focus:border-[#2173ff] transition-colors"
+              {pgAvatarStyle === "text" && (
+                <CtrlGroup
+                  label="Color"
+                  options={[
+                    { label: "Auto", value: "auto" },
+                    ...AVATAR_COLOR_KEYS.map(c => ({ label: c.charAt(0).toUpperCase() + c.slice(1), value: c })),
+                  ]}
+                  value={pgColor}
+                  onChange={v => setPgColor(v as AvatarColorKey | "auto")}
                 />
-              </div>
+              )}
+              <CtrlGroup
+                label="State"
+                options={[
+                  { label: "Default", value: "false" },
+                  { label: "Selected", value: "true" },
+                ]}
+                value={pgSelected ? "true" : "false"}
+                onChange={v => setPgSelected(v === "true")}
+              />
+              {pgAvatarStyle === "text" && (
+                <div className="flex flex-col gap-[6px]">
+                  <p className="text-[12px] font-medium text-[var(--field-supporting)]">Name (for initials)</p>
+                  <input
+                    type="text"
+                    value={pgName}
+                    onChange={e => setPgName(e.target.value)}
+                    placeholder="First Last"
+                    className="h-[32px] px-[8px] text-[12px] rounded-[6px] border border-[var(--field-border)] bg-[var(--field-bg)] text-[var(--field-text)] placeholder:text-[var(--field-supporting)] outline-none focus:border-[#2173ff] transition-colors"
+                  />
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-center min-h-[120px] rounded-md border border-[var(--field-border)] border-dashed">
-              <AvatarCircle name={pgName || "?"} sizeKey={pgSize} colorKey={pgColor} />
+              <AvatarCircle
+                name={pgName || "?"}
+                sizeKey={pgSize}
+                avatarStyle={pgAvatarStyle}
+                colorKey={pgColor !== "auto" ? pgColor : undefined}
+                selected={pgSelected}
+              />
             </div>
           </div>
         )}
@@ -5035,26 +5885,35 @@ function AvatarPage() {
         {/* ── Reference ──────────────────────────────────────────────── */}
         {tab === "reference" && (
           <div className="flex flex-col gap-[24px]">
-            <Row label="All color variants — Size M (24px)">
-              {AVATAR_COLOR_SPECS.map((c, i) => (
-                <AvatarCircle key={c.key} name={DEMO_NAMES[i]} colorKey={c.key} sizeKey="md" />
-              ))}
-            </Row>
-            <Row label="All color variants — Size L (32px)">
-              {AVATAR_COLOR_SPECS.map((c, i) => (
-                <AvatarCircle key={c.key} name={DEMO_NAMES[i]} colorKey={c.key} sizeKey="lg" />
-              ))}
-            </Row>
-            <Row label="All color variants — Size XL (40px)">
-              {AVATAR_COLOR_SPECS.map((c, i) => (
-                <AvatarCircle key={c.key} name={DEMO_NAMES[i]} colorKey={c.key} sizeKey="xl" />
-              ))}
-            </Row>
-            <Row label="All sizes — Blue variant">
+            <Row label="Text — all sizes, default state">
               {AVATAR_SIZE_SPECS.map(s => (
                 <div key={s.key} className="flex flex-col items-center gap-[4px]">
-                  <AvatarCircle name="Sarah Chen" colorKey="blue" sizeKey={s.key} />
+                  <AvatarCircle name="Sarah Chen" sizeKey={s.key} avatarStyle="text" />
                   <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{s.label} {s.px}px</span>
+                </div>
+              ))}
+            </Row>
+            <Row label="Text — all sizes, selected state (interactive contexts only)">
+              {AVATAR_SIZE_SPECS.map(s => (
+                <div key={s.key} className="flex flex-col items-center gap-[4px]">
+                  <AvatarCircle name="Sarah Chen" sizeKey={s.key} avatarStyle="text" selected />
+                  <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{s.label} {s.px}px</span>
+                </div>
+              ))}
+            </Row>
+            <Row label="Empty — all sizes (no photo available)">
+              {AVATAR_SIZE_SPECS.map(s => (
+                <div key={s.key} className="flex flex-col items-center gap-[4px]">
+                  <AvatarCircle name="?" sizeKey={s.key} avatarStyle="empty" />
+                  <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{s.label} {s.px}px</span>
+                </div>
+              ))}
+            </Row>
+            <Row label="Text — multiple users, Size M">
+              {DEMO_NAMES.map(name => (
+                <div key={name} className="flex flex-col items-center gap-[4px]">
+                  <AvatarCircle name={name} sizeKey="md" avatarStyle="text" />
+                  <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{name.split(" ").map(w => w[0]).join("")}</span>
                 </div>
               ))}
             </Row>
@@ -5070,14 +5929,98 @@ function AvatarPage() {
                 </div>
               </div>
             </Row>
-            <Row label="Auto color from name — deterministic assignment">
-              {DEMO_NAMES.map(name => (
-                <div key={name} className="flex flex-col items-center gap-[4px]">
-                  <AvatarCircle name={name} sizeKey="md" />
-                  <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{name.split(" ")[0]}</span>
-                </div>
-              ))}
-            </Row>
+          </div>
+        )}
+
+        {/* ── Specs ──────────────────────────────────────────────────── */}
+        {tab === "specs" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Size table */}
+            <section className="flex flex-col gap-[12px]">
+              <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Sizes</h2>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Size", "Diameter", "Font size", "Initials", "Typical use"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {AVATAR_SIZE_SPECS.map((s, i, arr) => (
+                      <tr key={s.key} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--table-border)" : "none" }}>
+                        <td className="px-[14px] py-[9px] font-semibold text-[var(--foreground)]">{s.label}</td>
+                        <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{s.px}px</td>
+                        <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{s.fs}px</td>
+                        <td className="px-[14px] py-[9px] text-[var(--field-supporting)]">{s.chars === 1 ? "1 char" : "2 chars"}</td>
+                        <td className="px-[14px] py-[9px] text-[var(--field-supporting)]">{s.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* Color token table */}
+            <section className="flex flex-col gap-[12px]">
+              <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Color tokens</h2>
+              <p className="text-[12px] text-[var(--field-supporting)]">
+                All tokens follow the pattern <code className="bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">--av-col-{"{color}"}-bg</code>. Colors are darker in light mode to maintain white-text contrast (WCAG AA).
+              </p>
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
+                      {["Color", "Token", "Dark mode", "Light mode"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[10px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {([
+                      ["blue",      "--av-col-blue-bg",      "#2173ff", "#1a5fd4"],
+                      ["green",     "--av-col-green-bg",     "#059669", "#047857"],
+                      ["red",       "--av-col-red-bg",       "#dc2626", "#b91c1c"],
+                      ["orange",    "--av-col-orange-bg",    "#c2410c", "#9a3412"],
+                      ["purple",    "--av-col-purple-bg",    "#7c3aed", "#6d28d9"],
+                      ["limegreen", "--av-col-limegreen-bg", "#4d7c0f", "#3f6212"],
+                      ["lightblue", "--av-col-lightblue-bg", "#0284c7", "#0369a1"],
+                    ] as const).map(([color, token, dark, light], i, arr) => (
+                      <tr key={color} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--table-border)" : "none" }}>
+                        <td className="px-[14px] py-[9px]">
+                          <div className="flex items-center gap-[8px]">
+                            <div style={{ width: 20, height: 20, borderRadius: "50%", background: `var(--av-col-${color}-bg)`, flexShrink: 0 }} />
+                            <span className="font-medium text-[var(--foreground)]">{color}</span>
+                          </div>
+                        </td>
+                        <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{token}</td>
+                        <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{dark}</td>
+                        <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{light}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* Usage */}
+            <section className="flex flex-col gap-[12px]">
+              <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Usage</h2>
+              <div className="rounded-[8px] p-[16px] font-mono text-[12px] leading-[1.8]"
+                style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)", color: "var(--field-supporting)" }}>
+                <span style={{ color: "#c792ea" }}>import</span>{" "}
+                {"{ AvatarCircle } "}<span style={{ color: "#c792ea" }}>from</span>{" "}
+                <span style={{ color: "#c3e88d" }}>"@/components/ui/avatar"</span><br /><br />
+                <span style={{ color: "#697098" }}>{"// Auto color from name hash"}</span><br />
+                {"<"}<span style={{ color: "#82aaff" }}>AvatarCircle</span>{" "}<span style={{ color: "#c792ea" }}>name</span>=<span style={{ color: "#c3e88d" }}>"Sarah Chen"</span>{" />"}<br /><br />
+                <span style={{ color: "#697098" }}>{"// Explicit color override"}</span><br />
+                {"<"}<span style={{ color: "#82aaff" }}>AvatarCircle</span>{" "}<span style={{ color: "#c792ea" }}>name</span>=<span style={{ color: "#c3e88d" }}>"Marco Rivera"</span>{" "}<span style={{ color: "#c792ea" }}>colorKey</span>=<span style={{ color: "#c3e88d" }}>"orange"</span>{" />"}<br /><br />
+                <span style={{ color: "#697098" }}>{"// Size + selected state"}</span><br />
+                {"<"}<span style={{ color: "#82aaff" }}>AvatarCircle</span>{" "}<span style={{ color: "#c792ea" }}>name</span>=<span style={{ color: "#c3e88d" }}>"Aisha Johnson"</span>{" "}<span style={{ color: "#c792ea" }}>sizeKey</span>=<span style={{ color: "#c3e88d" }}>"lg"</span>{" "}<span style={{ color: "#c792ea" }}>selected</span>{" />"}
+              </div>
+            </section>
           </div>
         )}
 
@@ -5116,6 +6059,452 @@ const SELECT_OPTIONS = [
   "GPT-4o",
   "Gemini 1.5 Pro",
 ]
+
+// ── EmptyStatePage ─────────────────────────────────────────────────────────
+
+const EMPTY_STATE_DEMOS: {
+  label: string
+  icon?: keyof typeof LucideIcons
+  title: string
+  description: string
+  ctaLabel?: string
+  cta2Label?: string
+  showIcon?: boolean
+  note: string
+}[] = [
+  {
+    label: "Default — icon + CTA",
+    icon: "Inbox",
+    title: "No messages yet",
+    description: "Messages from your team and notifications will appear here once activity begins.",
+    ctaLabel: "Start a conversation",
+    showIcon: true,
+    note: "Standard usage: icon highlight + title + description + primary CTA",
+  },
+  {
+    label: "Two CTAs",
+    icon: "Users",
+    title: "No contacts yet",
+    description: "Add your first contact or import an existing list to get started.",
+    ctaLabel: "Add contact",
+    cta2Label: "Import list",
+    showIcon: true,
+    note: "When there are two actions available: secondary appears first (left), primary last (right)",
+  },
+  {
+    label: "Search / filter — no results",
+    icon: "SearchX",
+    title: "No results found",
+    description: "Try adjusting your filters or search terms to find what you're looking for.",
+    ctaLabel: "Clear filters",
+    showIcon: true,
+    note: "After a search or filter returns 0 items. CTA clears/resets the active filter state",
+  },
+  {
+    label: "Compact — inside table or card (no icon)",
+    title: "No data available",
+    description: "Run a workflow to start seeing results here.",
+    showIcon: false,
+    note: "Use inside <Table> or <CardContainer> — set className='py-[40px] rounded-none' and showIcon=false",
+  },
+]
+
+const PG_ICONS: { label: string; key: string }[] = [
+  { label: "Inbox",        key: "Inbox"      },
+  { label: "Search off",   key: "SearchX"    },
+  { label: "Users",        key: "Users"      },
+  { label: "Folder",       key: "Folder"     },
+  { label: "Database",     key: "Database"   },
+  { label: "Bell off",     key: "BellOff"    },
+  { label: "Star",         key: "Star"       },
+  { label: "Activity",     key: "Activity"   },
+]
+
+function EmptyStatePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "usage" | "reference">("overview")
+
+  // Playground state
+  const [pgShowIcon,    setPgShowIcon]    = useState(true)
+  const [pgIconKey,     setPgIconKey]     = useState("Inbox")
+  const [pgTitle,       setPgTitle]       = useState("No messages yet")
+  const [pgDescription, setPgDescription] = useState("Messages from your team will appear here once activity begins.")
+  const [pgShowCta,     setPgShowCta]     = useState(true)
+  const [pgCtaLabel,    setPgCtaLabel]    = useState("Start a conversation")
+  const [pgShowCta2,    setPgShowCta2]    = useState(false)
+  const [pgCta2Label,   setPgCta2Label]   = useState("Learn more")
+  const pgIcon = (LucideIcons as Record<string, LucideIcon>)[pgIconKey] as LucideIcon
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Empty State</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            Zero-content placeholder for lists, tables, and views. Communicates absence and guides users toward the next action.
+            Anatomy: Icon Highlight → Title → Description → 1–2 CTA buttons.
+          </p>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          <SpecButton onClick={() => openSpec("empty-state")} />
+          <FigmaLink href="https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=8419-24544" />
+        </div>
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "playground", label: "Playground" },
+          { id: "usage",      label: "Usage"      },
+          { id: "reference",  label: "Reference"  },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Playground ────────────────────────────────────────────────── */}
+        {tab === "playground" && (
+          <div className="flex flex-col gap-[24px]">
+            <div className="grid grid-cols-[300px_1fr] gap-[24px] items-start">
+
+              {/* Controls panel */}
+              <div className="flex flex-col gap-[20px] p-[20px] rounded-[10px] sticky top-[24px]"
+                style={{ border: "1px solid var(--field-border)", background: "var(--field-bg)" }}>
+                <p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">Controls</p>
+
+                {/* Icon toggle + selector */}
+                <div className="flex flex-col gap-[8px]">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[13px] font-medium text-[var(--foreground)]">Show icon</label>
+                    <Toggle checked={pgShowIcon} onChange={setPgShowIcon} size="sm" />
+                  </div>
+                  {pgShowIcon && (
+                    <div className="flex flex-wrap gap-[6px] mt-[4px]">
+                      {PG_ICONS.map(ic => (
+                        <button
+                          key={ic.key}
+                          onClick={() => setPgIconKey(ic.key)}
+                          title={ic.label}
+                          className="w-[36px] h-[36px] flex items-center justify-center rounded-[6px] transition-all"
+                          style={{
+                            background: pgIconKey === ic.key ? "var(--card-primary-bg)" : "var(--field-bg-hover)",
+                            border: `1.5px solid ${pgIconKey === ic.key ? "var(--primary)" : "var(--field-border)"}`,
+                            color: pgIconKey === ic.key ? "var(--primary)" : "var(--field-supporting)",
+                          }}
+                        >
+                          {(() => { const I = (LucideIcons as Record<string, LucideIcon>)[ic.key] as LucideIcon; return <I size={16} strokeWidth={1.75} /> })()}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Title */}
+                <div className="flex flex-col gap-[6px]">
+                  <label className="text-[13px] font-medium text-[var(--foreground)]">Title</label>
+                  <Input
+                    value={pgTitle}
+                    onChange={e => setPgTitle(e.target.value)}
+                    placeholder="No messages yet"
+                    size="sm"
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="flex flex-col gap-[6px]">
+                  <label className="text-[13px] font-medium text-[var(--foreground)]">Description</label>
+                  <textarea
+                    value={pgDescription}
+                    onChange={e => setPgDescription(e.target.value)}
+                    placeholder="Supporting text…"
+                    rows={3}
+                    className="w-full text-[13px] font-medium rounded-[6px] px-[10px] py-[8px] resize-none focus:outline-none"
+                    style={{
+                      background: "var(--field-bg-hover)",
+                      border: "1px solid var(--field-border)",
+                      color: "var(--foreground)",
+                    }}
+                  />
+                </div>
+
+                {/* Primary CTA */}
+                <div className="flex flex-col gap-[6px]">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[13px] font-medium text-[var(--foreground)]">Primary CTA</label>
+                    <Toggle checked={pgShowCta} onChange={setPgShowCta} size="sm" />
+                  </div>
+                  {pgShowCta && (
+                    <Input
+                      value={pgCtaLabel}
+                      onChange={e => setPgCtaLabel(e.target.value)}
+                      placeholder="Button label"
+                      size="sm"
+                    />
+                  )}
+                </div>
+
+                {/* Secondary CTA */}
+                <div className="flex flex-col gap-[6px]">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[13px] font-medium text-[var(--foreground)]">Secondary CTA</label>
+                    <Toggle checked={pgShowCta2} onChange={setPgShowCta2} size="sm" />
+                  </div>
+                  {pgShowCta2 && (
+                    <Input
+                      value={pgCta2Label}
+                      onChange={e => setPgCta2Label(e.target.value)}
+                      placeholder="Button label"
+                      size="sm"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Live preview */}
+              <div
+                className="flex items-center justify-center rounded-[12px] min-h-[360px]"
+                style={{ border: "1px solid var(--field-border)", background: "var(--field-bg)" }}
+              >
+                <EmptyState
+                  icon={pgIcon}
+                  showIcon={pgShowIcon}
+                  title={pgTitle || "Title"}
+                  description={pgDescription || undefined}
+                  ctaLabel={pgShowCta ? pgCtaLabel : undefined}
+                  cta2Label={pgShowCta2 ? pgCta2Label : undefined}
+                  className="py-[48px]"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Overview ──────────────────────────────────────────────────── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Visual demos */}
+            {EMPTY_STATE_DEMOS.map((demo, i) => (
+              <div key={i} className="flex flex-col gap-[12px]">
+                <div className="flex items-start justify-between gap-[12px]">
+                  <div>
+                    <h2 className="text-[16px] font-semibold text-[var(--foreground)]">{demo.label}</h2>
+                    <p className="text-[12px] text-[var(--field-supporting)] mt-[2px]">{demo.note}</p>
+                  </div>
+                </div>
+                <div
+                  className="rounded-[12px] overflow-hidden"
+                  style={{ border: "1px solid var(--field-border)", background: "var(--field-bg)" }}
+                >
+                  <EmptyState
+                    icon={demo.icon ? (LucideIcons as Record<string, LucideIcon>)[demo.icon] as LucideIcon : undefined}
+                    showIcon={demo.showIcon}
+                    title={demo.title}
+                    description={demo.description}
+                    ctaLabel={demo.ctaLabel}
+                    cta2Label={demo.cta2Label}
+                    className={demo.showIcon === false ? "py-[40px] rounded-none" : undefined}
+                  />
+                </div>
+              </div>
+            ))}
+
+            {/* Inside a Table demo */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Inside a Table</h2>
+                <p className="text-[12px] text-[var(--field-supporting)] mt-[2px]">
+                  Pass <code className="font-mono text-[11px] bg-[var(--code-bg)] px-[4px] py-[0.5px] rounded">emptyTitle</code>, <code className="font-mono text-[11px] bg-[var(--code-bg)] px-[4px] py-[0.5px] rounded">emptyDescription</code>, and <code className="font-mono text-[11px] bg-[var(--code-bg)] px-[4px] py-[0.5px] rounded">emptyIcon</code> directly to the <code className="font-mono text-[11px] bg-[var(--code-bg)] px-[4px] py-[0.5px] rounded">Table</code> component.
+                </p>
+              </div>
+              <Table
+                columns={[
+                  { key: "name",   header: "Name" },
+                  { key: "status", header: "Status" },
+                  { key: "date",   header: "Last updated" },
+                ]}
+                data={[]}
+                emptyIcon={(LucideIcons as Record<string, LucideIcon>)["SearchX"] as LucideIcon}
+                emptyTitle="No records found"
+                emptyDescription="Try adjusting your search or filters to see results."
+                emptyCtaLabel="Clear filters"
+              />
+            </div>
+
+            {/* Dashed border with CardContainer */}
+            <div className="flex flex-col gap-[12px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">With CardContainer — Dashed Border</h2>
+                <p className="text-[12px] text-[var(--field-supporting)] mt-[2px]">
+                  Wrap <code className="font-mono text-[11px] bg-[var(--code-bg)] px-[4px] py-[0.5px] rounded">{"<EmptyState>"}</code> inside{" "}
+                  <code className="font-mono text-[11px] bg-[var(--code-bg)] px-[4px] py-[0.5px] rounded">{'<CardContainer variant="dashed" size="lg">'}</code>{" "}
+                  whenever the empty state occupies a standalone card slot (e.g. a dashboard widget or a droppable zone). The card provides the dashed border, radius, and 24px padding — use <code className="font-mono text-[11px] bg-[var(--code-bg)] px-[4px] py-[0.5px] rounded">className="py-[32px]"</code> on EmptyState to keep vertical breathing room without double-padding.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-[16px]">
+
+                {/* Variant 1: icon + title + desc + CTA */}
+                <CardContainer variant="dashed" size="lg">
+                  <EmptyState
+                    icon={LucideIcons.SearchX}
+                    showIcon
+                    title="No results found"
+                    description="Try adjusting your search or filters."
+                    ctaLabel="Clear filters"
+                    className="py-[32px] px-0"
+                  />
+                </CardContainer>
+
+                {/* Variant 2: no icon + title + desc + CTA */}
+                <CardContainer variant="dashed" size="lg">
+                  <EmptyState
+                    showIcon={false}
+                    title="No results found"
+                    description="Try adjusting your search or filters."
+                    ctaLabel="Clear filters"
+                    className="py-[32px] px-0"
+                  />
+                </CardContainer>
+
+                {/* Variant 3: icon + title + desc, no CTA */}
+                <CardContainer variant="dashed" size="lg">
+                  <EmptyState
+                    icon={LucideIcons.Inbox}
+                    showIcon
+                    title="Nothing here yet"
+                    description="Content will appear here once activity begins."
+                    className="py-[32px] px-0"
+                  />
+                </CardContainer>
+
+                {/* Variant 4: no icon, no CTA — text only */}
+                <CardContainer variant="dashed" size="lg">
+                  <EmptyState
+                    showIcon={false}
+                    title="Nothing here yet"
+                    description="Content will appear here once activity begins."
+                    className="py-[32px] px-0"
+                  />
+                </CardContainer>
+
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Usage ─────────────────────────────────────────────────────── */}
+        {tab === "usage" && (
+          <div className="flex flex-col gap-[24px]">
+            <div
+              className="rounded-[10px] p-[20px] flex flex-col gap-[16px]"
+              style={{ border: "1px solid var(--field-border)", background: "var(--field-bg)" }}
+            >
+              <div className="flex flex-col gap-[6px]">
+                <p className="text-[13px] font-semibold text-[var(--foreground)]">✅ When to use</p>
+                {[
+                  "A list, table, dashboard, or inbox has zero items to display.",
+                  "A search or filter returns no results.",
+                  "The user has not yet created any content in a new section.",
+                  "A connection or data source is not yet configured.",
+                ].map(t => (
+                  <p key={t} className="text-[13px] text-[var(--field-supporting)]">• {t}</p>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-[6px]">
+                <p className="text-[13px] font-semibold text-[var(--foreground)]">📦 Dashed border variant</p>
+                <p className="text-[13px] text-[var(--field-supporting)]">
+                  When the empty state occupies a standalone card slot (dashboard widget, droppable zone, or a section that will eventually hold a single entity), wrap it in <code className="font-mono text-[11px] bg-[var(--code-bg)] px-[4px] py-[0.5px] rounded">{'<CardContainer variant="dashed" size="lg">'}</code>. The dashed border signals to the user that this area expects content. Do <em>not</em> use a dashed card inside a table or full-page list — use the default inline empty state there.
+                </p>
+                <div
+                  className="mt-[8px] rounded-[8px] px-[14px] py-[12px] font-mono text-[12px] leading-[1.7] overflow-x-auto"
+                  style={{ background: "var(--code-bg)", color: "var(--foreground)" }}
+                >
+                  {`<CardContainer variant="dashed" size="lg">\n  <EmptyState\n    icon={Inbox}\n    title="No messages yet"\n    description="Messages will appear here once activity begins."\n    ctaLabel="Start a conversation"\n    className="py-[32px] px-0"\n  />\n</CardContainer>`}
+                </div>
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <p className="text-[13px] font-semibold text-[var(--foreground)]">❌ When NOT to use</p>
+                {[
+                  "Content is loading — use a Skeleton component instead.",
+                  "An error occurred — use an Alert Banner with a specific error message.",
+                  "There is at least one item to show, even partially.",
+                ].map(t => (
+                  <p key={t} className="text-[13px] text-[var(--field-supporting)]">• {t}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[8px]">
+              <h2 className="text-[14px] font-semibold text-[var(--foreground)]">Accessibility</h2>
+              {[
+                "Container has role=\"status\" and aria-live=\"polite\" so screen readers announce it when content changes.",
+                "The icon is decorative — rendered with aria-hidden=\"true\".",
+                "CTA button must have a descriptive label (e.g. \"Add your first contact\", not just \"Add\").",
+                "Do not rely on color alone — the title and description must always accompany the icon.",
+              ].map(t => (
+                <p key={t} className="text-[13px] text-[var(--field-supporting)]">• {t}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Reference ─────────────────────────────────────────────────── */}
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[16px]">
+            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
+                    {["Prop","Type","Default","Notes"].map(h => (
+                      <th key={h} className="text-left px-[12px] py-[8px] font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { prop: "icon",         type: "LucideIcon",  def: "Inbox",   note: "Icon component to render inside the highlight container" },
+                    { prop: "showIcon",     type: "boolean",     def: "true",    note: "Toggle the Icon Highlight on/off" },
+                    { prop: "title",        type: "string",      def: "—",       note: "Required. Short, direct headline" },
+                    { prop: "description",  type: "string",      def: "—",       note: "Supporting text, max ~440px wide" },
+                    { prop: "ctaLabel",     type: "string",      def: "—",       note: "Primary CTA label. Renders a primary Button" },
+                    { prop: "onCta",        type: "() => void",  def: "—",       note: "Primary CTA click handler" },
+                    { prop: "cta2Label",    type: "string",      def: "—",       note: "Secondary CTA label (shown to the left of primary)" },
+                    { prop: "onCta2",       type: "() => void",  def: "—",       note: "Secondary CTA click handler" },
+                    { prop: "className",    type: "string",      def: "—",       note: "Compact: 'py-[40px] rounded-none'" },
+                  ].map((r, i) => (
+                    <tr key={r.prop} style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[#2173ff]">{r.prop}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{r.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-label)]">{r.def}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{r.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Token reference */}
+            <h2 className="text-[14px] font-semibold text-[var(--foreground)] mt-[8px]">CSS Variables</h2>
+            <div className="rounded-[8px] p-[16px] font-mono text-[12px] leading-[1.8]" style={{ background: "var(--code-bg)", border: "1px solid var(--field-border)" }}>
+              <p className="text-[var(--field-supporting)]">{"/* Icon Highlight — Surface/Primary/More Subtle */"}</p>
+              <p><span className="text-[var(--primary)]">--card-primary-bg</span><span className="text-[var(--field-supporting)]">:  #f6f9ff {"/* light */"} | rgba(43,127,255,0.08) {"/* dark */"}</span></p>
+              <p><span className="text-[var(--primary)]">--primary</span><span className="text-[var(--field-supporting)]">:          #2173ff {"/* light */"} | #2b7fff {"/* dark */"}</span></p>
+              <p className="mt-[8px] text-[var(--field-supporting)]">{"/* Typography — Text/Title · Text/Body */"}</p>
+              <p><span className="text-[var(--primary)]">--foreground</span><span className="text-[var(--field-supporting)]">:       Title → Text/Title</span></p>
+              <p><span className="text-[var(--primary)]">--field-supporting</span><span className="text-[var(--field-supporting)]">: Description → Text/Body</span></p>
+              <p className="mt-[8px] text-[var(--field-supporting)]">{"/* CTA Buttons — delegated to Button component */"}</p>
+              <p><span className="text-[var(--primary)]">--btn-primary-*</span><span className="text-[var(--field-supporting)]">:   Primary CTA (Surface/Primary/Default)</span></p>
+              <p><span className="text-[var(--primary)]">--btn-secondary-*</span><span className="text-[var(--field-supporting)]">: Secondary CTA (Surface/Neutral/White)</span></p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function SelectPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab,         setTab]         = useState<"overview" | "playground" | "reference">("overview")
@@ -6171,7 +7560,7 @@ function TablePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                         "flex flex-col items-start px-[12px] py-[8px] rounded-[8px] text-left transition-colors",
                         active
                           ? "bg-[var(--field-border-focus)] text-white"
-                          : "bg-[var(--field-border)] text-[var(--field-text)] opacity-50 hover:opacity-80",
+                          : "bg-[var(--ctrl-inactive-bg)] text-[var(--field-text)] hover:bg-[var(--ctrl-inactive-bg)] hover:opacity-80",
                       ].join(" ")}
                     >
                       <span className="text-[13px] font-semibold leading-[1.2]">{m.label}</span>
@@ -6197,7 +7586,7 @@ function TablePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                         "px-[14px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors",
                         tblSize === s
                           ? "bg-[var(--field-border-focus)] text-white"
-                          : "bg-[var(--field-border)] text-[var(--field-text)] opacity-40 hover:opacity-70",
+                          : "bg-[var(--ctrl-inactive-bg)] text-[var(--field-text)] hover:bg-[var(--ctrl-inactive-bg)] hover:opacity-80",
                       ].join(" ")}
                     >
                       {s === "default" ? "M — 60px rows" : "S — 40px rows"}
@@ -6487,7 +7876,7 @@ function HighlightIconPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                             "w-[28px] h-[28px] flex items-center justify-center rounded-[4px] transition-colors",
                             hiIcon === ic.lucide
                               ? "bg-[#2173ff] text-white"
-                              : "text-[var(--field-supporting)] hover:bg-[var(--field-border)] hover:text-[var(--foreground)]",
+                              : "text-[var(--field-supporting)] hover:bg-[var(--ctrl-inactive-bg)] hover:text-[var(--foreground)]",
                           ].join(" ")}
                         >
                           <Ic size={14} strokeWidth={1.75}/>
@@ -7509,12 +8898,13 @@ const demoEntityItems: EntityListItemData[] = [
     aiInsight: {
       action: "Escalated",
       detail: [
-        "Billing issue sent to finance team — response expected within 24 hours.",
-        "Customer contacted via email with reference #2847.",
-        "Follow-up scheduled for tomorrow 10 AM with senior account manager.",
-        "Case flagged as high-priority — SLA clock running since 09:32 AM.",
+        "Billing dispute escalated to the finance and legal review teams — contractual SLA breach imminent, response required within 4 business hours.",
+        "Customer notified via email (ref #2847) and live chat. Awaiting supporting documentation before dispute resolution can proceed.",
+        "Follow-up meeting confirmed for tomorrow 10 AM with senior account manager and finance team lead.",
+        "Case flagged high-priority — SLA clock running since 09:32 AM. Automatic escalation triggers at 13:32 AM if unresolved.",
       ],
       showLabel: true,
+      viewMore: true,
     },
     secondaryMeta: [
       { iconName: "User",          label: "Agent: Mike R.", tooltip: "Assigned agent" },
@@ -7577,6 +8967,8 @@ function EntityListPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pgShowAI,          setPgShowAI]          = useState(true)
   const [pgAiShowLabel,     setPgAiShowLabel]     = useState(true)
   const [pgAiViewMore,      setPgAiViewMore]      = useState(false)
+  const [pgAiLong,          setPgAiLong]          = useState(true)
+  const [pgViewMoreOpen,    setPgViewMoreOpen]    = useState(false)
   const [pgShowTags,      setPgShowTags]      = useState(true)
   const [pgCtaPrimary,    setPgCtaPrimary]    = useState(true)
   const [pgCtaSecondary,  setPgCtaSecondary]  = useState(true)
@@ -7607,7 +8999,20 @@ function EntityListPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     id:            "pg-1",
     showCheckbox:  pgShowCheckbox,
     description:         pgShowDesc ? (pgDescLong ? DEMO_DESC_LONG : DEMO_DESC_SHORT) : undefined,
-    aiInsight:           pgShowAI   ? { ...demoEntityItems[0].aiInsight!, showLabel: pgAiShowLabel, viewMore: pgAiViewMore, defaultExpanded: false } : undefined,
+    aiInsight:           pgShowAI   ? (pgAiLong
+      ? {
+          ...demoEntityItems[0].aiInsight!,
+          showLabel:      pgAiShowLabel,
+          viewMore:       pgAiViewMore,
+          onViewMore:     pgAiViewMore ? () => setPgViewMoreOpen(true) : undefined,
+          defaultExpanded: false,
+        }
+      : {
+          action:    demoEntityItems[0].aiInsight!.action,
+          detail:    "Billing dispute routed to finance team — review in progress.",
+          showLabel: pgAiShowLabel,
+        }
+    ) : undefined,
     tags:                pgShowTags ? allTags.slice(0, pgTagsCount)  : undefined,
     actions:             pgActions.length > 0 ? pgActions : undefined,
     showMenu:            pgShowMenu,
@@ -7662,6 +9067,7 @@ function EntityListPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   ]
 
   const codeSnippet = `import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
+import { CardContainer } from "@/components/ui/card-container"
 
 const items: EntityListItemData[] = [
   {
@@ -7694,7 +9100,11 @@ const items: EntityListItemData[] = [
 ]
 
 export function MyList() {
-  return <EntityList items={items} />
+  return (
+    <CardContainer size="sm">
+      <EntityList items={items} />
+    </CardContainer>
+  )
 }`
 
   return (
@@ -8017,19 +9427,19 @@ export function MyList() {
                   <SubCard
                     label="Empty state"
                     definition="Empty container state when there are no entities to display — either because there is no data, or no item passes the active filter. Communicates absence without visual noise."
-                    capitalization="Message 14px / Medium / Sentence case · Hint 12px / Regular / Sentence case"
+                    capitalization="Title 16px / SemiBold · Description 14px / Medium"
                   >
                     <div
-                      className="w-full flex flex-col items-center justify-center gap-[8px] py-[32px] rounded-[8px]"
+                      className="w-full rounded-[8px] overflow-hidden"
                       style={{ border: "1px solid var(--table-border)", background: "var(--table-bg)" }}
                     >
-                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ opacity: 0.25, color: "var(--muted-foreground)" }}>
-                        <rect x="4" y="8" width="24" height="4" rx="2" fill="currentColor"/>
-                        <rect x="4" y="15" width="16" height="4" rx="2" fill="currentColor"/>
-                        <rect x="4" y="22" width="20" height="4" rx="2" fill="currentColor"/>
-                      </svg>
-                      <p className="text-[14px] font-medium" style={{ color: "var(--muted-foreground)" }}>No entities found</p>
-                      <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Adjust your filters or create a new entity</p>
+                      <EmptyState
+                        icon={LucideIcons.SearchX}
+                        title="No entities found"
+                        description="Adjust your filters or create a new entity to get started."
+                        ctaLabel="Create entity"
+                        className="py-[40px] rounded-none"
+                      />
                     </div>
                   </SubCard>
 
@@ -8058,25 +9468,45 @@ export function MyList() {
                   {/* 6 — AI Insight */}
                   <SubCard
                     label="AI Insight"
-                    definition="Purple horizontal bar that surfaces diagnostics and recommendations generated by the system. The Sparkle icon signals the AI origin. Only shown when aiInsight is defined on the item."
+                    definition="Purple bar that surfaces AI diagnostics and recommendations inline with the row. Short text (under 80 chars): no chevron, card narrows to content width. Long text / multiple bullets: chevron collapses to the truncated first line, expands to reveal all. Set viewMore=true + onViewMore callback to open a Modal Dialog with the full detail — see Playground for a live demo."
                     capitalization="Action 14px / Medium / Sentence case · Detail 12px / Medium / Sentence case"
                   >
-                    <CardContainer size="sm">
-                      <EntityList items={[{
-                        id: "ai-1",
-                        title: "Sarah Thompson",
-                        iconVariant: "yellow", iconName: "Car",
-                        timestamp: "4h ago",
-                        aiInsight: {
-                          action: "Escalated",
-                          detail: [
-                            "Billing issue sent to finance team — response expected within 24 hours.",
-                            "Customer contacted via email with reference #2847.",
-                            "Follow-up scheduled for tomorrow 10 AM.",
-                          ],
-                        },
-                      }]} />
-                    </CardContainer>
+                    <div className="flex flex-col gap-[8px]">
+                      <div className="flex gap-[6px] items-center mb-[4px]">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>Short — no chevron, card fits content width</span>
+                      </div>
+                      <CardContainer size="sm">
+                        <EntityList items={[{
+                          id: "ai-short",
+                          title: "Sarah Thompson",
+                          iconVariant: "yellow", iconName: "Car",
+                          timestamp: "4h ago",
+                          aiInsight: {
+                            action: "Escalated",
+                            detail: "Billing dispute routed to finance team — review in progress.",
+                          },
+                        }]} />
+                      </CardContainer>
+                      <div className="flex gap-[6px] items-center mt-[8px] mb-[4px]">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--field-supporting)" }}>Long — chevron collapses to first line (truncated), expands to all bullets</span>
+                      </div>
+                      <CardContainer size="sm">
+                        <EntityList items={[{
+                          id: "ai-long",
+                          title: "Sarah Thompson",
+                          iconVariant: "yellow", iconName: "Car",
+                          timestamp: "4h ago",
+                          aiInsight: {
+                            action: "Escalated",
+                            detail: [
+                              "Billing dispute escalated to the finance and legal review teams — contractual SLA breach imminent, response required within 4 business hours.",
+                              "Customer notified via email (ref #2847) and live chat. Awaiting supporting documentation before dispute resolution can proceed.",
+                              "Follow-up meeting confirmed for tomorrow 10 AM with senior account manager and finance team lead.",
+                            ],
+                          },
+                        }]} />
+                      </CardContainer>
+                    </div>
                   </SubCard>
 
                   {/* 7 — Description */}
@@ -8147,6 +9577,29 @@ export function MyList() {
               </CardContainer>
             </div>
 
+            {/* View more Modal — opens when pgAiViewMore=true and user clicks "View more" */}
+            <ModalDialog
+              isOpen={pgViewMoreOpen}
+              onClose={() => setPgViewMoreOpen(false)}
+              variant="content"
+              iconVariant="purple"
+              iconName="Sparkle"
+              title="AI Escalated — Full Analysis"
+              description="Complete diagnostic generated by the AI system for this case."
+              slot={
+                <div className="flex flex-col gap-[8px]">
+                  {(demoEntityItems[0].aiInsight!.detail as string[]).map((line, i) => (
+                    <div key={i} className="flex items-start gap-[10px]">
+                      <span className="mt-[2px] shrink-0 text-[12px]" style={{ color: "var(--tag-purple-fg)" }}>•</span>
+                      <span className="text-[13px] font-medium leading-[18px]" style={{ color: "var(--foreground)" }}>{line}</span>
+                    </div>
+                  ))}
+                </div>
+              }
+              ctaPrimary={{ label: "Got it", onClick: () => setPgViewMoreOpen(false) }}
+              ctaSecondary={{ label: "Open ticket", onClick: () => setPgViewMoreOpen(false) }}
+            />
+
             {/* Controls */}
             <div className="flex flex-col gap-[16px]">
               <h2 className="text-[14px] font-semibold text-[var(--foreground)]">Controls</h2>
@@ -8199,13 +9652,21 @@ export function MyList() {
                     <div>
                       <SectionLabel>AI Summary</SectionLabel>
                       <div className="flex gap-[6px] flex-wrap">
-                        <Tog label="Show"             val={pgShowAI}       set={setPgShowAI}       />
-                        <Tog label="«AI …» label"     val={pgAiShowLabel}  set={setPgAiShowLabel}  />
-                        <Tog label="View more"        val={pgAiViewMore}   set={setPgAiViewMore}   />
+                        <Tog label="Show"                  val={pgShowAI}       set={setPgShowAI}       />
+                        <Tog label="Long text (chevron)"   val={pgAiLong}       set={setPgAiLong}       />
+                        <Tog label="«AI …» label"          val={pgAiShowLabel}  set={setPgAiShowLabel}  />
+                        <Tog label="View more → Modal"     val={pgAiViewMore}   set={setPgAiViewMore}   />
                       </div>
-                      <p className="text-[10px] mt-[5px]" style={{ color: "var(--field-supporting)" }}>
-                        Bullet list con 4 items — collapsed por default, chevron para expandir
-                      </p>
+                      {!pgAiLong && (
+                        <p className="text-[10px] mt-[5px]" style={{ color: "var(--field-supporting)" }}>
+                          Short text — card se angosta al contenido, sin chevron
+                        </p>
+                      )}
+                      {pgAiLong && pgAiViewMore && (
+                        <p className="text-[10px] mt-[5px]" style={{ color: "var(--field-supporting)" }}>
+                          Expande el insight → "View more" abre el Modal Dialog con el detalle completo
+                        </p>
+                      )}
                     </div>
                     {/* Secondary meta mode */}
                     <div>
@@ -8343,7 +9804,7 @@ export function MyList() {
                     className="grid items-start px-[16px] py-[10px] text-[12px]"
                     style={{
                       gridTemplateColumns: "180px 260px 110px 1fr",
-                      background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                      background: i % 2 === 1 ? "var(--row-alt-bg)" : "transparent",
                       borderBottom: i < propRows.length - 1 ? "1px solid var(--table-border)" : "none",
                       color: "var(--field-supporting)",
                     }}
@@ -8861,7 +10322,7 @@ function InformativeCardPage({ openSpec }: { openSpec: (s: SpecModal) => void })
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Informative Card</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
             Horizontal surface that combines icon + title + optional description + optional CTA pair.
-            5 semantic states × 3 sizes. Token family <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">--ic-*</code> separate from HighlightIcon.
+            5 semantic states × 3 sizes. Token family <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">--ic-*</code> separate from HighlightIcon.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("informative-card")} />
@@ -9686,10 +11147,10 @@ function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Filters</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
             Horizontal 40px filter bar for narrowing large datasets. 8 state variants · up to 5 filter chips ·
-            selected value shown as <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">Tag informative sm</code> ·
+            selected value shown as <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">Tag informative sm</code> ·
             label truncated at 14 chars. "All filters" opens a 380px slideout with 12 section types.
             Token family{" "}
-            <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">--fi-*</code>.
+            <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">--fi-*</code>.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("filters")} />
@@ -10150,7 +11611,7 @@ function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   )
 }
 
-function IconsPage() {
+function IconsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab,    setTab]    = useState<"reference" | "overview">("reference")
   const [search, setSearch] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
@@ -10180,10 +11641,14 @@ function IconsPage() {
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
             {ICON_TOTAL} icons mapped from Material Design (Figma DS) to Lucide. Same semantics, different family.{" "}
             Import from{" "}
-            <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">
+            <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">
               lucide-react
             </code>.
           </p>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          <SpecButton onClick={() => openSpec("icons")} />
+          <FigmaLink href="https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS" />
         </div>
       </div>
 
@@ -10232,7 +11697,7 @@ function IconsPage() {
               <div key={cat.id} className="flex flex-col gap-[14px]">
                 {/* Category header */}
                 <div className="flex items-center gap-[10px]">
-                  <span className="text-[11px] font-mono text-[var(--field-supporting)] bg-[var(--field-border)] px-[6px] py-[2px] rounded-[4px] shrink-0">
+                  <span className="text-[11px] font-mono text-[var(--field-supporting)] bg-[var(--code-bg)] px-[6px] py-[2px] rounded-[4px] shrink-0">
                     {cat.number}
                   </span>
                   <h2 className="text-[15px] font-semibold text-[var(--foreground)]">{cat.label}</h2>
@@ -10257,7 +11722,7 @@ function IconsPage() {
                         ].join(" ")}
                       >
                         {/* Icon preview */}
-                        <span className="flex items-center justify-center w-[32px] h-[32px] rounded-[6px] bg-[var(--field-border)] text-[var(--foreground)] shrink-0">
+                        <span className="flex items-center justify-center w-[32px] h-[32px] rounded-[6px] bg-[var(--code-bg)] text-[var(--foreground)] shrink-0">
                           <LucidePreview name={ic.lucide} />
                         </span>
                         {/* Labels */}
@@ -10321,7 +11786,7 @@ function IconsPage() {
                 ].map(item => (
                   <div key={item.label} className="flex flex-col gap-[4px]">
                     <span className="text-[12px] text-[var(--field-supporting)]">{item.label}</span>
-                    <code className="block text-[12px] font-mono bg-[var(--field-border)] px-[12px] py-[8px] rounded-[6px] text-[var(--foreground)]">
+                    <code className="block text-[12px] font-mono bg-[var(--code-bg)] px-[12px] py-[8px] rounded-[6px] text-[var(--foreground)]">
                       {item.code}
                     </code>
                   </div>
@@ -10354,7 +11819,7 @@ function IconsPage() {
 
 const TYPE_CATEGORIES = ["Display","Title","Subtitle","Body","Label","Caption","Link"]
 
-function TypographyPage() {
+function TypographyPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [copied, setCopied] = useState<string|null>(null)
 
   function copy(text: string) {
@@ -10366,14 +11831,20 @@ function TypographyPage() {
 
   return (
     <div className="flex flex-col gap-0">
-      <div className="mb-[28px]">
-        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Typography</h1>
-        <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
-          DS typographic scale mapped to Tailwind classes. Font:{" "}
-          <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">Inter</code>.
-          All sizes defined in <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">tailwind.config.js</code> as{" "}
-          <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">text-type-*</code>.
-        </p>
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Typography</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            DS typographic scale mapped to Tailwind classes. Font:{" "}
+            <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">Inter</code>.
+            All sizes defined in <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">tailwind.config.js</code> as{" "}
+            <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">text-type-*</code>.
+          </p>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          <SpecButton onClick={() => openSpec("typography")} />
+          <FigmaLink href="https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS" />
+        </div>
       </div>
 
       <div className="flex flex-col gap-[40px]">
@@ -10406,10 +11877,10 @@ function TypographyPage() {
                   <div className="flex flex-col gap-[6px]">
                     <span className="text-[12px] text-[var(--field-supporting)]">{s.dsName}</span>
                     <div className="flex flex-wrap gap-[6px] items-center">
-                      <span className="text-[11px] font-mono bg-[var(--field-border)] text-[var(--foreground)] px-[6px] py-[2px] rounded-[4px]">{s.size}</span>
-                      <span className="text-[11px] font-mono bg-[var(--field-border)] text-[var(--foreground)] px-[6px] py-[2px] rounded-[4px]">lh {s.lineHeight}</span>
+                      <span className="text-[11px] font-mono bg-[var(--code-bg)] text-[var(--foreground)] px-[6px] py-[2px] rounded-[4px]">{s.size}</span>
+                      <span className="text-[11px] font-mono bg-[var(--code-bg)] text-[var(--foreground)] px-[6px] py-[2px] rounded-[4px]">lh {s.lineHeight}</span>
                       {s.letterSpacing && (
-                        <span className="text-[11px] font-mono bg-[var(--field-border)] text-[var(--foreground)] px-[6px] py-[2px] rounded-[4px]">ls {s.letterSpacing}</span>
+                        <span className="text-[11px] font-mono bg-[var(--code-bg)] text-[var(--foreground)] px-[6px] py-[2px] rounded-[4px]">ls {s.letterSpacing}</span>
                       )}
                     </div>
                     {/* Tailwind class — click to copy */}
@@ -10485,35 +11956,40 @@ const BP_TIERS = [
     id: "xl", label: "XL", name: "XL Desktop",
     min: 1920, max: null, canvasW: 1920, canvasH: 1080,
     cols: 12, gutter: 24, margin: 80, sidebar: 80,
-    color: "#2b7fff", bg: "rgba(43,127,255,0.12)", border: "rgba(43,127,255,0.3)",
+    color: "#2b7fff", labelColor: "#2b7fff", bg: "rgba(43,127,255,0.12)", border: "rgba(43,127,255,0.3)",
+    darkText: false,
     note: "Information-dense views (UCP, dashboards). Design here first.",
   },
   {
     id: "l", label: "L", name: "L Desktop",
     min: 1440, max: 1919, canvasW: 1440, canvasH: 900,
     cols: 12, gutter: 24, margin: 32, sidebar: 80,
-    color: "#6ee7b7", bg: "rgba(110,231,183,0.10)", border: "rgba(110,231,183,0.25)",
+    color: "#6ee7b7", labelColor: "#047857", bg: "rgba(110,231,183,0.10)", border: "rgba(110,231,183,0.25)",
+    darkText: true,
     note: "Standard baseline for most business workflows.",
   },
   {
     id: "m", label: "M", name: "M Laptop",
     min: 1280, max: 1439, canvasW: 1280, canvasH: 832,
     cols: 12, gutter: 16, margin: 24, sidebar: 80,
-    color: "#fcd34d", bg: "rgba(252,211,77,0.10)", border: "rgba(252,211,77,0.25)",
+    color: "#fcd34d", labelColor: "#b45309", bg: "rgba(252,211,77,0.10)", border: "rgba(252,211,77,0.25)",
+    darkText: true,
     note: "MacBook Pro / Air target. Test all views here.",
   },
   {
     id: "s", label: "S", name: "S Tablet",
     min: 600, max: 1279, canvasW: 744, canvasH: 1113,
     cols: 8, gutter: 16, margin: 24, sidebar: 80,
-    color: "#d8b4fe", bg: "rgba(216,180,254,0.10)", border: "rgba(216,180,254,0.25)",
+    color: "#d8b4fe", labelColor: "#7c3aed", bg: "rgba(216,180,254,0.10)", border: "rgba(216,180,254,0.25)",
+    darkText: true,
     note: "Tablet portrait. Sidebar toggleable (overlay or push).",
   },
   {
     id: "xs", label: "XS", name: "Mobile",
     min: null, max: 599, canvasW: 375, canvasH: 812,
     cols: 4, gutter: 12, margin: 16, sidebar: 0,
-    color: "#fb923c", bg: "rgba(251,146,60,0.10)", border: "rgba(251,146,60,0.25)",
+    color: "#fb923c", labelColor: "#c2410c", bg: "rgba(251,146,60,0.10)", border: "rgba(251,146,60,0.25)",
+    darkText: false,
     note: "Mobile. No sidebar — provide alternate navigation.",
   },
 ]
@@ -10536,8 +12012,8 @@ const BP_RULES = [
 ]
 
 // Renders a single device thumbnail at an arbitrary pixel scale
-function BpThumb({ bp, scale, isActive, onClick }: {
-  bp: typeof BP_TIERS[0]; scale: number; isActive: boolean; onClick: () => void
+function BpThumb({ bp, scale, isActive, onClick, isDark }: {
+  bp: typeof BP_TIERS[0]; scale: number; isActive: boolean; onClick: () => void; isDark: boolean
 }) {
   const W  = Math.round(bp.canvasW * scale)
   const H  = Math.round(bp.canvasH * scale)
@@ -10545,25 +12021,26 @@ function BpThumb({ bp, scale, isActive, onClick }: {
   const sW = Math.round(bp.sidebar * scale)
   const mW = Math.max(2, Math.round(bp.margin * scale))
   const gW = Math.max(1, Math.round(bp.gutter * scale))
+  const fc = isDark ? bp.color : bp.labelColor
   return (
     <button
       onClick={onClick}
       title={`${bp.name} · ${bp.canvasW}×${bp.canvasH}px`}
       style={{
         width: W, height: H, borderRadius: 3, overflow: "hidden", flexShrink: 0, cursor: "pointer",
-        border:   isActive ? `2px solid ${bp.color}` : "1.5px solid var(--field-border)",
-        opacity:  isActive ? 1 : 0.5,
+        border:   isActive ? `2px solid ${fc}` : "1.5px solid var(--table-border)",
+        opacity:  isActive ? 1 : 0.65,
         transition: "all 0.15s",
       }}
     >
       {/* Topbar */}
-      <div style={{ height: tH, background: bp.color, width: "100%", opacity: isActive ? 0.85 : 0.45 }} />
+      <div style={{ height: tH, background: fc, width: "100%", opacity: isActive ? 0.85 : 0.45 }} />
       {/* Body */}
-      <div style={{ display: "flex", height: H - tH, background: "rgba(0,0,0,0.2)" }}>
-        {sW > 0 && <div style={{ width: sW, background: bp.color + "30", flexShrink: 0 }} />}
+      <div style={{ display: "flex", height: H - tH, background: "var(--ctrl-inactive-bg)" }}>
+        {sW > 0 && <div style={{ width: sW, background: fc + "30", flexShrink: 0 }} />}
         <div style={{ flex: 1, display: "flex", paddingLeft: mW, paddingRight: mW, paddingTop: 2, gap: gW }}>
           {Array.from({ length: bp.cols }).map((_, ci) => (
-            <div key={ci} style={{ flex: 1, background: bp.color + (isActive ? "28" : "14"), borderRadius: 1 }} />
+            <div key={ci} style={{ flex: 1, background: fc + (isActive ? "28" : "14"), borderRadius: 1 }} />
           ))}
         </div>
       </div>
@@ -10572,7 +12049,7 @@ function BpThumb({ bp, scale, isActive, onClick }: {
 }
 
 // Renders the large annotated device mockup for the detail panel
-function BpAnnotatedMockup({ bp }: { bp: typeof BP_TIERS[0] }) {
+function BpAnnotatedMockup({ bp, isDark }: { bp: typeof BP_TIERS[0]; isDark: boolean }) {
   const isPortrait = bp.canvasH > bp.canvasW
   const MOCKUP_W   = isPortrait ? 150 : 340
   const MOCKUP_H   = Math.round(MOCKUP_W / bp.canvasW * bp.canvasH)
@@ -10582,13 +12059,15 @@ function BpAnnotatedMockup({ bp }: { bp: typeof BP_TIERS[0] }) {
   const mW  = Math.max(5, Math.round(bp.margin * sc))
   const gW  = Math.max(1, Math.round(bp.gutter * sc))
   const bH  = MOCKUP_H - tH
+  const fc  = isDark ? bp.color : bp.labelColor
+  const bd  = isDark ? bp.border : fc + "55"
 
   return (
     <div className="flex flex-col gap-[10px] shrink-0">
       {/* Device frame */}
-      <div style={{ width: MOCKUP_W, height: MOCKUP_H, borderRadius: 6, overflow: "hidden", border: `2px solid ${bp.border}`, flexShrink: 0 }}>
+      <div style={{ width: MOCKUP_W, height: MOCKUP_H, borderRadius: 6, overflow: "hidden", border: `2px solid ${bd}`, flexShrink: 0 }}>
         {/* Topbar */}
-        <div style={{ height: tH, background: bp.color + "99", borderBottom: `1px solid ${bp.border}` }}>
+        <div style={{ height: tH, background: fc + "cc", borderBottom: `1px solid ${bd}` }}>
           <div className="flex items-center gap-[3px] h-full px-[6px]">
             {[0.5, 0.35, 0.2].map((o, k) => (
               <div key={k} style={{ width: Math.max(3, tH * 0.35), height: Math.max(3, tH * 0.35), borderRadius: "50%", background: `rgba(255,255,255,${o})` }} />
@@ -10599,37 +12078,37 @@ function BpAnnotatedMockup({ bp }: { bp: typeof BP_TIERS[0] }) {
         <div style={{ display: "flex", height: bH }}>
           {/* Sidebar */}
           {sW > 0 && (
-            <div style={{ width: sW, background: bp.color + "28", borderRight: `1px solid ${bp.border}`, flexShrink: 0, paddingTop: 4 }}>
+            <div style={{ width: sW, background: fc + "35", borderRight: `1px solid ${bd}`, flexShrink: 0, paddingTop: 4 }}>
               {Array.from({ length: Math.min(7, Math.floor(bH / (sW * 1.4))) }).map((_, k) => (
-                <div key={k} style={{ width: sW * 0.55, height: sW * 0.38, background: bp.color + "55", borderRadius: 2, margin: "3px auto" }} />
+                <div key={k} style={{ width: sW * 0.55, height: sW * 0.38, background: fc + "66", borderRadius: 2, margin: "3px auto" }} />
               ))}
             </div>
           )}
           {/* Content area */}
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {/* Left margin */}
-            <div style={{ width: mW, background: bp.color + "18", flexShrink: 0, borderRight: `1px dashed ${bp.color}50` }} />
+            <div style={{ width: mW, background: fc + "22", flexShrink: 0, borderRight: `1px dashed ${fc}66` }} />
             {/* Columns */}
             <div style={{ flex: 1, display: "flex", gap: gW, padding: `${Math.max(4, 10 * sc)}px 0 ${Math.max(4, 10 * sc)}px` }}>
               {Array.from({ length: bp.cols }).map((_, ci) => (
-                <div key={ci} style={{ flex: 1, background: bp.color + "20", borderRadius: Math.max(1, 3 * sc), border: `0.5px solid ${bp.color}35`, height: "45%" }} />
+                <div key={ci} style={{ flex: 1, background: fc + "2a", borderRadius: Math.max(1, 3 * sc), border: `0.5px solid ${fc}55`, height: "45%" }} />
               ))}
             </div>
             {/* Right margin */}
-            <div style={{ width: mW, background: bp.color + "18", flexShrink: 0, borderLeft: `1px dashed ${bp.color}50` }} />
+            <div style={{ width: mW, background: fc + "22", flexShrink: 0, borderLeft: `1px dashed ${fc}66` }} />
           </div>
         </div>
       </div>
 
       {/* Annotation bar: margin / cols+gutter / margin */}
       <div className="flex text-[9px] font-semibold" style={{ width: MOCKUP_W, paddingLeft: sW }}>
-        <div style={{ width: mW, color: bp.color, textAlign: "center", overflow: "visible", whiteSpace: "nowrap", transform: "translateX(-25%)" }}>
+        <div style={{ width: mW, color: bp.labelColor, textAlign: "center", overflow: "visible", whiteSpace: "nowrap", transform: "translateX(-25%)" }}>
           ←{bp.margin}px
         </div>
         <div style={{ flex: 1, color: "var(--field-supporting)", textAlign: "center" }}>
           {bp.cols} cols · {bp.gutter}px gutter
         </div>
-        <div style={{ width: mW, color: bp.color, textAlign: "center", overflow: "visible", whiteSpace: "nowrap", transform: "translateX(25%)" }}>
+        <div style={{ width: mW, color: bp.labelColor, textAlign: "center", overflow: "visible", whiteSpace: "nowrap", transform: "translateX(25%)" }}>
           {bp.margin}px→
         </div>
       </div>
@@ -10637,13 +12116,13 @@ function BpAnnotatedMockup({ bp }: { bp: typeof BP_TIERS[0] }) {
       {/* Legend */}
       <div className="flex flex-wrap gap-[8px]">
         {[
-          { color: bp.color + "99", label: "Topbar" },
-          ...(bp.sidebar > 0 ? [{ color: bp.color + "28", label: `Sidebar ${bp.sidebar}px` }] : []),
-          { color: bp.color + "18", label: `Margin ${bp.margin}px` },
-          { color: bp.color + "20", label: `${bp.cols} columns` },
+          { color: fc + "cc", label: "Topbar" },
+          ...(bp.sidebar > 0 ? [{ color: fc + "35", label: `Sidebar ${bp.sidebar}px` }] : []),
+          { color: fc + "22", label: `Margin ${bp.margin}px` },
+          { color: fc + "2a", label: `${bp.cols} columns` },
         ].map(l => (
           <div key={l.label} className="flex items-center gap-[4px]">
-            <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color, flexShrink: 0 }} />
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color, flexShrink: 0, border: `1px solid ${fc}30` }} />
             <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{l.label}</span>
           </div>
         ))}
@@ -10652,24 +12131,31 @@ function BpAnnotatedMockup({ bp }: { bp: typeof BP_TIERS[0] }) {
   )
 }
 
-function BreakpointsPage() {
+function BreakpointsPage({ isDark, openSpec }: { isDark: boolean; openSpec: (s: SpecModal) => void }) {
   const [activeBp, setActiveBp] = useState<string>("l")
   const focused = BP_TIERS.find(b => b.id === activeBp)!
 
   // Scale thumbnails so XL = 224px wide
   const THUMB_SCALE = 224 / 1920
+  const fc = isDark ? focused.color : focused.labelColor
 
   return (
     <div className="flex flex-col gap-[40px]">
 
       {/* Header */}
-      <div>
-        <h1 className="text-[24px] font-semibold" style={{ color: "var(--foreground)" }}>Breakpoints</h1>
-        <p className="text-[14px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-          5-tier responsive system sourced from Figma DS node{" "}
-          <code className="text-[12px] font-mono px-[5px] py-[1px] rounded-[4px]" style={{ background: "var(--field-border)" }}>6729:35011</code>.
-          All layouts must conform to these tiers — no custom breakpoint values.
-        </p>
+      <div className="flex items-start justify-between gap-[16px]">
+        <div>
+          <h1 className="text-[24px] font-semibold" style={{ color: "var(--foreground)" }}>Breakpoints</h1>
+          <p className="text-[14px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+            5-tier responsive system sourced from Figma DS node{" "}
+            <code className="text-[12px] font-mono px-[5px] py-[1px] rounded-[4px]" style={{ background: "var(--code-bg)" }}>6729:35011</code>.
+            All layouts must conform to these tiers — no custom breakpoint values.
+          </p>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          <SpecButton onClick={() => openSpec("breakpoints")} />
+          <FigmaLink href="https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=6729-35011" />
+        </div>
       </div>
 
       {/* ── Device comparison + detail ───────────────────────────────────── */}
@@ -10689,9 +12175,9 @@ function BreakpointsPage() {
             const isActive = activeBp === bp.id
             return (
               <div key={bp.id} className="flex flex-col items-center gap-[8px] shrink-0">
-                <BpThumb bp={bp} scale={THUMB_SCALE} isActive={isActive} onClick={() => setActiveBp(bp.id)} />
+                <BpThumb bp={bp} scale={THUMB_SCALE} isActive={isActive} onClick={() => setActiveBp(bp.id)} isDark={isDark} />
                 <div className="flex flex-col items-center gap-[1px]">
-                  <span className="text-[11px] font-bold" style={{ color: isActive ? bp.color : "var(--field-supporting)" }}>
+                  <span className="text-[11px] font-bold" style={{ color: isActive ? bp.labelColor : "var(--field-supporting)" }}>
                     {bp.label}
                   </span>
                   <span className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>
@@ -10715,10 +12201,14 @@ function BreakpointsPage() {
         {/* Detail panel — always visible, updates on click */}
         <div
           className="rounded-b-[10px] p-[20px] flex gap-[28px] items-start"
-          style={{ background: focused.bg, border: `0.5px solid ${focused.border}`, borderTop: `2px solid ${focused.color}` }}
+          style={{
+            background:  isDark ? focused.bg : focused.labelColor + "0d",
+            border:      `0.5px solid ${isDark ? focused.border : focused.labelColor + "45"}`,
+            borderTop:   `2px solid ${fc}`,
+          }}
         >
           {/* Annotated mockup */}
-          <BpAnnotatedMockup bp={focused} />
+          <BpAnnotatedMockup bp={focused} isDark={isDark} />
 
           {/* Specs */}
           <div className="flex flex-col gap-[14px] flex-1 min-w-0">
@@ -10726,11 +12216,11 @@ function BreakpointsPage() {
             <div className="flex items-center gap-[10px]">
               <span
                 className="inline-flex items-center justify-center h-[26px] px-[10px] rounded-[6px] text-[12px] font-bold"
-                style={{ background: focused.color, color: "#fff" }}
+                style={{ background: focused.labelColor, color: "#fff" }}
               >
                 {focused.label}
               </span>
-              <span className="text-[16px] font-semibold" style={{ color: focused.color }}>{focused.name}</span>
+              <span className="text-[16px] font-semibold" style={{ color: focused.labelColor }}>{focused.name}</span>
               <span className="text-[12px] font-mono ml-auto shrink-0" style={{ color: "var(--field-supporting)" }}>
                 {focused.min != null ? (focused.max != null ? `${focused.min}–${focused.max}px` : `≥ ${focused.min}px`) : `< ${focused.max}px`}
               </span>
@@ -10780,14 +12270,14 @@ function BreakpointsPage() {
                   key={bp.id}
                   className="cursor-pointer transition-colors"
                   style={{
-                    background:   activeBp === bp.id ? bp.bg : i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                    background:   activeBp === bp.id ? bp.bg : i % 2 === 1 ? "var(--row-alt-bg)" : "transparent",
                     borderBottom: i < BP_TIERS.length - 1 ? "0.5px solid var(--field-border)" : "none",
                   }}
                   onClick={() => setActiveBp(bp.id)}
                 >
                   <td className="px-[14px] py-[12px]">
                     <span className="inline-flex items-center justify-center w-[28px] h-[22px] rounded-[4px] text-[11px] font-bold"
-                      style={{ background: bp.bg, color: bp.color, border: `0.5px solid ${bp.border}` }}>
+                      style={{ background: bp.labelColor, color: "#ffffff" }}>
                       {bp.label}
                     </span>
                   </td>
@@ -10826,12 +12316,12 @@ function BreakpointsPage() {
                 return (
                   <tr key={i} style={{
                     borderBottom: i < BP_CONTEXT.length - 1 ? "0.5px solid var(--field-border)" : "none",
-                    background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                    background: i % 2 === 1 ? "var(--row-alt-bg)" : "transparent",
                   }}>
                     <td className="px-[14px] py-[12px] font-medium" style={{ color: "var(--foreground)" }}>{row.view}</td>
                     <td className="px-[14px] py-[12px]">
                       <span className="inline-flex items-center justify-center w-[28px] h-[22px] rounded-[4px] text-[11px] font-bold"
-                        style={{ background: tier?.bg, color: tier?.color, border: `0.5px solid ${tier?.border}` }}>
+                        style={{ background: tier?.labelColor, color: "#ffffff" }}>
                         {row.primary}
                       </span>
                     </td>
@@ -10923,18 +12413,24 @@ const CR_A11Y = [
   "Do not rely on corner shape alone to communicate interactivity — pair with color, label, and focus ring.",
 ]
 
-function CornerRadiusPage() {
+function CornerRadiusPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   return (
     <div className="flex flex-col gap-[40px]">
 
       {/* Header */}
-      <div>
-        <h1 className="text-[24px] font-semibold" style={{ color: "var(--foreground)" }}>Corner Radius</h1>
-        <p className="text-[14px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-          8-token radius scale from Figma DS node{" "}
-          <code className="text-[12px] font-mono px-[5px] py-[1px] rounded-[4px]" style={{ background: "var(--field-border)" }}>4495:1311</code>.
-          Applied via CSS variables and Tailwind classes — never hardcode pixel values.
-        </p>
+      <div className="flex items-start justify-between gap-[16px]">
+        <div>
+          <h1 className="text-[24px] font-semibold" style={{ color: "var(--foreground)" }}>Corner Radius</h1>
+          <p className="text-[14px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+            8-token radius scale from Figma DS node{" "}
+            <code className="text-[12px] font-mono px-[5px] py-[1px] rounded-[4px]" style={{ background: "var(--code-bg)" }}>4495:1311</code>.
+            Applied via CSS variables and Tailwind classes — never hardcode pixel values.
+          </p>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          <SpecButton onClick={() => openSpec("corner-radius")} />
+          <FigmaLink href="https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4495-1311" />
+        </div>
       </div>
 
       {/* Token scale — visual showcase */}
@@ -10995,7 +12491,7 @@ function CornerRadiusPage() {
               {CR_MAPPING.map((row, i) => (
                 <tr key={i} style={{
                   borderBottom: i < CR_MAPPING.length - 1 ? "0.5px solid var(--field-border)" : "none",
-                  background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                  background: i % 2 === 1 ? "var(--row-alt-bg)" : "transparent",
                 }}>
                   <td className="px-[14px] py-[11px] font-medium" style={{ color: "var(--foreground)" }}>{row.component}</td>
                   <td className="px-[14px] py-[11px]">
@@ -11059,7 +12555,7 @@ function CornerRadiusPage() {
               {CR_TOKENS.map((t, i) => (
                 <tr key={t.token} style={{
                   borderBottom: i < CR_TOKENS.length - 1 ? "0.5px solid var(--field-border)" : "none",
-                  background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                  background: i % 2 === 1 ? "var(--row-alt-bg)" : "transparent",
                 }}>
                   <td className="px-[14px] py-[11px] font-medium" style={{ color: "var(--foreground)" }}>{t.token}</td>
                   <td className="px-[14px] py-[11px] font-mono font-semibold text-[12px]" style={{ color: "var(--fi-view-active-bg)" }}>
@@ -11099,7 +12595,7 @@ function CornerRadiusPage() {
   )
 }
 
-function ColorsPage() {
+function ColorsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab,    setTab]    = useState<"primitives"|"semantic">("primitives")
   const [copied, setCopied] = useState<string|null>(null)
 
@@ -11112,13 +12608,19 @@ function ColorsPage() {
 
   return (
     <div className="flex flex-col gap-0">
-      <div className="mb-[28px]">
-        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Colors</h1>
-        <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
-          Primitive palette + {SEMANTIC_GROUPS.reduce((n,g) => n + g.tokens.length, 0)} semantic tokens from the DS.
-          Applied in code as <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">var(--token-name)</code>{" "}
-          in <code className="text-[12px] font-mono bg-[var(--field-border)] px-[5px] py-[1px] rounded-[4px]">index.css</code>.
-        </p>
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Colors</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            Primitive palette + {SEMANTIC_GROUPS.reduce((n,g) => n + g.tokens.length, 0)} semantic tokens from the DS.
+            Applied in code as <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">var(--token-name)</code>{" "}
+            in <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">index.css</code>.
+          </p>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          <SpecButton onClick={() => openSpec("colors")} />
+          <FigmaLink href="https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS" />
+        </div>
       </div>
 
       <TabBar
@@ -11263,6 +12765,8 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
   search: string; onSearch: (v: string) => void
   isDark: boolean; onToggle: () => void
 }) {
+  const [collapsed, setCollapsed] = useState(false)
+
   const filtered = useMemo(
     () => NAV_SECTIONS.filter(s => s.label.toLowerCase().includes(search.toLowerCase()) || s.description.toLowerCase().includes(search.toLowerCase())),
     [search]
@@ -11276,44 +12780,105 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
   const glassBg     = isDark ? "rgba(8,10,20,0.88)"     : "rgba(242,247,255,0.72)"
   const glassBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(33,115,255,0.15)"
 
+  const EASE = "cubic-bezier(0.4, 0, 0.2, 1)"
+
   return (
     <aside
-      className="w-[240px] shrink-0 flex flex-col border-r"
+      className="shrink-0 flex flex-col border-r overflow-hidden"
       style={{
+        width: collapsed ? 56 : 240,
+        transition: `width 280ms ${EASE}`,
         background: glassBg,
         backdropFilter: "blur(20px) saturate(160%)",
         WebkitBackdropFilter: "blur(20px) saturate(160%)",
         borderColor: glassBorder,
       }}
     >
+      {/* Logo + toggle */}
       <div
-        className="flex items-center gap-[10px] px-[16px] py-[18px] border-b"
-        style={{ borderColor: glassBorder }}
+        className="flex items-center border-b shrink-0"
+        style={{
+          padding: collapsed ? "16px 0" : "18px 16px",
+          justifyContent: collapsed ? "center" : "space-between",
+          borderColor: glassBorder,
+          transition: `padding 280ms ${EASE}`,
+          gap: 10,
+        }}
       >
-        {/* AIMS OS isotype — gradient "A" mark, sourced from brand assets */}
-        <svg
-          width="26" height="21" viewBox="0 0 234 187" fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="shrink-0"
-          aria-label="AIMS OS"
+        {/* Isotype — always visible */}
+        <div className="flex items-center gap-[10px] min-w-0">
+          <svg
+            width="26" height="21" viewBox="0 0 234 187" fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="shrink-0"
+            aria-label="AIMS OS"
+          >
+            <defs>
+              <linearGradient id="aims-nav-grad" x1="189.036" y1="47.0792" x2="91.8984" y2="213.621" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#09E2AB" />
+                <stop offset="1" stopColor="#1B72FF" />
+              </linearGradient>
+            </defs>
+            <path d="M232.854 166.743L146.1 16.7697C140.025 6.26923 129.146 0 117 0C104.854 0 93.9747 6.26923 87.8998 16.7697L1.14583 166.743C-0.381945 169.385 -0.381945 172.64 1.14583 175.285C2.67361 177.927 5.50109 179.556 8.55665 179.556H51.9318C54.991 179.556 57.8149 177.927 59.3426 175.285L95.307 113.11L123.861 162.472H108.735C105.889 158.003 100.9 155.021 95.2129 155.021C86.3793 155.021 79.1929 162.194 79.1929 171.011C79.1929 179.827 86.3793 187 95.2129 187C100.9 187 105.889 184.019 108.735 179.549H138.682C141.741 179.549 144.565 177.92 146.093 175.278C147.621 172.637 147.621 169.381 146.093 166.736L102.721 91.7583C101.194 89.1169 98.3662 87.4873 95.3106 87.4873C92.2514 87.4873 89.4276 89.1169 87.8998 91.7583L46.9937 162.472H23.3819L102.725 25.3118C105.705 20.1591 111.041 17.0841 117 17.0841C122.959 17.0841 128.295 20.1591 131.275 25.3118L210.618 162.472H187.006L131.177 65.9588C132.35 63.7365 133.02 61.2144 133.02 58.5332C133.02 49.7166 125.834 42.544 117 42.544C108.166 42.544 100.98 49.7166 100.98 58.5332C100.98 67.1295 107.819 74.1467 116.352 74.49L174.657 175.282C176.185 177.923 179.013 179.553 182.068 179.553H225.443C228.503 179.553 231.326 177.923 232.854 175.282C234.382 172.644 234.382 169.388 232.854 166.743Z" fill="url(#aims-nav-grad)" />
+          </svg>
+          {/* Wordmark — fades out when collapsed */}
+          <div style={{
+            overflow: "hidden",
+            maxWidth: collapsed ? 0 : 160,
+            opacity: collapsed ? 0 : 1,
+            transition: collapsed
+              ? `opacity 100ms ease, max-width 160ms ${EASE}`
+              : `opacity 160ms ease 140ms, max-width 200ms ${EASE} 60ms`,
+            whiteSpace: "nowrap",
+          }}>
+            <p className="text-[13px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>AIMS OS</p>
+            <p className="text-[10px] leading-none mt-[3px]" style={{ color: "var(--field-supporting)" }}>Design System</p>
+          </div>
+        </div>
+
+        {/* Collapse/expand toggle — same icon set as DS Sidebar */}
+        <button
+          onClick={() => setCollapsed(c => !c)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="w-[24px] h-[24px] flex items-center justify-center rounded-[6px] shrink-0 transition-colors hover:bg-[var(--field-bg)]"
+          style={{ color: "var(--field-supporting)" }}
         >
-          <defs>
-            <linearGradient id="aims-nav-grad" x1="189.036" y1="47.0792" x2="91.8984" y2="213.621" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#09E2AB" />
-              <stop offset="1" stopColor="#1B72FF" />
-            </linearGradient>
-          </defs>
-          <path d="M232.854 166.743L146.1 16.7697C140.025 6.26923 129.146 0 117 0C104.854 0 93.9747 6.26923 87.8998 16.7697L1.14583 166.743C-0.381945 169.385 -0.381945 172.64 1.14583 175.285C2.67361 177.927 5.50109 179.556 8.55665 179.556H51.9318C54.991 179.556 57.8149 177.927 59.3426 175.285L95.307 113.11L123.861 162.472H108.735C105.889 158.003 100.9 155.021 95.2129 155.021C86.3793 155.021 79.1929 162.194 79.1929 171.011C79.1929 179.827 86.3793 187 95.2129 187C100.9 187 105.889 184.019 108.735 179.549H138.682C141.741 179.549 144.565 177.92 146.093 175.278C147.621 172.637 147.621 169.381 146.093 166.736L102.721 91.7583C101.194 89.1169 98.3662 87.4873 95.3106 87.4873C92.2514 87.4873 89.4276 89.1169 87.8998 91.7583L46.9937 162.472H23.3819L102.725 25.3118C105.705 20.1591 111.041 17.0841 117 17.0841C122.959 17.0841 128.295 20.1591 131.275 25.3118L210.618 162.472H187.006L131.177 65.9588C132.35 63.7365 133.02 61.2144 133.02 58.5332C133.02 49.7166 125.834 42.544 117 42.544C108.166 42.544 100.98 49.7166 100.98 58.5332C100.98 67.1295 107.819 74.1467 116.352 74.49L174.657 175.282C176.185 177.923 179.013 179.553 182.068 179.553H225.443C228.503 179.553 231.326 177.923 232.854 175.282C234.382 172.644 234.382 169.388 232.854 166.743Z" fill="url(#aims-nav-grad)" />
-        </svg>
-        <div>
-          <p className="text-[13px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>AIMS OS</p>
-          <p className="text-[10px] leading-none mt-[3px]" style={{ color: "var(--field-supporting)" }}>Design System</p>
+          {collapsed
+            ? <LucideIcons.PanelLeftOpen  size={14} strokeWidth={1.75} />
+            : <LucideIcons.PanelLeftClose size={14} strokeWidth={1.75} />
+          }
+        </button>
+      </div>
+
+      {/* Search — collapses with height transition */}
+      <div
+        className="border-b shrink-0 overflow-hidden"
+        style={{
+          maxHeight: collapsed ? 0 : 60,
+          opacity: collapsed ? 0 : 1,
+          borderColor: glassBorder,
+          transition: collapsed
+            ? `max-height 220ms ${EASE}, opacity 120ms ease`
+            : `max-height 280ms ${EASE} 60ms, opacity 160ms ease 140ms`,
+        }}
+      >
+        <div className="px-[12px] py-[12px]">
+          <Input placeholder="Search component…" leftIcon={<SearchIcon />} value={search} onChange={e => onSearch(e.target.value)} size="sm" />
         </div>
       </div>
-      <div className="px-[12px] py-[12px] border-b" style={{ borderColor: glassBorder }}>
-        <Input placeholder="Search component…" leftIcon={<SearchIcon />} value={search} onChange={e => onSearch(e.target.value)} size="sm" />
-      </div>
-      <nav className="flex-1 overflow-y-auto py-[12px] px-[8px] flex flex-col gap-[4px]">
+
+      {/* Nav — collapses */}
+      <nav
+        className="flex-1 overflow-y-auto flex flex-col gap-[4px]"
+        style={{
+          padding: collapsed ? 0 : "12px 8px",
+          opacity: collapsed ? 0 : 1,
+          pointerEvents: collapsed ? "none" : undefined,
+          transition: collapsed
+            ? `opacity 120ms ease, padding 220ms ${EASE}`
+            : `opacity 180ms ease 140ms, padding 280ms ${EASE} 60ms`,
+        }}
+      >
         {Object.keys(groups).length === 0 && (
           <p className="text-[12px] text-[var(--field-supporting)] px-[8px] py-[4px]">No results found</p>
         )}
@@ -11331,8 +12896,28 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
           </div>
         ))}
       </nav>
-      <div className="px-[16px] py-[14px] border-t flex items-center justify-between" style={{ borderColor: glassBorder }}>
-        <span className="text-[12px] text-[var(--field-supporting)]">{isDark ? "Dark mode" : "Light mode"}</span>
+
+      {/* Footer — label fades, toggle stays */}
+      <div
+        className="border-t flex items-center shrink-0"
+        style={{
+          padding: collapsed ? "14px 0" : "14px 16px",
+          justifyContent: collapsed ? "center" : "space-between",
+          borderColor: glassBorder,
+          transition: `padding 280ms ${EASE}`,
+        }}
+      >
+        <span style={{
+          overflow: "hidden",
+          maxWidth: collapsed ? 0 : 120,
+          opacity: collapsed ? 0 : 1,
+          whiteSpace: "nowrap",
+          transition: collapsed
+            ? `opacity 100ms ease, max-width 160ms ${EASE}`
+            : `opacity 160ms ease 140ms, max-width 200ms ${EASE} 60ms`,
+        }} className="text-[12px] text-[var(--field-supporting)]">
+          {isDark ? "Dark mode" : "Light mode"}
+        </span>
         <ThemeToggle isDark={isDark} onToggle={onToggle} />
       </div>
     </aside>
@@ -11373,7 +12958,9 @@ export default function App() {
       <main className="flex-1 overflow-y-auto">
         <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" ? "max-w-[1100px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
-          {active === "avatar"          && <AvatarPage />}
+          {active === "alert-banner"    && <AlertBannerPage  openSpec={setSpecModal} />}
+          {active === "empty-state"     && <EmptyStatePage   openSpec={setSpecModal} />}
+          {active === "avatar"          && <AvatarPage          openSpec={setSpecModal} />}
           {active === "button"          && <ButtonPage        openSpec={setSpecModal} />}
           {active === "input"           && <InputPage         openSpec={setSpecModal} />}
           {active === "textarea"        && <TextareaPage      openSpec={setSpecModal} />}
@@ -11391,11 +12978,11 @@ export default function App() {
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "filters"         && <FiltersPage         openSpec={setSpecModal} />}
-          {active === "breakpoints"     && <BreakpointsPage />}
-          {active === "corner-radius"   && <CornerRadiusPage />}
-          {active === "icons"           && <IconsPage />}
-          {active === "typography"      && <TypographyPage />}
-          {active === "colors"          && <ColorsPage />}
+          {active === "breakpoints"     && <BreakpointsPage isDark={isDark} openSpec={setSpecModal} />}
+          {active === "corner-radius"   && <CornerRadiusPage openSpec={setSpecModal} />}
+          {active === "icons"           && <IconsPage        openSpec={setSpecModal} />}
+          {active === "typography"      && <TypographyPage   openSpec={setSpecModal} />}
+          {active === "colors"          && <ColorsPage       openSpec={setSpecModal} />}
         </div>
       </main>
 

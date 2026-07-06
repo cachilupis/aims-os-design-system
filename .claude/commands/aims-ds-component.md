@@ -340,6 +340,16 @@ These apply throughout all phases. If any of these triggers, stop and re-run Pha
 
 6. **Never use `opacity-40` for a component that has DS-defined disabled tokens.** Only use generic opacity for variants where Phase 1 shows NO fills/strokes in the disabled state.
 
+7. **Never invent custom CSS alias tokens.** Before creating any new `--my-custom-*` variable in `index.css`, search for an existing token that maps to the same DS concept. The project already has tokens for every major DS concept (`--card-primary-bg` = `Surface/Primary/More Subtle`, `--primary` = `Icon/Primary/Default`, `--field-supporting` = `Text/Body`, etc.). Creating a new alias for an existing token introduces two bugs at once: it's a second source of truth that can diverge, and it hides the real DS name from the SpecPanel documentation. **If no existing token covers the concept, tell the user before creating one** — the correct response is "I don't see a token for X in `index.css`; should I add `--[name]` mapped to DS variable Y?"
+
+8. **No hardcoded values in `.tsx` component files — ever.** Every color, background, and border in a component file must reference `var(--token-name)`. The only accepted exceptions are values that are structurally absolute in the DS: `#ffffff` for `Text/Negative` (white text on solid-colored surfaces), and `transparent`. Everything else is a CSS variable. If a Phase 1 value has no matching token in `index.css`, stop and add the token first — do not inline the raw value into the component.
+
+9. **Audit before shipping.** After implementing any component, run a quick grep to confirm zero hardcoded colors remain:
+   ```bash
+   grep -n 'style={{.*"#\|style={{.*rgba\|bg-\[#\|text-\[#\|border-\[#' src/components/ui/[component].tsx
+   ```
+   If this returns any lines that are not referencing `var(--)`, treat them as bugs and fix before marking done.
+
 ---
 
 ## Day-to-day usage

@@ -54,6 +54,7 @@ export type EntityListItemData = {
     detail:           string | string[]
     showLabel?:       boolean
     viewMore?:        boolean
+    onViewMore?:      () => void  // called when "View more" is clicked — pair with ModalDialog
     defaultExpanded?: boolean
     detailThreshold?: number   // chars before collapsible kicks in (default 80)
   }
@@ -137,14 +138,14 @@ export function ELAvatar({ name, src }: { name: string; src?: string }) {
       <img
         src={src} alt={name}
         className="w-[24px] h-[24px] rounded-full object-cover shrink-0"
-        style={{ boxShadow: "0 0 0 1.5px rgba(128,175,255,0.5)" }}
+        style={{ boxShadow: "0 0 0 1.5px var(--el-avatar-ring)" }}
       />
     )
   }
   return (
     <span
       className="inline-flex shrink-0 items-center justify-center w-[24px] h-[24px] rounded-full"
-      style={{ background: "var(--primary)", color: "white", boxShadow: "0 0 0 1.5px rgba(128,175,255,0.5)", fontSize: "9px", fontWeight: 700, lineHeight: 1 }}
+      style={{ background: "var(--primary)", color: "white", boxShadow: "0 0 0 1.5px var(--el-avatar-ring)", fontSize: "9px", fontWeight: 700, lineHeight: 1 }}
     >
       {initials}
     </span>
@@ -196,14 +197,14 @@ function MetaItemView({ meta, mode, isFirst }: { meta: ELMetaItem; mode: "icon" 
               left: "50%",
               transform: "translateX(-50%)",
               whiteSpace: "nowrap",
-              background: "rgba(22,22,22,1)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--topbar-menu-bg)",
+              border: "1px solid var(--gs-input-border)",
               borderRadius: 6,
               padding: "3px 8px",
               boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
             }}
           >
-            <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.90)" }}>{tipText}</span>
+            <span className="text-[11px] font-medium" style={{ color: "var(--gs-text)" }}>{tipText}</span>
           </div>
         )}
       </div>
@@ -237,7 +238,7 @@ function TagOverflow({ labels }: { labels: string[] }) {
         >
           <div className="flex flex-col gap-[3px]">
             {labels.map((label, i) => (
-              <span key={i} className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.90)" }}>
+              <span key={i} className="text-[11px] font-medium" style={{ color: "var(--gs-text)" }}>
                 {label}
               </span>
             ))}
@@ -435,7 +436,7 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
                     <button
                       className="text-[12px] font-medium px-[10px] h-[24px] rounded-[4px] transition-opacity hover:opacity-70"
                       style={{ color: "var(--foreground)" }}
-                      onClick={e => e.stopPropagation()}
+                      onClick={e => { e.stopPropagation(); ai.onViewMore?.() }}
                     >
                       View more
                     </button>

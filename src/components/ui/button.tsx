@@ -124,8 +124,8 @@ const buttonVariants = cva(
       { variant: "tertiary",  class: "focus-visible:ring-[var(--btn-secondary-ring)]" },
       { variant: "warning",   class: "focus-visible:ring-[var(--btn-warning-ring)]"  },
       { variant: "positive",  class: "focus-visible:ring-[var(--btn-positive-ring)]" },
-      // Main Action focus: mint ring from DS Focus stroke (#cbfff4)
-      { variant: "main",      class: "focus-visible:ring-[#cbfff4]" },
+      // Main Action focus: DS Border/Success/Subtle — mint in light, teal in dark
+      { variant: "main",      class: "focus-visible:ring-[var(--btn-main-ring)]" },
     ],
 
     defaultVariants: {

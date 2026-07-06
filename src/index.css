@@ -56,6 +56,9 @@
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI Semantic Color Tokens — Dark mode */
     --field-bg:              rgba(255,255,255,0.1);   /* Surface/Neutral/White dark  = White/10  */
     --field-border:          rgba(255,255,255,0.1);   /* Border/Neutral/Default dark = White/10  */
+    --ctrl-inactive-bg:      rgba(255,255,255,0.10);  /* CtrlGroup pill inactive — dark          */
+    --row-alt-bg:            rgba(255,255,255,0.02);  /* Table/list alternating row  — dark      */
+    --code-bg:               rgba(255,255,255,0.12);  /* Inline code + icon preview boxes — dark */
     --field-border-hover:    rgba(255,255,255,0.2);   /* Border/Neutral/Darker dark  = White/20  */
     --field-border-focus:    #2b7fff;                 /* Border/Primary/Default dark             */
     --field-text:            rgba(255,255,255,0.6);   /* Text/Subtitle dark          = White/60  */
@@ -115,6 +118,7 @@
     --btn-positive-hover-bg:   #003328;
     --btn-positive-active-bg:  #001f18;
     --btn-positive-ring:       #00a07e;
+    --btn-main-ring:           #09e2ab;   /* Main Action focus ring dark — teal end of gradient */
 
     /* Main Action: gradient stays hardcoded — CSS vars can't be
        interpolated inside Tailwind arbitrary gradient strings */
@@ -321,6 +325,19 @@
     --topbar-search-border:    rgba(255,255,255,0.10);   /* Border/Neutral/Default dark   = White/10    */
     --topbar-badge-bg:         rgba(255,100,103,1.00);   /* Error/Notification dark                     */
     --topbar-avatar-ring:      rgba(43,127,255,0.30);    /* Border/Primary/Lighter dark                 */
+
+    /* ── Avatar — color variants — dark ─────────────────────────── */
+    --av-col-blue-bg:      #2173ff;   /* brand primary   */
+    --av-col-green-bg:     #059669;   /* emerald 600     */
+    --av-col-red-bg:       #dc2626;   /* red 600         */
+    --av-col-orange-bg:    #c2410c;   /* orange 700      */
+    --av-col-purple-bg:    #7c3aed;   /* violet 600      */
+    --av-col-limegreen-bg: #4d7c0f;   /* lime 700        */
+    --av-col-lightblue-bg: #0284c7;   /* sky 600         */
+    --av-col-pink-bg:      #be185d;   /* pink 700        */
+    --av-col-teal-bg:      #0d9488;   /* teal 600        */
+    --av-col-amber-bg:     #d97706;   /* amber 600       */
+
     --topbar-zone-hover-bg:    rgba(255,255,255,0.04);   /* Zone frame hover bg dark                    */
     --topbar-zone-hover-bd:    rgba(43,127,255,0.45);    /* Zone frame hover border dark                */
     --topbar-menu-bg:          rgba(22,22,22,1.00);      /* Dropdown bg dark = Surface/Neutral/Elevated */
@@ -344,6 +361,16 @@
     --modal-surface-blur: blur(10px);             /* DS backdrop-filter on modal card          */
     --modal-border:       rgba(255,255,255,0.15); /* Border rim — white/15 (Figma VariableID:4465:4449 dark = 0.15) */
     --modal-scrim:        rgba(0,0,0,0.65);       /* Overlay/Scrim dark = 65% opacity + blur   */
+    --el-avatar-ring:     rgba(128,175,255,0.50); /* Entity list avatar ring dark               */
+    --signout-hover-bg:   rgba(239,68,68,0.07);   /* Sign out row hover bg dark                 */
+    --signout-icon:       rgba(239,68,68,0.65);   /* Sign out icon color dark                   */
+    --signout-text:       rgba(239,68,68,0.85);   /* Sign out text color dark                   */
+    --fc-trigger-active-bg: rgba(33,115,255,0.10); /* FiltersCard trigger btn active bg dark    */
+    --priority-critical:  #f87171;   /* Priority dot Critical dark — red-400    */
+    --priority-high:      #fb923c;   /* Priority dot High dark    — orange-400  */
+    --priority-medium:    #fbbf24;   /* Priority dot Medium dark  — amber-400   */
+    --priority-low:       #4ade80;   /* Priority dot Low dark     — green-400   */
+    --gs-scrim:           rgba(0,0,0,0.45); /* Global Search backdrop scrim dark */
     --modal-icon-bg:      rgba(43,127,255,0.12);  /* Icon circle bg — primary/12 dark          */
     --modal-icon-color:   #80afff;                /* Icon color — Primary/Lighter dark         */
     --modal-slot-bg:      rgba(255,255,255,0.04); /* Slot content zone bg                      */
@@ -360,6 +387,26 @@
     --ic-error-bg:         rgba(220,38,38,0.12);    --ic-error-icon:       #FF9898;  --ic-error-text:       #ff6467;
     --ic-success-bg:       rgba(0,169,127,0.12);    --ic-success-icon:     #70EDD8;  --ic-success-text:     #70EDD8;
     --ic-neutral-bg:       rgba(255,255,255,0.08);  --ic-neutral-icon:     rgba(255,255,255,0.70); --ic-neutral-text: rgba(255,255,255,0.70);
+
+    /* ── Alert Banner — dark ────────────────────────────────────────────────── */
+    /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · node 13892:34 (Dark Mode Preview) */
+    /* Backgrounds are SOLID dark colors — not rgba overlays */
+    --ab-error-bg:      #2d1515;                  /* Surface/Error/More Subtle dark    */
+    --ab-error-bd:      transparent;              /* solid bg is sufficient            */
+    --ab-error-icon:    #ff6467;                  /* Text/Error dark = tag-error-fg    */
+    --ab-error-text:    #ff6467;                  /* Text/Error dark                   */
+
+    --ab-success-bg:    #0a1f1a;                  /* Surface/Success/More Subtle dark  */
+    --ab-success-bd:    transparent;
+    --ab-success-icon:  #6ee7b7;                  /* Text/Success dark = tag-success-fg */
+    --ab-success-text:  #6ee7b7;
+
+    --ab-alert-bg:      #2d1a08;                  /* Surface/Alert/Subtle dark         */
+    --ab-alert-bd:      transparent;
+    --ab-alert-icon:    #fcd34d;                  /* Text/Alert dark = tag-alert-fg    */
+    --ab-alert-text:    #fcd34d;
+
+    --ab-cta-text:      rgba(255,255,255,0.60);   /* Text/Label dark — CTA + close btn */
 
     /* ── Sidebar — dark ──────────────────────────────────────────────────── */
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Sidebar page · variable bindings resolved */
@@ -465,6 +512,9 @@
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI Semantic Color Tokens — Primary mode */
     --field-bg:              #ffffff;                 /* Surface/Neutral/White light  */
     --field-border:          #5c5c5c;                 /* Border/Neutral/Default light */
+    --ctrl-inactive-bg:      rgba(0,0,0,0.07);        /* CtrlGroup pill inactive — light          */
+    --row-alt-bg:            rgba(0,0,0,0.03);         /* Table/list alternating row  — light     */
+    --code-bg:               rgba(0,0,0,0.08);        /* Inline code + icon preview boxes — light */
     --field-border-hover:    #2a2a2a;                 /* Border/Neutral/Darker light  */
     --field-border-focus:    #2173ff;                 /* Border/Primary/Default light */
     --field-text:            #2a2a2a;                 /* Text/Subtitle light          */
@@ -524,6 +574,7 @@
     --btn-positive-hover-bg:   #003328;
     --btn-positive-active-bg:  #001f18;
     --btn-positive-ring:       #00a07e;
+    --btn-main-ring:           #cbfff4;   /* Main Action focus ring light — DS Border/Success/Subtle */
 
     /* ── Card Container tokens — light ──────────────────── */
     /* Default / White Opacity — Surface/Neutral/White light + Border/Neutral/Lighter light */
@@ -723,6 +774,19 @@
     --topbar-search-border:    rgba(186,186,186,1.00);   /* Border/Neutral/Lighter light  = Gray/500   */
     --topbar-badge-bg:         rgba(211,47,47,1.00);     /* Error/Notification light      = #d32f2f    */
     --topbar-avatar-ring:      rgba(128,175,255,1.00);   /* Border/Primary/Lighter light  = #80afff    */
+
+    /* ── Avatar — color variants — light ─────────────────────────── */
+    --av-col-blue-bg:      #1a5fd4;   /* primary darker   */
+    --av-col-green-bg:     #047857;   /* emerald 700      */
+    --av-col-red-bg:       #b91c1c;   /* red 700          */
+    --av-col-orange-bg:    #9a3412;   /* orange 800       */
+    --av-col-purple-bg:    #6d28d9;   /* violet 700       */
+    --av-col-limegreen-bg: #3f6212;   /* lime 800         */
+    --av-col-lightblue-bg: #0369a1;   /* sky 700          */
+    --av-col-pink-bg:      #9d174d;   /* pink 800         */
+    --av-col-teal-bg:      #0f766e;   /* teal 700         */
+    --av-col-amber-bg:     #92400e;   /* amber 800        */
+
     --topbar-zone-hover-bg:    rgba(0,0,0,0.03);         /* Zone frame hover bg light                   */
     --topbar-zone-hover-bd:    rgba(43,127,255,0.45);    /* Zone frame hover border light               */
     --topbar-menu-bg:          rgba(255,255,255,1.00);   /* Dropdown bg light                           */
@@ -746,6 +810,16 @@
     --modal-surface-blur: none;                  /* No blur on light mode modal surface        */
     --modal-border:       #BABABA;               /* Border — VariableID:4465:4449 light = rgb(186,186,186) */
     --modal-scrim:        rgba(0,0,0,0.50);      /* Overlay/Scrim light = 50% opacity + blur   */
+    --el-avatar-ring:     rgba(128,175,255,0.80); /* Entity list avatar ring light              */
+    --signout-hover-bg:   rgba(239,68,68,0.07);   /* Sign out row hover bg light                */
+    --signout-icon:       rgba(210,47,47,0.65);   /* Sign out icon color light                  */
+    --signout-text:       rgba(210,47,47,0.85);   /* Sign out text color light                  */
+    --fc-trigger-active-bg: rgba(33,115,255,0.08); /* FiltersCard trigger btn active bg light   */
+    --priority-critical:  #ef4444;   /* Priority dot Critical light — red-500   */
+    --priority-high:      #f97316;   /* Priority dot High light    — orange-500 */
+    --priority-medium:    #f59e0b;   /* Priority dot Medium light  — amber-400  */
+    --priority-low:       #22c55e;   /* Priority dot Low light     — green-500  */
+    --gs-scrim:           rgba(0,0,0,0.25); /* Global Search backdrop scrim light */
     --modal-icon-bg:      #E9F1FF;               /* Icon circle bg — Primary/100 light         */
     --modal-icon-color:   #2173ff;               /* Icon color — Primary/Default light         */
     --modal-slot-bg:      #F5F6FA;               /* Slot content zone bg — surface raised      */
@@ -762,6 +836,25 @@
     --ic-error-bg:         #FDEDED;   --ic-error-icon:       #992222;  --ic-error-text:       #5F2120;
     --ic-success-bg:       #E5FDF8;   --ic-success-icon:     #00A07E;  --ic-success-text:     #003328;
     --ic-neutral-bg:       #F2F2F2;   --ic-neutral-icon:     #2A2A2A;  --ic-neutral-text:     #2A2A2A;
+
+    /* ── Alert Banner — light ───────────────────────────────────────────────── */
+    /* Light mode uses subtle tint backgrounds — borders needed to define edges */
+    --ab-error-bg:      #fdeded;                  /* Surface/Error/More Subtle light = tag-error-bg  */
+    --ab-error-bd:      rgba(153,34,34,0.25);     /* Border/Error tint                               */
+    --ab-error-icon:    #992222;                  /* Icon/Error/Default light = tag-error-bd         */
+    --ab-error-text:    #5f2120;                  /* Text/Error light = tag-error-fg                 */
+
+    --ab-success-bg:    #e5fdf8;                  /* Surface/Success/More Subtle light = tag-success-bg */
+    --ab-success-bd:    rgba(0,153,120,0.25);     /* Border/Success tint                             */
+    --ab-success-icon:  #009978;                  /* Icon/Success/Default light = tag-success-bd     */
+    --ab-success-text:  #003328;                  /* Text/Success light = tag-success-fg             */
+
+    --ab-alert-bg:      #ffeedb;                  /* Surface/Alert/More Subtle light = tag-alert-bg  */
+    --ab-alert-bd:      rgba(180,83,9,0.25);      /* Border/Alert tint                               */
+    --ab-alert-icon:    #b45309;                  /* Icon/Alert/Default light                        */
+    --ab-alert-text:    #663c00;                  /* Text/Alert light = tag-alert-fg dark             */
+
+    --ab-cta-text:      rgba(0,0,0,0.55);         /* Text/Label light — CTA + close btn              */
 
     /* ── Sidebar — light ─────────────────────────────────────────────────── */
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Sidebar page · variable bindings resolved */

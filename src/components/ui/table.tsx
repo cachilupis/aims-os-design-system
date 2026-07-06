@@ -1,6 +1,8 @@
 import { type ReactNode } from "react"
+import { type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
+import { EmptyState } from "@/components/ui/empty-state"
 
 /**
  * Table — AIMS OS Design System
@@ -40,14 +42,19 @@ export type TableColumn<T extends object> = {
 export type TableSize = "default" | "sm"
 
 export type TableProps<T extends object> = {
-  columns:       TableColumn<T>[]
-  data:          T[]
-  size?:         TableSize
-  selectable?:   boolean
-  selectedRows?: Set<number>
-  onRowSelect?:  (index: number, checked: boolean) => void
-  onSelectAll?:  (allChecked: boolean) => void
-  className?:    string
+  columns:            TableColumn<T>[]
+  data:               T[]
+  size?:              TableSize
+  selectable?:        boolean
+  selectedRows?:      Set<number>
+  onRowSelect?:       (index: number, checked: boolean) => void
+  onSelectAll?:       (allChecked: boolean) => void
+  className?:         string
+  emptyIcon?:         LucideIcon
+  emptyTitle?:        string
+  emptyDescription?:  string
+  emptyCtaLabel?:     string
+  onEmptyCta?:        () => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -55,11 +62,16 @@ export type TableProps<T extends object> = {
 function Table<T extends object,>({
   columns,
   data,
-  size         = "default",
-  selectable   = false,
-  selectedRows = new Set<number>(),
+  size              = "default",
+  selectable        = false,
+  selectedRows      = new Set<number>(),
   onRowSelect,
   onSelectAll,
+  emptyIcon,
+  emptyTitle        = "No data yet",
+  emptyDescription  = "Nothing to display here yet.",
+  emptyCtaLabel,
+  onEmptyCta,
   className,
 }: TableProps<T>) {
   const isSm = size === "sm"
@@ -125,9 +137,17 @@ function Table<T extends object,>({
             <tr>
               <td
                 colSpan={selectable ? columns.length + 1 : columns.length}
-                className={cn(tdClass, "text-center text-[var(--field-placeholder)]")}
+                className="p-0"
               >
-                No data
+                <EmptyState
+                  icon={emptyIcon}
+                  showIcon={!!emptyIcon}
+                  title={emptyTitle}
+                  description={emptyDescription}
+                  ctaLabel={emptyCtaLabel}
+                  onCta={onEmptyCta}
+                  className="py-[48px] rounded-none"
+                />
               </td>
             </tr>
           ) : (
@@ -190,19 +210,6 @@ export { Table }
 // Pre-built renderers matching DS Table-content variants (COMPONENT_SET 4687:5139).
 // Use inside column.render() callbacks.
 
-const AVATAR_COLORS = [
-  { bg: "var(--tag-informative-bg)", fg: "var(--tag-informative-fg)" },
-  { bg: "var(--tag-success-bg)",     fg: "var(--tag-success-fg)"     },
-  { bg: "var(--tag-purple-bg)",      fg: "var(--tag-purple-fg)"      },
-  { bg: "var(--tag-alert-bg)",       fg: "var(--tag-alert-fg)"       },
-  { bg: "var(--tag-lightblue-bg)",   fg: "var(--tag-lightblue-fg)"   },
-  { bg: "var(--tag-limegreen-bg)",   fg: "var(--tag-limegreen-fg)"   },
-] as const
-
-function avatarColors(name: string) {
-  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]
-}
-
 // ── TableCellLink — DS variant: Link-text=Yes ─────────────────────────────────
 
 export type TableCellLinkProps = { children: ReactNode; onClick?: () => void }
@@ -223,19 +230,27 @@ export function TableCellLink({ children, onClick }: TableCellLinkProps) {
 
 // ── TableCellAvatar — DS variant: Avatars=Yes ─────────────────────────────────
 
+const AV_COLOR_KEYS = ["blue","green","red","orange","purple","limegreen","lightblue"]
+const nameToAvColor = (n: string) => {
+  const h = n.split("").reduce((a, c) => ((a * 31) + c.charCodeAt(0)) >>> 0, 0)
+  return AV_COLOR_KEYS[h % AV_COLOR_KEYS.length]
+}
+
 export type TableCellAvatarProps = { name: string; src?: string; size?: TableSize }
 
 export function TableCellAvatar({ name, src, size = "default" }: TableCellAvatarProps) {
   const px       = size === "sm" ? 20 : 24
   const fs       = size === "sm" ? 8  : 9
   const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
-  const { bg, fg } = avatarColors(name)
+  const colorKey = nameToAvColor(name)
   return (
     <div
       style={{
         width: px, height: px, borderRadius: "50%", flexShrink: 0,
-        background: src ? undefined : bg, color: fg,
-        fontSize: fs, fontWeight: 700, lineHeight: 1,
+        background: src ? undefined : `var(--av-col-${colorKey}-bg)`,
+        color: "#ffffff",
+        border: "1px solid var(--topbar-avatar-ring)",
+        fontSize: fs, fontWeight: 600, lineHeight: 1,
         display: "flex", alignItems: "center", justifyContent: "center",
         overflow: "hidden",
       }}
