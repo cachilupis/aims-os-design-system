@@ -8,9 +8,11 @@ import { CardContainer, type CardVariant } from "@/components/ui/card-container"
 import { Tag, type TagVariant } from "@/components/ui/tag"
 import { Menu, MenuItem, MenuDivider, MenuSection } from "@/components/ui/menu-item"
 import { HighlightIcon, type HighlightIconVariant, type HighlightIconSize } from "@/components/ui/highlight-icon"
+import { HighlightCard, type HighlightCardStyle } from "@/components/ui/highlight-card"
 import { Select, type SelectState } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Toggle } from "@/components/ui/toggle"
+import { AppBackground, type AppBgVariant } from "@/components/ui/app-background"
 import {
   Table,
   TableCellLink,
@@ -31,11 +33,13 @@ import { FiltersSlideout } from "@/components/ui/filters-slideout"
 import { AlertBanner, type AlertBannerState } from "@/components/ui/alert-banner"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, type TooltipSide } from "@/components/ui/tooltip"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "topbar" | "typography"
-type SpecModal = "alert-banner" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "select" | "sidebar" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography"
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -96,11 +100,13 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
   { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
   { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
+  { id: "highlight-card",  label: "Highlight Card",    group: "Components",  description: "KPI metric card for dashboards · 9 background styles · Default & Disabled states · --hc-* token family · auto dark mode" },
   { id: "highlight-icon",  label: "Highlight Icon",    group: "Components",  description: "Rounded semantic icon container · 3 sizes · 9 color variants · used as leading slot in Menu items" },
   { id: "informative-card",label: "Informative Card",  group: "Components",  description: "Horizontal notice surface. 5 semantic states · 3 sizes · optional description + CTA. Uses --ic-* token family." },
   { id: "input",           label: "Input",             group: "Components",  description: "Single-line text field · 2 sizes · 5 validation states · icon slots" },
   { id: "menu-item",       label: "Menu / Dropdown",   group: "Components",  description: "Dropdown list panel · 2 sizes · 4 states · leading icon, subtext, dividers, section headers" },
   { id: "modal-dialog",    label: "Modal Dialog",      group: "Components",  description: "2 variants: Confirmation (centered, max 900px) and Content (left-aligned, max 900px). Icon, title, description, slot, informative card, CTA pair." },
+  { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "sidebar",         label: "Sidebar",           group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
   { id: "table",           label: "Table",             group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
@@ -108,8 +114,10 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
   { id: "textarea",        label: "Text Description",  group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
   { id: "toggle",          label: "Toggle",            group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
+  { id: "tooltip",         label: "Tooltip",           group: "Components",  description: "Informational overlay on hover/focus · always dark · plain or arrow variant · 4 sides · max 300px width · 2 lines max" },
   { id: "topbar",          label: "Topbar",            group: "Components",  description: "Global navigation bar · 2 variants (Default/Tablet) · workspace, search, action buttons, profile" },
   // Foundations — alphabetical by label
+  { id: "app-background", label: "App Background", group: "Foundations", description: "Full-screen gradient background layer · light radial / dark linear · 7 contextual color variants · fixed -z-10" },
   { id: "breakpoints", label: "Breakpoints", group: "Foundations", description: "5-tier responsive system · XL/L/M/S/XS · column grid, gutter and margin specs per breakpoint · sidebar behavior rules" },
   { id: "colors",        label: "Colors",         group: "Foundations", description: "Primitive palette + 162 semantic tokens · light & dark mode · Surface, Border, Text, Icon, Badge" },
   { id: "corner-radius", label: "Corner Radius",  group: "Foundations", description: "8-token radius scale · none/XS/S/M/L/XL/XXL/Full · component mapping · do/don't guidelines" },
@@ -1078,6 +1086,69 @@ const TOPBAR_SPEC = {
   ],
 }
 
+const HIGHLIGHT_CARD_SPEC = {
+  name: "Highlight Card",
+  figmaNodeId: "6399:21296",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=6399-21296",
+  description: "Compact KPI metric card for dashboards. Displays a label, large numeric value, optional unit, optional trend feedback, and a contextual icon. 9 background styles × 2 states = 18 variants.",
+  properties: [
+    { name: "Styte",  type: "Variant", values: ["Default","Primary BG","Green BG","Orange BG","Yellow BG","Purple BG","Light Blue BG","Lime Green BG","Red"], default: '"Default"', note: "Controls card bg + HighlightIcon variant. Note: 'Styte' is a typo in Figma" },
+    { name: "State",  type: "Variant", values: ["Default","Disabled"], default: '"Default"', note: "Disabled = opacity 40% + pointer-events none on the whole card" },
+  ],
+  sizes: [
+    { size: "Card",  dimensions: "236×auto",  padding: "16px",  radius: "12px",  gap: "8px between rows" },
+    { size: "Icon",  dimensions: "40×40px",   padding: "8px",   radius: "8px",   gap: "HighlightIcon size L" },
+  ],
+  typography: [
+    { element: "Label",    family: "Inter", size: "14px", weight: "500 Medium",   lineHeight: "auto" },
+    { element: "Value",    family: "Inter", size: "20px", weight: "600 Semibold", lineHeight: "none (leading-none)" },
+    { element: "Unit",     family: "Inter", size: "12px", weight: "500 Medium",   lineHeight: "auto" },
+    { element: "Feedback", family: "Inter", size: "12px", weight: "500 Medium",   lineHeight: "auto" },
+  ],
+  variants: [
+    {
+      name: "Component Tokens — --hc-* family",
+      description: "All component-level tokens alias canonical DS semantic tokens. Used in highlight-card.tsx — zero hardcoded hex.",
+      cssPrefix: "hc",
+      tokens: [
+        { role: "Card bg (default)",   variable: "--hc-bg → Surface/Neutral/White",           varId: "", light: "#FFFFFF",    dark: "#131C2E (surface-raised)" },
+        { role: "Label text",          variable: "--hc-text-label → Text/Subtitle",            varId: "", light: "#8C8C8C",    dark: "rgba(255,255,255,0.40)" },
+        { role: "Value text",          variable: "--hc-text-value → Text/Body",                varId: "", light: "#1A1A1A",    dark: "rgba(255,255,255,0.80)" },
+        { role: "Feedback + Unit",     variable: "--hc-text-feedback → Text/Placeholder",      varId: "", light: "#8C8C8C",    dark: "rgba(255,255,255,0.40)" },
+        { role: "Icon fill",           variable: "--hc-icon-fill → Icon/Primary/Dark",         varId: "", light: "#001740",    dark: "#2B7FFF" },
+        { role: "Icon circle bg",      variable: "--hc-icon-bg → Surface/Primary/Lighter",     varId: "", light: "#E9F1FF",    dark: "rgba(33,115,255,0.15)" },
+        { role: "Card border",         variable: "--color-border-neutral-lighter",             varId: "", light: "#E8E8E8",    dark: "rgba(255,255,255,0.08)" },
+        { role: "Positive feedback",   variable: "--color-text-success → Text/Success",        varId: "", light: "#003328",    dark: "#6ee7b7" },
+        { role: "Negative feedback",   variable: "--color-text-error → Text/Error",            varId: "", light: "#5f2120",    dark: "#ff6467" },
+      ],
+    },
+    {
+      name: "Style Variant BG + Border",
+      description: "9 background styles. Each colored variant has a semantic border token. Default uses neutral border; Primary uses primary border.",
+      tokens: [
+        { role: "Default BG",           variable: "--hc-bg → Surface/Neutral/White",             varId: "", light: "#FFFFFF",  dark: "#131C2E" },
+        { role: "Default border",        variable: "--color-border-neutral-lighter",              varId: "", light: "#E8E8E8",  dark: "rgba(255,255,255,0.08)" },
+        { role: "Primary BG",            variable: "--color-surface-primary-subtle",              varId: "", light: "#E9F1FF",  dark: "rgba(33,115,255,0.15)" },
+        { role: "Primary border",        variable: "--color-border-primary-default",              varId: "", light: "#2173FF",  dark: "#2B7FFF" },
+        { role: "Green BG",              variable: "--color-surface-success-subtle",              varId: "", light: "#E5FDF8",  dark: "rgba(0,169,127,0.15)" },
+        { role: "Green border",          variable: "--color-border-success-default",              varId: "", light: "#00A07E",  dark: "#00A07E" },
+        { role: "Orange BG",             variable: "--color-surface-alert-subtle",                varId: "", light: "#FFF4E5",  dark: "rgba(217,119,6,0.15)" },
+        { role: "Orange border",         variable: "--color-border-alert-default",                varId: "", light: "#ED6C02",  dark: "#ED6C02" },
+        { role: "Yellow BG",             variable: "--color-surface-yellow-subtle",               varId: "", light: "#FFFAF0",  dark: "rgba(202,138,4,0.14)" },
+        { role: "Yellow border",         variable: "--color-border-yellow-default",               varId: "", light: "#ED6C02",  dark: "#ED6C02" },
+        { role: "Purple BG",             variable: "--color-surface-purple-subtle",               varId: "", light: "#F3E9FD",  dark: "rgba(124,58,237,0.14)" },
+        { role: "Purple border",         variable: "--color-border-purple-default",               varId: "", light: "#7B27ED",  dark: "#7B27ED" },
+        { role: "Light Blue BG",         variable: "--color-surface-light-blue-subtle",           varId: "", light: "#E5F8FF",  dark: "rgba(2,132,199,0.14)" },
+        { role: "Light Blue border",     variable: "--color-border-light-blue-default",           varId: "", light: "#00B5D9",  dark: "#00B5D9" },
+        { role: "Lime BG",               variable: "--color-surface-lime-subtle",                 varId: "", light: "#F9FEE5",  dark: "rgba(101,163,13,0.14)" },
+        { role: "Lime border",           variable: "--color-border-lime-green-default",           varId: "", light: "#A0DA1D",  dark: "#A0DA1D" },
+        { role: "Red BG",                variable: "--color-surface-error-subtle",                varId: "", light: "#FDEDED",  dark: "rgba(220,38,38,0.14)" },
+        { role: "Red border",            variable: "--color-border-error-default",                varId: "", light: "#992222",  dark: "#992222" },
+      ],
+    },
+  ],
+}
+
 const INFORMATIVE_CARD_SPEC = {
   name: "Informational Card",
   figmaNodeId: "8057:1259",
@@ -1604,6 +1675,53 @@ const TYPOGRAPHY_SPEC = {
   ],
 }
 
+const APP_BACKGROUND_SPEC = {
+  name: "App Background",
+  figmaNodeId: "12655:211429",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=12655-211429",
+  description: "Fixed full-screen gradient background layer. Switches light↔dark automatically via two FLOAT opacity variables bound to each gradient layer. Contextual variants are always light — no dark mode switching.",
+  properties: [
+    { name: "variant",   type: "Variant", values: ["default","green","red","orange","yellow","purple","light-blue","lime"], default: "default", note: "Default switches automatically. Contextual variants are always light." },
+    { name: "className", type: "String",  values: ["string"],                                                               default: "—",       note: "Additional classes on the fixed background div." },
+  ],
+  sizes: [],
+  typography: [],
+  variants: [
+    {
+      name: "Mode-aware default",
+      description: "Two stacked gradient layers with FLOAT opacity variables. Switching Primitives Tokens mode swaps them automatically.",
+      cssPrefix: "--app-bg",
+      tokens: [
+        { role: "Dark mode gradient",   variable: "--app-bg",          varId: "App Background/Dark",  light: "—",                                                           dark: "linear-gradient(144deg, #020618 0%, #0F172B 50%, #020618 100%)" },
+        { role: "Light mode gradient",  variable: "--app-bg (.light)", varId: "Primary Color BG",     light: "radial-gradient(circle at 50% 0%, #F6F9FF 0%, #FFFFFF 80%)", dark: "—" },
+      ],
+    },
+    {
+      name: "Figma variable system — FLOAT opacity",
+      description: "Layer OPACITY (not fill opacity) is bound to these FLOAT variables (0–100 scale) from the Primitives Tokens collection.",
+      cssPrefix: "BG/*-Opacity",
+      tokens: [
+        { role: "BG/Light-Opacity", variable: "Layer opacity (Light BG)", varId: "Primitives Tokens", light: "100 (visible)", dark: "0 (hidden)"  },
+        { role: "BG/Dark-Opacity",  variable: "Layer opacity (Dark BG)",  varId: "Primitives Tokens", light: "0 (hidden)",    dark: "100 (visible)" },
+      ],
+    },
+    {
+      name: "Contextual variants (always light)",
+      description: "Applied directly as fill — no dark mode switching. Use for mood-specific screens only.",
+      cssPrefix: "--app-bg-*",
+      tokens: [
+        { role: "Green",      variable: "--app-bg-green",      varId: "Green BG",      light: "radial-gradient(circle at 50% 0%, #E5FDF8 0%, #FFFFFF 80%)", dark: "static" },
+        { role: "Red",        variable: "--app-bg-red",        varId: "Red BG",        light: "radial-gradient(circle at 50% 0%, #FDECED 0%, #FFFFFF 80%)", dark: "static" },
+        { role: "Orange",     variable: "--app-bg-orange",     varId: "Orange BG",     light: "radial-gradient(circle at 50% 0%, #FFF4E5 0%, #FFFFFF 80%)", dark: "static" },
+        { role: "Yellow",     variable: "--app-bg-yellow",     varId: "Yellow BG",     light: "radial-gradient(circle at 50% 0%, #FFFAF0 0%, #FFFFFF 80%)", dark: "static" },
+        { role: "Purple",     variable: "--app-bg-purple",     varId: "Purple BG",     light: "radial-gradient(circle at 50% 0%, #F3E9FD 0%, #FFFFFF 80%)", dark: "static" },
+        { role: "Light Blue", variable: "--app-bg-light-blue", varId: "Light Blue BG", light: "radial-gradient(circle at 50% 0%, #E5F8FF 0%, #FFFFFF 80%)", dark: "static" },
+        { role: "Lime",       variable: "--app-bg-lime",       varId: "Lime Green BG", light: "radial-gradient(circle at 50% 0%, #F9FEE5 0%, #FFFFFF 80%)", dark: "static" },
+      ],
+    },
+  ],
+}
+
 const BREAKPOINTS_SPEC = {
   name: "Breakpoints",
   figmaNodeId: "6729:35011",
@@ -1774,7 +1892,7 @@ const TABS_SPEC = {
   name: "Tabs",
   figmaNodeId: "856:11281",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=856-11281",
-  description: "Horizontal tab bar for switching between related views within the same context. Use inside CardContainer for card/panel nav, or standalone for page-level and modal-level switching. Active state: primary-blue indicator + label. Supports leading icon, disabled state, and two sizes (M/S).",
+  description: "Horizontal tab bar for switching between related views within the same context. Sits directly on any surface — no CardContainer needed. Active state: primary-blue 2px indicator + label. Supports leading icon, disabled state, and two sizes (M/S).",
   properties: [
     { name: "items",     type: "Array",    values: ["TabItem[]"],       default: "required",   note: "id · label · icon? · disabled?" },
     { name: "activeId",  type: "String",   values: ["string"],          default: "required",   note: "ID of the currently selected tab" },
@@ -1783,13 +1901,93 @@ const TABS_SPEC = {
     { name: "className", type: "String",   values: ["string"],          default: "undefined",  note: "Extra Tailwind classes applied to the tablist container" },
   ],
   sizes: [
-    { element: "Tab M",     padding: "10×16px", gap: "6px", radius: "0px",   note: "Default · icon 16px · 14px label" },
-    { element: "Tab S",     padding: "8×12px",  gap: "4px", radius: "0px",   note: "Compact · icon 14px · 12px label" },
-    { element: "Indicator", padding: "—",       gap: "—",   radius: "—",     note: "2px border-bottom · active tab only · mb-[-1px] overlap" },
+    { element: "Tab M",     padding: "10×16px", gap: "6px", radius: "8px", note: "Default · icon 16px · 14px label" },
+    { element: "Tab S",     padding: "8×12px",  gap: "4px", radius: "8px", note: "Compact · icon 14px · 12px label" },
+    { element: "Indicator", padding: "—",       gap: "—",   radius: "0",   note: "2px · active tab only · bottom-[-1px] · abs positioned" },
   ],
   typography: [
     { element: "Label M", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
     { element: "Label S", family: "Inter", size: "12px", weight: "Medium (500)", lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
+  ],
+  states: [
+    { name: "Active",   borderWidth: "indicator 2px", tokens: [
+      { role: "Label",     variable: "Border/Primary/Default",  varId: "", light: "#2173ff",              dark: "#2b7fff"               },
+      { role: "Indicator", variable: "Border/Primary/Default",  varId: "", light: "#2173ff",              dark: "#2b7fff"               },
+    ]},
+    { name: "Default",  borderWidth: "—", tokens: [
+      { role: "Label",     variable: "Text/Body",               varId: "", light: "#5c5c5c",              dark: "rgba(255,255,255,0.60)" },
+    ]},
+    { name: "Hover",    borderWidth: "—", tokens: [
+      { role: "Background",variable: "Surface/Neutral/Subtle",  varId: "", light: "#fafafa",              dark: "rgba(255,255,255,0.06)" },
+      { role: "Label",     variable: "Text/Title",              varId: "", light: "#1a1a1a",              dark: "rgba(255,255,255,0.80)" },
+    ]},
+    { name: "Disabled", borderWidth: "opacity 40%", tokens: [
+      { role: "Label ×0.4",variable: "Text/Body",               varId: "", light: "#5c5c5c",              dark: "rgba(255,255,255,0.60)" },
+    ]},
+  ],
+}
+
+const SCROLL_AREA_SPEC = {
+  name: "Scroll Area",
+  figmaNodeId: "4838:8343",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4838-8343",
+  description: "Scrollable container with a DS-branded 4px custom scrollbar (Size S only). Thumb is hidden by default and appears on container hover. Always maintain 8px (Spacing/2x) between the scrollbar and the scrollable content. Supports vertical, horizontal, or both axes.",
+  properties: [
+    { name: "children",  type: "ReactNode", values: ["ReactNode"],                default: "required", note: "Content to scroll." },
+    { name: "axis",      type: "Variant",   values: ["y", "x", "both"],           default: "y",        note: '"y" = vertical · "x" = horizontal · "both" = 2D.' },
+    { name: "className", type: "String",    values: ["string"],                   default: "—",        note: "Add h-[N] for vertical scroll, pr-[8px] or pb-[8px] for gap." },
+    { name: "style",     type: "Object",    values: ["React.CSSProperties"],      default: "—",        note: "Inline styles for the container div." },
+  ],
+  sizes: [
+    { element: "Scrollbar width",  padding: "—",  gap: "—",   radius: "100px", note: "Fixed 4px — Size S only. M size deprecated." },
+    { element: "Gap to content",   padding: "8px", gap: "—",  radius: "—",     note: "Spacing/2x · apply pr-[8px] (vertical) or pb-[8px] (horizontal)." },
+  ],
+  typography: [],
+  states: [
+    { name: "Thumb · Default (hidden)", borderWidth: "—", tokens: [
+      { role: "Thumb", variable: "transparent",              varId: "", light: "transparent",            dark: "transparent"           },
+    ]},
+    { name: "Thumb · Container hover",  borderWidth: "4px", tokens: [
+      { role: "Thumb", variable: "Surface/Neutral/Emphasis", varId: "", light: "#d9d9d9",               dark: "rgba(255,255,255,0.20)" },
+    ]},
+    { name: "Thumb · Thumb hover",      borderWidth: "4px", tokens: [
+      { role: "Thumb", variable: "Surface/Neutral/Focus",   varId: "", light: "#bababa",               dark: "rgba(255,255,255,0.32)" },
+    ]},
+  ],
+}
+
+const TOOLTIP_SPEC = {
+  name: "Tooltip",
+  figmaNodeId: "4614:5319",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4614-5319",
+  description: "Small informational overlay that appears on hover or focus. Always dark (Surface/Neutral/Darker) regardless of light/dark mode — inverted style. Two variants: plain (no arrow) and with directional arrow pointer. Max recommended width: 300px.",
+  properties: [
+    { name: "content",   type: "String",  values: ["string"],                              default: "required",  note: "Tooltip text. Keep to 1–3 lines max (300px wide)." },
+    { name: "arrow",     type: "Boolean", values: ["false", "true"],                        default: "false",     note: "Show directional arrow pointer toward trigger element." },
+    { name: "side",      type: "Variant", values: ["top", "right", "bottom", "left"],       default: "top",       note: "Which side of the trigger the tooltip appears on." },
+    { name: "children",  type: "ReactNode", values: ["ReactNode"],                          default: "required",  note: "Trigger element — typically a button or icon." },
+    { name: "className", type: "String",  values: ["string"],                               default: "—",         note: "Extra classes on the tooltip bubble." },
+  ],
+  sizes: [
+    { element: "Border radius",  padding: "—",    gap: "—",   radius: "4px",   note: "rounded · 4px fixed" },
+    { element: "Padding H",      padding: "12px", gap: "—",   radius: "—",     note: "px-3 · Spacing/3x" },
+    { element: "Padding V",      padding: "8px",  gap: "—",   radius: "—",     note: "py-2 · Spacing/2x" },
+    { element: "Max width",      padding: "—",    gap: "—",   radius: "—",     note: "300px — use ellipsis if content would exceed 2 lines" },
+    { element: "Trigger gap",    padding: "—",    gap: "8px", radius: "—",     note: "mb-2 / mt-2 / mr-2 / ml-2 · 8px between trigger and bubble" },
+  ],
+  typography: [],
+  states: [
+    { name: "Container", borderWidth: "0px", tokens: [
+      { role: "Background",    variable: "--color-surface-neutral-darker", varId: "Surface/Neutral/Darker", light: "#111827", dark: "#111827" },
+      { role: "Text color",    variable: "--color-text-negative",          varId: "Text/Negative",          light: "#ffffff",  dark: "#ffffff" },
+      { role: "Arrow fill",    variable: "--color-surface-neutral-darker", varId: "Surface/Neutral/Darker", light: "#111827", dark: "#111827" },
+    ]},
+    { name: "Typography", borderWidth: "—", tokens: [
+      { role: "Font size",     variable: "text-sm",                        varId: "—", light: "14px",   dark: "14px" },
+      { role: "Font weight",   variable: "font-medium",                    varId: "—", light: "500",    dark: "500" },
+      { role: "Line height",   variable: "leading-5",                      varId: "—", light: "20px",   dark: "20px" },
+      { role: "Text color",    variable: "--tooltip-text (Text/Negative)", varId: "—", light: "#ffffff", dark: "#ffffff" },
+    ]},
   ],
 }
 
@@ -1801,6 +1999,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "textarea")         return TEXTAREA_SPEC         as AnySpec
   if (id === "tag")              return TAG_SPEC              as AnySpec
   if (id === "menu-item")        return MENU_SPEC             as AnySpec
+  if (id === "highlight-card")   return HIGHLIGHT_CARD_SPEC   as AnySpec
   if (id === "highlight-icon")   return HIGHLIGHT_ICON_SPEC   as AnySpec
   if (id === "select")           return SELECT_SPEC           as AnySpec
   if (id === "checkbox")         return CHECKBOX_SPEC         as AnySpec
@@ -1809,12 +2008,15 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "topbar")           return TOPBAR_SPEC           as AnySpec
   if (id === "sidebar")          return SIDEBAR_SPEC          as AnySpec
   if (id === "alert-banner")     return ALERT_BANNER_SPEC     as AnySpec
+  if (id === "app-background")   return APP_BACKGROUND_SPEC   as AnySpec
   if (id === "entity-list")      return ENTITY_LIST_SPEC      as AnySpec
   if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
   if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
   if (id === "filters")          return FILTERS_SPEC          as AnySpec
   if (id === "empty-state")      return EMPTY_STATE_SPEC      as AnySpec
   if (id === "tabs")             return TABS_SPEC             as AnySpec
+  if (id === "scroll-area")     return SCROLL_AREA_SPEC      as AnySpec
+  if (id === "tooltip")         return TOOLTIP_SPEC          as AnySpec
   // Foundation pages
   if (id === "avatar")           return AVATAR_SPEC           as AnySpec
   if (id === "colors")           return COLORS_SPEC           as AnySpec
@@ -2355,6 +2557,9 @@ const DONE_COMPONENTS = [
   { name: "Alert Banner",    complexity: "Simple",  hours: 2,  note: "3 states · optional CTA + dismiss · --ab-* token family" },
   { name: "Empty State",     complexity: "Medium",  hours: 3,  note: "Icon Highlight + title + desc + 1–2 CTAs · compact table/card variant · --es-* tokens" },
   { name: "Tabs",            complexity: "Medium",  hours: 3,  note: "Active indicator · icon · 2 sizes M/S · disabled state" },
+  { name: "Tooltip",         complexity: "Medium",  hours: 3,  note: "4 positions · delay · arrow · --tooltip-* token family · Portal render" },
+  { name: "App Background",  complexity: "Simple",  hours: 2,  note: "4 gradient presets · FLOAT opacity variables · dark-only tokens" },
+  { name: "Highlight Card",  complexity: "Medium",  hours: 4,  note: "9 BG styles · 2 states · --hc-* tokens · dynamic playground · 0.5px semantic borders" },
 ] as const
 
 const REMAINING_PHASES = [
@@ -2371,7 +2576,6 @@ const REMAINING_PHASES = [
     status: "in-progress" as const,
     items: [
       { name: "Toast",            complexity: "Medium",  hours: 3 },
-      { name: "Tooltip",          complexity: "Medium",  hours: 3 },
       { name: "Progress Bar",     complexity: "Simple",  hours: 2 },
       { name: "Skeleton Loader",  complexity: "Medium",  hours: 3 },
     ],
@@ -6991,6 +7195,629 @@ function CheckboxPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   )
 }
 
+// ── TooltipPage ───────────────────────────────────────────────────────────────
+
+function TooltipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  type PageTab = "overview" | "playground" | "reference"
+  const [tab, setTab] = useState<PageTab>("overview")
+
+  const [pgContent, setPgContent] = useState("Click to copy link")
+  const [pgArrow,   setPgArrow]   = useState(false)
+  const [pgSide,    setPgSide]    = useState<TooltipSide>("top")
+
+  const tabItems = [
+    { id: "overview",   label: "Overview" },
+    { id: "playground", label: "Playground" },
+    { id: "reference",  label: "Reference" },
+  ]
+
+  const codeSnippet = `import { Tooltip } from "@/components/ui/tooltip"
+
+{/* Plain tooltip */}
+<Tooltip content="Copy to clipboard">
+  <button>Copy</button>
+</Tooltip>
+
+{/* With arrow, positioned below */}
+<Tooltip content="More information" arrow side="bottom">
+  <button>Info</button>
+</Tooltip>`
+
+  const demoSides: TooltipSide[] = ["top", "right", "bottom", "left"]
+
+  return (
+    <div className="flex flex-col gap-[32px]">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px]">
+        <div className="flex flex-col gap-[8px]">
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Tooltip</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] max-w-[600px]">
+            Small informational overlay appearing on hover or focus. Always dark regardless of theme mode.
+            Two variants: plain (no arrow) and with directional arrow pointer.
+            Maximum recommended width: 300px.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("tooltip")} />
+      </div>
+
+      {/* Tabs */}
+      <Tabs
+        items={tabItems}
+        activeId={tab}
+        onChange={(id) => setTab(id as PageTab)}
+      />
+
+      {/* Overview */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+
+          {/* Plain variant */}
+          <div className="flex flex-col gap-[16px]">
+            <SectionLabel>Plain — no arrow (default)</SectionLabel>
+            <div className="flex flex-wrap items-center gap-[32px] py-[40px] px-[32px]" style={{ background: "var(--surface)", borderRadius: 8, border: "0.5px solid var(--field-border)" }}>
+              <Tooltip content="Copy to clipboard">
+                <button className="px-[16px] py-[8px] rounded-[8px] text-[14px] font-medium text-[var(--foreground)] bg-[var(--field-bg)] border border-[var(--field-border)]">Copy link</button>
+              </Tooltip>
+              <Tooltip content="Remove this item from the list">
+                <button className="px-[16px] py-[8px] rounded-[8px] text-[14px] font-medium text-[var(--foreground)] bg-[var(--field-bg)] border border-[var(--field-border)]">Delete</button>
+              </Tooltip>
+              <Tooltip content="Maximum recommended width is 300px. Content exceeding two lines should use ellipsis.">
+                <button className="px-[16px] py-[8px] rounded-[8px] text-[14px] font-medium text-[var(--foreground)] bg-[var(--field-bg)] border border-[var(--field-border)]">Long tooltip text</button>
+              </Tooltip>
+            </div>
+          </div>
+
+          {/* Arrow variant — all 4 sides */}
+          <div className="flex flex-col gap-[16px]">
+            <SectionLabel>Arrow variant — 4 sides</SectionLabel>
+            <div className="flex flex-wrap items-center justify-center gap-[48px] py-[56px] px-[32px]" style={{ background: "var(--surface)", borderRadius: 8, border: "0.5px solid var(--field-border)" }}>
+              {demoSides.map(s => (
+                <div key={s} className="flex flex-col items-center gap-[8px]">
+                  <Tooltip content={`Tooltip · side="${s}"`} arrow side={s}>
+                    <button className="px-[16px] py-[8px] rounded-[8px] text-[14px] font-medium text-[var(--foreground)] bg-[var(--field-bg)] border border-[var(--field-border)]">
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </button>
+                  </Tooltip>
+                  <span className="text-[11px] text-[var(--field-supporting)]">side="{s}"</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Usage guidelines */}
+          <div className="flex flex-col gap-[16px]">
+            <SectionLabel>Usage guidelines</SectionLabel>
+            <div className="grid grid-cols-2 gap-[16px]">
+              <div className="flex flex-col gap-[10px] p-[20px] rounded-[8px]" style={{ background: "var(--ab-success-bg)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--ab-success-text)" }}>Do</span>
+                {[
+                  "Use for brief, non-essential supplemental information triggered on hover or focus.",
+                  "Keep to 1–3 lines (max 300px wide).",
+                  "Use on icon-only buttons that lack a visible text label.",
+                  "Position to avoid clipping at screen or container edges.",
+                  "Use the arrow variant to clarify which element the tooltip refers to.",
+                ].map(t => (
+                  <p key={t} className="text-[13px]" style={{ color: "var(--ab-success-text)" }}>• {t}</p>
+                ))}
+              </div>
+              <div className="flex flex-col gap-[10px] p-[20px] rounded-[8px]" style={{ background: "var(--ab-error-bg)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--ab-error-text)" }}>Don't</span>
+                {[
+                  "Don't put critical information in a tooltip — it's invisible on mobile and to keyboard-only users who don't focus the element.",
+                  "Don't include interactive elements (links, buttons) inside the tooltip.",
+                  "Don't exceed 300px width.",
+                  "Don't use Tooltip as the only labeling mechanism for form inputs.",
+                  "Don't trigger tooltips on click — use a Popover instead.",
+                ].map(t => (
+                  <p key={t} className="text-[13px]" style={{ color: "var(--ab-error-text)" }}>• {t}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Accessibility */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Accessibility</SectionLabel>
+            {[
+              "role=\"tooltip\" is applied to the tooltip container.",
+              "aria-describedby is set on the wrapper element pointing to the tooltip id.",
+              "Tooltip appears on keyboard focus (onFocus) and disappears on blur.",
+              "Dismiss with Escape key — handled by the trigger element's default keyboard behavior.",
+              "Do not place focusable or interactive elements inside the tooltip.",
+              "Text/Negative (#ffffff) achieves 4.5:1+ contrast against Surface/Neutral/Darker (#111827).",
+            ].map(t => (
+              <p key={t} className="text-[13px] text-[var(--field-supporting)]">• {t}</p>
+            ))}
+          </div>
+
+        </div>
+      )}
+
+      {/* Playground */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[24px]">
+          <div className="grid grid-cols-[280px_1fr] gap-[24px]">
+            {/* Controls */}
+            <div className="flex flex-col gap-[20px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Controls</p>
+
+              <div className="flex flex-col gap-[8px]">
+                <label className="text-[12px] text-[var(--field-label)]">content</label>
+                <input
+                  value={pgContent}
+                  onChange={e => setPgContent(e.target.value)}
+                  className="px-[10px] py-[6px] rounded-[6px] text-[13px] bg-[var(--field-bg)] border border-[var(--field-border)] text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+                  placeholder="Tooltip text..."
+                />
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <label className="text-[12px] text-[var(--field-label)]">side</label>
+                <div className="grid grid-cols-2 gap-[6px]">
+                  {(["top","right","bottom","left"] as TooltipSide[]).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setPgSide(s)}
+                      className="px-[10px] py-[6px] rounded-[6px] text-[12px] font-medium transition-colors"
+                      style={{
+                        background: pgSide === s ? "var(--primary)" : "var(--field-bg)",
+                        color: pgSide === s ? "#ffffff" : "var(--field-supporting)",
+                        border: `1px solid ${pgSide === s ? "var(--primary)" : "var(--field-border)"}`,
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <label className="text-[12px] text-[var(--field-label)]">arrow</label>
+                <button
+                  onClick={() => setPgArrow(v => !v)}
+                  className="relative w-[36px] h-[20px] rounded-full transition-colors"
+                  style={{ background: pgArrow ? "var(--primary)" : "var(--toggle-track-off)", border: `1px solid ${pgArrow ? "transparent" : "var(--toggle-border-off)"}` }}
+                >
+                  <span
+                    className="absolute top-[2px] w-[14px] h-[14px] rounded-full transition-transform"
+                    style={{ background: pgArrow ? "#fff" : "var(--toggle-thumb-off)", left: pgArrow ? "19px" : "2px" }}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div className="flex flex-col gap-[16px]">
+              <div className="flex items-center justify-center" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 8, minHeight: 240 }}>
+                <Tooltip content={pgContent || "Tooltip text"} arrow={pgArrow} side={pgSide}>
+                  <button className="px-[20px] py-[10px] rounded-[8px] text-[14px] font-medium text-[var(--foreground)] bg-[var(--field-bg)] border border-[var(--field-border)] hover:border-[var(--field-border-hover)] transition-colors">
+                    Hover me
+                  </button>
+                </Tooltip>
+              </div>
+              <p className="text-[12px] text-[var(--field-supporting)] text-center">Hover over the button to preview the tooltip</p>
+
+              {/* Code snippet */}
+              <div className="rounded-[8px] overflow-hidden" style={{ background: "var(--code-bg)", border: "0.5px solid var(--field-border)" }}>
+                <div className="px-[16px] py-[10px]" style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Code</span>
+                </div>
+                <pre className="px-[16px] py-[14px] text-[12px] leading-[20px] text-[var(--foreground)] overflow-x-auto whitespace-pre-wrap">
+{`import { Tooltip } from "@/components/ui/tooltip"
+
+<Tooltip
+  content="${pgContent || "Tooltip text"}"
+  arrow={${pgArrow}}
+  side="${pgSide}"
+>
+  <button>Hover me</button>
+</Tooltip>`}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reference */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[32px]">
+
+          <div className="flex flex-col gap-[16px]">
+            <SectionLabel>When to use</SectionLabel>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--table-header-bg)", borderBottom: "0.5px solid var(--table-border)" }}>
+                    <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--table-header-text)]">Scenario</th>
+                    <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--table-header-text)]">Recommendation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Icon-only button or control", "Tooltip with plain variant — label the action"],
+                    ["Overflow text needs full value shown", "Tooltip — show full text on hover"],
+                    ["Brief contextual hint", "Tooltip plain — keep under 2 lines"],
+                    ["Need to indicate arrow direction", "Tooltip with arrow=true and appropriate side"],
+                    ["Critical / required information", "Do NOT use Tooltip — use inline copy or a label"],
+                    ["Interactive content (links, buttons)", "Do NOT use Tooltip — use a Popover or Modal"],
+                    ["Mobile or touch surfaces", "Do NOT use Tooltip — use alternative disclosure"],
+                  ].map(([sc, rec], i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)", borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[16px] py-[10px] text-[var(--foreground)]">{sc}</td>
+                      <td className="px-[16px] py-[10px] text-[var(--field-supporting)]">{rec}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-[16px]">
+            <SectionLabel>Props</SectionLabel>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--table-header-bg)", borderBottom: "0.5px solid var(--table-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="text-left px-[16px] py-[10px] font-semibold text-[var(--table-header-text)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["content",   "string",                              "required", "Tooltip text content. Max 300px wide, 2 lines recommended."],
+                    ["children",  "ReactNode",                           "required", "Trigger element — typically a button or icon."],
+                    ["arrow",     "boolean",                             "false",    "Show directional arrow pointer."],
+                    ["side",      '"top" | "right" | "bottom" | "left"', '"top"',    "Which side of the trigger the tooltip appears on."],
+                    ["className", "string",                              "—",        "Extra classes applied to the tooltip bubble."],
+                  ].map(([prop, type, def, desc], i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)", borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[16px] py-[10px] font-mono text-[12px] text-[var(--primary)]">{prop}</td>
+                      <td className="px-[16px] py-[10px] font-mono text-[12px] text-[var(--foreground)]">{type}</td>
+                      <td className="px-[16px] py-[10px] font-mono text-[12px] text-[var(--field-supporting)]">{def}</td>
+                      <td className="px-[16px] py-[10px] text-[var(--field-supporting)]">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-[16px]">
+            <SectionLabel>Developer Reference</SectionLabel>
+            <div className="rounded-[8px] overflow-hidden" style={{ background: "var(--code-bg)", border: "0.5px solid var(--field-border)" }}>
+              <div className="px-[16px] py-[10px]" style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Full Code</span>
+              </div>
+              <pre className="px-[16px] py-[14px] text-[12px] leading-[20px] text-[var(--foreground)] overflow-x-auto">
+{codeSnippet}
+              </pre>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-[16px]">
+            <SectionLabel>Tokens</SectionLabel>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--table-header-bg)", borderBottom: "0.5px solid var(--table-border)" }}>
+                    {["Token", "Role", "Dark", "Light"].map(h => (
+                      <th key={h} className="text-left px-[16px] py-[10px] font-semibold text-[var(--table-header-text)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["--color-surface-neutral-darker", "Background (Surface/Neutral/Darker)", "#111827", "#111827"],
+                    ["--color-text-negative",          "Text (Text/Negative)",                "#ffffff",  "#ffffff"],
+                  ].map(([token, role, dark, light], i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)", borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[16px] py-[10px] font-mono text-[12px] text-[var(--primary)]">{token}</td>
+                      <td className="px-[16px] py-[10px] text-[var(--field-supporting)]">{role}</td>
+                      <td className="px-[16px] py-[10px]">
+                        <span className="flex items-center gap-[8px]">
+                          <span className="w-[14px] h-[14px] rounded-[3px] inline-block border border-[var(--field-border)]" style={{ background: dark }} />
+                          <span className="font-mono text-[12px] text-[var(--foreground)]">{dark}</span>
+                        </span>
+                      </td>
+                      <td className="px-[16px] py-[10px]">
+                        <span className="flex items-center gap-[8px]">
+                          <span className="w-[14px] h-[14px] rounded-[3px] inline-block border border-[var(--field-border)]" style={{ background: light }} />
+                          <span className="font-mono text-[12px] text-[var(--foreground)]">{light}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+    </div>
+  )
+}
+
+// ── ScrollAreaPage ────────────────────────────────────────────────────────────
+
+function ScrollAreaPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab,    setTab]    = useState<"overview" | "playground" | "reference">("overview")
+  const [pgAxis, setPgAxis] = useState<"y" | "x" | "both">("y")
+
+  const DEMO_ROWS = Array.from({ length: 18 }, (_, i) => ({
+    id:   i,
+    w1:   [72, 55, 80, 64, 70, 58, 78, 62][i % 8],
+    w2:   [45, 60, 38, 55, 42, 65, 50, 48][i % 8],
+    w3:   [30, 40, 25, 35, 28, 38, 32, 36][i % 8],
+  }))
+
+  const DEMO_COLS = Array.from({ length: 14 }, (_, i) => 80 + (i % 3) * 20)
+
+  const codeSnippet = `import { ScrollArea } from "@/components/ui/scroll-area"
+
+// Vertical scroll (default) — 8px padding-right keeps content away from thumb
+<ScrollArea className="h-[320px] pr-[8px]">
+  {/* overflowing content */}
+</ScrollArea>
+
+// Horizontal scroll
+<ScrollArea axis="x" className="pb-[8px]">
+  <div className="flex gap-[8px] w-max">
+    {/* wide content */}
+  </div>
+</ScrollArea>
+
+// Both axes
+<ScrollArea axis="both" className="h-[320px] pr-[8px] pb-[8px]">
+  {/* 2D overflow content */}
+</ScrollArea>`
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Scroll Area</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
+            Scrollable container with a DS-branded 4px custom scrollbar. The thumb is hidden by default and appears on hover.
+            Supports vertical, horizontal, or both axes. Always maintain 8px (Spacing/2x) between the scrollbar and content.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("scroll-area")} />
+      </div>
+
+      {/* Page nav */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ─────────────────────────────────────────────────────── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+
+          {/* Vertical */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Vertical scroll</p>
+            <p className="text-[12px] mb-[12px]" style={{ color: "var(--field-supporting)" }}>
+              Default axis. Set a fixed height and add <code className="font-mono text-[11px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--surface-raised)" }}>pr-[8px]</code> to keep content 8px from the thumb.
+            </p>
+            <ScrollArea className="h-[220px] pr-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 8 }}>
+              <div className="p-[16px] flex flex-col gap-[8px]">
+                {DEMO_ROWS.map(row => (
+                  <div key={row.id} className="flex items-center gap-[10px]">
+                    <div className="h-[8px] rounded-[4px] flex-shrink-0" style={{ background: "var(--surface-raised)", width: `${row.w1}%` }} />
+                    <div className="h-[8px] rounded-[4px] flex-shrink-0" style={{ background: "var(--surface-raised)", width: `${row.w2}%` }} />
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </section>
+
+          {/* Horizontal */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Horizontal scroll</p>
+            <p className="text-[12px] mb-[12px]" style={{ color: "var(--field-supporting)" }}>
+              Use <code className="font-mono text-[11px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--surface-raised)" }}>axis="x"</code> with <code className="font-mono text-[11px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--surface-raised)" }}>pb-[8px]</code> to keep content 8px above the thumb.
+            </p>
+            <ScrollArea axis="x" className="pb-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 8 }}>
+              <div className="p-[16px] flex gap-[8px]" style={{ width: "max-content" }}>
+                {DEMO_COLS.map((w, i) => (
+                  <div key={i} className="h-[72px] rounded-[6px] flex-shrink-0" style={{ background: "var(--surface-raised)", width: w }} />
+                ))}
+              </div>
+            </ScrollArea>
+          </section>
+
+          {/* Usage guidelines */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
+            <div className="grid grid-cols-2 gap-[12px]">
+              <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#22c55e" }}>✓ Do</span>
+                <ul className="flex flex-col gap-[8px]">
+                  {[
+                    "Use when a container has overflow content beyond its defined boundaries.",
+                    "Apply pr-[8px] (vertical) or pb-[8px] (horizontal) to maintain the 8px Spacing/2x gap.",
+                    "Use only Size S (4px) — the only supported size.",
+                    "Support vertical and horizontal overflow scenarios.",
+                    "Let the scrollbar appear naturally on hover — never force it to show persistently.",
+                  ].map((t, i) => (
+                    <li key={i} className="text-[12px]" style={{ color: "var(--foreground)" }}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#ef4444" }}>✕ Don't</span>
+                <ul className="flex flex-col gap-[8px]">
+                  {[
+                    "Don't show the scrollbar permanently — thumb must appear only on hover/scroll.",
+                    "Don't use custom widths or override the 4px default.",
+                    "Don't skip the 8px gap between the thumb and the scrollable content.",
+                    "Don't use inside non-scrollable containers.",
+                    "Don't use M size — it has been deprecated; only S (4px) is supported.",
+                  ].map((t, i) => (
+                    <li key={i} className="text-[12px]" style={{ color: "var(--foreground)" }}>{t}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          {/* Code snippet */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Code snippet</p>
+            <pre className="rounded-[8px] p-[16px] text-[12px] font-mono leading-[1.7] overflow-x-auto" style={{ background: "var(--code-bg)", border: "0.5px solid var(--field-border)", color: "var(--field-text)" }}>{codeSnippet}</pre>
+          </section>
+        </div>
+      )}
+
+      {/* ── Playground ───────────────────────────────────────────────────── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[24px]">
+          {/* Controls */}
+          <div className="flex flex-wrap gap-[24px] p-[20px] rounded-[8px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
+            <div className="flex flex-col gap-[6px]">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Axis</span>
+              <div className="flex gap-[6px]">
+                {(["y", "x", "both"] as const).map(v => (
+                  <button key={v} onClick={() => setPgAxis(v)}
+                    className="px-[12px] py-[6px] rounded-[6px] text-[12px] font-medium transition-colors"
+                    style={{ background: pgAxis === v ? "var(--primary)" : "var(--surface)", color: pgAxis === v ? "#fff" : "var(--foreground)", border: "0.5px solid var(--field-border)" }}
+                  >{v}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Demo */}
+          <ScrollArea
+            axis={pgAxis}
+            className={pgAxis === "y" ? "h-[300px] pr-[8px]" : pgAxis === "x" ? "pb-[8px]" : "h-[300px] pr-[8px] pb-[8px]"}
+            style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 8 }}
+          >
+            {pgAxis === "x" ? (
+              <div className="p-[16px] flex gap-[8px]" style={{ width: "max-content" }}>
+                {DEMO_COLS.map((w, i) => (
+                  <div key={i} className="h-[80px] rounded-[6px] flex-shrink-0" style={{ background: "var(--surface-raised)", width: w }} />
+                ))}
+              </div>
+            ) : (
+              <div className="p-[16px] flex flex-col gap-[8px]">
+                {DEMO_ROWS.map(row => (
+                  <div key={row.id} className="flex items-center gap-[10px]">
+                    <div className="h-[8px] rounded-[4px]" style={{ background: "var(--surface-raised)", width: `${row.w1}%` }} />
+                    <div className="h-[8px] rounded-[4px]" style={{ background: "var(--surface-raised)", width: `${row.w2}%` }} />
+                  </div>
+                ))}
+                {pgAxis === "both" && (
+                  <div className="flex gap-[8px] mt-[8px]" style={{ width: "max-content" }}>
+                    {DEMO_COLS.slice(0, 8).map((w, i) => (
+                      <div key={i} className="h-[40px] rounded-[6px] flex-shrink-0" style={{ background: "var(--primary)", opacity: 0.15, width: w }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      )}
+
+      {/* ── Reference ────────────────────────────────────────────────────── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[40px]">
+
+          {/* Props */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">ScrollAreaProps</p>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr style={{ background: "var(--surface-raised)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-supporting)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { prop: "children",  type: "ReactNode",             def: "required", desc: "Content to scroll." },
+                    { prop: "axis",      type: '"y" | "x" | "both"',    def: '"y"',      desc: 'Scroll axis. "y" = vertical, "x" = horizontal, "both" = 2D.' },
+                    { prop: "className", type: "string",                 def: "—",        desc: "Extra Tailwind classes. Add h-[N] for vertical, w-[N] for horizontal." },
+                    { prop: "style",     type: "React.CSSProperties",    def: "—",        desc: "Inline styles passed to the container div." },
+                  ].map((r, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--field-border)", background: i % 2 === 0 ? "transparent" : "var(--surface-raised)" }}>
+                      <td className="px-[12px] py-[8px] font-mono" style={{ color: "var(--primary)" }}>{r.prop}</td>
+                      <td className="px-[12px] py-[8px] font-mono" style={{ color: "var(--field-supporting)" }}>{r.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono" style={{ color: "var(--field-supporting)" }}>{r.def}</td>
+                      <td className="px-[12px] py-[8px]" style={{ color: "var(--foreground)" }}>{r.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Tokens */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Design tokens</p>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr style={{ background: "var(--surface-raised)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    {["Token", "Figma source", "Usage"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-supporting)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { token: "--field-scrollbar-thumb", src: "Surface/Neutral/Emphasis",  usage: "Thumb color (default state)" },
+                    { token: "--scrollbar-thumb-hover", src: "Surface/Neutral/Focus",     usage: "Thumb color on thumb hover" },
+                  ].map((r, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--field-border)", background: i % 2 === 0 ? "transparent" : "var(--surface-raised)" }}>
+                      <td className="px-[12px] py-[8px] font-mono" style={{ color: "var(--primary)" }}>{r.token}</td>
+                      <td className="px-[12px] py-[8px] font-mono" style={{ color: "var(--field-supporting)" }}>{r.src}</td>
+                      <td className="px-[12px] py-[8px]" style={{ color: "var(--foreground)" }}>{r.usage}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Specs */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Specs</p>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                ["Size",      "S only — 4px width/height. M size is deprecated."],
+                ["Gap",       "Always 8px (Spacing/2x) between thumb and scrollable content. Apply pr-[8px] (vertical) or pb-[8px] (horizontal) to the ScrollArea."],
+                ["Behavior",  "Thumb is hidden until the user hovers the container. Appears automatically on macOS overlay scrollbars when scrolling begins."],
+                ["CSS class", "Applies .aims-scroll — do not override width or background on the scrollbar pseudo-elements."],
+              ].map(([label, desc], i) => (
+                <div key={i} className="flex gap-[12px] py-[10px] px-[12px] rounded-[6px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
+                  <span className="text-[12px] font-semibold flex-shrink-0 w-[80px]" style={{ color: "var(--field-supporting)" }}>{label}</span>
+                  <span className="text-[12px]" style={{ color: "var(--foreground)" }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── TabsPage ─────────────────────────────────────────────────────────────────
 
 function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
@@ -6998,7 +7825,6 @@ function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pgActive,  setPgActive]  = useState("overview")
   const [pgSize,    setPgSize]    = useState<"m" | "s">("m")
   const [pgIcon,    setPgIcon]    = useState(true)
-  const [pgCard,    setPgCard]    = useState(true)
   const [pgDisabled,setPgDisabled]= useState(false)
 
   const ICONS_FOR_DEMO = [
@@ -7017,13 +7843,6 @@ function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     disabled: pgDisabled && id === "settings",
   }))
 
-  const demoItems: TabItem[] = BASE_IDS.map((id, i) => ({
-    id,
-    label:    BASE_LABELS[i],
-    icon:     ICONS_FOR_DEMO[i],
-    disabled: id === "settings",
-  }))
-
   const Tog = ({ label, val, set }: { label: string; val: boolean; set: (v: boolean) => void }) => (
     <label className="flex items-center gap-[8px] cursor-pointer select-none">
       <div onClick={() => set(!val)} className="relative w-[32px] h-[18px] rounded-full transition-colors cursor-pointer flex-shrink-0" style={{ background: val ? "var(--primary)" : "var(--ctrl-inactive-bg)" }}>
@@ -7034,7 +7853,6 @@ function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   )
 
   const codeSnippet = `import { Tabs, type TabItem } from "@/components/ui/tabs"
-import { CardContainer } from "@/components/ui/card-container"
 import { User, Clock, FileText, Settings } from "lucide-react"
 import { useState } from "react"
 
@@ -7045,18 +7863,8 @@ const items: TabItem[] = [
   { id: "settings", label: "Settings", icon: Settings, disabled: true },
 ]
 
-// Pattern 1 — inside a card or panel (most common)
-export function CardTabBar() {
-  const [active, setActive] = useState("overview")
-  return (
-    <CardContainer size="sm">
-      <Tabs items={items} activeId={active} onChange={setActive} />
-    </CardContainer>
-  )
-}
-
-// Pattern 2 — standalone at page / detail view / modal level
-export function PageTabBar() {
+// Primary pattern — standalone at page / detail view / slide-out / modal level
+export function TabBar() {
   const [active, setActive] = useState("overview")
   return (
     <Tabs items={items} activeId={active} onChange={setActive} />
@@ -7093,57 +7901,38 @@ export function PageTabBar() {
       {tab === "overview" && (
         <div className="flex flex-col gap-[40px]">
 
-          {/* Preview */}
+          {/* Preview — primary pattern */}
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Inside a card</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Standalone</p>
             <p className="text-[12px] mb-[12px]" style={{ color: "var(--field-supporting)" }}>
-              Most common pattern — tabs as the nav header of a card or panel. Wrap with{" "}
-              <code className="font-mono text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface-raised)" }}>CardContainer</code>.
+              Tabs sit directly on any surface — no wrapper needed. Place at the top of a detail view, slide-out, modal body, or section.
             </p>
-            <CardContainer size="sm">
-              <Tabs items={demoItems} activeId="overview" onChange={() => {}} />
-            </CardContainer>
-          </section>
-
-          {/* Standalone / page-level */}
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Standalone — page or section level</p>
-            <p className="text-[12px] mb-[12px]" style={{ color: "var(--field-supporting)" }}>
-              Tabs without a wrapper, placed at the top of a detail view, modal body, or full-width content area.{" "}
-              No <code className="font-mono text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface-raised)" }}>CardContainer</code> needed.
-            </p>
-            <div className="rounded-[8px] p-[20px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
-              <Tabs
-                activeId="overview" onChange={() => {}}
-                items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i] }))}
-              />
-              <div className="mt-[20px] flex flex-col gap-[8px]">
-                {[80, 60, 72].map((w, i) => (
-                  <div key={i} className="h-[11px] rounded-[4px]" style={{ background: "var(--surface-raised)", width: `${w}%` }} />
-                ))}
-              </div>
+            <Tabs
+              activeId="overview" onChange={() => {}}
+              items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i] }))}
+            />
+            <div className="mt-[20px] flex flex-col gap-[8px]">
+              {[80, 60, 72].map((w, i) => (
+                <div key={i} className="h-[11px] rounded-[4px]" style={{ background: "var(--surface-raised)", width: `${w}%` }} />
+              ))}
             </div>
           </section>
 
           {/* Sizes */}
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Sizes</p>
-            <div className="flex flex-col gap-[12px]">
+            <div className="flex flex-col gap-[16px]">
               <div>
                 <p className="text-[11px] text-[var(--field-supporting)] mb-[8px]">Size M — default · 14px · px-16 py-10</p>
-                <CardContainer size="sm">
-                  <Tabs size="m" activeId="overview" onChange={() => {}}
-                    items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i] }))}
-                  />
-                </CardContainer>
+                <Tabs size="m" activeId="overview" onChange={() => {}}
+                  items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i] }))}
+                />
               </div>
               <div>
                 <p className="text-[11px] text-[var(--field-supporting)] mb-[8px]">Size S — compact · 12px · px-12 py-8</p>
-                <CardContainer size="sm">
-                  <Tabs size="s" activeId="overview" onChange={() => {}}
-                    items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i] }))}
-                  />
-                </CardContainer>
+                <Tabs size="s" activeId="overview" onChange={() => {}}
+                  items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i] }))}
+                />
               </div>
             </div>
           </section>
@@ -7151,26 +7940,22 @@ export function PageTabBar() {
           {/* Label only */}
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Label only</p>
-            <CardContainer size="sm">
-              <Tabs activeId="all" onChange={() => {}}
-                items={[
-                  { id: "all",       label: "All Cases" },
-                  { id: "open",      label: "Open"      },
-                  { id: "in-review", label: "In Review" },
-                  { id: "closed",    label: "Closed"    },
-                ]}
-              />
-            </CardContainer>
+            <Tabs activeId="all" onChange={() => {}}
+              items={[
+                { id: "all",       label: "All Cases" },
+                { id: "open",      label: "Open"      },
+                { id: "in-review", label: "In Review" },
+                { id: "closed",    label: "Closed"    },
+              ]}
+            />
           </section>
 
           {/* Disabled */}
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">With disabled tab</p>
-            <CardContainer size="sm">
-              <Tabs activeId="overview" onChange={() => {}}
-                items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i], disabled: id === "settings" }))}
-              />
-            </CardContainer>
+            <Tabs activeId="overview" onChange={() => {}}
+              items={BASE_IDS.map((id, i) => ({ id, label: BASE_LABELS[i], icon: ICONS_FOR_DEMO[i], disabled: id === "settings" }))}
+            />
           </section>
 
           {/* Usage guidelines */}
@@ -7222,15 +8007,8 @@ export function PageTabBar() {
       {/* ── Playground ──────────────────────────────────────────────── */}
       {tab === "playground" && (
         <div className="flex flex-col gap-[24px]">
-          {pgCard ? (
-            <CardContainer size="sm">
-              <Tabs items={pgItems} activeId={pgActive} onChange={setPgActive} size={pgSize} />
-            </CardContainer>
-          ) : (
-            <div className="rounded-[8px] p-[20px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
-              <Tabs items={pgItems} activeId={pgActive} onChange={setPgActive} size={pgSize} />
-            </div>
-          )}
+          {/* Demo — standalone, no wrapper */}
+          <Tabs items={pgItems} activeId={pgActive} onChange={setPgActive} size={pgSize} />
 
           <CardContainer size="sm">
             <div className="flex flex-col gap-[20px]">
@@ -7253,7 +8031,6 @@ export function PageTabBar() {
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[10px]">Options</p>
                 <div className="flex flex-col gap-[10px]">
-                  <Tog label="Card wrapper"         val={pgCard}      set={setPgCard}      />
                   <Tog label="Show icon"            val={pgIcon}      set={setPgIcon}      />
                   <Tog label="Disabled (Settings)"  val={pgDisabled}  set={setPgDisabled}  />
                 </div>
@@ -7272,7 +8049,7 @@ export function PageTabBar() {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">When to use</p>
             <div className="flex flex-col gap-[10px]">
               {[
-                { q: "Views inside a card or panel",      a: "Use Tabs inside CardContainer. The tab bar sits at the top edge; content renders below it in the same container." },
+                { q: "Views inside a slide-out or panel",  a: "Place Tabs directly on the surface — no CardContainer wrapper. The component sits at the top of the view; content renders below it in the same layout area." },
                 { q: "Page-level or section switcher",    a: "Use Tabs standalone (no wrapper). Place it at the top of the content area — e.g. a detail page, modal body, or sidebar panel." },
                 { q: "Sequential steps (Step 1 → 2 → 3)", a: "Don't use Tabs. Use a Stepper component — tabs don't communicate order or progress." },
                 { q: "Navigation between distinct pages", a: "Don't use Tabs. Use Sidebar or Topbar — tabs are for in-context switching, not route changes." },
@@ -10742,6 +11519,490 @@ function ModalDialogPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
 // ── InformativeCardPage ───────────────────────────────────────────────────────
 
+// ── Highlight Card page data ──────────────────────────────────────────────────
+
+const HC_STYLE_VARIANTS: { style: HighlightCardStyle; label: string; description: string; feedbackType: HighlightCardFeedback; feedbackText: string }[] = [
+  { style: "default",       label: "Default",       description: "White bg · neutral border · adapts to dark mode",      feedbackType: "neutral", feedbackText: "Feedback text" },
+  { style: "primary-bg",    label: "Primary BG",    description: "Blue subtle tint · primary border · brand metrics",    feedbackType: "neutral", feedbackText: "Feedback text" },
+  { style: "green-bg",      label: "Green BG",      description: "Success tint · healthy/positive KPIs",                feedbackType: "neutral", feedbackText: "Feedback text" },
+  { style: "orange-bg",     label: "Orange BG",     description: "Alert tint · warning/pending metrics",                feedbackType: "neutral", feedbackText: "Feedback text" },
+  { style: "yellow-bg",     label: "Yellow BG",     description: "Yellow tint · attention/in-progress",                 feedbackType: "neutral", feedbackText: "Feedback text" },
+  { style: "purple-bg",     label: "Purple BG",     description: "Purple tint · AI/creative/premium",                   feedbackType: "neutral", feedbackText: "Feedback text" },
+  { style: "light-blue-bg", label: "Light Blue BG", description: "Sky tint · integrations/cloud/data",                  feedbackType: "neutral", feedbackText: "Feedback text" },
+  { style: "lime-bg",       label: "Lime Green BG", description: "Lime tint · eco/growth/sustainability",               feedbackType: "neutral", feedbackText: "Feedback text" },
+  { style: "red",           label: "Red",           description: "Error tint · critical/failure-state KPIs",            feedbackType: "neutral", feedbackText: "Feedback text" },
+]
+
+function HighlightCardPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+  const [pgStyle, setPgStyle] = useState<HighlightCardStyle>("default")
+  const [pgDisabled, setPgDisabled] = useState(false)
+  const [pgShowUnit, setPgShowUnit] = useState(true)
+  const [pgShowFeedback, setPgShowFeedback] = useState(true)
+  const [pgLabel, setPgLabel] = useState("Open Jobs")
+  const [pgValue, setPgValue] = useState("1,243")
+  const [pgUnit, setPgUnit] = useState("Models")
+  const [pgFeedbackText, setPgFeedbackText] = useState("Feedback text")
+  const [pgIconName, setPgIconName] = useState("Briefcase")
+  const [pgIconSearch, setPgIconSearch] = useState("")
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Highlight Card</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
+            Compact KPI metric card for dashboards. Displays a label, large numeric value, optional unit, trend feedback, and a contextual icon. Available in 9 background styles × 2 states (Default / Disabled). Tokens auto-switch in dark mode via the <code className="font-mono text-[var(--primary)]">--hc-*</code> family.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("highlight-card")} />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{
+              color: tab === t ? "var(--primary)" : "var(--field-supporting)",
+              borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ─────────────────────────────────────────────────────────── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Anatomy */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Anatomy</SectionLabel>
+            <div className="flex gap-[32px] flex-wrap">
+              <div className="flex flex-col gap-[8px]">
+                <HighlightCard
+                  label="Open Jobs"
+                  value="1,243"
+                  unit="Models"
+                  feedback="+ 12% vs last week"
+                  feedbackType="positive"
+                  iconName="Briefcase"
+                  style="default"
+                />
+              </div>
+              <div className="flex flex-col gap-[12px] justify-center">
+                {[
+                  { region: "A  Label row",    desc: "Metric name (14px Medium) on left · HighlightIcon L (40px) on right" },
+                  { region: "B  Value row",     desc: "Large KPI figure (20px Semibold) + optional unit (12px Medium, baseline-aligned)" },
+                  { region: "C  Feedback row",  desc: "Trend/context text (12px Medium) · color controlled by feedbackType prop" },
+                ].map(r => (
+                  <div key={r.region} className="flex gap-[10px] items-start">
+                    <span className="text-[12px] font-bold text-[var(--primary)] shrink-0 w-[100px]">{r.region}</span>
+                    <p className="text-[12px] text-[var(--field-supporting)]">{r.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* All 9 style variants */}
+          <div className="flex flex-col gap-[12px]">
+            <SectionLabel>Background Styles — 9 variants × 2 states</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[4px]">
+              The <strong className="text-[var(--field-label)]">Styte</strong> property (note: Figma uses "Styte") controls both the card background and the HighlightIcon variant inside. All styles switch dark/light automatically via CSS tokens.
+            </p>
+            <div className="flex flex-wrap gap-[16px]">
+              {HC_STYLE_VARIANTS.map((v) => (
+                <div key={v.style} className="flex flex-col gap-[6px]">
+                  <HighlightCard
+                    label={v.label}
+                    value="00,000"
+                    unit="Models"
+                    feedback={v.feedbackText}
+                    feedbackType={v.feedbackType}
+                    iconName="BarChart2"
+                    style={v.style}
+                  />
+                  <p className="text-[11px] text-[var(--field-supporting)] max-w-[236px]">{v.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Disabled state */}
+          <div className="flex flex-col gap-[12px]">
+            <SectionLabel>States</SectionLabel>
+            <div className="flex gap-[24px] flex-wrap items-start">
+              <div className="flex flex-col gap-[6px]">
+                <p className="text-[12px] font-semibold text-[var(--field-label)]">Default</p>
+                <HighlightCard label="Open Tickets" value="342" unit="Items" feedback="- 5% vs yesterday" feedbackType="negative" iconName="Ticket" style="default" />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <p className="text-[12px] font-semibold text-[var(--field-label)]">Disabled</p>
+                <HighlightCard label="Open Tickets" value="342" unit="Items" feedback="▼ 5% vs yesterday" feedbackType="negative" iconName="Ticket" style="default" disabled />
+              </div>
+              <div className="flex flex-col gap-[6px] self-start">
+                <p className="text-[12px] text-[var(--field-supporting)] max-w-[200px] pt-[20px]">
+                  Disabled applies <code className="font-mono text-[var(--primary)]">opacity: 40%</code> and <code className="font-mono text-[var(--primary)]">pointer-events: none</code> to the entire card. No individual token changes.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Feedback types */}
+          <div className="flex flex-col gap-[12px]">
+            <SectionLabel>Feedback Types</SectionLabel>
+            <div className="flex gap-[24px] flex-wrap">
+              {([
+                { feedbackType: "positive" as const, feedback: "+ 18% vs last month",   label: "Total Revenue" },
+                { feedbackType: "negative" as const, feedback: "- 3% vs last month",   label: "Error Rate"    },
+                { feedbackType: "neutral"  as const, feedback: "No change detected",    label: "Active Users"  },
+              ]).map(({ feedbackType, feedback, label }) => (
+                <div key={feedbackType} className="flex flex-col gap-[6px]">
+                  <p className="text-[12px] font-semibold text-[var(--field-label)] capitalize">{feedbackType}</p>
+                  <HighlightCard label={label} value="1,243" unit="USD" feedback={feedback} feedbackType={feedbackType} iconName="TrendingUp" style="default" />
+                  <p className="text-[11px] text-[var(--field-supporting)]">
+                    {feedbackType === "positive" && "Color: --color-text-success"}
+                    {feedbackType === "negative" && "Color: --color-text-error"}
+                    {feedbackType === "neutral"  && "Color: --hc-text-feedback"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Best practices */}
+          <div className="grid grid-cols-2 gap-[16px]">
+            <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]" style={{ background: "rgba(0,200,120,0.06)", border: "0.5px solid rgba(0,200,120,0.20)" }}>
+              <p className="text-[12px] font-semibold" style={{ color: "#00b87a" }}>✅ Do</p>
+              {[
+                "When Highlights are displayed, they should be in Fill (width) mode — maintain consistency in the layout.",
+                "When space is limited, shorten the text using '...' — avoid overlapping text with the icon.",
+                "Pair the card style with the icon variant that matches (e.g. green-bg → success icon).",
+                "Always use HighlightIcon size L (40px) as the icon. Use Icon Color: Dark variants for better contrast.",
+                "Use feedbackType='positive' for growth and feedbackType='negative' for decline metrics.",
+              ].map(t => <p key={t} className="text-[12px] text-[var(--field-supporting)]">• {t}</p>)}
+            </div>
+            <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]" style={{ background: "rgba(220,50,50,0.06)", border: "0.5px solid rgba(220,50,50,0.18)" }}>
+              <p className="text-[12px] font-semibold" style={{ color: "#e53935" }}>❌ Don't</p>
+              {[
+                "Don't use the Disabled state for content that simply hasn't loaded — use a skeleton/loading state instead.",
+                "Don't mix colored-BG variants randomly — match the card color to the metric's semantic meaning.",
+                "Don't hardcode colors for feedback text — always use feedbackType prop to get the correct token.",
+                "Don't stack multiple metrics in one card — each Highlight Card should represent a single KPI.",
+                "Don't activate dark mode by setting only one collection. Both Primitives Tokens → Dark AND Semantic Color Tokens → Dark are required in Figma.",
+              ].map(t => <p key={t} className="text-[12px] text-[var(--field-supporting)]">• {t}</p>)}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Playground ───────────────────────────────────────────────────────── */}
+      {tab === "playground" && (
+        <div className="flex gap-[24px] flex-wrap items-start">
+
+          {/* Controls panel */}
+          <div className="flex flex-col gap-[16px] p-[20px] rounded-[8px] min-w-[320px] flex-1" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Controls</SectionLabel>
+
+            {/* Style */}
+            <CtrlGroup<HighlightCardStyle>
+              label="Style"
+              value={pgStyle}
+              onChange={setPgStyle}
+              options={HC_STYLE_VARIANTS.map(v => ({ label: v.label, value: v.style }))}
+            />
+
+            {/* Toggles */}
+            <CtrlToggle label="Disabled"      value={pgDisabled}     onChange={setPgDisabled} />
+            <CtrlToggle label="Show unit"     value={pgShowUnit}     onChange={setPgShowUnit} />
+            <CtrlToggle label="Show feedback" value={pgShowFeedback} onChange={setPgShowFeedback} />
+
+            <div className="w-full h-px" style={{ background: "var(--field-border)" }} />
+
+            {/* Editable text fields */}
+            <div className="flex flex-col gap-[10px]">
+              <SectionLabel>Content</SectionLabel>
+
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest w-[110px] shrink-0 text-[var(--field-supporting)]">Label</span>
+                <input
+                  type="text"
+                  value={pgLabel}
+                  onChange={e => setPgLabel(e.target.value)}
+                  placeholder="Label"
+                  className="flex-1 h-[30px] px-[8px] text-[12px] rounded-[6px] outline-none focus:border-[#2173ff] transition-colors"
+                  style={{ background: "var(--field-bg-hover)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}
+                />
+              </div>
+
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest w-[110px] shrink-0 text-[var(--field-supporting)]">Value</span>
+                <input
+                  type="text"
+                  value={pgValue}
+                  onChange={e => setPgValue(e.target.value)}
+                  placeholder="00,000"
+                  className="flex-1 h-[30px] px-[8px] text-[12px] rounded-[6px] outline-none focus:border-[#2173ff] transition-colors"
+                  style={{ background: "var(--field-bg-hover)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}
+                />
+              </div>
+
+              {pgShowUnit && (
+                <div className="flex items-center gap-[12px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-widest w-[110px] shrink-0 text-[var(--field-supporting)]">Unit</span>
+                  <input
+                    type="text"
+                    value={pgUnit}
+                    onChange={e => setPgUnit(e.target.value)}
+                    placeholder="Models"
+                    className="flex-1 h-[30px] px-[8px] text-[12px] rounded-[6px] outline-none focus:border-[#2173ff] transition-colors"
+                    style={{ background: "var(--field-bg-hover)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}
+                  />
+                </div>
+              )}
+
+              {pgShowFeedback && (
+                <div className="flex items-center gap-[12px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-widest w-[110px] shrink-0 text-[var(--field-supporting)]">Feedback</span>
+                  <input
+                    type="text"
+                    value={pgFeedbackText}
+                    onChange={e => setPgFeedbackText(e.target.value)}
+                    placeholder="Feedback text"
+                    className="flex-1 h-[30px] px-[8px] text-[12px] rounded-[6px] outline-none focus:border-[#2173ff] transition-colors"
+                    style={{ background: "var(--field-bg-hover)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="w-full h-px" style={{ background: "var(--field-border)" }} />
+
+            {/* Icon picker */}
+            <div className="flex flex-col gap-[8px]">
+              <SectionLabel>Icon</SectionLabel>
+              <input
+                type="text"
+                placeholder="Search icon…"
+                value={pgIconSearch}
+                onChange={e => setPgIconSearch(e.target.value)}
+                className="h-[30px] px-[8px] text-[12px] rounded-[6px] outline-none focus:border-[#2173ff] transition-colors"
+                style={{ background: "var(--field-bg-hover)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}
+              />
+              <div className="h-[80px] overflow-y-auto rounded-[6px] p-[4px] grid grid-cols-8 gap-[2px] content-start" style={{ border: "0.5px solid var(--field-border)" }}>
+                {ICON_CATEGORIES
+                  .flatMap(c => c.icons)
+                  .filter(ic => !pgIconSearch || ic.dsName.toLowerCase().includes(pgIconSearch.toLowerCase()) || ic.lucide.toLowerCase().includes(pgIconSearch.toLowerCase()))
+                  .slice(0, 64)
+                  .map(ic => {
+                    const Ic = (LucideIcons as unknown as Record<string, LucideIcon>)[ic.lucide]
+                    if (!Ic) return null
+                    return (
+                      <button
+                        key={ic.lucide}
+                        title={ic.dsName}
+                        onClick={() => setPgIconName(ic.lucide)}
+                        className={[
+                          "w-[28px] h-[28px] flex items-center justify-center rounded-[4px] transition-colors",
+                          pgIconName === ic.lucide
+                            ? "bg-[#2173ff] text-white"
+                            : "text-[var(--field-supporting)] hover:bg-[var(--ctrl-inactive-bg)] hover:text-[var(--foreground)]",
+                        ].join(" ")}
+                      >
+                        <Ic size={14} strokeWidth={1.75} />
+                      </button>
+                    )
+                  })}
+              </div>
+              <p className="text-[11px] text-[var(--field-supporting)]">
+                Activo: <code className="font-mono text-[var(--foreground)]">{pgIconName}</code>
+              </p>
+            </div>
+          </div>
+
+          {/* Live preview */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Preview</SectionLabel>
+            <div className="flex items-start justify-center min-h-[140px]">
+              <HighlightCard
+                label={pgLabel}
+                value={pgValue}
+                unit={pgShowUnit ? pgUnit : undefined}
+                feedback={pgShowFeedback ? pgFeedbackText : undefined}
+                feedbackType="neutral"
+                iconName={pgIconName}
+                style={pgStyle}
+                disabled={pgDisabled}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reference ────────────────────────────────────────────────────────── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Component tokens */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Component Tokens — --hc-* family</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[4px]">Each component token aliases a canonical DS semantic token. The component and .tsx files use only these vars — no raw hex values.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px] border-collapse" style={{ border: "0.5px solid var(--field-border)" }}>
+                <thead>
+                  <tr style={{ background: "var(--surface-raised)" }}>
+                    {["Role", "Token → Alias", "Light", "Dark"].map(h => (
+                      <th key={h} className="text-left px-[12px] py-[8px] font-semibold text-[var(--table-header-text)] border-b border-[var(--table-border)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {HIGHLIGHT_CARD_SPEC.variants[0].tokens.map((row, i) => (
+                    <tr key={i} className="border-b border-[var(--table-border)]" style={{ background: i % 2 !== 0 ? "var(--surface-raised)" : "transparent" }}>
+                      <td className="px-[12px] py-[8px] text-[12px] text-[var(--field-label)] whitespace-nowrap">{row.role}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--primary)] whitespace-nowrap">{row.variable}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{row.light}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{row.dark}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Style variant backgrounds */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Style Variant Background Tokens</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px] border-collapse" style={{ border: "0.5px solid var(--field-border)" }}>
+                <thead>
+                  <tr style={{ background: "var(--surface-raised)" }}>
+                    {["Style", "Background Token", "Light", "Dark"].map(h => (
+                      <th key={h} className="text-left px-[12px] py-[8px] font-semibold text-[var(--table-header-text)] border-b border-[var(--table-border)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {HIGHLIGHT_CARD_SPEC.variants[1].tokens.map((row, i) => (
+                    <tr key={i} className="border-b border-[var(--table-border)]" style={{ background: i % 2 !== 0 ? "var(--surface-raised)" : "transparent" }}>
+                      <td className="px-[12px] py-[8px] font-semibold text-[13px] text-[var(--field-label)]">{row.role}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--primary)]">{row.variable}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{row.light}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{row.dark}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Typography */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Typography</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px] border-collapse" style={{ border: "0.5px solid var(--field-border)" }}>
+                <thead>
+                  <tr style={{ background: "var(--surface-raised)" }}>
+                    {["Element", "Family", "Size", "Weight", "Line-height"].map(h => (
+                      <th key={h} className="text-left px-[12px] py-[8px] font-semibold text-[var(--table-header-text)] border-b border-[var(--table-border)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {HIGHLIGHT_CARD_SPEC.typography.map((row, i) => (
+                    <tr key={i} className="border-b border-[var(--table-border)]" style={{ background: i % 2 !== 0 ? "var(--surface-raised)" : "transparent" }}>
+                      <td className="px-[12px] py-[8px] font-semibold text-[13px] text-[var(--field-label)]">{row.element}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.family}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{row.size}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.weight}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.lineHeight}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Code usage */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Props &amp; Usage</SectionLabel>
+            <pre className="text-[12px] leading-[20px] p-[16px] rounded-[6px] overflow-x-auto" style={{ background: "var(--surface-raised)", color: "var(--field-label)" }}>{`// Basic usage
+<HighlightCard
+  label="Open Jobs"
+  value="1,243"
+  unit="Models"
+  feedback="+ 12.4% vs last month"
+  feedbackType="positive"
+  iconName="Briefcase"
+/>
+
+// Colored BG variant
+<HighlightCard
+  label="Error Rate"
+  value="0.3"
+  unit="%"
+  feedback="- 0.1% vs yesterday"
+  feedbackType="negative"
+  iconName="AlertTriangle"
+  style="red"
+/>
+
+// Disabled state
+<HighlightCard
+  label="Revenue"
+  value="$45,000"
+  iconName="DollarSign"
+  style="green-bg"
+  disabled
+/>
+
+// Props interface
+interface HighlightCardProps {
+  label:         string
+  value:         string | number
+  unit?:         string                                    // e.g. "Models", "USD"
+  feedback?:     string                                    // trend/context text
+  feedbackType?: "positive" | "negative" | "neutral"      // default: "neutral"
+  iconName?:     string                                    // Lucide icon name
+  style?:        HighlightCardStyle                        // default: "default"
+  disabled?:     boolean                                   // default: false
+  className?:    string
+}`}</pre>
+          </div>
+
+          {/* Figma steps */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Using in Figma designs</SectionLabel>
+            {[
+              { n: "①", text: "Find Highlights Card in the Assets panel (DS library must be enabled). Drag into your dashboard frame." },
+              { n: "②", text: "Set the Styte property (note: typo in Figma) to the background style that matches the metric's semantic meaning (e.g. Green BG for healthy KPIs, Red for critical)." },
+              { n: "③", text: "Set State to Default for active metrics, Disabled for unavailable or loading metrics." },
+              { n: "④", text: "Replace the icon inside the Highlight Icon slot with the appropriate icon from the DS icon library. Always use size L (40px)." },
+              { n: "⑤", text: "Update the label, value, unit, and feedback text layers directly in the component instance." },
+              { n: "⑥", text: "To switch to dark mode: select the parent frame → Variables → Primitives Tokens → Dark + Semantic Color Tokens → Dark. Both must be set together." },
+              { n: "⑦", text: "Place cards in a Fill Width layout row so they expand consistently across breakpoints." },
+            ].map(step => (
+              <div key={step.n} className="flex gap-[10px] items-start">
+                <span className="text-[14px] font-bold text-[var(--primary)] shrink-0 w-[20px]">{step.n}</span>
+                <p className="text-[13px] text-[var(--field-supporting)]">{step.text}</p>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
 function InformativeCardPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab,           setTab]           = useState<"overview" | "playground" | "reference">("overview")
   const [pgState,       setPgState]       = useState<InformativeCardState>("informative")
@@ -12586,6 +13847,339 @@ function BpAnnotatedMockup({ bp, isDark }: { bp: typeof BP_TIERS[0]; isDark: boo
   )
 }
 
+// ── App Background variants ───────────────────────────────────────────────────
+const APP_BG_VARIANTS: {
+  variant: AppBgVariant
+  label: string
+  tag: string
+  tagColor: string
+  description: string
+  gradient: string
+}[] = [
+  { variant: "default",    label: "Default · Light",  tag: "DEFAULT",     tagColor: "#2173ff", description: "Standard light mode background for all screens.",          gradient: "radial-gradient(circle at 50% 0%, #F6F9FF 0%, #FFFFFF 80%)" },
+  { variant: "default",    label: "Default · Dark",   tag: "DEFAULT",     tagColor: "#2173ff", description: "Standard dark mode background — pairs with light variant.", gradient: "linear-gradient(144deg, #020618 0%, #0F172B 50%, #020618 100%)" },
+  { variant: "green",      label: "Green BG",         tag: "CONTEXTUAL",  tagColor: "#00b87a", description: "Success or healthy-state screen contexts.",                  gradient: "radial-gradient(circle at 50% 0%, #E5FDF8 0%, #FFFFFF 80%)" },
+  { variant: "red",        label: "Red BG",           tag: "CONTEXTUAL",  tagColor: "#e53935", description: "Error or critical-state screen contexts.",                   gradient: "radial-gradient(circle at 50% 0%, #FDECED 0%, #FFFFFF 80%)" },
+  { variant: "orange",     label: "Orange BG",        tag: "CONTEXTUAL",  tagColor: "#e65100", description: "Warning or pending-action screen contexts.",                gradient: "radial-gradient(circle at 50% 0%, #FFF4E5 0%, #FFFFFF 80%)" },
+  { variant: "yellow",     label: "Yellow BG",        tag: "CONTEXTUAL",  tagColor: "#f9a825", description: "Attention or in-progress screen contexts.",                 gradient: "radial-gradient(circle at 50% 0%, #FFFAF0 0%, #FFFFFF 80%)" },
+  { variant: "purple",     label: "Purple BG",        tag: "CONTEXTUAL",  tagColor: "#7b27ed", description: "Creative, special, or premium screen contexts.",            gradient: "radial-gradient(circle at 50% 0%, #F3E9FD 0%, #FFFFFF 80%)" },
+  { variant: "light-blue", label: "Light Blue BG",    tag: "CONTEXTUAL",  tagColor: "#00b5d9", description: "Informational or neutral-action screen contexts.",          gradient: "radial-gradient(circle at 50% 0%, #E5F8FF 0%, #FFFFFF 80%)" },
+  { variant: "lime",       label: "Lime Green BG",    tag: "CONTEXTUAL",  tagColor: "#7fb800", description: "Fresh, eco, or growth-focused screen contexts.",            gradient: "radial-gradient(circle at 50% 0%, #F9FEE5 0%, #FFFFFF 80%)" },
+]
+
+function AppBackgroundPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "reference">("overview")
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">App Background</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
+            Atomic full-screen gradient background layer for every AIMS OS screen. Automatically switches between light radial and dark linear gradient by binding two FLOAT opacity variables to each layer. Seven contextual color variants reinforce screen mood without dark mode switching.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("app-background")} />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "reference"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{
+              color: tab === t ? "var(--primary)" : "var(--field-supporting)",
+              borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ───────────────────────────────────────────────────────────── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Anatomy — how it works */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>How it works — Two-layer anatomy</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
+              The component renders two gradient frames stacked on top of each other. Each layer's <strong className="text-[var(--field-label)]">opacity</strong> (not fill opacity) is bound to a FLOAT variable in the Primitives Tokens collection. When you toggle dark mode, both layers switch simultaneously with no extra steps.
+            </p>
+            <div className="grid grid-cols-2 gap-[12px] mt-[4px]">
+              {[
+                { layer: "Light BG Layer", paintStyle: "Primary Color BG", gradient: "radial-gradient(circle at 50% 0%, #F6F9FF 0%, #FFFFFF 80%)", variable: "BG/Light-Opacity", light: "100 (visible)", dark: "0 (hidden)" },
+                { layer: "Dark BG Layer",  paintStyle: "App Background/Dark", gradient: "linear-gradient(144deg, #020618 0%, #0F172B 50%, #020618 100%)", variable: "BG/Dark-Opacity", light: "0 (hidden)", dark: "100 (visible)" },
+              ].map(item => (
+                <div key={item.layer} className="flex flex-col gap-[10px] p-[16px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface-raised)" }}>
+                  <div className="w-full h-[64px] rounded-[6px]" style={{ background: item.gradient, border: "0.5px solid rgba(255,255,255,0.08)" }} />
+                  <div>
+                    <p className="text-[13px] font-semibold text-[var(--field-label)]">{item.layer}</p>
+                    <p className="text-[11px] text-[var(--field-supporting)] mt-[2px]">Paint Style: <span className="font-mono text-[var(--primary)]">{item.paintStyle}</span></p>
+                  </div>
+                  <div className="flex flex-col gap-[4px] pt-[8px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                    <p className="text-[11px] text-[var(--field-supporting)]">
+                      Variable: <span className="font-mono text-[var(--primary)]">{item.variable}</span>
+                    </p>
+                    <div className="flex gap-[12px]">
+                      <span className="text-[11px] text-[var(--field-supporting)]">☀️ Light: <strong className="text-[var(--field-label)]">{item.light}</strong></span>
+                      <span className="text-[11px] text-[var(--field-supporting)]">🌙 Dark: <strong className="text-[var(--field-label)]">{item.dark}</strong></span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[4px]">
+              To activate dark mode in Figma: select the parent frame → Design panel → Variables → set <span className="font-mono text-[var(--primary)]">Primitives Tokens → Dark</span> AND <span className="font-mono text-[var(--primary)]">Semantic Color Tokens → Dark</span>. Both must be set.
+            </p>
+          </div>
+
+          {/* Available styles grid */}
+          <div className="flex flex-col gap-[12px]">
+            <SectionLabel>Available Background Styles</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[4px]">
+              Primary Color BG + App Background/Dark are the only styles that switch automatically via the component. Contextual variants are applied manually as fill styles on specific screens.
+            </p>
+            <div className="grid grid-cols-3 gap-[16px]">
+              {APP_BG_VARIANTS.map((item, i) => (
+                <div key={i} className="flex flex-col gap-[8px]">
+                  <div
+                    className="w-full h-[120px] rounded-[8px] relative overflow-hidden"
+                    style={{ background: item.gradient, border: "0.5px solid var(--field-border)" }}
+                  >
+                    <span
+                      className="absolute top-[8px] right-[8px] px-[8px] py-[3px] rounded-[4px] text-[10px] font-semibold text-white"
+                      style={{ background: item.tagColor }}
+                    >
+                      {item.tag}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[var(--field-label)]">{item.label}</p>
+                    <p className="text-[12px] text-[var(--field-supporting)]">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Usage guidelines */}
+          <div className="grid grid-cols-2 gap-[16px]">
+            <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]" style={{ background: "rgba(0,200,120,0.06)", border: "0.5px solid rgba(0,200,120,0.20)" }}>
+              <p className="text-[12px] font-semibold" style={{ color: "#00b87a" }}>✅ Do</p>
+              {[
+                "Use App/Background as the bottom-most layer of every screen frame in the AIMS OS product.",
+                "Use Primary Color BG for all light-mode screens — provides the standard radial gradient background.",
+                "Use App Background/Dark for all dark-mode screens — pairs with Primary Color BG via the component.",
+                "Use color-variant styles (Green BG, Red BG…) for contextual screens where the background reinforces the page mood.",
+                "Always resize the component to fill the parent frame and send it to the back of the layer stack.",
+              ].map(t => <p key={t} className="text-[12px] text-[var(--field-supporting)]">• {t}</p>)}
+            </div>
+            <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]" style={{ background: "rgba(220,50,50,0.06)", border: "0.5px solid rgba(220,50,50,0.18)" }}>
+              <p className="text-[12px] font-semibold" style={{ color: "#e53935" }}>❌ Don't</p>
+              {[
+                "Don't apply background gradients as raw fills on individual frames — always use the App/Background component or a Paint Style.",
+                "Don't use contextual color variants (Green BG, Orange BG…) as the global app background — only for specific sections or screens.",
+                "Don't apply dark mode by setting only one collection mode. Both Primitives Tokens → Dark AND Semantic Color Tokens → Dark are required.",
+                "Don't stack multiple App/Background instances in the same frame.",
+              ].map(t => <p key={t} className="text-[12px] text-[var(--field-supporting)]">• {t}</p>)}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Reference ──────────────────────────────────────────────────────────── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Design tokens table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Design Tokens</SectionLabel>
+            <div className="flex flex-col gap-[20px]">
+
+              {/* FLOAT opacity variables */}
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[8px]">FLOAT Opacity Variables — Primitives Tokens collection</p>
+                <p className="text-[12px] text-[var(--field-supporting)] mb-[10px]">Control gradient layer visibility per mode. Bound to layer <em>opacity</em> (not fill opacity).</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[13px] border-collapse rounded-[6px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                    <thead>
+                      <tr style={{ background: "var(--surface-raised)" }}>
+                        {["Variable", "Role", "Light mode", "Dark mode"].map(h => (
+                          <th key={h} className="text-left px-[12px] py-[8px] font-semibold text-[var(--table-header-text)] border-b border-[var(--table-border)]">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ["BG/Light-Opacity", "Light BG layer opacity",  "100 (visible)", "0 (hidden)"],
+                        ["BG/Dark-Opacity",  "Dark BG layer opacity",   "0 (hidden)",    "100 (visible)"],
+                      ].map(([v, r, l, d], i) => (
+                        <tr key={i} className="border-b border-[var(--table-border)]">
+                          <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{v}</td>
+                          <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{r}</td>
+                          <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{l}</td>
+                          <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{d}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Paint Styles */}
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[8px]">Paint Styles — applied as fill on each gradient layer</p>
+                <p className="text-[12px] text-[var(--field-supporting)] mb-[10px]">Not variable-based — gradient values are fixed. Applied directly as Figma Paint Style fills.</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[13px] border-collapse" style={{ border: "0.5px solid var(--field-border)" }}>
+                    <thead>
+                      <tr style={{ background: "var(--surface-raised)" }}>
+                        {["Paint Style", "Type", "Gradient", "Used for"].map(h => (
+                          <th key={h} className="text-left px-[12px] py-[8px] font-semibold text-[var(--table-header-text)] border-b border-[var(--table-border)]">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ["Primary Color BG",    "GRADIENT_RADIAL",  "#F6F9FF → #FFFFFF (0%→80%)",               "Light BG layer fill"],
+                        ["App Background/Dark", "GRADIENT_LINEAR",  "#020618 → #0F172B → #020618 (144°)",       "Dark BG layer fill"],
+                        ["Green BG",            "GRADIENT_RADIAL",  "#E5FDF8 → #FFFFFF (0%→80%)",               "Contextual — success/healthy"],
+                        ["Red BG",              "GRADIENT_RADIAL",  "#FDECED → #FFFFFF (0%→80%)",               "Contextual — error/critical"],
+                        ["Orange BG",           "GRADIENT_RADIAL",  "#FFF4E5 → #FFFFFF (0%→80%)",               "Contextual — warning/pending"],
+                        ["Yellow BG",           "GRADIENT_RADIAL",  "#FFFAF0 → #FFFFFF (0%→80%)",               "Contextual — attention/in-progress"],
+                        ["Purple BG",           "GRADIENT_RADIAL",  "#F3E9FD → #FFFFFF (0%→80%)",               "Contextual — creative/premium"],
+                        ["Light Blue BG",       "GRADIENT_RADIAL",  "#E5F8FF → #FFFFFF (0%→80%)",               "Contextual — informational"],
+                        ["Lime Green BG",       "GRADIENT_RADIAL",  "#F9FEE5 → #FFFFFF (0%→80%)",               "Contextual — eco/growth"],
+                      ].map(([style, type, gradient, use], i) => (
+                        <tr key={i} className="border-b border-[var(--table-border)]" style={{ background: i % 2 !== 0 ? "var(--surface-raised)" : "transparent" }}>
+                          <td className="px-[12px] py-[8px] font-semibold text-[13px] text-[var(--field-label)]">{style}</td>
+                          <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{type}</td>
+                          <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{gradient}</td>
+                          <td className="px-[12px] py-[8px] text-[12px] text-[var(--field-supporting)]">{use}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* CSS vars */}
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[8px]">CSS Custom Properties — code implementation</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[13px] border-collapse" style={{ border: "0.5px solid var(--field-border)" }}>
+                    <thead>
+                      <tr style={{ background: "var(--surface-raised)" }}>
+                        {["CSS Variable", "Mode", "Value"].map(h => (
+                          <th key={h} className="text-left px-[12px] py-[8px] font-semibold text-[var(--table-header-text)] border-b border-[var(--table-border)]">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ["--app-bg",            "dark (default)", "linear-gradient(144deg, #020618 0%, #0F172B 50%, #020618 100%)"],
+                        ["--app-bg",            "light (.light)", "radial-gradient(circle at 50% 0%, #F6F9FF 0%, #FFFFFF 80%)"],
+                        ["--app-bg-green",      "static",         "radial-gradient(circle at 50% 0%, #E5FDF8 0%, #FFFFFF 80%)"],
+                        ["--app-bg-red",        "static",         "radial-gradient(circle at 50% 0%, #FDECED 0%, #FFFFFF 80%)"],
+                        ["--app-bg-orange",     "static",         "radial-gradient(circle at 50% 0%, #FFF4E5 0%, #FFFFFF 80%)"],
+                        ["--app-bg-yellow",     "static",         "radial-gradient(circle at 50% 0%, #FFFAF0 0%, #FFFFFF 80%)"],
+                        ["--app-bg-purple",     "static",         "radial-gradient(circle at 50% 0%, #F3E9FD 0%, #FFFFFF 80%)"],
+                        ["--app-bg-light-blue", "static",         "radial-gradient(circle at 50% 0%, #E5F8FF 0%, #FFFFFF 80%)"],
+                        ["--app-bg-lime",       "static",         "radial-gradient(circle at 50% 0%, #F9FEE5 0%, #FFFFFF 80%)"],
+                      ].map(([variable, mode, value], i) => (
+                        <tr key={i} className="border-b border-[var(--table-border)]" style={{ background: i % 2 !== 0 ? "var(--surface-raised)" : "transparent" }}>
+                          <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)] whitespace-nowrap">{variable}</td>
+                          <td className="px-[12px] py-[8px] text-[12px] text-[var(--field-supporting)] whitespace-nowrap">{mode}</td>
+                          <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Code snippets */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>HTML / JSX Usage</SectionLabel>
+            <pre className="text-[12px] leading-[20px] p-[16px] rounded-[6px] overflow-x-auto" style={{ background: "var(--surface-raised)", color: "var(--field-label)" }}>{`// 1 — Default (switches light/dark automatically)
+<AppBackground />
+
+// 2 — With arrow (appears below trigger)
+<AppBackground variant="green" />
+
+// 3 — On an icon button row (typical usage)
+<div class="relative w-full h-screen">
+  <AppBackground />              {/* always first child */}
+  {/* ...screen content... */}
+</div>
+
+// HTML equivalent
+<div class="fixed inset-0 -z-10 w-full h-full"
+     style="background: var(--app-bg)" />`}</pre>
+            <p className="text-[12px] text-[var(--field-supporting)]">
+              The component always renders <code className="font-mono text-[var(--primary)]">position: fixed; inset: 0; z-index: -10</code>. Place it as the <strong>first child</strong> of the root layout or screen wrapper — it sits behind all content automatically.
+            </p>
+          </div>
+
+          {/* Tailwind config */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Tailwind Config (optional — if not using CSS vars)</SectionLabel>
+            <pre className="text-[12px] leading-[20px] p-[16px] rounded-[6px] overflow-x-auto" style={{ background: "var(--surface-raised)", color: "var(--field-label)" }}>{`// tailwind.config.js
+module.exports = {
+  darkMode: 'class',   // toggle .dark on <html>
+  theme: {
+    extend: {
+      backgroundImage: {
+        'app-light':      'radial-gradient(circle at 50% 0%, #F6F9FF 0%, #FFFFFF 80%)',
+        'app-dark':       'linear-gradient(144deg, #020618 0%, #0F172B 50%, #020618 100%)',
+        'app-green':      'radial-gradient(circle at 50% 0%, #E5FDF8 0%, #FFFFFF 80%)',
+        'app-red':        'radial-gradient(circle at 50% 0%, #FDECED 0%, #FFFFFF 80%)',
+        'app-orange':     'radial-gradient(circle at 50% 0%, #FFF4E5 0%, #FFFFFF 80%)',
+        'app-yellow':     'radial-gradient(circle at 50% 0%, #FFFAF0 0%, #FFFFFF 80%)',
+        'app-purple':     'radial-gradient(circle at 50% 0%, #F3E9FD 0%, #FFFFFF 80%)',
+        'app-light-blue': 'radial-gradient(circle at 50% 0%, #E5F8FF 0%, #FFFFFF 80%)',
+        'app-lime':       'radial-gradient(circle at 50% 0%, #F9FEE5 0%, #FFFFFF 80%)',
+      },
+    },
+  },
+}
+
+// Then use as:
+// <div class="bg-app-light dark:bg-app-dark fixed inset-0 -z-10 w-full h-full" />`}</pre>
+          </div>
+
+          {/* Figma steps */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Using in Figma designs</SectionLabel>
+            {[
+              { n: "①", text: "Find App/Background in the Assets panel (DS library must be enabled)." },
+              { n: "②", text: "Drag into your screen frame → resize to fill the entire frame (Cmd/Ctrl + Shift + H)." },
+              { n: "③", text: "Send to back: Cmd/Ctrl + [ repeatedly until it is the bottom-most layer." },
+              { n: "④", text: "To switch to dark mode: select the parent frame → Variables → Primitives Tokens → Dark + Semantic Color Tokens → Dark." },
+              { n: "⑤", text: "For color-variant screens (green, red, etc.) apply the Paint Style directly as a fill — these do not respond to mode switching." },
+            ].map(step => (
+              <div key={step.n} className="flex gap-[10px] items-start">
+                <span className="text-[14px] font-bold text-[var(--primary)] shrink-0 w-[20px]">{step.n}</span>
+                <p className="text-[13px] text-[var(--field-supporting)]">{step.text}</p>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BreakpointsPage({ isDark, openSpec }: { isDark: boolean; openSpec: (s: SpecModal) => void }) {
   const [activeBp, setActiveBp] = useState<string>("l")
   const focused = BP_TIERS.find(b => b.id === activeBp)!
@@ -13412,7 +15006,8 @@ export default function App() {
       <main className="flex-1 overflow-y-auto">
         <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" ? "max-w-[1100px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
-          {active === "alert-banner"    && <AlertBannerPage  openSpec={setSpecModal} />}
+          {active === "alert-banner"    && <AlertBannerPage      openSpec={setSpecModal} />}
+          {active === "app-background"  && <AppBackgroundPage   openSpec={setSpecModal} />}
           {active === "empty-state"     && <EmptyStatePage   openSpec={setSpecModal} />}
           {active === "avatar"          && <AvatarPage          openSpec={setSpecModal} />}
           {active === "button"          && <ButtonPage        openSpec={setSpecModal} />}
@@ -13421,11 +15016,14 @@ export default function App() {
           {active === "card-container"  && <CardContainerPage openSpec={setSpecModal} />}
           {active === "tag"             && <TagPage           openSpec={setSpecModal} />}
           {active === "menu-item"       && <MenuItemPage       openSpec={setSpecModal} />}
+          {active === "highlight-card"  && <HighlightCardPage  openSpec={setSpecModal} />}
           {active === "highlight-icon"  && <HighlightIconPage openSpec={setSpecModal} />}
           {active === "select"          && <SelectPage        openSpec={setSpecModal} />}
           {active === "checkbox"        && <CheckboxPage      openSpec={setSpecModal} />}
+          {active === "scroll-area"     && <ScrollAreaPage     openSpec={setSpecModal} />}
           {active === "tabs"            && <TabsPage          openSpec={setSpecModal} />}
           {active === "toggle"          && <TogglePage        openSpec={setSpecModal} />}
+          {active === "tooltip"         && <TooltipPage       openSpec={setSpecModal} />}
           {active === "table"           && <TablePage         openSpec={setSpecModal} />}
           {active === "topbar"          && <TopbarPage        openSpec={setSpecModal} onAppThemeChange={(dark) => setIsDark(dark)} />}
           {active === "sidebar"         && <SidebarPage       openSpec={setSpecModal} />}

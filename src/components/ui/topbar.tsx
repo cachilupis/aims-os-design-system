@@ -580,12 +580,12 @@ export function TopbarRightMenu({
                 style={{
                   bottom: "calc(100% + 5px)", left: "50%", transform: "translateX(-50%)",
                   whiteSpace: "nowrap", zIndex: 10,
-                  background: "var(--topbar-menu-bg)", border: "1px solid var(--gs-input-border)",
-                  borderRadius: 6, padding: "3px 8px",
+                  background: "var(--tooltip-bg)",
+                  borderRadius: 4, padding: "3px 8px",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                 }}
               >
-                <span className="text-[11px] font-medium" style={{ color: "var(--gs-text)" }}>Automatic</span>
+                <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>Automatic</span>
               </div>
             )}
           </div>
@@ -613,12 +613,12 @@ export function TopbarRightMenu({
                 style={{
                   bottom: "calc(100% + 5px)", left: "50%", transform: "translateX(-50%)",
                   whiteSpace: "nowrap", zIndex: 10,
-                  background: "var(--topbar-menu-bg)", border: "1px solid var(--gs-input-border)",
-                  borderRadius: 6, padding: "3px 8px",
+                  background: "var(--tooltip-bg)",
+                  borderRadius: 4, padding: "3px 8px",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                 }}
               >
-                <span className="text-[11px] font-medium" style={{ color: "var(--gs-text)" }}>Light</span>
+                <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>Light</span>
               </div>
             )}
           </div>
@@ -646,12 +646,12 @@ export function TopbarRightMenu({
                 style={{
                   bottom: "calc(100% + 5px)", left: "50%", transform: "translateX(-50%)",
                   whiteSpace: "nowrap", zIndex: 10,
-                  background: "var(--topbar-menu-bg)", border: "1px solid var(--gs-input-border)",
-                  borderRadius: 6, padding: "3px 8px",
+                  background: "var(--tooltip-bg)",
+                  borderRadius: 4, padding: "3px 8px",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                 }}
               >
-                <span className="text-[11px] font-medium" style={{ color: "var(--gs-text)" }}>Dark</span>
+                <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>Dark</span>
               </div>
             )}
           </div>

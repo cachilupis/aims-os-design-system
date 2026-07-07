@@ -248,7 +248,7 @@ export function TableCellAvatar({ name, src, size = "default" }: TableCellAvatar
       style={{
         width: px, height: px, borderRadius: "50%", flexShrink: 0,
         background: src ? undefined : `var(--av-col-${colorKey}-bg)`,
-        color: "#ffffff",
+        color: "var(--primary-foreground)",
         border: "1px solid var(--topbar-avatar-ring)",
         fontSize: fs, fontWeight: 600, lineHeight: 1,
         display: "flex", alignItems: "center", justifyContent: "center",

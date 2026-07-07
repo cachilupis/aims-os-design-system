@@ -19,6 +19,18 @@
   .dark {
     /* Canvas / surface */
     --canvas:              #0A0E1A;
+
+    /* ── App Background — node 12655:211429 ─────────────────────────────── */
+    --app-bg:            linear-gradient(144deg, #020618 0%, #0F172B 50%, #020618 100%);
+    /* Contextual variants — always light, not overridden in .light block    */
+    --app-bg-green:      radial-gradient(circle at 50% 0%, #E5FDF8 0%, #FFFFFF 80%);
+    --app-bg-red:        radial-gradient(circle at 50% 0%, #FDECED 0%, #FFFFFF 80%);
+    --app-bg-orange:     radial-gradient(circle at 50% 0%, #FFF4E5 0%, #FFFFFF 80%);
+    --app-bg-yellow:     radial-gradient(circle at 50% 0%, #FFFAF0 0%, #FFFFFF 80%);
+    --app-bg-purple:     radial-gradient(circle at 50% 0%, #F3E9FD 0%, #FFFFFF 80%);
+    --app-bg-light-blue: radial-gradient(circle at 50% 0%, #E5F8FF 0%, #FFFFFF 80%);
+    --app-bg-lime:       radial-gradient(circle at 50% 0%, #F9FEE5 0%, #FFFFFF 80%);
+
     --surface:             #0D1120;
     --surface-raised:      #131C2E;
 
@@ -70,6 +82,7 @@
     /* ── Field — scrollbar ───────────────────────────── */
     --field-scrollbar-track: rgba(255,255,255,0.08);  /* Surface/Neutral/Default dark = White/8  */
     --field-scrollbar-thumb: rgba(255,255,255,0.2);   /* Surface/Neutral/Emphasis dark= White/20 */
+    --scrollbar-thumb-hover: rgba(255,255,255,0.32);  /* ScrollArea thumb hover dark  = White/32 */
 
     /* ── Field — validation state borders ───────────── */
     /* Border/Error/Lighter dark  */ --field-border-error:    #fb2c36;
@@ -472,11 +485,55 @@
     --fi-view-icon:          rgba(255,255,255,0.40);   /* Inactive view icon             = White/40  */
     --fi-sort-icon:          rgba(255,255,255,0.40);   /* Sort direction icon            = White/40  */
     --fi-sort-text:          rgba(255,255,255,0.65);   /* Sort label text                = White/65  */
+
+    /* ── Tooltip — Surface/Neutral/Darker + Text/Negative ────────────────── */
+    /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · node 4614:5319                  */
+    /* "Naturally dark-on-light — inverted style" per DS spec — same hex both modes */
+    --color-surface-neutral-darker: #111827;   /* Surface/Neutral/Darker — tooltip bg   */
+    --color-text-negative:          #ffffff;   /* Text/Negative          — tooltip text  */
+    --tooltip-bg:   var(--color-surface-neutral-darker);
+    --tooltip-text: var(--color-text-negative);
+    /* ── Canonical color tokens (shared across components) ──────────────── */
+    --color-surface-neutral-white:      #FFFFFF;                  /* Surface/Neutral/White            */
+    --color-border-neutral-lighter:     rgba(255,255,255,0.08);   /* Border/Neutral/Lighter           */
+    --color-text-title:                 rgba(255,255,255,0.80);   /* Text/Title                       */
+    --color-text-subtitle:              rgba(255,255,255,0.40);   /* Text/Subtitle                    */
+    --color-text-success:               #6ee7b7;                  /* Text/Success                     */
+    --color-text-error:                 #ff6467;                  /* Text/Error                       */
+    --color-icon-primary-default:       #2B7FFF;                  /* Icon/Primary/Default             */
+    --color-border-primary-default:     #2b7fff;                  /* Border/Primary/Default           */
+    --color-border-success-default:     #00a07e;                  /* Border/Success/Default           */
+    --color-border-alert-default:       #ed6c02;                  /* Border/Alert/Default             */
+    --color-border-yellow-default:      #ed6c02;                  /* Border/Yellow/Default            */
+    --color-border-purple-default:      #7b27ed;                  /* Border/Purple/Default            */
+    --color-border-light-blue-default:  #00b5d9;                  /* Border/Light Blue/Default        */
+    --color-border-lime-green-default:  #a0da1d;                  /* Border/LimeGreen/Default         */
+    --color-border-error-default:       #992222;                  /* Border/Error/Default             */
+    --color-surface-primary-subtle:     rgba(33,115,255,0.15);    /* Surface/Primary/Subtle           */
+    --color-surface-success-subtle:     rgba(0,169,127,0.15);     /* Surface/Success/Subtle           */
+    --color-surface-alert-subtle:       rgba(217,119,6,0.15);     /* Surface/Alert/Subtle             */
+    --color-surface-yellow-subtle:      rgba(202,138,4,0.14);     /* Surface/Yellow/Subtle            */
+    --color-surface-purple-subtle:      rgba(124,58,237,0.14);    /* Surface/Purple/Subtle            */
+    --color-surface-light-blue-subtle:  rgba(2,132,199,0.14);     /* Surface/LightBlue/Subtle         */
+    --color-surface-lime-subtle:        rgba(101,163,13,0.14);    /* Surface/Lime/Subtle              */
+    --color-surface-error-subtle:       rgba(220,38,38,0.14);     /* Surface/Error/Subtle             */
+    /* ── Highlight Card — component tokens ──────────────────────────────────
+       Dark bg: DS flags Surface/Neutral/White (#FFF) as ⚠ in dark mode.
+       Visual preview shows dark surface cards — use surface-raised instead. */
+    --hc-bg:            var(--surface-raised);           /* dark surface card — visual intent */
+    --hc-text-label:    var(--color-text-subtitle);      /* rgba(255,255,255,0.40) on dark bg */
+    --hc-text-value:    var(--color-text-title);         /* rgba(255,255,255,0.80) on dark bg */
+    --hc-text-feedback: var(--color-text-subtitle);
+    --hc-text-unit:     var(--color-text-subtitle);
+    --hc-icon-fill:     var(--color-icon-primary-default);
+    --hc-icon-bg:       var(--color-surface-primary-subtle);
   }
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
   .light {
     --canvas:              #E4ECF7;   /* richer blue-gray base for visible gradient */
+    --app-bg:            radial-gradient(circle at 50% 0%, #F6F9FF 0%, #FFFFFF 80%);
+
     --surface:             #F2F7FF;   /* subtle brand-blue tint instead of flat white */
     --surface-raised:      #EBF2FF;   /* elevated with blue tint for depth */
 
@@ -527,6 +584,7 @@
     /* ── Field — scrollbar ───────────────────────────── */
     --field-scrollbar-track: #f2f2f2;                 /* Surface/Neutral/Default light */
     --field-scrollbar-thumb: #d9d9d9;                 /* Surface/Neutral/Emphasis light */
+    --scrollbar-thumb-hover: #bababa;                 /* ScrollArea thumb hover light · Surface/Neutral/Focus */
 
     /* ── Field — validation state borders ───────────── */
     /* Border/Error/Lighter light  */ --field-border-error:    #d32f2f;
@@ -918,6 +976,44 @@
     --fi-view-icon:          rgba(0,0,0,0.40);
     --fi-sort-icon:          rgba(0,0,0,0.40);
     --fi-sort-text:          rgba(0,0,0,0.65);
+
+    /* ── Tooltip — light (inverted style — tooltip always dark) ─────────── */
+    --color-surface-neutral-darker: #111827;   /* Surface/Neutral/Darker light — always dark */
+    --color-text-negative:          #ffffff;   /* Text/Negative light          — always white */
+    --tooltip-bg:   var(--color-surface-neutral-darker);
+    --tooltip-text: var(--color-text-negative);
+    /* ── Canonical color tokens — light overrides ───────────────────────── */
+    --color-surface-neutral-white:      #FFFFFF;                  /* Surface/Neutral/White            */
+    --color-border-neutral-lighter:     #E8E8E8;                  /* Border/Neutral/Lighter           */
+    --color-text-title:                 #1A1A1A;                  /* Text/Title                       */
+    --color-text-subtitle:              #8C8C8C;                  /* Text/Subtitle                    */
+    --color-text-success:               #003328;                  /* Text/Success                     */
+    --color-text-error:                 #5f2120;                  /* Text/Error                       */
+    --color-icon-primary-default:       #001740;                  /* Icon/Primary/Default             */
+    --color-border-primary-default:     #2173ff;                  /* Border/Primary/Default           */
+    --color-border-success-default:     #00a07e;                  /* Border/Success/Default           */
+    --color-border-alert-default:       #ed6c02;                  /* Border/Alert/Default             */
+    --color-border-yellow-default:      #ed6c02;                  /* Border/Yellow/Default            */
+    --color-border-purple-default:      #7b27ed;                  /* Border/Purple/Default            */
+    --color-border-light-blue-default:  #00b5d9;                  /* Border/Light Blue/Default        */
+    --color-border-lime-green-default:  #a0da1d;                  /* Border/LimeGreen/Default         */
+    --color-border-error-default:       #992222;                  /* Border/Error/Default             */
+    --color-surface-primary-subtle:     #E9F1FF;                  /* Surface/Primary/Subtle           */
+    --color-surface-success-subtle:     #E5FDF8;                  /* Surface/Success/Subtle           */
+    --color-surface-alert-subtle:       #FFF4E5;                  /* Surface/Alert/Subtle             */
+    --color-surface-yellow-subtle:      #FFFAF0;                  /* Surface/Yellow/Subtle            */
+    --color-surface-purple-subtle:      #F3E9FD;                  /* Surface/Purple/Subtle            */
+    --color-surface-light-blue-subtle:  #E5F8FF;                  /* Surface/LightBlue/Subtle         */
+    --color-surface-lime-subtle:        #F9FEE5;                  /* Surface/Lime/Subtle              */
+    --color-surface-error-subtle:       #FDECED;                  /* Surface/Error/Subtle             */
+    /* ── Highlight Card — component tokens (alias → canonical) ──────────── */
+    --hc-bg:            var(--color-surface-neutral-white);
+    --hc-text-label:    var(--color-text-subtitle);
+    --hc-text-value:    var(--color-text-title);
+    --hc-text-feedback: var(--color-text-subtitle);
+    --hc-text-unit:     var(--color-text-subtitle);
+    --hc-icon-fill:     var(--color-icon-primary-default);
+    --hc-icon-bg:       var(--color-surface-primary-subtle);
   }
 
   html {
@@ -991,4 +1087,26 @@
   textarea::-webkit-scrollbar-track  { background: var(--field-scrollbar-track); border-radius: 100px; }
   textarea::-webkit-scrollbar-thumb  { background: var(--field-scrollbar-thumb); border-radius: 100px; }
   textarea::-webkit-scrollbar-thumb:hover { background: var(--field-border-hover); }
+
+  /* ScrollArea — DS custom scrollbar · node 4838:8343 · Size S 4px · hidden until hover */
+  .aims-scroll::-webkit-scrollbar               { width: 4px; height: 4px; }
+  .aims-scroll::-webkit-scrollbar-track         { background: transparent; }
+  .aims-scroll::-webkit-scrollbar-thumb         { background: transparent; border-radius: 100px; }
+  .aims-scroll:hover::-webkit-scrollbar-thumb   { background: var(--field-scrollbar-thumb); }
+  .aims-scroll::-webkit-scrollbar-thumb:hover   { background: var(--scrollbar-thumb-hover); }
+  /* Firefox */
+  .aims-scroll         { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  .aims-scroll:hover   { scrollbar-color: var(--field-scrollbar-thumb) transparent; }
+}
+
+/* Tabs — active indicator fade-in on mount */
+@keyframes tab-indicator-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Tooltip — appear on mount */
+@keyframes tooltip-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }

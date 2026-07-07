@@ -42,15 +42,14 @@ function SidebarTooltip({ label, visible }: { label: string; visible: boolean })
       role="tooltip"
       className="absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 z-50 pointer-events-none"
       style={{
-        background: "var(--topbar-menu-bg)",
-        border: "1px solid var(--topbar-menu-border)",
-        borderRadius: 6,
-        padding: "4px 10px",
+        background: "var(--tooltip-bg)",
+        borderRadius: 4,
+        padding: "8px 12px",
         whiteSpace: "nowrap",
         boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
       }}
     >
-      <span className="text-[12px] font-medium" style={{ color: "var(--gs-text)" }}>
+      <span className="text-[14px] font-medium leading-[20px]" style={{ color: "var(--tooltip-text)" }}>
         {label}
       </span>
     </div>

@@ -5,12 +5,12 @@
  * Sizes: M (default, 14px / px-16 py-10) · S (12px / px-12 py-8)
  *
  * States:
- *   Active   → 2px indicator span (absolute, not clipped by rounded-[8px]) · --primary color
- *   Default  → no bg · --field-supporting color
- *   Hover    → --tabs-hover-bg (Surface/Neutral/Subtle) · rounded-[8px] · --foreground text
+ *   Active   → 2px indicator span (absolute) · --primary color · NO container border
+ *   Default  → no bg · no line · --field-supporting color
+ *   Hover    → --tabs-hover-bg (Surface/Neutral/Subtle) · rounded-[8px] · --foreground text · no line
  *   Disabled → opacity-40 · no interaction
  *
- * Tokens: --primary · --field-supporting · --foreground · --field-border · --tabs-hover-bg
+ * Tokens: --primary · --field-supporting · --foreground · --tabs-hover-bg
  */
 
 import { cn } from "@/lib/utils"
@@ -42,8 +42,7 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
   return (
     <div
       role="tablist"
-      className={cn("flex items-end border-b", className)}
-      style={{ borderColor: "var(--field-border)" }}
+      className={cn("flex items-end", className)}
     >
       {items.map(tab => {
         const isActive   = tab.id === activeId
@@ -73,18 +72,16 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
             )}
           >
             {/*
-              Always rendered — opacity + translateY animate in/out so the indicator
-              "rises" into place rather than snapping. Not clipped by rounded-[8px]
-              because absolute children ignore parent border-radius without overflow:hidden.
+              Conditionally rendered so it is NEVER in the DOM for inactive tabs —
+              no line in default state. Fades in via CSS animation on mount.
+              Absolute position keeps it outside the button's rounded-[8px] clip.
             */}
-            <span
-              className={cn(
-                "absolute left-0 right-0 bottom-[-1px] h-[2px]",
-                "transition-[opacity,transform] duration-200 ease-out",
-                isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[2px]",
-              )}
-              style={{ background: "var(--primary)" }}
-            />
+            {isActive && (
+              <span
+                className="absolute left-0 right-0 bottom-[-1px] h-[2px]"
+                style={{ background: "var(--primary)", animation: "tab-indicator-in 180ms ease-out both" }}
+              />
+            )}
             {Icon && (
               <Icon
                 size={sm ? 14 : 16}
