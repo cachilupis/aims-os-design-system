@@ -527,6 +527,21 @@
     --hc-text-unit:     var(--color-text-subtitle);
     --hc-icon-fill:     var(--color-icon-primary-default);
     --hc-icon-bg:       var(--color-surface-primary-subtle);
+    /* ── Slide Out — canonical tokens ────────────────────────────────────────
+       Source: Figma v6rmYKA2zmyXWOahlxLOeI · node 5045:61434
+       Panel bg uses Surface/Neutral/Black (#0F172B) in dark, white in light. */
+    --color-border-neutral-subtle:   rgba(255,255,255,0.10);  /* Border/Neutral/Subtle dark     */
+    --color-text-body:               #94A3B8;                 /* Text/Body dark                 */
+    --color-icon-neutral-default:    #D1D5DB;                 /* Icon/Neutral/Default dark      */
+    --color-surface-overlay:         rgba(0,0,0,0.30);        /* Overlay/Scrim/Default          */
+    --color-surface-neutral-black:   #0f172b;                 /* Surface/Neutral/Black          */
+    /* ── Slide Out — component tokens ──────────────────────────────────── */
+    --slide-out-bg:      var(--color-surface-neutral-black);
+    --slide-out-title:   var(--color-text-title);
+    --slide-out-body:    var(--color-text-body);
+    --slide-out-border:  var(--color-border-neutral-subtle);
+    --slide-out-icon:    var(--color-icon-neutral-default);
+    --slide-out-overlay: var(--color-surface-overlay);
   }
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
@@ -1014,6 +1029,19 @@
     --hc-text-unit:     var(--color-text-subtitle);
     --hc-icon-fill:     var(--color-icon-primary-default);
     --hc-icon-bg:       var(--color-surface-primary-subtle);
+    /* ── Slide Out — light overrides ─────────────────────────────────────── */
+    --color-border-neutral-subtle:   #E4E4E7;                 /* Border/Neutral/Subtle light    */
+    --color-text-body:               #5C5C5C;                 /* Text/Body light                */
+    --color-icon-neutral-default:    #52525B;                 /* Icon/Neutral/Default light     */
+    --color-surface-overlay:         rgba(0,0,0,0.30);        /* Overlay/Scrim/Default (same)   */
+    --color-surface-neutral-black:   #0f172b;                 /* Surface/Neutral/Black (static) */
+    /* ── Slide Out — component tokens (light) ───────────────────────────── */
+    --slide-out-bg:      var(--color-surface-neutral-white);
+    --slide-out-title:   var(--color-text-title);
+    --slide-out-body:    var(--color-text-body);
+    --slide-out-border:  var(--color-border-neutral-subtle);
+    --slide-out-icon:    var(--color-icon-neutral-default);
+    --slide-out-overlay: var(--color-surface-overlay);
   }
 
   html {

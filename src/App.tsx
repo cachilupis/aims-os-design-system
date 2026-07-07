@@ -35,11 +35,12 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, type TooltipSide } from "@/components/ui/tooltip"
+import { SlideOut, type SlideOutSize } from "@/components/ui/slide-out"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "slide-out" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography"
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "slide-out" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -109,6 +110,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "sidebar",         label: "Sidebar",           group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
+  { id: "slide-out",       label: "Slide Out",         group: "Components",  description: "Overlay panel from the right · 2 sizes M (635px) / S (420px) · header with title + subtitle + close · divider · scrollable body · optional footer · Escape key + backdrop dismiss" },
   { id: "table",           label: "Table",             group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
   { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · inside card or standalone · active indicator · icon · 2 sizes (M/S) · disabled state · use for in-context view switching, not page navigation" },
   { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
@@ -1991,6 +1993,45 @@ const TOOLTIP_SPEC = {
   ],
 }
 
+const SLIDE_OUT_SPEC = {
+  componentName: "Slide Out",
+  nodeId: "5045:61434",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5045-61434",
+  description: "Overlay panel that slides in from the right edge. Used for detail views, filters, and configuration panels. Supports M (635px) and S (420px) widths, optional subtitle, scrollable content, and a footer action row.",
+  properties: [
+    { name: "size",            type: "Enum",    values: ["m", "s"],          default: "m",     note: "M = 635px · S = 420px. Use M for detailed content, S for focused tasks." },
+    { name: "title",           type: "String",  values: ["string"],          default: "required", note: "Panel title. Font: Title/Bold/M — 20px SemiBold." },
+    { name: "subtitle",        type: "String",  values: ["string", "undefined"], default: "undefined", note: "Optional secondary label below the title." },
+    { name: "open",            type: "Boolean", values: ["true", "false"],   default: "false", note: "Controls visibility. Animates with translate-x transition." },
+    { name: "onClose",         type: "Function",values: ["() => void"],      default: "required", note: "Called on close button click, backdrop click, or Escape key." },
+    { name: "closeOnBackdrop", type: "Boolean", values: ["true", "false"],   default: "true",  note: "Whether clicking the backdrop triggers onClose." },
+    { name: "footer",          type: "ReactNode",values: ["ReactNode", "undefined"], default: "undefined", note: "Renders below a divider. Typically Cancel + Apply buttons." },
+  ],
+  sizes: [
+    { size: "M", dimensions: "635px wide · 100vh tall", note: "Default. For detail panels with multiple sections." },
+    { size: "S", dimensions: "420px wide · 100vh tall", note: "Focused tasks, quick configurations, or small viewports." },
+  ],
+  typography: [
+    { element: "Title",    family: "Inter", size: "20px", weight: "600", lineHeight: "100%" },
+    { element: "Subtitle", family: "Inter", size: "14px", weight: "500", lineHeight: "143%" },
+  ],
+  variants: [
+    {
+      name: "Dark Mode",
+      description: "Panel on dark app background — uses Surface/Neutral/Black (#0F172B).",
+      cssPrefix: "--slide-out",
+      tokens: [
+        { role: "Panel BG",       variable: "--slide-out-bg",      varId: "Surface/Neutral/Black",   light: "#FFFFFF",               dark: "#0F172B"              },
+        { role: "Title text",     variable: "--slide-out-title",   varId: "Text/Title",              light: "#000000",               dark: "rgba(255,255,255,.80)"},
+        { role: "Subtitle text",  variable: "--slide-out-body",    varId: "Text/Body",               light: "#5C5C5C",               dark: "#94A3B8"              },
+        { role: "Divider / border", variable: "--slide-out-border", varId: "Border/Neutral/Subtle",  light: "#E4E4E7",               dark: "rgba(255,255,255,.10)"},
+        { role: "Close icon",     variable: "--slide-out-icon",    varId: "Icon/Neutral/Default",    light: "#52525B",               dark: "#D1D5DB"              },
+        { role: "Backdrop",       variable: "--slide-out-overlay", varId: "Overlay/Scrim/Default",   light: "rgba(0,0,0,.30)",       dark: "rgba(0,0,0,.30)"     },
+      ],
+    },
+  ],
+}
+
 // ── Unified Spec Panel ─────────────────────────────────────────────────────
 
 function getSpec(id: NonNullable<SpecModal>): AnySpec {
@@ -2017,6 +2058,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "tabs")             return TABS_SPEC             as AnySpec
   if (id === "scroll-area")     return SCROLL_AREA_SPEC      as AnySpec
   if (id === "tooltip")         return TOOLTIP_SPEC          as AnySpec
+  if (id === "slide-out")       return SLIDE_OUT_SPEC        as AnySpec
   // Foundation pages
   if (id === "avatar")           return AVATAR_SPEC           as AnySpec
   if (id === "colors")           return COLORS_SPEC           as AnySpec
@@ -14972,6 +15014,507 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
   )
 }
 
+// ── SlideOutPage ──────────────────────────────────────────────────────────────
+
+function SlideOutPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+
+  // Playground state
+  const [pgOpen,           setPgOpen]           = useState(false)
+  const [pgSize,           setPgSize]           = useState<SlideOutSize>("m")
+  const [pgTitle,          setPgTitle]          = useState("Filter Results")
+  const [pgShowSubtitle,   setPgShowSubtitle]   = useState(true)
+  const [pgSubtitle,       setPgSubtitle]       = useState("Refine your search criteria")
+  const [pgShowFooter,     setPgShowFooter]     = useState(true)
+  const [pgCloseBackdrop,  setPgCloseBackdrop]  = useState(true)
+
+  const anatomyItems = [
+    { label: "Backdrop",       desc: "Semi-transparent scrim (rgba 0,0,0, 0.30) covering the full viewport. Click closes the panel when closeOnBackdrop=true." },
+    { label: "Panel container", desc: "Aside element, slides in from the right. Radius-XL (24px) on top-left and bottom-left corners. Width: 635px (M) · 420px (S)." },
+    { label: "Header",         desc: "px-16 py-16 · Title (20px SemiBold) + optional Subtitle (14px Medium) on the left · close × button on the right." },
+    { label: "Header divider", desc: "0.5px horizontal rule using --slide-out-border. Separates header from body." },
+    { label: "Content area",   desc: "Flex-1 · overflow-y-auto · px-24 py-24. Holds any children via the children prop." },
+    { label: "Footer",         desc: "Optional. Appears below a 0.5px divider · right-aligned · px-16 py-16. Typically Cancel + Apply button pair." },
+  ]
+
+  const sizeVariants = [
+    { size: "M" as SlideOutSize, label: "Size M", width: "635px", note: "Default. Detail views, filter panels, configuration drawers with multiple sections." },
+    { size: "S" as SlideOutSize, label: "Size S", width: "420px", note: "Focused tasks, quick edits, or narrow viewports where M is too wide." },
+  ]
+
+  const codeSnippet = `import { SlideOut } from "@/components/ui/slide-out"
+
+// Basic usage
+const [open, setOpen] = useState(false)
+
+<button onClick={() => setOpen(true)}>Open panel</button>
+
+<SlideOut
+  open={open}
+  onClose={() => setOpen(false)}
+  title="Filter Results"
+  subtitle="Refine your search criteria"
+  footer={
+    <>
+      <button onClick={() => setOpen(false)}>Cancel</button>
+      <button onClick={() => setOpen(false)}>Apply</button>
+    </>
+  }
+>
+  {/* Any content here */}
+  <p>Panel body content</p>
+</SlideOut>`
+
+  const tokenRows = [
+    { token: "--slide-out-bg",      varId: "Surface/Neutral/Black",  light: "#FFFFFF",            dark: "#0F172B" },
+    { token: "--slide-out-title",   varId: "Text/Title",             light: "#000000",            dark: "rgba(255,255,255,.80)" },
+    { token: "--slide-out-body",    varId: "Text/Body",              light: "#5C5C5C",            dark: "#94A3B8" },
+    { token: "--slide-out-border",  varId: "Border/Neutral/Subtle",  light: "#E4E4E7",            dark: "rgba(255,255,255,.10)" },
+    { token: "--slide-out-icon",    varId: "Icon/Neutral/Default",   light: "#52525B",            dark: "#D1D5DB" },
+    { token: "--slide-out-overlay", varId: "Overlay/Scrim/Default",  light: "rgba(0,0,0,.30)",    dark: "rgba(0,0,0,.30)" },
+  ]
+
+  const propRows = [
+    { prop: "open",            type: "boolean",           def: "—",       desc: "Controls visibility. Animates panel in/out with translate-x." },
+    { prop: "onClose",         type: "() => void",        def: "—",       desc: "Called on close button, backdrop click, or Escape key." },
+    { prop: "title",           type: "string",            def: "—",       desc: "Panel heading. 20px SemiBold (Title/Bold/M)." },
+    { prop: "subtitle",        type: "string",            def: "undefined", desc: "Optional secondary text below the title." },
+    { prop: "size",            type: '"m" | "s"',         def: '"m"',     desc: 'M = 635px wide · S = 420px wide.' },
+    { prop: "closeOnBackdrop", type: "boolean",           def: "true",    desc: "Whether clicking the backdrop triggers onClose." },
+    { prop: "children",        type: "ReactNode",         def: "undefined", desc: "Scrollable body content." },
+    { prop: "footer",          type: "ReactNode",         def: "undefined", desc: "Rendered below a divider, right-aligned. Typically CTA pair." },
+    { prop: "className",       type: "string",            def: "undefined", desc: "Extra classes applied to the aside panel element." },
+  ]
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Slide Out</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
+            Overlay panel that slides in from the right edge. Used for filters, detail views, and configuration drawers.
+            Two widths: M (635px) and S (420px). Closes on backdrop click, close button, or Escape key.
+            Renders via React portal above all other content.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("slide-out")} />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{
+              color: tab === t ? "var(--primary)" : "var(--field-supporting)",
+              borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ─────────────────────────────────────────────────────────── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+
+          {/* Anatomy */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Anatomy</h2>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">Six structural zones. Each is always present except Subtitle and Footer, which are optional.</p>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {anatomyItems.map((item, i) => (
+                <div key={i} className="flex flex-col gap-[4px] p-[16px] rounded-[8px] border border-[var(--field-border)]">
+                  <span className="text-[12px] font-semibold" style={{ color: "var(--primary)" }}>{String(i + 1).padStart(2, "0")} {item.label}</span>
+                  <span className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>{item.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Size variants */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Sizes</h2>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">Two widths with the same height (100vh). The height is always full-screen — content scrolls inside the body zone.</p>
+            <div className="flex gap-[16px]">
+              {sizeVariants.map(sv => (
+                <div key={sv.size} className="flex flex-col gap-[12px] p-[20px] rounded-[8px] border border-[var(--field-border)] flex-1">
+                  <div className="flex items-center gap-[8px]">
+                    <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{sv.label}</span>
+                    <span className="px-[8px] py-[2px] rounded-full text-[11px] font-medium" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{sv.width}</span>
+                  </div>
+                  <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>{sv.note}</p>
+                  {/* Visual preview */}
+                  <div
+                    className="relative overflow-hidden rounded-[6px] flex justify-end"
+                    style={{ height: 120, background: "var(--canvas)" }}
+                  >
+                    <div
+                      className="h-full rounded-tl-[12px] rounded-bl-[12px]"
+                      style={{
+                        width: sv.size === "m" ? "62%" : "46%",
+                        background: "var(--slide-out-bg)",
+                        borderLeft: "0.5px solid var(--slide-out-border)",
+                        display: "flex",
+                        flexDirection: "column",
+                        padding: "10px 10px",
+                        gap: 6,
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-[3px]">
+                          <div className="h-[6px] w-[60px] rounded-[2px]" style={{ background: "var(--slide-out-title)" }} />
+                          <div className="h-[4px] w-[80px] rounded-[2px]" style={{ background: "var(--slide-out-body)", opacity: 0.6 }} />
+                        </div>
+                        <div className="w-[14px] h-[14px] rounded-full flex items-center justify-center" style={{ background: "var(--slide-out-border)" }}>
+                          <LucideIcons.X size={8} style={{ color: "var(--slide-out-icon)" }} />
+                        </div>
+                      </div>
+                      <div className="w-full" style={{ height: "0.5px", background: "var(--slide-out-border)" }} />
+                      <div className="flex flex-col gap-[4px] flex-1">
+                        {[40, 75, 55].map((w, i) => (
+                          <div key={i} className="h-[4px] rounded-[2px]" style={{ width: `${w}%`, background: "var(--slide-out-border)" }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[16px]">Do / Don't</h2>
+            <div className="grid grid-cols-2 gap-[16px]">
+              <div className="p-[20px] rounded-[8px] border border-[var(--color-border-success-default)]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-text-success)" }}>Do</span>
+                <ul className="mt-[12px] flex flex-col gap-[8px]">
+                  {[
+                    "Use role=\"dialog\" and aria-modal=\"true\" on the panel element.",
+                    "Always provide a visible close button with aria-label=\"Close panel\".",
+                    "Trap focus inside the panel while open; restore on close.",
+                    "Support Escape key to dismiss — built into the component.",
+                    "Use Size M for multi-section content, Size S for focused tasks.",
+                    "Show a footer only when there is a commit action (Apply, Save, Confirm).",
+                  ].map((d, i) => (
+                    <li key={i} className="flex gap-[8px] items-start text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                      <span style={{ color: "var(--color-text-success)" }}>✓</span>{d}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="p-[20px] rounded-[8px] border border-[var(--color-border-error-default)]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-text-error)" }}>Don't</span>
+                <ul className="mt-[12px] flex flex-col gap-[8px]">
+                  {[
+                    "Don't open a Slide Out from inside another Slide Out.",
+                    "Don't use the Slide Out for navigation — use the Sidebar instead.",
+                    "Don't stack more than one Slide Out on screen at a time.",
+                    "Don't embed destructive actions without a secondary confirmation.",
+                    "Don't forget to scroll-lock the body when the panel is open.",
+                    "Don't use the Title as the only accessible label — set aria-labelledby.",
+                  ].map((d, i) => (
+                    <li key={i} className="flex gap-[8px] items-start text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                      <span style={{ color: "var(--color-text-error)" }}>✕</span>{d}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Playground ───────────────────────────────────────────────────────── */}
+      {tab === "playground" && (
+        <div className="flex gap-[24px]">
+
+          {/* Controls */}
+          <div
+            className="flex flex-col gap-[20px] p-[24px] rounded-[8px] border border-[var(--field-border)] shrink-0"
+            style={{ width: 280, background: "var(--surface)" }}
+          >
+            <p className="text-[12px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Controls</p>
+            <CtrlGroup
+              label="Size"
+              options={[
+                { label: "M (635px)", value: "m" },
+                { label: "S (420px)", value: "s" },
+              ]}
+              value={pgSize}
+              onChange={setPgSize}
+            />
+            <CtrlToggle label="Subtitle"   value={pgShowSubtitle}  onChange={setPgShowSubtitle} />
+            <CtrlToggle label="Footer"     value={pgShowFooter}    onChange={setPgShowFooter} />
+            <CtrlToggle label="Backdrop close" value={pgCloseBackdrop} onChange={setPgCloseBackdrop} />
+            <div className="flex flex-col gap-[6px]">
+              <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Title</span>
+              <input
+                className="px-[10px] py-[7px] rounded-[6px] text-[12px] outline-none"
+                style={{ background: "var(--field-bg)", border: "1px solid var(--field-border)", color: "var(--field-text)" }}
+                value={pgTitle}
+                onChange={e => setPgTitle(e.target.value)}
+              />
+            </div>
+            {pgShowSubtitle && (
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Subtitle</span>
+                <input
+                  className="px-[10px] py-[7px] rounded-[6px] text-[12px] outline-none"
+                  style={{ background: "var(--field-bg)", border: "1px solid var(--field-border)", color: "var(--field-text)" }}
+                  value={pgSubtitle}
+                  onChange={e => setPgSubtitle(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Preview */}
+          <div className="flex-1 flex flex-col items-center justify-center gap-[24px] p-[40px] rounded-[8px] border border-[var(--field-border)]"
+            style={{ background: "var(--canvas)", minHeight: 340 }}
+          >
+            <div className="text-center flex flex-col gap-[8px]">
+              <p className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>
+                {pgSize === "m" ? "Size M — 635px" : "Size S — 420px"}
+              </p>
+              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Click Launch to open the panel over the full viewport
+              </p>
+            </div>
+            {/* Schematic preview */}
+            <div
+              className="relative overflow-hidden rounded-[6px] flex justify-end"
+              style={{ width: 320, height: 200, background: "var(--surface)", border: "1px solid var(--field-border)" }}
+            >
+              <div
+                className="h-full"
+                style={{
+                  width: pgSize === "m" ? "68%" : "52%",
+                  background: "var(--slide-out-bg)",
+                  borderLeft: "0.5px solid var(--slide-out-border)",
+                  borderTopLeftRadius: 16,
+                  borderBottomLeftRadius: 16,
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Schematic header */}
+                <div
+                  className="flex items-center justify-between shrink-0"
+                  style={{ padding: "10px 12px", borderBottom: "0.5px solid var(--slide-out-border)" }}
+                >
+                  <div className="flex flex-col gap-[4px]">
+                    <div className="h-[7px] w-[60px] rounded-[2px]" style={{ background: "var(--slide-out-title)" }} />
+                    {pgShowSubtitle && <div className="h-[4px] w-[80px] rounded-[2px]" style={{ background: "var(--slide-out-body)", opacity: 0.6 }} />}
+                  </div>
+                  <div className="w-[16px] h-[16px] rounded-full flex items-center justify-center shrink-0" style={{ background: "var(--slide-out-border)" }}>
+                    <LucideIcons.X size={9} style={{ color: "var(--slide-out-icon)" }} />
+                  </div>
+                </div>
+                {/* Schematic body */}
+                <div className="flex-1 flex flex-col gap-[6px]" style={{ padding: "12px" }}>
+                  {[70, 90, 55, 80].map((w, i) => (
+                    <div key={i} className="h-[5px] rounded-[2px]" style={{ width: `${w}%`, background: "var(--slide-out-border)" }} />
+                  ))}
+                </div>
+                {/* Schematic footer */}
+                {pgShowFooter && (
+                  <div
+                    className="flex items-center justify-end gap-[6px] shrink-0"
+                    style={{ padding: "8px 12px", borderTop: "0.5px solid var(--slide-out-border)" }}
+                  >
+                    <div className="h-[18px] w-[44px] rounded-[4px]" style={{ background: "var(--slide-out-border)" }} />
+                    <div className="h-[18px] w-[44px] rounded-[4px]" style={{ background: "var(--primary)", opacity: 0.7 }} />
+                  </div>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setPgOpen(true)}
+              className="flex items-center gap-[8px] px-[20px] py-[10px] rounded-[8px] text-[13px] font-semibold transition-opacity hover:opacity-80"
+              style={{ background: "var(--primary)", color: "#ffffff" }}
+            >
+              <LucideIcons.PanelRight size={14} />
+              Launch Slide Out
+            </button>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Reference ────────────────────────────────────────────────────────── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[40px]">
+
+          {/* Design tokens */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Design tokens</h2>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[16px]">All component tokens alias canonical DS tokens. Add <code className="font-mono text-[var(--primary)]">--slide-out-*</code> to <code className="font-mono text-[var(--primary)]">index.css</code> for both dark and light blocks.</p>
+            <div className="rounded-[8px] overflow-hidden border border-[var(--field-border)]">
+              <div
+                className="grid px-[16px] py-[10px] text-[11px] font-semibold uppercase tracking-wider"
+                style={{ gridTemplateColumns: "200px 1fr 120px 120px", background: "var(--table-header-bg)", color: "var(--table-header-text)" }}
+              >
+                <span>CSS Variable</span>
+                <span>DS Token</span>
+                <span>Light</span>
+                <span>Dark</span>
+              </div>
+              {tokenRows.map((row, i) => (
+                <div
+                  key={row.token}
+                  className="grid items-center px-[16px] py-[10px] text-[12px]"
+                  style={{
+                    gridTemplateColumns: "200px 1fr 120px 120px",
+                    background: i % 2 === 1 ? "var(--row-alt-bg)" : "transparent",
+                    borderTop: "1px solid var(--table-border)",
+                    color: "var(--field-supporting)",
+                  }}
+                >
+                  <code className="font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.token}</code>
+                  <span>{row.varId}</span>
+                  <span className="flex items-center gap-[6px]">
+                    <span className="w-[12px] h-[12px] rounded-[2px] border border-[var(--field-border)] shrink-0" style={{ background: row.light }} />
+                    <span className="font-mono text-[10px]">{row.light}</span>
+                  </span>
+                  <span className="flex items-center gap-[6px]">
+                    <span className="w-[12px] h-[12px] rounded-[2px] border border-[var(--field-border)] shrink-0" style={{ background: row.dark }} />
+                    <span className="font-mono text-[10px]">{row.dark}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[16px]">Usage</h2>
+            <pre
+              className="p-[20px] rounded-[8px] text-[12px] leading-[1.8] overflow-x-auto"
+              style={{ background: "var(--code-bg)", color: "var(--field-text)" }}
+            >
+              {codeSnippet}
+            </pre>
+          </div>
+
+          {/* Props table */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[16px]">Props</h2>
+            <div className="rounded-[8px] overflow-hidden border border-[var(--field-border)]">
+              <div
+                className="grid px-[16px] py-[10px] text-[11px] font-semibold uppercase tracking-wider"
+                style={{ gridTemplateColumns: "140px 160px 100px 1fr", background: "var(--table-header-bg)", color: "var(--table-header-text)" }}
+              >
+                <span>Prop</span><span>Type</span><span>Default</span><span>Description</span>
+              </div>
+              {propRows.map((row, i) => (
+                <div
+                  key={row.prop}
+                  className="grid items-start px-[16px] py-[10px] text-[12px]"
+                  style={{
+                    gridTemplateColumns: "140px 160px 100px 1fr",
+                    background: i % 2 === 1 ? "var(--row-alt-bg)" : "transparent",
+                    borderTop: "1px solid var(--table-border)",
+                    color: "var(--field-supporting)",
+                  }}
+                >
+                  <span className="font-mono font-semibold" style={{ color: "var(--foreground)" }}>{row.prop}</span>
+                  <span className="font-mono text-[11px]" style={{ color: "var(--muted-foreground)" }}>{row.type}</span>
+                  <span className="font-mono opacity-60">{row.def}</span>
+                  <span className="leading-[1.6]">{row.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Figma usage steps */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[16px]">Figma usage steps</h2>
+            <div className="flex flex-col gap-[12px]">
+              {[
+                "From the DS library, insert the Slide Out component onto your frame.",
+                "Select Type: With variants to show the anatomy zones, or Full slot for a blank content area.",
+                "Set Size: M (635px) for dense content, S (420px) for focused tasks.",
+                "Replace the Title and optional Subtitle text layers with your content labels.",
+                "In the Content slot, detach and populate with your actual content (tables, forms, lists).",
+                "Add a Footer row only if there is a commit action (Apply / Cancel pair).",
+                "Apply the dark/light variable mode using the Figma Dark Mode toggle script in the Developer Reference.",
+                "To position: anchor the panel to the right edge of your screen frame at x = (screen width − panel width).",
+              ].map((step, i) => (
+                <div key={i} className="flex gap-[12px] items-start text-[13px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                  <span className="shrink-0 w-[24px] h-[24px] rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>
+                    {i + 1}
+                  </span>
+                  {step}
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* Portal slide out — always mounted so animation works */}
+      <SlideOut
+        open={pgOpen}
+        onClose={() => setPgOpen(false)}
+        title={pgTitle}
+        subtitle={pgShowSubtitle ? pgSubtitle : undefined}
+        size={pgSize}
+        closeOnBackdrop={pgCloseBackdrop}
+        footer={pgShowFooter ? (
+          <div className="flex gap-[8px]">
+            <button
+              onClick={() => setPgOpen(false)}
+              className="px-[16px] py-[8px] rounded-[6px] text-[13px] font-medium transition-opacity hover:opacity-70"
+              style={{ background: "var(--field-bg)", border: "1px solid var(--field-border)", color: "var(--foreground)" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => setPgOpen(false)}
+              className="px-[16px] py-[8px] rounded-[6px] text-[13px] font-semibold transition-opacity hover:opacity-80"
+              style={{ background: "var(--primary)", color: "#ffffff" }}
+            >
+              Apply
+            </button>
+          </div>
+        ) : undefined}
+      >
+        <div className="flex flex-col gap-[20px]">
+          <p className="text-[14px] leading-[1.6]" style={{ color: "var(--slide-out-body)" }}>
+            This is the scrollable content area of the Slide Out. Drop any content here — filter controls, detail views, forms, or data tables.
+          </p>
+          <div className="flex flex-col gap-[8px]">
+            {["Category A", "Category B", "Category C", "Category D", "Category E"].map((label) => (
+              <div
+                key={label}
+                className="flex items-center justify-between px-[12px] py-[10px] rounded-[6px]"
+                style={{ background: "var(--field-bg)", border: "0.5px solid var(--slide-out-border)" }}
+              >
+                <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{label}</span>
+                <span className="text-[11px] px-[8px] py-[2px] rounded-full" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>Active</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[12px] leading-[1.6]" style={{ color: "var(--slide-out-body)", opacity: 0.7 }}>
+            The content area is flex-1 and overflow-y-auto. Long content scrolls within the panel without affecting the header or footer.
+          </p>
+        </div>
+      </SlideOut>
+
+    </div>
+  )
+}
+
 // ── App ────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -14981,6 +15524,11 @@ export default function App() {
   const [specModal, setSpecModal] = useState<SpecModal>(null)
 
   const theme = isDark ? "dark" : "light"
+
+  // Mirror theme class to document.body so portals (SlideOut, etc.) inherit CSS vars
+  useEffect(() => {
+    document.body.classList.toggle("light", !isDark)
+  }, [isDark])
 
   function handleSearch(v: string) {
     setSearch(v)
@@ -15027,6 +15575,7 @@ export default function App() {
           {active === "table"           && <TablePage         openSpec={setSpecModal} />}
           {active === "topbar"          && <TopbarPage        openSpec={setSpecModal} onAppThemeChange={(dark) => setIsDark(dark)} />}
           {active === "sidebar"         && <SidebarPage       openSpec={setSpecModal} />}
+          {active === "slide-out"       && <SlideOutPage      openSpec={setSpecModal} />}
           {active === "entity-list"     && <EntityListPage    openSpec={setSpecModal} />}
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
