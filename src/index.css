@@ -527,21 +527,71 @@
     --hc-text-unit:     var(--color-text-subtitle);
     --hc-icon-fill:     var(--color-icon-primary-default);
     --hc-icon-bg:       var(--color-surface-primary-subtle);
-    /* ── Slide Out — canonical tokens ────────────────────────────────────────
-       Source: Figma v6rmYKA2zmyXWOahlxLOeI · node 5045:61434
-       Panel bg uses Surface/Neutral/Black (#0F172B) in dark, white in light. */
-    --color-border-neutral-subtle:   rgba(255,255,255,0.10);  /* Border/Neutral/Subtle dark     */
-    --color-text-body:               #94A3B8;                 /* Text/Body dark                 */
-    --color-icon-neutral-default:    #D1D5DB;                 /* Icon/Neutral/Default dark      */
-    --color-surface-overlay:         rgba(0,0,0,0.30);        /* Overlay/Scrim/Default          */
-    --color-surface-neutral-black:   #0f172b;                 /* Surface/Neutral/Black          */
+    /* ── Slide Out — canonical tokens (DS node 5066:9783) ───────────────────
+       Panel bg: Surface/Floating/Default = frosted glass rgba(16,22,40,0.92)
+       + backdrop-blur(30px) + shadow -24px -24px 60px rgba(0,0,0,0.08)
+       Radius: Radius-XL 24px (M) | Radius-L 16px (S) — left corners only   */
+    --surface-floating-default:           rgba(16,22,40,0.92);     /* Surface/Floating/Default dark  */
+    --color-border-neutral-default:       rgba(255,255,255,0.10);  /* Border/Neutral/Default dark    */
+    --color-border-primary-lighter:       #80afff;                 /* Border/Primary/Lighter (static)*/
+    --color-text-label:                   rgba(255,255,255,0.80);  /* Text/Label dark                */
+    --color-text-disabled:                rgba(255,255,255,0.30);  /* Text/Disabled dark             */
+    --color-text-negative:                #ffffff;                 /* Text/Negative (static)         */
+    --color-surface-success-more-subtle:  rgba(110,231,183,0.10);  /* Surface/Success/More Subtle dk */
+    --color-border-success-lighter:       #009978;                 /* Border/Success/Lighter (static)*/
+    --color-surface-purple-more-subtle:   rgba(139,92,246,0.12);   /* Surface/Purple/More Subtle dk  */
+    --color-surface-neutral-default:      rgba(255,255,255,0.06);  /* Surface/Neutral/Default dark   */
+    --color-surface-neutral-emphasis:     rgba(255,255,255,0.12);  /* Surface/Neutral/Emphasis dark  */
+    --slide-out-shadow:                   -24px -24px 60px 0px rgba(0,0,0,0.08);
+    --slide-out-btn-secondary-bg:         rgba(255,255,255,0.08);  /* secondary CTA bg dark          */
+    --slide-out-btn-secondary-text:       rgba(255,255,255,0.80);  /* secondary CTA text dark        */
+    --color-border-neutral-subtle:        rgba(255,255,255,0.10);  /* Border/Neutral/Subtle dark     */
+    --color-text-body:                    #94A3B8;                 /* Text/Body dark                 */
+    --color-icon-neutral-default:         #D1D5DB;                 /* Icon/Neutral/Default dark      */
+    --color-surface-overlay:              rgba(0,0,0,0.30);        /* Overlay/Scrim/Default          */
+    --color-surface-neutral-black:        #0f172b;                 /* Surface/Neutral/Black          */
     /* ── Slide Out — component tokens ──────────────────────────────────── */
-    --slide-out-bg:      var(--color-surface-neutral-black);
+    --slide-out-bg:      var(--surface-floating-default);
     --slide-out-title:   var(--color-text-title);
     --slide-out-body:    var(--color-text-body);
     --slide-out-border:  var(--color-border-neutral-subtle);
     --slide-out-icon:    var(--color-icon-neutral-default);
     --slide-out-overlay: var(--color-surface-overlay);
+    /* ── Side Panel — canonical tokens (DS node 14423-32215) ───────────────
+       Inline layout panel: no overlay, shifts main content when open.
+       bg = Surface/Floating/Default dark (same glass surface as Slide Out)
+       blur = 5px  ·  corners = tl+bl (right) or tr+br (left), radius-xl 24px  */
+    --side-panel-bg:            var(--surface-floating-default);    /* rgba(16,22,40,0.92)           */
+    --side-panel-border:        var(--color-border-neutral-subtle); /* rgba(255,255,255,0.10)         */
+    --side-panel-title:         var(--color-text-label);            /* rgba(255,255,255,0.80)         */
+    --side-panel-description:   var(--color-text-body);             /* #94A3B8                       */
+    --side-panel-icon:          var(--color-icon-neutral-default);  /* #D1D5DB                       */
+    --side-panel-icon-hover-bg: rgba(255,255,255,0.08);             /* Surface/Neutral/Default dark   */
+    --side-panel-search-bg:     rgba(255,255,255,0.10);             /* Surface/Neutral/White dark     */
+    --side-panel-search-bd:     var(--color-border-neutral-default);/* rgba(255,255,255,0.10)         */
+    /* ── Chip — canonical tokens (DS node 5051:62341) ───────────────────── */
+    --color-surface-neutral-subtle:       rgba(255,255,255,0.05);   /* Surface/Neutral/Subtle dark    */
+    --color-surface-primary-default:      var(--primary);            /* Surface/Primary/Default dark   */
+    --color-surface-primary-darker:       #002f80;                   /* Surface/Primary/Darker dark    */
+    --color-surface-primary-lighter:      rgba(43,127,255,0.40);    /* Surface/Primary/Lighter dark   */
+    --color-button-primary-text-default:  #ffffff;                   /* Button/Primary/Text/Default    */
+    --color-button-primary-text-disabled: rgba(255,255,255,0.30);   /* Button/Primary/Text/Disabled   */
+    --color-icon-neutral-light:           #ffffff;                   /* Icon/Neutral/Light             */
+    --color-icon-neutral-black:           #2a2a2a;                   /* Icon/Neutral/Black             */
+    --color-surface-purple-default:       #7b27ed;                   /* Surface/Purple/Default         */
+    --color-surface-purple-darker:        #2c075c;                   /* Surface/Purple/Darker dark     */
+    --color-surface-purple-lighter:       rgba(123,39,237,0.40);    /* Surface/Purple/Lighter dark    */
+    --color-text-purple:                  #d8b4fe;                   /* Text/Purple dark               */
+    --color-border-purple-lighter:        rgba(123,39,237,0.30);    /* Border/Purple/Lighter dark     */
+    --color-surface-light-blue-default:   #00b5d9;                   /* Surface/LightBlue/Default      */
+    --color-surface-light-blue-darker:    #02445a;                   /* Surface/LightBlue/Darker dark  */
+    --color-surface-light-blue-lighter:   rgba(0,181,217,0.40);     /* Surface/LightBlue/Lighter dark */
+    /* Secondary chip: semi-transparent surface on dark bg (mirrors secondary button) */
+    --chip-secondary-bg:                  rgba(255,255,255,0.10);   /* Surface/Neutral/White dark     */
+    --chip-secondary-text:                rgba(255,255,255,0.60);   /* Text/Label dark                */
+    --chip-secondary-text-disabled:       rgba(255,255,255,0.30);   /* Text/Disabled dark             */
+    --chip-secondary-bg-hover:            rgba(255,255,255,0.15);   /* Surface/Neutral/Lighter dark   */
+    --chip-secondary-bg-disabled:         rgba(255,255,255,0.05);   /* Surface/Neutral/Subtle dark    */
   }
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
@@ -1029,19 +1079,65 @@
     --hc-text-unit:     var(--color-text-subtitle);
     --hc-icon-fill:     var(--color-icon-primary-default);
     --hc-icon-bg:       var(--color-surface-primary-subtle);
-    /* ── Slide Out — light overrides ─────────────────────────────────────── */
-    --color-border-neutral-subtle:   #E4E4E7;                 /* Border/Neutral/Subtle light    */
-    --color-text-body:               #5C5C5C;                 /* Text/Body light                */
-    --color-icon-neutral-default:    #52525B;                 /* Icon/Neutral/Default light     */
-    --color-surface-overlay:         rgba(0,0,0,0.30);        /* Overlay/Scrim/Default (same)   */
-    --color-surface-neutral-black:   #0f172b;                 /* Surface/Neutral/Black (static) */
+    /* ── Slide Out — light overrides (DS node 5066:9783) ────────────────────
+       Panel bg: Surface/Floating/Default = rgba(255,255,255,0.92) + blur(30px) */
+    --surface-floating-default:           rgba(255,255,255,0.92);  /* Surface/Floating/Default lt    */
+    --color-border-neutral-default:       #5c5c5c;                 /* Border/Neutral/Default light   */
+    --color-border-primary-lighter:       #80afff;                 /* Border/Primary/Lighter (static)*/
+    --color-text-label:                   #2a2a2a;                 /* Text/Label light               */
+    --color-text-disabled:                #bababa;                 /* Text/Disabled light            */
+    --color-text-negative:                #ffffff;                 /* Text/Negative (static)         */
+    --color-surface-success-more-subtle:  #e5fdf8;                 /* Surface/Success/More Subtle lt */
+    --color-border-success-lighter:       #009978;                 /* Border/Success/Lighter (static)*/
+    --color-surface-purple-more-subtle:   #f3e9fd;                 /* Surface/Purple/More Subtle lt  */
+    --color-surface-neutral-default:      #f2f2f2;                 /* Surface/Neutral/Default light  */
+    --color-surface-neutral-emphasis:     #d9d9d9;                 /* Surface/Neutral/Emphasis light */
+    --slide-out-shadow:                   -24px -24px 60px 0px rgba(0,0,0,0.08);
+    --slide-out-btn-secondary-bg:         #ffffff;                 /* secondary CTA bg light         */
+    --slide-out-btn-secondary-text:       #2a2a2a;                 /* secondary CTA text light       */
+    --color-border-neutral-subtle:        #E4E4E7;                 /* Border/Neutral/Subtle light    */
+    --color-text-body:                    #5C5C5C;                 /* Text/Body light                */
+    --color-icon-neutral-default:         #52525B;                 /* Icon/Neutral/Default light     */
+    --color-surface-overlay:              rgba(0,0,0,0.30);        /* Overlay/Scrim/Default (same)   */
+    --color-surface-neutral-black:        #0f172b;                 /* Surface/Neutral/Black (static) */
     /* ── Slide Out — component tokens (light) ───────────────────────────── */
-    --slide-out-bg:      var(--color-surface-neutral-white);
+    --slide-out-bg:      var(--surface-floating-default);
     --slide-out-title:   var(--color-text-title);
     --slide-out-body:    var(--color-text-body);
     --slide-out-border:  var(--color-border-neutral-subtle);
     --slide-out-icon:    var(--color-icon-neutral-default);
     --slide-out-overlay: var(--color-surface-overlay);
+    /* ── Side Panel — canonical tokens (DS node 14423-32215) light ──────── */
+    --side-panel-bg:            var(--surface-floating-default);    /* rgba(255,255,255,0.92)        */
+    --side-panel-border:        var(--color-border-neutral-subtle); /* #E4E4E7                      */
+    --side-panel-title:         var(--color-text-label);            /* #2a2a2a                      */
+    --side-panel-description:   var(--color-text-body);             /* #5C5C5C                      */
+    --side-panel-icon:          var(--color-icon-neutral-default);  /* #52525B                      */
+    --side-panel-icon-hover-bg: rgba(0,0,0,0.05);                   /* Surface/Neutral/Subtle light  */
+    --side-panel-search-bg:     var(--color-surface-neutral-white); /* #FFFFFF                      */
+    --side-panel-search-bd:     var(--color-border-neutral-default);/* #5c5c5c                      */
+    /* ── Chip — canonical tokens (DS node 5051:62341) ───────────────────── */
+    --color-surface-neutral-subtle:       #fafafa;   /* Surface/Neutral/Subtle light  */
+    --color-surface-primary-default:      var(--primary);  /* Surface/Primary/Default */
+    --color-surface-primary-darker:       #001740;   /* Surface/Primary/Darker light  */
+    --color-surface-primary-lighter:      #80afff;   /* Surface/Primary/Lighter       */
+    --color-button-primary-text-default:  #ffffff;   /* Button/Primary/Text/Default   */
+    --color-button-primary-text-disabled: #f2f2f2;   /* Button/Primary/Text/Disabled  */
+    --color-icon-neutral-light:           #ffffff;   /* Icon/Neutral/Light            */
+    --color-icon-neutral-black:           #2a2a2a;   /* Icon/Neutral/Black            */
+    --color-surface-purple-default:       #7b27ed;   /* Surface/Purple/Default        */
+    --color-surface-purple-darker:        #2c075c;   /* Surface/Purple/Darker light   */
+    --color-surface-purple-lighter:       #cfa7f9;   /* Surface/Purple/Lighter        */
+    --color-text-purple:                  #2c075c;   /* Text/Purple light             */
+    --color-border-purple-lighter:        #cfa7f9;   /* Border/Purple/Lighter         */
+    --color-surface-light-blue-default:   #00b5d9;   /* Surface/LightBlue/Default     */
+    --color-surface-light-blue-darker:    #02445a;   /* Surface/LightBlue/Darker      */
+    --color-surface-light-blue-lighter:   #99e5f9;   /* Surface/LightBlue/Lighter     */
+    --chip-secondary-bg:                  #FFFFFF;
+    --chip-secondary-text:                var(--color-text-subtitle);
+    --chip-secondary-text-disabled:       #bababa;
+    --chip-secondary-bg-hover:            #f2f2f2;
+    --chip-secondary-bg-disabled:         #fafafa;
   }
 
   html {

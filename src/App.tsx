@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type CSSProperties } from "react"
+import { useState, useEffect, useMemo, Fragment, type CSSProperties } from "react"
 import * as LucideIcons from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -35,12 +35,14 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, type TooltipSide } from "@/components/ui/tooltip"
-import { SlideOut, type SlideOutSize } from "@/components/ui/slide-out"
+import { SlideOut, type SlideOutSize, type SlideOutType } from "@/components/ui/slide-out"
+import { SidePanel, type SidePanelSide } from "@/components/ui/side-panel"
+import { Chip, type ChipVariant, type ChipSize } from "@/components/ui/chip"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "slide-out" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "slide-out" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography"
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -99,6 +101,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "button",          label: "Button",            group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
   { id: "card-container",  label: "Card Container",    group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
+  { id: "chip",            label: "Chip",              group: "Components",  description: "Pill-shaped selection control · 5 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · used in filter rows and Slide Out headers" },
   { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
   { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
   { id: "highlight-card",  label: "Highlight Card",    group: "Components",  description: "KPI metric card for dashboards · 9 background styles · Default & Disabled states · --hc-* token family · auto dark mode" },
@@ -110,6 +113,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "sidebar",         label: "Sidebar",           group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
+  { id: "side-panel",     label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 450px default · 300px min · header + scrollable body + optional footer" },
   { id: "slide-out",       label: "Slide Out",         group: "Components",  description: "Overlay panel from the right · 2 sizes M (635px) / S (420px) · header with title + subtitle + close · divider · scrollable body · optional footer · Escape key + backdrop dismiss" },
   { id: "table",           label: "Table",             group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
   { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · inside card or standalone · active indicator · icon · 2 sizes (M/S) · disabled state · use for in-context view switching, not page navigation" },
@@ -928,6 +932,89 @@ const SELECT_SPEC = {
     { name: "open",     borderWidth: "1px",   tokens: [{ role: "Border", variable: "Border/Primary/Default", varId: "", light: "#2173ff", dark: "#2b7fff" }, { role: "Right icon", variable: "ChevronUp", varId: "", light: "–", dark: "–" }] },
     { name: "error",    borderWidth: "0.5px", tokens: [{ role: "Border", variable: "Border/Error/Default",   varId: "", light: "#d32f2f", dark: "#fb2c36" }, { role: "Right icon", variable: "CircleAlert", varId: "", light: "–", dark: "–" }, { role: "Supporting", variable: "Text/Error", varId: "", light: "#5f2120", dark: "#ff6467" }] },
     { name: "disabled", borderWidth: "1px",   tokens: [{ role: "All text + icons", variable: "Text/Disabled",  varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" }, { role: "Opacity", variable: "–", varId: "", light: "40%", dark: "40%" }] },
+  ],
+}
+
+const CHIP_SPEC = {
+  name: "Chip",
+  figmaNodeId: "5051:62341",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5051-62341",
+  description: "Pill-shaped selection control for filtering and categorization. 5 color variants × 2 sizes × 4 states. The secondary chip always uses a white background in both dark and light mode for contrast against dark panels.",
+  properties: [
+    { name: "variant",    type: "ChipVariant", values: ["primary","secondary","purple-primary","purple-secondary","light-blue-primary"], default: "secondary", note: "Color variant. Primary = selected/active state." },
+    { name: "size",       type: "ChipSize",    values: ["m","s"],                                                                        default: "m",         note: "m = 28px height, s = 20px height. Both use px-12px horizontal." },
+    { name: "personIcon", type: "boolean",     values: ["true","false"],                                                                  default: "false",     note: "Displays a User icon to the left of the label." },
+    { name: "disabled",   type: "boolean",     values: ["true","false"],                                                                  default: "false",     note: "Disables interaction; muted background + text." },
+    { name: "onClick",    type: "() => void",  values: ["—"],                                                                            default: "—",         note: "Click handler. Ignored when disabled." },
+  ],
+  sizes: [
+    { size: "M", height: "28px", paddingH: "12px", paddingV: "4px", fontSize: "14px", lineHeight: "20px", gap: "4px", radius: "Radius-Full (999px)" },
+    { size: "S", height: "20px", paddingH: "12px", paddingV: "0px", fontSize: "12px", lineHeight: "20px", gap: "4px", radius: "Radius-Full (999px)" },
+  ],
+  typography: [
+    { element: "Chip label M", family: "Inter", size: "14px", weight: "500 (Medium)", lineHeight: "20px" },
+    { element: "Chip label S", family: "Inter", size: "12px", weight: "500 (Medium)", lineHeight: "20px" },
+  ],
+  variants: [
+    {
+      name: "Primary",
+      description: "Active / selected state. Brand blue background with white text.",
+      cssPrefix: "--color-surface-primary-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-primary-default",      varId: "Surface/Primary/Default",  light: "#2173ff",               dark: "#2b7fff" },
+        { role: "BG hover",    variable: "--color-surface-primary-darker",        varId: "Surface/Primary/Darker",   light: "#001740",               dark: "#001740" },
+        { role: "BG disabled", variable: "--color-surface-primary-lighter",       varId: "Surface/Primary/Lighter",  light: "#80afff",               dark: "#80afff" },
+        { role: "Text",        variable: "--color-button-primary-text-default",   varId: "Button/Primary/Text/Default",  light: "#ffffff",           dark: "#ffffff" },
+        { role: "Text disabled",variable: "--color-button-primary-text-disabled", varId: "Button/Primary/Text/Disabled", light: "#f2f2f2",           dark: "rgba(255,255,255,0.30)" },
+      ],
+    },
+    {
+      name: "Secondary",
+      description: "Unselected state. Always-white background with border and muted text.",
+      cssPrefix: "--color-surface-neutral-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-neutral-white",  varId: "Surface/Neutral/White",   light: "#ffffff",               dark: "#ffffff" },
+        { role: "BG hover",    variable: "--chip-secondary-bg-hover",       varId: "—",                       light: "#f2f2f2",               dark: "#f2f2f2" },
+        { role: "BG disabled", variable: "--chip-secondary-bg-disabled",    varId: "Surface/Neutral/Subtle",  light: "#fafafa",               dark: "#fafafa" },
+        { role: "Text",        variable: "--chip-secondary-text",            varId: "Text/Subtitle (on white)", light: "#8c8c8c",              dark: "#5c5c5c" },
+        { role: "Text disabled",variable: "--color-text-disabled",           varId: "Text/Disabled",           light: "#bababa",               dark: "rgba(255,255,255,0.30)" },
+        { role: "Border",      variable: "--color-border-neutral-default",   varId: "Border/Neutral/Default",  light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)" },
+      ],
+    },
+    {
+      name: "Purple Primary",
+      description: "Purple brand variant for categorical tagging. Same structure as Primary.",
+      cssPrefix: "--color-surface-purple-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-purple-default",  varId: "Surface/Purple/Default",  light: "#7b27ed",               dark: "#7b27ed" },
+        { role: "BG hover",    variable: "--color-surface-purple-darker",    varId: "Surface/Purple/Darker",   light: "#2c075c",               dark: "#2c075c" },
+        { role: "BG disabled", variable: "--color-surface-purple-lighter",   varId: "Surface/Purple/Lighter",  light: "#cfa7f9",               dark: "#cfa7f9" },
+        { role: "Text",        variable: "--color-button-primary-text-default", varId: "Button/Primary/Text/Default", light: "#ffffff",         dark: "#ffffff" },
+      ],
+    },
+    {
+      name: "Purple Secondary",
+      description: "White chip with purple border and purple text. Used for purple categorical labels.",
+      cssPrefix: "--color-border-purple-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-neutral-white",    varId: "Surface/Neutral/White",   light: "#ffffff",               dark: "#ffffff" },
+        { role: "BG hover",    variable: "--color-surface-purple-more-subtle",varId: "Surface/Purple/More Subtle", light: "#f3e9fd",            dark: "rgba(139,92,246,0.12)" },
+        { role: "Text",        variable: "--color-text-purple",               varId: "Text/Purple",             light: "#2c075c",               dark: "#2c075c" },
+        { role: "Border",      variable: "--color-border-purple-default",     varId: "Border/Purple/Default",   light: "#7b27ed",               dark: "#7b27ed" },
+        { role: "Border focus",variable: "--color-border-purple-lighter",     varId: "Border/Purple/Lighter",   light: "#cfa7f9",               dark: "#cfa7f9" },
+      ],
+    },
+    {
+      name: "Light Blue Primary",
+      description: "Teal/cyan variant for informational or system-level filters.",
+      cssPrefix: "--color-surface-light-blue-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-light-blue-default",  varId: "Surface/LightBlue/Default",  light: "#00b5d9",          dark: "#00b5d9" },
+        { role: "BG hover",    variable: "--color-surface-light-blue-darker",    varId: "Surface/LightBlue/Darker",   light: "#02445a",          dark: "#02445a" },
+        { role: "BG disabled", variable: "--color-surface-light-blue-lighter",   varId: "Surface/LightBlue/Lighter",  light: "#99e5f9",          dark: "#99e5f9" },
+        { role: "Text",        variable: "--color-button-primary-text-default",  varId: "Button/Primary/Text/Default", light: "#ffffff",          dark: "#ffffff" },
+      ],
+    },
   ],
 }
 
@@ -1993,40 +2080,121 @@ const TOOLTIP_SPEC = {
   ],
 }
 
-const SLIDE_OUT_SPEC = {
-  componentName: "Slide Out",
-  nodeId: "5045:61434",
-  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5045-61434",
-  description: "Overlay panel that slides in from the right edge. Used for detail views, filters, and configuration panels. Supports M (635px) and S (420px) widths, optional subtitle, scrollable content, and a footer action row.",
-  properties: [
-    { name: "size",            type: "Enum",    values: ["m", "s"],          default: "m",     note: "M = 635px · S = 420px. Use M for detailed content, S for focused tasks." },
-    { name: "title",           type: "String",  values: ["string"],          default: "required", note: "Panel title. Font: Title/Bold/M — 20px SemiBold." },
-    { name: "subtitle",        type: "String",  values: ["string", "undefined"], default: "undefined", note: "Optional secondary label below the title." },
-    { name: "open",            type: "Boolean", values: ["true", "false"],   default: "false", note: "Controls visibility. Animates with translate-x transition." },
-    { name: "onClose",         type: "Function",values: ["() => void"],      default: "required", note: "Called on close button click, backdrop click, or Escape key." },
-    { name: "closeOnBackdrop", type: "Boolean", values: ["true", "false"],   default: "true",  note: "Whether clicking the backdrop triggers onClose." },
-    { name: "footer",          type: "ReactNode",values: ["ReactNode", "undefined"], default: "undefined", note: "Renders below a divider. Typically Cancel + Apply buttons." },
+const SIDE_PANEL_SPEC = {
+  componentName: "Side Panel",
+  nodeId: "14423:32215",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=14423-32215",
+  description: "Inline layout panel for persistent contextual content alongside the main view. Not an overlay — it reduces main content width when open. Supports header, scrollable body slot, and optional footer CTAs.",
+  variants: [
+    { name: "Right", description: "Panel attaches to the right edge. Left corners rounded (radius-xl 24px)." },
+    { name: "Left",  description: "Panel attaches to the left edge. Right corners rounded (radius-xl 24px)." },
+  ],
+  states: [
+    { name: "Open",     description: "Panel visible at default width (450px). Main content shifts left." },
+    { name: "Expanded", description: "Panel at extended width (1/3 or 1/2 of viewport). User-triggered." },
+    { name: "Closed",   description: "Panel hidden with animated width transition. Main content restores." },
   ],
   sizes: [
-    { size: "M", dimensions: "635px wide · 100vh tall", note: "Default. For detail panels with multiple sections." },
-    { size: "S", dimensions: "420px wide · 100vh tall", note: "Focused tasks, quick configurations, or small viewports." },
+    { name: "Default (1/3)",      value: "450px" },
+    { name: "Expanded (1/3)",     value: "480px" },
+    { name: "Expanded (1/2)",     value: "704px" },
+    { name: "Min (small screen)", value: "300px" },
   ],
   typography: [
-    { element: "Title",    family: "Inter", size: "20px", weight: "600", lineHeight: "100%" },
-    { element: "Subtitle", family: "Inter", size: "14px", weight: "500", lineHeight: "143%" },
+    { element: "Title",               family: "Inter", size: "18px", weight: "600", lineHeight: "100%" },
+    { element: "Description",         family: "Inter", size: "14px", weight: "500", lineHeight: "20px" },
+    { element: "Search placeholder",  family: "Inter", size: "14px", weight: "500", lineHeight: "20px" },
+  ],
+  properties: [
+    { name: "open",              type: "boolean",             default: "false",      note: "Controls visibility. Width animates from 450px to 0 on close." },
+    { name: "side",              type: '"left" | "right"',    default: '"right"',    note: "Which edge the panel attaches to." },
+    { name: "title",             type: "string",              default: "—",          note: "Panel heading. 18px SemiBold, letter-spacing 0.25px." },
+    { name: "description",       type: "string",              default: "—",          note: "Subtitle below title. 14px Medium." },
+    { name: "showSearch",        type: "boolean",             default: "false",      note: "Renders a search input below the title row." },
+    { name: "showMenu",          type: "boolean",             default: "false",      note: "Renders a menu icon button beside the close button." },
+    { name: "footer",            type: "ReactNode",           default: "—",          note: "Sticky footer. Typically primary + secondary action buttons." },
+    { name: "width",             type: "number",              default: "450",        note: "Panel open width in px. Use 300 on small screens." },
+    { name: "searchPlaceholder", type: "string",              default: '"Search…"',  note: "Search input placeholder text." },
+    { name: "onClose",           type: "() => void",          default: "—",          note: "Called on close/collapse button click." },
+    { name: "children",          type: "ReactNode",           default: "—",          note: "Dynamic content slot. Scrollable. Supports any content." },
+  ],
+  tokens: [
+    { role: "Panel BG",           variable: "--side-panel-bg",            varId: "Surface/Floating/Default",  light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)"   },
+    { role: "Panel border",       variable: "--side-panel-border",        varId: "Border/Neutral/Subtle",     light: "#E4E4E7",               dark: "rgba(255,255,255,0.10)" },
+    { role: "Title text",         variable: "--side-panel-title",         varId: "Text/Label",                light: "#2a2a2a",               dark: "rgba(255,255,255,0.80)" },
+    { role: "Description text",   variable: "--side-panel-description",   varId: "Text/Body",                 light: "#5C5C5C",               dark: "#94A3B8"               },
+    { role: "Icon / close btn",   variable: "--side-panel-icon",          varId: "Icon/Neutral/Default",      light: "#52525B",               dark: "#D1D5DB"               },
+    { role: "Icon hover BG",      variable: "--side-panel-icon-hover-bg", varId: "Surface/Neutral/Default",   light: "rgba(0,0,0,0.05)",      dark: "rgba(255,255,255,0.08)"},
+    { role: "Search field BG",    variable: "--side-panel-search-bg",     varId: "Surface/Neutral/White",     light: "#FFFFFF",               dark: "rgba(255,255,255,0.10)"},
+    { role: "Search field border",variable: "--side-panel-search-bd",     varId: "Border/Neutral/Default",    light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)"},
+  ],
+}
+
+const SLIDE_OUT_SPEC = {
+  componentName: "Slide Out",
+  nodeId: "5066:9783",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5066-9783",
+  description: "Frosted-glass overlay panel from the right. Two types: With variants (full header + tabs + search + chips + content slot + CTA) and Full slot (just the content slot). Two sizes: M (635px) and S (420px). Background: Surface/Floating/Default with backdrop-blur(30px).",
+  properties: [
+    { name: "type",           type: "Enum",    values: ["with-variants","full-slot"], default: "with-variants", note: "With variants: full anatomy. Full slot: dashed content area only." },
+    { name: "size",           type: "Enum",    values: ["m","s"],          default: "m",          note: "M = 635px · Radius-XL 24px. S = 420px · Radius-L 16px." },
+    { name: "showIcon",       type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: icon. Purple 40px (M) / 32px (S) highlight icon in header." },
+    { name: "showStatus",     type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: status. Green status tag next to title." },
+    { name: "showTabs",       type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: tabs. Tab navigation row below header." },
+    { name: "showTab3",       type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: tab3. Show or hide the third tab." },
+    { name: "showSearchBar",  type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: searchBar. Search input field below tabs." },
+    { name: "showChips",      type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: chips. Category chip row with overflow + > button." },
+    { name: "showCta",        type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: cta. Secondary + Primary CTA buttons row at the bottom." },
+    { name: "showTopButton",  type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: topButton. Edit (pencil) icon in the top-right header." },
+    { name: "showClose",      type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: close. X close button in the top-right header." },
+  ],
+  sizes: [
+    { size: "M (With variants)", dimensions: "635px × 100vh · Radius-XL 24px · gap 24px", note: "Full anatomy for detail views, filter panels, configuration drawers." },
+    { size: "M (Full slot)",     dimensions: "600px × 100vh · Radius-XL 24px · gap 32px", note: "Blank slot for fully custom content — no pre-built anatomy." },
+    { size: "S (With variants)", dimensions: "420px × 100vh · Radius-L  16px · gap 16px", note: "Compact anatomy for quick edits and focused tasks." },
+    { size: "S (Full slot)",     dimensions: "420px × 100vh · Radius-L  16px · gap 24px", note: "Compact blank slot." },
+  ],
+  typography: [
+    { element: "Title M",        family: "Inter", size: "24px", weight: "600", lineHeight: "100%" },
+    { element: "Title S",        family: "Inter", size: "18px", weight: "600", lineHeight: "100%" },
+    { element: "Subtitle M",     family: "Inter", size: "14px", weight: "500", lineHeight: "143%" },
+    { element: "Subtitle S",     family: "Inter", size: "12px", weight: "500", lineHeight: "167%" },
+    { element: "Tab label",      family: "Inter", size: "14px", weight: "600", lineHeight: "100%" },
+    { element: "Chip / CTA M",   family: "Inter", size: "14px", weight: "500", lineHeight: "143%" },
+    { element: "Chip / CTA S",   family: "Inter", size: "12px", weight: "500", lineHeight: "167%" },
+    { element: "Slot indicator", family: "Inter", size: "18px", weight: "600", lineHeight: "100%" },
   ],
   variants: [
     {
-      name: "Dark Mode",
-      description: "Panel on dark app background — uses Surface/Neutral/Black (#0F172B).",
-      cssPrefix: "--slide-out",
+      name: "Surface tokens",
+      description: "Panel frosted glass surface, icon highlight, status tag, and chip backgrounds.",
+      cssPrefix: "--surface",
       tokens: [
-        { role: "Panel BG",       variable: "--slide-out-bg",      varId: "Surface/Neutral/Black",   light: "#FFFFFF",               dark: "#0F172B"              },
-        { role: "Title text",     variable: "--slide-out-title",   varId: "Text/Title",              light: "#000000",               dark: "rgba(255,255,255,.80)"},
-        { role: "Subtitle text",  variable: "--slide-out-body",    varId: "Text/Body",               light: "#5C5C5C",               dark: "#94A3B8"              },
-        { role: "Divider / border", variable: "--slide-out-border", varId: "Border/Neutral/Subtle",  light: "#E4E4E7",               dark: "rgba(255,255,255,.10)"},
-        { role: "Close icon",     variable: "--slide-out-icon",    varId: "Icon/Neutral/Default",    light: "#52525B",               dark: "#D1D5DB"              },
-        { role: "Backdrop",       variable: "--slide-out-overlay", varId: "Overlay/Scrim/Default",   light: "rgba(0,0,0,.30)",       dark: "rgba(0,0,0,.30)"     },
+        { role: "Panel BG (Floating/Default)",     variable: "--slide-out-bg",                    varId: "Surface/Floating/Default",       light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)"          },
+        { role: "Icon highlight (Purple)",         variable: "--color-surface-purple-more-subtle", varId: "Surface/Purple/More Subtle",      light: "#f3e9fd",                dark: "rgba(139,92,246,0.12)"        },
+        { role: "Status tag BG (Success)",         variable: "--color-surface-success-more-subtle",varId: "Surface/Success/More Subtle",     light: "#e5fdf8",                dark: "rgba(110,231,183,0.10)"       },
+        { role: "Active chip BG / Primary",        variable: "--primary",                         varId: "Surface/Primary/Default",         light: "#2173ff",                dark: "#2b7fff"                      },
+        { role: "Inactive chip / search BG",       variable: "--color-surface-neutral-white",     varId: "Surface/Neutral/White",           light: "#ffffff",                dark: "#ffffff"                      },
+        { role: "Secondary CTA bg",                variable: "--slide-out-btn-secondary-bg",      varId: "—",                               light: "#ffffff",                dark: "rgba(255,255,255,0.08)"       },
+      ],
+    },
+    {
+      name: "Text & border tokens",
+      description: "Title, body, label, link, success, disabled, and border tokens.",
+      cssPrefix: "--color",
+      tokens: [
+        { role: "Title",                           variable: "--color-text-title",                varId: "Text/Title",                      light: "#000000",                dark: "rgba(255,255,255,0.80)"       },
+        { role: "Body / subtitle",                 variable: "--slide-out-body",                  varId: "Text/Body",                       light: "#5c5c5c",                dark: "#94A3B8"                      },
+        { role: "Tab/chip label (inactive)",       variable: "--color-text-label",                varId: "Text/Label",                      light: "#2a2a2a",                dark: "rgba(255,255,255,0.80)"       },
+        { role: "Active tab / link",               variable: "--primary",                         varId: "Text/Link",                       light: "#2173ff",                dark: "#2b7fff"                      },
+        { role: "Status tag text",                 variable: "--color-text-success",              varId: "Text/Success",                    light: "#003328",                dark: "#6ee7b7"                      },
+        { role: "Search placeholder",              variable: "--color-text-disabled",             varId: "Text/Disabled",                   light: "#bababa",                dark: "rgba(255,255,255,0.30)"       },
+        { role: "Primary btn text",                variable: "--color-text-negative",             varId: "Text/Negative",                   light: "#ffffff",                dark: "#ffffff"                      },
+        { role: "Secondary CTA text",              variable: "--slide-out-btn-secondary-text",   varId: "—",                               light: "#2a2a2a",                dark: "rgba(255,255,255,0.80)"       },
+        { role: "Dashed slot border",              variable: "--color-border-primary-lighter",   varId: "Border/Primary/Lighter",           light: "#80afff",                dark: "#80afff"                      },
+        { role: "Status tag border",               variable: "--color-border-success-lighter",   varId: "Border/Success/Lighter",           light: "#009978",                dark: "#009978"                      },
+        { role: "Search/chip border",              variable: "--color-border-neutral-default",   varId: "Border/Neutral/Default",           light: "#5c5c5c",                dark: "rgba(255,255,255,0.10)"       },
+        { role: "Backdrop / overlay",              variable: "--slide-out-overlay",               varId: "Overlay/Scrim/Default",            light: "rgba(0,0,0,0.30)",       dark: "rgba(0,0,0,0.30)"            },
       ],
     },
   ],
@@ -2043,6 +2211,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "highlight-card")   return HIGHLIGHT_CARD_SPEC   as AnySpec
   if (id === "highlight-icon")   return HIGHLIGHT_ICON_SPEC   as AnySpec
   if (id === "select")           return SELECT_SPEC           as AnySpec
+  if (id === "chip")             return CHIP_SPEC             as AnySpec
   if (id === "checkbox")         return CHECKBOX_SPEC         as AnySpec
   if (id === "toggle")           return TOGGLE_SPEC           as AnySpec
   if (id === "table")            return TABLE_SPEC            as AnySpec
@@ -2058,6 +2227,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "tabs")             return TABS_SPEC             as AnySpec
   if (id === "scroll-area")     return SCROLL_AREA_SPEC      as AnySpec
   if (id === "tooltip")         return TOOLTIP_SPEC          as AnySpec
+  if (id === "side-panel")      return SIDE_PANEL_SPEC       as AnySpec
   if (id === "slide-out")       return SLIDE_OUT_SPEC        as AnySpec
   // Foundation pages
   if (id === "avatar")           return AVATAR_SPEC           as AnySpec
@@ -2602,6 +2772,7 @@ const DONE_COMPONENTS = [
   { name: "Tooltip",         complexity: "Medium",  hours: 3,  note: "4 positions · delay · arrow · --tooltip-* token family · Portal render" },
   { name: "App Background",  complexity: "Simple",  hours: 2,  note: "4 gradient presets · FLOAT opacity variables · dark-only tokens" },
   { name: "Highlight Card",  complexity: "Medium",  hours: 4,  note: "9 BG styles · 2 states · --hc-* tokens · dynamic playground · 0.5px semantic borders" },
+  { name: "Side Panel",     complexity: "Complex", hours: 8,  note: "48px collapsed strip · drag-to-resize · title icon/tag variants · portal tooltip · 9 hi-variants · 11 tag-variants" },
 ] as const
 
 const REMAINING_PHASES = [
@@ -7232,6 +7403,253 @@ function CheckboxPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </Row>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── ChipPage ─────────────────────────────────────────────────────────────────
+
+function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab,         setTab]         = useState<"overview" | "playground" | "reference">("overview")
+  const [pgVariant,   setPgVariant]   = useState<ChipVariant>("primary")
+  const [pgSize,      setPgSize]      = useState<ChipSize>("m")
+  const [pgPersonIcon,setPgPersonIcon]= useState(false)
+  const [pgDisabled,  setPgDisabled]  = useState(false)
+
+  const ALL_VARIANTS: { variant: ChipVariant; label: string }[] = [
+    { variant: "primary",            label: "Primary" },
+    { variant: "secondary",          label: "Secondary" },
+    { variant: "purple-primary",     label: "Purple Primary" },
+    { variant: "purple-secondary",   label: "Purple Secondary" },
+    { variant: "light-blue-primary", label: "Light Blue" },
+  ]
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Chip</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
+            Pill-shaped selection control for filtering and categorization. 5 color variants × 2 sizes × 4 states. Used in Slide Out filter rows and any category-selection surface.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("chip")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "playground", label: "Playground" },
+          { id: "reference",  label: "Reference"  },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Overview ─────────────────────────────────────────────────── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Size M */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Size M — 28px</h2>
+              <div className="flex flex-wrap items-end gap-[20px]">
+                {ALL_VARIANTS.map(({ variant, label }) => (
+                  <div key={variant} className="flex flex-col items-center gap-[8px]">
+                    <Chip variant={variant} size="m">{label}</Chip>
+                    <span className="text-[11px] text-[var(--field-supporting)] text-center">{variant}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Size S */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Size S — 20px</h2>
+              <div className="flex flex-wrap items-end gap-[20px]">
+                {ALL_VARIANTS.map(({ variant, label }) => (
+                  <div key={variant} className="flex flex-col items-center gap-[8px]">
+                    <Chip variant={variant} size="s">{label}</Chip>
+                    <span className="text-[11px] text-[var(--field-supporting)] text-center">{variant}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Person icon */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Person icon</h2>
+              <div className="flex flex-wrap gap-[12px] items-center">
+                <Chip variant="primary"   size="m" personIcon>Primary M</Chip>
+                <Chip variant="secondary" size="m" personIcon>Secondary M</Chip>
+                <Chip variant="primary"   size="s" personIcon>Primary S</Chip>
+                <Chip variant="secondary" size="s" personIcon>Secondary S</Chip>
+              </div>
+            </div>
+
+            {/* Disabled */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Disabled state</h2>
+              <div className="flex flex-wrap gap-[12px] items-center">
+                {ALL_VARIANTS.map(({ variant, label }) => (
+                  <Chip key={variant} variant={variant} size="m" disabled>{label}</Chip>
+                ))}
+              </div>
+            </div>
+
+            {/* Slide Out usage */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">In context — Slide Out filter row (Size S)</h2>
+              <div className="flex items-center gap-[8px] p-[12px] rounded-[8px]" style={{ background: "var(--surface-raised)" }}>
+                {["All", "Category 1", "Category 2", "Category 3", "Category 4"].map((label, i) => (
+                  <Chip key={i} variant={i === 0 ? "primary" : "secondary"} size="s">{label}</Chip>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Playground ───────────────────────────────────────────────── */}
+        {tab === "playground" && (
+          <div className="flex flex-col gap-[20px]">
+            <div className="rounded-md border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
+              <CtrlGroup
+                label="Variant"
+                options={ALL_VARIANTS.map(v => ({ label: v.label, value: v.variant }))}
+                value={pgVariant}
+                onChange={v => setPgVariant(v as ChipVariant)}
+              />
+              <CtrlGroup
+                label="Size"
+                options={[{ label: "M — 28px", value: "m" }, { label: "S — 20px", value: "s" }]}
+                value={pgSize}
+                onChange={v => setPgSize(v as ChipSize)}
+              />
+              <CtrlToggle label="Person icon" value={pgPersonIcon} onChange={setPgPersonIcon} />
+              <CtrlToggle label="Disabled"    value={pgDisabled}   onChange={setPgDisabled} />
+            </div>
+            <div className="flex items-center justify-center min-h-[100px] rounded-md border border-dashed border-[var(--field-border)]">
+              <Chip variant={pgVariant} size={pgSize} personIcon={pgPersonIcon} disabled={pgDisabled}>
+                Label
+              </Chip>
+            </div>
+          </div>
+        )}
+
+        {/* ── Reference ────────────────────────────────────────────────── */}
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Tokens table */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Design tokens</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Token", "Role", "Dark", "Light"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { token: "--color-surface-primary-default",       role: "Primary BG (default)",           dark: "#2b7fff",                light: "#2173ff" },
+                      { token: "--color-surface-primary-darker",        role: "Primary BG (hover)",             dark: "#001740",                light: "#001740" },
+                      { token: "--color-surface-primary-lighter",       role: "Primary BG (disabled)",          dark: "#80afff",                light: "#80afff" },
+                      { token: "--color-button-primary-text-default",   role: "Primary text / icon",            dark: "#ffffff",                light: "#ffffff" },
+                      { token: "--color-button-primary-text-disabled",  role: "Primary text disabled",          dark: "rgba(255,255,255,0.30)", light: "#f2f2f2" },
+                      { token: "--color-surface-neutral-white",         role: "Secondary BG (always white)",    dark: "#ffffff",                light: "#ffffff" },
+                      { token: "--chip-secondary-text",                 role: "Secondary text",                 dark: "#5c5c5c",                light: "#8c8c8c" },
+                      { token: "--chip-secondary-bg-hover",             role: "Secondary BG (hover)",           dark: "#f2f2f2",                light: "#f2f2f2" },
+                      { token: "--color-border-neutral-default",        role: "Secondary border",               dark: "rgba(255,255,255,0.10)", light: "#5c5c5c" },
+                      { token: "--color-surface-purple-default",        role: "Purple primary BG",              dark: "#7b27ed",                light: "#7b27ed" },
+                      { token: "--color-text-purple",                   role: "Purple secondary text",          dark: "#2c075c",                light: "#2c075c" },
+                      { token: "--color-border-purple-default",         role: "Purple secondary border",        dark: "#7b27ed",                light: "#7b27ed" },
+                      { token: "--color-surface-light-blue-default",    role: "Light blue BG",                  dark: "#00b5d9",                light: "#00b5d9" },
+                    ].map((row, i, arr) => (
+                      <tr key={row.token} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none", background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.token}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.role}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.dark}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.light}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Props table */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Prop", "Type", "Default", "Description"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { prop: "variant",    type: "ChipVariant",  def: '"secondary"', desc: "primary | secondary | purple-primary | purple-secondary | light-blue-primary" },
+                      { prop: "size",       type: "ChipSize",     def: '"m"',         desc: "m = 28px height · s = 20px height. Both use 12px horizontal padding." },
+                      { prop: "personIcon", type: "boolean",      def: "false",       desc: "Renders a User icon to the left of the label." },
+                      { prop: "disabled",   type: "boolean",      def: "false",       desc: "Muted appearance, click blocked, aria-disabled set." },
+                      { prop: "onClick",    type: "() => void",   def: "—",           desc: "Click handler. No-op when disabled." },
+                      { prop: "className",  type: "string",       def: "—",           desc: "Appended to root element. Use for shrink-0 in flex rows." },
+                    ].map((row, i, arr) => (
+                      <tr key={row.prop} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none", background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px] font-semibold text-[var(--foreground)]">{row.prop}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.type}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.def}</td>
+                        <td className="px-[12px] py-[8px]" style={{ color: "var(--field-supporting)" }}>{row.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Code snippet */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
+              <pre className="rounded-md p-[16px] text-[12px] leading-[20px] overflow-x-auto" style={{ background: "var(--code-bg)", color: "var(--foreground)" }}>{`import { Chip } from "@/components/ui/chip"
+
+// Primary — active/selected state
+<Chip variant="primary" size="m">All</Chip>
+
+// Secondary — inactive/unselected
+<Chip variant="secondary" size="s">Category 1</Chip>
+
+// With person icon
+<Chip variant="primary" size="m" personIcon>Assign</Chip>
+
+// Disabled
+<Chip variant="secondary" size="m" disabled>Unavailable</Chip>
+
+// In a filter row (Slide Out pattern)
+{chipLabels.map((label, i) => (
+  <Chip
+    key={i}
+    variant={i === activeChip ? "primary" : "secondary"}
+    size="s"
+    className="shrink-0"
+    onClick={() => setActiveChip(i)}
+  >
+    {label}
+  </Chip>
+))}`}
+              </pre>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )
@@ -15014,76 +15432,753 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
   )
 }
 
+// ── SidePanelPage ─────────────────────────────────────────────────────────────
+
+function SidePanelPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+
+  // Playground state — starts collapsed so the icon strip is the first thing seen
+  const [pgOpen,               setPgOpen]               = useState(false)
+  const [pgSide,               setPgSide]               = useState<SidePanelSide>("right")
+  const [pgShowSearch,         setPgShowSearch]         = useState(false)
+  const [pgShowMenu,           setPgShowMenu]           = useState(true)
+  const [pgShowFooter,         setPgShowFooter]         = useState(true)
+  const [pgShowCollapsedIcons, setPgShowCollapsedIcons] = useState(true)
+  const [pgShowTitleIcon,      setPgShowTitleIcon]      = useState(false)
+  const [pgTitleIconVariant,   setPgTitleIconVariant]   = useState<import("@/components/ui/side-panel").TitleIconVariant>("informative")
+  const [pgShowTitleTag,       setPgShowTitleTag]       = useState(false)
+  const [pgTitleTagVariant,    setPgTitleTagVariant]    = useState<import("@/components/ui/side-panel").TitleTagVariant>("informative")
+  const [pgIconSet,            setPgIconSet]            = useState(0)
+
+  // Simulated main-content rows for the demo canvas
+  const demoRows = [
+    { title: "AIMS Driver v2.4", sub: "Production · 3 instances · last updated 2h ago" },
+    { title: "Inference Engine",  sub: "Staging · 1 instance · last updated 6h ago" },
+    { title: "Vector Store API",  sub: "Development · paused · last updated 1d ago" },
+    { title: "Auth Service",      sub: "Production · 2 instances · last updated 4d ago" },
+    { title: "Job Scheduler",     sub: "Staging · 1 instance · last updated 1w ago" },
+  ]
+
+  const panelFooter = pgShowFooter ? (
+    <>
+      <Button variant="secondary" size="default">Cancel</Button>
+      <Button variant="primary"   size="default">Apply</Button>
+    </>
+  ) : undefined
+
+  const panelContent = (
+    <div className="flex flex-col gap-[0px]">
+      {[
+        { label: "Environment",   value: "Production" },
+        { label: "Region",        value: "us-east-1" },
+        { label: "Replicas",      value: "3" },
+        { label: "CPU limit",     value: "2 vCPU" },
+        { label: "Memory limit",  value: "4 GiB" },
+        { label: "Autoscaling",   value: "Enabled" },
+      ].map((row, i) => (
+        <div key={i} className="flex items-center justify-between py-[12px]" style={{ borderBottom: "1px solid var(--side-panel-border)" }}>
+          <span className="text-[13px] font-medium" style={{ color: "var(--field-supporting)" }}>{row.label}</span>
+          <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{row.value}</span>
+        </div>
+      ))}
+    </div>
+  )
+
+  // Three example icon sets — demonstrates that collapsedIcons is fully customizable.
+  // Pass any icon + label combination that matches the sections in your panel.
+  type DemoIcon = import("@/components/ui/side-panel").CollapsedIcon
+  const ICON_SETS: DemoIcon[][] = [
+    // Set A — AI / infrastructure context
+    [
+      { icon: <LucideIcons.Sparkles    size={15} style={{ color: "var(--color-text-purple)" }} />,              label: "AI Insights",    onClick: () => setPgOpen(true) },
+      { icon: <LucideIcons.BookOpen    size={15} style={{ color: "var(--color-surface-light-blue-default)" }} />, label: "Documentation",  onClick: () => setPgOpen(true) },
+      { icon: <LucideIcons.Server      size={15} style={{ color: "var(--primary)" }} />,                        label: "Configuration",  onClick: () => setPgOpen(true) },
+      { icon: <LucideIcons.Zap         size={15} style={{ color: "var(--priority-high)" }} />,                  label: "Automation",     onClick: () => setPgOpen(true) },
+      { icon: <LucideIcons.CheckCircle size={15} style={{ color: "var(--color-text-success)" }} />,             label: "Status",         onClick: () => setPgOpen(true) },
+    ],
+    // Set B — team / security context
+    [
+      { icon: <LucideIcons.Users    size={15} style={{ color: "var(--primary)" }} />,                       label: "Team",      onClick: () => setPgOpen(true) },
+      { icon: <LucideIcons.Shield   size={15} style={{ color: "var(--priority-high)" }} />,                 label: "Security",  onClick: () => setPgOpen(true) },
+      { icon: <LucideIcons.Activity size={15} style={{ color: "var(--color-text-success)" }} />,            label: "Analytics", onClick: () => setPgOpen(true) },
+      { icon: <LucideIcons.Bell     size={15} style={{ color: "var(--color-text-purple)" }} />,             label: "Alerts",    onClick: () => setPgOpen(true) },
+    ],
+    // Set C — data / dev context (3 icons — shows the list length is variable too)
+    [
+      { icon: <LucideIcons.Database  size={15} style={{ color: "var(--color-surface-light-blue-default)" }} />, label: "Data Store", onClick: () => setPgOpen(true) },
+      { icon: <LucideIcons.GitBranch size={15} style={{ color: "var(--color-text-purple)" }} />,               label: "Versions",   onClick: () => setPgOpen(true) },
+      { icon: <LucideIcons.Terminal  size={15} style={{ color: "var(--priority-high)" }} />,                   label: "Logs",       onClick: () => setPgOpen(true) },
+    ],
+  ]
+  const demoCollapsedIcons = ICON_SETS[pgIconSet % ICON_SETS.length]
+
+  const codeSnippet = `import { SidePanel } from "@/components/ui/side-panel"
+
+const [open, setOpen] = useState(false)
+
+// Wrap your canvas in a flex row
+<div className="flex h-full">
+  {/* Main content — flex-1 so it shrinks when panel opens */}
+  <main className="flex-1 min-w-0 overflow-auto">
+    {/* your page content */}
+  </main>
+
+  <SidePanel
+    open={open}
+    onClose={() => setOpen(false)}
+    side="right"
+    title="Node Configuration"
+    description="Adjust settings for the selected node"
+    showSearch
+    showMenu
+    footer={
+      <>
+        <button onClick={() => setOpen(false)}>Cancel</button>
+        <button onClick={handleApply}>Apply</button>
+      </>
+    }
+  >
+    {/* Scrollable body slot */}
+    <YourPanelContent />
+  </SidePanel>
+</div>`
+
+  return (
+    <div>
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[28px] font-bold mb-[8px]" style={{ color: "var(--foreground)" }}>Side Panel</h1>
+          <p className="text-[15px] leading-[24px] max-w-[600px]" style={{ color: "var(--field-supporting)" }}>
+            Inline layout panel for persistent contextual content alongside the main view. Unlike the Slide Out, it is not an overlay — it shifts the main content width when open.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("side-panel")} />
+      </div>
+
+      {/* Tab row */}
+      <div className="flex gap-[4px] mb-[32px] border-b" style={{ borderColor: "var(--field-border)" }}>
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[16px] py-[8px] text-[14px] font-medium capitalize transition-colors"
+            style={{
+              color: tab === t ? "var(--primary)" : "var(--field-supporting)",
+              borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >{t}</button>
+        ))}
+      </div>
+
+      {/* ── OVERVIEW ── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+
+          {/* Anatomy */}
+          <div className="flex flex-col gap-[16px]">
+            <h2 className="text-[18px] font-semibold" style={{ color: "var(--foreground)" }}>Anatomy</h2>
+            <div className="grid grid-cols-3 gap-[12px]">
+              {[
+                { label: "Header zone",   desc: "Title (18px SemiBold) + optional description (14px Medium) + optional search field (40px) + action icons (menu + collapse)." },
+                { label: "Body slot",     desc: "flex-1 scrollable area. Accepts any content — forms, lists, detail views. Header and footer stay fixed while body scrolls." },
+                { label: "Footer (opt.)", desc: "Sticky bottom row with right-aligned CTAs. Primary + secondary actions. Recommended for workflows that require confirmation." },
+              ].map(item => (
+                <div key={item.label} className="rounded-[8px] p-[16px]" style={{ background: "var(--card)", border: "1px solid var(--field-border)" }}>
+                  <p className="text-[13px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>{item.label}</p>
+                  <p className="text-[12px] leading-[18px]" style={{ color: "var(--field-supporting)" }}>{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Behavior vs Slide Out */}
+          <div className="flex flex-col gap-[16px]">
+            <h2 className="text-[18px] font-semibold" style={{ color: "var(--foreground)" }}>Layout behavior</h2>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { label: "Side Panel (this)", items: ["Part of the page layout (flex row)", "Opens → main content reduces width", "No backdrop / no overlay", "Main workspace stays visible and usable", "State persists — closing doesn't reset content"] },
+                { label: "Slide Out",          items: ["Overlay on top of the canvas", "Opens → main content width unchanged", "Backdrop scrim (click to dismiss)", "Main workspace partially obscured", "Temporary interaction — dismiss to continue"] },
+              ].map(col => (
+                <div key={col.label} className="rounded-[8px] p-[16px]" style={{ background: "var(--card)", border: "1px solid var(--field-border)" }}>
+                  <p className="text-[13px] font-semibold mb-[10px]" style={{ color: "var(--foreground)" }}>{col.label}</p>
+                  <ul className="flex flex-col gap-[6px]">
+                    {col.items.map((it, i) => (
+                      <li key={i} className="flex items-start gap-[6px] text-[12px] leading-[18px]" style={{ color: "var(--field-supporting)" }}>
+                        <span style={{ color: col.label === "Side Panel (this)" ? "var(--primary)" : "var(--color-text-subtitle)" }}>•</span>
+                        {it}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Width presets */}
+          <div className="flex flex-col gap-[16px]">
+            <h2 className="text-[18px] font-semibold" style={{ color: "var(--foreground)" }}>Width presets</h2>
+            <div className="grid grid-cols-4 gap-[12px]">
+              {[
+                { name: "Default (1/3)",  width: "450px", note: "Standard. Works for most configuration and detail panels." },
+                { name: "Expanded 1/3",   width: "480px", note: "Slightly wider. Fits more complex inline forms." },
+                { name: "Expanded 1/2",   width: "704px", note: "Half the viewport. Use when panel and content are equally important." },
+                { name: "Min width",      width: "300px", note: "Small screens or multiple side panels (e.g. Workflow Builder)." },
+              ].map(p => (
+                <div key={p.name} className="rounded-[8px] p-[16px]" style={{ background: "var(--card)", border: "1px solid var(--field-border)" }}>
+                  <p className="text-[18px] font-bold mb-[2px]" style={{ color: "var(--primary)" }}>{p.width}</p>
+                  <p className="text-[12px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>{p.name}</p>
+                  <p className="text-[11px] leading-[16px]" style={{ color: "var(--field-supporting)" }}>{p.note}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Split Screen Definitions */}
+          <div className="flex flex-col gap-[16px]">
+            <div>
+              <h2 className="text-[18px] font-semibold mb-[4px]" style={{ color: "var(--foreground)" }}>Split Screen Definitions</h2>
+              <p className="text-[13px]" style={{ color: "var(--field-supporting)" }}>
+                The side panel supports 3 preset widths that control how much of the main workspace remains visible.
+                Panel opens at 1/3 by default; drag the edge handle to snap to 1/2.
+              </p>
+            </div>
+
+            {/* Proportional diagrams */}
+            {[
+              {
+                name: "1/3 S — Minimum",
+                px: "300px",
+                panelPct: 33,
+                contentPct: 67,
+                note: "Small screens or multiple panels open simultaneously (e.g. Workflow Builder).",
+                tag: "min",
+              },
+              {
+                name: "1/3 M — Default",
+                px: "450px",
+                panelPct: 33,
+                contentPct: 67,
+                note: "Default layout for most pages. Panel opens here. Remaining 2/3 shows primary workspace.",
+                tag: "default",
+              },
+              {
+                name: "1/2 — Expanded",
+                px: "704px",
+                panelPct: 50,
+                contentPct: 50,
+                note: "Use when Side Panel and content are equally important. Activated by dragging the resize handle.",
+                tag: "expanded",
+              },
+            ].map(preset => (
+              <div key={preset.name} className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
+                {/* Header row */}
+                <div className="flex items-center justify-between px-[16px] py-[10px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}>
+                  <div className="flex items-center gap-[8px]">
+                    <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{preset.name}</span>
+                    {preset.tag === "default" && (
+                      <span className="text-[10px] font-semibold px-[6px] py-[1px] rounded-full" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>Default</span>
+                    )}
+                  </div>
+                  <span className="text-[12px] font-medium font-mono" style={{ color: "var(--primary)" }}>{preset.px}</span>
+                </div>
+
+                {/* Proportional bar */}
+                <div className="flex h-[52px]" style={{ background: "var(--canvas)" }}>
+                  {/* Panel area */}
+                  <div
+                    className="flex items-center justify-center flex-shrink-0 border-r"
+                    style={{
+                      width: `${preset.panelPct}%`,
+                      background: "var(--side-panel-bg)",
+                      borderColor: "var(--side-panel-border)",
+                    }}
+                  >
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--primary)" }}>
+                      Side Panel · {preset.panelPct}%
+                    </span>
+                  </div>
+                  {/* Content area */}
+                  <div className="flex-1 flex items-center justify-center">
+                    <span className="text-[11px] font-medium" style={{ color: "var(--field-supporting)" }}>
+                      Main content · {preset.contentPct}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Note */}
+                <div className="px-[16px] py-[8px]" style={{ borderTop: "1px solid var(--field-border)", background: "var(--card)" }}>
+                  <p className="text-[12px] leading-[18px]" style={{ color: "var(--field-supporting)" }}>{preset.note}</p>
+                </div>
+              </div>
+            ))}
+
+            {/* Behavior rules table */}
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
+              <div className="px-[16px] py-[10px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}>
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Resize rules</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Preset", "%", "px", "Usage scenario"].map(h => (
+                        <th key={h} className="text-left px-[14px] py-[8px] font-semibold" style={{ color: "var(--foreground)" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { preset: "1/3 S", pct: "33.33%", px: "300px", use: "Minimum width — small screens, multi-panel layouts" },
+                      { preset: "1/3 M", pct: "33.33%", px: "450px", use: "Default — opens here on most pages" },
+                      { preset: "1/2",   pct: "50%",    px: "704px", use: "Expanded — drag handle past 40% threshold to snap" },
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid var(--field-border)" }}>
+                        <td className="px-[14px] py-[10px] font-mono font-semibold" style={{ color: "var(--primary)" }}>{row.preset}</td>
+                        <td className="px-[14px] py-[10px]" style={{ color: "var(--foreground)" }}>{row.pct}</td>
+                        <td className="px-[14px] py-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>{row.px}</td>
+                        <td className="px-[14px] py-[10px]" style={{ color: "var(--field-supporting)" }}>{row.use}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div className="flex flex-col gap-[16px]">
+            <h2 className="text-[18px] font-semibold" style={{ color: "var(--foreground)" }}>Do / Don't</h2>
+            <div className="grid grid-cols-2 gap-[12px]">
+              <div className="rounded-[8px] p-[16px]" style={{ background: "var(--card)", border: "1px solid var(--color-border-success-default)" }}>
+                <p className="text-[12px] font-semibold mb-[10px]" style={{ color: "var(--color-text-success)" }}>✓ Do</p>
+                {["Use when the user needs continuous access to contextual information", "Use for node configuration, item inspection, secondary editing workflows", "Let the body scroll internally — keep header and footer fixed", "Use width={300} on small screens or when running multiple panels"].map((t, i) => (
+                  <p key={i} className="text-[12px] leading-[18px] mb-[6px]" style={{ color: "var(--field-supporting)" }}>• {t}</p>
+                ))}
+              </div>
+              <div className="rounded-[8px] p-[16px]" style={{ background: "var(--card)", border: "1px solid var(--destructive)" }}>
+                <p className="text-[12px] font-semibold mb-[10px]" style={{ color: "var(--destructive)" }}>✗ Don't</p>
+                {["Use for temporary or dismissible interactions — use Slide Out instead", "Use for blocking workflows that require full attention — use Modal instead", "Overload the panel with unrelated content", "Use Side Panel and Slide Out simultaneously for the same context"].map((t, i) => (
+                  <p key={i} className="text-[12px] leading-[18px] mb-[6px]" style={{ color: "var(--field-supporting)" }}>• {t}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PLAYGROUND ── */}
+      {tab === "playground" && (
+        <div className="flex gap-[24px] overflow-x-auto" style={{ height: 600 }}>
+
+          {/* Sidebar controls */}
+          <div
+            className="flex flex-col gap-[14px] p-[20px] rounded-[8px] border shrink-0 overflow-y-auto"
+            style={{ width: 200, background: "var(--surface)", borderColor: "var(--field-border)" }}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-widest shrink-0" style={{ color: "var(--field-supporting)" }}>Controls</p>
+            <CtrlGroup
+              label="Panel state"
+              value={pgOpen ? "open" : "closed"}
+              options={[{ value: "open", label: "Open" }, { value: "closed", label: "Closed" }]}
+              onChange={v => setPgOpen(v === "open")}
+            />
+            <CtrlGroup
+              label="Side"
+              value={pgSide}
+              options={[{ value: "right", label: "Right" }, { value: "left", label: "Left" }]}
+              onChange={v => setPgSide(v as SidePanelSide)}
+            />
+            <CtrlToggle label="Search"          value={pgShowSearch}         onChange={setPgShowSearch} />
+            <CtrlToggle label="Menu btn"        value={pgShowMenu}           onChange={setPgShowMenu} />
+            <CtrlToggle label="Footer CTAs"     value={pgShowFooter}         onChange={setPgShowFooter} />
+            <CtrlToggle label="Title icon"      value={pgShowTitleIcon}      onChange={setPgShowTitleIcon} />
+            {pgShowTitleIcon && (
+              <CtrlGroup
+                label="Icon color"
+                value={pgTitleIconVariant}
+                options={[
+                  { value: "informative", label: "Blue" },
+                  { value: "success",     label: "Green" },
+                  { value: "alert",       label: "Orange" },
+                  { value: "error",       label: "Red" },
+                  { value: "purple",      label: "Purple" },
+                  { value: "lightblue",   label: "Teal" },
+                ]}
+                onChange={v => setPgTitleIconVariant(v as import("@/components/ui/side-panel").TitleIconVariant)}
+              />
+            )}
+            <CtrlToggle label="Title tag"       value={pgShowTitleTag}       onChange={setPgShowTitleTag} />
+            {pgShowTitleTag && (
+              <CtrlGroup
+                label="Tag state"
+                value={pgTitleTagVariant}
+                options={[
+                  { value: "informative", label: "Info" },
+                  { value: "success",     label: "Success" },
+                  { value: "alert",       label: "Alert" },
+                  { value: "error",       label: "Error" },
+                  { value: "neutral",     label: "Neutral" },
+                  { value: "purple",      label: "Purple" },
+                ]}
+                onChange={v => setPgTitleTagVariant(v as import("@/components/ui/side-panel").TitleTagVariant)}
+              />
+            )}
+            <CtrlToggle label="Collapsed icons" value={pgShowCollapsedIcons} onChange={setPgShowCollapsedIcons} />
+
+            {/* Collapsed icons — shows the icon set + shuffle button to demo customizability */}
+            {pgShowCollapsedIcons && (
+              <div className="flex flex-col gap-[8px]">
+                {/* Header row: label + shuffle button */}
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                    Collapsed icons
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setPgIconSet(s => s + 1)}
+                    className="flex items-center gap-[3px] px-[6px] rounded-[4px] text-[10px] font-medium transition-colors"
+                    style={{ height: 18, background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "none" }}
+                  >
+                    <LucideIcons.Shuffle size={9} />
+                    Shuffle
+                  </button>
+                </div>
+                {/* Caption */}
+                <p className="text-[10px] leading-[14px]" style={{ color: "var(--field-supporting)", opacity: 0.6 }}>
+                  Any icon + label — pass your own
+                </p>
+                {/* Icon list */}
+                {demoCollapsedIcons.map((item, i) => (
+                  <div key={i} className="flex items-center gap-[6px]">
+                    <div className="flex items-center justify-center flex-shrink-0" style={{ width: 16, height: 16 }}>
+                      {item.icon}
+                    </div>
+                    <span className="text-[11px] truncate" style={{ color: "var(--field-supporting)" }}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Split-screen demo */}
+          <div className="flex-1 min-w-0 rounded-[12px] overflow-hidden flex" style={{ border: "1px solid var(--field-border)", background: "var(--canvas)" }}>
+
+            {/* Left panel */}
+            {pgSide === "left" && (
+              <SidePanel
+                open={pgOpen}
+                onClose={() => setPgOpen(o => !o)}
+                side="left"
+                title="Node Configuration"
+                description="Adjust settings for the selected node"
+                titleIcon={pgShowTitleIcon ? <LucideIcons.Settings size={14} /> : undefined}
+                titleIconVariant={pgTitleIconVariant}
+                titleTag={pgShowTitleTag ? "Active" : undefined}
+                titleTagVariant={pgTitleTagVariant}
+                showSearch={pgShowSearch}
+                showMenu={pgShowMenu}
+                footer={panelFooter}
+                collapsedIcons={demoCollapsedIcons}
+                showCollapsedIcons={pgShowCollapsedIcons}
+              >
+                {panelContent}
+              </SidePanel>
+            )}
+
+            {/* Main canvas */}
+            <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-[20px] h-[48px] flex-shrink-0" style={{ borderBottom: "1px solid var(--field-border)", background: "var(--surface)" }}>
+                <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Services</span>
+                <button type="button" onClick={() => setPgOpen(o => !o)}
+                  className="flex items-center gap-[6px] px-[12px] h-[28px] rounded-[6px] text-[12px] font-medium transition-colors"
+                  style={{ background: pgOpen ? "var(--color-surface-primary-subtle)" : "var(--surface-raised)", color: pgOpen ? "var(--primary)" : "var(--foreground)", border: "1px solid var(--field-border)" }}>
+                  {pgSide === "right" ? <LucideIcons.PanelRight size={13} /> : <LucideIcons.PanelLeft size={13} />}
+                  {pgOpen ? "Close panel" : "Open panel"}
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-[20px] py-[8px]">
+                {demoRows.map((row, i) => (
+                  <div key={i} className="flex items-center gap-[12px] py-[12px] cursor-pointer"
+                    style={{ borderBottom: i < demoRows.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                    <div className="rounded-[8px] flex items-center justify-center shrink-0" style={{ width: 36, height: 36, background: "var(--color-surface-primary-subtle)" }}>
+                      <LucideIcons.Server size={16} style={{ color: "var(--primary)" }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold truncate" style={{ color: "var(--foreground)" }}>{row.title}</p>
+                      <p className="text-[11px] truncate" style={{ color: "var(--field-supporting)" }}>{row.sub}</p>
+                    </div>
+                    <LucideIcons.ChevronRight size={14} style={{ color: "var(--field-supporting)" }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right panel */}
+            {pgSide === "right" && (
+              <SidePanel
+                open={pgOpen}
+                onClose={() => setPgOpen(o => !o)}
+                side="right"
+                title="Node Configuration"
+                description="Adjust settings for the selected node"
+                titleIcon={pgShowTitleIcon ? <LucideIcons.Settings size={14} /> : undefined}
+                titleIconVariant={pgTitleIconVariant}
+                titleTag={pgShowTitleTag ? "Active" : undefined}
+                titleTagVariant={pgTitleTagVariant}
+                showSearch={pgShowSearch}
+                showMenu={pgShowMenu}
+                footer={panelFooter}
+                collapsedIcons={demoCollapsedIcons}
+                showCollapsedIcons={pgShowCollapsedIcons}
+              >
+                {panelContent}
+              </SidePanel>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── REFERENCE ── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Tokens table */}
+          <div className="flex flex-col gap-[12px]">
+            <h2 className="text-[16px] font-semibold" style={{ color: "var(--foreground)" }}>Design tokens</h2>
+            <div className="overflow-x-auto rounded-md border" style={{ borderColor: "var(--field-border)" }}>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                    {["Token", "Role", "Dark", "Light"].map(h => (
+                      <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(SIDE_PANEL_SPEC.tokens as {role:string;variable:string;varId:string;light:string;dark:string}[]).map((row, i, arr) => (
+                    <tr key={row.variable} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none", background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.variable}</td>
+                      <td className="px-[12px] py-[8px]" style={{ color: "var(--foreground)" }}>{row.role}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.dark}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.light}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Props table */}
+          <div className="flex flex-col gap-[12px]">
+            <h2 className="text-[16px] font-semibold" style={{ color: "var(--foreground)" }}>Props</h2>
+            <div className="overflow-x-auto rounded-md border" style={{ borderColor: "var(--field-border)" }}>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--field-supporting)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(SIDE_PANEL_SPEC.properties as {name:string;type:string;default:string;note:string}[]).map((row, i, arr) => (
+                    <tr key={row.name} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none", background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{row.name}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.default}</td>
+                      <td className="px-[12px] py-[8px]" style={{ color: "var(--field-supporting)" }}>{row.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div className="flex flex-col gap-[12px]">
+            <h2 className="text-[16px] font-semibold" style={{ color: "var(--foreground)" }}>Usage</h2>
+            <pre className="rounded-md p-[16px] text-[12px] leading-[20px] overflow-x-auto" style={{ background: "var(--code-bg)", color: "var(--foreground)" }}>{codeSnippet}</pre>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── SlideOutPage ──────────────────────────────────────────────────────────────
 
 function SlideOutPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
 
-  // Playground state
-  const [pgOpen,           setPgOpen]           = useState(false)
-  const [pgSize,           setPgSize]           = useState<SlideOutSize>("m")
-  const [pgTitle,          setPgTitle]          = useState("Filter Results")
-  const [pgShowSubtitle,   setPgShowSubtitle]   = useState(true)
-  const [pgSubtitle,       setPgSubtitle]       = useState("Refine your search criteria")
-  const [pgShowFooter,     setPgShowFooter]     = useState(true)
-  const [pgCloseBackdrop,  setPgCloseBackdrop]  = useState(true)
+  // Playground state — mirrors all DS boolean props
+  const [pgType,          setPgType]          = useState<SlideOutType>("with-variants")
+  const [pgSize,          setPgSize]          = useState<SlideOutSize>("m")
+  const [pgShowIcon,      setPgShowIcon]      = useState(true)
+  const [pgShowStatus,    setPgShowStatus]    = useState(true)
+  const [pgShowTopButton, setPgShowTopButton] = useState(true)
+  const [pgShowClose,     setPgShowClose]     = useState(true)
+  const [pgShowTabs,      setPgShowTabs]      = useState(true)
+  const [pgShowTab3,      setPgShowTab3]      = useState(true)
+  const [pgShowSearch,    setPgShowSearch]    = useState(true)
+  const [pgShowChips,     setPgShowChips]     = useState(true)
+  const [pgShowCta,       setPgShowCta]       = useState(true)
+  const [pgActiveTab,     setPgActiveTab]     = useState(0)
+  const [pgActiveChip,    setPgActiveChip]    = useState(0)
+  const [pgTopButtonIconKey, setPgTopButtonIconKey] = useState("pencil")
+  const [pgShowContent,     setPgShowContent]     = useState(false)
+  const [pgPortalOpen,      setPgPortalOpen]      = useState(false)
+  const [pgTitle,           setPgTitle]           = useState("Deployment Configuration — Staging & Production Environments")
+  const [pgSubtitle,        setPgSubtitle]        = useState("Review and apply settings for each deployment target before the release window closes. Changes take effect immediately after confirmation.")
+
+  const pgTopButtonIconMap: Record<string, React.ReactNode> = {
+    pencil:   <LucideIcons.Pencil size={14} />,
+    more:     <LucideIcons.MoreHorizontal size={14} />,
+    link:     <LucideIcons.ExternalLink size={14} />,
+    settings: <LucideIcons.Settings2 size={14} />,
+  }
+
+  // DS type variants for the overview grid
+  const typeVariants = [
+    {
+      type: "with-variants" as SlideOutType,
+      size: "m" as SlideOutSize,
+      label: "With variants — M",
+      width: "635px",
+      note: "Full anatomy: icon, title, status tag, tabs, search bar, category chips, dashed content slot, CTA buttons.",
+    },
+    {
+      type: "full-slot" as SlideOutType,
+      size: "m" as SlideOutSize,
+      label: "Full slot — M",
+      width: "600px",
+      note: "Blank dashed content area. No header, tabs, or CTA. Use for fully custom content.",
+    },
+    {
+      type: "with-variants" as SlideOutType,
+      size: "s" as SlideOutSize,
+      label: "With variants — S",
+      width: "420px",
+      note: "Same anatomy as M but compact: 32px icon, 18px title, 12px subtitle, smaller buttons.",
+    },
+    {
+      type: "full-slot" as SlideOutType,
+      size: "s" as SlideOutSize,
+      label: "Full slot — S",
+      width: "420px",
+      note: "Compact blank slot. Radius-L (16px) on left corners.",
+    },
+  ]
 
   const anatomyItems = [
-    { label: "Backdrop",       desc: "Semi-transparent scrim (rgba 0,0,0, 0.30) covering the full viewport. Click closes the panel when closeOnBackdrop=true." },
-    { label: "Panel container", desc: "Aside element, slides in from the right. Radius-XL (24px) on top-left and bottom-left corners. Width: 635px (M) · 420px (S)." },
-    { label: "Header",         desc: "px-16 py-16 · Title (20px SemiBold) + optional Subtitle (14px Medium) on the left · close × button on the right." },
-    { label: "Header divider", desc: "0.5px horizontal rule using --slide-out-border. Separates header from body." },
-    { label: "Content area",   desc: "Flex-1 · overflow-y-auto · px-24 py-24. Holds any children via the children prop." },
-    { label: "Footer",         desc: "Optional. Appears below a 0.5px divider · right-aligned · px-16 py-16. Typically Cancel + Apply button pair." },
+    { label: "Backdrop",       desc: "Full-viewport scrim (rgba 0,0,0,0.30). Click closes the panel when closeOnBackdrop=true." },
+    { label: "Panel",          desc: "Frosted glass: Surface/Floating/Default + backdrop-blur(30px) + shadow -24px -24px 60px rgba(0,0,0,0.08). Left-only radius: 24px (M) / 16px (S)." },
+    { label: "Header zone",    desc: "Icon (purple, 40px M / 32px S) + Title + Status tag + Description/subtitle + TopButton + Close button." },
+    { label: "Navigation",     desc: "Tabs row (2–3 tabs, active = blue underline) + Search bar (32px, white bg, border Neutral/Default)." },
+    { label: "Chips row",      desc: "Horizontal overflow-hidden chip strip. Active chip = Surface/Primary/Default (blue). Inactive = white bg + Neutral/Default border. ChevronRight overflow button." },
+    { label: "Content slot",   desc: "flex-1 dashed container (Border/Primary/Lighter = #80afff). Shows 'Replace content here' placeholder or custom children." },
+    { label: "CTA row",        desc: "Secondary button (white bg, Neutral border) + Primary button (Surface/Primary/Default) — right-aligned. M: 40px height · S: 27px height." },
   ]
 
-  const sizeVariants = [
-    { size: "M" as SlideOutSize, label: "Size M", width: "635px", note: "Default. Detail views, filter panels, configuration drawers with multiple sections." },
-    { size: "S" as SlideOutSize, label: "Size S", width: "420px", note: "Focused tasks, quick edits, or narrow viewports where M is too wide." },
-  ]
+  // Realistic content example — used in overview and playground
+  const exampleSlotContent = (
+    <div className="flex flex-col">
+      <p className="text-[11px] font-semibold mb-[8px] shrink-0" style={{ color: "var(--field-supporting)" }}>4 agents · 2 active</p>
+      {[
+        { name: "GPT-4o Vision",       detail: "Multimodal · 2h ago",       status: "Active",  tagVariant: "success" as TagVariant },
+        { name: "Claude-3.5 Sonnet",   detail: "Natural language · 5h ago",  status: "Active",  tagVariant: "success" as TagVariant },
+        { name: "Llama-3.1 70B",       detail: "Open source · 2d ago",       status: "Paused",  tagVariant: "alert"   as TagVariant },
+        { name: "Mixtral-8×7B",        detail: "MoE · 5d ago",               status: "Offline", tagVariant: "neutral" as TagVariant },
+      ].map((row, i, arr) => (
+        <div
+          key={i}
+          className="flex items-center gap-[12px] px-[4px] py-[10px] cursor-pointer shrink-0"
+          style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}
+        >
+          <div className="flex items-center justify-center rounded-[8px] shrink-0" style={{ width: 36, height: 36, background: "var(--color-surface-primary-subtle)" }}>
+            <LucideIcons.Bot size={18} style={{ color: "var(--primary)" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-semibold truncate" style={{ color: "var(--foreground)" }}>{row.name}</div>
+            <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.detail}</div>
+          </div>
+          <Tag variant={row.tagVariant} size="sm">{row.status}</Tag>
+        </div>
+      ))}
+    </div>
+  )
 
   const codeSnippet = `import { SlideOut } from "@/components/ui/slide-out"
 
-// Basic usage
 const [open, setOpen] = useState(false)
-
-<button onClick={() => setOpen(true)}>Open panel</button>
 
 <SlideOut
   open={open}
   onClose={() => setOpen(false)}
-  title="Filter Results"
-  subtitle="Refine your search criteria"
-  footer={
-    <>
-      <button onClick={() => setOpen(false)}>Cancel</button>
-      <button onClick={() => setOpen(false)}>Apply</button>
-    </>
-  }
+  type="with-variants"
+  size="m"
+  title="Section Title"
+  subtitle="Short description of what the user can do here"
+  showStatus
+  statusLabel="Active"
+  showTabs
+  tabLabels={["Overview", "Details", "Activity"]}
+  showSearchBar
+  showChips
+  chipLabels={["All", "Category A", "Category B", "Category C"]}
+  showCta
+  ctaPrimaryLabel="Apply"
+  ctaSecondaryLabel="Cancel"
+  onCtaPrimary={() => setOpen(false)}
+  onCtaSecondary={() => setOpen(false)}
 >
-  {/* Any content here */}
-  <p>Panel body content</p>
+  {/* Replace with tables, forms, lists, etc. */}
+  <p style={{ padding: 24 }}>Your content here</p>
 </SlideOut>`
 
   const tokenRows = [
-    { token: "--slide-out-bg",      varId: "Surface/Neutral/Black",  light: "#FFFFFF",            dark: "#0F172B" },
-    { token: "--slide-out-title",   varId: "Text/Title",             light: "#000000",            dark: "rgba(255,255,255,.80)" },
-    { token: "--slide-out-body",    varId: "Text/Body",              light: "#5C5C5C",            dark: "#94A3B8" },
-    { token: "--slide-out-border",  varId: "Border/Neutral/Subtle",  light: "#E4E4E7",            dark: "rgba(255,255,255,.10)" },
-    { token: "--slide-out-icon",    varId: "Icon/Neutral/Default",   light: "#52525B",            dark: "#D1D5DB" },
-    { token: "--slide-out-overlay", varId: "Overlay/Scrim/Default",  light: "rgba(0,0,0,.30)",    dark: "rgba(0,0,0,.30)" },
+    { token: "--slide-out-bg",                   varId: "Surface/Floating/Default",      light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)"        },
+    { token: "--slide-out-shadow",               varId: "Drop Shadow effect",            light: "−24 −24 60 0 rgba(0,0,0,.08)", dark: "−24 −24 60 0 rgba(0,0,0,.08)" },
+    { token: "--color-surface-purple-more-subtle", varId: "Surface/Purple/More Subtle",  light: "#f3e9fd",                dark: "rgba(139,92,246,0.12)"       },
+    { token: "--color-surface-success-more-subtle",varId: "Surface/Success/More Subtle", light: "#e5fdf8",                dark: "rgba(110,231,183,0.10)"      },
+    { token: "--color-border-primary-lighter",   varId: "Border/Primary/Lighter",        light: "#80afff",                dark: "#80afff"                     },
+    { token: "--color-border-success-lighter",   varId: "Border/Success/Lighter",        light: "#009978",                dark: "#009978"                     },
+    { token: "--color-border-neutral-default",   varId: "Border/Neutral/Default",        light: "#5c5c5c",                dark: "rgba(255,255,255,0.10)"      },
+    { token: "--color-text-label",               varId: "Text/Label",                    light: "#2a2a2a",                dark: "rgba(255,255,255,0.80)"      },
+    { token: "--color-text-disabled",            varId: "Text/Disabled",                 light: "#bababa",                dark: "rgba(255,255,255,0.30)"      },
+    { token: "--color-text-negative",            varId: "Text/Negative",                 light: "#ffffff",                dark: "#ffffff"                     },
+    { token: "--slide-out-btn-secondary-bg",     varId: "—",                             light: "#ffffff",                dark: "rgba(255,255,255,0.08)"      },
+    { token: "--slide-out-btn-secondary-text",   varId: "—",                             light: "#2a2a2a",                dark: "rgba(255,255,255,0.80)"      },
+    { token: "--slide-out-overlay",              varId: "Overlay/Scrim/Default",         light: "rgba(0,0,0,0.30)",       dark: "rgba(0,0,0,0.30)"            },
   ]
 
   const propRows = [
-    { prop: "open",            type: "boolean",           def: "—",       desc: "Controls visibility. Animates panel in/out with translate-x." },
-    { prop: "onClose",         type: "() => void",        def: "—",       desc: "Called on close button, backdrop click, or Escape key." },
-    { prop: "title",           type: "string",            def: "—",       desc: "Panel heading. 20px SemiBold (Title/Bold/M)." },
-    { prop: "subtitle",        type: "string",            def: "undefined", desc: "Optional secondary text below the title." },
-    { prop: "size",            type: '"m" | "s"',         def: '"m"',     desc: 'M = 635px wide · S = 420px wide.' },
-    { prop: "closeOnBackdrop", type: "boolean",           def: "true",    desc: "Whether clicking the backdrop triggers onClose." },
-    { prop: "children",        type: "ReactNode",         def: "undefined", desc: "Scrollable body content." },
-    { prop: "footer",          type: "ReactNode",         def: "undefined", desc: "Rendered below a divider, right-aligned. Typically CTA pair." },
-    { prop: "className",       type: "string",            def: "undefined", desc: "Extra classes applied to the aside panel element." },
+    { prop: "open",            type: "boolean",                        def: "—",                desc: "Controls visibility. Animates panel in/out via translate-x." },
+    { prop: "onClose",         type: "() => void",                     def: "—",                desc: "Called on close button, backdrop click, or Escape key." },
+    { prop: "type",            type: '"with-variants" | "full-slot"',  def: '"with-variants"',  desc: "With variants: full header + navigation + content + CTA. Full slot: dashed content area only." },
+    { prop: "size",            type: '"m" | "s"',                      def: '"m"',              desc: "M = 635px (With variants) / 600px (Full slot), Radius-XL 24px. S = 420px, Radius-L 16px." },
+    { prop: "closeOnBackdrop", type: "boolean",                        def: "true",             desc: "Whether clicking the backdrop triggers onClose." },
+    { prop: "title",           type: "string",                         def: '"Title of section"', desc: "Panel heading. 24px SemiBold (M) / 18px SemiBold (S)." },
+    { prop: "subtitle",        type: "string",                         def: "DS default text",  desc: "DS prop: description. Body text below title. 14px (M) / 12px (S)." },
+    { prop: "showIcon",        type: "boolean",                        def: "true",             desc: "DS prop: icon. Purple icon highlight in header. 40px (M) / 32px (S)." },
+    { prop: "iconContent",     type: "ReactNode",                      def: "<Sparkles/>",      desc: "Custom content inside the purple icon container." },
+    { prop: "showStatus",      type: "boolean",                        def: "true",             desc: "DS prop: status. Green status tag next to title." },
+    { prop: "statusLabel",     type: "string",                         def: '"Status"',         desc: "Label inside the status tag." },
+    { prop: "showTopButton",   type: "boolean",                        def: "true",             desc: "DS prop: topButton. Edit (pencil) icon in top-right header." },
+    { prop: "showClose",       type: "boolean",                        def: "true",             desc: "DS prop: close. X close button in top-right header." },
+    { prop: "showTabs",        type: "boolean",                        def: "true",             desc: "DS prop: tabs. Tab navigation row." },
+    { prop: "showTab3",        type: "boolean",                        def: "true",             desc: "DS prop: tab3. Show or hide the third tab." },
+    { prop: "tabLabels",       type: "[string, string, string]",       def: '["Tab 1","Tab 2","Tab 3"]', desc: "Labels for the 3 tabs." },
+    { prop: "activeTab",       type: "number",                         def: "0",               desc: "Index of the active tab (0-based)." },
+    { prop: "onTabChange",     type: "(i: number) => void",           def: "—",                desc: "Called when a tab is clicked." },
+    { prop: "showSearchBar",   type: "boolean",                        def: "true",             desc: "DS prop: searchBar. Search input field." },
+    { prop: "showChips",       type: "boolean",                        def: "true",             desc: "DS prop: chips. Category chip strip with overflow." },
+    { prop: "chipLabels",      type: "string[]",                       def: "5 default labels", desc: "Chip labels. Active chip highlighted in blue." },
+    { prop: "activeChip",      type: "number",                         def: "0",               desc: "Index of the active chip (0-based)." },
+    { prop: "children",        type: "ReactNode",                      def: "—",               desc: "Replaces the 'Replace content here' placeholder in the content slot." },
+    { prop: "showCta",         type: "boolean",                        def: "true",             desc: "DS prop: cta. Secondary + Primary buttons row at bottom." },
+    { prop: "ctaPrimaryLabel", type: "string",                         def: '"Button"',         desc: "Label for the primary (blue) CTA button." },
+    { prop: "ctaSecondaryLabel",type: "string",                        def: '"Button"',         desc: "Label for the secondary (outline) CTA button." },
+    { prop: "className",       type: "string",                         def: "—",               desc: "Extra classes applied to the aside panel element." },
   ]
 
   return (
@@ -15092,16 +16187,16 @@ const [open, setOpen] = useState(false)
       <div className="flex items-start justify-between gap-[16px] mb-[28px]">
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Slide Out</h1>
-          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
-            Overlay panel that slides in from the right edge. Used for filters, detail views, and configuration drawers.
-            Two widths: M (635px) and S (420px). Closes on backdrop click, close button, or Escape key.
-            Renders via React portal above all other content.
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[640px]">
+            Frosted-glass overlay panel from the right. Two types: <strong>With variants</strong> (full DS anatomy) and <strong>Full slot</strong> (blank dashed area).
+            Two sizes: M (635px, Radius-XL 24px) and S (420px, Radius-L 16px).
+            Background: <code className="font-mono text-xs">Surface/Floating/Default</code> with <code className="font-mono text-xs">backdrop-blur(30px)</code>.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("slide-out")} />
       </div>
 
-      {/* Tabs */}
+      {/* Tab row */}
       <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
         {(["overview", "playground", "reference"] as const).map(t => (
           <button
@@ -15121,12 +16216,330 @@ const [open, setOpen] = useState(false)
 
       {/* ── Overview ─────────────────────────────────────────────────────────── */}
       {tab === "overview" && (
-        <div className="flex flex-col gap-[40px]">
+        <div className="flex flex-col gap-[48px]">
 
-          {/* Anatomy */}
+          {/* ── 1. Panel widths — proportional viewport strips ─────────────────── */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Panel widths</h2>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">S and M differ significantly at real viewport scale (1440px). Both can also expand to half-screen via drag.</p>
+            <div className="flex flex-col gap-[12px]">
+              {([
+                { label: "Size S", px: "420px", pct: 29.2, badge: "29% of viewport", note: "Focused quick actions" },
+                { label: "Size M", px: "635px", pct: 44.1, badge: "44% of viewport", note: "Detail panels, multi-section views" },
+                { label: "Expanded", px: "50vw", pct: 50, badge: "50% of viewport", note: "Drag left edge → snaps to half-screen" },
+              ] as const).map(({ label, px, pct, badge, note }) => (
+                <div key={label}>
+                  <div className="flex items-center gap-[8px] mb-[6px] flex-wrap">
+                    <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{label}</span>
+                    <span className="px-[8px] py-[1px] rounded-full text-[11px] font-semibold" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{px}</span>
+                    <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{badge} · {note}</span>
+                  </div>
+                  {/* Full-width viewport strip */}
+                  <div className="relative overflow-hidden rounded-[8px] flex" style={{ height: 88, background: "var(--canvas)", border: "1px solid var(--field-border)" }}>
+                    {/* Page content lines */}
+                    <div className="flex-1 flex flex-col justify-center gap-[8px] px-[24px] pointer-events-none">
+                      {[65, 88, 72, 55].map((w, i) => (
+                        <div key={i} className="rounded-[2px]" style={{ height: 6, width: `${w}%`, background: "var(--field-border)", opacity: 0.5 }} />
+                      ))}
+                    </div>
+                    {/* Panel slice — proportional to 1440px viewport */}
+                    <div
+                      className="h-full flex flex-col justify-center gap-[6px] relative"
+                      style={{
+                        width: `${pct}%`,
+                        background: "var(--slide-out-bg)",
+                        borderRadius: "12px 0 0 12px",
+                        boxShadow: "-8px 0 24px rgba(0,0,0,0.09)",
+                        backdropFilter: "blur(8px)",
+                        padding: "12px 16px",
+                      }}
+                    >
+                      {label === "Expanded" && (
+                        <div className="absolute left-0 top-0 bottom-0" style={{ width: 1, background: "var(--primary)", borderRadius: "1px 0 0 1px" }} />
+                      )}
+                      <div className="flex items-center gap-[6px]">
+                        <div className="rounded-[3px]" style={{ width: 12, height: 12, background: "var(--color-surface-purple-more-subtle)", flexShrink: 0 }} />
+                        <div className="h-[5px] rounded-[2px]" style={{ width: 64, background: "var(--color-text-title)", opacity: 0.7 }} />
+                      </div>
+                      <div className="rounded-[3px]" style={{ height: 7, width: "70%", background: "var(--field-border)", opacity: 0.5 }} />
+                      <div className="rounded-[3px]" style={{ height: 7, width: "50%", background: "var(--field-border)", opacity: 0.3 }} />
+                      {/* Width label */}
+                      <div className="absolute bottom-[8px] right-[10px] text-[11px] font-bold" style={{ color: "var(--primary)" }}>
+                        {pct}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── 2. Drag to expand — 3-step visual ──────────────────────────────── */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Drag to expand</h2>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">Hover the left border of the panel to reveal the resize handle. Drag left to grow; release to snap to the default width or half-screen.</p>
+            <div className="flex items-stretch gap-[8px]">
+              {([
+                {
+                  step: "1",
+                  label: "Default",
+                  sub: "Panel at default width",
+                  panelPct: 44,
+                  showHandle: false,
+                  showExpanded: false,
+                },
+                {
+                  step: "2",
+                  label: "Hover edge",
+                  sub: "Blue line + grip appears",
+                  panelPct: 44,
+                  showHandle: true,
+                  showExpanded: false,
+                },
+                {
+                  step: "3",
+                  label: "Expanded",
+                  sub: "Snaps to 50% of viewport",
+                  panelPct: 50,
+                  showHandle: true,
+                  showExpanded: true,
+                },
+              ] as const).map(({ step, label, sub, panelPct, showHandle, showExpanded }, idx) => (
+                <Fragment key={step}>
+                  <div className="flex-1 flex flex-col gap-[8px]">
+                    {/* Step label */}
+                    <div className="flex items-center gap-[6px]">
+                      <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: "var(--primary)", color: "var(--color-text-negative)" }}>{step}</div>
+                      <div>
+                        <div className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{label}</div>
+                        <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{sub}</div>
+                      </div>
+                    </div>
+                    {/* Viewport strip */}
+                    <div className="relative overflow-hidden rounded-[8px] flex flex-1" style={{ height: 100, background: "var(--canvas)", border: "1px solid var(--field-border)" }}>
+                      {/* Page bg lines */}
+                      <div className="flex-1 flex flex-col justify-center gap-[7px] px-[16px] pointer-events-none">
+                        {[70, 85, 60].map((w, i) => (
+                          <div key={i} className="rounded-[2px]" style={{ height: 5, width: `${w}%`, background: "var(--field-border)", opacity: 0.5 }} />
+                        ))}
+                      </div>
+                      {/* Panel */}
+                      <div
+                        className="h-full relative"
+                        style={{
+                          width: `${panelPct}%`,
+                          background: showExpanded ? "var(--slide-out-bg)" : "var(--slide-out-bg)",
+                          borderRadius: "10px 0 0 10px",
+                          boxShadow: "-6px 0 20px rgba(0,0,0,0.09)",
+                          backdropFilter: "blur(8px)",
+                          transition: "width 300ms ease",
+                        }}
+                      >
+                        {/* Panel inner */}
+                        <div className="flex flex-col gap-[5px] p-[10px]">
+                          <div className="flex items-center gap-[4px]">
+                            <div className="rounded-[2px]" style={{ width: 10, height: 10, background: "var(--color-surface-purple-more-subtle)" }} />
+                            <div className="h-[4px] rounded-[2px]" style={{ width: 48, background: "var(--color-text-title)", opacity: 0.7 }} />
+                          </div>
+                          <div className="rounded-[2px]" style={{ height: 4, width: "65%", background: "var(--field-border)", opacity: 0.5 }} />
+                        </div>
+                        {/* Drag handle — only on hover/expanded steps */}
+                        {showHandle && (
+                          <>
+                            {/* Blue line */}
+                            <div
+                              className="absolute left-0 top-0 bottom-0"
+                              style={{ width: 1, background: "var(--primary)", borderRadius: "1px 0 0 1px" }}
+                            />
+                            {/* Grip dots */}
+                            <div
+                              className="absolute flex flex-col gap-[3px]"
+                              style={{ left: 5, top: "50%", transform: "translateY(-50%)" }}
+                            >
+                              {[0, 1, 2].map(i => (
+                                <div key={i} className="rounded-full" style={{ width: 3, height: 3, background: "var(--primary)" }} />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Arrow between steps */}
+                  {idx < 2 && (
+                    <div className="flex items-center justify-center pt-[26px] shrink-0 text-[18px]" style={{ color: "var(--field-supporting)", width: 20 }}>
+                      →
+                    </div>
+                  )}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* ── 3. With content example — real component in previewMode ──────────── */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Example with content</h2>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">Pass children to the content slot for a fully custom layout. The slot stretches to fill remaining height between the header and CTA.</p>
+            {/* Full-width viewport strip — shows the real component */}
+            <div className="relative overflow-hidden rounded-[12px] flex border border-[var(--field-border)]" style={{ height: 560, background: "var(--canvas)" }}>
+              {/* Page background */}
+              <div className="flex-1 flex flex-col justify-center gap-[14px] px-[40px] pointer-events-none select-none min-w-0">
+                {[62, 85, 70, 55, 78, 42].map((w, i) => (
+                  <div key={i} className="rounded-[3px]" style={{ height: 8, width: `${w}%`, background: "var(--field-border)", opacity: 0.45 }} />
+                ))}
+              </div>
+              {/* Real SlideOut in previewMode */}
+              <SlideOut
+                previewMode
+                open
+                onClose={() => {}}
+                size="m"
+                type="with-variants"
+                title="AI Agents"
+                subtitle="Manage and monitor your deployed agents"
+                statusLabel="4 active"
+                showIcon
+                showStatus
+                showTabs
+                showSearchBar
+                showChips
+                chipLabels={["All", "Production", "Staging", "Dev"]}
+                activeChip={0}
+                showCta
+                ctaPrimaryLabel="Save config"
+                ctaSecondaryLabel="Cancel"
+              >
+                {exampleSlotContent}
+              </SlideOut>
+            </div>
+            {/* S size companion — shown alongside for comparison */}
+            <div className="mt-[12px] relative overflow-hidden rounded-[12px] flex border border-[var(--field-border)]" style={{ height: 400, background: "var(--canvas)" }}>
+              <div className="flex-1 flex flex-col justify-center gap-[12px] px-[32px] pointer-events-none select-none min-w-0">
+                {[58, 80, 68, 72].map((w, i) => (
+                  <div key={i} className="rounded-[3px]" style={{ height: 7, width: `${w}%`, background: "var(--field-border)", opacity: 0.45 }} />
+                ))}
+              </div>
+              <SlideOut
+                previewMode
+                open
+                onClose={() => {}}
+                size="s"
+                type="with-variants"
+                title="AI Agents"
+                subtitle="Monitor your deployed agents"
+                statusLabel="4 active"
+                showIcon
+                showStatus
+                showTabs
+                showSearchBar
+                showChips
+                chipLabels={["All", "Production", "Dev"]}
+                activeChip={0}
+                showCta
+                ctaPrimaryLabel="Save"
+                ctaSecondaryLabel="Cancel"
+              >
+                {exampleSlotContent}
+              </SlideOut>
+            </div>
+            <p className="text-[11px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>↑ Size M (635px) and Size S (420px) with identical slot content. The panel header + slot + CTA stack flexibly.</p>
+          </div>
+
+          {/* ── 4. Types × Sizes grid ───────────────────────────────────────────── */}
+          <div>
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Variants</h2>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">Two types × two sizes = four combinations. All share the same frosted glass background and left-side radius.</p>
+            <div className="grid grid-cols-2 gap-[16px]">
+              {typeVariants.map(v => (
+                <div key={`${v.type}-${v.size}`} className="flex flex-col gap-[12px] p-[20px] rounded-[8px] border border-[var(--field-border)]">
+                  <div className="flex items-center gap-[8px] flex-wrap">
+                    <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{v.label}</span>
+                    <span className="px-[8px] py-[2px] rounded-full text-[11px] font-medium" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{v.width}</span>
+                  </div>
+                  <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>{v.note}</p>
+                  {/* Schematic — panel width uses real viewport proportions (420/1440=29%, 635/1440=44%) */}
+                  <div
+                    className="relative overflow-hidden rounded-[6px] flex"
+                    style={{ height: 120, background: "var(--canvas)" }}
+                  >
+                    {/* Page bg */}
+                    <div className="flex-1 flex flex-col justify-center gap-[8px] px-[16px] pointer-events-none">
+                      {[70, 88, 60, 75].map((w, i) => (
+                        <div key={i} className="rounded-[2px]" style={{ height: 5, width: `${w}%`, background: "var(--field-border)", opacity: 0.4 }} />
+                      ))}
+                    </div>
+                    {/* Panel slice — S=30%, M=44% (matches real 1440px viewport proportions) */}
+                    <div
+                      className="h-full flex flex-col overflow-hidden"
+                      style={{
+                        width: v.size === "m" ? "44%" : "30%",
+                        background: "var(--slide-out-bg)",
+                        borderRadius: v.size === "m" ? "12px 0 0 12px" : "8px 0 0 8px",
+                        boxShadow: "-6px 0 16px rgba(0,0,0,0.06)",
+                        padding: v.type === "full-slot" ? "8px" : "8px 8px 6px",
+                        gap: v.type === "full-slot" ? 0 : 5,
+                        backdropFilter: "blur(8px)",
+                      }}
+                    >
+                      {v.type === "with-variants" && (
+                        <>
+                          <div className="flex items-center justify-between shrink-0">
+                            <div className="flex gap-[4px] items-center">
+                              <div className="rounded-[3px]" style={{ width: 10, height: 10, background: "var(--color-surface-purple-more-subtle)" }} />
+                              <div className="h-[5px] rounded-[2px]" style={{ width: 36, background: "var(--color-text-title)", opacity: 0.7 }} />
+                              <div className="rounded-full px-[4px] py-[1px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-lighter)" }}>
+                                <div className="h-[3px] rounded-[1px]" style={{ width: 14, background: "var(--color-text-success)", opacity: 0.6 }} />
+                              </div>
+                            </div>
+                            <div className="flex gap-[2px]">
+                              <div className="rounded-[2px]" style={{ width: 7, height: 7, background: "var(--slide-out-icon)", opacity: 0.4 }} />
+                              <div className="rounded-[2px]" style={{ width: 7, height: 7, background: "var(--slide-out-icon)", opacity: 0.4 }} />
+                            </div>
+                          </div>
+                          <div className="flex gap-[3px] shrink-0">
+                            {[0, 1].map(ti => (
+                              <div key={ti} className="flex-1 flex items-center justify-center py-[3px] relative">
+                                <div className="h-[3px] rounded-[1px]" style={{ width: "60%", background: ti === 0 ? "var(--primary)" : "var(--color-text-label)", opacity: ti === 0 ? 1 : 0.4 }} />
+                                {ti === 0 && <div className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 1, background: "var(--primary)" }} />}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="rounded-[3px] shrink-0" style={{ height: 7, background: "var(--color-surface-neutral-white)", border: "0.5px solid var(--color-border-neutral-default)", opacity: 0.6 }} />
+                          <div className="flex gap-[3px] overflow-hidden shrink-0">
+                            {[true, false, false].map((active, ci) => (
+                              <div key={ci} className="rounded-full" style={{
+                                height: 7, width: active ? 16 : 20,
+                                background: active ? "var(--primary)" : "var(--color-surface-neutral-white)",
+                                border: active ? "none" : "0.5px solid var(--color-border-neutral-default)",
+                                opacity: active ? 1 : 0.7,
+                              }} />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      <div
+                        className="flex-1 min-h-0 rounded-[4px] flex items-center justify-center"
+                        style={{ border: "1px dashed var(--color-border-primary-lighter)" }}
+                      >
+                        <div className="h-[3px] rounded-[2px]" style={{ width: 32, background: "var(--primary)", opacity: 0.6 }} />
+                      </div>
+                      {v.type === "with-variants" && (
+                        <div className="flex gap-[4px] justify-end shrink-0 pt-[2px]">
+                          <div className="rounded-[3px]" style={{ height: 7, width: 18, background: "var(--slide-out-border)", opacity: 0.5 }} />
+                          <div className="rounded-[3px]" style={{ height: 7, width: 18, background: "var(--primary)", opacity: 0.8 }} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── 4. Anatomy ──────────────────────────────────────────────────────── */}
           <div>
             <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Anatomy</h2>
-            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">Six structural zones. Each is always present except Subtitle and Footer, which are optional.</p>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">Seven structural zones. With variants shows all 7; Full slot shows only Backdrop, Panel, and Content slot.</p>
             <div className="grid grid-cols-2 gap-[12px]">
               {anatomyItems.map((item, i) => (
                 <div key={i} className="flex flex-col gap-[4px] p-[16px] rounded-[8px] border border-[var(--field-border)]">
@@ -15137,58 +16550,7 @@ const [open, setOpen] = useState(false)
             </div>
           </div>
 
-          {/* Size variants */}
-          <div>
-            <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Sizes</h2>
-            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">Two widths with the same height (100vh). The height is always full-screen — content scrolls inside the body zone.</p>
-            <div className="flex gap-[16px]">
-              {sizeVariants.map(sv => (
-                <div key={sv.size} className="flex flex-col gap-[12px] p-[20px] rounded-[8px] border border-[var(--field-border)] flex-1">
-                  <div className="flex items-center gap-[8px]">
-                    <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{sv.label}</span>
-                    <span className="px-[8px] py-[2px] rounded-full text-[11px] font-medium" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{sv.width}</span>
-                  </div>
-                  <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>{sv.note}</p>
-                  {/* Visual preview */}
-                  <div
-                    className="relative overflow-hidden rounded-[6px] flex justify-end"
-                    style={{ height: 120, background: "var(--canvas)" }}
-                  >
-                    <div
-                      className="h-full rounded-tl-[12px] rounded-bl-[12px]"
-                      style={{
-                        width: sv.size === "m" ? "62%" : "46%",
-                        background: "var(--slide-out-bg)",
-                        borderLeft: "0.5px solid var(--slide-out-border)",
-                        display: "flex",
-                        flexDirection: "column",
-                        padding: "10px 10px",
-                        gap: 6,
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-col gap-[3px]">
-                          <div className="h-[6px] w-[60px] rounded-[2px]" style={{ background: "var(--slide-out-title)" }} />
-                          <div className="h-[4px] w-[80px] rounded-[2px]" style={{ background: "var(--slide-out-body)", opacity: 0.6 }} />
-                        </div>
-                        <div className="w-[14px] h-[14px] rounded-full flex items-center justify-center" style={{ background: "var(--slide-out-border)" }}>
-                          <LucideIcons.X size={8} style={{ color: "var(--slide-out-icon)" }} />
-                        </div>
-                      </div>
-                      <div className="w-full" style={{ height: "0.5px", background: "var(--slide-out-border)" }} />
-                      <div className="flex flex-col gap-[4px] flex-1">
-                        {[40, 75, 55].map((w, i) => (
-                          <div key={i} className="h-[4px] rounded-[2px]" style={{ width: `${w}%`, background: "var(--slide-out-border)" }} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Do / Don't */}
+          {/* ── 5. Do / Don't ───────────────────────────────────────────────────── */}
           <div>
             <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[16px]">Do / Don't</h2>
             <div className="grid grid-cols-2 gap-[16px]">
@@ -15196,12 +16558,12 @@ const [open, setOpen] = useState(false)
                 <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-text-success)" }}>Do</span>
                 <ul className="mt-[12px] flex flex-col gap-[8px]">
                   {[
-                    "Use role=\"dialog\" and aria-modal=\"true\" on the panel element.",
-                    "Always provide a visible close button with aria-label=\"Close panel\".",
-                    "Trap focus inside the panel while open; restore on close.",
-                    "Support Escape key to dismiss — built into the component.",
-                    "Use Size M for multi-section content, Size S for focused tasks.",
-                    "Show a footer only when there is a commit action (Apply, Save, Confirm).",
+                    "Use type=\"with-variants\" for content that needs navigation (tabs, search, chips).",
+                    "Use type=\"full-slot\" when you need complete control over layout.",
+                    "Use Size M for detail panels or multi-section views; S for focused quick tasks.",
+                    "Always provide aria-labelledby pointing to the title element.",
+                    "Support Escape key dismiss — built into the component.",
+                    "Show CTA buttons only when there is a commit action (Apply, Save, etc.).",
                   ].map((d, i) => (
                     <li key={i} className="flex gap-[8px] items-start text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
                       <span style={{ color: "var(--color-text-success)" }}>✓</span>{d}
@@ -15216,9 +16578,9 @@ const [open, setOpen] = useState(false)
                     "Don't open a Slide Out from inside another Slide Out.",
                     "Don't use the Slide Out for navigation — use the Sidebar instead.",
                     "Don't stack more than one Slide Out on screen at a time.",
-                    "Don't embed destructive actions without a secondary confirmation.",
-                    "Don't forget to scroll-lock the body when the panel is open.",
-                    "Don't use the Title as the only accessible label — set aria-labelledby.",
+                    "Don't embed destructive actions without secondary confirmation.",
+                    "Don't hide the close button in contexts where users expect to dismiss.",
+                    "Don't use the Full slot type if your content has headers or navigation — use With variants.",
                   ].map((d, i) => (
                     <li key={i} className="flex gap-[8px] items-start text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
                       <span style={{ color: "var(--color-text-error)" }}>✕</span>{d}
@@ -15234,14 +16596,24 @@ const [open, setOpen] = useState(false)
 
       {/* ── Playground ───────────────────────────────────────────────────────── */}
       {tab === "playground" && (
-        <div className="flex gap-[24px]">
+        /* overflow-x: auto ensures M panel (635px) never gets clipped on narrow screens */
+        <div className="flex gap-[24px] overflow-x-auto" style={{ height: 680 }}>
 
           {/* Controls */}
           <div
-            className="flex flex-col gap-[20px] p-[24px] rounded-[8px] border border-[var(--field-border)] shrink-0"
-            style={{ width: 280, background: "var(--surface)" }}
+            className="flex flex-col gap-[16px] p-[24px] rounded-[8px] border border-[var(--field-border)] shrink-0 overflow-y-auto"
+            style={{ width: 240, maxHeight: 680, background: "var(--surface)" }}
           >
-            <p className="text-[12px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Controls</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest shrink-0" style={{ color: "var(--field-supporting)" }}>Controls</p>
+            <CtrlGroup
+              label="Type"
+              options={[
+                { label: "With variants", value: "with-variants" },
+                { label: "Full slot",     value: "full-slot" },
+              ]}
+              value={pgType}
+              onChange={setPgType}
+            />
             <CtrlGroup
               label="Size"
               options={[
@@ -15251,104 +16623,168 @@ const [open, setOpen] = useState(false)
               value={pgSize}
               onChange={setPgSize}
             />
-            <CtrlToggle label="Subtitle"   value={pgShowSubtitle}  onChange={setPgShowSubtitle} />
-            <CtrlToggle label="Footer"     value={pgShowFooter}    onChange={setPgShowFooter} />
-            <CtrlToggle label="Backdrop close" value={pgCloseBackdrop} onChange={setPgCloseBackdrop} />
-            <div className="flex flex-col gap-[6px]">
-              <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Title</span>
-              <input
-                className="px-[10px] py-[7px] rounded-[6px] text-[12px] outline-none"
-                style={{ background: "var(--field-bg)", border: "1px solid var(--field-border)", color: "var(--field-text)" }}
-                value={pgTitle}
-                onChange={e => setPgTitle(e.target.value)}
-              />
-            </div>
-            {pgShowSubtitle && (
-              <div className="flex flex-col gap-[6px]">
-                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Subtitle</span>
-                <input
-                  className="px-[10px] py-[7px] rounded-[6px] text-[12px] outline-none"
-                  style={{ background: "var(--field-bg)", border: "1px solid var(--field-border)", color: "var(--field-text)" }}
-                  value={pgSubtitle}
-                  onChange={e => setPgSubtitle(e.target.value)}
+            {/* Text content — editable fields to test truncation */}
+            <div className="flex flex-col gap-[8px]">
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Text content</p>
+              <div className="flex flex-col gap-[4px]">
+                <label className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Title</label>
+                <Input
+                  value={pgTitle}
+                  onChange={(e) => setPgTitle(e.target.value)}
+                  placeholder="Panel title"
                 />
               </div>
+              <div className="flex flex-col gap-[4px]">
+                <label className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Description</label>
+                <textarea
+                  value={pgSubtitle}
+                  onChange={(e) => setPgSubtitle(e.target.value)}
+                  placeholder="Short description"
+                  rows={3}
+                  className="w-full resize-none rounded-[6px] px-[10px] py-[8px] text-[12px] leading-[1.5] outline-none"
+                  style={{
+                    background: "var(--field-bg)",
+                    border: "1px solid var(--field-border)",
+                    color: "var(--field-text)",
+                  }}
+                />
+              </div>
+            </div>
+
+            {pgType === "with-variants" && (
+              <>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mt-[4px]" style={{ color: "var(--field-supporting)" }}>Header</p>
+                <CtrlToggle label="Icon"       value={pgShowIcon}      onChange={setPgShowIcon} />
+                <CtrlToggle label="Status tag" value={pgShowStatus}    onChange={setPgShowStatus} />
+                <CtrlToggle label="Top button" value={pgShowTopButton} onChange={setPgShowTopButton} />
+                {pgShowTopButton && (
+                  <CtrlGroup
+                    label="Top btn icon"
+                    options={[
+                      { label: "Pencil",   value: "pencil" },
+                      { label: "•••",      value: "more" },
+                      { label: "↗ Link",  value: "link" },
+                      { label: "Settings", value: "settings" },
+                    ]}
+                    value={pgTopButtonIconKey}
+                    onChange={setPgTopButtonIconKey}
+                  />
+                )}
+                <CtrlToggle label="Close btn"  value={pgShowClose}     onChange={setPgShowClose} />
+                <p className="text-[10px] font-semibold uppercase tracking-widest mt-[4px]" style={{ color: "var(--field-supporting)" }}>Navigation</p>
+                <CtrlToggle label="Tabs"       value={pgShowTabs}      onChange={setPgShowTabs} />
+                <CtrlToggle label="Tab 3"      value={pgShowTab3}      onChange={setPgShowTab3} />
+                <CtrlToggle label="Search bar" value={pgShowSearch}    onChange={setPgShowSearch} />
+                <CtrlToggle label="Chips"      value={pgShowChips}     onChange={setPgShowChips} />
+                <p className="text-[10px] font-semibold uppercase tracking-widest mt-[4px]" style={{ color: "var(--field-supporting)" }}>Footer</p>
+                <CtrlToggle label="CTA buttons" value={pgShowCta}     onChange={setPgShowCta} />
+                <p className="text-[10px] font-semibold uppercase tracking-widest mt-[4px]" style={{ color: "var(--field-supporting)" }}>Slot content</p>
+                <CtrlToggle label="Example content" value={pgShowContent} onChange={setPgShowContent} />
+              </>
             )}
           </div>
 
-          {/* Preview */}
-          <div className="flex-1 flex flex-col items-center justify-center gap-[24px] p-[40px] rounded-[8px] border border-[var(--field-border)]"
-            style={{ background: "var(--canvas)", minHeight: 340 }}
-          >
-            <div className="text-center flex flex-col gap-[8px]">
-              <p className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>
-                {pgSize === "m" ? "Size M — 635px" : "Size S — 420px"}
-              </p>
-              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
-                Click Launch to open the panel over the full viewport
-              </p>
-            </div>
-            {/* Schematic preview */}
+          {/* Preview container — flex column: toolbar + viewport */}
+          <div className="flex flex-col gap-0 rounded-[8px] border border-[var(--field-border)] overflow-hidden" style={{ flex: "1 0 auto", minWidth: pgSize === "m" ? 760 : 540 }}>
+
+            {/* Toolbar: "Open live" button + drag hint */}
             <div
-              className="relative overflow-hidden rounded-[6px] flex justify-end"
-              style={{ width: 320, height: 200, background: "var(--surface)", border: "1px solid var(--field-border)" }}
+              className="flex items-center justify-between px-[16px] py-[10px] shrink-0"
+              style={{ borderBottom: "1px solid var(--field-border)", background: "var(--surface)" }}
             >
-              <div
-                className="h-full"
-                style={{
-                  width: pgSize === "m" ? "68%" : "52%",
-                  background: "var(--slide-out-bg)",
-                  borderLeft: "0.5px solid var(--slide-out-border)",
-                  borderTopLeftRadius: 16,
-                  borderBottomLeftRadius: 16,
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden",
-                }}
-              >
-                {/* Schematic header */}
-                <div
-                  className="flex items-center justify-between shrink-0"
-                  style={{ padding: "10px 12px", borderBottom: "0.5px solid var(--slide-out-border)" }}
+              <div className="flex items-center gap-[6px]">
+                <div className="w-[8px] h-[8px] rounded-full" style={{ background: "var(--primary)" }} />
+                <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>
+                  Preview — {pgSize === "m" ? "635px" : "420px"} · {pgType === "with-variants" ? "With variants" : "Full slot"}
+                </span>
+              </div>
+              <div className="flex items-center gap-[8px]">
+                <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                  ← Hover left edge to drag-resize in live mode
+                </span>
+                <button
+                  className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[6px] text-[11px] font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: "var(--primary)", color: "var(--color-text-negative)" }}
+                  onClick={() => setPgPortalOpen(true)}
                 >
-                  <div className="flex flex-col gap-[4px]">
-                    <div className="h-[7px] w-[60px] rounded-[2px]" style={{ background: "var(--slide-out-title)" }} />
-                    {pgShowSubtitle && <div className="h-[4px] w-[80px] rounded-[2px]" style={{ background: "var(--slide-out-body)", opacity: 0.6 }} />}
-                  </div>
-                  <div className="w-[16px] h-[16px] rounded-full flex items-center justify-center shrink-0" style={{ background: "var(--slide-out-border)" }}>
-                    <LucideIcons.X size={9} style={{ color: "var(--slide-out-icon)" }} />
-                  </div>
-                </div>
-                {/* Schematic body */}
-                <div className="flex-1 flex flex-col gap-[6px]" style={{ padding: "12px" }}>
-                  {[70, 90, 55, 80].map((w, i) => (
-                    <div key={i} className="h-[5px] rounded-[2px]" style={{ width: `${w}%`, background: "var(--slide-out-border)" }} />
-                  ))}
-                </div>
-                {/* Schematic footer */}
-                {pgShowFooter && (
-                  <div
-                    className="flex items-center justify-end gap-[6px] shrink-0"
-                    style={{ padding: "8px 12px", borderTop: "0.5px solid var(--slide-out-border)" }}
-                  >
-                    <div className="h-[18px] w-[44px] rounded-[4px]" style={{ background: "var(--slide-out-border)" }} />
-                    <div className="h-[18px] w-[44px] rounded-[4px]" style={{ background: "var(--primary)", opacity: 0.7 }} />
-                  </div>
-                )}
+                  <LucideIcons.ExternalLink size={11} />
+                  Open live
+                </button>
               </div>
             </div>
-            <button
-              onClick={() => setPgOpen(true)}
-              className="flex items-center gap-[8px] px-[20px] py-[10px] rounded-[8px] text-[13px] font-semibold transition-opacity hover:opacity-80"
-              style={{ background: "var(--primary)", color: "#ffffff" }}
-            >
-              <LucideIcons.PanelRight size={14} />
-              Launch Slide Out
-            </button>
-          </div>
 
+            {/* Viewport — page bg + panel */}
+            <div className="flex flex-1 overflow-hidden" style={{ background: "var(--canvas)" }}>
+              {/* Simulated page background */}
+              <div className="flex-1 flex flex-col justify-center gap-[12px] px-[32px] pointer-events-none select-none min-w-0">
+                {[55, 80, 65, 72, 48, 68].map((w, i) => (
+                  <div key={i} className="rounded-[4px]" style={{ height: 8, width: `${w}%`, background: "var(--field-border)", opacity: 0.4 }} />
+                ))}
+              </div>
+              {/* Actual slide out rendered inline */}
+              <SlideOut
+                previewMode
+                open
+                onClose={() => {}}
+                type={pgType}
+                size={pgSize}
+                title={pgTitle}
+                subtitle={pgSubtitle}
+                showIcon={pgShowIcon}
+                showStatus={pgShowStatus}
+                showTopButton={pgShowTopButton}
+                topButtonIcon={pgTopButtonIconMap[pgTopButtonIconKey]}
+                showClose={pgShowClose}
+                showTabs={pgShowTabs}
+                showTab3={pgShowTab3}
+                showSearchBar={pgShowSearch}
+                showChips={pgShowChips}
+                showCta={pgShowCta}
+                activeTab={pgActiveTab}
+                onTabChange={setPgActiveTab}
+                activeChip={pgActiveChip}
+                onChipChange={setPgActiveChip}
+                ctaPrimaryLabel="Apply"
+                ctaSecondaryLabel="Cancel"
+                onCtaPrimary={() => {}}
+                onCtaSecondary={() => {}}
+              >
+                {pgShowContent ? exampleSlotContent : undefined}
+              </SlideOut>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Portal SlideOut — launched from "Open live" button, real drag-to-resize */}
+      <SlideOut
+        open={pgPortalOpen}
+        onClose={() => setPgPortalOpen(false)}
+        type={pgType}
+        size={pgSize}
+        title={pgTitle}
+        subtitle={pgSubtitle}
+        showIcon={pgShowIcon}
+        showStatus={pgShowStatus}
+        showTopButton={pgShowTopButton}
+        topButtonIcon={pgTopButtonIconMap[pgTopButtonIconKey]}
+        showClose={pgShowClose}
+        showTabs={pgShowTabs}
+        showTab3={pgShowTab3}
+        showSearchBar={pgShowSearch}
+        showChips={pgShowChips}
+        showCta={pgShowCta}
+        activeTab={pgActiveTab}
+        onTabChange={setPgActiveTab}
+        activeChip={pgActiveChip}
+        onChipChange={setPgActiveChip}
+        ctaPrimaryLabel="Apply"
+        ctaSecondaryLabel="Cancel"
+        onCtaPrimary={() => setPgPortalOpen(false)}
+        onCtaSecondary={() => setPgPortalOpen(false)}
+      >
+        {pgShowContent ? exampleSlotContent : undefined}
+      </SlideOut>
 
       {/* ── Reference ────────────────────────────────────────────────────────── */}
       {tab === "reference" && (
@@ -15357,11 +16793,14 @@ const [open, setOpen] = useState(false)
           {/* Design tokens */}
           <div>
             <h2 className="text-[16px] font-semibold text-[var(--foreground)] mb-[4px]">Design tokens</h2>
-            <p className="text-[13px] text-[var(--field-supporting)] mb-[16px]">All component tokens alias canonical DS tokens. Add <code className="font-mono text-[var(--primary)]">--slide-out-*</code> to <code className="font-mono text-[var(--primary)]">index.css</code> for both dark and light blocks.</p>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[16px]">
+              All tokens are defined in <code className="font-mono text-[var(--primary)] text-xs">index.css</code> for both dark and light blocks.
+              Canonical DS tokens are used directly in the component — no intermediate aliases for color values.
+            </p>
             <div className="rounded-[8px] overflow-hidden border border-[var(--field-border)]">
               <div
                 className="grid px-[16px] py-[10px] text-[11px] font-semibold uppercase tracking-wider"
-                style={{ gridTemplateColumns: "200px 1fr 120px 120px", background: "var(--table-header-bg)", color: "var(--table-header-text)" }}
+                style={{ gridTemplateColumns: "220px 1fr 140px 160px", background: "var(--table-header-bg)", color: "var(--table-header-text)" }}
               >
                 <span>CSS Variable</span>
                 <span>DS Token</span>
@@ -15373,14 +16812,14 @@ const [open, setOpen] = useState(false)
                   key={row.token}
                   className="grid items-center px-[16px] py-[10px] text-[12px]"
                   style={{
-                    gridTemplateColumns: "200px 1fr 120px 120px",
+                    gridTemplateColumns: "220px 1fr 140px 160px",
                     background: i % 2 === 1 ? "var(--row-alt-bg)" : "transparent",
                     borderTop: "1px solid var(--table-border)",
                     color: "var(--field-supporting)",
                   }}
                 >
                   <code className="font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.token}</code>
-                  <span>{row.varId}</span>
+                  <span className="text-[11px]">{row.varId}</span>
                   <span className="flex items-center gap-[6px]">
                     <span className="w-[12px] h-[12px] rounded-[2px] border border-[var(--field-border)] shrink-0" style={{ background: row.light }} />
                     <span className="font-mono text-[10px]">{row.light}</span>
@@ -15411,7 +16850,7 @@ const [open, setOpen] = useState(false)
             <div className="rounded-[8px] overflow-hidden border border-[var(--field-border)]">
               <div
                 className="grid px-[16px] py-[10px] text-[11px] font-semibold uppercase tracking-wider"
-                style={{ gridTemplateColumns: "140px 160px 100px 1fr", background: "var(--table-header-bg)", color: "var(--table-header-text)" }}
+                style={{ gridTemplateColumns: "150px 180px 1fr 1fr", background: "var(--table-header-bg)", color: "var(--table-header-text)" }}
               >
                 <span>Prop</span><span>Type</span><span>Default</span><span>Description</span>
               </div>
@@ -15420,16 +16859,16 @@ const [open, setOpen] = useState(false)
                   key={row.prop}
                   className="grid items-start px-[16px] py-[10px] text-[12px]"
                   style={{
-                    gridTemplateColumns: "140px 160px 100px 1fr",
+                    gridTemplateColumns: "150px 180px 1fr 1fr",
                     background: i % 2 === 1 ? "var(--row-alt-bg)" : "transparent",
                     borderTop: "1px solid var(--table-border)",
                     color: "var(--field-supporting)",
                   }}
                 >
-                  <span className="font-mono font-semibold" style={{ color: "var(--foreground)" }}>{row.prop}</span>
-                  <span className="font-mono text-[11px]" style={{ color: "var(--muted-foreground)" }}>{row.type}</span>
-                  <span className="font-mono opacity-60">{row.def}</span>
-                  <span className="leading-[1.6]">{row.desc}</span>
+                  <span className="font-mono font-semibold text-[11px]" style={{ color: "var(--foreground)" }}>{row.prop}</span>
+                  <span className="font-mono text-[10px]" style={{ color: "var(--muted-foreground)" }}>{row.type}</span>
+                  <span className="font-mono text-[10px] opacity-60">{row.def}</span>
+                  <span className="text-[11px] leading-[1.6]">{row.desc}</span>
                 </div>
               ))}
             </div>
@@ -15441,13 +16880,13 @@ const [open, setOpen] = useState(false)
             <div className="flex flex-col gap-[12px]">
               {[
                 "From the DS library, insert the Slide Out component onto your frame.",
-                "Select Type: With variants to show the anatomy zones, or Full slot for a blank content area.",
-                "Set Size: M (635px) for dense content, S (420px) for focused tasks.",
-                "Replace the Title and optional Subtitle text layers with your content labels.",
-                "In the Content slot, detach and populate with your actual content (tables, forms, lists).",
-                "Add a Footer row only if there is a commit action (Apply / Cancel pair).",
-                "Apply the dark/light variable mode using the Figma Dark Mode toggle script in the Developer Reference.",
-                "To position: anchor the panel to the right edge of your screen frame at x = (screen width − panel width).",
+                "Set Type: With variants for detail views with navigation, or Full slot for completely custom content.",
+                "Set Size: M (635px) for content-dense panels, S (420px) for focused quick tasks.",
+                "Toggle boolean props (icon, status, tabs, searchBar, chips, cta, topButton, close) in the Figma properties panel.",
+                "Replace the Title, Subtitle, Tab labels, and Chip labels with your actual content.",
+                "In the Content Area (dashed slot), detach and populate with your layout (tables, forms, lists).",
+                "Apply the dark/light variable mode using the Figma variable mode switch (right panel → Local variables).",
+                "Position: anchor the panel to the right edge of your screen frame at x = (screenWidth − panelWidth).",
               ].map((step, i) => (
                 <div key={i} className="flex gap-[12px] items-start text-[13px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
                   <span className="shrink-0 w-[24px] h-[24px] rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>
@@ -15459,57 +16898,65 @@ const [open, setOpen] = useState(false)
             </div>
           </div>
 
+          {/* Header text overflow */}
+          <div>
+            <h2 className="text-[16px] font-semibold mb-[4px]" style={{ color: "var(--foreground)" }}>Header text overflow</h2>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>
+              The SlideOut header handles long text automatically. Apply the same pattern in prototypes whenever the title or description could exceed the available width.
+            </p>
+            <div className="flex flex-col gap-[16px]">
+              {[
+                {
+                  label: "Title — single-line truncation",
+                  rule: "The title always renders on one line. When it exceeds the container width (shared with the optional status badge), it truncates with an ellipsis (…). Hovering anywhere over the title reveals a cursor-following Tooltip with the full text.",
+                  snippet:
+`// Built into the SlideOut component — no extra work needed.
+// To reproduce the pattern in custom content:
+<Tooltip content={title} side="cursor" triggerClassName="block min-w-0 flex-1">
+  <p className="font-semibold truncate block" style={{ color: "var(--color-text-title)" }}>
+    {title}
+  </p>
+</Tooltip>`,
+                  note: "side=\"cursor\" renders the Tooltip via a React portal at position: fixed, so CSS transforms on the panel itself never offset the popup. triggerClassName=\"block min-w-0 flex-1\" overrides Tooltip's inline-flex root so truncate works inside the flex title row.",
+                },
+                {
+                  label: "Description — 2-line clamp",
+                  rule: "The description is clamped to 2 lines maximum. If the text runs longer, it truncates with an ellipsis at the end of line 2. Hovering reveals a cursor-following Tooltip with the complete text.",
+                  snippet:
+`// Built into the SlideOut component — no extra work needed.
+// To reproduce the pattern in custom content:
+<Tooltip content={subtitle} side="cursor" triggerClassName="block min-w-0">
+  <p className="font-medium line-clamp-2 block" style={{ color: "var(--slide-out-body)" }}>
+    {subtitle}
+  </p>
+</Tooltip>`,
+                  note: "line-clamp-2 = overflow: hidden + -webkit-line-clamp: 2. The Tooltip is always mounted when the element is hovered — for production use, consider measuring scrollHeight > clientHeight to conditionally show the Tooltip only when text is actually clamped.",
+                },
+              ].map((item, i) => (
+                <div key={i} className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
+                  <div className="px-[16px] py-[10px]" style={{ borderBottom: "1px solid var(--field-border)", background: "var(--table-header-bg)" }}>
+                    <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{item.label}</span>
+                  </div>
+                  <div className="px-[16px] py-[14px] flex flex-col gap-[10px]">
+                    <p className="text-[12px] leading-[1.7]" style={{ color: "var(--field-supporting)" }}>{item.rule}</p>
+                    <pre
+                      className="p-[14px] rounded-[6px] text-[11px] leading-[1.8] overflow-x-auto"
+                      style={{ background: "var(--code-bg)", color: "var(--field-text)" }}
+                    >
+                      {item.snippet}
+                    </pre>
+                    <p className="text-[11px] leading-[1.6]" style={{ color: "var(--field-supporting)", opacity: 0.65 }}>
+                      {item.note}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
       )}
 
-      {/* Portal slide out — always mounted so animation works */}
-      <SlideOut
-        open={pgOpen}
-        onClose={() => setPgOpen(false)}
-        title={pgTitle}
-        subtitle={pgShowSubtitle ? pgSubtitle : undefined}
-        size={pgSize}
-        closeOnBackdrop={pgCloseBackdrop}
-        footer={pgShowFooter ? (
-          <div className="flex gap-[8px]">
-            <button
-              onClick={() => setPgOpen(false)}
-              className="px-[16px] py-[8px] rounded-[6px] text-[13px] font-medium transition-opacity hover:opacity-70"
-              style={{ background: "var(--field-bg)", border: "1px solid var(--field-border)", color: "var(--foreground)" }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => setPgOpen(false)}
-              className="px-[16px] py-[8px] rounded-[6px] text-[13px] font-semibold transition-opacity hover:opacity-80"
-              style={{ background: "var(--primary)", color: "#ffffff" }}
-            >
-              Apply
-            </button>
-          </div>
-        ) : undefined}
-      >
-        <div className="flex flex-col gap-[20px]">
-          <p className="text-[14px] leading-[1.6]" style={{ color: "var(--slide-out-body)" }}>
-            This is the scrollable content area of the Slide Out. Drop any content here — filter controls, detail views, forms, or data tables.
-          </p>
-          <div className="flex flex-col gap-[8px]">
-            {["Category A", "Category B", "Category C", "Category D", "Category E"].map((label) => (
-              <div
-                key={label}
-                className="flex items-center justify-between px-[12px] py-[10px] rounded-[6px]"
-                style={{ background: "var(--field-bg)", border: "0.5px solid var(--slide-out-border)" }}
-              >
-                <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{label}</span>
-                <span className="text-[11px] px-[8px] py-[2px] rounded-full" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>Active</span>
-              </div>
-            ))}
-          </div>
-          <p className="text-[12px] leading-[1.6]" style={{ color: "var(--slide-out-body)", opacity: 0.7 }}>
-            The content area is flex-1 and overflow-y-auto. Long content scrolls within the panel without affecting the header or footer.
-          </p>
-        </div>
-      </SlideOut>
 
     </div>
   )
@@ -15552,7 +16999,7 @@ export default function App() {
         isDark={isDark} onToggle={() => setIsDark(d => !d)}
       />
       <main className="flex-1 overflow-y-auto">
-        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" ? "max-w-[1100px]" : "max-w-[900px]"}`}>
+        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
           {active === "alert-banner"    && <AlertBannerPage      openSpec={setSpecModal} />}
           {active === "app-background"  && <AppBackgroundPage   openSpec={setSpecModal} />}
@@ -15568,6 +17015,7 @@ export default function App() {
           {active === "highlight-icon"  && <HighlightIconPage openSpec={setSpecModal} />}
           {active === "select"          && <SelectPage        openSpec={setSpecModal} />}
           {active === "checkbox"        && <CheckboxPage      openSpec={setSpecModal} />}
+          {active === "chip"            && <ChipPage          openSpec={setSpecModal} />}
           {active === "scroll-area"     && <ScrollAreaPage     openSpec={setSpecModal} />}
           {active === "tabs"            && <TabsPage          openSpec={setSpecModal} />}
           {active === "toggle"          && <TogglePage        openSpec={setSpecModal} />}
@@ -15575,6 +17023,7 @@ export default function App() {
           {active === "table"           && <TablePage         openSpec={setSpecModal} />}
           {active === "topbar"          && <TopbarPage        openSpec={setSpecModal} onAppThemeChange={(dark) => setIsDark(dark)} />}
           {active === "sidebar"         && <SidebarPage       openSpec={setSpecModal} />}
+          {active === "side-panel"      && <SidePanelPage     openSpec={setSpecModal} />}
           {active === "slide-out"       && <SlideOutPage      openSpec={setSpecModal} />}
           {active === "entity-list"     && <EntityListPage    openSpec={setSpecModal} />}
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
