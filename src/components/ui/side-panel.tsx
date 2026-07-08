@@ -164,9 +164,6 @@ export function SidePanel({
   const isRight     = side === "right"
   const presets     = widthPresets ?? [450, 704]
   const COLLAPSED_W = 48
-  // Tooltip side: opposite the panel's open edge so it points into the main content
-  const tooltipSide = isRight ? "left" : "right"
-
   // ── Drag-to-resize (same pattern as Slide Out) ─────────────────────────────
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()

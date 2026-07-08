@@ -8,11 +8,11 @@ import { CardContainer, type CardVariant } from "@/components/ui/card-container"
 import { Tag, type TagVariant } from "@/components/ui/tag"
 import { Menu, MenuItem, MenuDivider, MenuSection } from "@/components/ui/menu-item"
 import { HighlightIcon, type HighlightIconVariant, type HighlightIconSize } from "@/components/ui/highlight-icon"
-import { HighlightCard, type HighlightCardStyle } from "@/components/ui/highlight-card"
+import { HighlightCard, type HighlightCardStyle, type HighlightCardFeedback } from "@/components/ui/highlight-card"
 import { Select, type SelectState } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Toggle } from "@/components/ui/toggle"
-import { AppBackground, type AppBgVariant } from "@/components/ui/app-background"
+import { type AppBgVariant } from "@/components/ui/app-background"
 import {
   Table,
   TableCellLink,
@@ -2081,6 +2081,8 @@ const TOOLTIP_SPEC = {
 }
 
 const SIDE_PANEL_SPEC = {
+  name: "Side Panel",
+  figmaNodeId: "14423:32215",
   componentName: "Side Panel",
   nodeId: "14423:32215",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=14423-32215",
@@ -2131,6 +2133,8 @@ const SIDE_PANEL_SPEC = {
 }
 
 const SLIDE_OUT_SPEC = {
+  name: "Slide Out",
+  figmaNodeId: "5066:9783",
   componentName: "Slide Out",
   nodeId: "5066:9783",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5066-9783",
@@ -2227,7 +2231,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "tabs")             return TABS_SPEC             as AnySpec
   if (id === "scroll-area")     return SCROLL_AREA_SPEC      as AnySpec
   if (id === "tooltip")         return TOOLTIP_SPEC          as AnySpec
-  if (id === "side-panel")      return SIDE_PANEL_SPEC       as AnySpec
+  if (id === "side-panel")      return SIDE_PANEL_SPEC       as unknown as AnySpec
   if (id === "slide-out")       return SLIDE_OUT_SPEC        as AnySpec
   // Foundation pages
   if (id === "avatar")           return AVATAR_SPEC           as AnySpec
