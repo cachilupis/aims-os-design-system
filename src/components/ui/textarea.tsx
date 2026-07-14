@@ -245,24 +245,25 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
         )}
       </div>
 
-      {/* DS: Feedback text — outside the field border, below as a sibling (node 5079:14555) */}
-      {showCount && (
-        <div className="flex items-center justify-end w-full">
-          <span
-            className={cn(
-              "text-[12px] font-medium tabular-nums select-none",
-              countColorClass[resolvedState]
-            )}
-          >
-            {charCount}{maxLength ? `/${maxLength}` : ""}
-          </span>
+      {/* DS: Feedback row — supporting text left, char count right, same baseline */}
+      {(showCount || supportingText) && (
+        <div className="flex items-center justify-between w-full gap-[8px]">
+          {supportingText ? (
+            <span className={supportingCva({ state: resolvedState })}>
+              {supportingText}
+            </span>
+          ) : <span />}
+          {showCount && (
+            <span
+              className={cn(
+                "text-[12px] font-medium tabular-nums select-none shrink-0",
+                countColorClass[resolvedState]
+              )}
+            >
+              {charCount}{maxLength ? `/${maxLength}` : ""}
+            </span>
+          )}
         </div>
-      )}
-
-      {supportingText && (
-        <span className={supportingCva({ state: resolvedState })}>
-          {supportingText}
-        </span>
       )}
     </div>
   )

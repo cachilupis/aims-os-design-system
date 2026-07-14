@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Toggle } from "@/components/ui/toggle"
 import { Button } from "@/components/ui/button"
-import { Tag } from "@/components/ui/tag"
+import { Tag, type TagVariant } from "@/components/ui/tag"
 
 /**
  * Filters Slideout — AIMS OS Design System
@@ -677,6 +677,7 @@ export type FiltersSlideoutActiveFilter = {
   label: string
   value: string
   onRemove: () => void
+  tagVariant?: TagVariant
 }
 
 export type FiltersSlideoutProps = {
@@ -789,7 +790,7 @@ export function FiltersSlideout({
                 {activeFilters.map((f, i) => (
                   <Tag
                     key={`${f.label}-${f.value}-${i}`}
-                    variant="informative"
+                    variant={f.tagVariant ?? "informative"}
                     size="sm"
                     trailingIcon={
                       <button

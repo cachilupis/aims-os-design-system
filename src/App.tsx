@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment, type CSSProperties } from "react"
+import { useState, useEffect, useMemo, Fragment, useRef, useLayoutEffect, type CSSProperties } from "react"
 import * as LucideIcons from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,11 +8,13 @@ import { CardContainer, type CardVariant } from "@/components/ui/card-container"
 import { Tag, type TagVariant } from "@/components/ui/tag"
 import { Menu, MenuItem, MenuDivider, MenuSection } from "@/components/ui/menu-item"
 import { HighlightIcon, type HighlightIconVariant, type HighlightIconSize } from "@/components/ui/highlight-icon"
+import { Header, type HeaderSize } from "@/components/ui/header"
+import { Pagination } from "@/components/ui/pagination"
 import { HighlightCard, type HighlightCardStyle, type HighlightCardFeedback } from "@/components/ui/highlight-card"
 import { Select, type SelectState } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Toggle } from "@/components/ui/toggle"
-import { type AppBgVariant } from "@/components/ui/app-background"
+import { AppBackground, type AppBgVariant } from "@/components/ui/app-background"
 import {
   Table,
   TableCellLink,
@@ -38,11 +40,17 @@ import { Tooltip, type TooltipSide } from "@/components/ui/tooltip"
 import { SlideOut, type SlideOutSize, type SlideOutType } from "@/components/ui/slide-out"
 import { SidePanel, type SidePanelSide } from "@/components/ui/side-panel"
 import { Chip, type ChipVariant, type ChipSize } from "@/components/ui/chip"
+import { SwitchTab, type SwitchTabSize } from "@/components/ui/switch-tab"
+import { ProgressBar, type ProgressBarStyle, type ProgressBarSize } from "@/components/ui/progress-bar"
+import { Skeleton, type SkeletonShape } from "@/components/ui/skeleton"
+import { Spinner, type SpinnerStyle, type SpinnerSize } from "@/components/ui/spinner"
+import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
+import { WidgetFather, type WidgetWidthClass } from "@/components/ui/widget-father"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "empty-state" | "entity-list" | "filters" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "widget-father" | "widgets"
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -90,45 +98,79 @@ const ExternalIcon = () => (
   </svg>
 )
 
+// ── Prototype registry ────────────────────────────────────────────────────
+// PM prototypes are registered here by Claude. One entry per screen.
+// The screen component lives in src/screens/ — only this entry touches App.tsx.
+//
+// To add a prototype:
+//   1. Import the component:  import { MyScreen } from "./screens/my-screen"
+//   2. Add an entry below:    { id: "proto-my-screen", label: "My Screen", description: "...", author: "PM Name", component: MyScreen }
+//
+const PROTOTYPE_PAGES: { id: string; label: string; description: string; author: string; component: React.FC }[] = [
+  // Example (uncomment to see it appear in the sidebar):
+  // { id: "proto-example", label: "Example Screen", description: "A sample PM prototype", author: "PM Name", component: () => <div className="p-8 text-[var(--foreground)]">Your screen renders here.</div> },
+]
+
 // ── Nav data ──────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: string }[] = [
   { id: "home",            label: "DS Strategy",        group: "Overview",    description: "Alignment doc: why a component repository is the foundation for consistent AI prototypes" },
   // Components — alphabetical by label
+  // Components — keep sorted A→Z by label so new entries stay predictable in the sidebar
   { id: "alert-banner",    label: "Alert Banner",      group: "Components",  description: "Full-width contextual notice. 3 states: Error, Success, Alert · optional CTA + dismiss · adaptive dark/light tokens." },
-  { id: "empty-state",     label: "Empty State",       group: "Components",  description: "Zero-content placeholder. Icon Highlight + title + description + 1–2 CTA buttons. Compact variant for Tables and Cards." },
   { id: "avatar",          label: "Avatar",            group: "Components",  description: "User & workspace avatars · 4 sizes (S/M/L/XL) · 6 color variants · initials fallback · stacked group" },
   { id: "button",          label: "Button",            group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
   { id: "card-container",  label: "Card Container",    group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
   { id: "chip",            label: "Chip",              group: "Components",  description: "Pill-shaped selection control · 5 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · used in filter rows and Slide Out headers" },
+  { id: "empty-state",     label: "Empty State",       group: "Components",  description: "Zero-content placeholder. Icon Highlight + title + description + 1–2 CTA buttons. Compact variant for Tables and Cards." },
   { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
   { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
+  { id: "header",          label: "Header",            group: "Components",  description: "Page header · title + description + status tag + CTAs + optional back button · 3 sizes: Size L (24px), Size M (18px), Compress (scroll state)" },
   { id: "highlight-card",  label: "Highlight Card",    group: "Components",  description: "KPI metric card for dashboards · 9 background styles · Default & Disabled states · --hc-* token family · auto dark mode" },
   { id: "highlight-icon",  label: "Highlight Icon",    group: "Components",  description: "Rounded semantic icon container · 3 sizes · 9 color variants · used as leading slot in Menu items" },
   { id: "informative-card",label: "Informative Card",  group: "Components",  description: "Horizontal notice surface. 5 semantic states · 3 sizes · optional description + CTA. Uses --ic-* token family." },
   { id: "input",           label: "Input",             group: "Components",  description: "Single-line text field · 2 sizes · 5 validation states · icon slots" },
   { id: "menu-item",       label: "Menu / Dropdown",   group: "Components",  description: "Dropdown list panel · 2 sizes · 4 states · leading icon, subtext, dividers, section headers" },
   { id: "modal-dialog",    label: "Modal Dialog",      group: "Components",  description: "2 variants: Confirmation (centered, max 900px) and Content (left-aligned, max 900px). Icon, title, description, slot, informative card, CTA pair." },
+  { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
+  { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
+  { id: "side-panel",      label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 450px default · 300px min · header + scrollable body + optional footer" },
   { id: "sidebar",         label: "Sidebar",           group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
-  { id: "side-panel",     label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 450px default · 300px min · header + scrollable body + optional footer" },
+  { id: "skeleton",        label: "Skeleton",          group: "Components",  description: "Loading placeholder · 3 shapes (Rectangle 12px / Circle / Text 4px) · linear shimmer 1.2s left→right loop · matches content layout · prefers-reduced-motion safe · --skeleton-* tokens" },
   { id: "slide-out",       label: "Slide Out",         group: "Components",  description: "Overlay panel from the right · 2 sizes M (635px) / S (420px) · header with title + subtitle + close · divider · scrollable body · optional footer · Escape key + backdrop dismiss" },
+  { id: "spinner",         label: "Spinner",           group: "Components",  description: "Circular indeterminate loading indicator · 6 semantic styles · 5 sizes (XS 12px → XL 48px) · 0.7s linear rotation · ARIA status · prefers-reduced-motion safe · --spinner-* tokens" },
+  { id: "stepper",         label: "Stepper",           group: "Components",  description: "Horizontal multi-step progress indicator · 5 states (Default, Active, Completed, Locked, View-only) · 24×24px dot with Radius-S · Check/Lock icons · connector line · --stepper-* tokens" },
+  { id: "switch-tab",      label: "Switch Tab",        group: "Components",  description: "Segmented tab switcher · white pill container · 2–7 tabs · M (48px) / S (44px) · active blue fill · ARIA tablist · keyboard nav (← →)" },
   { id: "table",           label: "Table",             group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
   { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · inside card or standalone · active indicator · icon · 2 sizes (M/S) · disabled state · use for in-context view switching, not page navigation" },
   { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
   { id: "textarea",        label: "Text Description",  group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
   { id: "toggle",          label: "Toggle",            group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
   { id: "tooltip",         label: "Tooltip",           group: "Components",  description: "Informational overlay on hover/focus · always dark · plain or arrow variant · 4 sides · max 300px width · 2 lines max" },
-  { id: "topbar",          label: "Topbar",            group: "Components",  description: "Global navigation bar · 2 variants (Default/Tablet) · workspace, search, action buttons, profile" },
+  { id: "topbar",          label: "Topbar",            group: "Components",  description: "App header · global navigation bar · 2 variants (Default/Tablet) · workspace selector, search, action buttons, profile avatar" },
   // Foundations — alphabetical by label
   { id: "app-background", label: "App Background", group: "Foundations", description: "Full-screen gradient background layer · light radial / dark linear · 7 contextual color variants · fixed -z-10" },
   { id: "breakpoints", label: "Breakpoints", group: "Foundations", description: "5-tier responsive system · XL/L/M/S/XS · column grid, gutter and margin specs per breakpoint · sidebar behavior rules" },
   { id: "colors",        label: "Colors",         group: "Foundations", description: "Primitive palette + 162 semantic tokens · light & dark mode · Surface, Border, Text, Icon, Badge" },
   { id: "corner-radius", label: "Corner Radius",  group: "Foundations", description: "8-token radius scale · none/XS/S/M/L/XL/XXL/Full · component mapping · do/don't guidelines" },
+  { id: "elevation",     label: "Elevation",      group: "Foundations", description: "5-level shadow scale · Elevation-1 micro → Elevation-5 float · dark/light mode values · component mapping" },
   { id: "icons",       label: "Icons",       group: "Foundations", description: "141 icons mapped from Material Design DS to Lucide · 12 semantic categories" },
   { id: "typography",  label: "Typography",  group: "Foundations", description: "Type scale DS → Tailwind · Display, Title, Subtitle, Body, Label, Caption, Link" },
+  // Patterns — behavioral guides for PMs and engineers
+  { id: "patterns-list-view",  label: "List View Layout",  group: "Patterns", description: "Stack obligatorio: Topbar + Sidebar + EntityList + Pagination · AppBackground siempre · Side Panel para detalles · Filters como única fuente de verdad del dataset" },
+  { id: "patterns-filter",     label: "Filter System",     group: "Patterns", description: "3 capas: Visible Filters → All Filters button → Slideout (completo) → Chips (opcional) · estado draft/applied · Apply resets pagination" },
+  { id: "patterns-overlay",    label: "Overlay Decision",  group: "Patterns", description: "Modal cuando el usuario debe detenerse y decidir · Slide-out cuando puede seguir explorando · solo 1 de cada tipo activo a la vez" },
+  { id: "patterns-header",     label: "Header Sticky",     group: "Patterns", description: "Scroll > 16px → COMPRESSED (60px) · hover 0–24px idle 3s → filtros visibles (130px) · transición 200ms ease-in-out" },
+  { id: "patterns-nav-depth",  label: "Navigation Depth",  group: "Patterns", description: "Máx 2 capas: Tabs (¿dónde?) + SwitchTab (¿cómo?) + Filters (¿qué?) · no añadir más capas de nav · usar solo cuando cada capa aporta diferenciación real" },
+  { id: "patterns-loading",    label: "Loading States",    group: "Patterns", description: "Spinner → duración desconocida · Progress Bar → progreso conocido (%) · Skeleton → layout conocido · <300ms no mostrar nada · solo 1 indicador por vista" },
+  { id: "patterns-feedback",   label: "Feedback & Alerts", group: "Patterns", description: "Modal → error que bloquea flujo · Alert Banner → estado persistente en contexto · Inline → validación de campo · no usar overlays para info no crítica" },
+  { id: "patterns-logs",       label: "Logs Table",        group: "Patterns", description: "Lista de eventos del sistema con DS Table · Level Tag (error/warning/info) · Filters (Date · Level · Worker · Status) · Pagination · SlideOut para detalle de log" },
+  { id: "widget-father",          label: "Widget Father",         group: "Patterns", description: "Componente base de todos los widgets UCP · Header (título + descripción + máx 2 acciones) · Slot de contenido · Footer CTA opcional · Estados: Default, Drag, Error, Connection Error" },
+  { id: "patterns-widget-canvas", label: "Widget Canvas Layout", group: "Patterns", description: "Sistema de grid de 12 columnas · 3 clases de ancho (1/3, 2/3, 3/3) · 3 clases de alto (Compact, Standard, Heavy) · snap-to-grid · compactación vertical · responsive a 1/2/3 cols" },
+  { id: "widgets",               label: "Widgets",              group: "Patterns", description: "UCP widget gallery — KPI, Timeline, Calendar, Charts, Table, Activity, Notes, Folder Navigation · click any widget to view its anatomy, states, and usage rules" },
 ]
 
 // ── DS Spec data (sourced directly from Figma — source of truth) ──────────
@@ -1291,6 +1333,121 @@ const INFORMATIVE_CARD_SPEC = {
   ],
 }
 
+const PAGINATION_SPEC = {
+  name: "Pagination",
+  figmaNodeId: "4755:606",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4755-606",
+  description: "Bottom strip for paged datasets. Displays a rows-per-page selector, a visible range indicator (1–25 of 120 items), and previous/next navigation. Auto-hides when totalItems ≤ itemsPerPage (single page case).",
+  properties: [
+    { name: "currentPage",          type: "number",   values: ["any positive integer"],             default: "1",              note: "1-indexed. Page 1 = first page." },
+    { name: "totalItems",           type: "number",   values: ["any positive integer"],             default: "—",              note: "Required. Controls visibility and range text." },
+    { name: "itemsPerPage",         type: "number",   values: ["5", "25", "50", "100", "200"],      default: "25" },
+    { name: "onPageChange",         type: "function", values: ["(page: number) => void"],           default: "—",              note: "Required. Called on prev/next click." },
+    { name: "onItemsPerPageChange", type: "function", values: ["(items: number) => void"],          default: "undefined",      note: "Optional. Omit to make rows-per-page read-only." },
+    { name: "rowsPerPageOptions",   type: "number[]", values: ["[5, 25, 50, 100, 200]"],            default: "[5, 25, 50, 100, 200]" },
+    { name: "className",            type: "string",   values: ["any CSS class string"],             default: "undefined" },
+  ],
+  sizes: [
+    { element: "Outer wrapper",   width: "MAX", height: "48px", padding: "8px 12px",  gap: "—",    border: "none",  borderRadius: "—" },
+    { element: "Inner container", width: "MAX", height: "32px", padding: "4px 8px",   gap: "40px", border: "1px",   borderRadius: "6px" },
+    { element: "Nav button",      width: "24px", height: "24px", padding: "0",        gap: "12px", border: "none",  borderRadius: "4px" },
+  ],
+  typography: [
+    { element: '"Rows per page:" caption',    family: "Inter", size: "12px", weight: "500 Medium", lineHeight: "—" },
+    { element: "Range text (1–25 of N items)", family: "Inter", size: "12px", weight: "500 Medium", lineHeight: "—" },
+  ],
+  variants: [
+    {
+      name: "Default",
+      description: "Single-page or first page. Previous button disabled. All tokens shared across both Default and Multipage states.",
+      cssPrefix: "pagination",
+      tokens: [
+        { role: "Range text + row count",      variable: "--color-text-label",               varId: "Text/Label",               light: "#2a2a2a",              dark: "rgba(255,255,255,0.80)" },
+        { role: '"Rows per page:" caption',    variable: "--color-text-subtitle",            varId: "Text/Subtitle",            light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
+        { role: "Nav icons + chevron",         variable: "--color-icon-neutral-dark",        varId: "Icon/Neutral/Dark",        light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.70)" },
+        { role: "Nav button hover bg",         variable: "--color-surface-neutral-default",  varId: "Surface/Neutral/Default",  light: "#f2f2f2",              dark: "rgba(255,255,255,0.06)" },
+        { role: "Inner container bg",          variable: "--surface-floating-default",       varId: "Surface/Floating/Default", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
+        { role: "Inner container border",      variable: "--color-border-neutral-default",   varId: "Border/Neutral/Default",   light: "#5c5c5c",              dark: "rgba(255,255,255,0.10)" },
+      ],
+    },
+    {
+      name: "Multipage",
+      description: "Middle or last page. Previous and/or next buttons change opacity when disabled (0.35). No new tokens — inherits all tokens from Default.",
+      cssPrefix: "pagination",
+      tokens: [
+        { role: "Disabled nav button opacity", variable: "opacity: 0.35",                   varId: "—",                        light: "0.35",                 dark: "0.35" },
+        { role: "Range text + row count",      variable: "--color-text-label",               varId: "Text/Label",               light: "#2a2a2a",              dark: "rgba(255,255,255,0.80)" },
+      ],
+    },
+  ],
+}
+
+const HEADER_SPEC = {
+  name: "Header",
+  figmaNodeId: "7995:4268",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7995-4268",
+  description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — only title + CTAs visible).",
+  properties: [
+    { name: "title",           type: "string",  values: ["any string"],                                                                       default: "—",             note: "Required. Always visible in all sizes." },
+    { name: "size",            type: "Variant", values: ["size-l", "size-m", "compress"],                                                     default: "size-l" },
+    { name: "description",     type: "string",  values: ["any string"],                                                                       default: "undefined",     note: "Hidden in compress." },
+    { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after title. Hidden in compress." },
+    { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. Hidden in compress. Use only in drill-down pages." },
+    { name: "icon",            type: "node",    values: ["LucideIcon"],                                                                       default: "undefined",     note: "Rendered inside a HighlightIcon (sm). Hidden in compress." },
+    { name: "iconVariant",     type: "Variant", values: ["informative","success","alert","error","neutral","yellow","lime","purple","light-blue"], default: "informative", note: "HighlightIcon color variant. Only applies when icon is set." },
+    { name: "primaryAction",   type: "node",    values: ["<Button variant=\"main\" size=\"sm\" />"],                                          default: "undefined" },
+    { name: "secondaryAction", type: "node",    values: ["<Button variant=\"secondary\" size=\"sm\" />"],                                     default: "undefined" },
+  ],
+  sizes: [
+    { size: "Size L",   padding: "12px 24px", titleSize: "24px", height: "auto (~48px)", notes: "Default. Full slots visible." },
+    { size: "Size M",   padding: "10px 24px", titleSize: "18px", height: "auto (~38px)", notes: "Compact. Full slots visible." },
+    { size: "Compress", padding: "8px 24px",  titleSize: "18px", height: "60px (fixed)", notes: "Scroll state. Only title + CTAs." },
+  ],
+  typography: [
+    { element: "Title — Size L",          family: "Inter", size: "24px", weight: "600 SemiBold", lineHeight: "tight (1.2)" },
+    { element: "Title — Size M / Compress", family: "Inter", size: "18px", weight: "600 SemiBold", lineHeight: "tight (1.2)" },
+    { element: "Description",             family: "Inter", size: "14px", weight: "400 Regular",   lineHeight: "20px" },
+  ],
+  variants: [
+    {
+      name: "Size L",
+      description: "Default top-level header. 24px title, description, tag, back button, icon, CTAs. Padding 12px × 24px.",
+      cssPrefix: "header",
+      tokens: [
+        { role: "Title text",       variable: "--header-title",     varId: "Text/Title",        light: "#1A1A1A",          dark: "rgba(255,255,255,0.80)" },
+        { role: "Description text", variable: "--header-desc",      varId: "Text/Body",         light: "#5C5C5C",          dark: "#94A3B8"                },
+        { role: "Back button icon", variable: "--header-back-icon", varId: "Icon/Neutral/Dark", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.70)" },
+      ],
+    },
+    {
+      name: "Size M",
+      description: "Compact header. 18px title, reduced padding (10px × 24px). All slots remain available.",
+      cssPrefix: "header",
+      tokens: [
+        { role: "Title text",       variable: "--header-title", varId: "Text/Title", light: "#1A1A1A", dark: "rgba(255,255,255,0.80)" },
+        { role: "Description text", variable: "--header-desc",  varId: "Text/Body",  light: "#5C5C5C", dark: "#94A3B8"                },
+      ],
+    },
+    {
+      name: "Compress",
+      description: "Scroll-triggered minimal state. 18px title only — description, tag, back button, and icon are hidden. Padding 8px × 24px.",
+      cssPrefix: "header",
+      tokens: [
+        { role: "Title text", variable: "--header-title", varId: "Text/Title", light: "#1A1A1A", dark: "rgba(255,255,255,0.80)" },
+      ],
+    },
+    {
+      name: "Icon — HighlightIcon (informative)",
+      description: "The icon slot uses the HighlightIcon component (size sm, iconColor dark). Color variant controlled via iconVariant prop. Tokens shown for the default 'informative' variant.",
+      cssPrefix: "hi-informative",
+      tokens: [
+        { role: "Icon bg",   variable: "--hi-informative-bg",   varId: "Surface/Informative/Subtle", light: "#E9F1FF",          dark: "rgba(33,115,255,0.14)" },
+        { role: "Icon color", variable: "--hi-informative-icon", varId: "Icon/Informative/Dark",     light: "#001740",          dark: "#A8C8FF"               },
+      ],
+    },
+  ],
+}
+
 const FILTERS_SPEC = {
   name: "Filters",
   figmaNodeId: "7996:4655",
@@ -1917,6 +2074,53 @@ const ICONS_SPEC = {
   ],
 }
 
+const ELEVATION_SPEC = {
+  name: "Elevation",
+  figmaNodeId: "—",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS",
+  description: "5-level shadow scale for communicating depth and layer hierarchy. Use only `var(--shadow-elevation-N)` — never hardcode rgba() in box-shadow. Dark mode shadows are proportionally stronger to compensate for the dark canvas.",
+  properties: [
+    { name: "level",   type: "Variant", values: ["1","2","3","4","5"],             default: "2",  note: "Use the lowest level that separates the surface from its background" },
+    { name: "mode",    type: "Variant", values: ["dark (default)","light"],        default: "dark" },
+  ],
+  sizes: [
+    { level: "1", token: "--shadow-elevation-1", role: "Micro",    usage: "Focused inputs, toggles, subtle chip lift"          },
+    { level: "2", token: "--shadow-elevation-2", role: "Low",      usage: "Card rest state, inline panels"                    },
+    { level: "3", token: "--shadow-elevation-3", role: "Mid",      usage: "Dropdown menus, select overlays, filter dropdowns"  },
+    { level: "4", token: "--shadow-elevation-4", role: "High",     usage: "Modals, topbar sheets, large floating panels"       },
+    { level: "5", token: "--shadow-elevation-5", role: "Float",    usage: "SwitchTab — diagonal offset for floating containers"},
+  ],
+  typography: [],
+  variants: [
+    {
+      name: "Dark mode values (default)",
+      description: "Shadows are perceptually stronger on dark backgrounds to maintain visible depth separation",
+      cssPrefix: "--shadow-elevation-*",
+      tokens: [
+        { role: "Elevation-1 Micro",  variable: "--shadow-elevation-1", varId: "Elevation-1", light: "0 1px 4px rgba(0,0,0,0.06)",                                          dark: "0 1px 4px rgba(0,0,0,0.16)"                                          },
+        { role: "Elevation-2 Low",    variable: "--shadow-elevation-2", varId: "Elevation-2", light: "0 2px 8px rgba(0,0,0,0.10)",                                          dark: "0 2px 8px rgba(0,0,0,0.24)"                                          },
+        { role: "Elevation-3 Mid",    variable: "--shadow-elevation-3", varId: "Elevation-3", light: "0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)",            dark: "0 4px 24px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.16)"            },
+        { role: "Elevation-4 High",   variable: "--shadow-elevation-4", varId: "Elevation-4", light: "0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)",            dark: "0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.24)"            },
+        { role: "Elevation-5 Float",  variable: "--shadow-elevation-5", varId: "Elevation-5", light: "8px 8px 16px rgba(0,0,0,0.08)",                                       dark: "8px 8px 24px rgba(0,0,0,0.32)"                                       },
+      ],
+    },
+    {
+      name: "Component mapping",
+      description: "Which elevation level each DS component uses",
+      cssPrefix: "—",
+      tokens: [
+        { role: "Input focus ring",     variable: "--shadow-elevation-1", varId: "", light: "Elevation-1", dark: "Elevation-1" },
+        { role: "Card hover",           variable: "--shadow-elevation-2", varId: "", light: "Elevation-2", dark: "Elevation-2" },
+        { role: "Dropdown / Select",    variable: "--shadow-elevation-3", varId: "", light: "Elevation-3", dark: "Elevation-3" },
+        { role: "Pagination strip",     variable: "--shadow-elevation-3", varId: "", light: "Elevation-3", dark: "Elevation-3" },
+        { role: "SlideOut panel",       variable: "--shadow-elevation-4", varId: "", light: "Elevation-4", dark: "Elevation-4" },
+        { role: "ModalDialog",          variable: "--shadow-elevation-4", varId: "", light: "Elevation-4", dark: "Elevation-4" },
+        { role: "SwitchTab container",  variable: "--shadow-elevation-5", varId: "", light: "Elevation-5", dark: "Elevation-5" },
+      ],
+    },
+  ],
+}
+
 // ── Spec types ─────────────────────────────────────────────────────────────
 
 type SpecToken = { role: string; variable: string; varId?: string; light: string; dark: string }
@@ -2045,6 +2249,100 @@ const SCROLL_AREA_SPEC = {
   ],
 }
 
+const PROGRESS_BAR_SPEC = {
+  name: "Progress Bar",
+  figmaNodeId: "7091:37109",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7091-37109",
+  description: "Linear determinate loading bar that communicates known progress. Full-width track with a filled indicator that animates as value changes. 7 semantic styles, 2 track sizes, and full ARIA progressbar semantics.",
+  properties: [
+    { name: "value",     type: "number",           values: ["0–100"],                                                                      default: "required", note: "Current progress percentage. Clamped to [0, 100] automatically." },
+    { name: "style",     type: "ProgressBarStyle", values: ["primary", "success", "alert", "error", "yellow", "light-blue", "purple"],     default: "primary",  note: "Determines fill and track colors via Surface/* DS tokens." },
+    { name: "size",      type: "ProgressBarSize",  values: ["s", "m"],                                                                     default: "m",        note: "S = 4px track height. M = 8px. Use S for compact contexts (tables, cards)." },
+    { name: "label",     type: "string",           values: ["string"],                                                                     default: "Loading",  note: "Accessible label for screen readers via aria-label." },
+    { name: "className", type: "string",           values: ["string"],                                                                     default: "—",        note: "Extra classes applied to the track container." },
+  ],
+  sizes: [
+    { element: "Track S",   padding: "—", gap: "—", radius: "2px",   note: "4px height · Surface/Primary/Subtle BG" },
+    { element: "Track M",   padding: "—", gap: "—", radius: "2px",   note: "8px height · same track token · wider visual prominence" },
+    { element: "Fill bar",  padding: "—", gap: "—", radius: "2px",   note: "Width = value% · inherits full track height · animated via transition-[width] 300ms" },
+  ],
+  typography: [],
+  variants: [
+    { name: "Primary",    description: "Blue — data fetch, page transitions",        cssPrefix: "pb-primary",    tokens: [
+      { role: "Track", variable: "--color-surface-primary-subtle",      varId: "Surface/Primary/Subtle",      light: "#E9F1FF",           dark: "rgba(33,115,255,0.15)"  },
+      { role: "Fill",  variable: "--color-surface-primary-default",     varId: "Surface/Primary/Default",     light: "#2173ff",           dark: "#2b7fff"                },
+    ]},
+    { name: "Success",    description: "Green — successful operations",              cssPrefix: "pb-success",    tokens: [
+      { role: "Track", variable: "--color-surface-success-more-subtle", varId: "Surface/Success/More Subtle", light: "#e5fdf8",           dark: "rgba(110,231,183,0.10)" },
+      { role: "Fill",  variable: "--color-surface-success-default",     varId: "Surface/Success/Default",     light: "#00a07e",           dark: "#00a07e"                },
+    ]},
+    { name: "Alert",      description: "Orange — warning-level progress",            cssPrefix: "pb-alert",      tokens: [
+      { role: "Track", variable: "--color-surface-alert-more-subtle",   varId: "Surface/Alert/More Subtle",   light: "#FFF4E5",           dark: "rgba(217,119,6,0.08)"   },
+      { role: "Fill",  variable: "--color-surface-alert-default",       varId: "Surface/Alert/Default",       light: "#ed6c02",           dark: "#ed6c02"                },
+    ]},
+    { name: "Error",      description: "Red — failed or critical operations",        cssPrefix: "pb-error",      tokens: [
+      { role: "Track", variable: "--color-surface-error-more-subtle",   varId: "Surface/Error/More Subtle",   light: "#FEF5F5",           dark: "rgba(220,38,38,0.08)"   },
+      { role: "Fill",  variable: "--color-surface-error-default",       varId: "Surface/Error/Default",       light: "#e05252",           dark: "#e05252"                },
+    ]},
+    { name: "Yellow",     description: "Amber — attention-required progress",        cssPrefix: "pb-yellow",     tokens: [
+      { role: "Track", variable: "--color-surface-yellow-more-subtle",  varId: "Surface/Yellow/More Subtle",  light: "#FFFAF0",           dark: "rgba(202,138,4,0.08)"   },
+      { role: "Fill",  variable: "--color-surface-yellow-default",      varId: "Surface/Yellow/Default",      light: "#f59e0b",           dark: "#f59e0b"                },
+    ]},
+    { name: "Light Blue", description: "Teal — informative / neutral progress",      cssPrefix: "pb-lightblue",  tokens: [
+      { role: "Track", variable: "--color-surface-light-blue-subtle",   varId: "Surface/Light Blue/Subtle",   light: "#E5F8FF",           dark: "rgba(2,132,199,0.14)"   },
+      { role: "Fill",  variable: "--color-surface-light-blue-default",  varId: "Surface/Light Blue/Default",  light: "#00b5d9",           dark: "#00b5d9"                },
+    ]},
+    { name: "Purple",     description: "Violet — creative / AI contexts",            cssPrefix: "pb-purple",     tokens: [
+      { role: "Track", variable: "--color-surface-purple-subtle",       varId: "Surface/Purple/Subtle",       light: "#F3E9FD",           dark: "rgba(124,58,237,0.14)"  },
+      { role: "Fill",  variable: "--color-surface-purple-default",      varId: "Surface/Purple/Default",      light: "#7b27ed",           dark: "#7b27ed"                },
+    ]},
+    { name: "Layout",     description: "Track and fill share 2px border-radius",     cssPrefix: "pb-layout",     tokens: [
+      { role: "Radius", variable: "--pb-radius", varId: "Radius/Radius-XS", light: "2px", dark: "2px" },
+    ]},
+  ],
+}
+
+const SWITCH_TAB_SPEC = {
+  name: "Switch Tab",
+  figmaNodeId: "4591:349",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4591-349",
+  description: "Segmented tab switcher for top-level navigation within a contained view. White pill container (Elevation-5 shadow) with 2–7 equal-width tab items. Active tab shows a blue tinted fill and SemiBold label; inactive tabs are transparent with a Medium label.",
+  properties: [
+    { name: "items",        type: "SwitchTabItem[]", values: ["{ id, label, icon? }[]"],           default: "required",  note: "Tab definitions. Each item needs a unique id and a label. Icon is optional." },
+    { name: "value",        type: "string",          values: ["string"],                            default: "—",         note: "Controlled active tab id. Pair with onChange." },
+    { name: "defaultValue", type: "string",          values: ["string"],                            default: "items[0]",  note: "Uncontrolled initial active tab id." },
+    { name: "onChange",     type: "(id) => void",    values: ["function"],                          default: "—",         note: "Called with the newly activated tab id." },
+    { name: "size",         type: "SwitchTabSize",   values: ["m", "s"],                            default: "m",         note: "M = 48px container height. S = 44px. Font scales proportionally." },
+    { name: "aria-label",   type: "string",          values: ["string"],                            default: "—",         note: "Accessible label for the tablist region." },
+  ],
+  sizes: [
+    { element: "Container M",  padding: "8px all",  gap: "2px",  radius: "8px",   note: "48px total height. Tabs fill equally." },
+    { element: "Container S",  padding: "8px all",  gap: "2px",  radius: "8px",   note: "44px total height." },
+    { element: "Tab item M",   padding: "12px H / 4px V", gap: "—", radius: "4px", note: "16px font, 24px line-height." },
+    { element: "Tab item S",   padding: "8px H / 4px V",  gap: "—", radius: "4px", note: "14px font, 20px line-height." },
+  ],
+  typography: [
+    { element: "Active label M",   family: "Inter", size: "16px", weight: "600", lineHeight: "24px" },
+    { element: "Inactive label M", family: "Inter", size: "16px", weight: "500", lineHeight: "24px" },
+    { element: "Active label S",   family: "Inter", size: "14px", weight: "600", lineHeight: "20px" },
+    { element: "Inactive label S", family: "Inter", size: "14px", weight: "500", lineHeight: "20px" },
+  ],
+  variants: [
+    { name: "Container",   description: "White pill wrapper with Elevation-5 shadow",       cssPrefix: "st-container", tokens: [
+      { role: "Background", variable: "--st-bg",          varId: "Surface/Neutral/White",        light: "#FFFFFF",                           dark: "#FFFFFF"                           },
+      { role: "Shadow",     variable: "--st-shadow",      varId: "Elevation-5",                  light: "8px 8px 16px rgba(0,0,0,.08)",      dark: "8px 8px 16px rgba(0,0,0,.08)"      },
+      { role: "Item radius",variable: "--st-item-radius", varId: "Radius/Radius-S",              light: "4px",                               dark: "4px"                               },
+    ]},
+    { name: "Active tab",  description: "Selected tab — blue tint + SemiBold label",       cssPrefix: "st-active",    tokens: [
+      { role: "Tab BG",    variable: "--st-active-bg",    varId: "Surface/Primary/More Subtle",  light: "#f6f9ff",                           dark: "#f6f9ff"                           },
+      { role: "Text",      variable: "--st-active-text",  varId: "Text/Link",                    light: "#2173ff",                           dark: "#2b7fff"                           },
+    ]},
+    { name: "Inactive tab",description: "Non-selected tabs — transparent + Medium label",  cssPrefix: "st-inactive",  tokens: [
+      { role: "Text",      variable: "--st-text",         varId: "Text/Info",                    light: "#1a1a1a",                           dark: "rgba(255,255,255,.80)"             },
+    ]},
+  ],
+}
+
 const TOOLTIP_SPEC = {
   name: "Tooltip",
   figmaNodeId: "4614:5319",
@@ -2087,15 +2385,6 @@ const SIDE_PANEL_SPEC = {
   nodeId: "14423:32215",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=14423-32215",
   description: "Inline layout panel for persistent contextual content alongside the main view. Not an overlay — it reduces main content width when open. Supports header, scrollable body slot, and optional footer CTAs.",
-  variants: [
-    { name: "Right", description: "Panel attaches to the right edge. Left corners rounded (radius-xl 24px)." },
-    { name: "Left",  description: "Panel attaches to the left edge. Right corners rounded (radius-xl 24px)." },
-  ],
-  states: [
-    { name: "Open",     description: "Panel visible at default width (450px). Main content shifts left." },
-    { name: "Expanded", description: "Panel at extended width (1/3 or 1/2 of viewport). User-triggered." },
-    { name: "Closed",   description: "Panel hidden with animated width transition. Main content restores." },
-  ],
   sizes: [
     { name: "Default (1/3)",      value: "450px" },
     { name: "Expanded (1/3)",     value: "480px" },
@@ -2120,15 +2409,23 @@ const SIDE_PANEL_SPEC = {
     { name: "onClose",           type: "() => void",          default: "—",          note: "Called on close/collapse button click." },
     { name: "children",          type: "ReactNode",           default: "—",          note: "Dynamic content slot. Scrollable. Supports any content." },
   ],
-  tokens: [
-    { role: "Panel BG",           variable: "--side-panel-bg",            varId: "Surface/Floating/Default",  light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)"   },
-    { role: "Panel border",       variable: "--side-panel-border",        varId: "Border/Neutral/Subtle",     light: "#E4E4E7",               dark: "rgba(255,255,255,0.10)" },
-    { role: "Title text",         variable: "--side-panel-title",         varId: "Text/Label",                light: "#2a2a2a",               dark: "rgba(255,255,255,0.80)" },
-    { role: "Description text",   variable: "--side-panel-description",   varId: "Text/Body",                 light: "#5C5C5C",               dark: "#94A3B8"               },
-    { role: "Icon / close btn",   variable: "--side-panel-icon",          varId: "Icon/Neutral/Default",      light: "#52525B",               dark: "#D1D5DB"               },
-    { role: "Icon hover BG",      variable: "--side-panel-icon-hover-bg", varId: "Surface/Neutral/Default",   light: "rgba(0,0,0,0.05)",      dark: "rgba(255,255,255,0.08)"},
-    { role: "Search field BG",    variable: "--side-panel-search-bg",     varId: "Surface/Neutral/White",     light: "#FFFFFF",               dark: "rgba(255,255,255,0.10)"},
-    { role: "Search field border",variable: "--side-panel-search-bd",     varId: "Border/Neutral/Default",    light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)"},
+  variants: [
+    { name: "Panel surface", description: "Frosted-glass BG and border",                      cssPrefix: "side-panel-surface", tokens: [
+      { role: "Background", variable: "--side-panel-bg",              varId: "Surface/Floating/Default",  light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)"    },
+      { role: "Border",     variable: "--side-panel-border",          varId: "Border/Neutral/Subtle",     light: "#E4E4E7",               dark: "rgba(255,255,255,0.10)" },
+    ]},
+    { name: "Text",          description: "Title and body copy inside the panel",             cssPrefix: "side-panel-text",    tokens: [
+      { role: "Title",       variable: "--side-panel-title",          varId: "Text/Label",                light: "#2a2a2a",               dark: "rgba(255,255,255,0.80)" },
+      { role: "Description", variable: "--side-panel-description",    varId: "Text/Body",                 light: "#5C5C5C",               dark: "#94A3B8"               },
+    ]},
+    { name: "Icons",         description: "Action icons and close button",                    cssPrefix: "side-panel-icons",   tokens: [
+      { role: "Icon fill",     variable: "--side-panel-icon",          varId: "Icon/Neutral/Default",      light: "#52525B",               dark: "#D1D5DB"               },
+      { role: "Icon hover BG", variable: "--side-panel-icon-hover-bg", varId: "Surface/Neutral/Default",   light: "rgba(0,0,0,0.05)",      dark: "rgba(255,255,255,0.08)"},
+    ]},
+    { name: "Search field",  description: "Optional search input below the header",           cssPrefix: "side-panel-search",  tokens: [
+      { role: "Background", variable: "--side-panel-search-bg",        varId: "Surface/Neutral/White",     light: "#FFFFFF",               dark: "rgba(255,255,255,0.10)"},
+      { role: "Border",     variable: "--side-panel-search-bd",        varId: "Border/Neutral/Default",    light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)"},
+    ]},
   ],
 }
 
@@ -2212,6 +2509,8 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "textarea")         return TEXTAREA_SPEC         as AnySpec
   if (id === "tag")              return TAG_SPEC              as AnySpec
   if (id === "menu-item")        return MENU_SPEC             as AnySpec
+  if (id === "header")           return HEADER_SPEC           as AnySpec
+  if (id === "pagination")       return PAGINATION_SPEC       as AnySpec
   if (id === "highlight-card")   return HIGHLIGHT_CARD_SPEC   as AnySpec
   if (id === "highlight-icon")   return HIGHLIGHT_ICON_SPEC   as AnySpec
   if (id === "select")           return SELECT_SPEC           as AnySpec
@@ -2228,6 +2527,11 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
   if (id === "filters")          return FILTERS_SPEC          as AnySpec
   if (id === "empty-state")      return EMPTY_STATE_SPEC      as AnySpec
+  if (id === "progress-bar")     return PROGRESS_BAR_SPEC     as AnySpec
+  if (id === "skeleton")         return SKELETON_SPEC          as AnySpec
+  if (id === "spinner")          return SPINNER_SPEC           as AnySpec
+  if (id === "stepper")          return STEPPER_SPEC           as AnySpec
+  if (id === "switch-tab")       return SWITCH_TAB_SPEC       as AnySpec
   if (id === "tabs")             return TABS_SPEC             as AnySpec
   if (id === "scroll-area")     return SCROLL_AREA_SPEC      as AnySpec
   if (id === "tooltip")         return TOOLTIP_SPEC          as AnySpec
@@ -2240,6 +2544,8 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "breakpoints")      return BREAKPOINTS_SPEC      as AnySpec
   if (id === "corner-radius")    return CORNER_RADIUS_SPEC    as AnySpec
   if (id === "icons")            return ICONS_SPEC            as AnySpec
+  if (id === "elevation")        return ELEVATION_SPEC        as AnySpec
+  if (id === "card-container")   return CARD_SPEC             as AnySpec
   return CARD_SPEC as AnySpec
 }
 
@@ -2777,6 +3083,16 @@ const DONE_COMPONENTS = [
   { name: "App Background",  complexity: "Simple",  hours: 2,  note: "4 gradient presets · FLOAT opacity variables · dark-only tokens" },
   { name: "Highlight Card",  complexity: "Medium",  hours: 4,  note: "9 BG styles · 2 states · --hc-* tokens · dynamic playground · 0.5px semantic borders" },
   { name: "Side Panel",     complexity: "Complex", hours: 8,  note: "48px collapsed strip · drag-to-resize · title icon/tag variants · portal tooltip · 9 hi-variants · 11 tag-variants" },
+  { name: "Switch Tab",     complexity: "Simple",  hours: 2,  note: "2–7 tabs · M/S sizes · active blue fill · ARIA tablist · roving tabindex keyboard nav · --st-* tokens" },
+  { name: "Progress Bar",  complexity: "Simple",  hours: 2,  note: "7 semantic styles · S (4px) / M (8px) · animated fill · ARIA progressbar · --pb-* token family · new DS surface tokens" },
+  { name: "Chip",          complexity: "Medium",  hours: 3,  note: "Pill selection · 5 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · filter rows + Slide Out headers" },
+  { name: "Header",        complexity: "Medium",  hours: 3,  note: "Page header · 3 sizes (L / M / Compress) · title + desc + tag + CTAs · optional back · 3-state sticky behavior" },
+  { name: "Pagination",    complexity: "Medium",  hours: 3,  note: "Bottom strip · rows-per-page (5/25/50/100/200) · range text · prev/next · auto-hides when not needed · --pag-* tokens" },
+  { name: "Scroll Area",   complexity: "Simple",  hours: 2,  note: "Custom 4px scrollbar · thumb on hover only · vertical/horizontal/both axes · 8px gap from content · --scroll-* tokens" },
+  { name: "Skeleton",      complexity: "Medium",  hours: 3,  note: "Loading placeholder · 3 shapes (Rectangle / Circle / Text) · shimmer 1.2s loop · prefers-reduced-motion safe · --skeleton-* tokens" },
+  { name: "Slide Out",     complexity: "Complex", hours: 5,  note: "Overlay panel from right · M (635px) / S (420px) · header + scrollable body + optional footer · Escape + backdrop dismiss" },
+  { name: "Spinner",       complexity: "Simple",  hours: 2,  note: "Circular loading indicator · 6 semantic styles · 5 sizes (XS 12px → XL 48px) · 0.7s rotation · ARIA status · --spinner-* tokens" },
+  { name: "Stepper",       complexity: "Medium",  hours: 3,  note: "Multi-step progress · 5 states · 24px dot · Check/Lock icons · connector line · --stepper-* tokens" },
 ] as const
 
 const REMAINING_PHASES = [
@@ -2785,7 +3101,6 @@ const REMAINING_PHASES = [
     status: "in-progress" as const,
     items: [
       { name: "Breadcrumb",     complexity: "Simple",  hours: 2 },
-      { name: "Pagination",     complexity: "Medium",  hours: 3 },
     ],
   },
   {
@@ -2793,8 +3108,6 @@ const REMAINING_PHASES = [
     status: "in-progress" as const,
     items: [
       { name: "Toast",            complexity: "Medium",  hours: 3 },
-      { name: "Progress Bar",     complexity: "Simple",  hours: 2 },
-      { name: "Skeleton Loader",  complexity: "Medium",  hours: 3 },
     ],
   },
   {
@@ -2842,11 +3155,11 @@ const REMAINING_PHASES = [
 ] as const
 
 function ProgressTab() {
-  const totalDone      = DONE_COMPONENTS.length                                  // 20
+  const totalDone      = DONE_COMPONENTS.length                                  // 35
   const totalRemaining = REMAINING_PHASES.reduce((s, p) => s + p.items.length, 0)
-  const totalAll       = totalDone + totalRemaining                              // ~45
+  const totalAll       = totalDone + totalRemaining                              // ~54
 
-  const hoursInvested  = DONE_COMPONENTS.reduce((s, c) => s + c.hours, 0)       // 73h
+  const hoursInvested  = DONE_COMPONENTS.reduce((s, c) => s + c.hours, 0)       // ~121h
   const hoursRemaining = REMAINING_PHASES.reduce(
     (s, p) => s + p.items.reduce((ps, i) => ps + i.hours, 0), 0
   )
@@ -2975,7 +3288,7 @@ function ProgressTab() {
             style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--primary)" }}>
             <div className="flex items-center gap-[8px]">
               <span className="text-[11px] font-semibold px-[8px] py-[2px] rounded-[4px]"
-                style={{ background: "var(--primary)", color: "#fff" }}>
+                style={{ background: "var(--primary)", color: "var(--color-text-negative)" }}>
                 Every prototype session · ~10–30 min
               </span>
             </div>
@@ -2987,7 +3300,7 @@ function ProgressTab() {
             ].map(s => (
               <div key={s.n} className="flex items-start gap-[10px]">
                 <span className="flex items-center justify-center shrink-0 w-[20px] h-[20px] rounded-full text-[10px] font-bold mt-[1px]"
-                  style={{ background: "var(--primary)", color: "#fff" }}>
+                  style={{ background: "var(--primary)", color: "var(--color-text-negative)" }}>
                   {s.n}
                 </span>
                 <p className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{s.text}</p>
@@ -3141,7 +3454,7 @@ function ProgressTab() {
             style={{ background: "var(--tag-informative-bg)" }}>
             <div className="flex items-center gap-[10px]">
               <span className="text-[11px] font-semibold px-[8px] py-[2px] rounded-[4px]"
-                style={{ background: "var(--primary)", color: "#fff" }}>
+                style={{ background: "var(--primary)", color: "var(--color-text-negative)" }}>
                 Milestone 1 — Priority
               </span>
               <span className="text-[14px] font-semibold text-[var(--foreground)]">
@@ -3212,7 +3525,7 @@ function ProgressTab() {
 }
 
 function HomePage() {
-  const [tab, setTab] = useState<"overview" | "problem" | "solution" | "evidence" | "progress">("overview")
+  const [tab, setTab] = useState<"overview" | "problem" | "solution" | "evidence" | "progress" | "pm-guide">("overview")
 
   const homeTabs = [
     { id: "overview",  label: "Overview" },
@@ -3220,6 +3533,7 @@ function HomePage() {
     { id: "solution",  label: "The Solution" },
     { id: "evidence",  label: "Evidence" },
     { id: "progress",  label: "Progress & Time" },
+    { id: "pm-guide",  label: "PM Working Guide" },
   ] as const
 
   return (
@@ -3635,6 +3949,395 @@ function HomePage() {
 
         {tab === "progress" && <ProgressTab />}
 
+        {tab === "pm-guide" && (
+          <>
+            {/* ── Audience callout ── */}
+            <div className="rounded-md px-[16px] py-[12px] flex items-start gap-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <span style={{ fontSize: 18, lineHeight: 1 }}>📋</span>
+              <div>
+                <p className="text-[13px] font-semibold text-[var(--foreground)]">This tab is for Product Managers and for Michael (Product Design).</p>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px] leading-[1.5]">It documents the full pipeline: how PMs set up and use the repository, what happens automatically when something is missing from the DS, and how Michael receives and audits each delivery.</p>
+              </div>
+            </div>
+
+            {/* ── Section 1: PM Setup ── */}
+            <DocSection title="Part 1 — PM: One-time setup (done once, never again)">
+              <Prose>
+                Each PM clones the Design System repository to their local machine once. From that point on, the folder is permanent — there is nothing to reinstall or re-download.
+              </Prose>
+
+              <div className="flex flex-col gap-[18px]">
+                <NumberedStep n={1} title="Install prerequisites (if not already installed)">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">You need Node.js, Git, and Claude Code on your machine. If you already have them, skip to step 2.</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal</span>
+                      </div>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`# Check if you have them (each should print a version number)
+node -v
+git -v
+
+# Install Claude Code (if not installed)
+npm install -g @anthropic-ai/claude-code`}
+                      </pre>
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={2} title="Clone the repository">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Open your Terminal app and run this command. It creates a folder called <code className="px-[5px] py-[1px] rounded text-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>aims-os-ds</code> on your machine.</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal — run once</span>
+                      </div>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`git clone https://github.com/cachilupis/aims-os-design-system.git aims-os-ds
+cd aims-os-ds
+npm install`}
+                      </pre>
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={3} title="Open with Claude Code">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Every time you want to prototype, navigate to the folder and open Claude Code.</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal — every session</span>
+                      </div>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`cd ~/aims-os-ds   # navigate to the folder
+claude            # opens Claude Code in this directory`}
+                      </pre>
+                    </div>
+                    <p className="text-[12px] text-[var(--field-supporting)]">Alternatively: open the Claude Code desktop app → click "Open project" → select the <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>aims-os-ds</code> folder.</p>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={4} title="Get updates when Design adds new components">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">When Michael adds a new component to the library, you pull the changes with one command.</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal — when notified by Design</span>
+                      </div>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`cd ~/aims-os-ds
+git pull`}
+                      </pre>
+                    </div>
+                  </div>
+                </NumberedStep>
+              </div>
+            </DocSection>
+
+            <Divider />
+
+            {/* ── Section 2: Day-to-day ── */}
+            <DocSection title="Part 2 — PM: Day-to-day prototyping">
+              <Prose>
+                Once the setup is done, the daily workflow is straightforward. You describe what you need and Claude assembles the screen using real Design System components.
+              </Prose>
+
+              <div className="flex flex-col gap-[18px]">
+                <NumberedStep n={1} title="Open Claude Code in the repository folder">
+                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Always open Claude Code pointing to the <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>aims-os-ds</code> folder — not from a random directory. This is what gives Claude access to the DS components and tokens.</p>
+                </NumberedStep>
+
+                <NumberedStep n={2} title="Describe the screen or flow you need">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Be specific about the data, actions, and layout. The more context you give, the more faithful the result.</p>
+                    <div className="rounded-md px-[14px] py-[11px] flex flex-col gap-[6px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Example prompt</p>
+                      <p className="text-[13px] italic" style={{ color: "var(--foreground)" }}>"Create a list view of workflows for a tenant admin. It should have filters by status (Active, Draft, Running) and category. Each item shows the workflow name, status badge, owner, and two buttons: Publish (primary) and Edit (secondary)."</p>
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={3} title="Claude builds the screen — DS components used automatically">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Claude reads the Design System rules and composes your screen using existing components from <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/components/ui/</code>. You don't need to specify which component to use — it knows.</p>
+                    <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
+                      <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}><strong>If a component you need doesn't exist in the DS yet:</strong> Claude builds it anyway using only DS tokens (colors, spacing, radii) and flags it automatically. You don't need to do anything extra — just keep prototyping.</p>
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={4} title="Review in the browser">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Run the local dev server to see your prototype live.</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal</span>
+                      </div>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`npm run dev
+# Opens at http://localhost:5173 (may show as 5174 or 5175 if port is busy)`}
+                      </pre>
+                    </div>
+                    <p className="text-[12px] text-[var(--field-supporting)]">Iterate by describing changes to Claude: "Move the filters above the tabs", "Add a pagination bar at the bottom", "Replace the status text with a badge".</p>
+                  </div>
+                </NumberedStep>
+              </div>
+            </DocSection>
+
+            <Divider />
+
+            {/* ── Section 3: Delivery ── */}
+            <DocSection title="Part 3 — PM: Delivering your prototype to Design">
+              <Prose>
+                When your prototype is ready for review, you share your project folder with Michael. No extra steps, no additional documentation — just the folder. Everything Claude built, including any experimental components, is automatically included.
+              </Prose>
+
+              <div className="flex flex-col gap-[18px]">
+                <NumberedStep n={1} title="Share the folder">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Compress the <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>aims-os-ds</code> folder and share it via Slack, email, or Drive. Alternatively, if you use Git:</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal — optional Git delivery</span>
+                      </div>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`git add .
+git commit -m "Prototype: [brief description]"
+git push origin pm/[your-name]-[feature]
+# Share the branch name with Michael`}
+                      </pre>
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={2} title="What Design receives">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Your delivery always contains two relevant things:</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      {[
+                        { path: "src/screens/[your-prototype]/", desc: "The screens you built — fully composed from DS components.", color: "var(--primary)" },
+                        { path: "src/components/experimental/", desc: "Any new components Claude created that don't exist in the DS yet. May be empty if everything came from the DS.", color: "#ed6c02" },
+                      ].map((item, i) => (
+                        <div key={i} className={`flex items-start gap-[12px] px-[14px] py-[12px]`} style={{ borderBottom: i === 0 ? "0.5px solid var(--field-border)" : undefined }}>
+                          <div className="shrink-0 w-[6px] h-[6px] rounded-full mt-[6px]" style={{ background: item.color }} />
+                          <div>
+                            <code className="text-[12px] font-mono" style={{ color: item.color }}>{item.path}</code>
+                            <p className="text-[12px] text-[var(--field-supporting)] mt-[2px]">{item.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </NumberedStep>
+              </div>
+
+              <Callout>
+                You don't need to write a summary of what's new or what components you added. The system handles that automatically — Michael runs one command and sees exactly what needs review.
+              </Callout>
+            </DocSection>
+
+            <Divider />
+
+            {/* ── Section 3b: Apply DS to existing prototype ── */}
+            <DocSection title="Part 3b — PM: Applying AIMS OS to an existing prototype">
+              <Prose>
+                If you already have a rough prototype — an HTML file, a Figma export, or even a description of screens you built elsewhere — you don't need to start over. Claude can migrate it into the DS in one session.
+              </Prose>
+
+              <div className="flex flex-col gap-[18px]">
+                <NumberedStep n={1} title="Open Claude Code in the DS repository folder">
+                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Same as always — Claude needs the DS folder open to have access to the components and tokens.</p>
+                </NumberedStep>
+
+                <NumberedStep n={2} title="Share your existing prototype with Claude">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Three ways to hand it over, depending on what you have:</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      {[
+                        {
+                          label: "You have an HTML file",
+                          instruction: `Copy the HTML into your message, or say:\n"I have this prototype at ~/Desktop/my-prototype.html — migrate it to AIMS OS components."`,
+                        },
+                        {
+                          label: "You have a screenshot or Figma link",
+                          instruction: `Paste the image or URL and say:\n"Recreate this screen using AIMS OS DS components."`,
+                        },
+                        {
+                          label: "You have a description",
+                          instruction: `Describe what screens exist and what they do:\n"I have a 3-screen flow: list → detail panel → confirmation modal. Here's what each shows: [...]"`,
+                        },
+                      ].map((item, i) => (
+                        <div key={i} className="px-[14px] py-[12px]" style={{ borderBottom: i < 2 ? "0.5px solid var(--field-border)" : undefined }}>
+                          <p className="text-[12px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>{item.label}</p>
+                          <pre className="text-[12px] leading-[1.7] whitespace-pre-wrap" style={{ color: "var(--field-supporting)", fontFamily: "inherit" }}>{item.instruction}</pre>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={3} title="Claude rebuilds it with DS components">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Claude maps your existing structure to the correct DS components — replacing any raw HTML buttons with <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>&lt;Button&gt;</code>, tables with <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>&lt;Table&gt;</code>, status labels with <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>&lt;Tag&gt;</code>, and so on. All colors become DS tokens automatically.</p>
+                    <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
+                      <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}><strong>The result is not a reskin.</strong> Claude rebuilds the screen from scratch using DS components — your prototype becomes a proper DS screen with the right spacing, tokens, states, and dark mode support.</p>
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={4} title="Review and iterate">
+                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Open the dev server and compare your original with the rebuilt version. Iterate the same way as a new prototype — describe what to adjust and Claude applies the change.</p>
+                </NumberedStep>
+              </div>
+
+              <Callout>
+                The end result of Part 3b is identical to Part 3 — a screen in <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/screens/</code> using DS components, ready for Design to audit.
+              </Callout>
+            </DocSection>
+
+            <Divider />
+
+            {/* ── Section 4: Michael receiving ── */}
+            <DocSection title="Part 4 — Design: Receiving and auditing a PM delivery">
+              <Prose>
+                When you receive a prototype from a PM, the audit process is structured and takes minutes, not hours. The experimental folder is the single place to look.
+              </Prose>
+
+              <div className="flex flex-col gap-[18px]">
+                <NumberedStep n={1} title="Open the received folder in Claude Code">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">You have two ways to open a PM's project:</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Option A — Terminal (if PM sent a folder/zip)</span>
+                      </div>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`# Unzip if needed, then:
+cd ~/Downloads/aims-os-ds-juan   # or wherever you put it
+claude                           # Claude Code opens in this folder`}
+                      </pre>
+                    </div>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Option B — Git (if PM sent a branch name)</span>
+                      </div>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`cd ~/aims-os-ds                  # your local DS copy
+git fetch
+git checkout pm/juan-dashboard   # the branch name the PM shared
+claude                           # open Claude Code here`}
+                      </pre>
+                    </div>
+                    <p className="text-[12px] text-[var(--field-supporting)]">You can also open Claude Code desktop app → "Open project" → navigate to and select the folder.</p>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={2} title="Run the experimental component audit">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">One command shows you everything that needs your attention:</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal</span>
+                      </div>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`grep -rn "DS-GAP" src/components/experimental/`}
+                      </pre>
+                    </div>
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Output example:</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
+{`experimental/MetricCard.tsx:1:  // DS-GAP: MetricCard — KPI with trend delta. Closest DS component: CardContainer.
+experimental/TenantRing.tsx:1:  // DS-GAP: TenantRing — donut chart per tenant. Closest DS component: none (new pattern).`}
+                      </pre>
+                    </div>
+                    <p className="text-[12px] text-[var(--field-supporting)]">If the command returns nothing, the PM's prototype uses only existing DS components — no design work needed from your side.</p>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={3} title="Decide what to do with each experimental component">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">For each entry in the grep output, open the file and apply one of three decisions:</p>
+                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      {[
+                        {
+                          decision: "Replace with existing DS component",
+                          when: "The PM's component duplicates something already in ui/ — it just wasn't used correctly.",
+                          action: 'Tell Claude to swap it out: "Replace MetricCard with CardContainer using the existing variant X."',
+                          color: "#2173ff",
+                        },
+                        {
+                          decision: "Formalize as a new DS component",
+                          when: "The component fills a genuine gap that will recur across multiple screens.",
+                          action: "Design it in Figma → have Claude tokenize and document it → move to src/components/ui/.",
+                          color: "#00a07e",
+                        },
+                        {
+                          decision: "Keep as one-off for this prototype",
+                          when: "The component is very specific to this screen and unlikely to be reused.",
+                          action: "Leave in experimental/ for this prototype only. Don't promote it.",
+                          color: "#ed6c02",
+                        },
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < 2 ? "0.5px solid var(--field-border)" : undefined }}>
+                          <div className="shrink-0 w-[6px] h-[6px] rounded-full mt-[5px]" style={{ background: item.color }} />
+                          <div className="flex flex-col gap-[4px]">
+                            <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{item.decision}</p>
+                            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}><strong style={{ color: "var(--foreground)" }}>When:</strong> {item.when}</p>
+                            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}><strong style={{ color: "var(--foreground)" }}>Action:</strong> {item.action}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={4} title="Promote to the DS (if applicable)">
+                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">If a component is promoted: design it in Figma using the tokens already identified in the experimental file → Claude moves it to <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/components/ui/</code>, tokenizes it, and documents it in the DS library. All PMs get it on their next <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>git pull</code>.</p>
+                </NumberedStep>
+              </div>
+            </DocSection>
+
+            <Divider />
+
+            {/* ── Section 5: Full pipeline diagram ── */}
+            <DocSection title="Complete pipeline at a glance">
+              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                <div className="px-[16px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>End-to-end flow</p>
+                </div>
+                <div className="px-[16px] py-[16px] flex flex-col gap-[0px]">
+                  {[
+                    { actor: "PM", step: "Clone repo once → permanent local folder", icon: "1", color: "#2173ff" },
+                    { actor: "PM", step: "Open Claude Code → describe screen → Claude assembles it with DS components", icon: "2", color: "#2173ff" },
+                    { actor: "Auto", step: "If component missing → Claude creates it in experimental/ with DS-GAP comment and DS tokens only", icon: "↓", color: "#9333ea" },
+                    { actor: "PM", step: "Review in browser, iterate with Claude, compress and share the folder with Design", icon: "3", color: "#2173ff" },
+                    { actor: "Design", step: "Open received folder in Claude Code → run grep -rn \"DS-GAP\" → see exactly what's new", icon: "4", color: "#00a07e" },
+                    { actor: "Design", step: "Decide: replace with existing DS component / formalize / keep as one-off", icon: "5", color: "#00a07e" },
+                    { actor: "Design", step: "Formalize in Figma → Claude promotes to ui/ → git pull updates all PMs", icon: "6", color: "#00a07e" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-[12px] py-[10px]" style={{ borderBottom: i < 6 ? "0.5px solid var(--field-border)" : undefined }}>
+                      <div className="shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: item.color + "20", border: `0.5px solid ${item.color}50`, color: item.color }}>
+                        {item.icon}
+                      </div>
+                      <div className="flex items-center gap-[8px] flex-1 flex-wrap pt-[2px]">
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-[6px] py-[1px] rounded-full shrink-0" style={{ background: item.color + "18", color: item.color }}>{item.actor}</span>
+                        <p className="text-[13px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>{item.step}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                  <strong style={{ color: "var(--foreground)" }}>Key principle:</strong> PMs prototype freely without knowledge of the DS internals. Design maintains full control of what enters the official library. The experimental folder is the handoff boundary — nothing in it affects the DS until Design explicitly promotes it.
+                </p>
+              </div>
+            </DocSection>
+          </>
+        )}
+
       </div>
     </div>
   )
@@ -3778,7 +4481,7 @@ function InputPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab,         setTab]         = useState<"overview" | "playground" | "reference">("overview")
   const [inpState,    setInpState]    = useState<InpState>("default")
   const [inpSize,     setInpSize]     = useState<"sm" | "default">("default")
-  const [showLabel,   setShowLabel]   = useState(true)
+  const [showLabel,   setShowLabel]   = useState(false)
   const [showSupport, setShowSupport] = useState(true)
   const [showLeft,    setShowLeft]    = useState(false)
   const [showRight,   setShowRight]   = useState(false)
@@ -3883,7 +4586,7 @@ function InputPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 function TextareaPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab,          setTab]          = useState<"playground" | "reference">("playground")
   const [taState,      setTaState]      = useState<InpState>("default")
-  const [showLabel,    setShowLabel]    = useState(true)
+  const [showLabel,    setShowLabel]    = useState(false)
   const [showSupport,  setShowSupport]  = useState(true)
   const [showCount,    setShowCount]    = useState(true)
   const [taExpand,     setTaExpand]     = useState(false)
@@ -8107,7 +8810,7 @@ function ScrollAreaPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
             <div className="grid grid-cols-2 gap-[12px]">
               <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
-                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#22c55e" }}>✓ Do</span>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-surface-success-default)" }}>✓ Do</span>
                 <ul className="flex flex-col gap-[8px]">
                   {[
                     "Use when a container has overflow content beyond its defined boundaries.",
@@ -8121,7 +8824,7 @@ function ScrollAreaPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </ul>
               </div>
               <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
-                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#ef4444" }}>✕ Don't</span>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-surface-error-default)" }}>✕ Don't</span>
                 <ul className="flex flex-col gap-[8px]">
                   {[
                     "Don't show the scrollbar permanently — thumb must appear only on hover/scroll.",
@@ -8282,6 +8985,8574 @@ function ScrollAreaPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   )
 }
 
+// ── Pattern page helpers ─────────────────────────────────────────────────────
+
+function PatternTabRow({ tab, setTab }: { tab: string; setTab: (t: string) => void }) {
+  return (
+    <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+      {(["when-to-use", "anatomy", "rules"] as const).map(t => (
+        <button key={t} onClick={() => setTab(t)}
+          className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+          style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+          {t === "when-to-use" ? "When to Use" : t === "anatomy" ? "Anatomy" : "Rules"}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function PatternCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+      {children}
+    </div>
+  )
+}
+
+function WireBlock({ label, h, flex, bg }: { label: string; h?: number | string; flex?: number; bg?: string }) {
+  return (
+    <div className="flex items-center justify-center rounded-[4px] shrink-0"
+      style={{ height: h ?? 40, flex: flex ?? "none", background: bg ?? "var(--color-surface-neutral-default)", border: "1px dashed var(--field-border)", minWidth: 40, fontSize: 11, fontWeight: 600, color: "var(--field-label)", letterSpacing: "0.04em", textTransform: "uppercase", padding: "4px 8px", textAlign: "center" }}>
+      {label}
+    </div>
+  )
+}
+
+function PatternRules({ code }: { code: string }) {
+  return (
+    <pre className="text-[11px] leading-[18px] overflow-x-auto p-[16px] rounded-[6px] whitespace-pre-wrap"
+      style={{ background: "var(--canvas)", color: "var(--foreground)", fontFamily: "monospace" }}>
+      {code}
+    </pre>
+  )
+}
+
+function DecisionRow({ condition, result, component }: { condition: string; result: string; component: string }) {
+  return (
+    <tr style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+      <td className="px-[12px] py-[10px] text-[13px] text-[var(--foreground)]">{condition}</td>
+      <td className="px-[12px] py-[10px] text-[13px] font-semibold" style={{ color: "var(--primary)" }}>{result}</td>
+      <td className="px-[12px] py-[10px]">
+        <span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{component}</span>
+      </td>
+    </tr>
+  )
+}
+
+// ── Shared mock data for pattern demos ───────────────────────────────────────
+
+// Workspaces for Topbar switcher in all previews (Figma 14690-55695)
+const PREVIEW_WORKSPACES = [
+  { id: "ws1", name: "Product Design",  description: "Main workspace",       tag: "Active" as const },
+  { id: "ws2", name: "Engineering",     description: "Development workspace", tag: "Member" as const },
+  { id: "ws3", name: "Growth",          description: "Marketing & growth",    tag: "Member" as const },
+]
+
+// AI Workers entity data — matches Figma 14690-55695 structure
+const MEMBER_ENTITY_ITEMS: EntityListItemData[] = [
+  {
+    id: "w1", title: "Churn Risk Intervention", iconVariant: "success", iconName: "Zap",
+    actions: [
+      { label: "Publish", variant: "primary"   },
+      { label: "Edit",    variant: "secondary" },
+    ],
+    state: { label: "Active", variant: "success" },
+    timestamp: "4m ago",
+    showMenu: true,
+    description: "Detects at-risk accounts from health signals, triggers CS playbook and executes targeted interventions.",
+    aiInsight: {
+      action: "Summary",
+      detail: "Description of a suggestion made by the AI based on the performance of the workflow",
+      detailThreshold: 100,
+    },
+    secondaryMeta: [
+      { label: "Owner Name" },
+      { iconName: "TrendingDown", label: "health.score.dropped +1" },
+      { iconName: "Play",         label: "48" },
+      { iconName: "TrendingUp",   label: "97.5%" },
+      { iconName: "Users",        label: "12" },
+    ],
+    tags: [{ label: "Customer success" }],
+  },
+  {
+    id: "w2", title: "Churn Risk Intervention", iconVariant: "success", iconName: "Zap",
+    actions: [
+      { label: "Stop",   variant: "primary"   },
+      { label: "Edit",   variant: "secondary" },
+    ],
+    state: { label: "Running", variant: "informative" },
+    timestamp: "12m ago",
+    showMenu: true,
+    description: "Detects at-risk accounts from health signals, triggers CS playbook and executes targeted interventions.",
+    aiInsight: {
+      action: "Summary",
+      detail: "Description of a suggestion made by the AI based on the performance of the workflow",
+      detailThreshold: 100,
+    },
+    secondaryMeta: [
+      { label: "Owner Name" },
+      { iconName: "TrendingDown", label: "health.score.dropped +1" },
+      { iconName: "Play",         label: "48" },
+      { iconName: "TrendingUp",   label: "97.5%" },
+      { iconName: "Users",        label: "12" },
+    ],
+    tags: [{ label: "Customer success" }],
+  },
+  {
+    id: "w3", title: "Churn Risk Intervention", iconVariant: "neutral", iconName: "Zap",
+    actions: [
+      { label: "Publish", variant: "primary"   },
+      { label: "Edit",    variant: "secondary" },
+    ],
+    state: { label: "Draft", variant: "neutral" },
+    timestamp: "1h ago",
+    showMenu: true,
+    description: "Detects at-risk accounts from health signals, triggers CS playbook and executes targeted interventions.",
+    aiInsight: {
+      action: "Summary",
+      detail: "Description of a suggestion made by the AI based on the performance of the workflow",
+      detailThreshold: 100,
+    },
+    secondaryMeta: [
+      { label: "Owner Name" },
+      { iconName: "TrendingDown", label: "health.score.dropped +1" },
+      { iconName: "Play",         label: "48" },
+      { iconName: "TrendingUp",   label: "97.5%" },
+      { iconName: "Users",        label: "12" },
+    ],
+    tags: [{ label: "Customer success" }],
+  },
+  {
+    id: "w4", title: "Churn Risk Intervention", iconVariant: "success", iconName: "Zap",
+    actions: [
+      { label: "Publish", variant: "primary"   },
+      { label: "Edit",    variant: "secondary" },
+    ],
+    state: { label: "Active", variant: "success" },
+    timestamp: "2h ago",
+    showMenu: true,
+    description: "Detects at-risk accounts from health signals, triggers CS playbook and executes targeted interventions.",
+    aiInsight: {
+      action: "Summary",
+      detail: "Description of a suggestion made by the AI based on the performance of the workflow",
+      detailThreshold: 100,
+    },
+    secondaryMeta: [
+      { label: "Owner Name" },
+      { iconName: "TrendingDown", label: "health.score.dropped +1" },
+      { iconName: "Play",         label: "48" },
+      { iconName: "TrendingUp",   label: "97.5%" },
+      { iconName: "Users",        label: "12" },
+    ],
+    tags: [{ label: "Customer success" }],
+  },
+  {
+    id: "w5", title: "Churn Risk Intervention", iconVariant: "success", iconName: "Zap",
+    actions: [
+      { label: "Publish", variant: "primary"   },
+      { label: "Edit",    variant: "secondary" },
+    ],
+    state: { label: "Active", variant: "success" },
+    timestamp: "1d ago",
+    showMenu: true,
+    description: "Detects at-risk accounts from health signals, triggers CS playbook and executes targeted interventions.",
+    aiInsight: {
+      action: "Summary",
+      detail: "Description of a suggestion made by the AI based on the performance of the workflow",
+      detailThreshold: 100,
+    },
+    secondaryMeta: [
+      { label: "Owner Name" },
+      { iconName: "TrendingDown", label: "health.score.dropped +1" },
+      { iconName: "Play",         label: "48" },
+      { iconName: "TrendingUp",   label: "97.5%" },
+      { iconName: "Users",        label: "12" },
+    ],
+    tags: [{ label: "Customer success" }],
+  },
+]
+
+const MOCK_MEMBERS: Array<{
+  id: number; initials: string; name: string; email: string; role: string; status: string; statusV: TagVariant
+}> = [
+  { id: 1, initials: "RA", name: "Revenue Analytics Agent",     email: "analytics@aimsos.ai",    role: "AI Action",  status: "Published",   statusV: "success"   },
+  { id: 2, initials: "CS", name: "Customer Satisfaction Monitor", email: "cx@aimsos.ai",          role: "AI Action",  status: "Processing",  statusV: "informative"},
+  { id: 3, initials: "OE", name: "Operational Efficiency Tracker", email: "ops@aimsos.ai",        role: "AI Action",  status: "Draft",       statusV: "neutral"     },
+  { id: 4, initials: "MI", name: "Market Intelligence Gatherer",  email: "market@aimsos.ai",     role: "AI Action",  status: "Published",   statusV: "success"     },
+  { id: 5, initials: "DQ", name: "Data Quality Inspector",        email: "dataquality@aimsos.ai", role: "AI Action",  status: "Published",   statusV: "success"     },
+]
+
+// ── PatternListViewPage ───────────────────────────────────────────────────────
+
+function PatternListViewPage() {
+  const [tab, setTab]                         = useState<string>("when-to-use")
+  const [previewOpen, setPreviewOpen]         = useState(false)
+  const [previewFiltersOpen, setPreviewFiltersOpen] = useState(false)
+  const [previewTab, setPreviewTab]           = useState<string>("all")
+  const [previewScrolled, setPreviewScrolled]             = useState(false)
+  const [previewHFiltersVisible, setPreviewHFiltersVisible] = useState(false)
+  const previewHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [previewOpenSlot, setPreviewOpenSlot]                 = useState<string | null>(null)
+  const [previewDropdownAnchor, setPreviewDropdownAnchor]     = useState<{ left: number; top: number } | null>(null)
+  const [previewFilterStatus, setPreviewFilterStatus]         = useState<string | null>(null)
+  const [previewFilterRole, setPreviewFilterRole]             = useState<string | null>(null)
+  const [previewFilterTeam, setPreviewFilterTeam]             = useState<string | null>(null)
+  const [previewWorkspaceId, setPreviewWorkspaceId]           = useState<string>("ws1")
+  const [previewSlideoutId, setPreviewSlideoutId]             = useState<string | null>(null)
+  const [previewPage, setPreviewPage]         = useState(1)
+  const [previewPerPage, setPreviewPerPage]   = useState(5)
+  const mainScrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!previewOpen) { setPreviewScrolled(false); setPreviewHFiltersVisible(false); return }
+    const el = mainScrollRef.current
+    if (!el) return
+    const handler = () => {
+      const scrolled = el.scrollTop > 16
+      setPreviewScrolled(scrolled)
+      if (!scrolled) setPreviewHFiltersVisible(false)
+    }
+    el.addEventListener('scroll', handler)
+    return () => el.removeEventListener('scroll', handler)
+  }, [previewOpen])
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <div className="flex items-center gap-[8px]">
+          <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        </div>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">List View Layout</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          The standard shell for any data-heavy list view in AIMS OS. Defines which components to stack, in what order, and how they interact as a system.
+        </p>
+      </div>
+
+      <PatternTabRow tab={tab} setTab={setTab} />
+
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Decision Table</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Situation", "Use this", "Component"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  <DecisionRow condition="Page shows a dataset (records, entities, tasks…)" result="List View Layout" component="EntityList" />
+                  <DecisionRow condition="User selects an entity to see details" result="Open Side Panel" component="SidePanel" />
+                  <DecisionRow condition="User triggers a destructive action" result="Open Modal" component="ModalDialog" />
+                  <DecisionRow condition="User needs advanced filtering" result="Open Filters Slideout" component="FiltersSlideout" />
+                  <DecisionRow condition="Dataset spans multiple pages" result="Show Pagination" component="Pagination" />
+                  <DecisionRow condition="Page background color must be consistent" result="Use AppBackground" component="AppBackground" />
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Always include AppBackground — it ensures gradient consistency across light/dark modes." },
+                { type: "dont", text: "Don't open entity details in a Slide-out or navigate to a new page — use Side Panel to keep list context." },
+                { type: "do",   text: "Keep Filters as the single source of truth for the dataset. Pagination always follows applied filters." },
+                { type: "dont", text: "Don't add a 3rd navigation layer beyond Tabs + SwitchTab — use the Navigation Depth edge-case pattern instead." },
+                { type: "do",   text: "Reset pagination to page 1 whenever filters, sort, or rows-per-page change." },
+                { type: "dont", text: "Don't place Modals as the primary way to show entity details — they block the main workflow." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>Full Preview — Real DS Components</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Open a full-viewport preview built with the actual Topbar, Sidebar, Tabs, Filters, EntityList, and CardContainer components from this Design System. Pagination floats over the list — content scrolls behind it without losing height. Click any row to open the detail panel.
+            </p>
+            <Button onClick={() => setPreviewOpen(true)}>
+              <LucideIcons.Expand size={14} />
+              Launch Full Preview
+            </Button>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Component Hierarchy — Required Order</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Every list view in AIMS OS follows this exact stacking order. No exceptions.
+            </p>
+            <div className="flex flex-col">
+              {([
+                { n: 1, comp: "Topbar",       badge: "Required",               desc: "Global navigation. Workspace switcher, search, user profile. Always at the very top." },
+                { n: 2, comp: "Sidebar",      badge: "Required",               desc: "Left navigation rail. Collapsed by default (80 px). Active section highlighted." },
+                { n: 3, comp: "Page Header",  badge: "Required",               desc: "Page title + description + primary CTA. First element inside the content area." },
+                { n: 4, comp: "Tabs",         badge: "Conditional",            desc: "Top-level context switch (All / Active / Archived). Only when the page has distinct content groups." },
+                { n: 5, comp: "SwitchTab",    badge: "Rare",                   desc: "View mode switcher (List / Grid / Kanban). Only when the same data needs multiple representations." },
+                { n: 6, comp: "Filters",      badge: "Required if filterable", desc: "Search + filter slots + All Filters button. Single source of truth for the dataset." },
+                { n: 7, comp: "EntityList",   badge: "Required",               desc: "Data rows. Each entity in its own CardContainer size='sm'. Never group multiple entities in a shared card." },
+                { n: 8, comp: "Pagination",   badge: "Conditional",            desc: "Bottom strip. Only visible when total > rows-per-page. Resets to page 1 on any filter change." },
+              ] as { n: number; comp: string; badge: string; desc: string }[]).map((item, i, arr) => (
+                <div key={item.n} className="flex">
+                  <div className="flex flex-col items-center" style={{ width: 28 }}>
+                    <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 28, height: 28, background: "var(--color-surface-primary-default)", fontSize: 11, fontWeight: 700, color: "var(--color-text-negative)" }}>
+                      {item.n}
+                    </div>
+                    {i < arr.length - 1 && (
+                      <div style={{ width: 1, flex: 1, background: "var(--field-border)", minHeight: 14 }} />
+                    )}
+                  </div>
+                  <div className="flex-1 pl-[12px]" style={{ paddingBottom: i < arr.length - 1 ? 14 : 0, paddingTop: 3 }}>
+                    <div className="flex items-center gap-[8px] mb-[2px]">
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{item.comp}</span>
+                      <Tag
+                        variant={item.badge === "Required" || item.badge === "Required if filterable" ? "success" : item.badge === "Conditional" ? "primary" : "secondary"}
+                        size="sm"
+                      >
+                        {item.badge}
+                      </Tag>
+                    </div>
+                    <p style={{ fontSize: 12, color: "var(--field-supporting)" }}>{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          {/* ── Full-Viewport Preview Overlay ──────────────────────────────── */}
+          {previewOpen && (
+            <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+              <AppBackground />
+
+              {/* Close button */}
+              <button
+                onClick={() => { setPreviewOpen(false); setPreviewFiltersOpen(false) }}
+                className="fixed flex items-center gap-[6px] rounded-[6px]"
+                style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-surface-error-default)", color: "var(--color-surface-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+              >
+                <LucideIcons.X size={12} />
+                Close Preview
+              </button>
+
+              {/* Real Topbar — workspace switcher wired */}
+              <Topbar
+                workspaceName={PREVIEW_WORKSPACES.find(w => w.id === previewWorkspaceId)?.name ?? "Product Design"}
+                companyName="AIMS OS"
+                userName="Michael O."
+                userEmail="michael@aimsos.ai"
+                workspaces={PREVIEW_WORKSPACES}
+                selectedWorkspaceId={previewWorkspaceId}
+                onWorkspaceSelect={setPreviewWorkspaceId}
+                actions={[
+                  { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
+                  { icon: <LucideIcons.Bell size={16} />, label: "Notifications" },
+                  { icon: <LucideIcons.Settings size={16} />, label: "Settings" },
+                ]}
+              />
+
+              {/* Body row */}
+              <div className="flex flex-1 overflow-hidden">
+
+                {/* Real Sidebar */}
+                <Sidebar
+                  items={DEFAULT_SIDEBAR_ITEMS}
+                  activeId="contacts"
+                  defaultCollapsed={true}
+                />
+
+                {/* Main content + optional detail panel */}
+                <div className="flex flex-1 overflow-hidden">
+
+                  {/* Main column */}
+                  <div className="flex flex-col flex-1 overflow-hidden">
+
+                    {/* Header + Tabs + Filters — sticky, 3-state compression */}
+                    <div
+                      className="sticky top-0 z-10"
+                      onMouseEnter={() => {
+                        if (previewScrolled && !previewHoverTimer.current) {
+                          previewHoverTimer.current = setTimeout(() => { setPreviewHFiltersVisible(true); previewHoverTimer.current = null }, 800)
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        if (previewHoverTimer.current) { clearTimeout(previewHoverTimer.current); previewHoverTimer.current = null }
+                        if (previewOpenSlot === null) setPreviewHFiltersVisible(false)
+                      }}
+                    >
+                      {previewScrolled && (
+                        <div aria-hidden="true" style={{
+                          position: "absolute", top: 0, left: 0, right: 0,
+                          height: "calc(100% + 32px)",
+                          background: (previewHFiltersVisible || previewOpenSlot !== null)
+                            ? "linear-gradient(to bottom, var(--canvas) 0%, var(--canvas) 85%, transparent 100%)"
+                            : "linear-gradient(to bottom, var(--canvas) 0%, var(--canvas) 65%, transparent 100%)",
+                          zIndex: -1, pointerEvents: "none", transition: "background 200ms ease-in-out",
+                        }} />
+                      )}
+                    <Header
+                      size={previewScrolled ? "compress" : "size-l"}
+                      title="AI Workers"
+                      description="Manage and monitor your AI workers across all categories."
+                      tag={<Tag variant="success" size="sm">24 Active</Tag>}
+                      primaryAction={
+                        <Button variant="main" size="sm">
+                          <LucideIcons.Plus size={13} /> New Worker
+                        </Button>
+                      }
+                      secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                      style={{ transition: "padding 200ms ease-in-out" }}
+                    />
+
+                    {/* Tabs — hidden when compressed */}
+                    {!previewScrolled && (
+                    <div className="shrink-0" style={{ paddingLeft: 32, paddingRight: 32 }}>
+                      <Tabs
+                        items={[
+                          { id: "all",       label: "All Workers" },
+                          { id: "published", label: "Active"      },
+                          { id: "draft",     label: "Draft"       },
+                        ]}
+                        activeId={previewTab}
+                        onChange={setPreviewTab}
+                      />
+                    </div>
+                    )}
+
+                    {/* Filters — animate in/out when compressed */}
+                    <div style={{
+                      maxHeight: (!previewScrolled || previewHFiltersVisible || previewOpenSlot !== null) ? 64 : 0,
+                      opacity:   (!previewScrolled || previewHFiltersVisible || previewOpenSlot !== null) ? 1 : 0,
+                      overflow: "hidden",
+                      transition: "max-height 220ms ease-in-out, opacity 180ms ease-in-out",
+                      borderBottom: previewHFiltersVisible ? "0.5px solid var(--field-border)" : "none",
+                    }}>
+                    <div
+                      className="shrink-0"
+                      style={{ padding: "12px 32px 0" }}
+                      onClickCapture={(e: React.MouseEvent) => {
+                        const btn = (e.target as HTMLElement).closest('button')
+                        const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                        const left = btn ? btn.getBoundingClientRect().left : e.clientX
+                        setPreviewDropdownAnchor({ left, top: containerRect.bottom })
+                      }}
+                    >
+                      <Filters
+                        showSearch
+                        searchPlaceholder="Search workers..."
+                        slots={[
+                          {
+                            placeholder: "Status",
+                            value: previewFilterStatus ?? undefined,
+                            onOpen:   () => setPreviewOpenSlot(prev => prev === "Status" ? null : "Status"),
+                            onRemove: () => { setPreviewFilterStatus(null); setPreviewOpenSlot(null) },
+                          },
+                          {
+                            placeholder: "Category",
+                            value: previewFilterRole ?? undefined,
+                            onOpen:   () => setPreviewOpenSlot(prev => prev === "Category" ? null : "Category"),
+                            onRemove: () => { setPreviewFilterRole(null); setPreviewOpenSlot(null) },
+                          },
+                          {
+                            placeholder: "Type",
+                            value: previewFilterTeam ?? undefined,
+                            onOpen:   () => setPreviewOpenSlot(prev => prev === "Type" ? null : "Type"),
+                            onRemove: () => { setPreviewFilterTeam(null); setPreviewOpenSlot(null) },
+                          },
+                        ]}
+                        showAllFilters
+                        onAllFiltersClick={() => { setPreviewOpenSlot(null); setPreviewFiltersOpen(true) }}
+                        showViewToggle
+                      />
+                    </div>
+                    </div>
+                    </div>
+                    {/* Slot dropdown — fixed-position so it always aligns to the clicked chip */}
+                    {previewOpenSlot !== null && previewDropdownAnchor !== null && (() => {
+                      const OPTS: Record<string, string[]> = {
+                        Status:   ["Published", "Processing", "Draft"],
+                        Category: ["Analytics", "CX", "Operations", "Research", "Validation"],
+                        Type:     ["Scheduled", "Reactive"],
+                      }
+                      const opts = OPTS[previewOpenSlot] ?? []
+                      const currentVal = previewOpenSlot === "Status" ? previewFilterStatus
+                        : previewOpenSlot === "Category" ? previewFilterRole : previewFilterTeam
+                      return (
+                        <>
+                          <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setPreviewOpenSlot(null)} />
+                          <div
+                            className="flex flex-col overflow-hidden"
+                            style={{
+                              position: "fixed",
+                              left: previewDropdownAnchor.left,
+                              top: previewDropdownAnchor.top + 4,
+                              zIndex: 10001,
+                              background: "var(--menu-bg)",
+                              backdropFilter: "blur(16px)",
+                              WebkitBackdropFilter: "blur(16px)",
+                              border: "0.5px solid var(--field-border)",
+                              borderRadius: 8,
+                              minWidth: 200,
+                              boxShadow: "var(--shadow-elevation-3)",
+                            }}
+                          >
+                            <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>
+                                {previewOpenSlot}
+                              </span>
+                            </div>
+                            {opts.map(opt => {
+                              const isSel = currentVal === opt
+                              return (
+                                <button
+                                  key={opt}
+                                  className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full transition-colors"
+                                  style={{
+                                    background: isSel ? "var(--color-surface-primary-subtle)" : "transparent",
+                                    color: isSel ? "var(--primary)" : "var(--foreground)",
+                                    fontWeight: isSel ? 600 : 400,
+                                    fontSize: 13,
+                                  }}
+                                  onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "var(--color-surface-neutral-default)" }}
+                                  onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent" }}
+                                  onClick={() => {
+                                    if (previewOpenSlot === "Status") setPreviewFilterStatus(opt)
+                                    else if (previewOpenSlot === "Category") setPreviewFilterRole(opt)
+                                    else setPreviewFilterTeam(opt)
+                                    setPreviewOpenSlot(null)
+                                  }}
+                                >
+                                  <span className="flex-1">{opt}</span>
+                                  {isSel && <LucideIcons.Check size={13} style={{ flexShrink: 0 }} />}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </>
+                      )
+                    })()}
+
+                    {/* Content area — Pagination floats absolute at bottom */}
+                    <div className="flex-1 relative overflow-hidden">
+                      <div ref={mainScrollRef} className="h-full overflow-y-auto" style={{ padding: "8px 32px 64px" }}>
+                        <div className="flex flex-col gap-[12px]">
+                          {MEMBER_ENTITY_ITEMS
+                            .filter(item =>
+                              previewTab === "published" ? item.state?.label === "Active"  :
+                              previewTab === "draft"     ? item.state?.label === "Draft"   :
+                              true
+                            )
+                            .map(item => (
+                              <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+                                <EntityList items={[{
+                                  ...item,
+                                  actions: [
+                                    ...(item.actions ?? []),
+                                    { label: "Preview", icon: "Eye", variant: "tertiary" as const, onClick: () => setPreviewSlideoutId(item.id) },
+                                  ],
+                                }]} />
+                              </CardContainer>
+                            ))
+                          }
+                        </div>
+                      </div>
+                      {/* Pagination floats over entity list — content scrolls behind it */}
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+                        <Pagination
+                          currentPage={previewPage}
+                          totalItems={24}
+                          itemsPerPage={previewPerPage}
+                          onPageChange={setPreviewPage}
+                          onItemsPerPageChange={n => { setPreviewPerPage(n); setPreviewPage(1) }}
+                          rowsPerPageOptions={[5, 10, 25]}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Worker preview — SlideOut triggered by Eye icon */}
+              {(() => {
+                const item = MEMBER_ENTITY_ITEMS.find(x => x.id === previewSlideoutId)
+                return (
+                  <SlideOut
+                    open={previewSlideoutId !== null}
+                    onClose={() => setPreviewSlideoutId(null)}
+                    title={item?.title ?? "Worker Preview"}
+                    subtitle={item?.description ?? ""}
+                    type="with-variants"
+                    size="m"
+                  >
+                    {item && (
+                      <div className="flex flex-col gap-[20px] p-[24px]">
+                        <div className="flex items-center gap-[14px]">
+                          <div className="flex items-center justify-center rounded-full shrink-0"
+                            style={{ width: 48, height: 48, background: "var(--color-surface-primary-default)", fontSize: 15, fontWeight: 700, color: "var(--color-text-negative)" }}>
+                            {item.avatarName}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--foreground)" }}>{item.title}</div>
+                            {item.state && (
+                              <Tag variant={item.state.variant === "success" ? "success" : item.state.variant === "informative" ? "primary" : "secondary"} size="sm" className="mt-[4px]">
+                                {item.state.label}
+                              </Tag>
+                            )}
+                          </div>
+                        </div>
+                        {[
+                          ["Category",  item.primaryMeta?.[0]?.label ?? "—"],
+                          ["Trigger",   item.primaryMeta?.[1]?.label ?? "—"],
+                          ["Last run",  item.timestamp ?? "—"],
+                          ["Created",   (item.secondaryMeta?.[1]?.label ?? "—").replace("Created ", "")],
+                        ].map(([label, val]) => (
+                          <div key={label} style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 16 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", marginBottom: 4 }}>{label}</div>
+                            <div style={{ fontSize: 13, color: "var(--foreground)" }}>{val}</div>
+                          </div>
+                        ))}
+                        <div style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 16 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", marginBottom: 6 }}>Latest AI Action</div>
+                          <div style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.5 }}>{item.secondaryMeta?.[0]?.label}</div>
+                        </div>
+                        <div className="flex gap-[8px] mt-[8px]">
+                          <Button size="sm" variant="secondary" className="flex-1">Edit</Button>
+                          <Button size="sm" className="flex-1">Publish</Button>
+                        </div>
+                      </div>
+                    )}
+                  </SlideOut>
+                )
+              })()}
+
+              {/* Real FiltersSlideout — position:fixed z-50 within this z-9999 stacking context */}
+              <FiltersSlideout
+                isOpen={previewFiltersOpen}
+                onClose={() => setPreviewFiltersOpen(false)}
+                onClearAll={() => {}}
+              />
+
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Technical Spec (from Figma)</SectionLabel>
+            <PatternRules code={`INTERACTION_FLOW
+
+PATTERN_RELATIONSHIPS
+  The list does not own data logic — it reflects the applied system state
+  Filters = single source of truth for dataset definition
+  Pagination depends on the filtered dataset
+  Side Panel depends on entity selection
+  Modals depend on actions triggered from list or panel
+
+SYSTEM_RULES
+  applying filters → RESET pagination to page 1
+  dataset updates must propagate to all dependent components
+  selecting an entity → OPEN Side Panel (contextual detail)
+  actions requiring confirmation → USE Modal
+  contextual interactions must NOT block the main workflow
+
+COMPONENT_STACK (mandatory order)
+  1. AppBackground   — always present, z-behind
+  2. Topbar          — fixed top
+  3. Sidebar         — fixed left
+  4. Content Area:
+     a. Tabs (optional)
+     b. Header: title + description + CTA
+     c. Filters: Visible Filters + All Filters button
+     d. Entity List
+     e. Side Panel (conditional — entity selected)
+     f. Pagination
+
+BACKGROUND_RULES
+  ALWAYS use AppBackground for color consistency
+  LIGHT MODE  → Primary Color/BG gradient
+  DARK MODE   → App/Background/Dark gradient`} />
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Design Norms</SectionLabel>
+            <div className="flex flex-col gap-[12px]">
+              {[
+                {
+                  rule: "EntityList + CardContainer — one card per entity",
+                  detail: "Each EntityList instance must be wrapped in its own CardContainer size=\"sm\". Never place multiple entities inside a single shared card. One CardContainer → one EntityList → one entity record. This ensures visual separation, correct elevation, and predictable hover/selection states.",
+                  icon: "Layers",
+                },
+                {
+                  rule: "Page header — always include a primary action (mainAction)",
+                  detail: "Every list view page header must contain a primary Button (default variant, no variant prop needed) as the main CTA — e.g. \"Invite Member\", \"Create Agent\", \"Add Contact\". Secondary actions like \"Export\" are optional and use variant=\"secondary\". The primary action must never be omitted.",
+                  icon: "MousePointerClick",
+                },
+              ].map(({ rule, detail, icon }) => {
+                const Icon = LucideIcons[icon as keyof typeof LucideIcons] as React.FC<{ size?: number; style?: React.CSSProperties }>
+                return (
+                  <div key={rule} className="flex gap-[12px] p-[14px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                    <div className="flex items-center justify-center rounded-[6px] shrink-0" style={{ width: 32, height: 32, background: "var(--color-surface-primary-subtle)" }}>
+                      <Icon size={15} style={{ color: "var(--primary)" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>{rule}</div>
+                      <div style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.6 }}>{detail}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Edge Cases</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                "If content height < viewport height → compression behavior does not trigger.",
+                "If entity list is empty → show EmptyState component; Pagination hidden.",
+                "If Side Panel is open → header compression still applies on scroll.",
+                "If no filters exist → hide the All Filters button entirely.",
+              ].map((ec, i) => (
+                <div key={i} className="flex gap-[8px] p-[10px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                  <span className="shrink-0 text-[12px] font-bold" style={{ color: "var(--primary)" }}>EC{i + 1}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{ec}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternFilterPage ─────────────────────────────────────────────────────────
+
+function PatternFilterPage() {
+  const [tab, setTab]                           = useState<string>("when-to-use")
+  const [filtersPanelOpen, setFiltersPanelOpen] = useState(false)
+  const [compactFiltersApplied, setCompactFiltersApplied] = useState(false)
+  const [filterPreviewOpen, setFilterPreviewOpen]         = useState(false)
+  const [fpSlideoutOpen, setFpSlideoutOpen]               = useState(false)
+  const [fpFiltersApplied, setFpFiltersApplied]           = useState(false)
+  const [fpWorkspaceId, setFpWorkspaceId]                 = useState<string>("ws1")
+  const [fpOpenSlot, setFpOpenSlot]                       = useState<string | null>(null)
+  const [fpDropdownAnchor, setFpDropdownAnchor]           = useState<{ left: number; top: number } | null>(null)
+  const [fpFilterStatus, setFpFilterStatus]               = useState<string | null>(null)
+  const [fpFilterCategory, setFpFilterCategory]           = useState<string | null>(null)
+  const [fpFilterType, setFpFilterType]                   = useState<string | null>(null)
+  const [fpItemSlideoutId, setFpItemSlideoutId]           = useState<string | null>(null)
+  const [fpScrolled,        setFpScrolled]        = useState(false)
+  const [fpHFiltersVisible, setFpHFiltersVisible]  = useState(false)
+  const fpContentScrollRef = useRef<HTMLDivElement>(null)
+  const fpHoverTimer       = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!filterPreviewOpen) { setFpScrolled(false); setFpHFiltersVisible(false); return }
+    const el = fpContentScrollRef.current
+    if (!el) return
+    const handler = () => {
+      const scrolled = el.scrollTop > 16
+      setFpScrolled(scrolled)
+      if (!scrolled) setFpHFiltersVisible(false)
+    }
+    el.addEventListener('scroll', handler)
+    return () => el.removeEventListener('scroll', handler)
+  }, [filterPreviewOpen])
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Filter System</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          A 3-layer filtering architecture that balances visibility, flexibility, and space efficiency. Every filtering surface in AIMS OS must follow this hierarchy.
+        </p>
+      </div>
+
+      <PatternTabRow tab={tab} setTab={setTab} />
+
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Filter Layer Hierarchy</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                { layer: "1", label: "Visible Filters", note: "Search + dropdowns for high-frequency filtering. Limited to the most relevant options.", required: true },
+                { layer: "2", label: "All Filters button → Slideout", note: "The primary entry point to the complete filtering system. Always available when filters exist.", required: true },
+                { layer: "3", label: "Chips (active filter indicators)", note: "Optional. Only use when users benefit from seeing active filters or quick-toggling them.", required: false },
+              ].map(item => (
+                <div key={item.layer} className="flex gap-[12px] items-start p-[14px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                  <span className="shrink-0 w-[20px] h-[20px] rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: "var(--primary)", color: "var(--color-text-negative)" }}>{item.layer}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-[8px]">
+                      <span className="text-[13px] font-semibold text-[var(--foreground)]">{item.label}</span>
+                      <Tag variant={item.required ? "primary" : "secondary"} size="sm">{item.required ? "Required" : "Optional"}</Tag>
+                    </div>
+                    <p className="text-[12px] text-[var(--field-supporting)] mt-[2px]">{item.note}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Filter State Model</SectionLabel>
+            <div className="flex gap-[8px] items-center flex-wrap">
+              {["default_state", "→", "draft_state", "→", "applied_state"].map((s, i) => (
+                s === "→"
+                  ? <span key={i} className="text-[18px]" style={{ color: "var(--field-supporting)" }}>→</span>
+                  : <div key={i} className="px-[14px] py-[8px] rounded-[6px] text-[13px] font-semibold" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--primary)" }}>{s}</div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-[6px] mt-[4px]">
+              {[
+                ["default_state", "No filters applied. Dataset shows all records."],
+                ["draft_state", "Changes made inside the Slideout but not yet applied. Only exists inside the Slideout panel."],
+                ["applied_state", "Filters affecting the dataset. Only updated when the user clicks Apply."],
+              ].map(([state, desc]) => (
+                <div key={state} className="flex gap-[10px]">
+                  <code className="text-[11px] font-mono shrink-0" style={{ color: "var(--primary)" }}>{state}</code>
+                  <span className="text-[13px] text-[var(--field-supporting)]">{desc}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Always show the All Filters button when filtering is available — even if visible filters are present." },
+                { type: "dont", text: "Don't make Chips required — the system must work without them." },
+                { type: "do",   text: "Close Slideout + update dataset only after Apply is clicked." },
+                { type: "dont", text: "Don't update the dataset in real-time while the user is changing filters inside the Slideout." },
+                { type: "do",   text: "Reset pagination to page 1 when Apply is triggered." },
+                { type: "dont", text: "Don't duplicate filter controls — Chips are indicators, not replacements for the filter system." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* ── Full-viewport preview ───────────────────────────────────── */}
+          <PatternCard>
+            <SectionLabel>Full Preview — 3-Layer Filter Architecture</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Open a full-viewport preview with the real DS Filters component. Click "All Filters" to open the slideout, select options, and click Apply to see the chips and filtered list.
+            </p>
+            <Button onClick={() => setFilterPreviewOpen(true)}>
+              <LucideIcons.Expand size={14} />
+              Launch Full Preview
+            </Button>
+          </PatternCard>
+
+          {filterPreviewOpen && (
+            <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+              <AppBackground />
+
+              <button
+                onClick={() => { setFilterPreviewOpen(false); setFpSlideoutOpen(false); setFpFiltersApplied(false); setFpScrolled(false); setFpHFiltersVisible(false) }}
+                className="fixed flex items-center gap-[6px] rounded-[6px]"
+                style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-surface-error-default)", color: "var(--color-surface-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+              >
+                <LucideIcons.X size={12} />
+                Close Preview
+              </button>
+
+              {/* Layer indicator */}
+              <div className="fixed flex items-center gap-[8px]"
+                style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001, background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 20, padding: "5px 14px", fontSize: 11 }}>
+                <span style={{ color: "var(--field-supporting)" }}>Active layer:</span>
+                <span style={{ fontWeight: 700, color: fpScrolled ? (fpHFiltersVisible ? "var(--color-surface-alert-default)" : "var(--field-label)") : "var(--primary)" }}>
+                  {fpSlideoutOpen ? "Layer 2 — Slideout open" : fpFiltersApplied ? "Layer 3 — Filters applied" : fpScrolled ? (fpHFiltersVisible ? "COMPRESSED + Filters" : "COMPRESSED (scroll → hover)") : "Layer 1 — Default state"}
+                </span>
+              </div>
+
+              <Topbar
+                workspaceName={PREVIEW_WORKSPACES.find(w => w.id === fpWorkspaceId)?.name ?? "Product Design"}
+                companyName="AIMS OS"
+                userName="Michael O."
+                userEmail="michael@aimsos.ai"
+                workspaces={PREVIEW_WORKSPACES}
+                selectedWorkspaceId={fpWorkspaceId}
+                onWorkspaceSelect={setFpWorkspaceId}
+                actions={[
+                  { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
+                  { icon: <LucideIcons.Bell size={16} />, label: "Notifications" },
+                  { icon: <LucideIcons.Settings size={16} />, label: "Settings" },
+                ]}
+              />
+
+              <div className="flex flex-1 overflow-hidden">
+                <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId="contacts" defaultCollapsed={true} />
+
+                <div className="flex flex-col flex-1 overflow-hidden">
+                  {/* Single scroll container — sticky header sits inside it */}
+                  <div ref={fpContentScrollRef} className="flex-1 overflow-y-auto relative">
+
+                    {/* Sticky header — compress on scroll */}
+                    <div
+                      className="sticky top-0 z-10"
+                      onMouseEnter={() => {
+                        if (fpScrolled && !fpHoverTimer.current) {
+                          fpHoverTimer.current = setTimeout(() => { setFpHFiltersVisible(true); fpHoverTimer.current = null }, 800)
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        if (fpHoverTimer.current) { clearTimeout(fpHoverTimer.current); fpHoverTimer.current = null }
+                        if (fpOpenSlot === null) setFpHFiltersVisible(false)
+                      }}
+                    >
+                      {/* Gradient overlay — extends 32px below the header so the fade starts after the filter row */}
+                      {fpScrolled && (
+                        <div
+                          aria-hidden="true"
+                          style={{
+                            position: "absolute",
+                            top: 0, left: 0, right: 0,
+                            height: "calc(100% + 32px)",
+                            background: (fpHFiltersVisible || fpOpenSlot !== null)
+                              ? "linear-gradient(to bottom, var(--canvas) 0%, var(--canvas) 85%, transparent 100%)"
+                              : "linear-gradient(to bottom, var(--canvas) 0%, var(--canvas) 65%, transparent 100%)",
+                            zIndex: -1,
+                            pointerEvents: "none",
+                            transition: "background 200ms ease-in-out",
+                          }}
+                        />
+                      )}
+                      {/* Title row */}
+                      <Header
+                        size={fpScrolled ? "compress" : "size-l"}
+                        title="AI Workers"
+                        description="Manage and monitor your AI workers across all categories."
+                        tag={<Tag variant="success" size="sm">24 Published</Tag>}
+                        primaryAction={
+                          <Button variant="main" size="sm">
+                            <LucideIcons.Plus size={13} /> New Worker
+                          </Button>
+                        }
+                        secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                        style={{ transition: "padding 200ms ease-in-out" }}
+                      />
+
+                      {/* Tabs — hidden when compressed */}
+                      {!fpScrolled && (
+                        <div style={{ paddingLeft: 32, paddingRight: 32 }}>
+                          <Tabs
+                            items={[
+                              { id: "all",    label: "All Workers" },
+                              { id: "active", label: "Active"      },
+                              { id: "draft",  label: "Draft"       },
+                            ]}
+                            activeId="all"
+                            onChange={() => {}}
+                          />
+                        </div>
+                      )}
+
+                      {/* Layer 1 Filters — animate in/out when compressed */}
+                      <div
+                        style={{
+                          maxHeight: (!fpScrolled || fpHFiltersVisible || fpOpenSlot !== null) ? 64 : 0,
+                          opacity:   (!fpScrolled || fpHFiltersVisible || fpOpenSlot !== null) ? 1 : 0,
+                          overflow: "hidden",
+                          transition: "max-height 220ms ease-in-out, opacity 180ms ease-in-out",
+                          borderBottom: fpHFiltersVisible ? "0.5px solid var(--field-border)" : "none",
+                        }}
+                      >
+                        <div
+                          style={{ padding: "12px 32px 0" }}
+                          onClickCapture={(e: React.MouseEvent) => {
+                            const btn = (e.target as HTMLElement).closest('button')
+                            const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                            const left = btn ? btn.getBoundingClientRect().left : e.clientX
+                            setFpDropdownAnchor({ left, top: containerRect.bottom })
+                          }}
+                        >
+                          <Filters
+                            showSearch
+                            searchPlaceholder="Search workers..."
+                            slots={[
+                              {
+                                placeholder: "Status",
+                                value: fpFilterStatus ?? undefined,
+                                onOpen:   () => setFpOpenSlot(prev => prev === "Status" ? null : "Status"),
+                                onRemove: () => { setFpFilterStatus(null); setFpOpenSlot(null) },
+                              },
+                              {
+                                placeholder: "Category",
+                                value: fpFilterCategory ?? undefined,
+                                onOpen:   () => setFpOpenSlot(prev => prev === "Category" ? null : "Category"),
+                                onRemove: () => { setFpFilterCategory(null); setFpOpenSlot(null) },
+                              },
+                              {
+                                placeholder: "Type",
+                                value: fpFilterType ?? undefined,
+                                onOpen:   () => setFpOpenSlot(prev => prev === "Type" ? null : "Type"),
+                                onRemove: () => { setFpFilterType(null); setFpOpenSlot(null) },
+                              },
+                            ]}
+                            showAllFilters
+                            onAllFiltersClick={() => { setFpOpenSlot(null); setFpSlideoutOpen(true) }}
+                            showViewToggle
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Layer 3 — Applied filter tags (multi-color, one per category) */}
+                    {fpFiltersApplied && (
+                      <div className="flex items-center gap-[6px] flex-wrap" style={{ padding: "8px 32px 6px" }}>
+                        <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Active:</span>
+                        {([
+                          { label: "Status",   value: "Published",  tagVariant: "success"  as TagVariant },
+                          { label: "Category", value: "Analytics",  tagVariant: "primary"  as TagVariant },
+                          { label: "Type",     value: "Scheduled",  tagVariant: "purple"   as TagVariant },
+                        ] as { label: string; value: string; tagVariant: TagVariant }[]).map(f => (
+                          <button key={f.label} className="flex items-center" onClick={() => setFpFiltersApplied(false)}>
+                            <Tag variant={f.tagVariant} size="sm" trailingIcon={<LucideIcons.X size={9} />}>{f.label}: {f.value}</Tag>
+                          </button>
+                        ))}
+                        <button style={{ fontSize: 11, color: "var(--field-supporting)" }} onClick={() => setFpFiltersApplied(false)}>Clear all</button>
+                      </div>
+                    )}
+
+                    {/* Entity list — triple-repeated for scroll room */}
+                    <div style={{ padding: "8px 32px 80px" }}>
+                      <div className="flex flex-col gap-[12px]">
+                        {[...MEMBER_ENTITY_ITEMS, ...MEMBER_ENTITY_ITEMS, ...MEMBER_ENTITY_ITEMS].map((item, idx) => (
+                          <CardContainer key={`fp-${item.id}-${idx}`} size="sm" className="!p-0 overflow-hidden">
+                            <EntityList items={[{
+                              ...item,
+                              actions: [
+                                ...(item.actions ?? []),
+                                { label: "Preview", icon: "Eye", variant: "tertiary" as const, onClick: () => setFpItemSlideoutId(item.id) },
+                              ],
+                            }]} />
+                          </CardContainer>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter dropdown — position: fixed, aligned to slot button */}
+              {fpOpenSlot !== null && fpDropdownAnchor !== null && (() => {
+                const FP_OPTS: Record<string, string[]> = {
+                  Status:   ["Published", "Processing", "Draft"],
+                  Category: ["Analytics", "CX", "Operations", "Research", "Validation"],
+                  Type:     ["Scheduled", "Reactive"],
+                }
+                const opts = FP_OPTS[fpOpenSlot] ?? []
+                const curVal = fpOpenSlot === "Status" ? fpFilterStatus : fpOpenSlot === "Category" ? fpFilterCategory : fpFilterType
+                return (
+                  <>
+                    <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setFpOpenSlot(null)} />
+                    <div className="flex flex-col overflow-hidden" style={{
+                      position: "fixed", left: fpDropdownAnchor.left, top: fpDropdownAnchor.top + 4, zIndex: 10001,
+                      background: "var(--menu-bg)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+                      border: "0.5px solid var(--field-border)", borderRadius: 8, minWidth: 200,
+                      boxShadow: "var(--shadow-elevation-3)",
+                    }}>
+                      <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>{fpOpenSlot}</span>
+                      </div>
+                      {opts.map(opt => {
+                        const isSel = curVal === opt
+                        return (
+                          <button key={opt} className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full"
+                            style={{ background: isSel ? "var(--color-surface-primary-subtle)" : "transparent", color: isSel ? "var(--primary)" : "var(--foreground)", fontWeight: isSel ? 600 : 400, fontSize: 13 }}
+                            onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "var(--color-surface-neutral-default)" }}
+                            onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent" }}
+                            onClick={() => {
+                              if (fpOpenSlot === "Status") setFpFilterStatus(opt)
+                              else if (fpOpenSlot === "Category") setFpFilterCategory(opt)
+                              else setFpFilterType(opt)
+                              setFpOpenSlot(null)
+                            }}>
+                            <span className="flex-1">{opt}</span>
+                            {isSel && <LucideIcons.Check size={13} style={{ flexShrink: 0 }} />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )
+              })()}
+
+              {/* Real FiltersSlideout — Layer 2 */}
+              <FiltersSlideout
+                isOpen={fpSlideoutOpen}
+                onClose={() => setFpSlideoutOpen(false)}
+                onApply={() => setFpFiltersApplied(true)}
+                onClearAll={() => setFpFiltersApplied(false)}
+                activeFilters={fpFiltersApplied ? [
+                  { label: "Status",   value: "Published", tagVariant: "success" as TagVariant, onRemove: () => setFpFiltersApplied(false) },
+                  { label: "Category", value: "Analytics", tagVariant: "primary" as TagVariant, onRemove: () => setFpFiltersApplied(false) },
+                  { label: "Type",     value: "Scheduled", tagVariant: "purple"  as TagVariant, onRemove: () => setFpFiltersApplied(false) },
+                ] : []}
+              />
+              {/* Item preview SlideOut */}
+              {(() => {
+                const fpPreviewItem = MEMBER_ENTITY_ITEMS.find(i => i.id === fpItemSlideoutId)
+                return (
+                  <SlideOut
+                    open={fpItemSlideoutId !== null}
+                    onClose={() => setFpItemSlideoutId(null)}
+                    title={fpPreviewItem?.title ?? "Item Preview"}
+                    subtitle={fpPreviewItem?.description ?? ""}
+                    type="with-variants"
+                    size="m"
+                  >
+                    {fpPreviewItem && (
+                      <div className="flex flex-col gap-[20px] p-[24px]">
+                        <div className="flex flex-col gap-[8px]">
+                          <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>Status</span>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>{fpPreviewItem.state?.label ?? "—"}</span>
+                        </div>
+                        {fpPreviewItem.aiInsight && (
+                          <div className="flex flex-col gap-[8px]">
+                            <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>AI Summary</span>
+                            <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
+                              {Array.isArray(fpPreviewItem.aiInsight.detail) ? fpPreviewItem.aiInsight.detail.join(" ") : fpPreviewItem.aiInsight.detail}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </SlideOut>
+                )
+              })()}
+            </div>
+          )}
+
+          <PatternCard>
+            <SectionLabel>Interactive 3-Layer Demo</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)]">
+              Click "All Filters" → Slideout opens (Layer 2) · Click "Apply" → chips appear (Layer 3) · list narrows to applied filters
+            </p>
+
+            <div className="relative rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+
+              {/* Layer 1 — Visible Filters (always shown) */}
+              <div className="flex items-center gap-[8px] px-[14px] py-[9px] flex-wrap"
+                style={{ background: "var(--surface)", borderBottom: "0.5px solid var(--field-border)" }}>
+                <div className="flex items-center gap-[2px] px-[6px] rounded-[4px] shrink-0"
+                  style={{ height: 20, background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)", fontSize: 8, fontWeight: 700, letterSpacing: "0.07em", color: "var(--primary)", textTransform: "uppercase" }}>
+                  Layer 1
+                </div>
+                <div className="flex items-center gap-[5px] px-[8px] rounded-[5px]"
+                  style={{ height: 28, background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)", fontSize: 11, color: "var(--field-supporting)", flex: "1 0 120px", maxWidth: 180 }}>
+                  <LucideIcons.Search size={10} />
+                  <span>Search...</span>
+                </div>
+                {["Status", "Date"].map(label => (
+                  <div key={label} className="flex items-center gap-[4px] px-[8px] rounded-[5px]"
+                    style={{ height: 28, background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)", fontSize: 11, color: "var(--field-label)" }}>
+                    <span>{label}</span>
+                    <LucideIcons.ChevronDown size={9} />
+                  </div>
+                ))}
+                <button onClick={() => setFiltersPanelOpen(true)}
+                  className="flex items-center gap-[4px] px-[8px] rounded-[5px] shrink-0"
+                  style={{ height: 28, background: filtersPanelOpen ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-default)", border: `0.5px solid ${filtersPanelOpen ? "var(--primary)" : "var(--field-border)"}`, fontSize: 11, fontWeight: 600, color: filtersPanelOpen ? "var(--primary)" : "var(--foreground)" }}>
+                  <LucideIcons.SlidersHorizontal size={10} />
+                  <span>All Filters</span>
+                  {compactFiltersApplied && (
+                    <span className="w-[16px] h-[16px] rounded-full flex items-center justify-center"
+                      style={{ background: "var(--primary)", fontSize: 9, fontWeight: 700, color: "var(--color-text-negative)" }}>
+                      1
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Layer 3 — Active Chips (conditional on Apply) */}
+              {compactFiltersApplied && (
+                <div className="flex items-center gap-[6px] px-[14px] py-[7px] flex-wrap"
+                  style={{ background: "var(--canvas)", borderBottom: "0.5px solid var(--field-border)" }}>
+                  <div className="flex items-center gap-[2px] px-[6px] rounded-[4px] shrink-0"
+                    style={{ height: 20, background: "var(--color-surface-success-subtle)", border: "0.5px solid var(--color-surface-success-default)", fontSize: 8, fontWeight: 700, letterSpacing: "0.07em", color: "var(--color-surface-success-default)", textTransform: "uppercase" }}>
+                    Layer 3
+                  </div>
+                  {([
+                    { label: "Status",   value: "Published", tagVariant: "success" as TagVariant },
+                    { label: "Category", value: "Analytics", tagVariant: "primary" as TagVariant },
+                    { label: "Type",     value: "Scheduled", tagVariant: "purple"  as TagVariant },
+                  ] as { label: string; value: string; tagVariant: TagVariant }[]).map(f => (
+                    <button key={f.label} className="flex items-center" onClick={() => setCompactFiltersApplied(false)}>
+                      <Tag variant={f.tagVariant} size="sm" trailingIcon={<LucideIcons.X size={9} />}>{f.label}: {f.value}</Tag>
+                    </button>
+                  ))}
+                  <button style={{ fontSize: 11, color: "var(--field-supporting)" }} onClick={() => setCompactFiltersApplied(false)}>Clear all</button>
+                </div>
+              )}
+
+              {/* Entity list */}
+              <div style={{ minHeight: 200 }}>
+                {MOCK_MEMBERS
+                  .filter(m => !compactFiltersApplied || m.status === "Published")
+                  .map(member => (
+                    <div key={member.id} className="flex items-center gap-[12px] px-[14px] py-[9px]"
+                      style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                      <div className="w-[28px] h-[28px] rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: "var(--color-surface-primary-default)", fontSize: 10, fontWeight: 700, color: "var(--color-text-negative)" }}>
+                        {member.initials}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{member.name}</div>
+                        <div style={{ fontSize: 10, color: "var(--field-supporting)" }}>{member.email}</div>
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--field-supporting)" }}>{member.role}</div>
+                      <Tag variant={member.statusV} size="sm">{member.status}</Tag>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Real FiltersSlideout — Layer 2 */}
+            <FiltersSlideout
+              isOpen={filtersPanelOpen}
+              onClose={() => setFiltersPanelOpen(false)}
+              onApply={() => setCompactFiltersApplied(true)}
+              onClearAll={() => setCompactFiltersApplied(false)}
+              activeFilters={compactFiltersApplied ? [
+                { label: "Status",   value: "Published", tagVariant: "success" as TagVariant, onRemove: () => setCompactFiltersApplied(false) },
+                { label: "Category", value: "Analytics", tagVariant: "primary" as TagVariant, onRemove: () => setCompactFiltersApplied(false) },
+                { label: "Type",     value: "Scheduled", tagVariant: "purple"  as TagVariant, onRemove: () => setCompactFiltersApplied(false) },
+              ] : []}
+            />
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Technical Spec (from Figma)</SectionLabel>
+            <PatternRules code={`FILTER_SYSTEM OVERVIEW
+
+STATE_MODEL
+  default_state  → no filters applied
+  draft_state    → changes inside slideout (not applied yet)
+  applied_state  → filters affecting the dataset
+
+STATE_OWNERSHIP
+  dataset_query  = applied_state only
+  list_view reacts only to applied_state
+  draft_state exists only inside the slideout
+
+BEHAVIOR
+  on_open         → display current applied_state as initial draft_state
+  on_filter_change → update draft_state only (NOT the dataset)
+  on_apply        → sync draft → applied_state
+                  → update dataset
+                  → reset pagination to page 1
+                  → close slideout
+  on_close_without_apply → discard draft_state (list unchanged)
+  on_clear_all (draft)   → reset draft only
+  on_clear_all (applied) → reset applied + update dataset + remove chips
+
+ALL_FILTERS_RULES
+  IF filtering_available == true → ALWAYS show All Filters button
+  IF user clicks All Filters     → OPEN Filters_Slideout
+
+CHIPS_RULES
+  optional   = true
+  required   = false
+  use when   → active filter visibility required OR quick toggle needed
+  do NOT use → chips duplicate filter controls without adding value
+
+SECTION_LOGIC
+  Toggle_List  → AND logic across enabled toggles
+  Multi_Select → OR logic within section
+  Single_Select → one active value or neutral "All"
+  Date_Presets → resolved as relative ranges at query time
+  Sort         → ORDER BY only (does not filter)`} />
+          </PatternCard>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternOverlayPage ────────────────────────────────────────────────────────
+
+function PatternOverlayPage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+  const [modalOpen, setModalOpen] = useState(false)
+  const [slideoutOpen, setSlideoutOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Overlay Decision</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          Choose between Modal and Slide-out based on the level of interruption required. The wrong choice breaks user flow or under-communicates urgency.
+        </p>
+      </div>
+
+      <PatternTabRow tab={tab} setTab={setTab} />
+
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <div className="grid grid-cols-2 gap-[16px]">
+            <PatternCard>
+              <SectionLabel>Modal — Blocking</SectionLabel>
+              <AlertBanner state="error" title="Requires user attention before continuing" className="mb-[4px]" />
+              <div className="flex flex-col gap-[6px]">
+                {["Destructive or irreversible actions (delete, remove)", "Critical confirmations that cannot be ignored", "Forms requiring focused completion (multi-step)", "Actions where background interaction must be disabled"].map((u, i) => (
+                  <div key={i} className="flex gap-[8px]"><span style={{ color: "var(--color-surface-success-default)" }}>✓</span><span className="text-[13px] text-[var(--foreground)]">{u}</span></div>
+                ))}
+              </div>
+            </PatternCard>
+            <PatternCard>
+              <SectionLabel>Slide-out — Non-blocking</SectionLabel>
+              <AlertBanner state="success" title="User can continue exploring in background" className="mb-[4px]" />
+              <div className="flex flex-col gap-[6px]">
+                {["Entity detail views (user can switch between records)", "Filter configuration panels", "Secondary actions (comments, history, settings)", "Progressive exploration — no decision required"].map((u, i) => (
+                  <div key={i} className="flex gap-[8px]"><span style={{ color: "var(--color-surface-success-default)" }}>✓</span><span className="text-[13px] text-[var(--foreground)]">{u}</span></div>
+                ))}
+              </div>
+            </PatternCard>
+          </div>
+          <PatternCard>
+            <SectionLabel>Quick Decision Rule</SectionLabel>
+            <div className="flex flex-col gap-[12px]">
+              <div className="flex items-center gap-[12px] p-[16px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                <span className="text-[28px]">❓</span>
+                <div>
+                  <p className="text-[15px] font-semibold text-[var(--foreground)]">Can the user safely ignore this and keep working?</p>
+                  <div className="flex gap-[16px] mt-[6px]">
+                    <span className="text-[13px]"><span style={{ color: "var(--color-surface-error-default)", fontWeight: 700 }}>NO</span> → Modal</span>
+                    <span className="text-[13px]"><span style={{ color: "var(--color-surface-success-default)", fontWeight: 700 }}>YES</span> → Slide-out</span>
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead><tr style={{ borderBottom: "1px solid var(--table-border)" }}>{["Property", "Modal", "Slide-out"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}</tr></thead>
+                  <tbody>
+                    {[
+                      ["Background interaction", "Disabled", "Allowed"],
+                      ["Focus trap", "Yes", "No"],
+                      ["Dismiss without action", "Requires explicit action", "Close button / ESC / click outside"],
+                      ["Priority", "High — blocking", "Medium — contextual"],
+                      ["Max active simultaneously", "1", "1"],
+                      ["Can open on top of other", "Yes, over Slide-out", "No, not over Modal"],
+                    ].map(([prop, modal, slideout]) => (
+                      <tr key={prop} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                        <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{prop}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{modal}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{slideout}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+          <div className="grid grid-cols-2 gap-[16px]">
+            <PatternCard>
+              <SectionLabel>Modal — Blocking Overlay</SectionLabel>
+              <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
+                Interrupts the workflow. Background interaction is disabled. User must explicitly confirm or cancel.
+              </p>
+              <div className="flex flex-col gap-[6px] mb-[16px]">
+                {["Destructive or irreversible actions", "Critical confirmations", "Multi-step forms requiring focus", "Error states that block flow"].map((u, i) => (
+                  <div key={i} className="flex gap-[8px]">
+                    <span style={{ color: "var(--color-surface-error-default)", fontWeight: 700 }}>✕</span>
+                    <span className="text-[13px] text-[var(--foreground)]">{u}</span>
+                  </div>
+                ))}
+              </div>
+              <Button size="sm" onClick={() => setModalOpen(true)}>
+                <LucideIcons.Play size={12} />
+                Try Modal
+              </Button>
+            </PatternCard>
+            <PatternCard>
+              <SectionLabel>Slide-out — Non-blocking Panel</SectionLabel>
+              <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
+                Appears from the right without interrupting. User can still interact with content behind it.
+              </p>
+              <div className="flex flex-col gap-[6px] mb-[16px]">
+                {["Entity detail views", "Filter configuration", "Comments, history, settings", "Progressive exploration — no decision required"].map((u, i) => (
+                  <div key={i} className="flex gap-[8px]">
+                    <span style={{ color: "var(--color-surface-success-default)", fontWeight: 700 }}>✓</span>
+                    <span className="text-[13px] text-[var(--foreground)]">{u}</span>
+                  </div>
+                ))}
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => setSlideoutOpen(true)}>
+                <LucideIcons.Play size={12} />
+                Try Slide-out
+              </Button>
+            </PatternCard>
+          </div>
+
+          <PatternCard>
+            <SectionLabel>Escalation Pattern — Slide-out → Modal</SectionLabel>
+            <div className="flex gap-[8px] items-center mb-[14px]">
+              <div className="flex-1 p-[10px] rounded-[6px] text-[13px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                User edits inside Slide-out with unsaved changes
+              </div>
+              <span className="text-[18px]" style={{ color: "var(--primary)" }}>→</span>
+              <div className="flex-1 p-[10px] rounded-[6px] text-[13px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                User tries to close Slide-out
+              </div>
+              <span className="text-[18px]" style={{ color: "var(--primary)" }}>→</span>
+              <div className="flex-1 p-[10px] rounded-[6px] text-[13px] font-semibold" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)", color: "var(--primary)" }}>
+                Confirmation Modal appears on top
+              </div>
+            </div>
+            <Button size="sm" variant="secondary" onClick={() => setConfirmOpen(true)}>
+              <LucideIcons.Play size={12} />
+              Try escalation pattern
+            </Button>
+          </PatternCard>
+
+          {/* Real ModalDialog — delete confirmation */}
+          <ModalDialog
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            variant="confirmation"
+            tone="error"
+            title="Delete workspace member?"
+            description="Sarah Chen will immediately lose access to all workspace resources. This action cannot be undone."
+            ctaPrimary={{ label: "Delete member", destructive: true, onClick: () => setModalOpen(false) }}
+            ctaSecondary={{ label: "Cancel", onClick: () => setModalOpen(false) }}
+          />
+
+          {/* Real ModalDialog — escalation confirmation */}
+          <ModalDialog
+            isOpen={confirmOpen}
+            onClose={() => setConfirmOpen(false)}
+            variant="confirmation"
+            tone="alert"
+            title="Discard unsaved changes?"
+            description="You have unsaved changes in this panel. Closing will discard them permanently."
+            ctaPrimary={{ label: "Discard changes", onClick: () => setConfirmOpen(false) }}
+            ctaSecondary={{ label: "Keep editing", onClick: () => setConfirmOpen(false) }}
+          />
+
+          {/* Real SlideOut — member details */}
+          <SlideOut
+            open={slideoutOpen}
+            onClose={() => setSlideoutOpen(false)}
+            title="Sarah Chen"
+            subtitle="Admin · Platform Team"
+            type="with-variants"
+            size="m"
+          />
+
+        </div>
+      )}
+
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Technical Spec (from Figma)</SectionLabel>
+            <PatternRules code={`MODAL_SLIDEOUT_PATTERN
+
+MODAL
+  blocking                = true
+  background_interaction  = disabled
+  focus_trap              = required
+
+  USE when:
+    action_requires_confirmation == true
+    action_is_destructive        == true
+    user_must_complete_flow      == true
+    interaction_complexity == high AND requires_focus == true
+
+SLIDE_OUT
+  blocking                = false
+  background_interaction  = allowed
+  focus_trap              = not required (unless specified)
+
+  USE when:
+    user_views_details              == true
+    interaction_priority            == secondary
+    content_is_contextual           == true
+    interaction_can_be_interrupted  == true
+
+DECISION_LOGIC
+  IF blocking_interaction_required == true → USE MODAL
+  ELSE IF contextual AND non_blocking → USE SLIDE_OUT
+
+STACKING_RULES
+  max simultaneous MODAL    = 1
+  max simultaneous SLIDE_OUT = 1
+  Modal CAN appear on top of Slide-out
+  Slide-out CANNOT open on top of Modal
+
+DISMISS_RULES
+  MODAL:     requires explicit CTA or close action
+  SLIDE_OUT: Close button / ESC / click outside (if non-critical)
+
+UNSAVED_STATE_RULE
+  IF slide_out has unsaved changes AND user attempts close
+  → trigger CONFIRMATION MODAL before closing
+
+ESC_BEHAVIOR
+  MODAL:     closes if safe (no unsaved data); else show confirmation
+  SLIDE_OUT: closes by default; if unsaved → show confirmation modal`} />
+          </PatternCard>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternHeaderPage ─────────────────────────────────────────────────────────
+
+function PatternHeaderPage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+  const [headerPreviewOpen, setHeaderPreviewOpen] = useState(false)
+  const [headerScrolled, setHeaderScrolled] = useState(false)
+  const [headerFiltersVisible, setHeaderFiltersVisible] = useState(false)
+  const [headerWorkspaceId, setHeaderWorkspaceId]       = useState<string>("ws1")
+  const [headerOpenSlot, setHeaderOpenSlot]             = useState<string | null>(null)
+  const [headerDropdownAnchor, setHeaderDropdownAnchor] = useState<{ left: number; top: number } | null>(null)
+  const [headerFilterStatus, setHeaderFilterStatus]     = useState<string | null>(null)
+  const [headerFilterCategory, setHeaderFilterCategory] = useState<string | null>(null)
+  const [headerPage, setHeaderPage]                   = useState(1)
+  const [headerPerPage, setHeaderPerPage]             = useState(10)
+  const headerScrollRef   = useRef<HTMLDivElement>(null)
+  const headerHoverTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!headerPreviewOpen) { setHeaderScrolled(false); setHeaderFiltersVisible(false); return }
+    const el = headerScrollRef.current
+    if (!el) return
+    const handler = () => {
+      const scrolled = el.scrollTop > 16
+      setHeaderScrolled(scrolled)
+      if (!scrolled) setHeaderFiltersVisible(false)
+    }
+    el.addEventListener('scroll', handler)
+    return () => el.removeEventListener('scroll', handler)
+  }, [headerPreviewOpen])
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Header Sticky</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          The header collapses as the user scrolls and recovers on demand. Ensures the key actions stay reachable without sacrificing vertical space.
+        </p>
+      </div>
+
+      <PatternTabRow tab={tab} setTab={setTab} />
+
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>States Overview</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                { state: "DEFAULT", trigger: "scroll_position == 0", height: "auto", visible: "Title + Description + Filters + Nav + CTA" },
+                { state: "COMPRESSED", trigger: "scroll_position > 16px", height: "60px", visible: "Title + Status + CTA only" },
+                { state: "COMPRESSED_WITH_FILTERS", trigger: "Hover 0–24px from top AND idle ≥ 3s", height: "130px", visible: "Title + Status + CTA + Filters" },
+              ].map(item => (
+                <div key={item.state} className="grid grid-cols-4 gap-[8px] p-[12px] rounded-[6px] items-start" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                  <code className="text-[11px] font-mono font-bold" style={{ color: "var(--primary)" }}>{item.state}</code>
+                  <span className="text-[12px] text-[var(--field-supporting)]">{item.trigger}</span>
+                  <span className="text-[12px] font-semibold text-[var(--foreground)]">{item.height}</span>
+                  <span className="text-[12px] text-[var(--field-supporting)]">{item.visible}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Apply the Header Sticky pattern to all list views with scrollable content." },
+                { type: "dont", text: "Don't show filters in COMPRESSED state — only via the 3s hover trigger." },
+                { type: "do",   text: "Maintain the gradient background in both states for visual continuity." },
+                { type: "dont", text: "If the Filters Slideout is open, lock the header — disable compression interaction." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* ── Launch full preview ─────────────────────────────────────── */}
+          <PatternCard>
+            <SectionLabel>Full Preview — Scroll Compression Demo</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Open a full-viewport demo and scroll down to see the header compress to 60px in real time. Scroll back to the top to restore the DEFAULT state.
+            </p>
+            <Button onClick={() => setHeaderPreviewOpen(true)}>
+              <LucideIcons.Expand size={14} />
+              Launch Full Preview
+            </Button>
+          </PatternCard>
+
+          {/* ── Full-viewport overlay ───────────────────────────────────── */}
+          {headerPreviewOpen && (
+            <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+              <AppBackground />
+
+              {/* Close */}
+              <button
+                onClick={() => { setHeaderPreviewOpen(false); setHeaderScrolled(false); setHeaderFiltersVisible(false) }}
+                className="fixed flex items-center gap-[6px] rounded-[6px]"
+                style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-surface-error-default)", color: "var(--color-surface-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+              >
+                <LucideIcons.X size={12} />
+                Close Preview
+              </button>
+
+              {/* State badge */}
+              <div className="fixed flex items-center gap-[8px]"
+                style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001, background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 20, padding: "5px 14px", fontSize: 11 }}>
+                <span style={{ color: "var(--field-supporting)" }}>Header:</span>
+                <span style={{ fontWeight: 700, color: headerScrolled ? (headerFiltersVisible ? "var(--color-surface-alert-default)" : "var(--field-label)") : "var(--primary)" }}>
+                  {headerScrolled ? (headerFiltersVisible ? "COMPRESSED_WITH_FILTERS (130px)" : "COMPRESSED (60px)") : "DEFAULT (auto)"}
+                </span>
+                <span style={{ color: "var(--field-supporting)" }}>— {headerScrolled ? "hover header to reveal filters" : "scroll to toggle"}</span>
+              </div>
+
+              <Topbar
+                workspaceName={PREVIEW_WORKSPACES.find(w => w.id === headerWorkspaceId)?.name ?? "Product Design"}
+                companyName="AIMS OS"
+                userName="Michael O."
+                userEmail="michael@aimsos.ai"
+                workspaces={PREVIEW_WORKSPACES}
+                selectedWorkspaceId={headerWorkspaceId}
+                onWorkspaceSelect={setHeaderWorkspaceId}
+                actions={[
+                  { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
+                  { icon: <LucideIcons.Bell size={16} />, label: "Notifications" },
+                  { icon: <LucideIcons.Settings size={16} />, label: "Settings" },
+                ]}
+              />
+
+              <div className="flex flex-1 overflow-hidden">
+                <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId="contacts" defaultCollapsed={true} />
+
+                <div className="flex flex-col flex-1 overflow-hidden">
+
+                  {/* Single scroll container — sticky header sits inside it. Outer div is relative so Pagination can float. */}
+                  <div className="flex-1 relative overflow-hidden">
+                  <div ref={headerScrollRef} className="h-full overflow-y-auto">
+
+                    {/* Sticky header — content scrolls behind it */}
+                    <div
+                      className="sticky top-0 z-10"
+                      onMouseEnter={() => {
+                        if (headerScrolled && !headerHoverTimer.current) {
+                          headerHoverTimer.current = setTimeout(() => {
+                            setHeaderFiltersVisible(true)
+                            headerHoverTimer.current = null
+                          }, 800)
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        if (headerHoverTimer.current) {
+                          clearTimeout(headerHoverTimer.current)
+                          headerHoverTimer.current = null
+                        }
+                        // Keep filters visible while a slot dropdown is open
+                        if (headerOpenSlot === null) {
+                          setHeaderFiltersVisible(false)
+                        }
+                      }}
+                    >
+                      {/* Gradient overlay — extends 32px below the header so the fade starts after the filter row */}
+                      {headerScrolled && (
+                        <div
+                          aria-hidden="true"
+                          style={{
+                            position: "absolute",
+                            top: 0, left: 0, right: 0,
+                            height: "calc(100% + 32px)",
+                            background: (headerFiltersVisible || headerOpenSlot !== null)
+                              ? "linear-gradient(to bottom, var(--canvas) 0%, var(--canvas) 85%, transparent 100%)"
+                              : "linear-gradient(to bottom, var(--canvas) 0%, var(--canvas) 65%, transparent 100%)",
+                            zIndex: -1,
+                            pointerEvents: "none",
+                            transition: "background 200ms ease-in-out",
+                          }}
+                        />
+                      )}
+                      {/* Title row */}
+                      <Header
+                        size={headerScrolled ? "compress" : "size-l"}
+                        title="AI Workers"
+                        description="Manage and monitor your AI workers across all categories."
+                        tag={<Tag variant="success" size="sm">24 Published</Tag>}
+                        primaryAction={
+                          <Button variant="main" size="sm">
+                            <LucideIcons.Plus size={13} /> New Worker
+                          </Button>
+                        }
+                        secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                        style={{ transition: "padding 200ms ease-in-out" }}
+                      />
+
+                      {/* Tabs — hidden in COMPRESSED */}
+                      {!headerScrolled && (
+                        <div style={{ paddingLeft: 32, paddingRight: 32 }}>
+                          <Tabs
+                            items={[{ id: "all", label: "All Workers" }, { id: "active", label: "Active" }, { id: "draft", label: "Draft" }]}
+                            activeId="all"
+                            onChange={() => {}}
+                          />
+                        </div>
+                      )}
+
+                      {/* Filters — always rendered, animate in/out */}
+                      <div
+                        style={{
+                          maxHeight: (!headerScrolled || headerFiltersVisible || headerOpenSlot !== null) ? 64 : 0,
+                          opacity:   (!headerScrolled || headerFiltersVisible || headerOpenSlot !== null) ? 1 : 0,
+                          overflow: "hidden",
+                          transition: "max-height 220ms ease-in-out, opacity 180ms ease-in-out",
+                          borderBottom: headerFiltersVisible ? "0.5px solid var(--field-border)" : "none",
+                        }}
+                      >
+                        <div
+                          style={{ padding: "12px 32px 0" }}
+                          onClickCapture={(e: React.MouseEvent) => {
+                            const btn = (e.target as HTMLElement).closest('button')
+                            const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                            const left = btn ? btn.getBoundingClientRect().left : e.clientX
+                            setHeaderDropdownAnchor({ left, top: containerRect.bottom })
+                          }}
+                        >
+                          <Filters
+                            showSearch
+                            searchPlaceholder="Search workers..."
+                            slots={[
+                              {
+                                placeholder: "Status",
+                                value: headerFilterStatus ?? undefined,
+                                onOpen:   () => setHeaderOpenSlot(prev => prev === "Status" ? null : "Status"),
+                                onRemove: () => { setHeaderFilterStatus(null); setHeaderOpenSlot(null) },
+                              },
+                              {
+                                placeholder: "Category",
+                                value: headerFilterCategory ?? undefined,
+                                onOpen:   () => setHeaderOpenSlot(prev => prev === "Category" ? null : "Category"),
+                                onRemove: () => { setHeaderFilterCategory(null); setHeaderOpenSlot(null) },
+                              },
+                            ]}
+                            showAllFilters
+                            showViewToggle
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Header filter dropdown — fixed so it escapes overflow */}
+                    {headerOpenSlot !== null && headerDropdownAnchor !== null && (() => {
+                      const H_OPTS: Record<string, string[]> = {
+                        Status:   ["Published", "Processing", "Draft"],
+                        Category: ["Analytics", "CX", "Operations", "Research", "Validation"],
+                      }
+                      const opts = H_OPTS[headerOpenSlot] ?? []
+                      const curVal = headerOpenSlot === "Status" ? headerFilterStatus : headerFilterCategory
+                      return (
+                        <>
+                          <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setHeaderOpenSlot(null)} />
+                          <div className="flex flex-col overflow-hidden" style={{
+                            position: "fixed", left: headerDropdownAnchor.left, top: headerDropdownAnchor.top + 4, zIndex: 10001,
+                            background: "var(--menu-bg)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+                            border: "0.5px solid var(--field-border)", borderRadius: 8, minWidth: 200,
+                            boxShadow: "var(--shadow-elevation-3)",
+                          }}>
+                            <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>{headerOpenSlot}</span>
+                            </div>
+                            {opts.map(opt => {
+                              const isSel = curVal === opt
+                              return (
+                                <button key={opt} className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full"
+                                  style={{ background: isSel ? "var(--color-surface-primary-subtle)" : "transparent", color: isSel ? "var(--primary)" : "var(--foreground)", fontWeight: isSel ? 600 : 400, fontSize: 13 }}
+                                  onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "var(--color-surface-neutral-default)" }}
+                                  onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent" }}
+                                  onClick={() => {
+                                    if (headerOpenSlot === "Status") setHeaderFilterStatus(opt)
+                                    else setHeaderFilterCategory(opt)
+                                    setHeaderOpenSlot(null)
+                                  }}>
+                                  <span className="flex-1">{opt}</span>
+                                  {isSel && <LucideIcons.Check size={13} style={{ flexShrink: 0 }} />}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </>
+                      )
+                    })()}
+
+                    {/* Entity list — inside scroll container so items scroll behind sticky header */}
+                    <div className="flex flex-col gap-[12px]" style={{ padding: "8px 32px 64px" }}>
+                      {[...MEMBER_ENTITY_ITEMS, ...MEMBER_ENTITY_ITEMS, ...MEMBER_ENTITY_ITEMS].map((item, i) => (
+                        <CardContainer key={`h-${item.id}-${i}`} size="sm" className="!p-0 overflow-hidden">
+                          <EntityList items={[item]} />
+                        </CardContainer>
+                      ))}
+                    </div>
+                  </div>{/* end headerScrollRef */}
+                  {/* Pagination floats over scrollable list */}
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+                    <Pagination
+                      currentPage={headerPage}
+                      totalItems={33}
+                      itemsPerPage={headerPerPage}
+                      onPageChange={setHeaderPage}
+                      onItemsPerPageChange={n => { setHeaderPerPage(n); setHeaderPage(1) }}
+                    />
+                  </div>
+                  </div>{/* end relative wrapper */}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <PatternCard>
+            <SectionLabel>3 Header States — Reference</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)]">States are triggered by scroll position and hover proximity. Each is a snapshot of the same header component.</p>
+            <div className="grid grid-cols-3 gap-[12px]">
+
+              {/* DEFAULT state */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center gap-[6px]">
+                  <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--primary)" }}>DEFAULT</span>
+                  <span style={{ fontSize: 9, color: "var(--field-supporting)" }}>scroll = 0</span>
+                </div>
+                <div className="rounded-[8px] overflow-hidden flex flex-col" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div style={{ background: "var(--surface)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    <div className="flex items-center justify-between px-[12px] pt-[12px] pb-[6px]">
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>AI Workers</div>
+                        <div style={{ fontSize: 10, color: "var(--field-supporting)" }}>24 workers</div>
+                      </div>
+                      <Button size="sm">+ New Worker</Button>
+                    </div>
+                    <div className="flex gap-[0] px-[12px]">
+                      {["All", "Published", "Draft"].map((t, i) => (
+                        <div key={t} className="px-[8px] py-[4px]" style={{ fontSize: 10, fontWeight: i === 0 ? 700 : 400, color: i === 0 ? "var(--primary)" : "var(--field-label)", borderBottom: i === 0 ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>{t}</div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-[6px] px-[12px] py-[8px]">
+                      <div className="flex items-center gap-[4px] px-[6px] rounded-[4px]"
+                        style={{ height: 24, background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)", fontSize: 10, color: "var(--field-supporting)", flex: 1, maxWidth: 90 }}>
+                        <LucideIcons.Search size={9} />
+                        <span>Search</span>
+                      </div>
+                      <div className="flex items-center gap-[3px] px-[6px] rounded-[4px]"
+                        style={{ height: 24, background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)", fontSize: 10, color: "var(--field-label)" }}>
+                        Status <LucideIcons.ChevronDown size={8} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-[12px] py-[8px] flex flex-col gap-[5px]" style={{ background: "var(--canvas)" }}>
+                    {MOCK_MEMBERS.slice(0, 3).map(m => (
+                      <div key={m.id} className="flex items-center gap-[6px]">
+                        <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0"
+                          style={{ background: "var(--color-surface-primary-default)", fontSize: 7, fontWeight: 700, color: "var(--color-text-negative)" }}>{m.initials}</div>
+                        <div style={{ flex: 1, fontSize: 10, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                        <Tag variant={m.statusV} size="sm">{m.status}</Tag>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--field-supporting)", lineHeight: 1.4 }}>Full header visible. Title + description + tabs + filters + CTA. Height: auto (content-driven).</div>
+              </div>
+
+              {/* COMPRESSED state */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center gap-[6px]">
+                  <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-label)" }}>COMPRESSED</span>
+                  <span style={{ fontSize: 9, color: "var(--field-supporting)" }}>scroll &gt; 16px</span>
+                </div>
+                <div className="rounded-[8px] overflow-hidden flex flex-col" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div className="flex items-center justify-between px-[12px]"
+                    style={{ height: 60, background: "var(--surface)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    <div className="flex items-center gap-[6px]">
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>AI Workers</span>
+                      <Tag variant="success" size="sm">Published</Tag>
+                    </div>
+                    <Button size="sm">+ New Worker</Button>
+                  </div>
+                  <div className="px-[12px] py-[8px] flex flex-col gap-[5px]" style={{ background: "var(--canvas)" }}>
+                    {MOCK_MEMBERS.slice(0, 4).map(m => (
+                      <div key={m.id} className="flex items-center gap-[6px]">
+                        <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0"
+                          style={{ background: "var(--color-surface-primary-default)", fontSize: 7, fontWeight: 700, color: "var(--color-text-negative)" }}>{m.initials}</div>
+                        <div style={{ flex: 1, fontSize: 10, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                        <Tag variant={m.statusV} size="sm">{m.status}</Tag>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--field-supporting)", lineHeight: 1.4 }}>Collapsed to exactly 60px. Title + status chip + CTA only. Tabs and filters hidden. More list content visible.</div>
+              </div>
+
+              {/* COMPRESSED + FILTERS state */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center gap-[6px]">
+                  <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-label)" }}>+ FILTERS</span>
+                  <span style={{ fontSize: 9, color: "var(--field-supporting)" }}>hover 3s</span>
+                </div>
+                <div className="rounded-[8px] overflow-hidden flex flex-col" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div style={{ background: "var(--surface)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    <div className="flex items-center justify-between px-[12px]" style={{ height: 60 }}>
+                      <div className="flex items-center gap-[6px]">
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>AI Workers</span>
+                        <Tag variant="success" size="sm">Published</Tag>
+                      </div>
+                      <Button size="sm">+ New Worker</Button>
+                    </div>
+                    <div className="flex items-center gap-[5px] px-[12px] pb-[8px]">
+                      <div className="flex items-center gap-[4px] px-[6px] rounded-[4px]"
+                        style={{ height: 24, background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)", fontSize: 10, color: "var(--field-supporting)", flex: 1, maxWidth: 90 }}>
+                        <LucideIcons.Search size={9} />
+                        <span>Search</span>
+                      </div>
+                      <div className="flex items-center gap-[3px] px-[6px] rounded-[4px]"
+                        style={{ height: 24, background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)", fontSize: 10, color: "var(--field-label)" }}>
+                        Status <LucideIcons.ChevronDown size={8} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-[12px] py-[8px] flex flex-col gap-[5px]" style={{ background: "var(--canvas)" }}>
+                    {MOCK_MEMBERS.slice(0, 2).map(m => (
+                      <div key={m.id} className="flex items-center gap-[6px]">
+                        <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0"
+                          style={{ background: "var(--color-surface-primary-default)", fontSize: 7, fontWeight: 700, color: "var(--color-text-negative)" }}>{m.initials}</div>
+                        <div style={{ flex: 1, fontSize: 10, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                        <Tag variant={m.statusV} size="sm">{m.status}</Tag>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--field-supporting)", lineHeight: 1.4 }}>130px. Filters revealed on cursor hover within 24px of top for ≥ 3s. Triggered by proximity, not scroll.</div>
+              </div>
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Background Gradient</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              <div className="rounded-[8px] overflow-hidden" style={{ height: 80, background: "linear-gradient(to bottom, var(--surface), transparent)" }}>
+                <div className="p-[12px] text-[12px] font-semibold">Light mode</div>
+              </div>
+              <div className="rounded-[8px] overflow-hidden" style={{ height: 80, background: "linear-gradient(to bottom, var(--canvas), transparent)" }}>
+                <div className="p-[12px] text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Dark mode</div>
+              </div>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)]">Gradient fills behind the header on top of AppBackground. Fades to transparent so list content is visible below in compressed states.</p>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Technical Spec (from Figma)</SectionLabel>
+            <PatternRules code={`HEADER_SCROLL_BEHAVIOR
+
+STATE_TRANSITIONS
+  IF scroll_position > 16px  → SET state = COMPRESSED
+  IF scroll_position == 0    → SET state = DEFAULT
+  IF scrolling_up AND scroll_position > 0 → KEEP state = COMPRESSED
+  IF scrolling_up AND scroll_position == 0 → SET state = DEFAULT
+
+HEIGHTS
+  DEFAULT                  = auto (content-driven)
+  COMPRESSED               = 60px
+  COMPRESSED_WITH_FILTERS  = 130px
+
+FILTER_VISIBILITY (compressed mode only)
+  IF cursor_position <= 24px from top
+     AND cursor_idle_time >= 3s
+  → filters = visible → state = COMPRESSED_WITH_FILTERS
+  IF cursor leaves hover area → filters = hidden → back to COMPRESSED
+
+TRANSITIONS
+  height_transition_duration  = 200ms
+  height_transition_easing    = ease-in-out
+  filters_opacity_duration    = 150ms
+  filters_opacity_easing      = ease-in-out
+
+SCROLLBAR
+  visible = while user is scrolling
+  hidden  = after 5s of inactivity
+  offset  = 8px from content edge
+
+BACKGROUND
+  LIGHT: gradient #FFFFFF (100%) → #FFFFFF (0%)
+  DARK:  gradient #04081B (100%) → #04081B (0%)
+
+BEHAVIOR_RULES
+  Only one state active at a time
+  Filters cannot be visible in DEFAULT hover state
+  COMPRESSED_WITH_FILTERS only occurs via hover (not scroll)
+  IF Filters_Slideout == open → lock header → disable compression
+
+EDGE_CASES
+  IF no filters exist → COMPRESSED_WITH_FILTERS state disabled
+  IF content height < viewport → compression does NOT trigger
+  IF rapid scroll → transitions still respect defined durations`} />
+          </PatternCard>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternNavDepthPage ───────────────────────────────────────────────────────
+
+function PatternNavDepthPage() {
+  const [tab, setTab]   = useState<string>("when-to-use")
+  const [stTab, setStTab] = useState("all")
+  const [swTab, setSwTab] = useState("list")
+  const [navPreviewOpen, setNavPreviewOpen] = useState(false)
+  const [navWorkspaceId, setNavWorkspaceId]           = useState<string>("ws1")
+  const [ndNavChip, setNdNavChip]                     = useState<string>("All")
+  const [ndOpenSlot, setNdOpenSlot]                   = useState<string | null>(null)
+  const [ndFilterStatus, setNdFilterStatus]           = useState<string | null>(null)
+  const [ndFilterCategory, setNdFilterCategory]       = useState<string | null>(null)
+  const [ndDropdownAnchor, setNdDropdownAnchor]       = useState<{ left: number; top: number } | null>(null)
+  const [ndItemSlideoutId, setNdItemSlideoutId]       = useState<string | null>(null)
+  const [ndPage, setNdPage]                           = useState(1)
+  const [ndPerPage, setNdPerPage]                     = useState(10)
+  const [ndScrolled, setNdScrolled]                     = useState(false)
+  const [ndHFiltersVisible, setNdHFiltersVisible]       = useState(false)
+  const ndHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const ndScrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!navPreviewOpen) { setNdScrolled(false); setNdHFiltersVisible(false); return }
+    const el = ndScrollRef.current
+    if (!el) return
+    const handler = () => {
+      const scrolled = el.scrollTop > 16
+      setNdScrolled(scrolled)
+      if (!scrolled) setNdHFiltersVisible(false)
+    }
+    el.addEventListener('scroll', handler)
+    return () => el.removeEventListener('scroll', handler)
+  }, [navPreviewOpen])
+
+  const mainTabs: TabItem[] = [
+    { id: "all",   label: "All Workers" },
+    { id: "teams", label: "Teams"       },
+  ]
+  const subItems = [
+    { id: "list",   label: "List"   },
+    { id: "grid",   label: "Grid"   },
+    { id: "kanban", label: "Kanban" },
+  ]
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern · Edge Case</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Navigation Depth</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          When a page needs multiple navigation layers. Maximum 2 nav layers: Tabs + SwitchTab. Additional complexity goes into Filters.
+        </p>
+      </div>
+
+      <PatternTabRow tab={tab} setTab={setTab} />
+
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Layer Purpose</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                { layer: "Tabs", question: "Where am I?", purpose: "Primary context switch. Separates distinct sections of the page.", component: "Tabs" },
+                { layer: "SwitchTab", question: "How am I viewing this?", purpose: "Mutually exclusive sub-views within the current Tab section.", component: "SwitchTab" },
+                { layer: "Filters", question: "What subset am I seeing?", purpose: "Refines the visible dataset without changing page structure.", component: "Filters" },
+              ].map(item => (
+                <div key={item.layer} className="flex gap-[12px] items-start p-[14px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                  <div className="w-[28px] h-[28px] rounded-[6px] flex items-center justify-center shrink-0 text-[11px] font-bold" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{item.layer[0]}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-[8px]">
+                      <span className="text-[13px] font-semibold text-[var(--foreground)]">{item.layer}</span>
+                      <span className="text-[12px] italic" style={{ color: "var(--primary)" }}>"{item.question}"</span>
+                    </div>
+                    <p className="text-[12px] text-[var(--field-supporting)] mt-[2px]">{item.purpose}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>When to Avoid</SectionLabel>
+            <div className="flex flex-col gap-[6px]">
+              {[
+                "When the dataset can be understood without segmentation — use Filters alone.",
+                "When filters alone can solve the differentiation — don't add nav layers.",
+                "When multiple layers introduce cognitive overload — simplify to 1 layer.",
+                "When none of the sub-views provide meaningfully different structure.",
+              ].map((rule, i) => (
+                <div key={i} className="flex gap-[8px] p-[10px] rounded-[6px]" style={{ background: "var(--color-surface-error-subtle)", border: "0.5px solid var(--color-border-error-default)" }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: "var(--color-surface-error-default)" }}>✕</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{rule}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>Full Preview — All 3 Navigation Layers</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Open a full-viewport view showing all 3 layers in context: Tabs (Layer 1) · SwitchTab under Overview (Layer 2) · real Filters (Layer 3). Switch tabs and views to see how layers interact.
+            </p>
+            <Button onClick={() => setNavPreviewOpen(true)}>
+              <LucideIcons.Expand size={14} />
+              Launch Full Preview
+            </Button>
+          </PatternCard>
+
+          {navPreviewOpen && (
+            <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+              <AppBackground />
+
+              <button
+                onClick={() => setNavPreviewOpen(false)}
+                className="fixed flex items-center gap-[6px] rounded-[6px]"
+                style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-surface-error-default)", color: "var(--color-surface-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+              >
+                <LucideIcons.X size={12} />
+                Close Preview
+              </button>
+
+              {/* Layer badge */}
+              <div className="fixed flex items-center gap-[8px]"
+                style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001, background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 20, padding: "5px 14px", fontSize: 11 }}>
+                <span style={{ color: "var(--field-supporting)" }}>Tab:</span>
+                <span style={{ fontWeight: 700, color: "var(--primary)" }}>{stTab}</span>
+                {stTab === "all" && (
+                  <>
+                    <span style={{ color: "var(--field-border)" }}>|</span>
+                    <span style={{ color: "var(--field-supporting)" }}>View:</span>
+                    <span style={{ fontWeight: 700, color: "var(--primary)" }}>{swTab}</span>
+                  </>
+                )}
+              </div>
+
+              <Topbar
+                workspaceName={PREVIEW_WORKSPACES.find(w => w.id === navWorkspaceId)?.name ?? "Product Design"}
+                companyName="AIMS OS"
+                userName="Michael O."
+                userEmail="michael@aimsos.ai"
+                workspaces={PREVIEW_WORKSPACES}
+                selectedWorkspaceId={navWorkspaceId}
+                onWorkspaceSelect={setNavWorkspaceId}
+                actions={[
+                  { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
+                  { icon: <LucideIcons.Bell size={16} />, label: "Notifications" },
+                  { icon: <LucideIcons.Settings size={16} />, label: "Settings" },
+                ]}
+              />
+
+              <div className="flex flex-1 overflow-hidden">
+                <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId="contacts" defaultCollapsed={true} />
+
+                <div className="flex flex-col flex-1 overflow-hidden">
+                  {/* Header + Nav layers — sticky, 3-state compression */}
+                  <div
+                    className="sticky top-0 z-10"
+                    onMouseEnter={() => {
+                      if (ndScrolled && !ndHoverTimer.current) {
+                        ndHoverTimer.current = setTimeout(() => { setNdHFiltersVisible(true); ndHoverTimer.current = null }, 800)
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      if (ndHoverTimer.current) { clearTimeout(ndHoverTimer.current); ndHoverTimer.current = null }
+                      if (ndOpenSlot === null) setNdHFiltersVisible(false)
+                    }}
+                  >
+                    {ndScrolled && (
+                      <div aria-hidden="true" style={{
+                        position: "absolute", top: 0, left: 0, right: 0,
+                        height: "calc(100% + 32px)",
+                        background: (ndHFiltersVisible || ndOpenSlot !== null)
+                          ? "linear-gradient(to bottom, var(--canvas) 0%, var(--canvas) 85%, transparent 100%)"
+                          : "linear-gradient(to bottom, var(--canvas) 0%, var(--canvas) 65%, transparent 100%)",
+                        zIndex: -1, pointerEvents: "none", transition: "background 200ms ease-in-out",
+                      }} />
+                    )}
+                  <Header
+                    size={ndScrolled ? "compress" : "size-l"}
+                    title="AI Workers"
+                    description="Manage and monitor your AI workers across all categories."
+                    tag={<Tag variant="success" size="sm">24 Active</Tag>}
+                    primaryAction={
+                      <Button variant="main" size="sm">
+                        <LucideIcons.Plus size={13} /> New Worker
+                      </Button>
+                    }
+                    secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                    style={{ transition: "padding 200ms ease-in-out" }}
+                  />
+
+                  {/* Layer 1 — Tabs (hidden when compressed) */}
+                  {!ndScrolled && (
+                  <div className="shrink-0" style={{ paddingLeft: 32, paddingRight: 32 }}>
+                    <Tabs items={mainTabs} activeId={stTab} onChange={setStTab} />
+                  </div>
+                  )}
+
+                  {/* Layer 2 — SwitchTab (only on All Workers tab, hidden when compressed) */}
+                  {stTab === "all" && !ndScrolled && (
+                    <div className="shrink-0 flex items-center gap-[12px]" style={{ padding: "12px 32px 0" }}>
+                      <SwitchTab items={subItems} value={swTab} onChange={setSwTab} size="s" />
+                    </div>
+                  )}
+
+                  {/* Layer 3 — Filters animate in/out */}
+                  <div style={{
+                    maxHeight: (!ndScrolled || ndHFiltersVisible || ndOpenSlot !== null) ? 64 : 0,
+                    opacity:   (!ndScrolled || ndHFiltersVisible || ndOpenSlot !== null) ? 1 : 0,
+                    overflow: "hidden",
+                    transition: "max-height 220ms ease-in-out, opacity 180ms ease-in-out",
+                    borderBottom: ndHFiltersVisible ? "0.5px solid var(--field-border)" : "none",
+                  }}>
+                  <div
+                    className="shrink-0"
+                    style={{ padding: "12px 32px 0" }}
+                    onClickCapture={(e: React.MouseEvent) => {
+                      const btn = (e.target as HTMLElement).closest('button')
+                      const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                      const left = btn ? btn.getBoundingClientRect().left : e.clientX
+                      setNdDropdownAnchor({ left, top: containerRect.bottom })
+                    }}
+                  >
+                    <Filters
+                      showSearch
+                      searchPlaceholder={stTab === "all" ? "Search workers..." : "Search teams..."}
+                      slots={[
+                        {
+                          placeholder: "Status",
+                          value: ndFilterStatus ?? undefined,
+                          onOpen:   () => setNdOpenSlot(prev => prev === "Status" ? null : "Status"),
+                          onRemove: () => { setNdFilterStatus(null); setNdOpenSlot(null) },
+                        },
+                        {
+                          placeholder: "Category",
+                          value: ndFilterCategory ?? undefined,
+                          onOpen:   () => setNdOpenSlot(prev => prev === "Category" ? null : "Category"),
+                          onRemove: () => { setNdFilterCategory(null); setNdOpenSlot(null) },
+                        },
+                      ]}
+                      showAllFilters
+                      showViewToggle
+                    />
+                  </div>
+                  </div>
+                  </div>
+                  {/* Filter dropdown — position: fixed, aligned to click position */}
+                  {ndOpenSlot !== null && ndDropdownAnchor !== null && (() => {
+                    const ND_OPTS: Record<string, string[]> = {
+                      Status:   ["Published", "Processing", "Draft"],
+                      Category: ["Analytics", "CX", "Operations", "Research", "Validation"],
+                    }
+                    const opts = ND_OPTS[ndOpenSlot] ?? []
+                    const curVal = ndOpenSlot === "Status" ? ndFilterStatus : ndFilterCategory
+                    return (
+                      <>
+                        <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setNdOpenSlot(null)} />
+                        <div className="flex flex-col overflow-hidden" style={{
+                          position: "fixed", left: ndDropdownAnchor.left, top: ndDropdownAnchor.top + 4, zIndex: 10001,
+                          background: "var(--menu-bg)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+                          border: "0.5px solid var(--field-border)", borderRadius: 8, minWidth: 200,
+                          boxShadow: "var(--shadow-elevation-3)",
+                        }}>
+                          <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>{ndOpenSlot}</span>
+                          </div>
+                          {opts.map(opt => {
+                            const isSel = curVal === opt
+                            return (
+                              <button key={opt} className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full"
+                                style={{ background: isSel ? "var(--color-surface-primary-subtle)" : "transparent", color: isSel ? "var(--primary)" : "var(--foreground)", fontWeight: isSel ? 600 : 400, fontSize: 13 }}
+                                onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "var(--color-surface-neutral-default)" }}
+                                onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent" }}
+                                onClick={() => {
+                                  if (ndOpenSlot === "Status") setNdFilterStatus(opt)
+                                  else setNdFilterCategory(opt)
+                                  setNdOpenSlot(null)
+                                }}>
+                                <span className="flex-1">{opt}</span>
+                                {isSel && <LucideIcons.Check size={13} style={{ flexShrink: 0 }} />}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )
+                  })()}
+
+                  {/* Navigation sub-category chips — BELOW Filters per Figma spec, 24px from filters */}
+                  {stTab === "all" && (
+                    <div className="shrink-0 flex items-center gap-[6px] flex-wrap" style={{ padding: "24px 32px 12px" }}>
+                      {["All", "Analytics", "Operations", "Research", "CX", "Validation"].map(cat => (
+                        <Chip
+                          key={cat}
+                          variant={ndNavChip === cat ? "primary" : "secondary"}
+                          size="s"
+                          onClick={() => setNdNavChip(cat)}
+                        >
+                          {cat}
+                        </Chip>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Content area — Pagination floats absolute at bottom */}
+                  <div className="flex-1 relative overflow-hidden">
+                    <div ref={ndScrollRef} className="h-full overflow-y-auto" style={{ padding: "12px 32px 64px" }}>
+                      {stTab === "all" && (
+                        <div className="flex flex-col gap-[12px]">
+                          {MEMBER_ENTITY_ITEMS.map(item => (
+                            <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+                              <EntityList items={[{
+                                ...item,
+                                actions: [
+                                  ...(item.actions ?? []),
+                                  { label: "Preview", icon: "Eye", variant: "tertiary" as const, onClick: () => setNdItemSlideoutId(item.id) },
+                                ],
+                              }]} />
+                            </CardContainer>
+                          ))}
+                        </div>
+                      )}
+                      {stTab === "teams" && (
+                        <div className="flex flex-col items-center justify-center" style={{ height: 260, color: "var(--field-supporting)", fontSize: 13 }}>
+                          <LucideIcons.Users size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
+                          Teams view — different structure under same Tabs context
+                        </div>
+                      )}
+                    </div>
+                    {/* Pagination floats over entity list */}
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+                      <Pagination
+                        currentPage={ndPage}
+                        totalItems={24}
+                        itemsPerPage={ndPerPage}
+                        onPageChange={setNdPage}
+                        onItemsPerPageChange={n => { setNdPerPage(n); setNdPage(1) }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Item preview SlideOut */}
+          {(() => {
+            const ndPreviewItem = MEMBER_ENTITY_ITEMS.find(i => i.id === ndItemSlideoutId)
+            return (
+              <SlideOut
+                open={ndItemSlideoutId !== null}
+                onClose={() => setNdItemSlideoutId(null)}
+                title={ndPreviewItem?.title ?? "Item Preview"}
+                subtitle={ndPreviewItem?.description ?? ""}
+                type="with-variants"
+                size="m"
+              >
+                {ndPreviewItem && (
+                  <div className="flex flex-col gap-[20px] p-[24px]">
+                    <div className="flex flex-col gap-[8px]">
+                      <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>Status</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>{ndPreviewItem.state?.label ?? "—"}</span>
+                    </div>
+                    {ndPreviewItem.aiInsight && (
+                      <div className="flex flex-col gap-[8px]">
+                        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>AI Summary</span>
+                        <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
+                          {Array.isArray(ndPreviewItem.aiInsight.detail) ? ndPreviewItem.aiInsight.detail.join(" ") : ndPreviewItem.aiInsight.detail}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </SlideOut>
+            )
+          })()}
+
+          <PatternCard>
+            <SectionLabel>Compact Demo — Layer Structure</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <div className="flex flex-col gap-[4px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Layer 1 — Tabs (Where am I?)</span>
+                <Tabs items={mainTabs} activeId={stTab} onChange={setStTab} />
+              </div>
+              {stTab === "all" && (
+                <div className="flex flex-col gap-[4px] pl-[2px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Layer 2 — SwitchTab (How am I viewing?)</span>
+                  <SwitchTab items={subItems} value={swTab} onChange={setSwTab} size="s" />
+                </div>
+              )}
+              <div className="flex flex-col gap-[4px] pl-[2px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Layer 3 — Filters (What subset?)</span>
+                <Filters showSearch slots={[{ placeholder: "Status" }]} showAllFilters />
+              </div>
+              <div className="p-[12px] rounded-[6px] text-[13px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)", color: "var(--field-supporting)" }}>
+                Entity List — {stTab} / {swTab} view
+              </div>
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Technical Spec (from Figma)</SectionLabel>
+            <PatternRules code={`MULTIPLE_SUBMENU_TABS — EDGE CASE
+
+USE ONLY when ALL conditions are true:
+  content requires clear separation between sections (Tabs)
+  each section contains mutually exclusive sub-views (SwitchTab)
+  dataset is large and requires filtering (Filters)
+
+BEHAVIOR_GUIDELINES
+  Tabs        → define the main context of the page
+  Switch Tabs → define mutually exclusive sub-views within that context
+  Filters     → refine the visible dataset (do not change structure)
+
+RESTRICTIONS
+  max navigation layers = 2 (Tabs + SwitchTab)
+  additional complexity → handled through Filters
+  Chips: only for active filter display or high-frequency quick actions
+  DO NOT add navigation patterns beyond this structure
+
+WHEN_TO_AVOID
+  IF dataset understandable without segmentation → use Filters only
+  IF filters alone solve the use case → no nav layers needed
+  IF multiple layers create cognitive overload → simplify to 1 layer
+  IF any layer does not introduce meaningful differentiation → remove it
+
+KEY_PRINCIPLE
+  Tabs      → Where am I?
+  SwitchTab → How am I viewing this?
+  Filters   → What subset am I seeing?
+  Each layer answers a DIFFERENT question`} />
+          </PatternCard>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternLoadingPage ────────────────────────────────────────────────────────
+
+function PatternLoadingPage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Loading States</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          Three distinct loading indicators, each suited to a specific situation. Using the wrong one creates false expectations about wait time and content structure.
+        </p>
+      </div>
+
+      <PatternTabRow tab={tab} setTab={setTab} />
+
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Decision Table</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--table-border)" }}>{["Situation", "Use this", "Why"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}</tr></thead>
+                <tbody>
+                  {[
+                    ["Duration unknown (API call, AI processing)", "Spinner", "Signals indeterminate wait — user can't know how long"],
+                    ["Progress percentage is known (file upload)", "Progress Bar", "User sees meaningful progress, reduces anxiety"],
+                    ["Content structure is known (list, cards)", "Skeleton Loader", "Preserves layout expectation, reduces perceived load time"],
+                    ["Action completes in < 300ms", "Nothing", "Too fast to perceive — adding indicator creates visual noise"],
+                    ["Global page load or route transition", "Spinner (top bar)", "Single global indicator, not per-section"],
+                  ].map(([sit, use, why]) => (
+                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
+                      <td className="px-[12px] py-[10px] font-semibold" style={{ color: "var(--primary)" }}>{use}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{why}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Golden Rules</SectionLabel>
+            <div className="flex flex-col gap-[6px]">
+              {[
+                "Only ONE loading indicator per view at any time — never stack multiple.",
+                "Never show a loading indicator for actions that complete in under 300ms.",
+                "Use Spinner for AI-driven operations — the model's response time is always unknown.",
+                "Use Progress Bar only when you can meaningfully report progress in real-time.",
+                "Use Skeleton Loader when the content layout is predictable (tables, card lists).",
+              ].map((rule, i) => (
+                <div key={i} className="flex gap-[8px] p-[10px] rounded-[6px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: "var(--primary)" }}>→</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{rule}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Spinner */}
+          <PatternCard>
+            <SectionLabel>Spinner — Indeterminate Loading</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">Use when duration is unknown: API calls, AI processing, route transitions. Only one spinner per view.</p>
+
+            {/* All 6 styles at size M */}
+            <div className="flex flex-col gap-[8px] mb-[20px]">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">All styles — size M</span>
+              <div className="flex items-center gap-[24px] flex-wrap p-[16px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                {(["primary", "success", "alert", "error", "informative", "bw"] as const).map(s => (
+                  <div key={s} className="flex flex-col items-center gap-[8px]">
+                    <Spinner style={s} size="m" />
+                    <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* All 5 sizes at primary */}
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">All sizes — primary</span>
+              <div className="flex items-end gap-[24px] flex-wrap p-[16px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                {(["xs", "s", "m", "l", "xl"] as const).map(sz => (
+                  <div key={sz} className="flex flex-col items-center gap-[8px]">
+                    <Spinner style="primary" size={sz} />
+                    <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>{sz}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </PatternCard>
+
+          {/* Progress Bar */}
+          <PatternCard>
+            <SectionLabel>Progress Bar — Determinate Loading</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)]">Use when progress % is known and can be updated in real time. 4 semantic styles map to operation state.</p>
+            <div className="flex flex-col gap-[14px]">
+              {([
+                ["primary",  "Primary",  "File upload in progress — general default",     72],
+                ["success",  "Success",  "Completing successfully — swap for done state",  90],
+                ["error",    "Error",    "Operation failed — threshold crossed",            45],
+                ["alert",    "Alert",    "Warning — storage approaching limit (88%)",       88],
+              ] as const).map(([style, label, desc, val]) => (
+                <div key={style} className="flex gap-[12px] items-center">
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", width: 60, flexShrink: 0 }}>{label}</span>
+                  <div style={{ flex: 1 }}>
+                    <div className="flex items-center justify-between mb-[5px]">
+                      <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>{desc}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--primary)" }}>{val}%</span>
+                    </div>
+                    <ProgressBar value={val} style={style} size="m" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          {/* Skeleton Loader */}
+          <PatternCard>
+            <SectionLabel>Skeleton Loader — Entity List Structure</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Use when content structure is known and predictable. Prevents layout flash and reduces perceived load time.
+            </p>
+
+            {/* 3 shapes */}
+            <div className="flex flex-col gap-[8px] mb-[20px]">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Shapes</span>
+              <div className="flex items-center gap-[32px] flex-wrap p-[16px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                {([
+                  { shape: "rectangle", label: "Rectangle",  w: 120, h: 20 },
+                  { shape: "circle",    label: "Circle",     w: 40,  h: 40 },
+                  { shape: "text",      label: "Text",       w: 160, h: 12 },
+                ] as const).map(({ shape, label, w, h }) => (
+                  <div key={shape} className="flex flex-col items-start gap-[8px]">
+                    <Skeleton shape={shape} width={w} height={h} />
+                    <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Entity list loading simulation */}
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Entity list — loading state</span>
+              <div className="flex flex-col gap-[10px]">
+                {[70, 55, 85].map((w, i) => (
+                  <CardContainer key={i} size="sm">
+                    <div className="flex items-center gap-[12px]" style={{ padding: "10px 16px" }}>
+                      <Skeleton shape="circle" width={32} height={32} />
+                      <div className="flex flex-col gap-[6px] flex-1">
+                        <Skeleton shape="text" width={`${w}%`} height={11} />
+                        <Skeleton shape="text" width={`${w - 20}%`} height={9} />
+                      </div>
+                      <Skeleton shape="rectangle" width={56} height={22} />
+                    </div>
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Loading Pattern Rules</SectionLabel>
+            <PatternRules code={`LOADING_STATES_PATTERN
+
+INDICATOR_SELECTION
+  duration_unknown  = true → USE Spinner
+  progress_%_known  = true → USE Progress Bar
+  layout_known      = true → USE Skeleton Loader
+  duration < 300ms         → SHOW nothing
+
+CONSTRAINTS
+  max_simultaneous_indicators = 1
+  (one per view — never stack multiple)
+
+SPINNER_RULES
+  use for: AI processing, API calls, unknown-duration waits
+  do NOT use when progress % is available
+
+PROGRESS_BAR_RULES
+  requires real-time progress data (0–100%)
+  on_complete (100%) → replace with success state or content
+  style selection:
+    Primary   → general loading (default)
+    Success   → operation completing successfully
+    Error     → threshold crossed or operation failed
+    Alert     → warning threshold approaching
+
+SKELETON_RULES
+  use only when content layout is predictable
+  match skeleton structure to actual content shape
+  do NOT use for forms or dynamic layouts
+  replace with real content as soon as data is available
+
+THRESHOLD
+  IF action_duration < 300ms → suppress indicator entirely
+  rationale: imperceptible duration; indicator would cause visual flash`} />
+          </PatternCard>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternFeedbackPage ───────────────────────────────────────────────────────
+
+function PatternFeedbackPage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+  const [feedbackDemo, setFeedbackDemo] = useState<"success" | "error" | "alert" | null>(null)
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Feedback & Alerts</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          How to communicate system state, action results, and errors to users. The right feedback mechanism matches the urgency and persistence of the message.
+        </p>
+      </div>
+
+      <PatternTabRow tab={tab} setTab={setTab} />
+
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Decision Table</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--table-border)" }}>{["Situation", "Pattern", "Component"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}</tr></thead>
+                <tbody>
+                  {[
+                    ["Error blocks the entire workflow", "Blocking overlay", "Modal (Confirmation)"],
+                    ["Persistent informational state in context", "Inline banner", "AlertBanner (Informative)"],
+                    ["Persistent warning in context", "Inline banner", "AlertBanner (Alert)"],
+                    ["Action resulted in error (non-blocking)", "Inline banner", "AlertBanner (Error)"],
+                    ["Action succeeded (non-blocking)", "Inline banner", "AlertBanner (Success)"],
+                    ["Form field validation failed", "Inline error under field", "Input / Textarea (error state)"],
+                    ["Ephemeral success / info after action", "Toast (when available)", "AlertBanner (auto-dismiss)"],
+                  ].map(([sit, pat, comp]) => (
+                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{pat}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{comp}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Use AlertBanner for persistent states — it stays in the layout and doesn't auto-dismiss unless intended." },
+                { type: "dont", text: "Don't use overlays (Modal, Slide-out) to deliver non-critical informational messages." },
+                { type: "do",   text: "Keep field-level errors inline (under the field) — never in a global banner." },
+                { type: "dont", text: "Don't stack multiple AlertBanners for the same event — use one banner with the most specific message." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>AlertBanner — Interactive States</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[14px]">Trigger each state to preview how AlertBanner communicates system feedback in context.</p>
+            <div className="flex flex-wrap gap-[8px] mb-[16px]">
+              <Button size="sm" variant={feedbackDemo === "success" ? "primary" : "secondary"} onClick={() => setFeedbackDemo("success")}>
+                <LucideIcons.CheckCircle size={12} />
+                Success
+              </Button>
+              <Button size="sm" variant={feedbackDemo === "error" ? "primary" : "secondary"} onClick={() => setFeedbackDemo("error")}>
+                <LucideIcons.XCircle size={12} />
+                Error
+              </Button>
+              <Button size="sm" variant={feedbackDemo === "alert" ? "primary" : "secondary"} onClick={() => setFeedbackDemo("alert")}>
+                <LucideIcons.AlertTriangle size={12} />
+                Alert
+              </Button>
+              {feedbackDemo !== null && (
+                <Button size="sm" variant="tertiary" onClick={() => setFeedbackDemo(null)}>
+                  <LucideIcons.X size={12} />
+                  Dismiss
+                </Button>
+              )}
+            </div>
+            {feedbackDemo === null && (
+              <div className="flex items-center justify-center p-[20px] rounded-[6px]" style={{ border: "0.5px dashed var(--field-border)", color: "var(--field-supporting)", fontSize: 12 }}>
+                Select a state above to preview
+              </div>
+            )}
+            {feedbackDemo === "success" && (
+              <AlertBanner state="success" title="Changes saved successfully" description="Your workspace settings have been updated. All members will see the changes immediately." />
+            )}
+            {feedbackDemo === "error" && (
+              <AlertBanner state="error" title="Failed to save changes" description="Unable to reach the server. Check your connection and try again." />
+            )}
+            {feedbackDemo === "alert" && (
+              <AlertBanner state="alert" title="Storage approaching limit" description="Your workspace is at 88% capacity. Consider removing unused files or upgrading your plan." />
+            )}
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>AlertBanner — All States Reference</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <AlertBanner state="success" title="Success" description='Action completed. "Record saved", "Export ready", "Changes applied".' />
+              <AlertBanner state="alert" title="Alert" description="Warning. Something needs attention before it becomes a problem." />
+              <AlertBanner state="error" title="Error" description="Action failed or a critical threshold was reached." />
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Feedback Placement Hierarchy</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <div className="flex flex-col gap-[4px] p-[12px] rounded-[6px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>1. Page level (top of content)</div>
+                <WireBlock label="AlertBanner: persistent context message" h={36} flex={1} />
+              </div>
+              <div className="flex flex-col gap-[4px] p-[12px] rounded-[6px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>2. Section level (within a card or section)</div>
+                <WireBlock label="AlertBanner: scoped to this section" h={36} flex={1} />
+              </div>
+              <div className="flex flex-col gap-[4px] p-[12px] rounded-[6px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>3. Field level (inline under the input)</div>
+                <div className="flex flex-col gap-[4px]">
+                  <WireBlock label="Input field" h={36} />
+                  <span className="text-[11px]" style={{ color: "var(--color-surface-error-default)" }}>✕ This field is required</span>
+                </div>
+              </div>
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Feedback Pattern Rules</SectionLabel>
+            <PatternRules code={`FEEDBACK_ALERTS_PATTERN
+
+PRIORITY_HIERARCHY
+  CRITICAL (blocking)     → Modal (ModalDialog)
+  PERSISTENT (contextual) → AlertBanner
+  FIELD_VALIDATION        → Inline error under field
+  EPHEMERAL (transient)   → Toast (use AlertBanner until Toast built)
+
+ALERT_BANNER_USAGE
+  state=informative → general info, tips, non-critical system notices
+  state=success     → action completed successfully
+  state=alert       → warning requiring attention (not yet critical)
+  state=error       → action failed OR error threshold reached
+
+  placement rules:
+    page-level   → top of main content area
+    section-level → inside a card or section that caused the event
+    never global for field-level errors
+
+FIELD_ERRORS
+  always inline (under the field, in Input/Textarea error state)
+  do NOT use AlertBanner for single-field validation errors
+  trigger: on blur OR on submit attempt
+
+MODAL_FOR_FEEDBACK (when appropriate)
+  IF error requires user decision to proceed → USE Modal
+  IF action is irreversible → USE confirmation Modal
+  do NOT use Modal for informational-only messages
+
+STACKING_RULES
+  max AlertBanners per section = 1
+  IF multiple events → use most specific/critical message only
+  never stack overlapping feedback for the same trigger
+
+TOAST (when available)
+  use for: transient success after non-blocking action
+  auto-dismiss: 3–5 seconds
+  do NOT use for errors that require user action
+  current workaround: AlertBanner with auto-dismiss behavior`} />
+          </PatternCard>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternLogsPage — data & types ────────────────────────────────────────────
+
+type RunStatus   = "Success" | "Partial" | "Failed" | "Auth error" | "Timeout" | "Retrying" | "Waiting"
+type TriggerType = "clock" | "zap" | "play"
+type StepStatus  = "completed" | "warning" | "failed" | "running"
+type AiIcon      = "check" | "warning" | "error" | "retry" | "clock"
+
+interface RunEntry {
+  id:             string
+  run:            string
+  trigger:        TriggerType
+  triggerName:    string
+  status:         RunStatus
+  started:        string
+  duration:       string
+  stepsCompleted: number
+  stepsTotal:     number
+  stepStatus:     StepStatus
+  stepAt:         string
+  aiSummary:      string
+  aiIcon:         AiIcon
+}
+
+const RUN_STATUS_TAG: Record<RunStatus, TagVariant> = {
+  "Success":    "success",
+  "Partial":    "alert",
+  "Failed":     "error",
+  "Auth error": "error",
+  "Timeout":    "alert",
+  "Retrying":   "informative",
+  "Waiting":    "yellow",
+}
+
+const DURATION_COLOR: Record<RunStatus, string> = {
+  "Success":    "var(--tag-success-fg)",
+  "Partial":    "var(--tag-alert-fg)",
+  "Failed":     "var(--tag-error-fg)",
+  "Auth error": "var(--tag-error-fg)",
+  "Timeout":    "var(--tag-alert-fg)",
+  "Retrying":   "var(--table-cell-text)",
+  "Waiting":    "var(--table-cell-text)",
+}
+
+const STEP_DETAIL_LABEL: Record<StepStatus, string> = {
+  completed: "Completed:",
+  warning:   "Completed with Warnings:",
+  failed:    "Failed at:",
+  running:   "At:",
+}
+
+const STEP_DETAIL_COLOR: Record<StepStatus, string> = {
+  completed: "var(--tag-success-fg)",
+  warning:   "var(--tag-alert-fg)",
+  failed:    "var(--tag-error-fg)",
+  running:   "var(--primary)",
+}
+
+const RUNS_DATA: RunEntry[] = [
+  { id:"R01", run:"#RN-8841", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Success",    started:"Today · 9:00 AM",       duration:"4m 12s",  stepsCompleted:8, stepsTotal:8, stepStatus:"completed", stepAt:"Send Offer",           aiSummary:"Process completed successfully",                    aiIcon:"check"   },
+  { id:"R02", run:"#RN-8841", trigger:"zap",   triggerName:"Deal Closed",          status:"Partial",    started:"Today · 8:45 AM",       duration:"2m 44s",  stepsCompleted:7, stepsTotal:8, stepStatus:"warning",   stepAt:"Send Offer",           aiSummary:"Some steps were completed with warnings",            aiIcon:"warning" },
+  { id:"R03", run:"#RN-8841", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Failed",     started:"Yesterday · 9:00 AM",   duration:"1m 02s",  stepsCompleted:3, stepsTotal:8, stepStatus:"failed",    stepAt:"Enrich Lead",          aiSummary:"Process failed during lead enrichment",              aiIcon:"error"   },
+  { id:"R04", run:"#RN-8841", trigger:"zap",   triggerName:"Deal Closed",          status:"Auth error", started:"Yesterday · 2:00 PM",   duration:"0m 08s",  stepsCompleted:1, stepsTotal:8, stepStatus:"failed",    stepAt:"Sync CRM",             aiSummary:"Authentication error prevented completion",          aiIcon:"error"   },
+  { id:"R05", run:"#RN-8815", trigger:"play",  triggerName:"Carlos M",             status:"Partial",    started:"Mar 29 · 9:00 AM",      duration:"6m 30s",  stepsCompleted:5, stepsTotal:8, stepStatus:"failed",    stepAt:"Sync Score Account",   aiSummary:"Some steps were completed with warnings",            aiIcon:"warning" },
+  { id:"R06", run:"#RN-8841", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Timeout",    started:"Mar 25 · 8:00 AM",      duration:"15m 20s", stepsCompleted:5, stepsTotal:8, stepStatus:"failed",    stepAt:"Score Renewals",       aiSummary:"Process took too long and was stopped",              aiIcon:"warning" },
+  { id:"R07", run:"#RN-8841", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Retrying",   started:"Today · 9:05 AM",       duration:"3m 10s",  stepsCompleted:3, stepsTotal:8, stepStatus:"running",   stepAt:"Enrich Lead",          aiSummary:"Retrying failed step automatically",                 aiIcon:"retry"   },
+  { id:"R08", run:"#RN-8841", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Waiting",    started:"Today · 7:30 AM",       duration:"5m 02s",  stepsCompleted:3, stepsTotal:8, stepStatus:"running",   stepAt:"Payment Confirmation", aiSummary:"Waiting for next step to continue",                  aiIcon:"clock"   },
+  { id:"R09", run:"#RN-8843", trigger:"zap",   triggerName:"Deal Closed",          status:"Success",    started:"Mar 28 · 10:15 AM",     duration:"3m 55s",  stepsCompleted:8, stepsTotal:8, stepStatus:"completed", stepAt:"Send Offer",           aiSummary:"Process completed successfully",                    aiIcon:"check"   },
+  { id:"R10", run:"#RN-8840", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Success",    started:"Mar 28 · 9:00 AM",      duration:"4m 01s",  stepsCompleted:8, stepsTotal:8, stepStatus:"completed", stepAt:"Send Offer",           aiSummary:"Process completed successfully",                    aiIcon:"check"   },
+  { id:"R11", run:"#RN-8839", trigger:"play",  triggerName:"Sarah K",              status:"Partial",    started:"Mar 27 · 3:00 PM",      duration:"2m 18s",  stepsCompleted:6, stepsTotal:8, stepStatus:"warning",   stepAt:"Update HubSpot",       aiSummary:"Some steps were completed with warnings",            aiIcon:"warning" },
+  { id:"R12", run:"#RN-8838", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Failed",     started:"Mar 27 · 9:00 AM",      duration:"0m 44s",  stepsCompleted:2, stepsTotal:8, stepStatus:"failed",    stepAt:"Fetch Account Data",   aiSummary:"Process failed during account data fetch",           aiIcon:"error"   },
+  { id:"R13", run:"#RN-8837", trigger:"zap",   triggerName:"Contract Signed",      status:"Success",    started:"Mar 26 · 11:30 AM",     duration:"5m 07s",  stepsCompleted:8, stepsTotal:8, stepStatus:"completed", stepAt:"Send Offer",           aiSummary:"Process completed successfully",                    aiIcon:"check"   },
+  { id:"R14", run:"#RN-8836", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Timeout",    started:"Mar 26 · 8:00 AM",      duration:"12m 45s", stepsCompleted:4, stepsTotal:8, stepStatus:"failed",    stepAt:"Score Renewals",       aiSummary:"Process took too long and was stopped",              aiIcon:"warning" },
+  { id:"R15", run:"#RN-8835", trigger:"play",  triggerName:"Mike R",               status:"Success",    started:"Mar 25 · 2:15 PM",      duration:"3m 33s",  stepsCompleted:8, stepsTotal:8, stepStatus:"completed", stepAt:"Send Offer",           aiSummary:"Process completed successfully",                    aiIcon:"check"   },
+  { id:"R16", run:"#RN-8834", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Auth error", started:"Mar 24 · 9:00 AM",      duration:"0m 12s",  stepsCompleted:1, stepsTotal:8, stepStatus:"failed",    stepAt:"Sync CRM",             aiSummary:"Authentication error prevented completion",          aiIcon:"error"   },
+  { id:"R17", run:"#RN-8833", trigger:"zap",   triggerName:"Deal Closed",          status:"Partial",    started:"Mar 23 · 4:00 PM",      duration:"3m 22s",  stepsCompleted:6, stepsTotal:8, stepStatus:"warning",   stepAt:"Enrich Lead",          aiSummary:"Some steps were completed with warnings",            aiIcon:"warning" },
+  { id:"R18", run:"#RN-8832", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Success",    started:"Mar 23 · 9:00 AM",      duration:"4m 48s",  stepsCompleted:8, stepsTotal:8, stepStatus:"completed", stepAt:"Send Offer",           aiSummary:"Process completed successfully",                    aiIcon:"check"   },
+  { id:"R19", run:"#RN-8831", trigger:"play",  triggerName:"Ana L",                status:"Failed",     started:"Mar 22 · 1:00 PM",      duration:"1m 30s",  stepsCompleted:4, stepsTotal:8, stepStatus:"failed",    stepAt:"Update HubSpot",       aiSummary:"Process failed during HubSpot update",               aiIcon:"error"   },
+  { id:"R20", run:"#RN-8830", trigger:"clock", triggerName:"Daily 9:00 AM",       status:"Success",    started:"Mar 22 · 9:00 AM",      duration:"4m 15s",  stepsCompleted:8, stepsTotal:8, stepStatus:"completed", stepAt:"Send Offer",           aiSummary:"Process completed successfully",                    aiIcon:"check"   },
+]
+
+// ── PatternLogsPage ───────────────────────────────────────────────────────────
+
+function PatternLogsPage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+  const [previewOpen, setPreviewOpen]         = useState(false)
+  const [logSlide, setLogSlide]               = useState<RunEntry | null>(null)
+  const [logsFiltersOpen, setLogsFiltersOpen] = useState(false)
+  const [statusFilter, setStatusFilter]       = useState<RunStatus | null>(null)
+  const [searchQuery, setSearchQuery]         = useState("")
+  const [statusDropOpen, setStatusDropOpen]   = useState(false)
+  const [dropAnchor, setDropAnchor]           = useState<{ left: number; top: number } | null>(null)
+  const [currentPage, setCurrentPage]         = useState(1)
+  const [perPage, setPerPage]                 = useState(5)
+  const [headerCompressed, setHeaderCompressed] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!previewOpen) { setHeaderCompressed(false); return }
+    const el = scrollRef.current
+    if (!el) return
+    const handler = () => setHeaderCompressed(el.scrollTop > 16)
+    el.addEventListener("scroll", handler)
+    return () => el.removeEventListener("scroll", handler)
+  }, [previewOpen])
+
+  useEffect(() => { setCurrentPage(1) }, [statusFilter, searchQuery])
+
+  const filteredLogs = useMemo(() => RUNS_DATA.filter(r => {
+    if (statusFilter && r.status !== statusFilter) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      if (!r.run.toLowerCase().includes(q) && !r.triggerName.toLowerCase().includes(q) && !r.stepAt.toLowerCase().includes(q)) return false
+    }
+    return true
+  }), [statusFilter, searchQuery])
+
+  const paginatedLogs = useMemo(() => {
+    const start = (currentPage - 1) * perPage
+    return filteredLogs.slice(start, start + perPage)
+  }, [filteredLogs, currentPage, perPage])
+
+  const TriggerIcon = ({ type }: { type: TriggerType }) => {
+    if (type === "clock") return <LucideIcons.Clock size={13} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />
+    if (type === "zap")   return <LucideIcons.Zap   size={13} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />
+    return                       <LucideIcons.Play  size={13} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />
+  }
+
+  const StepIcon = ({ s }: { s: StepStatus }) => {
+    if (s === "completed") return <LucideIcons.CheckCircle2  size={13} style={{ color: "var(--tag-success-fg)",  flexShrink: 0 }} />
+    if (s === "warning")   return <LucideIcons.AlertTriangle size={13} style={{ color: "var(--tag-alert-fg)",    flexShrink: 0 }} />
+    if (s === "failed")    return <LucideIcons.XCircle       size={13} style={{ color: "var(--tag-error-fg)",    flexShrink: 0 }} />
+    return                        <LucideIcons.PauseCircle   size={13} style={{ color: "var(--primary)",         flexShrink: 0 }} />
+  }
+
+  const AISummaryIcon = ({ icon }: { icon: AiIcon }) => {
+    if (icon === "check")   return <LucideIcons.CheckCircle2  size={13} style={{ color: "var(--tag-success-fg)", flexShrink: 0 }} />
+    if (icon === "warning") return <LucideIcons.AlertTriangle size={13} style={{ color: "var(--tag-alert-fg)",   flexShrink: 0 }} />
+    if (icon === "error")   return <LucideIcons.XCircle       size={13} style={{ color: "var(--tag-error-fg)",   flexShrink: 0 }} />
+    if (icon === "retry")   return <LucideIcons.RefreshCw     size={13} style={{ color: "var(--primary)",        flexShrink: 0 }} />
+    return                         <LucideIcons.Clock         size={13} style={{ color: "var(--tag-success-fg)", flexShrink: 0 }} />
+  }
+
+  const logsColumns: TableColumn<RunEntry>[] = [
+    {
+      key: "run", header: "Run", width: "180px",
+      render: (row) => (
+        <div className="flex items-start gap-[8px]">
+          <TriggerIcon type={row.trigger} />
+          <div className="flex flex-col gap-[1px]">
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--table-cell-text)", fontFamily: "monospace" }}>{row.run}</span>
+            <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{row.triggerName}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "status", header: "Status", width: "128px",
+      render: (row) => <Tag variant={RUN_STATUS_TAG[row.status]} size="sm">{row.status}</Tag>,
+    },
+    {
+      key: "started", header: "Started", width: "160px",
+      render: (row) => (
+        <span style={{ fontSize: 12, color: "var(--table-cell-text)" }}>{row.started}</span>
+      ),
+    },
+    {
+      key: "duration", header: "Duration", width: "100px",
+      render: (row) => (
+        <span style={{ fontSize: 12, fontWeight: 500, color: DURATION_COLOR[row.status] }}>{row.duration}</span>
+      ),
+    },
+    {
+      key: "steps", header: "Steps",
+      render: (row) => (
+        <div className="flex flex-col gap-[2px]">
+          <div className="flex items-center gap-[6px]">
+            <StepIcon s={row.stepStatus} />
+            <span style={{ fontSize: 12, color: "var(--table-cell-text)" }}>{row.stepsCompleted} of {row.stepsTotal} steps</span>
+          </div>
+          <div style={{ paddingLeft: 19 }}>
+            <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{STEP_DETAIL_LABEL[row.stepStatus]}{" "}</span>
+            <span style={{ fontSize: 11, color: STEP_DETAIL_COLOR[row.stepStatus], fontWeight: 500 }}>{row.stepAt}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "aiSummary", header: "AI Summary",
+      render: (row) => (
+        <div className="flex items-start gap-[6px]">
+          <AISummaryIcon icon={row.aiIcon} />
+          <span style={{ fontSize: 12, color: "var(--table-cell-text)" }}>{row.aiSummary}</span>
+        </div>
+      ),
+    },
+    {
+      key: "actions", header: "", width: "52px", align: "center" as const,
+      render: (row) => (
+        <button
+          aria-label="View run detail"
+          onClick={(e) => { e.stopPropagation(); setLogSlide(row) }}
+          style={{ width: 28, height: 28, borderRadius: 6, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--table-cell-text)" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--table-row-hover-bg)" }}
+          onMouseLeave={e => { e.currentTarget.style.background = "none" }}
+        >
+          <LucideIcons.Eye size={14} />
+        </button>
+      ),
+    },
+  ]
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>
+          Pattern
+        </span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Logs Table</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          The canonical pattern for displaying system logs, events, and audit trails. Applies the List View shell to tabular data: DS Table with Level and Status tags, Filters, Pagination, and a SlideOut for log detail.
+        </p>
+      </div>
+
+      <PatternTabRow tab={tab} setTab={setTab} />
+
+      {/* ── When to Use ─────────────────────────────────────────────────── */}
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>When to use this pattern</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px] mt-[4px]">
+              {([
+                { ok: true,  label: "Structured event logs",             desc: "Any stream of timestamped events with type, source, and outcome — API calls, worker runs, integration syncs, auth events." },
+                { ok: true,  label: "Filterable by multiple dimensions", desc: "When users need to cross-filter by level, source (worker), status, and time range simultaneously." },
+                { ok: true,  label: "High-volume, scannable data",       desc: "50–10,000+ records per day. Users skim quickly then drill into a specific row for details." },
+                { ok: true,  label: "Compact, uniform row structure",    desc: "Each event has the same 5–6 fields. Variable-length content goes in the SlideOut, not the table." },
+              ] as { ok: boolean; label: string; desc: string }[]).map(item => (
+                <div key={item.label} className="flex gap-[10px] p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-success-more-subtle)" }}>
+                  <span style={{ color: "var(--color-surface-success-default)", fontWeight: 700, fontSize: 14, flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{item.label}</div>
+                    <div style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.5 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Logs Table vs Entity List — decision guide</SectionLabel>
+            <div style={{ borderRadius: 8, border: "0.5px solid var(--table-border)", overflow: "hidden" }}>
+              <div className="grid grid-cols-3" style={{ background: "var(--table-header-bg)" }}>
+                {["Signal", "Use Table", "Use Entity List"].map(h => (
+                  <div key={h} style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", borderRight: "0.5px solid var(--table-border)" }}>{h}</div>
+                ))}
+              </div>
+              {[
+                ["Row density",   "5–6 compact fields per row",               "Complex cards with avatars, actions, descriptions"],
+                ["Content type",  "Events, logs, audit trails",               "Entities: workers, users, workflows, teams"],
+                ["Primary action","Eye → SlideOut for detail",                "Multiple actions: edit, activate, preview, delete"],
+                ["Sorting",       "Sort by timestamp / level / status",       "No sort needed — order by creation or priority"],
+                ["Volume",        "50–10,000+ rows with pagination",          "10–100 items, rarely need pagination"],
+                ["Filter axes",   "Level + Status + Worker + Date",           "Category + Status + Type"],
+              ].map(([sig, tbl, ent], i) => (
+                <div key={i} className="grid grid-cols-3" style={{ borderTop: "0.5px solid var(--table-border)" }}>
+                  <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--field-supporting)", borderRight: "0.5px solid var(--table-border)", background: "var(--table-bg)" }}>{sig}</div>
+                  <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--foreground)", borderRight: "0.5px solid var(--table-border)", background: "var(--table-bg)" }}>{tbl}</div>
+                  <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--foreground)", background: "var(--table-bg)" }}>{ent}</div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[16px]">
+              {[
+                { ok: true,  label: "Use Level Tag for visual triage",            desc: "Error → red, Warning → amber, Info → teal. Consistent color semantics let users spot problems before reading text." },
+                { ok: false, label: "Don't put stack traces in the table cell",    desc: "Stack traces belong in the SlideOut. Table cells should never overflow or wrap to multiple lines." },
+                { ok: true,  label: "Reset pagination on filter change",           desc: "Any change to Level, Status, Worker, or Date filter resets to page 1. Users expect to see filtered results from the start." },
+                { ok: false, label: "Don't show a table for 5 or fewer rows",      desc: "Use an entity list or simple markup instead. Tables add column overhead that isn't worth it at very low volume." },
+                { ok: true,  label: "Timestamp in monospace, readable format",     desc: "\"Jul 13, 14:32:01\" in a monospace font makes alignment and scanning fast. Avoid relative times (\"5 min ago\") — they shift on re-render." },
+                { ok: false, label: "Don't open a Modal for log detail",           desc: "Log detail is read-only context — use SlideOut. Modal requires acknowledgment and blocks the rest of the view unnecessarily." },
+              ].map(item => (
+                <div key={item.label} className="flex gap-[10px]">
+                  <span style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", background: item.ok ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)", fontSize: 10, fontWeight: 800, color: "var(--color-text-negative)" }}>
+                    {item.ok ? "✓" : "✕"}
+                  </span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{item.label}</div>
+                    <div style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.5 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+        </div>
+      )}
+
+      {/* ── Anatomy ─────────────────────────────────────────────────────── */}
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>Full Preview — Real DS Components</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Full-viewport preview using real Topbar, Sidebar, Header, Tabs, Filters, DS Table, Pagination, and SlideOut. Filter by Level or Status, click the eye icon to open log detail.
+            </p>
+            <Button onClick={() => setPreviewOpen(true)}>
+              <LucideIcons.Expand size={14} />
+              Launch Full Preview
+            </Button>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Component Stack — Logs Table</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Same shell as all list views. The only change is EntityList → DS Table (compact, uniform rows, high volume).
+            </p>
+            <div className="flex flex-col">
+              {([
+                { n: 1, comp: "Topbar",     badge: "Required",    desc: "Workspace switcher, search, user profile. Identical to all other list views." },
+                { n: 2, comp: "Sidebar",    badge: "Required",    desc: "Left rail navigation. Logs is a secondary tab within the active workspace section." },
+                { n: 3, comp: "Header",     badge: "Required",    desc: "Title \"Logs\" + record count tag + Export CTA. Compresses to 60px on scroll > 16px." },
+                { n: 4, comp: "Tabs",       badge: "Required",    desc: "Overview / Workers / Teams / Logs. Logs is the active tab. This is the contextual location in the page hierarchy." },
+                { n: 5, comp: "Filters",    badge: "Required",    desc: "Date · Level · Worker · Status. All Filters → FiltersSlideout for advanced filtering." },
+                { n: 6, comp: "Table (DS)", badge: "Required",    desc: "6 columns: Timestamp, Level (Tag), Worker (Avatar+name), Action, Status (Tag), Eye action. Table — not EntityList — because content is uniform, compact, and high-volume." },
+                { n: 7, comp: "Pagination", badge: "Conditional", desc: "Shown only when total_results > rows_per_page (default 25). Resets to page 1 on any filter change." },
+                { n: 8, comp: "SlideOut",   badge: "Conditional", desc: "Opens on Eye click. Shows: header (level + status + timestamp), message (Textarea readOnly), stack trace (errors only), metadata key-value grid." },
+              ] as { n: number; comp: string; badge: string; desc: string }[]).map((item, i, arr) => (
+                <div key={item.n} className="flex">
+                  <div className="flex flex-col items-center" style={{ width: 28 }}>
+                    <div className="flex items-center justify-center rounded-full shrink-0" style={{ width: 28, height: 28, background: "var(--color-surface-primary-default)", fontSize: 11, fontWeight: 700, color: "var(--color-text-negative)" }}>
+                      {item.n}
+                    </div>
+                    {i < arr.length - 1 && <div style={{ width: 1, flex: 1, background: "var(--field-border)", minHeight: 14 }} />}
+                  </div>
+                  <div className="flex-1 pl-[12px]" style={{ paddingBottom: i < arr.length - 1 ? 14 : 0, paddingTop: 3 }}>
+                    <div className="flex items-center gap-[8px] mb-[2px]">
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{item.comp}</span>
+                      <Tag variant={item.badge === "Required" ? "success" : item.badge === "Conditional" ? "primary" : "secondary"} size="sm">
+                        {item.badge}
+                      </Tag>
+                    </div>
+                    <p style={{ fontSize: 12, color: "var(--field-supporting)" }}>{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          {/* ── Full-Viewport Preview ────────────────────────────────────────── */}
+          {previewOpen && (
+            <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+              <AppBackground />
+
+              <button
+                onClick={() => { setPreviewOpen(false); setLogSlide(null); setLogsFiltersOpen(false); setStatusDropOpen(false) }}
+                className="fixed flex items-center gap-[6px] rounded-[6px]"
+                style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-surface-error-default)", color: "var(--color-surface-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+              >
+                <LucideIcons.X size={12} /> Close Preview
+              </button>
+
+              <Topbar
+                workspaceName="AIMS OS"
+                companyName="AIMS OS"
+                userName="Michael O."
+                userEmail="michael@aimsos.ai"
+                actions={[
+                  { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
+                  { icon: <LucideIcons.Bell size={16} />, label: "Notifications" },
+                ]}
+              />
+
+              <div className="flex flex-1 overflow-hidden">
+                <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId="contacts" defaultCollapsed={true} />
+
+                <div className="flex flex-col flex-1 overflow-hidden">
+
+                  <Header
+                    size={headerCompressed ? "compress" : "size-l"}
+                    title="Logs"
+                    description="System events, errors, and execution history across all workers."
+                    tag={<Tag variant="neutral" size="sm">{filteredLogs.length} events</Tag>}
+                    primaryAction={
+                      <Button variant="main" size="sm">
+                        <LucideIcons.Download size={13} /> Export
+                      </Button>
+                    }
+                    style={{ transition: "padding 200ms ease-in-out", flexShrink: 0 }}
+                  />
+
+                  <div className="shrink-0" style={{ paddingLeft: 32, paddingRight: 32 }}>
+                    <Tabs
+                      items={[
+                        { id: "overview", label: "Overview" },
+                        { id: "workers",  label: "Workers"  },
+                        { id: "teams",    label: "Teams"    },
+                        { id: "logs",     label: "Logs"     },
+                      ]}
+                      activeId="logs"
+                      onChange={() => {}}
+                    />
+                  </div>
+
+                  <div
+                    className="shrink-0"
+                    style={{ padding: "12px 32px 0" }}
+                    onClickCapture={(e: React.MouseEvent) => {
+                      const btn = (e.target as HTMLElement).closest("button")
+                      if (!btn) return
+                      const r = btn.getBoundingClientRect()
+                      setDropAnchor({ left: r.left, top: r.bottom })
+                    }}
+                  >
+                    <Filters
+                      showSearch
+                      searchPlaceholder="Search runs…"
+                      searchValue={searchQuery}
+                      onSearchChange={setSearchQuery}
+                      slots={[
+                        {
+                          placeholder: statusFilter ?? "Status",
+                          value: statusFilter ?? undefined,
+                          onOpen:   () => setStatusDropOpen(prev => !prev),
+                          onRemove: statusFilter ? () => { setStatusFilter(null); setStatusDropOpen(false) } : undefined,
+                        },
+                        {
+                          placeholder: "Modified",
+                          onOpen: () => {},
+                        },
+                      ]}
+                      showAllFilters
+                      onAllFiltersClick={() => { setStatusDropOpen(false); setLogsFiltersOpen(true) }}
+                      showClearFilters={!!(statusFilter || searchQuery)}
+                      onClearFilters={() => { setStatusFilter(null); setSearchQuery(""); setStatusDropOpen(false) }}
+                    />
+                  </div>
+
+                  {/* Status filter dropdown */}
+                  {statusDropOpen && dropAnchor !== null && (() => {
+                    const STATUS_OPTS: RunStatus[] = ["Success", "Partial", "Failed", "Auth error", "Timeout", "Retrying", "Waiting"]
+                    return (
+                      <>
+                        <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setStatusDropOpen(false)} />
+                        <div style={{ position: "fixed", left: dropAnchor.left, top: dropAnchor.top + 4, zIndex: 10001, background: "var(--menu-bg)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "0.5px solid var(--field-border)", borderRadius: 8, minWidth: 180, boxShadow: "var(--shadow-elevation-3)", overflow: "hidden" }}>
+                          <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>Status</span>
+                          </div>
+                          {STATUS_OPTS.map(opt => {
+                            const isSel = statusFilter === opt
+                            return (
+                              <button
+                                key={opt}
+                                className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full transition-colors"
+                                style={{ background: isSel ? "var(--color-surface-primary-subtle)" : "transparent", color: isSel ? "var(--primary)" : "var(--foreground)", fontWeight: isSel ? 600 : 400, fontSize: 13 }}
+                                onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "var(--color-surface-neutral-default)" }}
+                                onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent" }}
+                                onClick={() => { setStatusFilter(opt); setStatusDropOpen(false) }}
+                              >
+                                <span className="flex-1">{opt}</span>
+                                {isSel && <LucideIcons.Check size={13} style={{ flexShrink: 0 }} />}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )
+                  })()}
+
+                  {/* Table — scrollable area */}
+                  <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ padding: "8px 32px" }}>
+                    <Table
+                      columns={logsColumns}
+                      data={paginatedLogs}
+                      emptyIcon={LucideIcons.FileWarning}
+                      emptyTitle="No runs match your filters"
+                      emptyDescription="Try removing some filters to see more results."
+                    />
+                  </div>
+                  {/* DS Pagination — footer strip, renders only when totalPages > 1 */}
+                  <Pagination
+                    currentPage={currentPage}
+                    totalItems={filteredLogs.length}
+                    itemsPerPage={perPage}
+                    onPageChange={setCurrentPage}
+                    onItemsPerPageChange={n => { setPerPage(n); setCurrentPage(1) }}
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                  />
+
+                </div>
+              </div>
+
+              {/* Run Detail SlideOut */}
+              <SlideOut
+                open={!!logSlide}
+                onClose={() => setLogSlide(null)}
+                title={logSlide ? `${logSlide.run} · ${logSlide.triggerName}` : ""}
+                subtitle={logSlide?.started ?? ""}
+                type="with-variants"
+                size="m"
+                showTabs={false}
+                showIcon={false}
+                showStatus={false}
+              >
+                {logSlide && (
+                  <div className="flex flex-col gap-[20px] p-[24px]">
+                    {/* Status + Duration */}
+                    <div className="flex items-center gap-[8px] flex-wrap">
+                      <Tag variant={RUN_STATUS_TAG[logSlide.status]} size="sm">{logSlide.status}</Tag>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: DURATION_COLOR[logSlide.status] }}>{logSlide.duration}</span>
+                      <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{logSlide.started}</span>
+                    </div>
+
+                    {/* Steps */}
+                    <div style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 16 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", marginBottom: 10 }}>Steps</div>
+                      <div className="flex flex-col gap-[8px]">
+                        {/* Progress bar */}
+                        <div className="flex items-center gap-[8px]">
+                          <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--field-border)", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${(logSlide.stepsCompleted / logSlide.stepsTotal) * 100}%`, background: DURATION_COLOR[logSlide.status], borderRadius: 2, transition: "width 300ms" }} />
+                          </div>
+                          <span style={{ fontSize: 12, color: "var(--table-cell-text)", whiteSpace: "nowrap" }}>{logSlide.stepsCompleted} / {logSlide.stepsTotal}</span>
+                        </div>
+                        {/* Current step */}
+                        <div className="flex items-center gap-[6px]">
+                          <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{STEP_DETAIL_LABEL[logSlide.stepStatus]}</span>
+                          <span style={{ fontSize: 11, fontWeight: 500, color: STEP_DETAIL_COLOR[logSlide.stepStatus] }}>{logSlide.stepAt}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI Summary */}
+                    <div style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 16 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", marginBottom: 8 }}>AI Summary</div>
+                      <div className="flex items-start gap-[8px] p-[12px] rounded-[8px]" style={{ background: "var(--canvas)" }}>
+                        <div style={{ marginTop: 1 }}>
+                          {logSlide.aiIcon === "check"   && <LucideIcons.CheckCircle2  size={14} style={{ color: "var(--tag-success-fg)" }} />}
+                          {logSlide.aiIcon === "warning" && <LucideIcons.AlertTriangle size={14} style={{ color: "var(--tag-alert-fg)"   }} />}
+                          {logSlide.aiIcon === "error"   && <LucideIcons.XCircle       size={14} style={{ color: "var(--tag-error-fg)"   }} />}
+                          {logSlide.aiIcon === "retry"   && <LucideIcons.RefreshCw     size={14} style={{ color: "var(--primary)"        }} />}
+                          {logSlide.aiIcon === "clock"   && <LucideIcons.Clock         size={14} style={{ color: "var(--tag-success-fg)" }} />}
+                        </div>
+                        <span style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.5 }}>{logSlide.aiSummary}</span>
+                      </div>
+                    </div>
+
+                    {/* Run info */}
+                    <div style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 16 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", marginBottom: 10 }}>Run details</div>
+                      <div className="grid grid-cols-2 gap-[8px]">
+                        {[
+                          { label: "Run ID",   value: logSlide.run },
+                          { label: "Trigger",  value: logSlide.triggerName },
+                          { label: "Started",  value: logSlide.started },
+                          { label: "Duration", value: logSlide.duration },
+                        ].map(({ label, value }) => (
+                          <div key={label} className="flex flex-col gap-[2px] p-[10px] rounded-[6px]" style={{ background: "var(--canvas)" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-supporting)" }}>{label}</span>
+                            <span style={{ fontSize: 12, color: "var(--foreground)", fontFamily: label === "Run ID" ? "monospace" : "inherit" }}>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </SlideOut>
+
+              <FiltersSlideout
+                isOpen={logsFiltersOpen}
+                onClose={() => setLogsFiltersOpen(false)}
+                onClearAll={() => { setStatusFilter(null); setSearchQuery("") }}
+              />
+
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Rules ─────────────────────────────────────────────────────────── */}
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Machine-readable spec</SectionLabel>
+            <PatternRules code={`LOGS_TABLE_PATTERN {
+
+  SHELL: identical to List View (Topbar + Sidebar + Header + Tabs)
+  MAIN_COMPONENT: Table (not EntityList)
+  REASON: uniform 5–6 col rows · high volume · no per-row actions beyond Eye
+
+  COLUMNS: [
+    timestamp  → monospace text "Mon DD, HH:MM:SS"
+    level      → Tag sm { error→"error" | warning→"alert" | info→"informative" }
+    worker     → TableCellAvatarLink (avatar + name)
+    action     → monospace text (HTTP method + endpoint, or system operation)
+    status     → Tag sm { Completed→"success" | Failed→"error" | Running→"informative" }
+    actions    → Eye icon button → SlideOut (sole action per row — no kebab)
+  ]
+
+  FILTERS: [
+    Date     → date range picker (placeholder for v1, wired in v2)
+    Level    → single-select { error | warning | info }
+    Worker   → single-select from active workers in workspace
+    Status   → single-select { Completed | Failed | Running }
+    AllFilters → FiltersSlideout (all 4 filters + advanced options)
+  ]
+
+  FILTER_CHANGE: reset pagination to page 1
+
+  PAGINATION:
+    default_rows_per_page: 25
+    options: [10, 25, 50]
+    show_only_when: total_items > rows_per_page
+    position: absolute bottom-0 left-0 right-0 (floats over table, content scrolls behind)
+
+  EMPTY_STATE:
+    component: Table emptyTitle / emptyDescription / emptyIcon (renders via EmptyState internally)
+    title:     "No logs match your filters"
+    cta:       "Clear filters" → clears all active filters
+
+  LOG_DETAIL_SLIDEOUT:
+    trigger: Eye icon on row
+    size: "m"
+    showTabs: false
+    showIcon: false
+    showStatus: false
+    sections:
+      - header:      level Tag + status Tag + timestamp (monospace)
+      - worker:      TableCellAvatarLink
+      - message:     Textarea readOnly scrollable rows=4
+      - stackTrace:  Textarea readOnly state="error" rows=5 — ONLY for level="error"
+      - metadata:    grid of key-value pairs in var(--canvas) chips, 2 cols
+
+  HEADER_STICKY:
+    compressed: scrollTop > 16px → size="compress" (60px, hides description + tag)
+    default:    size="size-l" (full title + description + tag + Export button)
+    transition: padding 200ms ease-in-out
+}`} />
+          </PatternCard>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternWidgetCanvasPage ───────────────────────────────────────────────────
+
+function PatternWidgetCanvasPage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+  const [widgetPreviewOpen, setWidgetPreviewOpen] = useState(false)
+  const [gridSysOpen, setGridSysOpen] = useState(false)
+  const [wcScrolled, setWcScrolled] = useState(false)
+  const wcContentRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!widgetPreviewOpen) { setWcScrolled(false); return }
+    const el = wcContentRef.current
+    if (!el) return
+    const handler = () => setWcScrolled(el.scrollTop > 16)
+    el.addEventListener("scroll", handler)
+    return () => el.removeEventListener("scroll", handler)
+  }, [widgetPreviewOpen])
+
+  // Mini canvas demo — widget class grid
+  const widthClasses = [
+    { id: "narrow",  label: "Narrow — 1/3",  cols: 4,  desc: "KPIs, single-metric stats, quick actions", color: "var(--color-surface-primary-subtle)" },
+    { id: "wide",    label: "Wide — 2/3",    cols: 8,  desc: "Charts, filtered lists, summary tables",    color: "var(--color-surface-informative-subtle)" },
+    { id: "full",    label: "Full — 3/3",    cols: 12, desc: "Full-width tables, timelines, complex feeds", color: "var(--color-surface-neutral-default)" },
+  ]
+
+  const heightClasses = [
+    { id: "compact",  label: "Class 1 — Compact",  gu: "4–5 GU",  px: "96–120px",  scroll: false, use: "KPI, summary, status. Content never drives height.", icon: <LucideIcons.Minimize2 size={14} /> },
+    { id: "standard", label: "Class 2 — Standard", gu: "7–9 GU",  px: "168–216px", scroll: false, use: "Lists, simple charts. Optional internal scroll.", icon: <LucideIcons.Square size={14} /> },
+    { id: "heavy",    label: "Class 3 — Heavy",    gu: "7–9 GU",  px: "168–216px", scroll: true,  use: "Tables, timelines, feeds. Always has internal scroll.", icon: <LucideIcons.AlignJustify size={14} /> },
+  ]
+
+  const responsiveCols = [
+    { state: "3-col",  width: "1299px canvas", trigger: "Default view",                     icon: <LucideIcons.LayoutGrid size={14} />, cols: 3 },
+    { state: "2-col",  width: "796px canvas",  trigger: "Chat panel open (50% width)",      icon: <LucideIcons.Columns2   size={14} />, cols: 2 },
+    { state: "1-col",  width: "616px canvas",  trigger: "Chat panel expanded (full width)", icon: <LucideIcons.PanelLeft  size={14} />, cols: 1 },
+  ]
+
+  const gridRules = [
+    { rule: "Snap to grid always",     detail: "Widgets can only be placed at full grid unit boundaries — no pixel-level free positioning.", icon: <LucideIcons.Grid3x3 size={14} /> },
+    { rule: "No overlapping",          detail: "When a widget is dragged over another, the system auto-repositions surrounding widgets or reverts to the last valid state.", icon: <LucideIcons.Layers size={14} /> },
+    { rule: "Vertical compaction",     detail: "The canvas compacts vertically, never horizontally. Columns are fixed; widgets only move up or down to resolve collisions.", icon: <LucideIcons.AlignVerticalJustifyStart size={14} /> },
+    { rule: "Gravity — highest valid position", detail: "Widgets always settle at the highest available valid position. The most compact vertical layout is always the final state.", icon: <LucideIcons.ArrowDownToLine size={14} /> },
+    { rule: "Height by grid units only", detail: "Widget height is defined by grid units, not by content. Vertical resize snaps to full grid units — no free pixel resize.", icon: <LucideIcons.Ruler size={14} /> },
+    { rule: "Content never grows height", detail: "Content that overflows uses internal scroll, pagination, or drill-down — the widget container height stays fixed.", icon: <LucideIcons.ScrollText size={14} /> },
+  ]
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Widget Canvas Layout</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          A 12-column grid system that governs how widgets are positioned, sized, and rearranged within the UCP canvas. All placement snaps to grid units — no free pixel positioning allowed.
+        </p>
+      </div>
+
+      <PatternTabRow tab={tab} setTab={setTab} />
+
+      {/* ── When to Use ───────────────────────────────────────── */}
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>When to use the Widget Canvas</SectionLabel>
+            <p className="text-[13px] text-[var(--foreground)] mb-[16px]">
+              The widget canvas is the Overview tab of any UCP (Unified Control Panel) screen. It replaces the EntityList pattern when the goal is monitoring and at-a-glance status — not browsing a list of records.
+            </p>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Use the canvas for dashboards, KPI summaries, and monitoring views where multiple data types must coexist." },
+                { type: "do",   text: "Let users reorder widgets by dragging — the canvas is always editable unless explicitly locked." },
+                { type: "dont", text: "Don't use the canvas to display a single homogeneous list — use EntityList + Pagination instead." },
+                { type: "dont", text: "Don't add navigation inside a widget — widgets surface status; navigation happens at the shell level (Tabs, Sidebar)." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Canvas vs. EntityList — Decision Table</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                  {["Situation", "Pattern", "Tab"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {[
+                    ["User needs an at-a-glance status of multiple metrics", "Widget Canvas", "Overview"],
+                    ["User needs to browse and act on a list of records", "EntityList + Pagination", "Any list tab"],
+                    ["User needs both — summary + full list", "Canvas for Overview, EntityList for a secondary tab", "Overview + List"],
+                    ["Single data type, large dataset", "EntityList (avoid canvas)", "N/A"],
+                  ].map(([sit, pat, tb]) => (
+                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{pat}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{tb}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Anatomy ───────────────────────────────────────────── */}
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Launch preview — first */}
+          <PatternCard>
+            <SectionLabel>Full Preview — Widget Canvas in Context</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Open a full-viewport preview of the UCP canvas layout. Shows the 3-column widget grid with Compact, Standard, and Heavy class widgets in a realistic shell (Topbar + Sidebar + Header + Tabs). Widget widths are labelled — Narrow (1/3), Wide (2/3), Full (3/3).
+            </p>
+            <div className="flex items-center gap-[10px] flex-wrap">
+              <Button onClick={() => setWidgetPreviewOpen(true)}>
+                <LucideIcons.Expand size={14} />
+                Launch Full Preview
+              </Button>
+              <Button variant="secondary" onClick={() => setGridSysOpen(true)}>
+                <LucideIcons.LayoutGrid size={14} />
+                Widget Classes Reference
+              </Button>
+            </div>
+          </PatternCard>
+
+          {/* ── Grid Unit Canvas — Widget Class Construction ───────── */}
+          <PatternCard>
+            <SectionLabel>Grid Unit Canvas — Widget Class Construction</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">
+              Three widget classes fill the 3-column canvas. Heights snap to Grid Units (1 GU = 24px). Each class defines a fixed height band — content never drives height.
+            </p>
+
+            {/* Legend */}
+            <div className="flex items-center gap-[20px] mb-[16px] flex-wrap">
+              {[
+                { label: "Class 1 — Compact", sub: "4–5 GU · 96–120px", bg: "var(--color-surface-primary-subtle)", border: "var(--color-border-primary-lighter)", text: "var(--primary)" },
+                { label: "Class 2 — Standard", sub: "7–9 GU · 168–216px", bg: "var(--color-surface-success-more-subtle)", border: "var(--color-border-success-lighter)", text: "var(--color-surface-success-default)" },
+                { label: "Class 3 — Heavy", sub: "9+ GU · 216px+", bg: "var(--card-orange-bg)", border: "var(--card-orange-border)", text: "var(--card-orange-hover-bd)" },
+              ].map(c => (
+                <div key={c.label} className="flex items-center gap-[8px]">
+                  <div style={{ width: 14, height: 14, borderRadius: 4, background: c.bg, border: `1.5px solid ${c.border}` }} />
+                  <div>
+                    <span className="text-[12px] font-semibold" style={{ color: "var(--color-text-title)" }}>{c.label}</span>
+                    <span className="text-[11px]" style={{ color: "var(--color-text-subtitle)" }}> — {c.sub}</span>
+                  </div>
+                </div>
+              ))}
+              <div className="ml-auto flex items-center gap-[6px]">
+                <span className="text-[10px] font-mono px-[6px] py-[2px] rounded-[4px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--color-border-primary-lighter)" }}>1 GU = 24px</span>
+                <span className="text-[10px] font-mono px-[6px] py-[2px] rounded-[4px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--color-border-primary-lighter)" }}>gap = 16px</span>
+              </div>
+            </div>
+
+            {/* Canvas diagram */}
+            <div className="rounded-[12px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
+              {/* Column ruler */}
+              <div style={{ display: "grid", gridTemplateColumns: "48px 1fr", background: "var(--surface)" }}>
+                <div style={{ borderRight: "1px solid var(--field-border)", borderBottom: "1px solid var(--field-border)" }} />
+                <div className="flex items-center px-[16px] py-[8px]" style={{ borderBottom: "1px solid var(--field-border)", gap: 8 }}>
+                  {[
+                    { label: "1/3 width · 4 cols", span: 1 },
+                    { label: "2/3 width · 8 cols", span: 2 },
+                    { label: "3/3 width · 12 cols", span: 3 },
+                  ].map((c, i) => (
+                    <div key={i} className="flex items-center gap-[6px]" style={{ flex: c.span }}>
+                      <div style={{ height: 1, flex: 1, background: "var(--field-border)" }} />
+                      <span className="text-[10px] font-mono shrink-0" style={{ color: "var(--color-text-subtitle)" }}>{c.label}</span>
+                      <div style={{ height: 1, flex: 1, background: "var(--field-border)" }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Canvas body */}
+              <div style={{ display: "grid", gridTemplateColumns: "48px 1fr", background: "var(--canvas)" }}>
+                {/* GU ruler */}
+                <div style={{ borderRight: "1px solid var(--field-border)", display: "flex", flexDirection: "column" }}>
+                  {[
+                    { label: "4 GU", h: 96 + 16, color: "var(--primary)" },
+                    { label: "9 GU", h: 216 + 16, color: "var(--color-surface-success-default)" },
+                    { label: "9+ GU", h: 240 + 16, color: "var(--card-orange-hover-bd)" },
+                  ].map((row, i) => (
+                    <div key={i} className="flex flex-col items-center justify-center" style={{ height: row.h, borderBottom: i < 2 ? "1px dashed var(--field-border)" : "none" }}>
+                      <span className="text-[9px] font-mono font-semibold" style={{ color: row.color, writingMode: "vertical-lr", transform: "rotate(180deg)", letterSpacing: "0.06em" }}>{row.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Widget grid */}
+                <div className="p-[16px] flex flex-col gap-[16px]">
+                  {/* Row 1: Class 1 Compact — 3× narrow */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                    {["Active Workers", "Conversions", "Goal Progress"].map((title, i) => (
+                      <div key={i} className="flex flex-col gap-[6px] rounded-[10px] p-[12px]"
+                        style={{ height: 96, background: "var(--color-surface-primary-subtle)", border: "1px solid var(--color-border-primary-lighter)" }}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--primary)" }}>{title}</span>
+                          <span className="text-[8px] font-mono px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface)", color: "var(--primary)" }}>1/3</span>
+                        </div>
+                        <div className="flex items-end justify-between flex-1">
+                          <span className="text-[22px] font-bold" style={{ color: "var(--color-text-title)", lineHeight: 1 }}>
+                            {["2,401", "843", "67%"][i]}
+                          </span>
+                          <span className="text-[8px] font-mono" style={{ color: "var(--color-text-subtitle)" }}>4 GU · 96px</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Row 2: Class 2 Standard — wide + narrow */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                    {/* Wide 2/3 */}
+                    <div className="flex flex-col gap-[8px] rounded-[10px] p-[12px]"
+                      style={{ gridColumn: "span 2", height: 216, background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-lighter)" }}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-surface-success-default)" }}>Last Activity</span>
+                        <span className="text-[8px] font-mono px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface)", color: "var(--color-surface-success-default)" }}>2/3</span>
+                      </div>
+                      <div className="flex flex-col gap-[4px] flex-1">
+                        {["Inbound call — Sarah Johnson", "Email — David Kim", "Meeting — Quarterly Review", "SMS — Maria Torres"].map((item, i) => (
+                          <div key={i} className="flex items-center gap-[8px] rounded-[6px] px-[8px] py-[5px]" style={{ background: "var(--surface)", opacity: 1 - i * 0.08 }}>
+                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-surface-success-default)", flexShrink: 0 }} />
+                            <span className="text-[10px] truncate" style={{ color: "var(--color-text-title)" }}>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-[8px] font-mono self-end" style={{ color: "var(--color-surface-success-default)" }}>9 GU · 216px</span>
+                    </div>
+                    {/* Narrow 1/3 */}
+                    <div className="flex flex-col gap-[8px] rounded-[10px] p-[12px]"
+                      style={{ height: 216, background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-lighter)" }}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-surface-success-default)" }}>Team Notes</span>
+                        <span className="text-[8px] font-mono px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface)", color: "var(--color-surface-success-default)" }}>1/3</span>
+                      </div>
+                      <div className="flex flex-col gap-[4px] flex-1">
+                        {["Alice Johnson — Follow up", "Team Standup", "Maria Torres"].map((item, i) => (
+                          <div key={i} className="flex items-center gap-[6px] rounded-[6px] px-[8px] py-[5px]" style={{ background: "var(--surface)", opacity: 1 - i * 0.08 }}>
+                            <div style={{ width: 16, height: 16, borderRadius: "50%", background: "var(--color-surface-primary-subtle)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <span className="text-[8px] font-bold" style={{ color: "var(--primary)" }}>{item[0]}</span>
+                            </div>
+                            <span className="text-[9px] truncate" style={{ color: "var(--color-text-title)" }}>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-[8px] font-mono self-end" style={{ color: "var(--color-surface-success-default)" }}>9 GU · 216px</span>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Class 3 Heavy — full */}
+                  <div className="flex flex-col gap-[8px] rounded-[10px] p-[12px]"
+                    style={{ height: 240, background: "var(--card-orange-bg)", border: "1px solid var(--card-orange-border)" }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--card-orange-hover-bd)" }}>Recent Activity Timeline</span>
+                      <span className="text-[8px] font-mono px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface)", color: "var(--card-orange-hover-bd)" }}>3/3 · full</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, flex: 1 }}>
+                      {[
+                        { n: "127", label: "Contracts" },
+                        { n: "43", label: "Meetings" },
+                        { n: "12", label: "Calls" },
+                        { n: "28", label: "Proposals" },
+                        { n: "7", label: "Closed" },
+                      ].map((col, i) => (
+                        <div key={i} className="flex flex-col items-center justify-center gap-[4px] rounded-[8px] p-[8px]" style={{ background: "var(--surface)" }}>
+                          <span className="text-[18px] font-bold" style={{ color: "var(--card-orange-hover-bd)" }}>{col.n}</span>
+                          <span className="text-[9px]" style={{ color: "var(--color-text-subtitle)" }}>{col.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <span className="text-[8px] font-mono self-end" style={{ color: "var(--card-orange-hover-bd)" }}>9+ GU · 240px · Internal scroll</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </PatternCard>
+
+          {/* Grid system */}
+          <PatternCard>
+            <SectionLabel>Grid System — 12 columns × 24px rows</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[16px]">
+              The canvas uses a fluid 12-column grid where each column's width adapts to the available canvas width. Rows are always <code className="text-[11px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>24px tall</code> — 1 Grid Unit (GU). Widget position and size are always expressed in whole GUs.
+            </p>
+            {/* Visual grid */}
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--color-border-neutral-default)", background: "var(--canvas)" }}>
+              {/* Header row labels */}
+              <div className="flex items-center px-[16px] pt-[12px] pb-[4px]">
+                <span className="text-[10px] text-[var(--field-supporting)] font-mono">12 COLUMNS (fluid width) — 16px gap</span>
+              </div>
+              {/* Grid demo */}
+              <div className="px-[16px] pb-[16px]">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: "4px" }}>
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-center rounded-[3px]" style={{ height: 32, background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-subtle)" }}>
+                      <span className="text-[9px] font-mono" style={{ color: "var(--primary)" }}>{i + 1}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-[16px] mt-[8px]">
+                  <span className="text-[10px] font-mono text-[var(--field-supporting)]">↕ 24px = 1 Grid Unit</span>
+                  <span className="text-[10px] font-mono text-[var(--field-supporting)]">1 GU = 1 row in react-grid-layout</span>
+                </div>
+              </div>
+            </div>
+          </PatternCard>
+
+          {/* Width classes */}
+          <PatternCard>
+            <SectionLabel>Widget Width Classes</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[16px]">
+              Widgets only snap to three valid widths. Dragging horizontally always resolves to the nearest valid class — partial widths (e.g. 1.5 columns) are never allowed.
+            </p>
+            <div className="flex flex-col gap-[8px]">
+              {widthClasses.map(wc => {
+                const fraction = wc.cols / 12
+                return (
+                  <div key={wc.id} className="flex items-center gap-[12px]">
+                    <div className="shrink-0 flex items-center" style={{ width: 80 }}>
+                      <span className="text-[12px] font-semibold text-[var(--foreground)]">{wc.label}</span>
+                    </div>
+                    <div className="flex-1 rounded-[4px] flex items-center px-[10px]" style={{ height: 32, width: `${fraction * 100}%`, maxWidth: `${fraction * 100}%`, background: wc.color, border: "1px solid var(--color-border-neutral-default)" }}>
+                      <span className="text-[11px] text-[var(--field-supporting)]">{wc.cols} columns</span>
+                    </div>
+                    <span className="text-[12px] text-[var(--field-supporting)] shrink-0" style={{ width: 260 }}>{wc.desc}</span>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-[12px] p-[10px] rounded-[6px]" style={{ background: "var(--color-surface-error-subtle)", border: "0.5px solid var(--color-border-error-default)" }}>
+              <span className="text-[12px] text-[var(--foreground)]"><strong>Incorrect:</strong> A widget floating between columns (e.g. 1.5 columns wide). Width must always match a valid class.</span>
+            </div>
+          </PatternCard>
+
+          {/* Height classes */}
+          <PatternCard>
+            <SectionLabel>Widget Height Classes</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[16px]">
+              Widget height is set in Grid Units, not pixels. Content that overflows must use internal scroll, pagination, or a drill-down — it never pushes the widget taller.
+            </p>
+            <div className="flex flex-col gap-[10px]">
+              {heightClasses.map(hc => (
+                <div key={hc.id} className="flex items-start gap-[14px] p-[14px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "1px solid var(--color-border-neutral-default)" }}>
+                  <div className="shrink-0 flex items-center justify-center rounded-[6px]" style={{ width: 32, height: 32, background: "var(--color-surface-neutral-darker)", color: "var(--color-icon-neutral-dark)" }}>
+                    {hc.icon}
+                  </div>
+                  <div className="flex flex-col gap-[4px] flex-1">
+                    <div className="flex items-center gap-[8px]">
+                      <span className="text-[13px] font-semibold text-[var(--foreground)]">{hc.label}</span>
+                      <span className="text-[11px] font-mono px-[6px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{hc.gu} = {hc.px}</span>
+                      {hc.scroll && <span className="text-[10px] font-semibold px-[5px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-informative-subtle)", color: "var(--color-icon-informative-default)" }}>Always scrolls</span>}
+                    </div>
+                    <span className="text-[12px] text-[var(--field-supporting)]">{hc.use}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          {/* Responsive breakpoints */}
+          <PatternCard>
+            <SectionLabel>Responsive — Column Reduction</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[16px]">
+              When the available canvas width shrinks (e.g. chat panel opens), the grid reduces from 3 to 2 to 1 column. Widgets reflow automatically — they never overflow horizontally.
+            </p>
+            <div className="flex flex-col gap-[8px]">
+              {responsiveCols.map(rc => (
+                <div key={rc.state} className="flex items-center gap-[12px] p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "1px solid var(--color-border-neutral-default)" }}>
+                  <div className="flex items-center justify-center rounded-[6px] shrink-0" style={{ width: 32, height: 32, background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>
+                    {rc.icon}
+                  </div>
+                  <div className="flex flex-col gap-[2px] flex-1">
+                    <div className="flex items-center gap-[8px]">
+                      <span className="text-[13px] font-semibold text-[var(--foreground)]">{rc.state}</span>
+                      <span className="text-[11px] font-mono px-[5px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{rc.width}</span>
+                    </div>
+                    <span className="text-[12px] text-[var(--field-supporting)]">{rc.trigger}</span>
+                  </div>
+                  <div className="flex gap-[4px] shrink-0">
+                    {Array.from({ length: rc.cols }).map((_, i) => (
+                      <div key={i} className="rounded-[3px]" style={{ width: 18, height: 28, background: "var(--color-surface-primary-subtle)", border: "1px solid var(--color-border-primary-subtle)" }} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-[12px] p-[10px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-darker)", border: "0.5px solid var(--color-border-neutral-default)" }}>
+              <p className="text-[12px] text-[var(--field-supporting)] m-0">
+                <strong style={{ color: "var(--foreground)" }}>Rule:</strong> When the canvas width shrinks, display one fewer column. Chat at 50% width → 2 columns. Chat fully expanded → 1 column. The canvas never scrolls horizontally.
+              </p>
+            </div>
+          </PatternCard>
+
+          {/* Spacing reference */}
+          <PatternCard>
+            <SectionLabel>Spacing Reference</SectionLabel>
+            <div className="grid grid-cols-2 gap-[8px]">
+              {[
+                { property: "Column gap",             value: "16px",  note: "Between widget columns" },
+                { property: "Row gap",                value: "16px",  note: "Between widget rows" },
+                { property: "Widget card padding",    value: "24px",  note: "All sides inside card" },
+                { property: "Header → content slot",  value: "12px",  note: "Inside widget card" },
+                { property: "Content area padding",   value: "32px",  note: "Left/right inside page wrapper" },
+                { property: "Tab bar → canvas",       value: "24px",  note: "Gap between last tab and canvas edge" },
+              ].map(sp => (
+                <div key={sp.property} className="flex items-center gap-[10px] p-[10px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--color-border-neutral-default)" }}>
+                  <span className="text-[12px] font-mono font-semibold shrink-0 px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", minWidth: 40, textAlign: "center" }}>{sp.value}</span>
+                  <div className="flex flex-col gap-[1px]">
+                    <span className="text-[12px] font-semibold text-[var(--foreground)]">{sp.property}</span>
+                    <span className="text-[11px] text-[var(--field-supporting)]">{sp.note}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          {/* Class 1 Vertical Stacking */}
+          <PatternCard>
+            <SectionLabel>Class 1 — Compact Stacking</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">
+              Two Class 1 (Compact) widgets can share the same 1/3-width column by stacking vertically. This maximises information density without expanding to a wider row.
+            </p>
+
+            {/* Visual diagram */}
+            <div className="flex gap-[16px] mb-[20px] flex-wrap">
+              {/* Before: two separate columns */}
+              <div className="flex flex-col gap-[6px] flex-1" style={{ minWidth: 160 }}>
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtitle)" }}>Before — separate columns</span>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, padding: 10, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)" }}>
+                  {["A", "B", "C"].map((l, i) => (
+                    <div key={i} className="flex items-center justify-center rounded-[6px]" style={{ height: 52, background: "var(--color-surface-primary-subtle)", border: "1px solid var(--color-border-primary-lighter)" }}>
+                      <span className="text-[11px] font-semibold" style={{ color: "var(--primary)" }}>KPI {l}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-center rounded-[6px]" style={{ gridColumn: "span 2", height: 52, background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-lighter)" }}>
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-surface-success-default)" }}>Activity 2/3</span>
+                  </div>
+                  <div style={{ height: 0 }} />
+                </div>
+              </div>
+
+              {/* Arrow */}
+              <div className="flex items-center justify-center" style={{ paddingTop: 20 }}>
+                <LucideIcons.ArrowRight size={16} style={{ color: "var(--color-text-subtitle)" }} />
+              </div>
+
+              {/* After: A and D stacked */}
+              <div className="flex flex-col gap-[6px] flex-1" style={{ minWidth: 160 }}>
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-subtitle)" }}>After — stacked in same column</span>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, padding: 10, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)" }}>
+                  {/* Col 1: A + D stacked */}
+                  <div className="flex flex-col gap-[6px]">
+                    {["KPI A", "KPI D"].map((l, i) => (
+                      <div key={i} className="flex items-center justify-center rounded-[6px]" style={{ height: 52, background: "var(--color-surface-primary-subtle)", border: "1px solid var(--color-border-primary-lighter)" }}>
+                        <span className="text-[11px] font-semibold" style={{ color: "var(--primary)" }}>{l}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Col 2+3: Activity wide */}
+                  <div className="flex items-center justify-center rounded-[6px]" style={{ gridColumn: "span 2", height: 110, background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-lighter)" }}>
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-surface-success-default)" }}>Activity 2/3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Rules */}
+            <div className="flex flex-col gap-[8px]">
+              {[
+                { icon: <LucideIcons.Layers size={13} />, label: "Class 1 only", desc: "Only Compact (1/3) widgets can stack. Class 2 and Class 3 always occupy their own row." },
+                { icon: <LucideIcons.ArrowUpDown size={13} />, label: "Max 2 per stack", desc: "A stack holds exactly 2 widgets. Dragging a third widget onto a stack treats it as a regular before/after reorder." },
+                { icon: <LucideIcons.MousePointerClick size={13} />, label: "How to stack", desc: "Drag a narrow widget onto the top 35% of another narrow widget to place it above, or the bottom 35% to place it below." },
+                { icon: <LucideIcons.X size={13} />, label: "How to unstack", desc: "Drag a stacked widget to any other position in the canvas — it leaves the stack automatically. If the remaining slot is alone, the stack dissolves." },
+              ].map(r => (
+                <div key={r.label} className="flex items-start gap-[10px] p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--color-border-neutral-default)" }}>
+                  <div className="flex items-center justify-center rounded-[5px] shrink-0" style={{ width: 26, height: 26, background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>
+                    {r.icon}
+                  </div>
+                  <div className="flex flex-col gap-[2px]">
+                    <span className="text-[12px] font-semibold" style={{ color: "var(--color-text-title)" }}>{r.label}</span>
+                    <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{r.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Rules ─────────────────────────────────────────────── */}
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Grid Behavior Rules</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[16px]">
+              These rules are enforced by <code className="text-[11px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>react-grid-layout</code>. They are constraints, not suggestions — any implementation of the widget canvas must respect all of them.
+            </p>
+            <div className="flex flex-col gap-[10px]">
+              {gridRules.map((r, i) => (
+                <div key={i} className="flex items-start gap-[14px] p-[14px] rounded-[8px]" style={{ border: "1px solid var(--color-border-neutral-default)", background: "var(--color-surface-neutral-default)" }}>
+                  <div className="flex items-center justify-center rounded-[6px] shrink-0" style={{ width: 32, height: 32, background: "var(--color-surface-neutral-darker)", color: "var(--color-icon-neutral-dark)" }}>
+                    {r.icon}
+                  </div>
+                  <div className="flex flex-col gap-[4px]">
+                    <span className="text-[13px] font-semibold text-[var(--foreground)]">{r.rule}</span>
+                    <span className="text-[12px] text-[var(--field-supporting)]">{r.detail}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Width Snap Rules</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[12px]">Horizontal drag always resolves to the nearest valid column class. Intermediate widths are never persisted.</p>
+            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.8] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`// Valid widget column spans
+const VALID_WIDTHS = {
+  narrow: 4,   // 1/3 of 12 columns
+  wide:   8,   // 2/3 of 12 columns
+  full:   12,  // 3/3 of 12 columns
+}
+
+// On drag-resize end — snap to nearest valid width
+function snapToWidth(dragged: number): number {
+  const breakpoints = [4, 8, 12]
+  return breakpoints.reduce((prev, curr) =>
+    Math.abs(curr - dragged) < Math.abs(prev - dragged) ? curr : prev
+  )
+}`}</pre>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Height Classes — Min / Max Grid Units</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[12px]">Height resize snaps to whole GUs. Each class has a min and max — exceeding the max forces the next height class.</p>
+            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.8] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`// Widget height classes (in Grid Units — 1 GU = 24px row)
+const HEIGHT_CLASSES = {
+  compact:  { minGU: 4, maxGU: 5,  scroll: false },
+  standard: { minGU: 7, maxGU: 9,  scroll: false }, // optional scroll
+  heavy:    { minGU: 7, maxGU: 9,  scroll: true  }, // always scrolls
+}
+
+// Height class is declared per widget type — not user-selectable.
+// Users can resize within min/max of the assigned class only.`}</pre>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Responsive Column Reduction</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[12px]">The canvas reads the available width and switches the column count. Widgets adapt; they never overflow.</p>
+            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.8] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`// Canvas column breakpoints (based on UCP content area width)
+const CANVAS_COLS = (canvasWidth: number): number => {
+  if (canvasWidth >= 1000) return 3  // ~1299px canvas
+  if (canvasWidth >= 750)  return 2  // ~796px canvas (chat at 50%)
+  return 1                           // ~616px canvas (chat expanded)
+}
+
+// React-grid-layout: update 'cols' prop on resize
+// Widgets reflow automatically — no manual layout recalculation needed`}</pre>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Content Overflow Strategy</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] mb-[12px]">Widgets never grow to fit content. Use one of these strategies when content exceeds the widget height class.</p>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                { strategy: "Internal scroll",  when: "Heavy class — table, feed, timeline", tag: "Preferred" },
+                { strategy: "Pagination",        when: "Standard class — list of items within widget", tag: "Alternative" },
+                { strategy: "Drill-down action", when: "Any class — 'View all' link opens EntityList in main tab", tag: "Alternative" },
+              ].map(s => (
+                <div key={s.strategy} className="flex items-center gap-[12px] px-[12px] py-[10px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--color-border-neutral-default)" }}>
+                  <span className="text-[12px] font-semibold text-[var(--foreground)]" style={{ width: 160 }}>{s.strategy}</span>
+                  <span className="text-[12px] text-[var(--field-supporting)] flex-1">{s.when}</span>
+                  <span className="text-[10px] font-semibold px-[6px] py-[2px] rounded-[3px]" style={{ background: s.tag === "Preferred" ? "var(--color-surface-success-subtle)" : "var(--color-surface-neutral-darker)", color: s.tag === "Preferred" ? "var(--color-surface-success-default)" : "var(--field-supporting)" }}>{s.tag}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Full-Viewport Widget Canvas Preview ─────────────────── */}
+      {widgetPreviewOpen && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+          <AppBackground />
+
+          {/* Close */}
+          <button
+            onClick={() => setWidgetPreviewOpen(false)}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-surface-error-default)", color: "var(--color-surface-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} />
+            Close Preview
+          </button>
+
+          {/* Topbar */}
+          <div style={{ flexShrink: 0 }}>
+            <Topbar
+              workspaceName="AIMS OS"
+              workspaces={[{ id: "1", name: "AIMS OS", description: "Main organization", tag: "Active" }]}
+              selectedWorkspaceId="1"
+              onWorkspaceSelect={() => {}}
+            />
+          </div>
+
+          {/* Shell: sidebar + content */}
+          <div className="flex flex-1 overflow-hidden">
+            <div style={{ flexShrink: 0 }}>
+              <Sidebar
+                items={[
+                  { id: "dash", icon: "LayoutDashboard", label: "Dashboard" },
+                  { id: "work", icon: "Bot",             label: "Workers" },
+                  { id: "team", icon: "Users",           label: "Teams" },
+                ]}
+                activeId="dash"
+                onItemClick={() => {}}
+              />
+            </div>
+
+            {/* Content area */}
+            <div className="flex flex-col flex-1 overflow-hidden">
+              {/* Header — sticky */}
+              <Header
+                size={wcScrolled ? "compress" : "size-l"}
+                title="Dashboard"
+                description="Real-time overview of your AI workforce performance."
+                tag={<Tag variant="success" size="sm">24 Active</Tag>}
+                primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> Add Widget</Button>}
+                secondaryAction={<Button variant="secondary" size="sm">Edit Layout</Button>}
+                style={{ transition: "padding 200ms ease-in-out", flexShrink: 0 }}
+              />
+
+              {/* Tab strip */}
+              <div className="flex items-center shrink-0" style={{ padding: "0 32px", borderBottom: "1px solid var(--field-border)", gap: 0 }}>
+                {["Overview", "Workers", "Teams", "Logs"].map((t, i) => (
+                  <button key={t} className="flex items-center h-[40px] px-[16px] text-[13px] font-medium" style={{ border: "none", background: "none", cursor: "pointer", color: i === 0 ? "var(--primary)" : "var(--field-supporting)", borderBottom: i === 0 ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              {/* Canvas scroll area — real widgets from DS */}
+              <div ref={wcContentRef} className="flex-1 overflow-y-auto" style={{ padding: "24px 32px" }}>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: 16,
+                }}>
+                  {CANVAS_LAYOUT.map(slot => (
+                    <div key={slot.uid} style={{ gridColumn: `span ${slot.colSpan}`, display: "flex", flexDirection: "column" }}>
+                      <WidgetFather
+                        className="flex-1"
+                        title={slot.title}
+                        fillWidth
+                        widthClass={slot.widthClass}
+                        showRefresh={slot.showRefresh}
+                        showMenu={slot.showMenu}
+                        showInfo={slot.showInfo}
+                      >
+                        <WidgetContent id={slot.id} kpiVariant={slot.kpiVariant ?? 2} />
+                      </WidgetFather>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-[16px] px-[12px] py-[10px] rounded-[6px] flex items-center gap-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-subtle)" }}>
+                  <LucideIcons.Info size={13} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                  <span className="text-[12px]" style={{ color: "var(--foreground)" }}>
+                    Vista estática del canvas layout. Para la versión interactiva con drag &amp; drop y resize, usa el <strong>Live Canvas</strong> desde la página de Widgets.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Widget Classes Reference modal ────────────────────────────── */}
+      {gridSysOpen && (
+        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 9998, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={e => { if (e.target === e.currentTarget) setGridSysOpen(false) }}>
+          <div className="flex flex-col overflow-hidden" style={{ width: "min(1100px, 95vw)", maxHeight: "90vh", background: "var(--surface-raised)", borderRadius: 20, border: "1px solid var(--widget-border)", boxShadow: "0 32px 80px rgba(0,0,0,0.45)" }}>
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-[32px] py-[20px]" style={{ borderBottom: "1px solid var(--field-border)", flexShrink: 0 }}>
+              <div className="flex flex-col gap-[2px]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Grid Unit System</span>
+                <h2 className="text-[18px] font-semibold" style={{ color: "var(--color-text-title)", margin: 0 }}>Widget Classes — Layout Reference</h2>
+                <p className="text-[12px]" style={{ color: "var(--color-text-subtitle)", margin: 0 }}>
+                  Three widget classes define all layout sizes. 1 GU = 24px. Widths are fractions of the 3-column canvas.
+                </p>
+              </div>
+              <button onClick={() => setGridSysOpen(false)} className="flex items-center justify-center rounded-[8px]"
+                style={{ width: 32, height: 32, background: "none", border: "1px solid var(--field-border)", cursor: "pointer", color: "var(--color-text-subtitle)" }}>
+                <LucideIcons.X size={14} />
+              </button>
+            </div>
+
+            {/* Class legend bar */}
+            <div className="flex items-center gap-[24px] px-[32px] py-[12px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)", flexShrink: 0 }}>
+              {[
+                { label: "Class 1 — Compact", desc: "KPI, summary, status", color: "var(--color-surface-primary-subtle)", border: "var(--color-border-primary-lighter)" },
+                { label: "Class 2 — Standard", desc: "Lists, simple charts", color: "var(--color-surface-success-more-subtle)", border: "var(--color-border-success-lighter)" },
+                { label: "Class 3 — Heavy", desc: "Tables, timelines, feeds", color: "var(--card-orange-bg)", border: "var(--card-orange-border)" },
+              ].map(c => (
+                <div key={c.label} className="flex items-center gap-[8px]">
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: c.color, border: `1px solid ${c.border}` }} />
+                  <div>
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-title)" }}>{c.label}</span>
+                    <span className="text-[11px]" style={{ color: "var(--color-text-subtitle)" }}> — {c.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Grid canvas */}
+            <div className="flex-1 overflow-y-auto p-[24px]">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
+
+                {/* ── Class 1 Compact: 3 narrow widgets at 4 GU (96px) ── */}
+                {([0, 1, 2] as const).map((variant, i) => (
+                  <div key={`c1-${i}`} style={{ gridColumn: "span 1", position: "relative" }}>
+                    <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-[8px] py-[4px] rounded-t-[8px] z-10"
+                      style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-lighter)", fontSize: 10, fontWeight: 700, color: "var(--primary)", fontFamily: "monospace", marginBottom: 4 }}>
+                      <span>Class 1 — Compact</span>
+                      <span>1/3 · 4–5 GU</span>
+                    </div>
+                    <div style={{ paddingTop: 26 }}>
+                      <WidgetFather title={["Active Workers", "Conversions", "Goal Progress"][i]} fillWidth widthClass="narrow" showRefresh showMenu>
+                        <WidgetContent id="kpi" kpiVariant={variant as 0|1|2} />
+                      </WidgetFather>
+                    </div>
+                  </div>
+                ))}
+
+                {/* ── Class 2 Standard: wide widget at 9 GU ── */}
+                <div style={{ gridColumn: "span 2", position: "relative" }}>
+                  <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-[8px] py-[4px] rounded-t-[8px] z-10"
+                    style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-border-success-lighter)", fontSize: 10, fontWeight: 700, color: "var(--color-surface-success-default)", fontFamily: "monospace", marginBottom: 4 }}>
+                    <span>Class 2 — Standard</span>
+                    <span>2/3 · 9 GU</span>
+                  </div>
+                  <div style={{ paddingTop: 26 }}>
+                    <WidgetFather title="Recent Activity Timeline" fillWidth widthClass="wide" showRefresh showMenu>
+                      <WidgetContent id="timeline" />
+                    </WidgetFather>
+                  </div>
+                </div>
+
+                {/* ── Class 2 Standard: narrow ── */}
+                <div style={{ gridColumn: "span 1", position: "relative" }}>
+                  <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-[8px] py-[4px] rounded-t-[8px] z-10"
+                    style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-border-success-lighter)", fontSize: 10, fontWeight: 700, color: "var(--color-surface-success-default)", fontFamily: "monospace", marginBottom: 4 }}>
+                    <span>Class 2 — Standard</span>
+                    <span>1/3 · 9 GU</span>
+                  </div>
+                  <div style={{ paddingTop: 26 }}>
+                    <WidgetFather title="Team Notes" fillWidth widthClass="narrow" showMenu>
+                      <WidgetContent id="notes" />
+                    </WidgetFather>
+                  </div>
+                </div>
+
+                {/* ── Class 3 Heavy: full width ── */}
+                <div style={{ gridColumn: "span 3", position: "relative" }}>
+                  <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-[8px] py-[4px] rounded-t-[8px] z-10"
+                    style={{ background: "var(--card-orange-bg)", border: "0.5px solid var(--card-orange-border)", fontSize: 10, fontWeight: 700, color: "var(--card-orange-hover-bd)", fontFamily: "monospace", marginBottom: 4 }}>
+                    <span>Class 3 — Heavy</span>
+                    <span>3/3 · 9+ GU · Internal scroll</span>
+                  </div>
+                  <div style={{ paddingTop: 26 }}>
+                    <WidgetFather title="Performance Charts" fillWidth widthClass="full" showRefresh showMenu>
+                      <WidgetContent id="charts" />
+                    </WidgetFather>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* GU reference table */}
+              <div className="mt-[20px] rounded-[12px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
+                <div className="px-[16px] py-[10px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-text-subtitle)" }}>Grid Unit Reference — 1 GU = 24px</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[12px]" style={{ borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "var(--surface)" }}>
+                        {["Class", "Use case", "Default width", "Height range", "px height", "Internal scroll"].map(h => (
+                          <th key={h} className="px-[14px] py-[9px] text-left font-semibold" style={{ color: "var(--field-label)", borderBottom: "1px solid var(--field-border)", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ["Class 1 — Compact", "KPI, status badge, counter", "1/3 (4 cols)", "4–5 GU", "96–120px", "No"],
+                        ["Class 2 — Standard", "List, simple chart, form", "1/3 (4 cols)", "7–9 GU", "168–216px", "Optional"],
+                        ["Class 3 — Heavy", "Table, timeline, feed", "2/3 (8 cols)", "9+ GU", "216px+", "Yes"],
+                      ].map(([cls, use, width, gu, px, scroll]) => (
+                        <tr key={cls} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                          <td className="px-[14px] py-[10px] font-semibold" style={{ color: "var(--color-text-title)", whiteSpace: "nowrap" }}>{cls}</td>
+                          <td className="px-[14px] py-[10px]" style={{ color: "var(--color-text-subtitle)" }}>{use}</td>
+                          <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{width}</td>
+                          <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--color-text-title)" }}>{gu}</td>
+                          <td className="px-[14px] py-[10px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{px}</td>
+                          <td className="px-[14px] py-[10px]" style={{ color: scroll === "Yes" ? "var(--color-surface-success-default)" : scroll === "Optional" ? "var(--primary)" : "var(--color-text-subtitle)" }}>{scroll}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── WidgetFatherPage ──────────────────────────────────────────────────────────
+
+function WidgetFatherPage() {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+
+  // Playground state
+  const [pgTitle,       setPgTitle]       = useState("Widget title")
+  const [pgDesc,        setPgDesc]        = useState(false)
+  const [pgInfo,        setPgInfo]        = useState(false)
+  const [pgRefresh,     setPgRefresh]     = useState(true)
+  const [pgMenu,        setPgMenu]        = useState(true)
+  const [pgPin,         setPgPin]         = useState(false)
+  const [pgState,       setPgState]       = useState<"default" | "hover" | "drag" | "error" | "connection">("default")
+  const [pgCTACount,    setPgCTACount]    = useState<0|1|2>(0)
+  const [pgCTADisp,     setPgCTADisp]     = useState<"horizontal"|"vertical">("horizontal")
+  const [pgCTAType,     setPgCTAType]     = useState<"hug"|"full">("hug")
+  const [pgWidth,       setPgWidth]       = useState<WidgetWidthClass>("narrow")
+
+  const CTA_VARIANTS: { label: string; count: 0|1|2; disp: "horizontal"|"vertical"; type: "hug"|"full" }[] = [
+    { label: "None",                     count: 0, disp: "horizontal", type: "hug"  },
+    { label: "1 CTA · Hug",             count: 1, disp: "horizontal", type: "hug"  },
+    { label: "2 CTA · Hug",             count: 2, disp: "horizontal", type: "hug"  },
+    { label: "2 CTA · Full Width",      count: 2, disp: "horizontal", type: "full" },
+    { label: "1 CTA · Full Width",      count: 1, disp: "horizontal", type: "full" },
+    { label: "2 CTA · Vertical",        count: 2, disp: "vertical",   type: "full" },
+  ]
+
+  const TOKENS = [
+    { token: "--widget-bg",              role: "Card background",          dark: "var(--surface)",                        light: "var(--surface)" },
+    { token: "--widget-border",          role: "Default border",           dark: "rgba(255,255,255,0.10)",                light: "var(--field-border)" },
+    { token: "--widget-border-hover",    role: "Hover border",             dark: "rgba(255,255,255,0.20)",                light: "var(--field-border-hover)" },
+    { token: "--widget-title",           role: "Header title (uppercase)", dark: "rgba(255,255,255,0.80)",                light: "#1A1A1A" },
+    { token: "--widget-subtitle",        role: "Description text",         dark: "rgba(255,255,255,0.60)",                light: "#2a2a2a" },
+    { token: "--widget-icon",            role: "Action icon color",        dark: "rgba(255,255,255,0.70)",                light: "rgba(0,0,0,0.50)" },
+    { token: "--widget-action-hover-bg", role: "Action button hover fill", dark: "rgba(255,255,255,0.06)",                light: "rgba(0,0,0,0.04)" },
+    { token: "--color-border-primary-lighter", role: "Slot dashed border (static)", dark: "#80afff",                    light: "#80afff" },
+    { token: "--primary",                role: "CTA primary background",   dark: "#2b7fff",                              light: "#2173ff" },
+  ]
+
+  return (
+    <div>
+      {/* Page header */}
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern · Component</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Widget Father</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          The shared base structure for all UCP widgets. Every widget type (KPI, Table, Calendar, etc.) is composed by embedding its content inside the Widget Father shell. The Father handles the header, actions, and optional footer CTAs — the body slot is always contextual.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-[0px] mb-[24px]" style={{ borderBottom: "1px solid var(--field-border)" }}>
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[16px] h-[40px] text-[13px] font-medium capitalize transition-colors"
+            style={{ border: "none", background: "none", cursor: "pointer", color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ─────────────────────────────────────────── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Anatomy — The Widget Father base</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[20px]">
+              All widgets share this exact shell. The content slot (dashed blue border) is replaced by each widget's specific content. The card padding is always 24px. Gap between header, body, and footer is 8px.
+            </p>
+            <div className="flex flex-wrap gap-[24px] items-start">
+              {/* Default — title only */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Title only · No CTA</span>
+                <WidgetFather title="Widget title" showRefresh showMenu showInfo={false} showPin={false} cta={{ count: 0 }}>
+                  <div className="flex items-center justify-center rounded-[8px]" style={{ height: 64, border: "1px dashed var(--color-border-primary-lighter)", color: "var(--primary)", fontSize: 13, fontWeight: 600 }}>
+                    Replace content here
+                  </div>
+                </WidgetFather>
+              </div>
+              {/* Title + description */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Title + description</span>
+                <WidgetFather title="Widget title" description="Optional description of this widget" showRefresh showMenu showInfo={false} showPin={false} cta={{ count: 0 }}>
+                  <div className="flex items-center justify-center rounded-[8px]" style={{ height: 64, border: "1px dashed var(--color-border-primary-lighter)", color: "var(--primary)", fontSize: 13, fontWeight: 600 }}>
+                    Replace content here
+                  </div>
+                </WidgetFather>
+              </div>
+              {/* Drag state */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Drag state (in motion)</span>
+                <WidgetFather title="Widget title" isDragging showRefresh showMenu showInfo={false} showPin={false} cta={{ count: 0 }}>
+                  <div className="flex items-center justify-center rounded-[8px]" style={{ height: 64, border: "1px dashed var(--color-border-primary-lighter)", color: "var(--primary)", fontSize: 13, fontWeight: 600 }}>
+                    Replace content here
+                  </div>
+                </WidgetFather>
+              </div>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>CTA Footer variants</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[20px]">
+              Five CTA configurations. Body actions never affect widget height and are always optional. CTAs relate directly to the visible content — never for primary task completion.
+            </p>
+            <div className="flex flex-col gap-[16px]">
+              {CTA_VARIANTS.filter(v => v.count > 0).map(v => (
+                <div key={v.label} className="flex flex-col gap-[6px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>{v.label}</span>
+                  <WidgetFather title="Widget title" showRefresh showMenu cta={{ count: v.count, disposition: v.disp, type: v.type, primaryLabel: "Primary action", secondaryLabel: "Secondary" }}>
+                    <div style={{ height: 40 }} />
+                  </WidgetFather>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>States — Error & Connection Error</SectionLabel>
+            <div className="flex flex-wrap gap-[24px] items-start">
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-surface-error-default)" }}>Error state</span>
+                <WidgetFather title="Widget title" showRefresh showMenu hasError>
+                  <div style={{ height: 48 }} />
+                </WidgetFather>
+              </div>
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-surface-alert-default)" }}>Connection error</span>
+                <WidgetFather title="Widget title" showRefresh showMenu hasConnectionError>
+                  <div style={{ height: 48 }} />
+                </WidgetFather>
+              </div>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Placement rules</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Max 2 header action buttons (overflow menu + one contextual action)." },
+                { type: "do",   text: "Body CTAs are optional — only add them when they relate directly to the visible content." },
+                { type: "dont", text: "Don't use header CTAs for primary task completion — only lightweight global actions (refresh, info, pin)." },
+                { type: "dont", text: "Don't grow the widget height to add more CTAs — content overflow uses internal scroll, pagination, or drill-down." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Playground ───────────────────────────────────────── */}
+      {tab === "playground" && (
+        <div className="flex gap-[24px] items-start">
+          {/* Controls */}
+          <div className="flex flex-col gap-[16px] shrink-0" style={{ width: 260 }}>
+            <PatternCard>
+              <SectionLabel>Content</SectionLabel>
+              <div className="flex flex-col gap-[10px]">
+                <div>
+                  <label className="text-[11px] font-semibold" style={{ color: "var(--field-supporting)" }}>Title</label>
+                  <input value={pgTitle} onChange={e => setPgTitle(e.target.value)}
+                    className="w-full mt-[4px] px-[8px] rounded-[6px] text-[12px]"
+                    style={{ height: 28, background: "var(--color-surface-neutral-default)", border: "1px solid var(--field-border)", color: "var(--foreground)", outline: "none" }}
+                  />
+                </div>
+                <CtrlToggle label="Description" value={pgDesc} onChange={setPgDesc} />
+              </div>
+            </PatternCard>
+            <PatternCard>
+              <SectionLabel>Header actions</SectionLabel>
+              <div className="flex flex-col gap-[8px]">
+                <CtrlToggle label="Refresh (↺)"      value={pgRefresh} onChange={setPgRefresh} />
+                <CtrlToggle label="Menu (⋮)"         value={pgMenu}    onChange={setPgMenu} />
+                <CtrlToggle label="Info (ⓘ)"         value={pgInfo}    onChange={setPgInfo} />
+                <CtrlToggle label="Pin (📌)"          value={pgPin}     onChange={setPgPin} />
+              </div>
+            </PatternCard>
+            <CtrlGroup label="State" value={pgState} onChange={setPgState} options={[
+              { value: "default",    label: "Default" },
+              { value: "hover",      label: "Hover" },
+              { value: "drag",       label: "Drag" },
+              { value: "error",      label: "Error" },
+              { value: "connection", label: "Connection" },
+            ]} />
+            <CtrlGroup label="CTA" value={String(CTA_VARIANTS.findIndex(v => v.count === pgCTACount && v.disp === pgCTADisp && v.type === pgCTAType))} onChange={(v) => {
+              const found = CTA_VARIANTS[Number(v)]
+              if (found) { setPgCTACount(found.count); setPgCTADisp(found.disp); setPgCTAType(found.type) }
+            }} options={CTA_VARIANTS.map((v, i) => ({ value: String(i), label: v.label }))} />
+            <CtrlGroup label="Width" value={pgWidth} onChange={setPgWidth} options={[
+              { value: "narrow", label: "Narrow (1/3)" },
+              { value: "wide",   label: "Wide (2/3)" },
+              { value: "full",   label: "Full (3/3)" },
+            ]} />
+          </div>
+
+          {/* Live preview */}
+          <div className="flex-1 flex flex-col gap-[12px]">
+            <div className="rounded-[10px] p-[24px] flex items-start justify-center" style={{ background: "var(--canvas)", border: "1px solid var(--field-border)", minHeight: 280 }}>
+              <WidgetFather
+                title={pgTitle}
+                description={pgDesc ? "This is an optional description for the widget header." : undefined}
+                showInfo={pgInfo}
+                showRefresh={pgRefresh}
+                showMenu={pgMenu}
+                showPin={pgPin}
+                isDragging={pgState === "drag"}
+                isHovered={pgState === "hover"}
+                hasError={pgState === "error"}
+                hasConnectionError={pgState === "connection"}
+                widthClass={pgWidth}
+                cta={{ count: pgCTACount, disposition: pgCTADisp, type: pgCTAType, primaryLabel: "Primary action", secondaryLabel: "Secondary" }}
+              >
+                <div className="flex items-center justify-center rounded-[8px]" style={{ height: 96, border: "1px dashed var(--color-border-primary-lighter)", color: "var(--primary)", fontSize: 13, fontWeight: 600 }}>
+                  Replace content here
+                </div>
+              </WidgetFather>
+            </div>
+            <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+              State: <strong style={{ color: "var(--foreground)" }}>{pgState}</strong> · Width: <strong style={{ color: "var(--foreground)" }}>{pgWidth}</strong> · CTA: <strong style={{ color: "var(--foreground)" }}>{CTA_VARIANTS.find(v => v.count === pgCTACount && v.disp === pgCTADisp && v.type === pgCTAType)?.label ?? "None"}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reference ────────────────────────────────────────── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Design tokens</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[12px]" style={{ borderCollapse: "collapse" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                  {["Token", "Role", "Dark mode", "Light mode"].map(h => (
+                    <th key={h} className="px-[12px] py-[8px] text-left font-semibold" style={{ color: "var(--field-label)" }}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {TOKENS.map(t => (
+                    <tr key={t.token} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px]"><code className="text-[11px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{t.token}</code></td>
+                      <td className="px-[12px] py-[8px]" style={{ color: "var(--foreground)" }}>{t.role}</td>
+                      <td className="px-[12px] py-[8px] font-mono" style={{ color: "var(--field-supporting)", fontSize: 11 }}>{t.dark}</td>
+                      <td className="px-[12px] py-[8px] font-mono" style={{ color: "var(--field-supporting)", fontSize: 11 }}>{t.light}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+          <PatternCard>
+            <SectionLabel>Props</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[12px]" style={{ borderCollapse: "collapse" }}>
+                <thead><tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                  {["Prop", "Type", "Default", "Description"].map(h => (
+                    <th key={h} className="px-[12px] py-[8px] text-left font-semibold" style={{ color: "var(--field-label)" }}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {[
+                    { prop: "title",             type: "string",                    def: "required",     desc: "Widget header title. Displayed uppercase, semibold, 12px." },
+                    { prop: "description",        type: "string?",                   def: "undefined",    desc: "Optional subtitle below the title. Shown when provided." },
+                    { prop: "showRefresh",        type: "boolean",                   def: "true",         desc: "Show the ↺ refresh icon action button." },
+                    { prop: "showMenu",           type: "boolean",                   def: "true",         desc: "Show the ⋮ overflow menu icon button." },
+                    { prop: "showInfo",           type: "boolean",                   def: "false",        desc: "Show the ⓘ info icon button." },
+                    { prop: "showPin",            type: "boolean",                   def: "false",        desc: "Show the 📌 pin icon button." },
+                    { prop: "isDragging",         type: "boolean",                   def: "false",        desc: "Activates drag state — shows grip dots on the left of the header." },
+                    { prop: "isHovered",          type: "boolean",                   def: "false",        desc: "Highlights the card border and adds a subtle shadow." },
+                    { prop: "hasError",           type: "boolean",                   def: "false",        desc: "Error state — red border + inline error message replaces content." },
+                    { prop: "hasConnectionError", type: "boolean",                   def: "false",        desc: "Connection error — orange border + message replaces content." },
+                    { prop: "cta",                type: "WidgetCTAProps?",           def: "undefined",    desc: "Footer CTA config: count (0/1/2), disposition (horizontal/vertical), type (hug/full)." },
+                    { prop: "widthClass",         type: '"narrow"|"wide"|"full"',    def: '"narrow"',     desc: "Sets max-width: 330px / 680px / 1020px for documentation previews." },
+                    { prop: "children",           type: "ReactNode",                 def: "placeholder",  desc: "The widget body content. If omitted, shows the dashed 'Replace content here' slot." },
+                  ].map(r => (
+                    <tr key={r.prop} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px]"><code className="text-[11px] px-[4px] py-[0.5px] rounded-[2px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{r.prop}</code></td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{r.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{r.def}</td>
+                      <td className="px-[12px] py-[8px]" style={{ color: "var(--foreground)" }}>{r.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── WidgetsPage ───────────────────────────────────────────────────────────────
+
+// ── Widget content components ─────────────────────────────────────────────────
+
+function KpiWidgetContent({ variant = 2 }: { variant?: 0 | 1 | 2 | 3 }) {
+  // HighlightIcon lg (40×40) with TrendingUp — right-aligned per Figma 12661:63019
+  const KpiHighlight = () => (
+    <HighlightIcon size="lg" variant="informative" iconName="TrendingUp" />
+  )
+  const FeedbackText = () => (
+    <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Feedback text</span>
+  )
+
+  if (variant === 0) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <span style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>2,401</span>
+      <KpiHighlight />
+    </div>
+  )
+  if (variant === 1) return (
+    <div className="flex flex-col gap-[6px]">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>2,401</span>
+        <KpiHighlight />
+      </div>
+      <FeedbackText />
+    </div>
+  )
+  if (variant === 2) return (
+    <div className="flex flex-col gap-[6px]">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+          <span style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>2,401</span>
+          <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>/ 2,800</span>
+        </div>
+        <KpiHighlight />
+      </div>
+      <FeedbackText />
+    </div>
+  )
+  // Variant 3 — with progress bar
+  return (
+    <div className="flex flex-col gap-[6px]">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+          <span style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>2,401</span>
+          <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>/ 2,800</span>
+        </div>
+        <KpiHighlight />
+      </div>
+      <div style={{ height: 4, background: "var(--color-surface-neutral-emphasis)", borderRadius: 100, overflow: "hidden" }}>
+        <div style={{ width: "85%", height: "100%", background: "var(--primary)", borderRadius: 100 }} />
+      </div>
+      <FeedbackText />
+    </div>
+  )
+}
+
+const TIMELINE_CARDS = [
+  {
+    value: "127", label: "Contracts", icon: "FileText",
+    bg: "var(--color-surface-primary-subtle)",
+    border: "var(--color-border-primary-default)",
+    textColor: "var(--color-border-primary-default)",
+  },
+  {
+    value: "43",  label: "Meetings", icon: "FileText",
+    bg: "var(--color-surface-yellow-subtle)",
+    border: "var(--color-surface-yellow-default)",
+    textColor: "var(--color-surface-yellow-default)",
+  },
+  {
+    value: "12",  label: "Calls", icon: "FileText",
+    bg: "var(--color-surface-success-subtle)",
+    border: "var(--color-border-success-default)",
+    textColor: "var(--color-border-success-default)",
+  },
+  {
+    value: "28",  label: "Proposals", icon: "FileText",
+    bg: "var(--color-surface-purple-subtle)",
+    border: "var(--color-border-purple-default)",
+    textColor: "var(--color-border-purple-default)",
+  },
+  {
+    value: "7",   label: "Closed", icon: "FileText",
+    bg: "var(--color-surface-lime-subtle)",
+    border: "var(--color-border-lime-green-default)",
+    textColor: "var(--color-border-lime-green-default)",
+  },
+  {
+    value: "19",  label: "Pipeline", icon: "FileText",
+    bg: "var(--color-surface-light-blue-subtle)",
+    border: "var(--color-border-light-blue-default)",
+    textColor: "var(--color-border-light-blue-default)",
+  },
+]
+
+const TIMELINE_META = [
+  { icon: "Cpu",        label: "AI Routing" },
+  { icon: "Workflow",   label: "Automation" },
+  { icon: "LayoutGrid", label: "Pipeline" },
+]
+
+function TimelineWidgetContent({ showMeta = true, count = 5 }: { showMeta?: boolean; count?: 2|3|4|5|6 }) {
+  type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
+  return (
+    <div className="flex flex-col gap-[8px] w-full">
+      {/* Cards row — horizontal scroll when narrow */}
+      <div className="flex items-stretch w-full" style={{ overflowX: "auto", gap: 0 }}>
+        {TIMELINE_CARDS.slice(0, count).map((card, i) => (
+          <Fragment key={i}>
+            {i > 0 && (
+              <div style={{ width: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: "100%", height: 1, background: "var(--field-border)" }} />
+              </div>
+            )}
+            <div
+              style={{
+                flex: "1 0 114px",
+                padding: "8px 12px",
+                background: card.bg,
+                border: `1px solid ${card.border}`,
+                borderRadius: 8,
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <span style={{ fontSize: 16, fontWeight: 600, color: card.textColor, lineHeight: 1.2 }}>
+                  {card.value}
+                </span>
+                <span style={{ fontSize: 14, color: "var(--color-text-body)", lineHeight: "20px" }}>
+                  {card.label}
+                </span>
+              </div>
+              {/* Icon — 16×16 with card color */}
+              <div style={{ width: 24, height: 24, flexShrink: 0, opacity: 0.7, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <LucideIcons.FileText size={16} style={{ color: card.textColor }} />
+              </div>
+            </div>
+          </Fragment>
+        ))}
+      </div>
+
+      {/* MetaData row */}
+      {showMeta && (
+        <div className="flex items-center gap-[12px]">
+          {TIMELINE_META.map((m, i) => {
+            const Icon = (LucideIcons as unknown as Record<string, LIcon>)[m.icon]
+            return (
+              <div key={i} className="flex items-center gap-[4px]">
+                {Icon && <Icon size={14} style={{ color: "var(--color-text-body)" }} />}
+                <span style={{ fontSize: 12, color: "var(--color-text-body)", whiteSpace: "nowrap" }}>
+                  {m.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// Lineal performance widget — matches Figma spec exactly
+const PERF_SERIES = [
+  { label: "Performance", color: "var(--color-border-lime-green-default)",  data: [38, 58, 65, 63] },
+  { label: "Engagement",  color: "var(--color-border-light-blue-default)",  data: [30, 30, 47, 38] },
+  { label: "Retention",   color: "var(--color-border-purple-default)",      data: [18, 18, 26, 24] },
+]
+
+function smoothPath(pts: [number, number][]): string {
+  if (pts.length < 2) return ""
+  let d = `M ${pts[0][0]} ${pts[0][1]}`
+  for (let i = 1; i < pts.length; i++) {
+    const cp1x = pts[i-1][0] + (pts[i][0] - pts[i-1][0]) / 3
+    const cp1y = pts[i-1][1]
+    const cp2x = pts[i][0] - (pts[i][0] - pts[i-1][0]) / 3
+    const cp2y = pts[i][1]
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${pts[i][0]} ${pts[i][1]}`
+  }
+  return d
+}
+
+function ChartsWidgetContent() {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+
+  // Fixed viewBox: 400×150. Chart area: x 36–392, y 10–130
+  const yScale = (v: number) => 130 - (v / 80) * 120
+  const xAt    = (i: number) => 36 + i * (356 / 3)
+  const yLabels = [0, 20, 40, 60, 80]
+  const xLabels = ["W1", "W2", "W3", "W4"]
+
+  function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    // Map rendered pixel X to viewBox X (0–400)
+    const svgX = ((e.clientX - rect.left) / rect.width) * 400
+    // Find nearest column
+    let best = 0, bestDist = Infinity
+    for (let i = 0; i < 4; i++) {
+      const dist = Math.abs(xAt(i) - svgX)
+      if (dist < bestDist) { bestDist = dist; best = i }
+    }
+    setHoveredIdx(best)
+  }
+
+  // Tooltip side: right when idx ≤ 1, left when idx ≥ 2
+  // Percentage across the SVG width for the crosshair position
+  const crosshairPct = hoveredIdx !== null ? (xAt(hoveredIdx) / 400) * 100 : 0
+
+  return (
+    <div className="flex flex-col gap-[8px]">
+      {/* Legend */}
+      <div className="flex gap-[10px] flex-wrap">
+        {PERF_SERIES.map(s => (
+          <div key={s.label} className="flex items-center gap-[4px]">
+            <div style={{ width: 12, height: 2, background: s.color, borderRadius: 1 }} />
+            <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Chart wrapper — position:relative so tooltip can be absolute */}
+      <div style={{ position: "relative", paddingBottom: 20 }}>
+
+        {/* Floating insight card tooltip */}
+        {hoveredIdx !== null && (
+          <div
+            style={{
+              position: "absolute",
+              top: 30,
+              ...(hoveredIdx <= 1
+                ? { left: `calc(${crosshairPct}% + 8px)` }
+                : { right: `calc(${100 - crosshairPct}% + 8px)` }),
+              background: "var(--widget-bg)",
+              border: "1px solid var(--field-border)",
+              borderRadius: 8,
+              padding: "10px 12px",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+              pointerEvents: "none",
+              zIndex: 10,
+              minWidth: 140,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 6 }}>
+              Week {xLabels[hoveredIdx]}
+            </div>
+            {PERF_SERIES.map(s => (
+              <div key={s.label} className="flex items-center gap-[6px]" style={{ marginBottom: 3 }}>
+                <span style={{ fontSize: 12, color: s.color, fontWeight: 500 }}>{s.label}:</span>
+                <span style={{ fontSize: 12, color: "var(--color-text-title)", fontWeight: 500 }}>
+                  {s.data[hoveredIdx]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <svg
+          width="100%"
+          height="140"
+          viewBox="0 0 400 140"
+          preserveAspectRatio="none"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setHoveredIdx(null)}
+          style={{ display: "block", cursor: "crosshair" }}
+        >
+          {/* Horizontal grid lines */}
+          {yLabels.map(yv => (
+            <line
+              key={yv}
+              x1="36" x2="392"
+              y1={yScale(yv)} y2={yScale(yv)}
+              stroke="var(--field-border)"
+              strokeWidth="0.5"
+              strokeDasharray="2,4"
+            />
+          ))}
+
+          {/* Crosshair vertical line */}
+          {hoveredIdx !== null && (
+            <line
+              x1={xAt(hoveredIdx)} x2={xAt(hoveredIdx)}
+              y1={10} y2={130}
+              stroke="var(--field-border)"
+              strokeWidth="1"
+            />
+          )}
+
+          {/* Series smooth lines */}
+          {PERF_SERIES.map(s => {
+            const pts: [number, number][] = s.data.map((v, i) => [xAt(i), yScale(v)])
+            return (
+              <path
+                key={s.label}
+                d={smoothPath(pts)}
+                fill="none"
+                stroke={s.color}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )
+          })}
+
+          {/* Data point dots — only on hover */}
+          {hoveredIdx !== null && PERF_SERIES.map(s => (
+            <circle
+              key={s.label}
+              cx={xAt(hoveredIdx)}
+              cy={yScale(s.data[hoveredIdx])}
+              r={3}
+              fill={s.color}
+            />
+          ))}
+        </svg>
+
+        {/* Y-axis labels — fixed HTML, don't scale with SVG */}
+        <div style={{
+          position: "absolute", top: 0, left: 0, bottom: 16,
+          display: "flex", flexDirection: "column", justifyContent: "space-between",
+          pointerEvents: "none",
+        }}>
+          {[80, 60, 40, 20, 0].map(yv => (
+            <span key={yv} style={{ fontSize: 9, color: "var(--color-text-subtitle)", lineHeight: 1 }}>
+              {yv}
+            </span>
+          ))}
+        </div>
+
+        {/* X-axis labels — fixed HTML, positioned at percentage */}
+        <div style={{
+          position: "absolute", bottom: 0, left: 36, right: 8,
+          display: "flex", justifyContent: "space-between",
+          pointerEvents: "none",
+        }}>
+          {["W1","W2","W3","W4"].map(lbl => (
+            <span key={lbl} style={{ fontSize: 9, color: "var(--color-text-subtitle)", textAlign: "center", lineHeight: 1 }}>
+              {lbl}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const TABLE_ROWS = [
+  { name: "Alice Johnson", status: "Active",   statusColor: "var(--color-surface-success-default)", value: "$12,400" },
+  { name: "Bob Smith",     status: "Inactive", statusColor: "var(--field-supporting)",              value: "$8,200"  },
+  { name: "Carol Davis",   status: "Pending",  statusColor: "var(--color-surface-alert-default)",   value: "$5,600"  },
+  { name: "Dave Wilson",   status: "Active",   statusColor: "var(--color-surface-success-default)", value: "$9,100"  },
+]
+
+function TableWidgetContent() {
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid var(--field-border)" }}>
+            {["Name","Status","Value"].map(h => (
+              <th key={h} style={{ padding: "4px 8px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--field-label)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {TABLE_ROWS.map((row, i) => (
+            <tr key={i} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+              <td style={{ padding: "7px 8px", fontSize: 12, color: "var(--foreground)" }}>{row.name}</td>
+              <td style={{ padding: "7px 8px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: row.statusColor, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{row.status}</span>
+                </span>
+              </td>
+              <td style={{ padding: "7px 8px", fontSize: 12, color: "var(--foreground)", fontWeight: 600 }}>{row.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+const ACTIVITY_DATA = [
+  { type: "call",    title: "Inbound call from Sarah Johnson",  time: "2m ago",  status: "alert" as const,
+    desc: "Sarah Johnson | Confirmed demo, asked for pricing. Available Thursday 3pm.", metaCount: 4 },
+  { type: "email",   title: "Email from David Kim",             time: "15m ago", status: "default" as const,
+    desc: "David Kim | Re: Q3 proposal — schedule a quick sync to review numbers?",    metaCount: 2 },
+  { type: "meeting", title: "Meeting — Quarterly Review",       time: "1h ago",  status: "default" as const,
+    desc: "Team | QBR completed. Action items assigned to Sarah and Mike for follow-up.", metaCount: 3 },
+  { type: "sms",     title: "SMS — Maria Torres",               time: "2h ago",  status: "default" as const,
+    desc: "Maria Torres | Thanks for follow-up. Loop in manager before Friday.",       metaCount: 1 },
+  { type: "task",    title: "Task — Contract renewal due",      time: "3h ago",  status: "alert" as const,
+    desc: "System | Contract renewal deadline approaching. Priority: High.",           metaCount: 2 },
+  { type: "call",    title: "Missed call from James Carter",    time: "4h ago",  status: "error" as const,
+    desc: "James Carter | Called twice — likely about contract renewal.",              metaCount: 3 },
+]
+
+const ACTIVITY_TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string; accentBorder: string }> = {
+  call:    { icon: "Phone",         color: "var(--primary)",                          bg: "var(--color-surface-primary-subtle)",    accentBorder: "var(--color-border-primary-default)" },
+  email:   { icon: "Mail",          color: "var(--color-border-light-blue-default)",  bg: "var(--color-surface-light-blue-subtle)", accentBorder: "var(--color-border-light-blue-default)" },
+  sms:     { icon: "MessageSquare", color: "var(--color-border-success-default)",     bg: "var(--color-surface-success-subtle)",    accentBorder: "var(--color-border-success-default)" },
+  meeting: { icon: "CalendarDays",  color: "var(--color-border-purple-default)",      bg: "var(--color-surface-purple-subtle)",     accentBorder: "var(--color-border-purple-default)" },
+  task:    { icon: "CheckSquare",   color: "var(--color-surface-yellow-default)",     bg: "var(--color-surface-yellow-subtle)",     accentBorder: "var(--color-surface-yellow-default)" },
+}
+
+function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
+  type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
+  const iconStyle: React.CSSProperties = { color: "var(--color-text-subtitle)" }
+  const dot = (key: string) => <span key={key} style={{ fontSize: 10, color: "var(--field-supporting)" }}>·</span>
+
+  function showTip(e: React.MouseEvent, text: string) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setTooltip({ text, x: r.left + r.width / 2, y: r.top })
+  }
+
+  const META_GROUPS = (onTip: (e: React.MouseEvent, t: string) => void): React.ReactNode[][] => [
+    [<span key="uid" style={{ fontSize: 10, color: "var(--color-text-subtitle)", fontFamily: "monospace",
+        background: "var(--color-surface-neutral-default)", borderRadius: 3, padding: "1px 4px" }}>{`{User-ID}`}</span>],
+    [dot("d1"), <span key="smile" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Sentiment")} onMouseLeave={() => setTooltip(null)}><LucideIcons.Smile size={10} style={iconStyle} /></span>],
+    [dot("d2"), <span key="chk" style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }} onMouseEnter={e => onTip(e, "Tasks completed")} onMouseLeave={() => setTooltip(null)}>
+        <LucideIcons.CheckSquare size={10} style={iconStyle} />
+        <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>2</span></span>],
+    [dot("d3"), <span key="wave" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Recording available")} onMouseLeave={() => setTooltip(null)}><LucideIcons.AudioWaveform size={10} style={iconStyle} /></span>],
+    [dot("d4"), <span key="arrow" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Outbound")} onMouseLeave={() => setTooltip(null)}><LucideIcons.ArrowUpRight size={10} style={iconStyle} /></span>],
+    [dot("d5"), <span key="clk" style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }} onMouseEnter={e => onTip(e, "Call duration")} onMouseLeave={() => setTooltip(null)}>
+        <LucideIcons.Clock size={10} style={iconStyle} />
+        <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>4 mins</span></span>],
+    [dot("d6"), <span key="cdl" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Ended by agent")} onMouseLeave={() => setTooltip(null)}><LucideIcons.CornerDownLeft size={10} style={iconStyle} /></span>],
+    [dot("d7"), <span key="flag" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Priority flag")} onMouseLeave={() => setTooltip(null)}><LucideIcons.Flag size={10} style={iconStyle} /></span>],
+  ]
+
+  return (
+    <>
+      {/* Fixed-position tooltip rendered outside overflow:hidden */}
+      {tooltip && (
+        <div style={{
+          position: "fixed",
+          left: tooltip.x,
+          top: tooltip.y - 4,
+          transform: "translateX(-50%) translateY(-100%)",
+          background: "var(--color-surface-neutral-darker)",
+          color: "#ffffff",
+          borderRadius: 4,
+          padding: "3px 7px",
+          fontSize: 10,
+          pointerEvents: "none",
+          zIndex: 99999,
+          whiteSpace: "nowrap",
+        }}>
+          {tooltip.text}
+        </div>
+      )}
+      <div className="flex flex-col gap-[6px]" style={{ overflowY: "auto", maxHeight: 280 }}>
+        {ACTIVITY_DATA.map((activity, i) => {
+          const cfg = ACTIVITY_TYPE_CONFIG[activity.type] ?? ACTIVITY_TYPE_CONFIG["call"]
+          const CfgIcon = (LucideIcons as unknown as Record<string, LIcon>)[cfg.icon]
+          const isHovered = hoveredIdx === i
+          const isSelected = selectedIdx === i
+          const showMetaRow = showMeta || isHovered || isSelected
+          const borderColor = isSelected || isHovered
+            ? "var(--color-border-primary-default)"
+            : "var(--hi-informative-bg)"
+          const bgColor = isSelected
+            ? "var(--color-surface-primary-subtle)"
+            : isHovered
+              ? "var(--color-surface-primary-subtle)"
+              : "var(--widget-bg)"
+
+          return (
+            <div
+              key={i}
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              onClick={() => setSelectedIdx(isSelected ? null : i)}
+              style={{
+                display: "flex", flexDirection: "column", gap: 4,
+                padding: "8px 10px", borderRadius: 8,
+                border: `1px solid ${borderColor}`,
+                background: bgColor,
+                cursor: "pointer",
+                transition: "background 150ms, border-color 150ms",
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 26, height: 26, borderRadius: 6, flexShrink: 0,
+                    background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {CfgIcon && <CfgIcon size={12} style={{ color: cfg.color }} />}
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)",
+                    flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {activity.title}
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                  {activity.status === "alert" && (
+                    <LucideIcons.AlertTriangle size={11} style={{ color: "var(--color-surface-alert-default)" }} />
+                  )}
+                  {activity.status === "error" && (
+                    <LucideIcons.XCircle size={11} style={{ color: "var(--color-text-error)" }} />
+                  )}
+                  <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{activity.time}</span>
+                  <LucideIcons.ChevronRight size={11} style={{ color: "var(--color-text-subtitle)" }} />
+                </div>
+              </div>
+              <p title={activity.desc} style={{ fontSize: 12, color: "var(--color-text-body)", lineHeight: "1.4",
+                  margin: 0, paddingLeft: 34, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {activity.desc}
+              </p>
+              {/* Metadata row — smooth reveal on hover or select */}
+              <div style={{
+                paddingLeft: 34,
+                maxHeight: showMetaRow ? 36 : 0,
+                opacity: showMetaRow ? 1 : 0,
+                overflow: "visible",
+                transition: "max-height 200ms ease, opacity 180ms ease",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                  {META_GROUPS(showTip).slice(0, Math.min(activity.metaCount, META_GROUPS(showTip).length)).flat()}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+const NOTES_ITEMS_DATA = [
+  { title: "Alice Johnson — Renewal",   time: "2h ago",    initial: "A",
+    color: "var(--primary)", bg: "var(--color-surface-primary-subtle)", accentBorder: "var(--color-border-primary-default)",
+    text: "Follow up with Alice re: renewal contract. Q3 budget reviews — custom pricing needed.", taskCount: 3, fileCount: 2 },
+  { title: "Team Sync — July Campaign", time: "Yesterday", initial: "T",
+    color: "var(--color-border-purple-default)", bg: "var(--color-surface-purple-subtle)", accentBorder: "var(--color-border-purple-default)",
+    text: "Prioritize warm leads in the Northeast for July. Assign Sarah for Northeast, Mike for Southeast.", taskCount: 1, fileCount: 0 },
+  { title: "Maria Torres — Proposal",   time: "3h ago",    initial: "M",
+    color: "var(--color-border-success-default)", bg: "var(--color-surface-success-subtle)", accentBorder: "var(--color-border-success-default)",
+    text: "Budget constraints flagged. Offer alternative pricing tier before Thursday meeting.", taskCount: 2, fileCount: 1 },
+]
+
+function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+  const iconSt: React.CSSProperties = { color: "var(--color-text-subtitle)" }
+  const dot = (key: string) => <span key={key} style={{ fontSize: 10, color: "var(--field-supporting)" }}>·</span>
+  return (
+    <div className="flex flex-col gap-[6px]" style={{ overflowY: "auto", maxHeight: 280 }}>
+      {NOTES_ITEMS_DATA.map((note, i) => {
+        const isHov = hoveredIdx === i
+        const showExpanded = showMeta || isHov
+        return (
+          <div
+            key={i}
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+            style={{
+              display: "flex", flexDirection: "column", gap: 4,
+              padding: "8px 10px", borderRadius: 8,
+              border: `1px solid ${isHov ? "var(--color-border-primary-default)" : "var(--hi-informative-bg)"}`,
+              background: isHov ? "var(--color-surface-primary-subtle)" : "var(--widget-bg)",
+              cursor: "pointer", transition: "background 150ms, border-color 150ms", flexShrink: 0,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 26, height: 26, borderRadius: 6, flexShrink: 0,
+                  background: note.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: note.color }}>{note.initial}</span>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)",
+                  flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {note.title}
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{note.time}</span>
+                <LucideIcons.ChevronRight size={11} style={{ color: "var(--color-text-subtitle)" }} />
+              </div>
+            </div>
+            <p title={note.text} style={{ fontSize: 12, color: "var(--color-text-body)", lineHeight: "1.4",
+                margin: 0, paddingLeft: 34, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {note.text}
+            </p>
+            {/* Metadata row — smooth reveal on hover */}
+            <div style={{
+              overflow: "hidden", paddingLeft: 34,
+              maxHeight: showExpanded ? 36 : 0,
+              opacity: showExpanded ? 1 : 0,
+              transition: "max-height 200ms ease, opacity 180ms ease",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                <span title="User ID" style={{ fontSize: 10, color: "var(--color-text-subtitle)", fontFamily: "monospace",
+                    background: "var(--color-surface-neutral-default)", borderRadius: 3, padding: "1px 4px" }}>{`{User-ID}`}</span>
+                {note.taskCount > 0 && <>
+                  {dot("dt")}
+                  <span title="Tasks" style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <LucideIcons.CheckSquare size={10} style={iconSt} />
+                    <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{note.taskCount}</span>
+                  </span>
+                </>}
+                {note.fileCount > 0 && <>
+                  {dot("df")}
+                  <span title="Attachments" style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <LucideIcons.Paperclip size={10} style={iconSt} />
+                    <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{note.fileCount}</span>
+                  </span>
+                </>}
+                {dot("dl")}
+                <span title="Linked items"><LucideIcons.Link size={10} style={iconSt} /></span>
+                {dot("dc")}
+                <span title="Date" style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <LucideIcons.Calendar size={10} style={iconSt} />
+                  <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{note.time}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+const FOLDER_FILES_DATA = [
+  { name: "Q2 Campaign Pack",  icon: "Package"  },
+  { name: "Marketing Assets",  icon: "Folder"   },
+  { name: "Customer Personas", icon: "FileText" },
+  { name: "Sales Scripts",     icon: "FileText" },
+]
+
+function FolderNavWidgetContent() {
+  const [folderTab, setFolderTab] = useState("packs")
+  type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
+  return (
+    <div className="flex flex-col gap-[8px]">
+      <Tabs
+        size="s"
+        className="border-b border-[var(--field-border)]"
+        items={[
+          { id: "packs",     label: "Packs"     },
+          { id: "drives",    label: "Drives"    },
+          { id: "knowledge", label: "Knowledge" },
+        ]}
+        activeId={folderTab}
+        onChange={setFolderTab}
+      />
+      <div className="flex items-center gap-[6px] px-[8px] rounded-[6px]"
+        style={{ height: 28, background: "var(--color-surface-neutral-default)", border: "1px solid var(--field-border)" }}>
+        <LucideIcons.Search size={11} style={{ color: "var(--field-supporting)" }} />
+        <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Search...</span>
+      </div>
+      <div className="flex flex-col">
+        {FOLDER_FILES_DATA.map((f, i) => {
+          const FIcon = (LucideIcons as unknown as Record<string, LIcon>)[f.icon]
+          return (
+            <div key={i} className="flex items-center gap-[8px] py-[6px] px-[4px] rounded-[4px]"
+              style={{ borderBottom: i < FOLDER_FILES_DATA.length - 1 ? "0.5px solid var(--field-border)" : "none", cursor: "pointer" }}>
+              {FIcon && <FIcon size={13} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />}
+              <span style={{ fontSize: 12, color: "var(--foreground)", flex: 1 }}>{f.name}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function StatusWarningWidgetContent() {
+  const STATUS_COLS: { label: string; value: number; iconName: string; variant: HighlightIconVariant; labelColor: string }[] = [
+    { label: "Normal",   value: 1284, iconName: "Check",         variant: "success", labelColor: "var(--color-text-success)"           },
+    { label: "Warnings", value: 47,   iconName: "AlertTriangle",  variant: "alert",   labelColor: "var(--color-surface-alert-default)"  },
+    { label: "Critical", value: 3,    iconName: "XCircle",        variant: "error",   labelColor: "var(--color-text-error)"             },
+  ]
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      {STATUS_COLS.map((col, i) => (
+        <div key={i} style={{
+          flex: 1, display: "flex", alignItems: "flex-start", gap: 12,
+          padding: "12px 16px", borderRadius: 8,
+          border: "1px solid var(--field-border)",
+          background: "var(--widget-bg)",
+        }}>
+          <HighlightIcon size="md" variant={col.variant} iconName={col.iconName} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontSize: 10, fontWeight: 500, color: col.labelColor, lineHeight: 1.2 }}>
+              {col.label}
+            </span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>
+              {col.value.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function WidgetContent({ id, kpiVariant = 2 }: { id: string; kpiVariant?: 0|1|2|3 }) {
+  switch (id) {
+    case "kpi":        return <KpiWidgetContent variant={kpiVariant} />
+    case "timeline":   return <TimelineWidgetContent />
+
+    case "charts":     return <ChartsWidgetContent />
+    case "table":      return <TableWidgetContent />
+    case "activity":   return <ActivityWidgetContent />
+    case "notes":      return <NotesWidgetContent />
+    case "folder-nav":      return <FolderNavWidgetContent />
+    case "status-warning":  return <StatusWarningWidgetContent />
+    default:
+      return (
+        <div className="flex items-center justify-center rounded-[6px] py-[16px]"
+          style={{ background: "var(--color-surface-neutral-default)", border: "1px dashed var(--field-border)" }}>
+          <span style={{ fontSize: 11, color: "var(--field-supporting)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Coming soon</span>
+        </div>
+      )
+  }
+}
+
+// ── Widget definitions ────────────────────────────────────────────────────────
+
+type WidgetId = "kpi" | "timeline" | "charts" | "table" | "activity" | "notes" | "folder-nav" | "progress-comparison" | "status-warning"
+
+interface WidgetDef {
+  id: WidgetId
+  name: string
+  classNum: 1 | 2 | 3
+  classLabel: "Compact" | "Standard" | "Heavy"
+  widthOptions: string[]
+  heightGU: string
+  defined: boolean
+  description: string
+  states: string[]
+  contentVariants?: string[]
+  useCases: string[]
+  dontUse: string[]
+  figmaNodeId?: string
+}
+
+const WIDGET_DEFS: WidgetDef[] = [
+  {
+    id: "kpi",
+    name: "KPI Widget",
+    classNum: 1,
+    classLabel: "Compact",
+    widthOptions: ["1/3 (4 cols)"],
+    heightGU: "4–5 GU",
+    defined: true,
+    figmaNodeId: "12661:62832",
+    description: "Single-metric display for KPIs, status indicators, and summary numbers. The most atomic widget type — shows one value with optional context (feedback text or progress bar). Content never drives height; the widget is always compact.",
+    states: ["Default", "Hover", "Connection problems", "Error"],
+    contentVariants: [
+      "Just number",
+      "Number + feedback text",
+      "Number + complementary text + feedback text",
+      "Number + complementary text + feedback text + Progress bar",
+    ],
+    useCases: [
+      "Surface a single KPI metric (e.g. active workers, success rate, response time)",
+      "Show a count with a trend delta (↑ 3%, +12 today)",
+      "Display a status with a simple color indicator",
+    ],
+    dontUse: [
+      "Don't use for more than one metric — use multiple KPI widgets instead",
+      "Don't grow the widget to add more content — switch to Standard class",
+      "Don't add interactive elements — KPI is display-only",
+    ],
+  },
+  {
+    id: "status-warning" as const,
+    name: "Status Warning Widget",
+    classNum: 1 as const,
+    classLabel: "Compact" as const,
+    widthOptions: ["1/3 (4 cols)", "2/3 (8 cols)"],
+    heightGU: "4 GU",
+    defined: true,
+    figmaNodeId: "12661:63347",
+    description: "Three-column status counter: Normal / Warnings / Critical. Always compact — equal-width columns, icon + label header, large number below. Used for system health, alert monitoring, and operations overviews.",
+    states: ["Default", "Hover", "Connection error", "Error"],
+    contentVariants: ["3-column (Normal / Warnings / Critical)"],
+    useCases: [
+      "Surface system health KPIs at a glance",
+      "Show alert counts for monitoring dashboards",
+      "Provide at-a-glance SLA or uptime status",
+    ],
+    dontUse: [
+      "Don't use for more than 3 categories",
+      "Don't use for trends — use Charts widget",
+      "Don't add interactive drill-down inside the widget",
+    ],
+  },
+  {
+    id: "timeline",
+    name: "Timeline Widget",
+    classNum: 1,
+    classLabel: "Compact",
+    widthOptions: ["FILL (any width)"],
+    heightGU: "65px fixed per card",
+    defined: true,
+    description: "A color-coded horizontal strip of event cards representing states, checkpoints, or activity categories. Each card shows an icon, value (max 4 chars), and label. Strictly display-only — no hover, no click, no interactive states.",
+    states: ["Default (static display only)"],
+    contentVariants: [
+      "2 cards",
+      "3 cards",
+      "4 cards",
+      "5 cards",
+      "6 cards (maximum)",
+    ],
+    useCases: [
+      "Show the history of states or lifecycle milestones for an item",
+      "Surface a color-coded summary of activity categories (calls, emails, visits)",
+      "Display checkpoint counts along a workflow (not necessarily sequential)",
+    ],
+    dontUse: [
+      "Don't exceed 6 cards — use a list or table for more than 6 events",
+      "Don't use the same color for all cards — color carries categorical meaning",
+      "Don't use for interactive selection — this is read-only",
+      "Don't use for mandatory sequential workflows — use Stepper instead",
+    ],
+  },
+
+  {
+    id: "charts",
+    name: "Charts Widget",
+    classNum: 2,
+    classLabel: "Standard",
+    widthOptions: ["2/3 (8 cols) default", "3/3 (12 cols) extended"],
+    heightGU: "9 GU default",
+    defined: true,
+    description: "Linear performance trend visualization supporting up to 3 concurrent data series across 4 time periods. Chart lines scale with the widget area; data point markers stay fixed at 6×6 px. Tooltip activates on hover showing exact values for the selected time period.",
+    states: ["Default (passive)", "Hover (tooltip active)"],
+    contentVariants: [
+      "1 data series",
+      "2 data series",
+      "3 data series (maximum)",
+      "Y-axis labels visible",
+      "Y-axis labels hidden (compact layout)",
+    ],
+    useCases: [
+      "Compare 2–3 performance series across the same time periods",
+      "Show trends over weekly or monthly periods (W1–W4, Jan–Apr)",
+      "Resize freely — chart scales proportionally in both dimensions",
+    ],
+    dontUse: [
+      "Don't plot more than 3 data series — legibility degrades",
+      "Don't use for categorical comparisons — use a bar or pie chart",
+      "Don't resize below 150px height — axis labels become unreadable",
+    ],
+  },
+  {
+    id: "table",
+    name: "Table Widget",
+    classNum: 3,
+    classLabel: "Heavy",
+    widthOptions: ["any width"],
+    heightGU: "9 GU",
+    defined: true,
+    description: "Structured data table with internal scroll. Only the table rows scroll — the column headers and optional pagination remain sticky. The widget never grows vertically beyond its class height; content overflow is handled internally.",
+    states: ["Default", "Hover (row)", "Connection problems", "Error"],
+    useCases: [
+      "Display a bounded dataset of records with column structure",
+      "Surface the most recent N items of a larger dataset with a 'View all' link",
+      "Compare values across multiple attributes in a dense, scannable format",
+    ],
+    dontUse: [
+      "Don't use for more than ~6–8 visible columns — legibility degrades",
+      "Don't grow the widget height to show more rows — use internal scroll + pagination",
+      "Don't use for a single-attribute list — use Notes or Activity widget instead",
+    ],
+  },
+  {
+    id: "activity",
+    name: "Last Activity Widget",
+    classNum: 3,
+    classLabel: "Heavy",
+    widthOptions: ["1/3 (4 cols)", "2/3 (8 cols)"],
+    heightGU: "9 GU",
+    defined: true,
+    description: "Chronological feed of customer interaction events — calls, emails, and SMS. Each item shows a channel icon, event metadata, timestamp, and optional alert tags. Hovering an alert tag surfaces the alert type. Internal scroll for overflow.",
+    states: ["Default", "Hover (row)", "Hover (alert tag)"],
+    contentVariants: ["Call item", "Email item", "SMS item"],
+    useCases: [
+      "Show recent touchpoints with a customer across communication channels",
+      "Surface alert or critical flags associated with recent interactions",
+      "Give agents context on the last N interactions before a call or visit",
+    ],
+    dontUse: [
+      "Don't mix non-communication activity types in this widget — use Timeline for lifecycle events",
+      "Don't use without timestamp context — time is essential to the feed pattern",
+    ],
+  },
+  {
+    id: "notes",
+    name: "Notes Widget",
+    classNum: 3,
+    classLabel: "Heavy",
+    widthOptions: ["1/3 (4 cols)", "2/3 (8 cols)"],
+    heightGU: "9 GU",
+    defined: true,
+    description: "Scrollable list of notes associated with an entity. Each note item shows author, timestamp, and note body. Supports timestamp formatting rules consistent with the Activity widget.",
+    states: ["Default", "Hover (item)"],
+    useCases: [
+      "Surface agent or system notes attached to a customer or record",
+      "Show a log of manual annotations added across sessions",
+    ],
+    dontUse: [
+      "Don't use for structured data — use Table widget instead",
+      "Don't use for communication history — use Activity widget instead",
+    ],
+  },
+  {
+    id: "folder-nav",
+    name: "Folder Navigation Widget",
+    classNum: 3,
+    classLabel: "Heavy",
+    widthOptions: ["1/3 (4 cols)", "2/3 (8 cols)"],
+    heightGU: "~250px content area",
+    defined: true,
+    description: "Embedded file and folder browser for navigating storage sources. Built on the Widget Father base. Tab row switches between storage sources (Packs, Drives, Knowledge). Search filters within the active tab. Items scroll internally when they exceed the content area.",
+    states: ["Default", "Hover (row)", "Empty state (no items in source)"],
+    contentVariants: ["Packs tab", "Drives tab", "Knowledge tab"],
+    useCases: [
+      "Let a user browse and select files or folders within a UCP context",
+      "Surface multi-source document navigation without leaving the widget",
+      "Use in node config or modal as an embedded file/folder picker",
+    ],
+    dontUse: [
+      "Don't use for non-file content selection (e.g. node values, dropdowns)",
+      "Don't use when the list has no folders or nesting — use a simple list",
+      "Don't show more than one storage source at once — each tab is one source",
+    ],
+  },
+  {
+    id: "progress-comparison",
+    name: "Progress Comparison",
+    classNum: 2,
+    classLabel: "Standard",
+    widthOptions: ["TBD"],
+    heightGU: "TBD",
+    defined: false,
+    description: "Not yet defined in the Design System. This widget will compare progress values across multiple items or dimensions. Specs will be added once the Figma design is complete.",
+    states: [],
+    useCases: [],
+    dontUse: [],
+  },
+]
+
+const CLASS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  Compact:  { bg: "var(--color-surface-success-subtle)",     text: "var(--color-surface-success-default)",     border: "var(--color-border-success-subtle)" },
+  Standard: { bg: "var(--color-surface-informative-subtle)", text: "var(--color-icon-informative-default)",    border: "var(--color-border-informative-subtle)" },
+  Heavy:    { bg: "var(--color-surface-alert-subtle)",       text: "var(--color-surface-alert-default)",       border: "var(--color-border-alert-subtle)" },
+}
+
+// ── Widget detail view (full page) ───────────────────────────────────────────
+
+type WidgetState = "default" | "hover" | "drag" | "error" | "connection"
+
+const WIDGET_TOKENS = [
+  { token: "--widget-bg",              role: "Card background",          dark: "var(--surface)",                         light: "var(--surface)" },
+  { token: "--widget-border",          role: "Default border",           dark: "var(--field-border)",                    light: "var(--field-border)" },
+  { token: "--widget-border-hover",    role: "Hover / selected border",  dark: "var(--field-border-hover)",              light: "var(--field-border-hover)" },
+  { token: "--widget-title",           role: "Header title (uppercase)", dark: "var(--color-text-title)",                light: "var(--color-text-title)" },
+  { token: "--widget-subtitle",        role: "Optional description",     dark: "var(--color-text-subtitle)",             light: "var(--color-text-subtitle)" },
+  { token: "--widget-icon",            role: "Action icon color",        dark: "var(--color-icon-neutral-dark)",         light: "var(--color-icon-neutral-dark)" },
+  { token: "--widget-action-hover-bg", role: "Action button hover fill", dark: "var(--color-surface-neutral-default)",   light: "var(--color-surface-neutral-default)" },
+  { token: "--color-border-primary-lighter", role: "Empty slot dashed border", dark: "#80afff",                        light: "#80afff" },
+  { token: "--primary",                role: "CTA primary background",   dark: "#2b7fff",                               light: "#2173ff" },
+]
+
+function WidgetDetailView({ widget, onBack }: { widget: WidgetDef; onBack: () => void }) {
+  const [wState,  setWState]  = useState<WidgetState>("default")
+  const [wWidth,  setWWidth]  = useState<WidgetWidthClass>("narrow")
+  const [kpiVar,  setKpiVar]  = useState<0|1|2|3>(2)
+  const [docTab,  setDocTab]  = useState<"tokens" | "states" | "variants" | "usage">("tokens")
+  const cls = CLASS_COLORS[widget.classLabel]
+
+  const widthLabel: Record<WidgetWidthClass, string> = { narrow: "Narrow (1/3 · 4 cols)", wide: "Wide (2/3 · 8 cols)", full: "Full (3/3 · 12 cols)" }
+
+  return (
+    <div className="flex flex-col gap-[0px]">
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-[12px] mb-[24px]">
+        {/* Breadcrumb */}
+        <button onClick={onBack} className="flex items-center gap-[6px] self-start"
+          style={{ border: "none", background: "none", cursor: "pointer", padding: 0 }}>
+          <LucideIcons.ChevronLeft size={14} style={{ color: "var(--primary)" }} />
+          <span style={{ fontSize: 12, color: "var(--primary)", fontWeight: 500 }}>Widgets</span>
+        </button>
+        {/* Title row */}
+        <div className="flex items-start gap-[12px] flex-wrap">
+          <div className="flex flex-col gap-[6px]">
+            <h1 className="text-[22px] font-semibold" style={{ color: "var(--foreground)", margin: 0 }}>{widget.name}</h1>
+            <p className="text-[13px]" style={{ color: "var(--field-supporting)", margin: 0, maxWidth: 560 }}>{widget.description}</p>
+          </div>
+          <div className="flex items-center gap-[6px] flex-wrap ml-auto">
+            <span className="text-[11px] font-semibold px-[8px] py-[3px] rounded-[4px]"
+              style={{ background: cls.bg, color: cls.text, border: `0.5px solid ${cls.border}` }}>
+              Class {widget.classNum} — {widget.classLabel}
+            </span>
+            {widget.widthOptions.map(w => (
+              <span key={w} className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]"
+                style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>
+                {w}
+              </span>
+            ))}
+            <span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]"
+              style={{ background: "var(--color-surface-neutral-default)", color: "var(--field-supporting)" }}>
+              ↕ {widget.heightGU}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Demo + Controls ── */}
+      <div className="flex gap-[24px] items-start mb-[32px]">
+        {/* Left controls column */}
+        <div className="flex flex-col gap-[16px]" style={{ width: 240, flexShrink: 0 }}>
+          <div className="rounded-[10px] p-[16px] flex flex-col gap-[16px]"
+            style={{ background: "var(--surface)", border: "1px solid var(--field-border)" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--field-supporting)" }}>Controls</span>
+            <CtrlGroup label="State" value={wState} onChange={setWState} options={[
+              { value: "default",    label: "Default" },
+              { value: "hover",      label: "Hover" },
+              { value: "drag",       label: "Drag" },
+              { value: "error",      label: "Error" },
+              { value: "connection", label: "Connection" },
+            ]} />
+            <CtrlGroup label="Width" value={wWidth} onChange={setWWidth} options={[
+              { value: "narrow", label: "Narrow 1/3" },
+              { value: "wide",   label: "Wide 2/3" },
+              { value: "full",   label: "Full 3/3" },
+            ]} />
+            {widget.id === "kpi" && (
+              <CtrlGroup label="Content" value={String(kpiVar)} onChange={v => setKpiVar(Number(v) as 0|1|2|3)} options={[
+                { value: "0", label: "Number only" },
+                { value: "1", label: "+ Feedback" },
+                { value: "2", label: "+ Comp." },
+                { value: "3", label: "+ Progress" },
+              ]} />
+            )}
+          </div>
+          {/* Current state label */}
+          <div className="rounded-[8px] p-[12px] flex flex-col gap-[6px]"
+            style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--field-supporting)" }}>Active config</span>
+            {[
+              { label: "State",  value: wState },
+              { label: "Width",  value: widthLabel[wWidth].split(" ")[0] },
+              { label: "Cols",   value: wWidth === "narrow" ? "4" : wWidth === "wide" ? "8" : "12" },
+              ...(widget.id === "kpi" ? [{ label: "Variant", value: `${kpiVar + 1}/4` }] : []),
+            ].map(row => (
+              <div key={row.label} className="flex items-center justify-between">
+                <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{row.label}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)" }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Demo canvas */}
+        <div className="flex-1 min-w-0 flex flex-col gap-[12px]">
+          <div className="rounded-[12px] p-[32px] flex items-center justify-center"
+            style={{ background: "var(--canvas)", border: "1px solid var(--field-border)", minHeight: 240 }}>
+            <WidgetFather
+              title={widget.name}
+              widthClass={wWidth}
+              showRefresh showMenu
+              isDragging={wState === "drag"}
+              isHovered={wState === "hover"}
+              hasError={wState === "error"}
+              hasConnectionError={wState === "connection"}
+            >
+              {widget.defined ? <WidgetContent id={widget.id} kpiVariant={kpiVar} /> : undefined}
+            </WidgetFather>
+          </div>
+          {/* Canvas annotation */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-[8px]">
+              <div style={{ width: 6, height: 6, borderRadius: "50%",
+                background: wState === "error" ? "var(--color-surface-error-default)"
+                  : wState === "connection" ? "var(--color-surface-alert-default)"
+                  : wState === "hover" ? "var(--color-surface-success-default)"
+                  : wState === "drag" ? "var(--primary)" : "var(--field-border-hover)" }} />
+              <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>
+                State: <strong style={{ color: "var(--foreground)" }}>{wState}</strong>
+              </span>
+            </div>
+            <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>
+              {widthLabel[wWidth]}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Size Variants ── */}
+      <div style={{ marginTop: 32, marginBottom: 32 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 16, marginTop: 0 }}>
+          Size Variants
+        </h3>
+        <div className="flex flex-col gap-[16px]">
+          {(["narrow", "wide", "full"] as WidgetWidthClass[]).map(size => (
+            <div key={size}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-subtitle)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                {size === "narrow" ? "Narrow — 330px" : size === "wide" ? "Wide — 680px" : "Full — 1020px"}
+              </div>
+              <WidgetFather
+                title={widget.name}
+                fillWidth={size === "full"}
+                widthClass={size}
+                showRefresh
+                showMenu
+              >
+                {widget.defined ? <WidgetContent id={widget.id} kpiVariant={kpiVar} /> : undefined}
+              </WidgetFather>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Documentation tabs ── */}
+      <div className="rounded-[12px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
+        {/* Tab row */}
+        <div className="flex" style={{ borderBottom: "1px solid var(--field-border)", background: "var(--surface)" }}>
+          {(["tokens", "states", "variants", "usage"] as const).map(t => (
+            <button key={t} onClick={() => setDocTab(t)}
+              className="px-[16px] h-[40px] text-[12px] font-medium capitalize"
+              style={{ border: "none", background: "none", cursor: "pointer",
+                color: docTab === t ? "var(--primary)" : "var(--field-supporting)",
+                borderBottom: docTab === t ? "2px solid var(--primary)" : "2px solid transparent",
+                marginBottom: -1 }}>
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div className="p-[24px]" style={{ background: "var(--surface)" }}>
+
+          {/* ── Tokens ── */}
+          {docTab === "tokens" && (
+            <div className="flex flex-col gap-[16px]">
+              <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: 0 }}>
+                All widgets share the Widget Father token set. Widget-specific content uses these same tokens plus semantic DS colors inherited from the global palette.
+              </p>
+              <div className="overflow-x-auto">
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--field-border)" }}>
+                      {["Token", "Role", "Dark mode", "Light mode"].map(h => (
+                        <th key={h} style={{ padding: "6px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--field-label)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {WIDGET_TOKENS.map(t => (
+                      <tr key={t.token} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                        <td style={{ padding: "8px 12px" }}>
+                          <code style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{t.token}</code>
+                        </td>
+                        <td style={{ padding: "8px 12px", fontSize: 12, color: "var(--foreground)" }}>{t.role}</td>
+                        <td style={{ padding: "8px 12px", fontSize: 11, fontFamily: "monospace", color: "var(--field-supporting)" }}>{t.dark}</td>
+                        <td style={{ padding: "8px 12px", fontSize: 11, fontFamily: "monospace", color: "var(--field-supporting)" }}>{t.light}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ── States ── */}
+          {docTab === "states" && (
+            <div className="flex flex-col gap-[20px]">
+              <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: 0 }}>
+                Visual comparison of all interaction states. The border and shadow change per state; content remains the same.
+              </p>
+              <div className="flex flex-wrap gap-[20px]">
+                {([
+                  { state: "default",    label: "Default",          borderNote: "--widget-border" },
+                  { state: "hover",      label: "Hover",            borderNote: "--widget-border-hover + shadow" },
+                  { state: "drag",       label: "Drag",             borderNote: "--widget-border + grip handle" },
+                  { state: "error",      label: "Error",            borderNote: "--color-surface-error-default" },
+                  { state: "connection", label: "Connection Error",  borderNote: "--color-surface-alert-default" },
+                ] as const).map(s => (
+                  <div key={s.state} className="flex flex-col gap-[8px]">
+                    <div className="flex items-center gap-[6px]">
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)" }}>{s.label}</span>
+                    </div>
+                    <WidgetFather title={widget.name} showRefresh showMenu widthClass="narrow"
+                      isDragging={s.state === "drag"}
+                      isHovered={s.state === "hover"}
+                      hasError={s.state === "error"}
+                      hasConnectionError={s.state === "connection"}
+                    >
+                      {widget.defined && s.state !== "error" && s.state !== "connection"
+                        ? <WidgetContent id={widget.id} kpiVariant={kpiVar} />
+                        : <div style={{ height: 48 }} />
+                      }
+                    </WidgetFather>
+                    <code style={{ fontSize: 10, color: "var(--field-supporting)" }}>{s.borderNote}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Variants ── */}
+          {docTab === "variants" && (
+            <div className="flex flex-col gap-[20px]">
+              {widget.id === "kpi" && (
+                <>
+                  <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: 0 }}>
+                    KPI Widget has 4 content variants, from the most minimal (number only) to the richest (number + progress bar).
+                  </p>
+                  <div className="flex flex-wrap gap-[20px]">
+                    {([0,1,2,3] as const).map(v => (
+                      <div key={v} className="flex flex-col gap-[8px]">
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)" }}>
+                          {["Number only","+ Feedback","+ Complementary","+ Progress bar"][v]}
+                        </span>
+                        <WidgetFather title="KPI Widget" showRefresh showMenu widthClass="narrow">
+                          <KpiWidgetContent variant={v} />
+                        </WidgetFather>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {widget.id === "timeline" && (
+                <>
+                  <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: 0 }}>
+                    Timeline cards support 8 color variants per card, always using DS semantic surface tokens.
+                  </p>
+                  <WidgetFather title="Timeline Widget" showRefresh showMenu widthClass="wide">
+                    <TimelineWidgetContent />
+                  </WidgetFather>
+                  {/* Count variants: 2 – 6 cards */}
+                  <div className="flex flex-col gap-[8px]">
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)" }}>Count variants (2 – 6 cards)</span>
+                    {([2, 3, 4, 5, 6] as const).map(n => (
+                      <div key={n} className="flex flex-col gap-[4px]">
+                        <span style={{ fontSize: 10, fontWeight: 600, color: "var(--field-supporting)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{n} cards</span>
+                        <WidgetFather title="Timeline Widget" fillWidth showRefresh={false} showMenu={false}>
+                          <TimelineWidgetContent count={n} showMeta={false} />
+                        </WidgetFather>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-[8px]">
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)" }}>Card color tokens</span>
+                    <div className="flex flex-wrap gap-[8px]">
+                      {[
+                        { label: "Primary",     color: "var(--primary)" },
+                        { label: "Success",     color: "var(--color-surface-success-default)" },
+                        { label: "Alert",       color: "var(--color-surface-alert-default)" },
+                        { label: "Error",       color: "var(--color-surface-error-default)" },
+                        { label: "Informative", color: "var(--color-icon-informative-default)" },
+                      ].map(c => (
+                        <div key={c.label} className="flex items-center gap-[6px] px-[8px] py-[4px] rounded-[4px]"
+                          style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, color: "var(--foreground)" }}>{c.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+              {widget.id === "charts" && (
+                <>
+                  <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: 0 }}>
+                    Charts widget supports 1–3 data series. More than 3 series degrades readability.
+                  </p>
+                  <WidgetFather title="Charts Widget" showRefresh showMenu widthClass="wide">
+                    <ChartsWidgetContent />
+                  </WidgetFather>
+                </>
+              )}
+              {widget.contentVariants && widget.contentVariants.length > 0 && widget.id !== "kpi" && widget.id !== "timeline" && widget.id !== "charts" && (
+                <>
+                  <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: 0 }}>
+                    Content variants available for this widget type.
+                  </p>
+                  <div className="flex flex-col gap-[6px]">
+                    {widget.contentVariants.map((v, i) => (
+                      <div key={i} className="flex items-center gap-[8px] p-[10px] rounded-[6px]"
+                        style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--color-surface-primary-subtle)", border: "1px solid var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--primary)" }}>{i + 1}</span>
+                        </div>
+                        <span style={{ fontSize: 12, color: "var(--foreground)" }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {(!widget.contentVariants || widget.contentVariants.length === 0) && widget.id !== "kpi" && widget.id !== "timeline" && widget.id !== "charts" && (
+                <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: 0 }}>No content variants defined for this widget type.</p>
+              )}
+            </div>
+          )}
+
+          {/* ── Usage ── */}
+          {docTab === "usage" && (
+            <div className="flex flex-col gap-[16px]">
+              {widget.useCases.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-[6px] mb-[10px]">
+                    <LucideIcons.Check size={13} style={{ color: "var(--color-surface-success-default)" }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-surface-success-default)" }}>Use when</span>
+                  </div>
+                  <div className="flex flex-col gap-[6px]">
+                    {widget.useCases.map((u, i) => (
+                      <div key={i} className="flex items-start gap-[10px] p-[10px] rounded-[6px]"
+                        style={{ background: "var(--color-surface-success-subtle)", border: "0.5px solid var(--color-border-success-subtle)" }}>
+                        <LucideIcons.Check size={12} style={{ color: "var(--color-surface-success-default)", flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ fontSize: 13, color: "var(--foreground)" }}>{u}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {widget.dontUse.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-[6px] mb-[10px]">
+                    <LucideIcons.X size={13} style={{ color: "var(--color-surface-error-default)" }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-surface-error-default)" }}>Don't use when</span>
+                  </div>
+                  <div className="flex flex-col gap-[6px]">
+                    {widget.dontUse.map((d, i) => (
+                      <div key={i} className="flex items-start gap-[10px] p-[10px] rounded-[6px]"
+                        style={{ background: "var(--color-surface-error-subtle)", border: "0.5px solid var(--color-border-error-subtle)" }}>
+                        <LucideIcons.X size={12} style={{ color: "var(--color-surface-error-default)", flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ fontSize: 13, color: "var(--foreground)" }}>{d}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {widget.states.length > 0 && (
+                <div>
+                  <div className="text-[11px] font-bold uppercase mb-[8px]" style={{ color: "var(--field-supporting)", letterSpacing: "0.08em" }}>Supported states</div>
+                  <div className="flex flex-wrap gap-[6px]">
+                    {widget.states.map(s => (
+                      <span key={s} className="text-[12px] px-[8px] py-[3px] rounded-[4px]"
+                        style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="p-[12px] rounded-[8px] flex items-start gap-[8px]"
+                style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-subtle)" }}>
+                <LucideIcons.Info size={13} style={{ color: "var(--primary)", flexShrink: 0, marginTop: 1 }} />
+                <p style={{ fontSize: 12, margin: 0, color: "var(--foreground)" }}>
+                  All widgets use the <strong>Widget Father</strong> base container — Header (title + up to 2 actions) + Body slot (this widget's content) + optional footer CTAs.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Widget canvas view (live interactive overview) ────────────────────────────
+
+// Each widget slot knows its position and size in the demo canvas
+interface CanvasSlot {
+  uid: string
+  id: WidgetId
+  kpiVariant?: 0 | 1 | 2 | 3
+  title: string
+  colSpan: 1 | 2 | 3       // 1=narrow, 2=wide, 3=full
+  widthClass: WidgetWidthClass
+  showRefresh?: boolean
+  showMenu?: boolean
+  showInfo?: boolean
+}
+
+// StackGroup: two narrow slots occupying a single grid column, stacked vertically
+interface StackGroup {
+  type: "stack"
+  uid: string
+  slots: CanvasSlot[]
+}
+type LayoutEntry = CanvasSlot | StackGroup
+function isStack(e: LayoutEntry): e is StackGroup { return (e as StackGroup).type === "stack" }
+function findSlotInLayout(entries: LayoutEntry[], uid: string): CanvasSlot | null {
+  for (const e of entries) {
+    if (isStack(e)) { const s = e.slots.find(s => s.uid === uid); if (s) return s }
+    else if (e.uid === uid) return e
+  }
+  return null
+}
+
+const HEIGHT_SNAPS = [96, 144, 192, 240, 288, 360, 480]
+
+const CANVAS_LAYOUT: CanvasSlot[] = [
+  { uid: "kpi-0",    id: "kpi",      kpiVariant: 0, title: "Active Workers",           colSpan: 1, widthClass: "narrow", showRefresh: true,  showMenu: true },
+  { uid: "kpi-1",    id: "kpi",      kpiVariant: 1, title: "Conversions",              colSpan: 1, widthClass: "narrow", showRefresh: true,  showMenu: true },
+  { uid: "kpi-2",    id: "kpi",      kpiVariant: 3, title: "Goal Progress",            colSpan: 1, widthClass: "narrow", showRefresh: true,  showMenu: true },
+  { uid: "activity", id: "activity", title: "Last Activity",                           colSpan: 2, widthClass: "wide",   showRefresh: true,  showMenu: true },
+  { uid: "notes",    id: "notes",    title: "Team Notes",                              colSpan: 1, widthClass: "narrow", showRefresh: false, showMenu: true },
+  { uid: "timeline", id: "timeline", title: "Recent Activity Timeline",                colSpan: 3, widthClass: "full",   showRefresh: true,  showMenu: true },
+  { uid: "charts",   id: "charts",   title: "Performance Charts",                      colSpan: 3, widthClass: "full",   showRefresh: true,  showMenu: true },
+]
+
+function WidgetCanvasView({ onBack }: { onBack: () => void }) {
+  const [hoveredUid, setHoveredUid] = useState<string | null>(null)
+  const [hoveredEdge, setHoveredEdge] = useState<"left" | "right" | "bottom" | null>(null)
+  const [activeState, setActiveState] = useState<"default" | "error" | "connection">("default")
+  const [layout, setLayout] = useState<LayoutEntry[]>([...CANVAS_LAYOUT])
+  const [dragUid, setDragUid] = useState<string | null>(null)
+  const [dropUid, setDropUid] = useState<string | null>(null)
+  const [dropSide, setDropSide] = useState<"before" | "after" | "stack-above" | "stack-below" | null>(null)
+  const [pointerPos, setPointerPos] = useState<{x: number, y: number} | null>(null)
+  const [collapsedUids, setCollapsedUids] = useState<Set<string>>(new Set())
+  const [widthByUid, setWidthByUid] = useState<Record<string, WidgetWidthClass>>({})
+  const [resizing, setResizing] = useState<{
+    uid: string; edge: "left" | "right"
+    startX: number; startCols: number; startRect: { left: number; top: number; width: number; height: number }
+  } | null>(null)
+  const [resizePreviewPx, setResizePreviewPx] = useState<number | null>(null)
+  const resizePreviewRef = useRef<number | null>(null)
+  const isResizingRef = useRef(false)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [heightByUid, setHeightByUid] = useState<Record<string, number>>({})
+  const [vertPreviewH, setVertPreviewH] = useState<{uid: string, h: number} | null>(null)
+  const activeDragRef = useRef<string | null>(null)
+  const activeDropRef = useRef<string | null>(null)
+  const activeDropSideRef = useRef<"before" | "after" | "stack-above" | "stack-below" | null>(null)
+  const dragPotentialRef = useRef<{uid: string, x: number, y: number} | null>(null)
+  const dropRafRef = useRef<number | null>(null)
+  const vertResizeRef = useRef<{uid: string, startY: number, startH: number, moved: boolean} | null>(null)
+  const vertPreviewRef = useRef<number | null>(null)
+  const flipInnerRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const flipPrevRects = useRef<Record<string, DOMRect>>({})
+
+  // Live layout: reorders during drag-over for real-time preview
+  const displayLayout = useMemo((): LayoutEntry[] => {
+    if (!dragUid || !dropUid || dragUid === dropUid) return layout
+
+    // Extract dragged slot from wherever it lives, producing a flat array without it
+    let dragSlot: CanvasSlot | null = null
+    const arr: LayoutEntry[] = []
+    for (const e of layout) {
+      if (isStack(e)) {
+        const slotI = e.slots.findIndex(s => s.uid === dragUid)
+        if (slotI !== -1) {
+          dragSlot = e.slots[slotI]
+          const rem = e.slots.filter(s => s.uid !== dragUid)
+          if (rem.length === 1) arr.push(rem[0])
+          else if (rem.length > 1) arr.push({ ...e, slots: rem })
+        } else arr.push(e)
+      } else {
+        if (e.uid === dragUid) dragSlot = e
+        else arr.push(e)
+      }
+    }
+    if (!dragSlot) return layout
+
+    // Stacking preview — narrow drag over narrow target's top/bottom zone
+    if ((dropSide === "stack-above" || dropSide === "stack-below") && dragSlot.widthClass === "narrow") {
+      const targetI = arr.findIndex(e => isStack(e) ? e.slots.some(s => s.uid === dropUid) : e.uid === dropUid)
+      if (targetI !== -1) {
+        const targetEntry = arr[targetI]
+        if (!isStack(targetEntry) && targetEntry.widthClass === "narrow") {
+          const preview: StackGroup = {
+            type: "stack", uid: "preview-stack",
+            slots: dropSide === "stack-above" ? [dragSlot, targetEntry] : [targetEntry, dragSlot],
+          }
+          arr.splice(targetI, 1, preview)
+          return arr
+        }
+      }
+    }
+
+    // Regular before/after reorder
+    const targetI = arr.findIndex(e => isStack(e)
+      ? (e.uid === dropUid || e.slots.some(s => s.uid === dropUid))
+      : e.uid === dropUid
+    )
+    if (targetI === -1) return layout
+    const insertAt = dropSide === "after" ? targetI + 1 : targetI
+    arr.splice(insertAt, 0, dragSlot)
+    return arr
+  }, [layout, dragUid, dropUid, dropSide])
+
+  const isDragging = dragUid !== null
+
+  function colSpanForWidth(w: WidgetWidthClass): 1 | 2 | 3 {
+    return w === "narrow" ? 1 : w === "wide" ? 2 : 3
+  }
+
+  function getColWidthPx(): number {
+    if (!gridRef.current) return 240
+    // Grid container has 24px padding each side, 2 gaps × 16px between 3 columns
+    return (gridRef.current.offsetWidth - 48 - 32) / 3
+  }
+
+
+
+  // Smooth resize: preview overlay grows continuously, grid snaps only on mouseup
+  useEffect(() => {
+    if (!resizing) return
+    function onMove(e: MouseEvent) {
+      const dx = e.clientX - resizing!.startX
+      const colW = getColWidthPx()
+      const mult = resizing!.edge === "left" ? -1 : 1
+      const newPx = Math.max(colW * 0.55, Math.min(colW * 3 + 32, resizing!.startRect.width + dx * mult))
+      resizePreviewRef.current = newPx
+      setResizePreviewPx(newPx)
+    }
+    function onUp() {
+      const px = resizePreviewRef.current
+      if (px !== null) {
+        const colW = getColWidthPx()
+        const cols = Math.max(1, Math.min(3, Math.round(px / colW))) as 1 | 2 | 3
+        const newW: WidgetWidthClass = cols === 1 ? "narrow" : cols === 2 ? "wide" : "full"
+        setWidthByUid(prev => ({ ...prev, [resizing!.uid]: newW }))
+      }
+      isResizingRef.current = false
+      setResizing(null)
+      setResizePreviewPx(null)
+      resizePreviewRef.current = null
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      isResizingRef.current = false
+      setResizing(null)
+      setResizePreviewPx(null)
+      resizePreviewRef.current = null
+    }
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
+    window.addEventListener("keydown", onEsc)
+    return () => {
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+      window.removeEventListener("keydown", onEsc)
+    }
+  }, [resizing])
+
+  // Pointer-based drag — runs once, handles threshold + tracking + commit
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      // Phase 1: threshold check for potential drag
+      if (dragPotentialRef.current) {
+        const { uid, x, y } = dragPotentialRef.current
+        if (Math.hypot(e.clientX - x, e.clientY - y) > 8) {
+          dragPotentialRef.current = null
+          activeDragRef.current = uid
+          setDragUid(uid)
+          setHoveredUid(null)
+          setPointerPos({ x: e.clientX, y: e.clientY })
+        }
+        return
+      }
+      // Phase 2: active drag tracking
+      if (!activeDragRef.current) return
+      setPointerPos({ x: e.clientX, y: e.clientY })
+      const el = document.elementFromPoint(e.clientX, e.clientY)
+      let foundSlotEl = (el as HTMLElement)?.closest?.('[data-slot-uid]') as HTMLElement | null
+
+      // Gap detection: cursor in grid but not over any slot — find nearest slot
+      if (!foundSlotEl && gridRef.current) {
+        const gr = gridRef.current.getBoundingClientRect()
+        if (e.clientX >= gr.left && e.clientX <= gr.right && e.clientY >= gr.top && e.clientY <= gr.bottom) {
+          const all = Array.from(gridRef.current.querySelectorAll('[data-slot-uid]')) as HTMLElement[]
+          let best: HTMLElement | null = null, minD = Infinity
+          for (const s of all) {
+            const r = s.getBoundingClientRect()
+            const dist = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2))
+            if (dist < minD) { minD = dist; best = s }
+          }
+          foundSlotEl = best
+        }
+      }
+
+      const uid = foundSlotEl?.dataset?.slotUid ?? null
+      const newDrop = uid && uid !== activeDragRef.current ? uid : null
+
+      // Determine drop side: for narrow-on-narrow use Y zones (top=stack-above, bottom=stack-below)
+      let newSide: "before" | "after" | "stack-above" | "stack-below" | null = null
+      if (newDrop && foundSlotEl) {
+        const r = foundSlotEl.getBoundingClientRect()
+        const dragEl = gridRef.current?.querySelector(`[data-slot-uid="${activeDragRef.current}"]`) as HTMLElement | null
+        const dragIsNarrow = dragEl?.dataset?.slotWidth === "narrow"
+        const targetIsNarrow = foundSlotEl?.dataset?.slotWidth === "narrow"
+        if (dragIsNarrow && targetIsNarrow) {
+          const yFrac = (e.clientY - r.top) / r.height
+          if (yFrac < 0.35) newSide = "stack-above"
+          else if (yFrac > 0.65) newSide = "stack-below"
+          else newSide = e.clientX < r.left + r.width / 2 ? "before" : "after"
+        } else {
+          newSide = e.clientX < r.left + r.width / 2 ? "before" : "after"
+        }
+      }
+
+      if (newDrop !== activeDropRef.current || newSide !== activeDropSideRef.current) {
+        activeDropRef.current = newDrop
+        activeDropSideRef.current = newSide
+        // Debounce via rAF — prevents layout flicker when crossing slot boundaries
+        if (dropRafRef.current !== null) cancelAnimationFrame(dropRafRef.current)
+        dropRafRef.current = requestAnimationFrame(() => {
+          setDropUid(activeDropRef.current)
+          setDropSide(activeDropSideRef.current)
+          dropRafRef.current = null
+        })
+      }
+    }
+    function onUp() {
+      if (dropRafRef.current !== null) { cancelAnimationFrame(dropRafRef.current); dropRafRef.current = null }
+      const dUid = activeDragRef.current
+      const tUid = activeDropRef.current
+      const side = activeDropSideRef.current
+      if (dUid && tUid) {
+        setLayout(prev => {
+          // Step 1: extract the dragged slot from its current position
+          let dragSlot: CanvasSlot | null = null
+          const next: LayoutEntry[] = []
+          for (const e of prev) {
+            if (isStack(e)) {
+              const slotI = e.slots.findIndex(s => s.uid === dUid)
+              if (slotI !== -1) {
+                dragSlot = e.slots[slotI]
+                const rem = e.slots.filter(s => s.uid !== dUid)
+                if (rem.length === 1) next.push(rem[0])        // dissolve group
+                else if (rem.length > 1) next.push({ ...e, slots: rem })
+              } else next.push(e)
+            } else {
+              if (e.uid === dUid) dragSlot = e
+              else next.push(e)
+            }
+          }
+          if (!dragSlot) return prev
+
+          // Step 2: stacking commit
+          if (side === "stack-above" || side === "stack-below") {
+            const tI = next.findIndex(e => isStack(e) ? e.slots.some(s => s.uid === tUid) : e.uid === tUid)
+            if (tI !== -1) {
+              const targetEntry = next[tI]
+              if (!isStack(targetEntry) && targetEntry.widthClass === "narrow" && dragSlot.widthClass === "narrow") {
+                const newStack: StackGroup = {
+                  type: "stack",
+                  uid: `stack-${dragSlot.uid}-${targetEntry.uid}`,
+                  slots: side === "stack-above" ? [dragSlot, targetEntry] : [targetEntry, dragSlot],
+                }
+                next.splice(tI, 1, newStack)
+                return next
+              }
+            }
+            // Fallback: can't stack → insert before target
+            const fbI = next.findIndex(e => isStack(e) ? e.slots.some(s => s.uid === tUid) : e.uid === tUid)
+            fbI !== -1 ? next.splice(fbI, 0, dragSlot) : next.push(dragSlot)
+            return next
+          }
+
+          // Step 3: regular before/after
+          const tI = next.findIndex(e => isStack(e)
+            ? (e.uid === tUid || e.slots.some(s => s.uid === tUid))
+            : e.uid === tUid
+          )
+          if (tI === -1) { next.push(dragSlot); return next }
+          next.splice(side === "after" ? tI + 1 : tI, 0, dragSlot)
+          return next
+        })
+      }
+      dragPotentialRef.current = null
+      activeDragRef.current = null
+      activeDropRef.current = null
+      activeDropSideRef.current = null
+      setDragUid(null)
+      setDropUid(null)
+      setDropSide(null)
+      setPointerPos(null)
+    }
+    function onEscDrag(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      if (dropRafRef.current !== null) { cancelAnimationFrame(dropRafRef.current); dropRafRef.current = null }
+      dragPotentialRef.current = null
+      activeDragRef.current = null
+      activeDropRef.current = null
+      activeDropSideRef.current = null
+      setDragUid(null)
+      setDropUid(null)
+      setDropSide(null)
+      setPointerPos(null)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('keydown', onEscDrag)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('keydown', onEscDrag)
+    }
+  }, [])
+
+  // Global grabbing cursor during drag — keeps cursor consistent over all elements
+  useEffect(() => {
+    document.body.style.cursor = isDragging ? 'grabbing' : ''
+    document.body.style.userSelect = isDragging ? 'none' : ''
+    return () => { document.body.style.cursor = ''; document.body.style.userSelect = '' }
+  }, [isDragging])
+
+  // Vertical height snap-resize via bottom edge drag; click = collapse toggle
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!vertResizeRef.current) return
+      const dy = e.clientY - vertResizeRef.current.startY
+      if (Math.abs(dy) > 3) vertResizeRef.current.moved = true
+      if (vertResizeRef.current.moved) {
+        const rawH = Math.max(72, vertResizeRef.current.startH + dy)
+        vertPreviewRef.current = rawH
+        setVertPreviewH({ uid: vertResizeRef.current.uid, h: rawH })
+      }
+    }
+    function onUp() {
+      if (!vertResizeRef.current) return
+      const { uid, moved } = vertResizeRef.current
+      if (moved && vertPreviewRef.current !== null) {
+        const rawH = vertPreviewRef.current
+        const snapped = HEIGHT_SNAPS.reduce((a, b) => Math.abs(a - rawH) < Math.abs(b - rawH) ? a : b)
+        setHeightByUid(prev => ({ ...prev, [uid]: snapped }))
+      } else if (!moved) {
+        setCollapsedUids(prev => {
+          const next = new Set(prev)
+          next.has(uid) ? next.delete(uid) : next.add(uid)
+          return next
+        })
+      }
+      vertResizeRef.current = null
+      vertPreviewRef.current = null
+      setVertPreviewH(null)
+    }
+    function onEscVert(e: KeyboardEvent) {
+      if (e.key !== 'Escape' || !vertResizeRef.current) return
+      vertResizeRef.current = null
+      vertPreviewRef.current = null
+      setVertPreviewH(null)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('keydown', onEscVert)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('keydown', onEscVert)
+    }
+  }, [])
+
+  // FLIP step 1 — capture current rects in cleanup, runs before the next render's effects
+  useLayoutEffect(() => {
+    return () => {
+      const rects: Record<string, DOMRect> = {}
+      Object.entries(flipInnerRefs.current).forEach(([uid, el]) => {
+        if (el) rects[uid] = el.getBoundingClientRect()
+      })
+      flipPrevRects.current = rects
+    }
+  })
+
+  // FLIP step 2 — after committed layout changes, invert→play with spring easing
+  useLayoutEffect(() => {
+    const prev = flipPrevRects.current
+    const timers: ReturnType<typeof setTimeout>[] = []
+    Object.entries(flipInnerRefs.current).forEach(([uid, el]) => {
+      if (!el || !prev[uid]) return
+      const curr = el.getBoundingClientRect()
+      const dx = prev[uid].left - curr.left
+      const dy = prev[uid].top - curr.top
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
+      // Invert: jump to old visual position before browser paints
+      el.style.transition = 'none'
+      el.style.transform = `translate(${dx}px, ${dy}px)`
+      void el.getBoundingClientRect() // force reflow so the jump is "locked in"
+      // Play: animate to natural position with spring feel
+      el.style.transition = 'transform 420ms cubic-bezier(0.34, 1.2, 0.64, 1)'
+      el.style.transform = ''
+      timers.push(setTimeout(() => {
+        el.style.transition = ''
+        el.style.transform = ''
+      }, 450))
+    })
+    return () => timers.forEach(clearTimeout)
+  }, [layout])
+
+  return (
+    <div className="flex flex-col gap-[20px]">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-[12px]">
+        <div className="flex flex-col gap-[4px]">
+          <button onClick={onBack} className="flex items-center gap-[6px] self-start mb-[4px]"
+            style={{ border: "none", background: "none", cursor: "pointer", padding: 0 }}>
+            <LucideIcons.ChevronLeft size={14} style={{ color: "var(--primary)" }} />
+            <span style={{ fontSize: 12, color: "var(--primary)", fontWeight: 500 }}>Widgets</span>
+          </button>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", margin: 0 }}>Live Canvas</h2>
+          <p style={{ fontSize: 13, color: "var(--color-text-subtitle)", margin: 0 }}>
+            Vista de overview interactiva. Hover sobre cualquier widget para ver el estado de drag. Los widgets se comportan como en el UCP real.
+          </p>
+        </div>
+        {/* Canvas state selector + reset */}
+        <div className="flex items-center gap-[8px] flex-wrap">
+          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)", fontWeight: 500 }}>Canvas state:</span>
+          {(["default", "error", "connection"] as const).map(s => (
+            <button key={s} onClick={() => setActiveState(s)}
+              style={{
+                border: "none", cursor: "pointer", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, textTransform: "capitalize",
+                background: activeState === s ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-default)",
+                color: activeState === s ? "var(--primary)" : "var(--color-text-subtitle)",
+              }}>
+              {s}
+            </button>
+          ))}
+          <button
+            onClick={() => { setLayout([...CANVAS_LAYOUT]); setCollapsedUids(new Set()); setWidthByUid({}); setHeightByUid({}) }}
+            style={{
+              border: "1px solid var(--field-border)", cursor: "pointer", padding: "4px 10px", borderRadius: 6,
+              fontSize: 11, fontWeight: 500, background: "transparent", color: "var(--color-text-subtitle)",
+              marginLeft: 4,
+            }}
+          >
+            Reset layout
+          </button>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-[16px] flex-wrap">
+        <div className="flex items-center gap-[6px]">
+          <LucideIcons.MousePointer size={12} style={{ color: "var(--color-text-subtitle)" }} />
+          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>Hover → drag handle aparece</span>
+        </div>
+        <div className="flex items-center gap-[6px]">
+          <LucideIcons.GripVertical size={12} style={{ color: "var(--primary)" }} />
+          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>Drag handle = widget movible</span>
+        </div>
+        <div className="flex items-center gap-[6px]">
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--field-border-hover)" }} />
+          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>Border activo en hover</span>
+        </div>
+        <div className="flex items-center gap-[6px]">
+          <LucideIcons.ArrowLeftRight size={12} style={{ color: "var(--color-text-subtitle)" }} />
+          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>Drag &amp; drop para reordenar</span>
+        </div>
+      </div>
+
+      {/* Smooth resize overlay — fixed-position, grows with mouse, no layout effect */}
+      {resizing && resizePreviewPx !== null && (
+        <div style={{
+          position: "fixed",
+          top: resizing.startRect.top,
+          height: resizing.startRect.height,
+          ...(resizing.edge === "left"
+            ? { right: window.innerWidth - (resizing.startRect.left + resizing.startRect.width), width: resizePreviewPx }
+            : { left: resizing.startRect.left, width: resizePreviewPx }
+          ),
+          background: "rgba(33,115,255,0.07)",
+          border: "1.5px solid var(--color-border-primary-default)",
+          borderRadius: 16,
+          pointerEvents: "none",
+          zIndex: 9999,
+          userSelect: "none",
+        }} />
+      )}
+
+      {/* Canvas grid */}
+      <div
+        ref={gridRef}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: 16,
+          background: "var(--surface)",
+          padding: 24,
+          borderRadius: 12,
+          border: "1px solid var(--widget-border)",
+        }}
+      >
+        {displayLayout.map(entry => {
+          // ── StackGroup: two narrow slots in one column cell ─────────────
+          if (isStack(entry)) {
+            return (
+              <div
+                key={entry.uid}
+                data-slot-uid={entry.uid}
+                style={{
+                  gridColumn: "span 1",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  userSelect: "none",
+                  position: "relative",
+                }}
+              >
+                {entry.slots.map(slot => {
+                  const isThisDragging = dragUid === slot.uid
+                  const isHovering = hoveredUid === slot.uid && !isDragging
+                  const isGhost = isThisDragging && !dropUid
+                  const isLanding = isThisDragging && !!dropUid
+                  return (
+                    <div
+                      key={slot.uid}
+                      data-slot-uid={slot.uid}
+                      data-slot-width="narrow"
+                      onMouseEnter={() => { if (!isDragging) setHoveredUid(slot.uid) }}
+                      onMouseLeave={() => { setHoveredUid(null) }}
+                      style={{
+                        position: "relative",
+                        borderRadius: 16,
+                        opacity: isGhost ? 0.25 : 1,
+                        transition: "opacity 150ms ease, transform 220ms ease",
+                        transform: isThisDragging ? "scale(0.97)" : "scale(1)",
+                        display: "flex",
+                        flexDirection: "column",
+                        userSelect: "none",
+                      }}
+                    >
+                      <div
+                        ref={el => { flipInnerRefs.current[slot.uid] = el }}
+                        style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", willChange: "transform" }}
+                      >
+                        {isLanding && (
+                          <div style={{ position: "absolute", inset: 0, background: "var(--color-surface-primary-subtle)", border: "2px solid var(--color-border-primary-lighter)", borderRadius: 16, zIndex: 15, pointerEvents: "none" }} />
+                        )}
+                        <WidgetFather
+                          className="flex-1"
+                          title={slot.title}
+                          fillWidth
+                          widthClass="narrow"
+                          showRefresh={slot.showRefresh}
+                          showMenu={slot.showMenu}
+                          showInfo={slot.showInfo}
+                          isHovered={isHovering && activeState === "default"}
+                          isDragging={isThisDragging}
+                          hasError={activeState === "error"}
+                          hasConnectionError={activeState === "connection"}
+                          isCollapsed={collapsedUids.has(slot.uid)}
+                          onGripMouseDown={e => {
+                            if (isResizingRef.current || vertResizeRef.current) return
+                            dragPotentialRef.current = { uid: slot.uid, x: e.clientX, y: e.clientY }
+                          }}
+                        >
+                          {activeState === "default"
+                            ? <WidgetContent id={slot.id} kpiVariant={slot.kpiVariant ?? 2} />
+                            : undefined
+                          }
+                        </WidgetFather>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          }
+
+          // ── Single slot ─────────────────────────────────────────────────
+          const slot = entry
+          const currentWidth = widthByUid[slot.uid] ?? slot.widthClass
+          const isThisDragging = dragUid === slot.uid
+          const isThisResizing = resizing?.uid === slot.uid
+          const isVertResizing = vertResizeRef.current?.uid === slot.uid
+          const isHovering = hoveredUid === slot.uid && !isDragging && !isThisResizing
+          const edge = isHovering ? hoveredEdge : null
+          const edgeShadow = edge === "left"
+            ? "-2px 0 0 0 var(--color-border-primary-default)"
+            : edge === "right"
+              ? "2px 0 0 0 var(--color-border-primary-default)"
+              : edge === "bottom"
+                ? "0 2px 0 0 var(--color-border-primary-default)"
+                : "none"
+          const isGhost = isThisDragging && !dropUid
+          const isLanding = isThisDragging && !!dropUid
+          const explicitH = vertPreviewH?.uid === slot.uid
+            ? vertPreviewH.h
+            : heightByUid[slot.uid]
+          return (
+            <div
+              key={slot.uid}
+              data-slot-uid={slot.uid}
+              data-slot-width={slot.widthClass}
+              onMouseEnter={() => { if (!isDragging) setHoveredUid(slot.uid) }}
+              onMouseLeave={() => { setHoveredUid(null); setHoveredEdge(null) }}
+              style={{
+                position: "relative",
+                gridColumn: `span ${colSpanForWidth(currentWidth)}`,
+                cursor: isDragging ? "grabbing" : isHovering ? "default" : "default",
+                opacity: isGhost ? 0.25 : (isThisResizing || isVertResizing) ? 0.7 : 1,
+                borderRadius: 16,
+                boxShadow: edgeShadow,
+                transition: isDragging && !isThisDragging ? "none" : "opacity 150ms ease, transform 220ms ease, box-shadow 100ms",
+                transform: isThisDragging ? "scale(0.97)" : "scale(1)",
+                display: "flex",
+                flexDirection: "column",
+                height: explicitH,
+                userSelect: "none",
+              }}
+            >
+              {/* Left edge resize handle */}
+              <div
+                onMouseDown={e => {
+                  e.stopPropagation(); e.preventDefault()
+                  const rect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
+                  isResizingRef.current = true
+                  setResizing({ uid: slot.uid, edge: "left", startX: e.clientX, startCols: colSpanForWidth(currentWidth), startRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } })
+                  setResizePreviewPx(rect.width); resizePreviewRef.current = rect.width
+                }}
+                onMouseEnter={() => setHoveredEdge("left")}
+                onMouseLeave={() => setHoveredEdge(null)}
+                style={{ position: "absolute", left: 0, top: 8, bottom: 8, width: 12, cursor: "col-resize", zIndex: 20 }}
+              />
+              {/* Right edge resize handle */}
+              <div
+                onMouseDown={e => {
+                  e.stopPropagation(); e.preventDefault()
+                  const rect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
+                  isResizingRef.current = true
+                  setResizing({ uid: slot.uid, edge: "right", startX: e.clientX, startCols: colSpanForWidth(currentWidth), startRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } })
+                  setResizePreviewPx(rect.width); resizePreviewRef.current = rect.width
+                }}
+                onMouseEnter={() => setHoveredEdge("right")}
+                onMouseLeave={() => setHoveredEdge(null)}
+                style={{ position: "absolute", right: 0, top: 8, bottom: 8, width: 12, cursor: "col-resize", zIndex: 20 }}
+              />
+              {/* Bottom edge — drag to resize height, click to collapse */}
+              <div
+                onMouseDown={e => {
+                  if (isDragging || isResizingRef.current) return
+                  e.stopPropagation()
+                  const slotEl = e.currentTarget.parentElement as HTMLElement
+                  const startH = slotEl.getBoundingClientRect().height
+                  vertResizeRef.current = { uid: slot.uid, startY: e.clientY, startH, moved: false }
+                }}
+                onMouseEnter={() => setHoveredEdge("bottom")}
+                onMouseLeave={() => setHoveredEdge(null)}
+                style={{ position: "absolute", left: 8, right: 8, bottom: 0, height: 14, cursor: "row-resize", zIndex: 20 }}
+              />
+              {/* FLIP animation target — inner wrapper keeps its transform independent from drag scale */}
+              <div
+                ref={el => { flipInnerRefs.current[slot.uid] = el }}
+                style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", willChange: "transform" }}
+              >
+                {/* Landing indicator: blue overlay at target position */}
+                {isLanding && (
+                  <div style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "var(--color-surface-primary-subtle)",
+                    border: "2px solid var(--color-border-primary-lighter)",
+                    borderRadius: 16,
+                    zIndex: 15,
+                    pointerEvents: "none",
+                    transition: "opacity 100ms",
+                  }} />
+                )}
+                <WidgetFather
+                  className="flex-1"
+                  title={slot.title}
+                  fillWidth
+                  widthClass={currentWidth}
+                  showRefresh={slot.showRefresh}
+                  showMenu={slot.showMenu}
+                  showInfo={slot.showInfo}
+                  isHovered={hoveredUid === slot.uid && activeState === "default" && !isDragging && !isThisResizing}
+                  isDragging={isThisDragging}
+                  hasError={activeState === "error"}
+                  hasConnectionError={activeState === "connection"}
+                  isCollapsed={collapsedUids.has(slot.uid)}
+                  onGripMouseDown={e => {
+                    if (isResizingRef.current || vertResizeRef.current) return
+                    dragPotentialRef.current = { uid: slot.uid, x: e.clientX, y: e.clientY }
+                  }}
+                >
+                  {activeState === "default"
+                    ? <WidgetContent id={slot.id} kpiVariant={slot.kpiVariant ?? 2} />
+                    : undefined
+                  }
+                </WidgetFather>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Footer note */}
+      <div className="flex items-start gap-[8px] p-[12px] rounded-[8px]"
+        style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-subtle)" }}>
+        <LucideIcons.Info size={13} style={{ color: "var(--primary)", flexShrink: 0, marginTop: 1 }} />
+        <p style={{ fontSize: 12, margin: 0, color: "var(--color-text-title)" }}>
+          Este canvas replica el comportamiento del UCP real. Cada widget está montado sobre el componente <strong>Widget Father</strong> con su contenido conectado. El estado "Canvas state" aplica globalmente — en el producto real cada widget tiene su estado independiente.
+        </p>
+      </div>
+
+      {/* Floating drag preview — follows cursor during drag */}
+      {isDragging && pointerPos && (
+        <div style={{
+          position: "fixed",
+          left: pointerPos.x + 14,
+          top: pointerPos.y - 16,
+          pointerEvents: "none",
+          zIndex: 9999,
+          background: "var(--widget-bg)",
+          border: "1.5px solid var(--color-border-primary-default)",
+          borderRadius: 8,
+          padding: "8px 12px",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.22)",
+          minWidth: 120,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          userSelect: "none",
+        }}>
+          <LucideIcons.GripVertical size={12} style={{ color: "var(--primary)", flexShrink: 0 }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-title)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {findSlotInLayout(layout, dragUid ?? "")?.title ?? ""}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Widgets gallery ───────────────────────────────────────────────────────────
+
+function WidgetsGallery({ onSelectWidget, onShowCanvas }: { onSelectWidget: (id: WidgetId) => void; onShowCanvas: () => void }) {
+  return (
+    <div className="flex flex-col gap-[28px]">
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-[16px] flex-wrap">
+        <div className="flex flex-col gap-[4px]">
+          <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--primary)" }}>Pattern</span>
+          <h1 className="text-[24px] font-semibold" style={{ color: "var(--color-text-title)", margin: 0 }}>Widgets</h1>
+          <p style={{ fontSize: 14, color: "var(--color-text-subtitle)", margin: 0, maxWidth: 540 }}>
+            Bloques de contenido modular del UCP. Click en un widget para ver su documentación detallada.
+          </p>
+        </div>
+        {/* Live Canvas CTA */}
+        <button onClick={onShowCanvas}
+          className="flex items-center gap-[8px] px-[14px] py-[8px] rounded-[8px]"
+          style={{ border: "1px solid var(--primary)", background: "var(--color-surface-primary-subtle)", cursor: "pointer", flexShrink: 0 }}>
+          <LucideIcons.LayoutDashboard size={14} style={{ color: "var(--primary)" }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>Live Canvas</span>
+          <LucideIcons.ChevronRight size={13} style={{ color: "var(--primary)" }} />
+        </button>
+      </div>
+
+      {/* Class legend */}
+      <div className="flex gap-[8px] flex-wrap">
+        {(["Compact", "Standard", "Heavy"] as const).map((c, i) => {
+          const col = CLASS_COLORS[c]
+          return (
+            <div key={c} className="flex items-center gap-[6px] px-[10px] py-[5px] rounded-[6px]"
+              style={{ background: col.bg, border: `0.5px solid ${col.border}` }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: col.text }}>Class {i + 1}</span>
+              <span style={{ fontSize: 11, color: col.text }}>{c}</span>
+              <span style={{ fontSize: 10, color: col.text, opacity: 0.7 }}>
+                {c === "Compact" ? "4–5 GU" : c === "Standard" ? "7–9 GU" : "7–9 GU · scrolls"}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Gallery grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+        {WIDGET_DEFS.map(w => {
+          const cls = CLASS_COLORS[w.classLabel]
+          return (
+            <button key={w.id} onClick={() => onSelectWidget(w.id)}
+              className="flex flex-col rounded-[10px] overflow-hidden text-left transition-all"
+              style={{ background: "var(--surface)", border: "1px solid var(--field-border)", cursor: "pointer", padding: 0 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border-hover)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px var(--color-surface-neutral-default)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}>
+              {/* Preview */}
+              <div style={{ padding: "16px 16px 12px", overflowY: "hidden", maxHeight: 240 }}>
+                <WidgetFather title={w.name} fillWidth showRefresh showMenu>
+                  {w.defined ? <WidgetContent id={w.id} kpiVariant={2} /> : undefined}
+                </WidgetFather>
+              </div>
+              {/* Card footer */}
+              <div className="flex items-center justify-between gap-[8px] px-[16px] py-[10px]"
+                style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                <div className="flex items-center gap-[6px]">
+                  <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 3, background: cls.bg, color: cls.text }}>
+                    Class {w.classNum} · {w.classLabel}
+                  </span>
+                  {!w.defined && (
+                    <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: "var(--color-surface-neutral-default)", color: "var(--field-supporting)", border: "0.5px solid var(--field-border)" }}>
+                      COMING SOON
+                    </span>
+                  )}
+                </div>
+                <LucideIcons.ChevronRight size={13} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── WidgetsPage ───────────────────────────────────────────────────────────────
+
+function WidgetsPage() {
+  const [view, setView] = useState<"gallery" | "canvas" | WidgetId>("gallery")
+  const selectedWidget = (view !== "gallery" && view !== "canvas")
+    ? WIDGET_DEFS.find(w => w.id === view) ?? null
+    : null
+
+  if (view === "canvas") return <WidgetCanvasView onBack={() => setView("gallery")} />
+  if (selectedWidget)    return <WidgetDetailView widget={selectedWidget} onBack={() => setView("gallery")} />
+
+  return <WidgetsGallery onSelectWidget={id => setView(id)} onShowCanvas={() => setView("canvas")} />
+}
+
+
+// ── SpinnerPage ──────────────────────────────────────────────────────────────
+
+const SPINNER_SPEC = {
+  name: "Spinner",
+  figmaNodeId: "7185:3933",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7185-3933",
+  description: "Circular indeterminate loading indicator for operations where duration is unknown. A single arc rotates at 0.7s linear speed. Six semantic styles match DS surface token families. Five sizes (XS–XL) cover inline, button, and full-section contexts.",
+  properties: [
+    { name: "style",     type: "SpinnerStyle",  values: ["primary", "success", "alert", "error", "informative", "bw"], default: "primary",  note: "Determines arc color and track color via --spinner-{style}-fill / --spinner-{style}-track tokens." },
+    { name: "size",      type: "SpinnerSize",   values: ["xs", "s", "m", "l", "xl"],                                   default: "m",        note: "XS=12px, S=16px, M=24px, L=32px, XL=48px. Border width scales: 1.5/2/2.5/3/3.5px." },
+    { name: "label",     type: "string",        values: ["string"],                                                     default: "Loading…", note: "Accessible label for screen readers via aria-label." },
+    { name: "className", type: "string",        values: ["string"],                                                     default: "—",        note: "Extra Tailwind classes on the spinner div." },
+  ],
+  sizes: [
+    { element: "XS", padding: "—", gap: "—", radius: "50%", note: "12px · border 1.5px — inline text, tight button contexts" },
+    { element: "S",  padding: "—", gap: "—", radius: "50%", note: "16px · border 2px — small buttons, table cells" },
+    { element: "M",  padding: "—", gap: "—", radius: "50%", note: "24px · border 2.5px — default, standalone loaders" },
+    { element: "L",  padding: "—", gap: "—", radius: "50%", note: "32px · border 3px — card-level loading" },
+    { element: "XL", padding: "—", gap: "—", radius: "50%", note: "48px · border 3.5px — full-section or page-level loading" },
+  ],
+  typography: [],
+  variants: [
+    { name: "Primary",     description: "Blue — data fetch, page transitions, API calls",         cssPrefix: "spinner-primary",     tokens: [
+      { role: "Arc (fill)", variable: "--spinner-primary-fill",      varId: "Surface/Primary/Default",            light: "#2173ff",           dark: "#2b7fff"               },
+      { role: "Track",      variable: "--spinner-primary-track",     varId: "Surface/Primary/Subtle",             light: "#E9F1FF",           dark: "rgba(33,115,255,0.15)" },
+    ]},
+    { name: "Success",     description: "Green — processing a confirmed-success operation",       cssPrefix: "spinner-success",     tokens: [
+      { role: "Arc (fill)", variable: "--spinner-success-fill",      varId: "Surface/Success/Default",            light: "#00a07e",           dark: "#00a07e"               },
+      { role: "Track",      variable: "--spinner-success-track",     varId: "Surface/Success/More Subtle",        light: "#e5fdf8",           dark: "rgba(110,231,183,0.10)"},
+    ]},
+    { name: "Alert",       description: "Orange — warning-level operation in progress",           cssPrefix: "spinner-alert",       tokens: [
+      { role: "Arc (fill)", variable: "--spinner-alert-fill",        varId: "Surface/Alert/Default",              light: "#ed6c02",           dark: "#ed6c02"               },
+      { role: "Track",      variable: "--spinner-alert-track",       varId: "Surface/Alert/More Subtle",          light: "#FFF4E5",           dark: "rgba(217,119,6,0.08)"  },
+    ]},
+    { name: "Error",       description: "Red — retrying a failed operation",                      cssPrefix: "spinner-error",       tokens: [
+      { role: "Arc (fill)", variable: "--spinner-error-fill",        varId: "Surface/Error/Default",              light: "#e05252",           dark: "#e05252"               },
+      { role: "Track",      variable: "--spinner-error-track",       varId: "Surface/Error/More Subtle",          light: "#FEF5F5",           dark: "rgba(220,38,38,0.08)"  },
+    ]},
+    { name: "Informative", description: "Teal — neutral background operations (sync, indexing)", cssPrefix: "spinner-informative", tokens: [
+      { role: "Arc (fill)", variable: "--spinner-informative-fill",  varId: "Surface/LightBlue/Default",          light: "#00b5d9",           dark: "#00b5d9"               },
+      { role: "Track",      variable: "--spinner-informative-track", varId: "Surface/LightBlue/Subtle",           light: "#E5F8FF",           dark: "rgba(2,132,199,0.14)"  },
+    ]},
+    { name: "B/W",         description: "Neutral — on colored or image backgrounds",             cssPrefix: "spinner-bw",          tokens: [
+      { role: "Arc (fill)", variable: "--spinner-bw-fill",           varId: "Icon/Neutral/Black (L) · White (D)", light: "#2a2a2a",           dark: "rgba(255,255,255,0.80)"},
+      { role: "Track",      variable: "--spinner-bw-track",          varId: "Neutral/Subtle",                     light: "rgba(0,0,0,0.08)",  dark: "rgba(255,255,255,0.10)"},
+    ]},
+  ],
+}
+
+const SPINNER_STYLES: { style: SpinnerStyle; label: string; desc: string }[] = [
+  { style: "primary",     label: "Primary",     desc: "General loading — data fetch, page transitions, API calls." },
+  { style: "success",     label: "Success",     desc: "Processing a successful-outcome operation (e.g. saving confirmed data)." },
+  { style: "alert",       label: "Alert",       desc: "Warning-level operation in progress — caution context." },
+  { style: "error",       label: "Error",       desc: "Retrying a failed operation. Used while recovery is in progress." },
+  { style: "informative", label: "Informative", desc: "Neutral, non-critical processing — syncing, indexing, background tasks." },
+  { style: "bw",          label: "B/W",         desc: "On colored or image backgrounds where semantic color would clash." },
+]
+
+function SpinnerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab]         = useState<"overview" | "playground" | "reference">("overview")
+  const [pgStyle, setPgStyle] = useState<SpinnerStyle>("primary")
+  const [pgSize, setPgSize]   = useState<SpinnerSize>("m")
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Spinner</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            Circular indeterminate loading indicator for operations where duration is unknown. A single arc rotates at 0.7s. Six semantic styles and five sizes (XS 12px → XL 48px) cover every context — inline text, buttons, cards, and full-section loading states.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("spinner")} />
+      </div>
+
+      {/* Tab row */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Anatomy */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Anatomy</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["#", "Element", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["1", "Track",    "Full circle ring using --spinner-{style}-track. Always visible as the background arc."],
+                    ["2", "Arc",      "Single quarter-arc using --spinner-{style}-fill (border-top). Rotates 360° at 0.7s linear infinite."],
+                    ["3", "Diameter", "Set by size prop: XS=12px, S=16px, M=24px, L=32px, XL=48px. Border scales proportionally."],
+                  ].map(([n, el, desc]) => (
+                    <tr key={n} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{n}</td>
+                      <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{el}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sizes */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Sizes</SectionLabel>
+            <div className="flex items-end gap-[32px] py-[16px] px-[8px]">
+              {(["xs", "s", "m", "l", "xl"] as SpinnerSize[]).map(sz => (
+                <div key={sz} className="flex flex-col items-center gap-[12px]">
+                  <Spinner size={sz} />
+                  <div className="flex flex-col items-center gap-[2px]">
+                    <span className="text-[11px] font-semibold text-[var(--field-label)] uppercase">{sz.toUpperCase()}</span>
+                    <span className="text-[11px] text-[var(--field-supporting)]">{{ xs:12, s:16, m:24, l:32, xl:48 }[sz]}px</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* All styles */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Styles — All 6 Variants</SectionLabel>
+            <div className="flex flex-col gap-[16px]">
+              {SPINNER_STYLES.map(({ style, label, desc }) => (
+                <div key={style} className="flex items-center gap-[16px]">
+                  <Spinner style={style} size="m" />
+                  <div>
+                    <span className="text-[13px] font-semibold text-[var(--foreground)]">{label}</span>
+                    <span className="text-[12px] text-[var(--field-supporting)] ml-[8px]">{desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[16px]">
+              {[
+                { type: "do",   text: "Use Spinner when duration is unknown (API call, AI processing, file upload in progress)." },
+                { type: "dont", text: "Don't use Spinner when progress percentage is known — use Progress Bar instead." },
+                { type: "do",   text: "Show only one Spinner per region. If a full section is loading, one centered Spinner is enough." },
+                { type: "dont", text: "Don't show a Spinner for operations under 300ms — instant feedback is better than a flash." },
+                { type: "do",   text: "Use B/W style on colored or image backgrounds to avoid color conflicts." },
+                { type: "dont", text: "Don't use Spinner and Skeleton simultaneously for the same content — pick one loading pattern." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[14px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>
+                    {item.type === "do" ? "DO" : "DON'T"}
+                  </span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Playground ── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[24px]">
+          {/* Controls */}
+          <div className="flex flex-col gap-[16px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Controls</SectionLabel>
+            <div className="flex flex-col gap-[12px]">
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Style</span>
+                <CtrlGroup<SpinnerStyle>
+                  label="Style"
+                  value={pgStyle} onChange={setPgStyle}
+                  options={[
+                    { value: "primary",     label: "Primary" },
+                    { value: "success",     label: "Success" },
+                    { value: "alert",       label: "Alert" },
+                    { value: "error",       label: "Error" },
+                    { value: "informative", label: "Informative" },
+                    { value: "bw",          label: "B/W" },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Size</span>
+                <CtrlGroup<SpinnerSize>
+                  label="Size"
+                  value={pgSize} onChange={setPgSize}
+                  options={[
+                    { value: "xs", label: "XS — 12px" },
+                    { value: "s",  label: "S — 16px" },
+                    { value: "m",  label: "M — 24px" },
+                    { value: "l",  label: "L — 32px" },
+                    { value: "xl", label: "XL — 48px" },
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Preview</SectionLabel>
+            <div className="py-[40px] flex justify-center items-center">
+              <Spinner style={pgStyle} size={pgSize} />
+            </div>
+            <div className="flex justify-center">
+              <span className="text-[12px] text-[var(--field-supporting)]">style="{pgStyle}" · size="{pgSize}"</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reference ── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Tokens table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Design Tokens</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Role", "CSS Variable", "DS Token", "Dark", "Light"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {SPINNER_SPEC.variants.flatMap(v => v.tokens).map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.role}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{row.variable}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{row.varId}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.dark}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.light}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Usage</SectionLabel>
+            <pre className="text-[12px] leading-[20px] overflow-x-auto p-[16px] rounded-[6px]" style={{ background: "var(--canvas)", color: "var(--foreground)" }}>{`import { Spinner } from "@/components/ui/spinner"
+
+// Default (M size, primary style)
+<Spinner />
+
+// Inline with text
+<div className="flex items-center gap-2">
+  <Spinner size="s" />
+  <span>Saving…</span>
+</div>
+
+// Success state
+<Spinner style="success" size="l" label="Processing complete" />
+
+// Full-section loading overlay
+<div className="flex justify-center py-16">
+  <Spinner style="primary" size="xl" label="Loading data" />
+</div>
+
+// Inside a button (disable button while loading)
+<button disabled>
+  <Spinner size="xs" style="bw" />
+  Publishing…
+</button>`}</pre>
+          </div>
+
+          {/* Props table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Props</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(SPINNER_SPEC.properties as { name: string; type: string; values: string[]; default: string; note: string }[]).map((p, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{p.name}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{p.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{p.default}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{p.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Figma usage steps */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Figma Usage Steps</SectionLabel>
+            <div className="flex flex-col gap-[10px]">
+              {[
+                "① Locate the 'Loading Spinner' component in the AIMS OS DS library (node 7185:3933).",
+                "② Select the Style property matching the semantic context of the operation (Primary for generic, Success/Error for outcome-aware states).",
+                "③ Select the Size: XS or S for inline/button contexts, M for standalone, L or XL for card and section-level loading.",
+                "④ The animation frames (Loading 1–4) are handled automatically in Figma prototype mode — in code, CSS handles the rotation.",
+                "⑤ Never show a Spinner alongside a Progress Bar for the same content — use one or the other based on whether progress is known.",
+                "⑥ Use B/W style on colored/gradient backgrounds (hero sections, colored cards) to avoid semantic color confusion.",
+              ].map((step, i) => (
+                <p key={i} className="text-[13px] text-[var(--foreground)]">{step}</p>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── SkeletonPage ─────────────────────────────────────────────────────────────
+
+const SKELETON_SPEC = {
+  name: "Skeleton",
+  figmaNodeId: "5992:6760",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5992-6760",
+  description: "Loading placeholder that mirrors the shape and size of real content. A linear shimmer (left→right, 1.2s, infinite) signals ongoing data fetching without blocking the UI. Three shape variants cover all common content types.",
+  properties: [
+    { name: "shape",     type: "SkeletonShape", values: ["rectangle", "circle", "text"], default: "rectangle", note: "Controls border-radius: rectangle=12px (Radius-L), circle=50% (Radius-Full), text=4px (Radius-XS)." },
+    { name: "width",     type: "string | number", values: ["string", "number"],          default: "100%",       note: "CSS width. Accepts px number or any CSS string. Defaults to full container width." },
+    { name: "height",    type: "string | number", values: ["string", "number"],          default: "16px",       note: "CSS height. Accepts px number or any CSS string. Defaults to 16px (text line height)." },
+    { name: "className", type: "string",          values: ["string"],                    default: "—",          note: "Extra Tailwind classes applied to the skeleton div." },
+  ],
+  sizes: [
+    { element: "Rectangle radius", padding: "—", gap: "—", radius: "12px", note: "Radius/Radius-L — cards, image blocks, containers" },
+    { element: "Circle radius",    padding: "—", gap: "—", radius: "50%",  note: "Radius/Full — avatars, icon placeholders" },
+    { element: "Text radius",      padding: "—", gap: "—", radius: "4px",  note: "Radius/Radius-XS — titles, body lines, captions" },
+    { element: "Default height",   padding: "—", gap: "—", radius: "—",    note: "16px — matches standard text line height" },
+  ],
+  typography: [],
+  variants: [
+    { name: "Skeleton", description: "Shimmer gradient over a neutral base — 1.2s linear infinite", cssPrefix: "skeleton", tokens: [
+      { role: "Base fill",    variable: "--skeleton-base",    varId: "Surface/Neutral/Default",  light: "#f2f2f2",               dark: "rgba(255,255,255,0.06)" },
+      { role: "Shimmer peak", variable: "--skeleton-shimmer", varId: "Surface/Neutral/Emphasis", light: "rgba(217,217,217,0.8)", dark: "rgba(255,255,255,0.12)" },
+    ]},
+  ],
+}
+
+function SkeletonPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab]         = useState<"overview" | "playground" | "reference">("overview")
+  const [pgShape, setPgShape] = useState<SkeletonShape>("rectangle")
+  const [pgWidth, setPgWidth] = useState<"100%" | "240px" | "120px">("100%")
+  const [pgHeight, setPgHeight] = useState<"20px" | "40px" | "80px" | "120px">("20px")
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Skeleton</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            Loading placeholder that mirrors the shape of real content. A left-to-right shimmer (1.2s linear, infinite) signals ongoing data fetching. Three shape variants — Rectangle, Circle, and Text Line — cover all common content types. Respects prefers-reduced-motion.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("skeleton")} />
+      </div>
+
+      {/* Tab row */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Anatomy */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Anatomy</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["#", "Element", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["1", "Base layer",     "Static fill using --skeleton-base. Matches surface color of the theme (rgba(255,255,255,0.06) dark / #f2f2f2 light)."],
+                    ["2", "Shimmer layer",  "Gradient overlay that sweeps left→right over 1.2s. Uses --skeleton-shimmer at 50% midpoint for the highlight peak."],
+                    ["3", "Shape (radius)", "Border-radius applied to the div: 12px for Rectangle, 50% for Circle, 4px for Text Line."],
+                  ].map(([n, el, desc]) => (
+                    <tr key={n} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{n}</td>
+                      <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{el}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Shape variants */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Shape Variants</SectionLabel>
+            <div className="flex flex-col gap-[24px]">
+              {([
+                { shape: "rectangle" as SkeletonShape, label: "Rectangle — 12px radius", desc: "Cards, image blocks, content containers. Matches the Radius-L (12px) used by CardContainer." },
+                { shape: "circle"    as SkeletonShape, label: "Circle — 50% radius",     desc: "Avatars, icon placeholders, profile images. Always set equal width and height." },
+                { shape: "text"      as SkeletonShape, label: "Text Line — 4px radius",  desc: "Titles, body paragraphs, labels, captions. Full width by default, 12–20px height." },
+              ]).map(({ shape, label, desc }) => (
+                <div key={shape} className="flex flex-col gap-[10px]">
+                  <div className="flex items-center gap-[8px]">
+                    <span className="text-[12px] font-semibold text-[var(--field-label)] uppercase tracking-wide w-[200px]">{label}</span>
+                    <span className="text-[12px] text-[var(--field-supporting)]">{desc}</span>
+                  </div>
+                  <div className="flex items-center gap-[16px]">
+                    <Skeleton
+                      shape={shape}
+                      width={shape === "circle" ? 48 : shape === "text" ? "100%" : 240}
+                      height={shape === "circle" ? 48 : shape === "text" ? 16 : 80}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Practical layout example */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Layout Example — Entity Card Loading</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">Compose multiple Skeleton instances to match the target content structure. Widths should approximate real content proportions.</p>
+            <div className="flex flex-col gap-[16px] p-[16px] rounded-[8px]" style={{ background: "var(--canvas)" }}>
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-[12px] p-[14px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+                  <Skeleton shape="circle" width={36} height={36} />
+                  <div className="flex flex-col gap-[8px] flex-1">
+                    <Skeleton shape="text" width="60%" height={14} />
+                    <Skeleton shape="text" width="40%" height={12} />
+                  </div>
+                  <Skeleton shape="rectangle" width={80} height={28} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[16px]">
+              {[
+                { type: "do",   text: "Match skeleton dimensions to the real content they replace — layout shift after load is disorienting." },
+                { type: "dont", text: "Don't show skeleton for operations under 300ms — the flash adds noise without useful feedback." },
+                { type: "do",   text: "Use Text shape for text lines, Circle for avatars, Rectangle for image and card blocks." },
+                { type: "dont", text: "Don't use a single full-page skeleton when only a section is loading — scope it to the loading region." },
+                { type: "do",   text: "Compose multiple Skeleton instances to approximate the real layout's column and row structure." },
+                { type: "dont", text: "Don't show a Skeleton and a Spinner simultaneously for the same content — pick one loading indicator per region." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[14px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>
+                    {item.type === "do" ? "DO" : "DON'T"}
+                  </span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Playground ── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[24px]">
+          {/* Controls */}
+          <div className="flex flex-col gap-[16px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Controls</SectionLabel>
+            <div className="flex flex-col gap-[12px]">
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Shape</span>
+                <CtrlGroup<SkeletonShape>
+                  label="Shape"
+                  value={pgShape} onChange={setPgShape}
+                  options={[
+                    { value: "rectangle", label: "Rectangle" },
+                    { value: "circle",    label: "Circle" },
+                    { value: "text",      label: "Text Line" },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Width</span>
+                <CtrlGroup<"100%" | "240px" | "120px">
+                  label="Width"
+                  value={pgWidth} onChange={setPgWidth}
+                  options={[
+                    { value: "100%",  label: "Full width" },
+                    { value: "240px", label: "240px" },
+                    { value: "120px", label: "120px" },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Height</span>
+                <CtrlGroup<"20px" | "40px" | "80px" | "120px">
+                  label="Height"
+                  value={pgHeight} onChange={setPgHeight}
+                  options={[
+                    { value: "20px",  label: "20px" },
+                    { value: "40px",  label: "40px" },
+                    { value: "80px",  label: "80px" },
+                    { value: "120px", label: "120px" },
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Preview</SectionLabel>
+            <div className="py-[32px] px-[24px] flex justify-center">
+              <Skeleton
+                shape={pgShape}
+                width={pgShape === "circle" ? parseInt(pgHeight) : pgWidth}
+                height={pgHeight}
+              />
+            </div>
+            <div className="flex justify-center">
+              <span className="text-[12px] text-[var(--field-supporting)]">
+                shape="{pgShape}" · width="{pgShape === "circle" ? pgHeight : pgWidth}" · height="{pgHeight}"
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reference ── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Tokens table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Design Tokens</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Role", "CSS Variable", "DS Token", "Dark", "Light"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {SKELETON_SPEC.variants.flatMap(v => v.tokens).map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.role}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{row.variable}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{row.varId}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.dark}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.light}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Usage</SectionLabel>
+            <pre className="text-[12px] leading-[20px] overflow-x-auto p-[16px] rounded-[6px]" style={{ background: "var(--canvas)", color: "var(--foreground)" }}>{`import { Skeleton } from "@/components/ui/skeleton"
+
+// Text line (default rectangle works too — text variant uses 4px radius)
+<Skeleton shape="text" width="60%" height={14} />
+
+// Avatar placeholder
+<Skeleton shape="circle" width={40} height={40} />
+
+// Card / image block
+<Skeleton shape="rectangle" width="100%" height={120} />
+
+// Compose a card loading state
+<div className="flex items-center gap-3 p-3">
+  <Skeleton shape="circle" width={36} height={36} />
+  <div className="flex flex-col gap-2 flex-1">
+    <Skeleton shape="text" width="55%" height={14} />
+    <Skeleton shape="text" width="35%" height={12} />
+  </div>
+</div>`}</pre>
+          </div>
+
+          {/* Props table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Props</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(SKELETON_SPEC.properties as { name: string; type: string; values: string[]; default: string; note: string }[]).map((p, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{p.name}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{p.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{p.default}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{p.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Figma usage steps */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Figma Usage Steps</SectionLabel>
+            <div className="flex flex-col gap-[10px]">
+              {[
+                "① Locate the 'Skeleton' component in the AIMS OS DS library (node 5992:6760).",
+                "② Select the Shape property: Rectangle for cards/images, Circle for avatars, Text for text lines.",
+                "③ Resize the component to match the actual dimensions of the content it replaces — same width and height.",
+                "④ For text skeletons, reduce width to ~60–80% of the container to approximate natural text length variation.",
+                "⑤ Compose multiple Skeleton instances inside a frame to mirror the full layout structure of the loading region.",
+                "⑥ Never use Skeleton for operations under 300ms — use nothing (instant) or a Spinner for unknown-duration waits.",
+              ].map((step, i) => (
+                <p key={i} className="text-[13px] text-[var(--foreground)]">{step}</p>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── StepperPage ──────────────────────────────────────────────────────────────
+
+const STEPPER_SPEC = {
+  name: "Stepper",
+  figmaNodeId: "8210:40358",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=8210-40358",
+  description: "Horizontal multi-step progress indicator. Communicates position in a multi-stage flow (onboarding, wizards, configuration sequences). Five step states cover all scenarios: Default (upcoming), Active (current), Completed (done), Locked (not yet accessible), View-only (read-only review).",
+  properties: [
+    { name: "steps",       type: "StepItem[]",              values: ["StepItem[]"],             default: "—",         note: "Array of step descriptors. Each item: { label: string, state: StepState, icon?: LucideIcon }. When icon is set, renders via HighlightIcon sm. When omitted, shows step number." },
+    { name: "onStepClick", type: "(index: number) => void", values: ["function", "undefined"],  default: "undefined", note: "Optional click handler. Receives 0-based index. Locked steps are always non-clickable." },
+    { name: "className",   type: "string",                  values: ["string"],                  default: "—",         note: "Extra Tailwind classes applied to the <ol> wrapper." },
+  ],
+  sizes: [
+    { element: "Step dot",    padding: "—",      gap: "—",    radius: "4px",  note: "24×24px · Radius-S — flex container for icon or number" },
+    { element: "Dot → label", padding: "—",      gap: "4px",  radius: "—",    note: "4px gap between dot and label text" },
+    { element: "Separator (ChevronRight)", padding: "16px mx", gap: "—", radius: "—", note: "ChevronRight 16×16px · 16px margin each side · Icon/Neutral/Disabled color" },
+    { element: "Icon (dot)",  padding: "—",      gap: "—",    radius: "—",    note: "12px — Check (Completed), Lock (Locked), 11px number (others)" },
+  ],
+  typography: [
+    { element: "Active label",  family: "Inter", size: "14px", weight: "600 (SemiBold)", lineHeight: "normal" },
+    { element: "Default label", family: "Inter", size: "14px", weight: "500 (Medium)",   lineHeight: "20px" },
+    { element: "Step number",   family: "Inter", size: "12px", weight: "600 (SemiBold)", lineHeight: "1" },
+  ],
+  variants: [
+    { name: "Active & Completed", description: "Primary-tinted dot · SemiBold 600 label · aria-current=step", cssPrefix: "stepper-active", tokens: [
+      { role: "Dot fill",    variable: "--stepper-dot-active-bg",  varId: "Surface/Primary/Subtle",  light: "#E9F1FF",               dark: "rgba(33,115,255,0.15)" },
+      { role: "Icon color",  variable: "--stepper-icon-active",    varId: "Icon/Primary/Darker",     light: "#001740",               dark: "#155dfc" },
+      { role: "Label color", variable: "--stepper-label-active",   varId: "Text/Subtitle",           light: "#2a2a2a",               dark: "rgba(255,255,255,0.60)" },
+    ]},
+    { name: "Default & View-only", description: "Neutral dot · Medium 500 label · upcoming or read-only steps", cssPrefix: "stepper-default", tokens: [
+      { role: "Dot fill",    variable: "--stepper-dot-default-bg", varId: "Surface/Neutral/Default", light: "#f2f2f2",               dark: "rgba(255,255,255,0.06)" },
+      { role: "Icon color",  variable: "--stepper-icon-default",   varId: "Icon/Neutral/Dark",       light: "#3F3F46",               dark: "rgba(255,255,255,0.50)" },
+      { role: "Label color", variable: "--stepper-label-default",  varId: "Text/Body",               light: "#5C5C5C",               dark: "#94A3B8" },
+    ]},
+    { name: "Locked", description: "Neutral dot · Lock icon · non-interactive, aria-disabled=true", cssPrefix: "stepper-locked", tokens: [
+      { role: "Lock icon",     variable: "--stepper-icon-locked",  varId: "Icon/Neutral/Disabled",   light: "#bababa",               dark: "rgba(255,255,255,0.30)" },
+    ]},
+    { name: "Connector", description: "ChevronRight 16×16px between steps · 16px margin each side", cssPrefix: "stepper-connector", tokens: [
+      { role: "Chevron color", variable: "--stepper-connector",    varId: "Icon/Neutral/Disabled",   light: "#bababa",               dark: "rgba(255,255,255,0.30)" },
+    ]},
+  ],
+}
+
+const STEP_STATES: { state: StepState; label: string; desc: string }[] = [
+  { state: "default",   label: "Default",   desc: "Upcoming step, not yet accessible. Neutral dot, muted label." },
+  { state: "active",    label: "Active",    desc: "Current step in progress. Primary-tinted dot, bold label, aria-current='step'." },
+  { state: "completed", label: "Completed", desc: "Step finished. Primary-tinted dot, Check icon." },
+  { state: "locked",    label: "Locked",    desc: "Step not yet reachable. Neutral dot, Lock icon, disabled interaction." },
+  { state: "view-only", label: "View-only", desc: "Read-only review state. Same visual as Default but signals content is inspectable." },
+]
+
+function StepperPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab]             = useState<"overview" | "playground" | "reference">("overview")
+  const [pgActive, setPgActive]   = useState<"0" | "1" | "2" | "3">("1")
+  const [pgLocked, setPgLocked]   = useState(false)
+  const [pgClickable, setPgClickable] = useState(false)
+  const [pgIconMode,  setPgIconMode]  = useState(false)
+
+  const STEP_LABELS = ["Account Setup", "Verify Identity", "Configure Access", "Review & Launch"]
+  const pgActiveIdx = parseInt(pgActive)
+  const STEP_ICONS = [LucideIcons.Mail, LucideIcons.ShieldCheck, LucideIcons.Settings2, LucideIcons.Rocket] as const
+  const pgSteps: StepItem[] = STEP_LABELS.map((label, i) => ({
+    label,
+    state: (i < pgActiveIdx ? "completed" : i === pgActiveIdx ? "active" : pgLocked ? "locked" : "default") as StepState,
+    icon: pgIconMode ? STEP_ICONS[i] : undefined,
+  }))
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Stepper</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            Horizontal multi-step progress indicator for onboarding flows, wizards, and configuration sequences. Five step states — Default, Active, Completed, Locked, View-only — communicate exactly where the user is and what's accessible. 24×24px rounded dot (Radius-S) with a 1px flex connector between steps.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("stepper")} />
+      </div>
+
+      {/* Tab row */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Anatomy */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Anatomy</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["#", "Element", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["1", "Step dot",      "24×24px container with Radius-S (4px). Background switches on state: Primary/Subtle (Active/Completed) vs Neutral/Default (others)."],
+                    ["2", "Dot icon",      "Check icon (Completed), Lock icon (Locked), or step number 1–N (Default/Active/View-only). 14px icon / 12px number inside 16×16px inner area, centered."],
+                    ["3", "Step label",    "14px text beside the dot. SemiBold 600 + Subtitle color (Active) · Medium 500 + Body color (all other states). 4px gap from dot."],
+                    ["4", "Separator",     "ChevronRight icon 16×16px between adjacent steps. 16px margin each side. Color: Icon/Neutral/Disabled. aria-hidden — purely decorative."],
+                  ].map(([n, el, desc]) => (
+                    <tr key={n} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{n}</td>
+                      <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{el}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* States */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>States — All 5 Variants</SectionLabel>
+            <div className="flex flex-col gap-[20px] py-[8px]">
+              {STEP_STATES.map(({ state, label, desc }) => (
+                <div key={state} className="flex items-center gap-[20px]">
+                  <div className="shrink-0" style={{ width: 160 }}>
+                    <Stepper steps={[{ label, state }]} />
+                  </div>
+                  <div>
+                    <span className="text-[13px] font-semibold text-[var(--foreground)]">{label}</span>
+                    <span className="text-[12px] text-[var(--field-supporting)] ml-[8px]">{desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Full flow example */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Flow Example — Onboarding Wizard (4 steps)</SectionLabel>
+            <div className="flex flex-col gap-[20px] py-[8px]">
+              {[
+                { label: "Step 1 active", steps: [{ label: "Account", state: "active" }, { label: "Verify", state: "default" }, { label: "Access", state: "locked" }, { label: "Launch", state: "locked" }] },
+                { label: "Step 2 active", steps: [{ label: "Account", state: "completed" }, { label: "Verify", state: "active" }, { label: "Access", state: "locked" }, { label: "Launch", state: "locked" }] },
+                { label: "Step 3 active", steps: [{ label: "Account", state: "completed" }, { label: "Verify", state: "completed" }, { label: "Access", state: "active" }, { label: "Launch", state: "default" }] },
+                { label: "All complete",  steps: [{ label: "Account", state: "completed" }, { label: "Verify", state: "completed" }, { label: "Access", state: "completed" }, { label: "Launch", state: "completed" }] },
+              ].map(({ label, steps }) => (
+                <div key={label} className="flex flex-col gap-[8px]">
+                  <span className="text-[11px] font-semibold text-[var(--field-label)] uppercase tracking-wide">{label}</span>
+                  <Stepper steps={steps as StepItem[]} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[16px]">
+              {[
+                { type: "do",   text: "Use Stepper for linear, ordered flows where step completion must be sequential (onboarding, setup wizards)." },
+                { type: "dont", text: "Don't use Stepper for non-sequential navigation — use Tabs instead when sections are independent." },
+                { type: "do",   text: "Show Locked state for steps that require prior completion. It communicates a dependency, not just unavailability." },
+                { type: "dont", text: "Don't exceed 6 steps in a single Stepper. Split long flows into stages with their own sub-steppers." },
+                { type: "do",   text: "Use View-only state when revisiting a completed flow for review — it signals 'you can see but not re-trigger'." },
+                { type: "dont", text: "Don't show a Stepper for a single-step process — a simple confirmation or form is clearer." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[14px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>
+                    {item.type === "do" ? "DO" : "DON'T"}
+                  </span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Playground ── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[24px]">
+          {/* Controls */}
+          <div className="flex flex-col gap-[16px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Controls</SectionLabel>
+            <div className="flex flex-col gap-[12px]">
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[100px]">Active step</span>
+                <CtrlGroup<"0" | "1" | "2" | "3">
+                  label="Active step"
+                  value={pgActive} onChange={setPgActive}
+                  options={[
+                    { value: "0", label: "Step 1" },
+                    { value: "1", label: "Step 2" },
+                    { value: "2", label: "Step 3" },
+                    { value: "3", label: "Step 4" },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[100px]">After active</span>
+                <CtrlGroup<"default" | "locked">
+                  label="After active"
+                  value={pgLocked ? "locked" : "default"} onChange={v => setPgLocked(v === "locked")}
+                  options={[
+                    { value: "default", label: "Default (accessible)" },
+                    { value: "locked",  label: "Locked (blocked)" },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[100px]">Interaction</span>
+                <CtrlToggle label="Clickable" value={pgClickable} onChange={setPgClickable} />
+              </div>
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[100px]">Dot style</span>
+                <CtrlGroup<"numeric" | "icon">
+                  label="Dot style"
+                  value={pgIconMode ? "icon" : "numeric"}
+                  onChange={v => setPgIconMode(v === "icon")}
+                  options={[
+                    { value: "numeric", label: "Numeric (1 2 3 4)" },
+                    { value: "icon",    label: "Icon (HighlightIcon)" },
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Preview</SectionLabel>
+            <div className="py-[32px] px-[16px]">
+              <Stepper
+                steps={pgSteps}
+                onStepClick={pgClickable ? (i) => setPgActive(String(i) as "0" | "1" | "2" | "3") : undefined}
+              />
+            </div>
+            <div className="flex justify-center">
+              <span className="text-[12px] text-[var(--field-supporting)]">
+                active={pgActiveIdx + 1} · {pgLocked ? "locked after active" : "default after active"}{pgClickable ? " · clickable" : ""}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reference ── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Tokens table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Design Tokens</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Role", "CSS Variable", "DS Token", "Dark", "Light"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {STEPPER_SPEC.variants.flatMap(v => v.tokens).map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.role}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{row.variable}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{row.varId}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.dark}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.light}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Usage</SectionLabel>
+            <pre className="text-[12px] leading-[20px] overflow-x-auto p-[16px] rounded-[6px]" style={{ background: "var(--canvas)", color: "var(--foreground)" }}>{`import { Stepper, type StepItem } from "@/components/ui/stepper"
+
+// Basic onboarding stepper
+const steps: StepItem[] = [
+  { label: "Account Setup",    state: "completed" },
+  { label: "Verify Identity",  state: "active" },
+  { label: "Configure Access", state: "locked" },
+  { label: "Review & Launch",  state: "locked" },
+]
+<Stepper steps={steps} />
+
+// With click navigation (advance to clicked step)
+const [activeIdx, setActiveIdx] = useState(0)
+const clickableSteps: StepItem[] = steps.map((s, i) => ({
+  ...s,
+  state: i < activeIdx ? "completed" : i === activeIdx ? "active" : "default",
+}))
+<Stepper
+  steps={clickableSteps}
+  onStepClick={(i) => setActiveIdx(i)}
+/>
+
+// View-only review (all steps accessible, none active)
+const reviewSteps: StepItem[] = steps.map(s => ({ ...s, state: "view-only" }))`}</pre>
+          </div>
+
+          {/* Props table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Props</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(STEPPER_SPEC.properties as { name: string; type: string; values: string[]; default: string; note: string }[]).map((p, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{p.name}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{p.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{p.default}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{p.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* StepItem shape */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>StepItem Shape & StepState Values</SectionLabel>
+            <pre className="text-[12px] leading-[20px] overflow-x-auto p-[16px] rounded-[6px]" style={{ background: "var(--canvas)", color: "var(--foreground)" }}>{`interface StepItem {
+  label: string   // Display text beside the dot
+  state: StepState
+  icon?: LucideIcon   // Lucide icon — renders via HighlightIcon sm. Omit for numeric dots.
+}
+
+type StepState =
+  | "default"   // Upcoming, accessible  — neutral dot + number
+  | "active"    // Current step          — primary dot + number + bold label
+  | "completed" // Finished              — primary dot + Check icon
+  | "locked"    // Not yet accessible    — neutral dot + Lock icon + disabled
+  | "view-only" // Read-only review      — neutral dot + number (same as default visually)`}</pre>
+          </div>
+
+          {/* Figma usage steps */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Figma Usage Steps</SectionLabel>
+            <div className="flex flex-col gap-[10px]">
+              {[
+                "① Locate the 'Stepper' component in the AIMS OS DS library (node 8210:40358).",
+                "② Set the number of steps to match your flow (typically 3–5). Each step is an individual 'Step' instance.",
+                "③ For each Step instance, set the State property: Default, Active, Completed, Locked, or View-only.",
+                "④ The Active step should always be exactly one. All steps before it should be Completed; steps after depend on whether they're accessible (Default) or blocked (Locked).",
+                "⑤ The connector line between steps is part of the layout — it stretches automatically with auto-layout.",
+                "⑥ Use Locked to signal prerequisite dependency (the user must complete step N before step N+1 unlocks). Never use Disabled — that is for form fields, not stepper steps.",
+                "⑦ In code, pass onStepClick to allow jumping to a completed step; omit it for a purely informational / read-only stepper.",
+              ].map((step, i) => (
+                <p key={i} className="text-[13px] text-[var(--foreground)]">{step}</p>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── ProgressBarPage ──────────────────────────────────────────────────────────
+
+const PB_STYLES: { style: ProgressBarStyle; label: string; desc: string }[] = [
+  { style: "primary",    label: "Primary",    desc: "General loading states — file uploads, page loads, data fetching." },
+  { style: "success",    label: "Success",    desc: "Process completed successfully. Typically animated to 100% then replaced." },
+  { style: "alert",      label: "Alert",      desc: "Warning-level processes — storage nearing limit, caution operations." },
+  { style: "error",      label: "Error",      desc: "Process failed or error threshold reached." },
+  { style: "yellow",     label: "Yellow",     desc: "Attention-level statuses. Draws focus without implying failure." },
+  { style: "light-blue", label: "Light Blue", desc: "Neutral, non-critical progress — syncing or indexing." },
+  { style: "purple",     label: "Purple",     desc: "Creative flows, AI-related features, brand-specific contexts." },
+]
+
+function ProgressBarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab]         = useState<"overview" | "playground" | "reference">("overview")
+  const [pgValue, setPgValue] = useState<"0" | "25" | "50" | "75" | "100">("50")
+  const [pgStyle, setPgStyle] = useState<ProgressBarStyle>("primary")
+  const [pgSize, setPgSize]   = useState<ProgressBarSize>("m")
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Progress Bar</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            Linear determinate loading bar that communicates known progress. Full-width track with a colored fill indicator that animates as value changes. 7 semantic styles and 2 track sizes.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("progress-bar")} />
+      </div>
+
+      {/* Tab row */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Anatomy */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Anatomy</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["#", "Element", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["1", "Track",      "Full-width background bar. Uses Surface/*Subtle token matching the chosen style."],
+                    ["2", "Fill / Indicator", "Animated foreground bar. Width = value%. Uses Surface/*Default token. 300ms ease-in-out transition."],
+                  ].map(([n, el, desc]) => (
+                    <tr key={n} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{n}</td>
+                      <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{el}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sizes */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Sizes</SectionLabel>
+            <div className="flex flex-col gap-[20px]">
+              {([
+                { size: "s" as ProgressBarSize, label: "S — 4px",  desc: "Compact contexts — tables, cards, dense UIs." },
+                { size: "m" as ProgressBarSize, label: "M — 8px",  desc: "Default. Standalone loaders, page-level progress." },
+              ] as const).map(({ size, label, desc }) => (
+                <div key={size} className="flex flex-col gap-[8px]">
+                  <div className="flex items-center gap-[8px]">
+                    <span className="text-[12px] font-semibold text-[var(--field-label)] uppercase tracking-wide w-[80px]">{label}</span>
+                    <span className="text-[12px] text-[var(--field-supporting)]">{desc}</span>
+                  </div>
+                  <ProgressBar value={65} size={size} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* All Styles */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Styles — All 7 Variants</SectionLabel>
+            <div className="flex flex-col gap-[16px]">
+              {PB_STYLES.map(({ style, label, desc }) => (
+                <div key={style} className="flex flex-col gap-[6px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-semibold text-[var(--foreground)]">{label}</span>
+                    <span className="text-[11px] text-[var(--field-supporting)] max-w-[480px] text-right">{desc}</span>
+                  </div>
+                  <ProgressBar value={65} style={style} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* State variants */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Progress States</SectionLabel>
+            <div className="flex flex-col gap-[16px]">
+              {[
+                { value: 0,   label: "0% — Not started" },
+                { value: 25,  label: "25% — In progress" },
+                { value: 50,  label: "50% — Halfway" },
+                { value: 75,  label: "75% — Almost done" },
+                { value: 100, label: "100% — Complete" },
+              ].map(({ value, label }) => (
+                <div key={value} className="flex flex-col gap-[6px]">
+                  <span className="text-[12px] text-[var(--field-supporting)]">{label}</span>
+                  <ProgressBar value={value} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[16px]">
+              {[
+                { type: "do",   text: "Use Progress Bar when the completion percentage is known (file upload, form step)." },
+                { type: "dont", text: "Don't use for unknown-duration waits — use a Spinner instead." },
+                { type: "do",   text: "Use semantic styles (Success, Error) when the result has a known outcome to communicate." },
+                { type: "dont", text: "Don't show a loading indicator for actions under 300ms — it creates unnecessary visual noise." },
+                { type: "do",   text: "Always include an accessible label via the label prop for screen reader support." },
+                { type: "dont", text: "Don't use multiple progress bars simultaneously on the same view without clear context labels." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[14px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>
+                    {item.type === "do" ? "DO" : "DON'T"}
+                  </span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Playground ── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[24px]">
+          {/* Controls */}
+          <div className="flex flex-col gap-[16px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Controls</SectionLabel>
+            <div className="flex flex-col gap-[12px]">
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Value</span>
+                <CtrlGroup<"0" | "25" | "50" | "75" | "100">
+                  label="Value"
+                  value={pgValue} onChange={setPgValue}
+                  options={[
+                    { value: "0",   label: "0%" },
+                    { value: "25",  label: "25%" },
+                    { value: "50",  label: "50%" },
+                    { value: "75",  label: "75%" },
+                    { value: "100", label: "100%" },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Style</span>
+                <CtrlGroup<ProgressBarStyle>
+                  label="Style"
+                  value={pgStyle} onChange={setPgStyle}
+                  options={[
+                    { value: "primary",    label: "Primary" },
+                    { value: "success",    label: "Success" },
+                    { value: "alert",      label: "Alert" },
+                    { value: "error",      label: "Error" },
+                    { value: "yellow",     label: "Yellow" },
+                    { value: "light-blue", label: "Light Blue" },
+                    { value: "purple",     label: "Purple" },
+                  ]}
+                />
+              </div>
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Size</span>
+                <CtrlGroup<ProgressBarSize>
+                  label="Size"
+                  value={pgSize} onChange={setPgSize}
+                  options={[
+                    { value: "m", label: "M — 8px" },
+                    { value: "s", label: "S — 4px" },
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Preview</SectionLabel>
+            <div className="py-[24px] px-[16px]">
+              <ProgressBar value={parseInt(pgValue)} style={pgStyle} size={pgSize} label="Demo progress" />
+            </div>
+            <div className="flex justify-center">
+              <span className="text-[12px] text-[var(--field-supporting)]">{pgValue}% · style="{pgStyle}" · size="{pgSize}"</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reference ── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Tokens table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Design Tokens</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Role", "CSS Variable", "DS Token", "Dark", "Light"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {PROGRESS_BAR_SPEC.variants.flatMap(v => v.tokens).map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.role}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{row.variable}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{row.varId}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.dark}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.light}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Usage</SectionLabel>
+            <pre className="text-[12px] leading-[20px] overflow-x-auto p-[16px] rounded-[6px]" style={{ background: "var(--canvas)", color: "var(--foreground)" }}>{`import { ProgressBar } from "@/components/ui/progress-bar"
+
+// Basic usage
+<ProgressBar value={65} />
+
+// With semantic style
+<ProgressBar value={100} style="success" label="Upload complete" />
+
+// Compact size in a card
+<ProgressBar value={42} style="primary" size="s" />
+
+// Error state
+<ProgressBar value={30} style="error" label="Upload failed at 30%" />`}</pre>
+          </div>
+
+          {/* Props table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Props</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(PROGRESS_BAR_SPEC.properties as { name: string; type: string; values: string[]; default: string; note: string }[]).map((p, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{p.name}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{p.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{p.default}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{p.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Figma usage steps */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Figma Usage Steps</SectionLabel>
+            <div className="flex flex-col gap-[10px]">
+              {[
+                "① Locate the 'Linear - Progress indicator' component in the AIMS OS DS library.",
+                "② Select the Style property to match your semantic context (Primary, Success, Error, etc.).",
+                "③ Select the Progress variant (0 / 10 / 20 / 50 / 80 / 100) that represents the fill state to show.",
+                "④ Select Size=S for compact contexts (tables, cards) or Size=M for standalone usage.",
+                "⑤ Set the component width to fill its container — the track is always full-width of the parent.",
+                "⑥ Use the same style for all instances of the same process type across the view.",
+              ].map((step, i) => (
+                <p key={i} className="text-[13px] text-[var(--foreground)]">{step}</p>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── SwitchTabPage ────────────────────────────────────────────────────────────
+
+const DEMO_ITEMS_2 = [
+  { id: "list",     label: "List"     },
+  { id: "grid",     label: "Grid"     },
+]
+const DEMO_ITEMS_3 = [
+  { id: "all",      label: "All"      },
+  { id: "active",   label: "Active"   },
+  { id: "archived", label: "Archived" },
+]
+const DEMO_ITEMS_4 = [
+  { id: "overview",  label: "Overview"  },
+  { id: "details",   label: "Details"   },
+  { id: "activity",  label: "Activity"  },
+  { id: "settings",  label: "Settings"  },
+]
+const DEMO_ITEMS_5 = [
+  { id: "overview",  label: "Overview"  },
+  { id: "details",   label: "Details"   },
+  { id: "activity",  label: "Activity"  },
+  { id: "settings",  label: "Settings"  },
+  { id: "insights",  label: "Insights"  },
+]
+const DEMO_ITEMS_6 = [
+  { id: "overview",  label: "Overview"  },
+  { id: "details",   label: "Details"   },
+  { id: "activity",  label: "Activity"  },
+  { id: "settings",  label: "Settings"  },
+  { id: "insights",  label: "Insights"  },
+  { id: "history",   label: "History"   },
+]
+
+function SwitchTabPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab]             = useState<"overview" | "playground" | "reference">("overview")
+  const [pgSize, setPgSize]       = useState<SwitchTabSize>("m")
+  const [pgCount, setPgCount]     = useState<"2" | "3" | "4" | "5" | "6">("3")
+  const [pgActive, setPgActive]   = useState("all")
+
+  const pgItems =
+    pgCount === "2" ? DEMO_ITEMS_2 :
+    pgCount === "3" ? DEMO_ITEMS_3 :
+    pgCount === "4" ? DEMO_ITEMS_4 :
+    pgCount === "5" ? DEMO_ITEMS_5 :
+    DEMO_ITEMS_6
+  const pgValue = pgItems.find(i => i.id === pgActive) ? pgActive : pgItems[0].id
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Switch Tab</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            Segmented tab switcher for top-level navigation within a contained view or panel. White pill-shaped container with 2–7 equal-width tab items, blue active fill, and full keyboard navigation.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("switch-tab")} />
+      </div>
+
+      {/* Tab row */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Anatomy */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Anatomy</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["#", "Element", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["1", "Container",           "White pill-shaped wrapper (Elevation-5 shadow) that holds all tab items."],
+                    ["2", "Tab Item — Inactive", "Transparent background · neutral text · receives focus via keyboard (← →)."],
+                    ["3", "Tab Item — Active",   "Blue tinted fill (Surface/Primary/More Subtle) · blue SemiBold label (Text/Link)."],
+                    ["4", "Tab Label",           "Text identifying each option. Keep to 1–3 words max."],
+                    ["5", "Optional Icon",       "16px icon rendered before the label inside the tab item. Same color as label."],
+                  ].map(([n, el, desc]) => (
+                    <tr key={n} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{n}</td>
+                      <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{el}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sizes */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Sizes</SectionLabel>
+            <div className="flex flex-col gap-[20px]">
+              {([
+                { size: "m" as SwitchTabSize, label: "M — 48px",  desc: "px-12 / py-4 · 16px font · default" },
+                { size: "s" as SwitchTabSize, label: "S — 44px",  desc: "px-8 / py-4 · 14px font · compact contexts" },
+              ] as const).map(({ size, label, desc }) => (
+                <div key={size} className="flex flex-col gap-[8px]">
+                  <div className="flex items-center gap-[8px]">
+                    <span className="text-[12px] font-semibold text-[var(--field-label)] uppercase tracking-wide w-[80px]">{label}</span>
+                    <span className="text-[12px] text-[var(--field-supporting)]">{desc}</span>
+                  </div>
+                  <SwitchTab items={DEMO_ITEMS_3} defaultValue="all" size={size} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quantity variants */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Quantity Variants (2–6 shown)</SectionLabel>
+            <div className="flex flex-col gap-[16px]">
+              {[
+                { items: DEMO_ITEMS_2, label: "2 items" },
+                { items: DEMO_ITEMS_3, label: "3 items" },
+                { items: DEMO_ITEMS_4, label: "4 items" },
+                { items: DEMO_ITEMS_5, label: "5 items" },
+                { items: DEMO_ITEMS_6, label: "6 items" },
+              ].map(({ items, label }) => (
+                <div key={label} className="flex items-center gap-[16px]">
+                  <span className="text-[12px] text-[var(--field-supporting)] w-[56px] shrink-0">{label}</span>
+                  <SwitchTab items={items} defaultValue={items[0].id} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div className="grid grid-cols-2 gap-[12px]">
+            <div className="p-[20px] rounded-[8px] flex flex-col gap-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--tag-success-bd)" }}>
+              <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ Do</p>
+              {[
+                "Use for top-level navigation switching within a contained view or panel.",
+                "Keep tab labels short and scannable (1–3 words maximum).",
+                "Always keep exactly one tab active at a time.",
+                "Choose the tab count that matches the number of options (2–7).",
+              ].map(d => <p key={d} className="text-[13px] text-[var(--field-supporting)]">· {d}</p>)}
+            </div>
+            <div className="p-[20px] rounded-[8px] flex flex-col gap-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--tag-error-bd)" }}>
+              <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ Don't</p>
+              {[
+                "Don't use as a multi-select or form toggle — only one tab can be active.",
+                "Don't add more than 7 tabs; use a dropdown or menu for larger sets.",
+                "Don't use when tab content requires deep navigation or separate pages.",
+                "Don't mix icon-only and text tabs within the same switcher.",
+              ].map(d => <p key={d} className="text-[13px] text-[var(--field-supporting)]">· {d}</p>)}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Playground ── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[28px]">
+          {/* Controls */}
+          <div className="flex flex-col gap-[20px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Controls</SectionLabel>
+            <CtrlGroup<SwitchTabSize> label="Size" value={pgSize} onChange={v => { setPgSize(v); setPgActive("") }}
+              options={[
+                { value: "m", label: "M — 48px" },
+                { value: "s", label: "S — 44px" },
+              ]} />
+            <CtrlGroup<"2" | "3" | "4" | "5" | "6"> label="Item count" value={pgCount} onChange={v => { setPgCount(v); setPgActive("") }}
+              options={[
+                { value: "2", label: "2 items" },
+                { value: "3", label: "3 items" },
+                { value: "4", label: "4 items" },
+                { value: "5", label: "5 items" },
+                { value: "6", label: "6 items" },
+              ]} />
+          </div>
+          {/* Preview */}
+          <div className="flex flex-col gap-[12px] p-[24px] rounded-[8px] items-center" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Preview</SectionLabel>
+            <SwitchTab items={pgItems} value={pgValue} onChange={setPgActive} size={pgSize} aria-label="Demo navigation" />
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">Active: <code className="font-mono text-[var(--primary)]">{pgValue}</code></p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reference ── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[28px]">
+          {/* Token table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Design Tokens</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Token", "DS Token", "Light", "Dark"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {SWITCH_TAB_SPEC.variants.flatMap(v => v.tokens).map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{row.role}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.variable}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{row.light}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{row.dark}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Props table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Props</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(SWITCH_TAB_SPEC.properties as { name: string; type: string; default: string; note: string }[]).map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px]" style={{ color: "var(--primary)" }}>{row.name}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{row.default}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{row.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>JSX Usage</SectionLabel>
+            <pre className="text-[12px] leading-[20px] p-[16px] rounded-[6px] overflow-x-auto" style={{ background: "var(--surface-raised)", color: "var(--field-label)" }}>{`import { SwitchTab } from "@/components/ui/switch-tab"
+
+// Uncontrolled
+<SwitchTab
+  items={[
+    { id: "all",      label: "All"      },
+    { id: "active",   label: "Active"   },
+    { id: "archived", label: "Archived" },
+  ]}
+  defaultValue="all"
+  size="m"
+/>
+
+// Controlled
+const [view, setView] = useState("all")
+<SwitchTab
+  items={items}
+  value={view}
+  onChange={setView}
+  size="s"
+  aria-label="Filter by status"
+/>`}</pre>
+          </div>
+
+          {/* Accessibility */}
+          <div className="p-[20px] rounded-[8px] flex flex-col gap-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>♿ Accessibility</SectionLabel>
+            {[
+              "role=\"tablist\" on the container; role=\"tab\" on each button.",
+              "aria-selected=\"true\" on the active tab; false on all others.",
+              "tabIndex={0} on active tab only — others use -1 (roving tabindex).",
+              "← → arrows navigate between tabs; Enter / Space activate the focused tab.",
+              "aria-controls links each tab to its corresponding panel via the tab id.",
+              "Focus indicator: 2px ring in var(--primary) with 1px offset.",
+            ].map(d => <p key={d} className="text-[13px] text-[var(--field-supporting)]">· {d}</p>)}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── TabsPage ─────────────────────────────────────────────────────────────────
 
 function TabsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
@@ -8427,7 +17698,7 @@ export function TabBar() {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
             <div className="grid grid-cols-2 gap-[12px]">
               <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
-                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#22c55e" }}>✓ Do</span>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-surface-success-default)" }}>✓ Do</span>
                 <ul className="flex flex-col gap-[8px]">
                   {[
                     "Switch between related views within the same context.",
@@ -8441,7 +17712,7 @@ export function TabBar() {
                 </ul>
               </div>
               <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--surface-raised)", border: "0.5px solid var(--field-border)" }}>
-                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#ef4444" }}>✕ Don't</span>
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-surface-error-default)" }}>✕ Don't</span>
                 <ul className="flex flex-col gap-[8px]">
                   {[
                     "Use for sequential steps — use a Stepper instead.",
@@ -9970,7 +19241,7 @@ function TopbarPage({ openSpec, onAppThemeChange }: { openSpec: (s: SpecModal) =
                 <button
                   onClick={() => setGsPreviewOpen(true)}
                   className="shrink-0 flex items-center gap-[6px] px-[14px] h-[32px] rounded-[6px] text-[12px] font-semibold transition-opacity hover:opacity-85 cursor-pointer"
-                  style={{ background: "var(--primary)", color: "#fff" }}
+                  style={{ background: "var(--primary)", color: "var(--color-text-negative)" }}
                 >
                   Open preview →
                 </button>
@@ -13297,6 +22568,811 @@ function FiltersInteractivePlayground() {
   )
 }
 
+// ── HeaderPage ────────────────────────────────────────────────────────────────
+
+function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+
+  // Playground state
+  const [pgSize,         setPgSize]         = useState<HeaderSize>("size-l")
+  const [pgBackButton,   setPgBackButton]    = useState(false)
+  const [pgTag,          setPgTag]           = useState(true)
+  const [pgDescription,  setPgDescription]   = useState(true)
+  const [pgSecondaryCta, setPgSecondaryCta]  = useState(false)
+  const [pgIcon,         setPgIcon]          = useState(false)
+  const [pgIconName,     setPgIconName]      = useState("Settings2")
+  const [pgIconVariant,  setPgIconVariant]   = useState<HighlightIconVariant>("informative")
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Header</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
+            Page-level header with title, description, status tag, and CTAs. Three sizes: Size L (24px default), Size M (18px compact), and Compress (scroll-triggered minimal state).
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("header")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "playground", label: "Playground" },
+          { id: "reference",  label: "Reference"  },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Overview ── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+            {/* Anatomy */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Anatomy</h2>
+              <div className="rounded-[8px] border border-[var(--field-border)] overflow-hidden">
+                <Header
+                  size="size-l"
+                  title="AIMS Drive"
+                  description="Securely store, manage, and organize your documents and folders."
+                  tag={<Tag variant="primary" size="sm">Active</Tag>}
+                  primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New File</Button>}
+                  secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                {([
+                  ["Title",         "Always visible. 24px in Size L, 18px in Size M and Compress."],
+                  ["Description",   "Optional subtitle below the title. Hidden in Compress."],
+                  ["Status Tag",    "Optional inline chip after the title. Hidden in Compress."],
+                  ["Back Button",   "Optional ArrowLeft — for inner-page drill-down contexts. Hidden in Compress."],
+                  ["Icon",          "Optional 24×24 icon in a primary-tint box. Hidden in Compress."],
+                  ["Primary CTA",   "Right-side primary action. Use Button variant=\"main\"."],
+                  ["Secondary CTA", "Right-side secondary action. Use Button variant=\"secondary\"."],
+                ] as [string, string][]).map(([name, desc]) => (
+                  <div key={name} className="flex gap-[10px] items-start text-[13px]">
+                    <span className="shrink-0 font-semibold text-[var(--foreground)] w-[120px]">{name}</span>
+                    <span className="text-[var(--field-supporting)]">{desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Size variants */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Size variants</h2>
+              {(["size-l", "size-m", "compress"] as HeaderSize[]).map(s => (
+                <div key={s}>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[6px]">
+                    {s === "size-l" ? "Size L — Default" : s === "size-m" ? "Size M — Compact" : "Compress — Scroll state"}
+                  </p>
+                  <div className="rounded-[8px] border border-[var(--field-border)] overflow-hidden">
+                    <Header
+                      size={s}
+                      title="AI Workers"
+                      description="Manage and monitor your AI workers across all categories."
+                      tag={<Tag variant="success" size="sm">24 Published</Tag>}
+                      primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New Worker</Button>}
+                      secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Do / Don't */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Do / Don't</h2>
+              <div className="grid grid-cols-2 gap-[16px]">
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[12px] font-semibold text-[var(--foreground)]">Do</p>
+                  {[
+                    "Use Compress only as a scroll-triggered state — never set it statically.",
+                    "Keep the title under 40 characters to prevent wrapping.",
+                    "Place the Tag inline after the title so status is always visible.",
+                    "Use Size L for top-level pages and Size M for sub-sections.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[13px] text-[var(--field-supporting)] pl-[14px]">{t}</p>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[12px] font-semibold text-[var(--foreground)]">Don't</p>
+                  {[
+                    "Don't add more than one Tag — use a single status chip.",
+                    "Don't use Back Button on root-level pages.",
+                    "Don't place more than 2 CTAs (one primary, one secondary).",
+                    "Don't show description or tag in Compress mode — those slots are hidden.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[13px] text-[var(--field-supporting)] pl-[14px]">{t}</p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Playground ── */}
+        {tab === "playground" && (
+          <div className="flex gap-[24px] items-start">
+            <div className="flex flex-col gap-[16px] w-[240px] shrink-0 rounded-md border border-[var(--field-border)] p-[20px]">
+              <CtrlGroup
+                label="Size"
+                options={[
+                  { label: "Size L",   value: "size-l"   },
+                  { label: "Size M",   value: "size-m"   },
+                  { label: "Compress", value: "compress" },
+                ]}
+                value={pgSize}
+                onChange={(v: HeaderSize) => setPgSize(v)}
+              />
+              <CtrlToggle label="Back button"   value={pgBackButton}   onChange={setPgBackButton} />
+              <CtrlToggle label="Status tag"    value={pgTag}          onChange={setPgTag} />
+              <CtrlToggle label="Description"   value={pgDescription}  onChange={setPgDescription} />
+              <CtrlToggle label="Secondary CTA" value={pgSecondaryCta} onChange={setPgSecondaryCta} />
+              <CtrlToggle label="Icon"          value={pgIcon}         onChange={v => { setPgIcon(v) }} />
+              {pgIcon && (
+                <>
+                  <div className="flex flex-col gap-[8px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Icon</span>
+                    <div className="grid grid-cols-4 gap-[4px]">
+                      {[
+                        "Settings2","Database","Users","BarChart2",
+                        "Globe","Bell","Shield","Zap",
+                        "FileText","Search","Calendar","Package",
+                        "Activity","Lock","Layers","Cpu",
+                      ].map(name => {
+                        const I = (LucideIcons as unknown as Record<string, LucideIcons.LucideIcon>)[name]
+                        const active = pgIconName === name
+                        return I ? (
+                          <button
+                            key={name}
+                            type="button"
+                            title={name}
+                            onClick={() => setPgIconName(name)}
+                            className="flex items-center justify-center rounded-[6px] transition-colors"
+                            style={{
+                              width: 32, height: 32,
+                              border: active ? "1.5px solid #2173ff" : "1px solid var(--field-border)",
+                              background: active ? "rgba(33,115,255,0.1)" : "var(--ctrl-inactive-bg)",
+                              color: active ? "#2173ff" : "var(--field-supporting)",
+                              cursor: "pointer",
+                              padding: 0,
+                            }}
+                          >
+                            <I size={14} strokeWidth={1.75} />
+                          </button>
+                        ) : null
+                      })}
+                    </div>
+                    <p className="text-[10px] text-[var(--field-supporting)] opacity-60">
+                      24,000+ Lucide icons available
+                    </p>
+                  </div>
+                  <CtrlGroup
+                    label="Color"
+                    options={[
+                      { label: "Blue",    value: "informative" },
+                      { label: "Green",   value: "success"     },
+                      { label: "Orange",  value: "alert"       },
+                      { label: "Red",     value: "error"       },
+                      { label: "Neutral", value: "neutral"     },
+                      { label: "Purple",  value: "purple"      },
+                    ]}
+                    value={pgIconVariant}
+                    onChange={(v: HighlightIconVariant) => setPgIconVariant(v)}
+                  />
+                </>
+              )}
+            </div>
+            <div className="flex-1 rounded-[12px] border border-[var(--field-border)] overflow-hidden" style={{ background: "var(--canvas)" }}>
+              <Header
+                size={pgSize}
+                title="AI Workers"
+                description={pgDescription ? "Manage and monitor your AI workers across all categories." : undefined}
+                tag={pgTag ? <Tag variant="success" size="sm">24 Published</Tag> : undefined}
+                backButton={pgBackButton}
+                icon={pgIcon ? (LucideIcons as unknown as Record<string, LucideIcons.LucideIcon>)[pgIconName] : undefined}
+                iconVariant={pgIconVariant}
+                primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New Worker</Button>}
+                secondaryAction={pgSecondaryCta ? <Button variant="secondary" size="sm">Export</Button> : undefined}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Reference ── */}
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[24px]">
+            {/* Tokens */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Design tokens</h2>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-[var(--field-border)]">
+                    {["Token", "Figma variable", "Role", "Light", "Dark"].map(h => (
+                      <th key={h} className="text-left py-[8px] pr-[16px] text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { token: "--header-title",    figma: "Text/Title",        role: "Page title",       light: "#1A1A1A",          dark: "rgba(255,255,255,0.80)" },
+                    { token: "--header-desc",      figma: "Text/Body",         role: "Description text", light: "#5C5C5C",          dark: "#94A3B8"                },
+                    { token: "--header-back-icon", figma: "Icon/Neutral/Dark", role: "Back button icon", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.70)" },
+                  ].map(row => (
+                    <tr key={row.token} className="border-b border-[var(--field-border)] last:border-0">
+                      <td className="py-[10px] pr-[16px] font-mono text-[12px] text-[var(--primary)]">{row.token}</td>
+                      <td className="py-[10px] pr-[16px] text-[var(--field-supporting)]">{row.figma}</td>
+                      <td className="py-[10px] pr-[16px] text-[var(--foreground)]">{row.role}</td>
+                      <td className="py-[10px] pr-[16px]">
+                        <span className="inline-flex items-center gap-[6px]">
+                          <ColorDot hex={row.light} size={14} />
+                          <span className="font-mono text-[11px] text-[var(--field-supporting)]">{row.light}</span>
+                        </span>
+                      </td>
+                      <td className="py-[10px]">
+                        <span className="inline-flex items-center gap-[6px]">
+                          <ColorDot hex={row.dark} size={14} />
+                          <span className="font-mono text-[11px] text-[var(--field-supporting)]">{row.dark}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Props */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-[var(--field-border)]">
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="text-left py-[8px] pr-[16px] text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { prop: "title",           type: "string",     def: "—",         desc: "Page title. Required. Always visible." },
+                    { prop: "size",            type: "HeaderSize", def: '"size-l"',   desc: '"size-l" | "size-m" | "compress"' },
+                    { prop: "description",     type: "string",     def: "undefined",  desc: "Subtitle below the title. Hidden in compress." },
+                    { prop: "tag",             type: "ReactNode",  def: "undefined",  desc: "Status chip (Tag component). Renders inline after title. Hidden in compress." },
+                    { prop: "backButton",      type: "boolean",    def: "false",      desc: "Shows an ArrowLeft back button. Hidden in compress." },
+                    { prop: "icon",            type: "LucideIcon", def: "undefined",  desc: "Lucide icon shown in a 24×24 primary-tint box. Hidden in compress." },
+                    { prop: "primaryAction",   type: "ReactNode",  def: "undefined",  desc: 'Primary CTA — right zone. Use Button variant="main".' },
+                    { prop: "secondaryAction", type: "ReactNode",  def: "undefined",  desc: 'Secondary CTA — right zone, before primary. Use Button variant="secondary".' },
+                  ].map(row => (
+                    <tr key={row.prop} className="border-b border-[var(--field-border)] last:border-0">
+                      <td className="py-[10px] pr-[16px] font-mono text-[12px] text-[var(--primary)]">{row.prop}</td>
+                      <td className="py-[10px] pr-[16px] font-mono text-[11px] text-[var(--field-supporting)]">{row.type}</td>
+                      <td className="py-[10px] pr-[16px] font-mono text-[11px] text-[var(--field-supporting)]">{row.def}</td>
+                      <td className="py-[10px] text-[var(--foreground)]">{row.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Code usage */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
+              <pre className="text-[12px] font-mono bg-[var(--field-bg)] p-[16px] rounded-[8px] overflow-x-auto text-[var(--foreground)]">{`import { Header } from "@/components/ui/header"
+import { Tag } from "@/components/ui/tag"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+
+// Size L — full default state
+<Header
+  size="size-l"
+  title="AI Workers"
+  description="Manage and monitor your AI workers."
+  tag={<Tag variant="success" size="sm">24 Published</Tag>}
+  primaryAction={
+    <Button variant="main" size="sm">
+      <Plus size={13} /> New Worker
+    </Button>
+  }
+  secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+/>
+
+// Scroll-triggered compress (driven by scroll state in parent)
+<Header
+  size={isScrolled ? "compress" : "size-l"}
+  title="AI Workers"
+  description="Manage and monitor your AI workers."
+  tag={<Tag variant="success" size="sm">24 Published</Tag>}
+  primaryAction={<Button variant="main" size="sm"><Plus size={13} /> New Worker</Button>}
+  style={{ transition: "padding 200ms ease-in-out" }}
+/>`}
+              </pre>
+            </div>
+
+            {/* Compress — scroll integration */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Compress — scroll integration</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                The <code className="font-mono text-[var(--primary)] bg-[var(--field-bg)] px-[4px] py-[1px] rounded-[4px]">compress</code> size is not a static variant — it is a scroll-triggered state. The parent page owns the scroll listener and passes the resulting size to the component. The Header itself is stateless.
+              </p>
+              <div className="flex flex-col gap-[8px]">
+                {([
+                  ["Threshold",   "Scroll > 16px → compress. Scroll back to 0 → back to default."],
+                  ["What hides",  "description, tag, backButton, and icon are all hidden. Only title and CTAs remain."],
+                  ["Transition",  "Pass style={{ transition: \"padding 200ms ease-in-out\" }} on the Header to animate the padding change."],
+                  ["Sticky shell","The Header sits inside a position: sticky container. The gradient overlay and filter row visibility are managed there — not inside the Header component."],
+                  ["Live example","Patterns → Header Sticky shows the full wired-up behavior with scroll, gradient, and filter row."],
+                ] as [string, string][]).map(([term, def]) => (
+                  <div key={term} className="flex gap-[10px] items-start text-[13px]">
+                    <span className="shrink-0 font-semibold text-[var(--foreground)] w-[130px]">{term}</span>
+                    <span className="text-[var(--field-supporting)]">{def}</span>
+                  </div>
+                ))}
+              </div>
+              <pre className="text-[12px] font-mono bg-[var(--field-bg)] p-[16px] rounded-[8px] overflow-x-auto text-[var(--foreground)]">{`// Parent page — owns the scroll state
+const [isScrolled, setIsScrolled] = useState(false)
+
+useEffect(() => {
+  const el = scrollContainerRef.current
+  if (!el) return
+  const handler = () => setIsScrolled(el.scrollTop > 16)
+  el.addEventListener("scroll", handler, { passive: true })
+  return () => el.removeEventListener("scroll", handler)
+}, [])
+
+// Pass size to Header — the component is stateless
+<div className="sticky top-0 z-10">
+  <Header
+    size={isScrolled ? "compress" : "size-l"}
+    title="AI Workers"
+    description="Manage and monitor your AI workers."
+    tag={<Tag variant="success" size="sm">24 Published</Tag>}
+    primaryAction={<Button variant="main" size="sm">New Worker</Button>}
+    style={{ transition: "padding 200ms ease-in-out" }}
+  />
+</div>`}
+              </pre>
+              <p className="text-[12px] text-[var(--field-supporting)] italic">
+                See the full sticky header pattern — including gradient fade and filter row — in <strong>Patterns → Header Sticky</strong>.
+              </p>
+            </div>
+
+            {/* Figma usage steps */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Figma usage steps</h2>
+              <ol className="flex flex-col gap-[8px] list-decimal list-inside text-[13px] text-[var(--field-supporting)]">
+                {[
+                  "Insert the Header component from the DS library.",
+                  "Set Property 1 to Size L (default), Size M (sub-sections), or Compress (scroll state).",
+                  "Toggle Back Button on only in inner-page / drill-down contexts.",
+                  "Toggle Tag on and bind a Tag component with the relevant status.",
+                  "Toggle Description on and fill the subtitle (max ~80 chars).",
+                  "Toggle Primary CTA on — use a Main Action Button with the primary page action.",
+                  "Toggle Secondary CTA on only if a secondary action exists.",
+                  "Apply Primitives + Semantic variable collections in both Dark and Light mode.",
+                ].map((step, i) => (
+                  <li key={i} className="pl-[4px]">{step}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── PaginationPage ────────────────────────────────────────────────────────────
+
+function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+
+  // Playground state
+  const [pgTotal,    setPgTotal]    = useState(120)
+  const [pgPerPage,  setPgPerPage]  = useState(25)
+  const [pgPage,     setPgPage]     = useState(1)
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Pagination</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
+            Bottom strip for paged datasets. Floats over the list — it does not divide or shrink the content area. Shows rows-per-page selector, visible range, and prev/next navigation. Auto-hides when all results fit on a single page.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("pagination")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "playground", label: "Playground" },
+          { id: "reference",  label: "Reference"  },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Overview ── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Anatomy — In context (first: main visual entry point) */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Anatomy — In context</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                Pagination floats over the list with <code className="font-mono text-[11px]">position: absolute; bottom: 0</code> — it does not divide or shrink the content area. The list keeps its full height; Pagination overlays it. The glass background (<code className="font-mono text-[11px]">backdrop-filter: blur(16px)</code>) lets rows behind it remain visible.
+              </p>
+
+              {/* Frame mockup */}
+              <div className="relative rounded-[12px] overflow-hidden" style={{ border: "1px solid var(--field-border)", height: 380 }}>
+                {/* Content fills full height — Pagination overlays on top */}
+                <div className="flex flex-col h-full" style={{ background: "var(--canvas)" }}>
+
+                  {/* Mocked page header */}
+                  <div style={{ padding: "12px 24px", borderBottom: "1px solid var(--field-border)", background: "var(--surface)", flexShrink: 0 }}>
+                    <div className="flex items-center justify-between">
+                      <div style={{ height: 18, width: 110, borderRadius: 4, background: "var(--color-surface-neutral-default)" }} />
+                      <div style={{ height: 28, width: 88, borderRadius: 6, background: "var(--primary)", opacity: 0.2 }} />
+                    </div>
+                  </div>
+
+                  {/* Mocked entity rows — fills remaining height */}
+                  <div style={{ flex: 1, overflow: "hidden" }}>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} style={{ padding: "10px 24px", borderBottom: "0.5px solid var(--field-border)", display: "flex", gap: 12, alignItems: "center" }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-surface-neutral-default)", flexShrink: 0 }} />
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                          <div style={{ height: 11, width: `${55 + i * 6}%`, borderRadius: 3, background: "var(--color-surface-neutral-default)" }} />
+                          <div style={{ height: 9, width: `${35 + i * 4}%`, borderRadius: 3, background: "var(--color-surface-neutral-default)", opacity: 0.5 }} />
+                        </div>
+                        <div style={{ height: 20, width: 52, borderRadius: 10, background: "var(--color-surface-neutral-default)", opacity: 0.6 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pagination floating over content — position absolute at bottom */}
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+                  {/* Left margin annotation */}
+                  <div style={{
+                    position: "absolute", left: 0, top: 0, bottom: 0, width: 12,
+                    background: "rgba(33,115,255,0.12)",
+                    borderRight: "1px dashed rgba(33,115,255,0.5)",
+                    zIndex: 1, pointerEvents: "none",
+                  }} />
+                  {/* Right margin annotation */}
+                  <div style={{
+                    position: "absolute", right: 0, top: 0, bottom: 0, width: 12,
+                    background: "rgba(33,115,255,0.12)",
+                    borderLeft: "1px dashed rgba(33,115,255,0.5)",
+                    zIndex: 1, pointerEvents: "none",
+                  }} />
+                  {/* Top margin annotation */}
+                  <div style={{
+                    position: "absolute", left: 0, right: 0, top: 0, height: 8,
+                    background: "rgba(33,115,255,0.08)",
+                    borderBottom: "1px dashed rgba(33,115,255,0.4)",
+                    zIndex: 1, pointerEvents: "none",
+                  }} />
+                  {/* Bottom margin annotation */}
+                  <div style={{
+                    position: "absolute", left: 0, right: 0, bottom: 0, height: 8,
+                    background: "rgba(33,115,255,0.08)",
+                    borderTop: "1px dashed rgba(33,115,255,0.4)",
+                    zIndex: 1, pointerEvents: "none",
+                  }} />
+                  <Pagination
+                    currentPage={2}
+                    totalItems={120}
+                    itemsPerPage={25}
+                    onPageChange={() => {}}
+                    onItemsPerPageChange={() => {}}
+                  />
+                </div>
+              </div>
+
+              {/* Margin legend */}
+              <div className="flex items-center gap-[20px] flex-wrap">
+                <div className="flex items-center gap-[6px]">
+                  <div style={{ width: 12, height: 12, background: "rgba(33,115,255,0.2)", border: "1px dashed rgba(33,115,255,0.6)", borderRadius: 2 }} />
+                  <span className="text-[11px] text-[var(--field-supporting)]">Left / Right — <span className="font-mono font-semibold text-[var(--foreground)]">12px</span></span>
+                </div>
+                <div className="flex items-center gap-[6px]">
+                  <div style={{ width: 12, height: 12, background: "rgba(33,115,255,0.1)", border: "1px dashed rgba(33,115,255,0.4)", borderRadius: 2 }} />
+                  <span className="text-[11px] text-[var(--field-supporting)]">Top / Bottom — <span className="font-mono font-semibold text-[var(--foreground)]">8px</span></span>
+                </div>
+                <div className="flex items-center gap-[6px]">
+                  <div style={{ width: 12, height: 1, background: "var(--field-border)" }} />
+                  <span className="text-[11px] text-[var(--field-supporting)]">Inner container border — <span className="font-mono font-semibold text-[var(--foreground)]">1px</span></span>
+                </div>
+              </div>
+
+              {/* Parts breakdown */}
+              <div className="flex flex-col gap-[6px]">
+                {([
+                  ["Inner container",  "Floating surface with glass blur. padding 4px, gap 40px between left and right zones. position: absolute; bottom: 0; left: 0; right: 0."],
+                  ["Rows per page",    '"Rows per page:" label + selector. Options: 5, 25, 50, 100, 200. Dropdown positions above the component.'],
+                  ["Range text",       "Shows start–end of totalItems (e.g. 26–50 of 120 items). Updates on every page change."],
+                  ["Prev / Next",      "24×24 icon buttons. Disabled + 35% opacity on first/last page. Hover shows neutral surface bg."],
+                  ["Auto-hide",        "Returns null when totalItems ≤ itemsPerPage — no empty strip left behind."],
+                ] as [string, string][]).map(([name, desc]) => (
+                  <div key={name} className="flex gap-[10px] items-start text-[13px]">
+                    <span className="shrink-0 font-semibold text-[var(--foreground)] w-[140px]">{name}</span>
+                    <span className="text-[var(--field-supporting)]">{desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* States */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">States</h2>
+              <div className="flex flex-col gap-[12px]">
+                {[
+                  { label: "First page (prev disabled)",    page: 1,  total: 120, perPage: 25 },
+                  { label: "Middle page",                   page: 3,  total: 120, perPage: 25 },
+                  { label: "Last page (next disabled)",     page: 5,  total: 120, perPage: 25 },
+                  { label: "Single page → hidden (returns null)", page: 1, total: 20, perPage: 25 },
+                ].map(({ label, page, total, perPage }) => (
+                  <div key={label}>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[6px]">{label}</p>
+                    <div className="rounded-[8px] border border-[var(--field-border)] overflow-hidden min-h-[48px] flex items-center justify-center">
+                      {total <= perPage
+                        ? <span className="text-[12px] text-[var(--field-supporting)] italic">Component hidden — no strip rendered</span>
+                        : <Pagination currentPage={page} totalItems={total} itemsPerPage={perPage} onPageChange={() => {}} onItemsPerPageChange={() => {}} />
+                      }
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Do / Don't */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Do / Don't</h2>
+              <div className="grid grid-cols-2 gap-[16px]">
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[12px] font-semibold text-[var(--foreground)]">Do</p>
+                  {[
+                    "Float over the list using position: absolute; bottom: 0 — do not add it to the flex flow.",
+                    "Show only when total results exceed itemsPerPage.",
+                    "Reset to page 1 whenever filters, sort, or rows-per-page change.",
+                    "Use onItemsPerPageChange to let the user control density.",
+                  ].map((t, i) => <p key={i} className="text-[13px] text-[var(--field-supporting)] pl-[14px]">{t}</p>)}
+                </div>
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[12px] font-semibold text-[var(--foreground)]">Don't</p>
+                  {[
+                    "Don't place Pagination as a flex sibling of EntityList — it will shrink the available list height.",
+                    "Don't show an empty pagination strip when the dataset fits one page.",
+                    "Don't show pagination on empty state screens.",
+                    "Don't place Pagination above the list or inside a card.",
+                  ].map((t, i) => <p key={i} className="text-[13px] text-[var(--field-supporting)] pl-[14px]">{t}</p>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Playground ── */}
+        {tab === "playground" && (
+          <div className="flex gap-[24px] items-start">
+            <div className="flex flex-col gap-[16px] w-[240px] shrink-0 rounded-md border border-[var(--field-border)] p-[20px]">
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Total items</span>
+                <div className="flex gap-[6px] flex-wrap">
+                  {[20, 60, 120, 500].map(n => (
+                    <button key={n} onClick={() => { setPgTotal(n); setPgPage(1) }}
+                      className={["px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors",
+                        pgTotal === n ? "bg-[#2173ff] text-white" : "bg-[var(--ctrl-inactive-bg)] border border-[var(--field-border)] text-[var(--field-label)] hover:border-[var(--field-border-hover)]",
+                      ].join(" ")}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <CtrlGroup
+                label="Per page"
+                options={[
+                  { label: "5",   value: "5"   },
+                  { label: "25",  value: "25"  },
+                  { label: "50",  value: "50"  },
+                  { label: "100", value: "100" },
+                ]}
+                value={String(pgPerPage)}
+                onChange={v => { setPgPerPage(Number(v)); setPgPage(1) }}
+              />
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Page</span>
+                <div className="flex items-center gap-[8px]">
+                  <button
+                    disabled={pgPage === 1}
+                    onClick={() => setPgPage(p => Math.max(1, p - 1))}
+                    className="px-[8px] py-[4px] rounded text-[11px] font-medium border border-[var(--field-border)] text-[var(--field-label)] disabled:opacity-40"
+                    style={{ background: "var(--ctrl-inactive-bg)" }}
+                  >←</button>
+                  <span className="text-[12px] text-[var(--foreground)] tabular-nums w-[60px] text-center">
+                    {pgPage} / {Math.ceil(pgTotal / pgPerPage)}
+                  </span>
+                  <button
+                    disabled={pgPage >= Math.ceil(pgTotal / pgPerPage)}
+                    onClick={() => setPgPage(p => p + 1)}
+                    className="px-[8px] py-[4px] rounded text-[11px] font-medium border border-[var(--field-border)] text-[var(--field-label)] disabled:opacity-40"
+                    style={{ background: "var(--ctrl-inactive-bg)" }}
+                  >→</button>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 rounded-[12px] border border-[var(--field-border)] overflow-hidden" style={{ background: "var(--canvas)" }}>
+              {pgTotal <= pgPerPage
+                ? (
+                  <div className="flex items-center justify-center h-[64px]">
+                    <span className="text-[12px] text-[var(--field-supporting)] italic">
+                      Component hidden — {pgTotal} items fit on one page of {pgPerPage}
+                    </span>
+                  </div>
+                )
+                : (
+                  <Pagination
+                    currentPage={pgPage}
+                    totalItems={pgTotal}
+                    itemsPerPage={pgPerPage}
+                    onPageChange={setPgPage}
+                    onItemsPerPageChange={n => { setPgPerPage(n); setPgPage(1) }}
+                  />
+                )
+              }
+            </div>
+          </div>
+        )}
+
+        {/* ── Reference ── */}
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[24px]">
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Design tokens</h2>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-[var(--field-border)]">
+                    {["Token", "Figma variable", "Role", "Light", "Dark"].map(h => (
+                      <th key={h} className="text-left py-[8px] pr-[16px] text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { token: "--color-text-label",              figma: "Text/Label",               role: "Range text + row count",       light: "#2a2a2a",               dark: "rgba(255,255,255,0.80)" },
+                    { token: "--color-text-subtitle",           figma: "Text/Subtitle",            role: '"Rows per page:" caption',     light: "#2a2a2a",               dark: "rgba(255,255,255,0.60)" },
+                    { token: "--color-icon-neutral-dark",       figma: "Icon/Neutral/Dark",        role: "Nav icons + chevron",          light: "rgba(92,92,92,1)",      dark: "rgba(255,255,255,0.70)" },
+                    { token: "--color-surface-neutral-default", figma: "Surface/Neutral/Default",  role: "Nav button hover bg",          light: "#f2f2f2",               dark: "rgba(255,255,255,0.06)" },
+                    { token: "--surface-floating-default",      figma: "Surface/Floating/Default", role: "Inner container bg",           light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
+                    { token: "--color-border-neutral-default",  figma: "Border/Neutral/Default",   role: "Inner container border",       light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)" },
+                  ].map(row => (
+                    <tr key={row.token} className="border-b border-[var(--field-border)] last:border-0">
+                      <td className="py-[10px] pr-[16px] font-mono text-[12px] text-[var(--primary)]">{row.token}</td>
+                      <td className="py-[10px] pr-[16px] text-[var(--field-supporting)]">{row.figma}</td>
+                      <td className="py-[10px] pr-[16px] text-[var(--foreground)]">{row.role}</td>
+                      <td className="py-[10px] pr-[16px]">
+                        <span className="inline-flex items-center gap-[6px]">
+                          <ColorDot hex={row.light} size={14} />
+                          <span className="font-mono text-[11px] text-[var(--field-supporting)]">{row.light}</span>
+                        </span>
+                      </td>
+                      <td className="py-[10px]">
+                        <span className="inline-flex items-center gap-[6px]">
+                          <ColorDot hex={row.dark} size={14} />
+                          <span className="font-mono text-[11px] text-[var(--field-supporting)]">{row.dark}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-[var(--field-border)]">
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="text-left py-[8px] pr-[16px] text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { prop: "currentPage",          type: "number",    def: "1",                    desc: "1-indexed current page." },
+                    { prop: "totalItems",            type: "number",    def: "—",                    desc: "Required. Component hides when totalItems ≤ itemsPerPage." },
+                    { prop: "itemsPerPage",          type: "number",    def: "25",                   desc: "Items shown per page. Controls range calculation." },
+                    { prop: "onPageChange",          type: "function",  def: "—",                    desc: "Required. Called with the new page number on prev/next click." },
+                    { prop: "onItemsPerPageChange",  type: "function",  def: "undefined",            desc: "Optional. If omitted, rows-per-page select is read-only." },
+                    { prop: "rowsPerPageOptions",    type: "number[]",  def: "[5,25,50,100,200]",    desc: "Options for the rows-per-page selector." },
+                  ].map(row => (
+                    <tr key={row.prop} className="border-b border-[var(--field-border)] last:border-0">
+                      <td className="py-[10px] pr-[16px] font-mono text-[12px] text-[var(--primary)]">{row.prop}</td>
+                      <td className="py-[10px] pr-[16px] font-mono text-[11px] text-[var(--field-supporting)]">{row.type}</td>
+                      <td className="py-[10px] pr-[16px] font-mono text-[11px] text-[var(--field-supporting)]">{row.def}</td>
+                      <td className="py-[10px] text-[var(--foreground)]">{row.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
+              <pre className="text-[12px] font-mono bg-[var(--field-bg)] p-[16px] rounded-[8px] overflow-x-auto text-[var(--foreground)]">{`import { Pagination } from "@/components/ui/pagination"
+
+const [page, setPage] = useState(1)
+const [perPage, setPerPage] = useState(25)
+
+// Auto-hides when total <= perPage
+<Pagination
+  currentPage={page}
+  totalItems={247}
+  itemsPerPage={perPage}
+  onPageChange={setPage}
+  onItemsPerPageChange={n => { setPerPage(n); setPage(1) }}
+/>
+
+// Read-only rows-per-page (no selector change)
+<Pagination
+  currentPage={page}
+  totalItems={247}
+  itemsPerPage={25}
+  onPageChange={setPage}
+/>`}
+              </pre>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Behavior rules</h2>
+              <div className="flex flex-col gap-[6px]">
+                {([
+                  ["Auto-hide",        "Returns null when totalItems ≤ itemsPerPage. No empty bar."],
+                  ["Reset on change",  "Always call setPage(1) alongside setPerPage(n) — range becomes invalid otherwise."],
+                  ["Filter reset",     "Applying filters must also reset page to 1 before updating totalItems."],
+                  ["Empty state",      "When the filtered dataset is empty, hide pagination (totalItems = 0 → hidden)."],
+                  ["Placement",        "Always at the bottom of the EntityList, outside the scroll area, full-width."],
+                ] as [string, string][]).map(([term, def]) => (
+                  <div key={term} className="flex gap-[10px] items-start text-[13px]">
+                    <span className="shrink-0 font-semibold text-[var(--foreground)] w-[130px]">{term}</span>
+                    <span className="text-[var(--field-supporting)]">{def}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Figma usage steps</h2>
+              <ol className="flex flex-col gap-[8px] list-decimal list-inside text-[13px] text-[var(--field-supporting)]">
+                {[
+                  "Insert the Pagination component from the DS library at the bottom of the list view.",
+                  "Set totalItems from the API response. Show only if totalItems > itemsPerPage.",
+                  "Bind currentPage and onPageChange to local state.",
+                  "Bind onItemsPerPageChange if the user should control density; omit for fixed rows.",
+                  "On any filter/sort/tab change, always reset currentPage to 1.",
+                  "On empty state (0 results), do not render Pagination — show EmptyState instead.",
+                ].map((step, i) => (
+                  <li key={i} className="pl-[4px]">{step}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── FiltersPage ───────────────────────────────────────────────────────────────
 
 function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
@@ -14729,7 +24805,7 @@ function BreakpointsPage({ isDark, openSpec }: { isDark: boolean; openSpec: (s: 
             <div className="flex items-center gap-[10px]">
               <span
                 className="inline-flex items-center justify-center h-[26px] px-[10px] rounded-[6px] text-[12px] font-bold"
-                style={{ background: focused.labelColor, color: "#fff" }}
+                style={{ background: focused.labelColor, color: "var(--color-text-negative)" }}
               >
                 {focused.label}
               </span>
@@ -15107,6 +25183,115 @@ function CornerRadiusPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   )
 }
 
+function ElevationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const EL_TOKENS = [
+    { level: 1, token: "--shadow-elevation-1", role: "Micro",  usage: "Focused inputs, toggles, subtle chip lift",           lightVal: "0 1px 4px rgba(0,0,0,0.06)",                                            darkVal: "0 1px 4px rgba(0,0,0,0.16)"                                           },
+    { level: 2, token: "--shadow-elevation-2", role: "Low",    usage: "Card rest state, inline panels",                      lightVal: "0 2px 8px rgba(0,0,0,0.10)",                                            darkVal: "0 2px 8px rgba(0,0,0,0.24)"                                           },
+    { level: 3, token: "--shadow-elevation-3", role: "Mid",    usage: "Dropdown menus, select overlays, filter dropdowns",   lightVal: "0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)",             darkVal: "0 4px 24px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.16)"             },
+    { level: 4, token: "--shadow-elevation-4", role: "High",   usage: "Modals, topbar sheets, large floating panels",        lightVal: "0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)",             darkVal: "0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.24)"             },
+    { level: 5, token: "--shadow-elevation-5", role: "Float",  usage: "Diagonal offset for floating containers (SwitchTab)", lightVal: "8px 8px 16px rgba(0,0,0,0.08)",                                         darkVal: "8px 8px 24px rgba(0,0,0,0.32)"                                         },
+  ]
+
+  return (
+    <div className="flex flex-col gap-[40px]">
+      <div className="flex items-start justify-between gap-[16px]">
+        <div>
+          <h1 className="text-[24px] font-semibold" style={{ color: "var(--foreground)" }}>Elevation</h1>
+          <p className="text-[14px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+            5-level shadow scale for communicating depth and hierarchy. Use only{" "}
+            <code className="text-[12px] font-mono px-[5px] py-[1px] rounded-[4px]" style={{ background: "var(--code-bg)" }}>var(--shadow-elevation-N)</code>{" "}
+            — never hardcode rgba() values in box-shadow.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("elevation")} />
+      </div>
+
+      {/* Visual scale */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Shadow scale</h2>
+        <div className="flex flex-col gap-[10px]">
+          {EL_TOKENS.map(t => (
+            <div key={t.token} className="flex items-center gap-[24px] p-[20px] rounded-[8px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+              {/* Visual preview */}
+              <div className="shrink-0 flex items-center justify-center" style={{ width: 80, height: 64 }}>
+                <div style={{
+                  width: 56, height: 48,
+                  borderRadius: 8,
+                  background: "var(--surface)",
+                  boxShadow: `var(${t.token})`,
+                }} />
+              </div>
+              {/* Meta */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-[8px] mb-[2px]">
+                  <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Elevation-{t.level}</span>
+                  <Tag variant="secondary" size="sm">{t.role}</Tag>
+                </div>
+                <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{t.usage}</p>
+              </div>
+              {/* Token */}
+              <div className="shrink-0 text-right">
+                <code className="text-[11px] font-mono block" style={{ color: "var(--primary)" }}>{t.token}</code>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Token values table */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Token values</h2>
+        <div className="overflow-x-auto rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+          <table className="w-full text-[12px]" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "0.5px solid var(--field-border)", background: "var(--field-bg)" }}>
+                {["Token", "Level", "Dark mode value", "Light mode value"].map(h => (
+                  <th key={h} className="px-[14px] py-[10px] text-left font-semibold" style={{ color: "var(--field-label)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {EL_TOKENS.map((t, i) => (
+                <tr key={t.token} style={{ borderBottom: i < EL_TOKENS.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+                  <td className="px-[14px] py-[10px]"><code style={{ color: "var(--primary)", fontSize: 11 }}>{t.token}</code></td>
+                  <td className="px-[14px] py-[10px]" style={{ color: "var(--foreground)", fontWeight: 600 }}>Elevation-{t.level} {t.role}</td>
+                  <td className="px-[14px] py-[10px]"><code className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>{t.darkVal}</code></td>
+                  <td className="px-[14px] py-[10px]"><code className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>{t.lightVal}</code></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Do / Don't */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Rules</h2>
+        <div className="grid grid-cols-2 gap-[10px]">
+          {[
+            { type: "do",   text: "Use the lowest level that visually separates the element from its background." },
+            { type: "do",   text: "Use var(--shadow-elevation-N) tokens — they adapt between dark and light mode automatically." },
+            { type: "do",   text: "Use Elevation-5 only for the SwitchTab diagonal float pattern — not for standard overlays." },
+            { type: "dont", text: "Never hardcode rgba() values directly in box-shadow style props." },
+            { type: "dont", text: "Never skip levels — jumping from 1 to 4 without visual reason breaks depth hierarchy." },
+            { type: "dont", text: "Never apply multiple elevation levels to the same element — one shadow per surface." },
+          ].map((item, i) => (
+            <div key={i} className="flex gap-[10px] p-[14px] rounded-[6px]" style={{
+              background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+              border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}`,
+            }}>
+              <span className="text-[13px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--tag-success-fg)" : "var(--tag-error-fg)" }}>
+                {item.type === "do" ? "✓" : "✕"}
+              </span>
+              <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{item.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ColorsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab,    setTab]    = useState<"primitives"|"semantic">("primitives")
   const [copied, setCopied] = useState<string|null>(null)
@@ -15273,15 +25458,20 @@ function ThemeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => vo
 // ── AppNav ─────────────────────────────────────────────────────────────────
 
 function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
-  active: SectionId; onSelect: (id: SectionId) => void
+  active: string; onSelect: (id: string) => void
   search: string; onSearch: (v: string) => void
   isDark: boolean; onToggle: () => void
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
+  const allSections = useMemo(() => [
+    ...NAV_SECTIONS,
+    ...PROTOTYPE_PAGES.map(p => ({ id: p.id, label: p.label, group: "Prototypes", description: p.description })),
+  ], [])
+
   const filtered = useMemo(
-    () => NAV_SECTIONS.filter(s => s.label.toLowerCase().includes(search.toLowerCase()) || s.description.toLowerCase().includes(search.toLowerCase())),
-    [search]
+    () => allSections.filter(s => s.label.toLowerCase().includes(search.toLowerCase()) || s.description.toLowerCase().includes(search.toLowerCase())),
+    [search, allSections]
   )
   const groups = useMemo(() => {
     const map: Record<string, typeof filtered> = {}
@@ -15959,7 +26149,7 @@ const [open, setOpen] = useState(false)
                   </tr>
                 </thead>
                 <tbody>
-                  {(SIDE_PANEL_SPEC.tokens as {role:string;variable:string;varId:string;light:string;dark:string}[]).map((row, i, arr) => (
+                  {SIDE_PANEL_SPEC.variants.flatMap(v => v.tokens).map((row, i, arr) => (
                     <tr key={row.variable} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none", background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)" }}>
                       <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.variable}</td>
                       <td className="px-[12px] py-[8px]" style={{ color: "var(--foreground)" }}>{row.role}</td>
@@ -16969,7 +27159,7 @@ const [open, setOpen] = useState(false)
 // ── App ────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [active,  setActive]  = useState<SectionId>("home")
+  const [active,  setActive]  = useState<string>("home")
   const [search,  setSearch]  = useState("")
   const [isDark,  setIsDark]  = useState(true)
   const [specModal, setSpecModal] = useState<SpecModal>(null)
@@ -16983,7 +27173,11 @@ export default function App() {
 
   function handleSearch(v: string) {
     setSearch(v)
-    const filtered = NAV_SECTIONS.filter(s =>
+    const allSections = [
+      ...NAV_SECTIONS,
+      ...PROTOTYPE_PAGES.map(p => ({ id: p.id, label: p.label, group: "Prototypes", description: p.description })),
+    ]
+    const filtered = allSections.filter(s =>
       s.label.toLowerCase().includes(v.toLowerCase()) ||
       s.description.toLowerCase().includes(v.toLowerCase())
     )
@@ -16998,7 +27192,7 @@ export default function App() {
     <div className={`${theme} flex h-screen overflow-hidden text-[var(--foreground)]`} style={{ background: canvasBg }}>
       <AppNav
         active={active}
-        onSelect={id => { setActive(id); setSearch("") }}
+        onSelect={(id: string) => { setActive(id); setSearch("") }}
         search={search} onSearch={handleSearch}
         isDark={isDark} onToggle={() => setIsDark(d => !d)}
       />
@@ -17021,6 +27215,22 @@ export default function App() {
           {active === "checkbox"        && <CheckboxPage      openSpec={setSpecModal} />}
           {active === "chip"            && <ChipPage          openSpec={setSpecModal} />}
           {active === "scroll-area"     && <ScrollAreaPage     openSpec={setSpecModal} />}
+          {active === "progress-bar"    && <ProgressBarPage   openSpec={setSpecModal} />}
+          {active === "skeleton"        && <SkeletonPage      openSpec={setSpecModal} />}
+          {active === "spinner"         && <SpinnerPage       openSpec={setSpecModal} />}
+          {active === "stepper"         && <StepperPage       openSpec={setSpecModal} />}
+          {active === "patterns-list-view"  && <PatternListViewPage />}
+          {active === "patterns-filter"     && <PatternFilterPage />}
+          {active === "patterns-overlay"    && <PatternOverlayPage />}
+          {active === "patterns-header"     && <PatternHeaderPage />}
+          {active === "patterns-nav-depth"  && <PatternNavDepthPage />}
+          {active === "patterns-loading"    && <PatternLoadingPage />}
+          {active === "patterns-feedback"      && <PatternFeedbackPage />}
+          {active === "patterns-logs"          && <PatternLogsPage />}
+          {active === "patterns-widget-canvas" && <PatternWidgetCanvasPage />}
+          {active === "widget-father"         && <WidgetFatherPage />}
+          {active === "widgets"               && <WidgetsPage />}
+          {active === "switch-tab"      && <SwitchTabPage     openSpec={setSpecModal} />}
           {active === "tabs"            && <TabsPage          openSpec={setSpecModal} />}
           {active === "toggle"          && <TogglePage        openSpec={setSpecModal} />}
           {active === "tooltip"         && <TooltipPage       openSpec={setSpecModal} />}
@@ -17032,12 +27242,17 @@ export default function App() {
           {active === "entity-list"     && <EntityListPage    openSpec={setSpecModal} />}
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
+          {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}
+          {active === "pagination"      && <PaginationPage      openSpec={setSpecModal} />}
           {active === "filters"         && <FiltersPage         openSpec={setSpecModal} />}
           {active === "breakpoints"     && <BreakpointsPage isDark={isDark} openSpec={setSpecModal} />}
           {active === "corner-radius"   && <CornerRadiusPage openSpec={setSpecModal} />}
+          {active === "elevation"       && <ElevationPage    openSpec={setSpecModal} />}
           {active === "icons"           && <IconsPage        openSpec={setSpecModal} />}
           {active === "typography"      && <TypographyPage   openSpec={setSpecModal} />}
           {active === "colors"          && <ColorsPage       openSpec={setSpecModal} />}
+          {/* PM prototypes — rendered from src/screens/ via PROTOTYPE_PAGES registry */}
+          {PROTOTYPE_PAGES.map(p => active === p.id && <p.component key={p.id} />)}
         </div>
       </main>
 

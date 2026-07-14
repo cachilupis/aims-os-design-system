@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import * as LucideIcons from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -17,6 +17,7 @@ export type ELMetaItem = {
 export type ELAction = {
   label:    string
   variant:  "primary" | "secondary" | "tertiary"
+  icon?:    string   // lucide icon name — renders as icon-only button when set
   onClick?: () => void
 }
 
@@ -158,9 +159,10 @@ function Bullet() {
   )
 }
 
-// Meta item with hover tooltip — used for primary and secondary meta
+// Meta item with hover tooltip — position:fixed so it escapes overflow:hidden containers
 function MetaItemView({ meta, mode, isFirst }: { meta: ELMetaItem; mode: "icon" | "icon-text"; isFirst: boolean }) {
-  const [hovered, setHovered] = useState(false)
+  const anchorRef = useRef<HTMLDivElement>(null)
+  const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null)
 
   // Tag variant: renders as a lightBlue Tag chip (no bullet before tags)
   if (meta.tag) {
@@ -175,13 +177,21 @@ function MetaItemView({ meta, mode, isFirst }: { meta: ELMetaItem; mode: "icon" 
   const Icon    = getLucideIcon(meta.iconName)
   const tipText = meta.tooltip ?? meta.label
 
+  const handleMouseEnter = () => {
+    if (anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect()
+      setTipPos({ left: rect.left + rect.width / 2, top: rect.top })
+    }
+  }
+
   return (
     <div className="flex items-center gap-[4px]">
       {!isFirst && <Bullet />}
       <div
-        className="relative flex items-center gap-[4px]"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        ref={anchorRef}
+        className="flex items-center gap-[4px]"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setTipPos(null)}
       >
         {Icon && <Icon size={16} strokeWidth={1.75} style={{ color: "var(--muted-foreground)" }} />}
         {mode === "icon-text" && meta.label && (
@@ -189,13 +199,15 @@ function MetaItemView({ meta, mode, isFirst }: { meta: ELMetaItem; mode: "icon" 
             {meta.label}
           </span>
         )}
-        {hovered && tipText && (
+        {tipPos && tipText && (
           <div
-            className="absolute pointer-events-none z-50"
+            className="pointer-events-none"
             style={{
-              bottom: "calc(100% + 6px)",
-              left: "50%",
-              transform: "translateX(-50%)",
+              position: "fixed",
+              left: tipPos.left,
+              top: tipPos.top - 6,
+              transform: "translate(-50%, -100%)",
+              zIndex: 99999,
               whiteSpace: "nowrap",
               background: "var(--tooltip-bg)",
               borderRadius: 4,
@@ -307,22 +319,28 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
 
         {/* Right */}
         <div className="flex items-center gap-[8px] shrink-0">
-          {item.actions?.map((action, i) => (
-            <button
-              key={i}
-              onClick={e => { e.stopPropagation(); action.onClick?.() }}
-              className="h-[27px] px-[12px] rounded-[8px] text-[12px] font-medium leading-none transition-opacity hover:opacity-80"
-              style={
-                action.variant === "primary"
-                  ? { background: "var(--primary)", color: "var(--primary-foreground)", border: "none" }
-                  : action.variant === "secondary"
-                  ? { background: "var(--muted)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }
-                  : { background: "transparent", border: "none", color: "var(--muted-foreground)" }
-              }
-            >
-              {action.label}
-            </button>
-          ))}
+          {item.actions?.map((action, i) => {
+            const ActionIcon = action.icon ? getLucideIcon(action.icon) : null
+            const isTertiaryIcon = action.variant === "tertiary" && ActionIcon
+            return (
+              <button
+                key={i}
+                onClick={e => { e.stopPropagation(); action.onClick?.() }}
+                className="h-[27px] rounded-[8px] text-[12px] font-medium leading-none transition-opacity hover:opacity-80 flex items-center justify-center"
+                style={
+                  action.variant === "primary"
+                    ? { background: "var(--primary)", color: "var(--primary-foreground)", border: "none", padding: "0 12px" }
+                    : action.variant === "secondary"
+                    ? { background: "var(--muted)", border: "1px solid var(--border)", color: "var(--muted-foreground)", padding: "0 12px" }
+                    : isTertiaryIcon
+                    ? { background: "transparent", border: "none", color: "var(--muted-foreground)", padding: "0 6px", width: 27 }
+                    : { background: "transparent", border: "none", color: "var(--muted-foreground)", padding: "0 12px" }
+                }
+              >
+                {ActionIcon ? <ActionIcon size={15} strokeWidth={1.75} /> : action.label}
+              </button>
+            )
+          })}
           {item.actions && item.actions.length > 0 && (
             <div className="w-px h-[18px] shrink-0" style={{ background: "var(--border)" }} />
           )}

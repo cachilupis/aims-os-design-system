@@ -254,7 +254,7 @@
     /* ── Menu / Dropdown tokens — dark ──────────────────────────────────── */
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · node 4762:7152                */
     /* Variables resolved: Surface/Floating/Default dark = rgba(20,27,42,0.85) */
-    --menu-bg:           rgba(20,27,42,0.85);    /* Surface/Floating/Default dark  VariableID:13469:2 mode 12277:1  */
+    --menu-bg:           var(--surface-floating-default);  /* Surface/Floating/Default dark  VariableID:13469:2 mode 12277:1  */
     --menu-item-hover:   rgba(32,42,62,0.90);    /* Surface/Floating/Hover dark    VariableID:13469:3 mode 12277:1  */
     --menu-item-text:    rgba(255,255,255,0.60); /* Text/Subtitle dark   = White/60                                 */
     --menu-item-subtext: rgba(255,255,255,0.60); /* Text/Body dark       = White/60                                 */
@@ -497,10 +497,11 @@
     --color-surface-neutral-white:      #FFFFFF;                  /* Surface/Neutral/White            */
     --color-border-neutral-lighter:     rgba(255,255,255,0.08);   /* Border/Neutral/Lighter           */
     --color-text-title:                 rgba(255,255,255,0.80);   /* Text/Title                       */
-    --color-text-subtitle:              rgba(255,255,255,0.40);   /* Text/Subtitle                    */
+    --color-text-subtitle:              rgba(255,255,255,0.60);   /* Text/Subtitle                    */
     --color-text-success:               #6ee7b7;                  /* Text/Success                     */
     --color-text-error:                 #ff6467;                  /* Text/Error                       */
     --color-icon-primary-default:       #2B7FFF;                  /* Icon/Primary/Default             */
+    --color-icon-primary-darker:        #155dfc;                  /* Icon/Primary/Darker              */
     --color-border-primary-default:     #2b7fff;                  /* Border/Primary/Default           */
     --color-border-success-default:     #00a07e;                  /* Border/Success/Default           */
     --color-border-alert-default:       #ed6c02;                  /* Border/Alert/Default             */
@@ -520,6 +521,15 @@
     /* ── Highlight Card — component tokens ──────────────────────────────────
        Dark bg: DS flags Surface/Neutral/White (#FFF) as ⚠ in dark mode.
        Visual preview shows dark surface cards — use surface-raised instead. */
+    /* ── Widget Father ──────────────────────────────────────────────────────── */
+    --widget-bg:               var(--surface-raised);                 /* Card bg — raised above canvas  */
+    --widget-border:           rgba(255,255,255,0.12);                /* Neutral/Lighter dark — visible  */
+    --widget-border-hover:     rgba(255,255,255,0.24);                /* Hover: stronger contrast        */
+    --widget-title:            var(--color-text-title);               /* Header title — uppercase label */
+    --widget-subtitle:         var(--color-text-subtitle);            /* Optional description           */
+    --widget-icon:             var(--color-icon-neutral-dark);        /* Header action icons            */
+    --widget-action-hover-bg:  var(--color-surface-neutral-default);  /* Action button hover fill       */
+
     --hc-bg:            var(--surface-raised);           /* dark surface card — visual intent */
     --hc-text-label:    var(--color-text-subtitle);      /* rgba(255,255,255,0.40) on dark bg */
     --hc-text-value:    var(--color-text-title);         /* rgba(255,255,255,0.80) on dark bg */
@@ -540,6 +550,14 @@
     --color-surface-success-more-subtle:  rgba(110,231,183,0.10);  /* Surface/Success/More Subtle dk */
     --color-border-success-lighter:       #009978;                 /* Border/Success/Lighter (static)*/
     --color-surface-purple-more-subtle:   rgba(139,92,246,0.12);   /* Surface/Purple/More Subtle dk  */
+    --color-surface-success-default:      #00a07e;                 /* Surface/Success/Default dark   */
+    --color-surface-alert-default:        #ed6c02;                 /* Surface/Alert/Default dark     */
+    --color-surface-error-default:        #e05252;                 /* Surface/Error/Default dark     */
+    --color-surface-yellow-default:       #f59e0b;                 /* Surface/Yellow/Default dark    */
+    --color-surface-alert-more-subtle:    rgba(217,119,6,0.08);    /* Surface/Alert/More Subtle dk   */
+    --color-surface-error-more-subtle:    rgba(220,38,38,0.08);    /* Surface/Error/More Subtle dk   */
+    --color-surface-yellow-more-subtle:   rgba(202,138,4,0.08);    /* Surface/Yellow/More Subtle dk  */
+    --pb-radius:                          2px;                     /* Progress Bar / Radius-XS       */
     --color-surface-neutral-default:      rgba(255,255,255,0.06);  /* Surface/Neutral/Default dark   */
     --color-surface-neutral-emphasis:     rgba(255,255,255,0.12);  /* Surface/Neutral/Emphasis dark  */
     --slide-out-shadow:                   -24px -24px 60px 0px rgba(0,0,0,0.08);
@@ -577,7 +595,12 @@
     --color-button-primary-text-default:  #ffffff;                   /* Button/Primary/Text/Default    */
     --color-button-primary-text-disabled: rgba(255,255,255,0.30);   /* Button/Primary/Text/Disabled   */
     --color-icon-neutral-light:           #ffffff;                   /* Icon/Neutral/Light             */
+    --color-icon-neutral-dark:            rgba(255,255,255,0.70);    /* Icon/Neutral/Dark dark         */
     --color-icon-neutral-black:           #2a2a2a;                   /* Icon/Neutral/Black             */
+    /* ── Header component tokens ──────────────────────────────────── */
+    --header-title:      var(--color-text-title);                    /* Page title                     */
+    --header-desc:       var(--color-text-body);                     /* Description subtitle           */
+    --header-back-icon:  var(--color-icon-neutral-dark);             /* Back arrow button              */
     --color-surface-purple-default:       #7b27ed;                   /* Surface/Purple/Default         */
     --color-surface-purple-darker:        #2c075c;                   /* Surface/Purple/Darker dark     */
     --color-surface-purple-lighter:       rgba(123,39,237,0.40);    /* Surface/Purple/Lighter dark    */
@@ -592,6 +615,45 @@
     --chip-secondary-text-disabled:       rgba(255,255,255,0.30);   /* Text/Disabled dark             */
     --chip-secondary-bg-hover:            rgba(255,255,255,0.15);   /* Surface/Neutral/Lighter dark   */
     --chip-secondary-bg-disabled:         rgba(255,255,255,0.05);   /* Surface/Neutral/Subtle dark    */
+    /* ── Switch Tab — canonical tokens (DS node 4591:349) ──────────────────── */
+    --color-surface-primary-more-subtle:  #f6f9ff;                  /* Surface/Primary/More Subtle    */
+    --st-bg:            var(--surface-raised);                        /* Dark elevated surface #131C2E  */
+    --st-shadow:        8px 8px 24px 0px rgba(0, 0, 0, 0.32);       /* Stronger shadow on dark bg     */
+    --st-active-bg:     rgba(43, 127, 255, 0.15);                    /* Blue tint on dark surface      */
+    --st-active-text:   var(--primary);                              /* Text/Link = #2b7fff            */
+    --st-text:          var(--foreground);                           /* rgba(255,255,255,0.80)         */
+    --st-item-radius:   4px;                                         /* Radius/Radius-S item           */
+    /* ── Skeleton — component tokens (DS node 5992:6760) ───────────────── */
+    --skeleton-base:    var(--color-surface-neutral-default);        /* rgba(255,255,255,0.06) dark    */
+    --skeleton-shimmer: var(--color-surface-neutral-emphasis);       /* rgba(255,255,255,0.12) dark    */
+    /* ── Spinner — component tokens (DS node 7185:3933) ────────────────── */
+    --spinner-primary-fill:      var(--primary);                           /* Surface/Primary/Default dark   */
+    --spinner-primary-track:     var(--color-surface-primary-subtle);      /* rgba(33,115,255,0.15) dark     */
+    --spinner-success-fill:      var(--color-surface-success-default);     /* #00a07e dark                   */
+    --spinner-success-track:     var(--color-surface-success-more-subtle); /* rgba(110,231,183,0.10) dark    */
+    --spinner-alert-fill:        var(--color-surface-alert-default);       /* #ed6c02 dark                   */
+    --spinner-alert-track:       var(--color-surface-alert-more-subtle);   /* rgba(217,119,6,0.08) dark      */
+    --spinner-error-fill:        var(--color-surface-error-default);       /* #e05252 dark                   */
+    --spinner-error-track:       var(--color-surface-error-more-subtle);   /* rgba(220,38,38,0.08) dark      */
+    --spinner-informative-fill:  var(--color-surface-light-blue-default);  /* #00b5d9 dark                   */
+    --spinner-informative-track: var(--color-surface-light-blue-subtle);   /* rgba(2,132,199,0.14) dark      */
+    --spinner-bw-fill:           rgba(255,255,255,0.80);                   /* white on dark                  */
+    --spinner-bw-track:          rgba(255,255,255,0.10);                   /* subtle white track on dark     */
+    /* ── Stepper — component tokens (DS node 8210:40358) ───────────────── */
+    --stepper-dot-active-bg:  var(--color-surface-primary-subtle);         /* Active/Completed dot fill      */
+    --stepper-dot-default-bg: var(--color-surface-neutral-default);        /* Default/Locked/View-only dot   */
+    --stepper-icon-active:    var(--color-icon-primary-darker);            /* Icon/Primary/Darker — #155dfc  */
+    --stepper-icon-default:   rgba(255,255,255,0.50);                      /* Icon/Neutral/Dark — White/50   */
+    --stepper-icon-locked:    var(--color-text-disabled);                  /* Icon/Neutral/Disabled (dimmed) */
+    --stepper-label-active:   var(--color-text-subtitle);                  /* Text/Subtitle — Subtitle/S     */
+    --stepper-label-default:  var(--color-text-body);                      /* Text/Body — Body/M             */
+    --stepper-connector:      var(--color-text-disabled);                  /* Icon/Neutral/Disabled          */
+    /* ── Elevation / Shadow scale (dark mode — stronger for depth on dark bg) */
+    --shadow-elevation-1: 0 1px 4px rgba(0,0,0,0.16);
+    --shadow-elevation-2: 0 2px 8px rgba(0,0,0,0.24);
+    --shadow-elevation-3: 0 4px 24px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.16);
+    --shadow-elevation-4: 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.24);
+    --shadow-elevation-5: 8px 8px 24px rgba(0,0,0,0.32);
   }
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
@@ -1051,10 +1113,11 @@
     --color-surface-neutral-white:      #FFFFFF;                  /* Surface/Neutral/White            */
     --color-border-neutral-lighter:     #E8E8E8;                  /* Border/Neutral/Lighter           */
     --color-text-title:                 #1A1A1A;                  /* Text/Title                       */
-    --color-text-subtitle:              #8C8C8C;                  /* Text/Subtitle                    */
+    --color-text-subtitle:              #2a2a2a;                  /* Text/Subtitle                    */
     --color-text-success:               #003328;                  /* Text/Success                     */
     --color-text-error:                 #5f2120;                  /* Text/Error                       */
     --color-icon-primary-default:       #001740;                  /* Icon/Primary/Default             */
+    --color-icon-primary-darker:        #001740;                  /* Icon/Primary/Darker — same as Default on light */
     --color-border-primary-default:     #2173ff;                  /* Border/Primary/Default           */
     --color-border-success-default:     #00a07e;                  /* Border/Success/Default           */
     --color-border-alert-default:       #ed6c02;                  /* Border/Alert/Default             */
@@ -1072,6 +1135,15 @@
     --color-surface-lime-subtle:        #F9FEE5;                  /* Surface/Lime/Subtle              */
     --color-surface-error-subtle:       #FDECED;                  /* Surface/Error/Subtle             */
     /* ── Highlight Card — component tokens (alias → canonical) ──────────── */
+    /* ── Widget Father — light overrides ──────────────────────────────────── */
+    --widget-bg:               var(--surface);
+    --widget-border:           rgba(0,0,0,0.12);                      /* Neutral/Lighter light ≈ #bababa */
+    --widget-border-hover:     rgba(0,0,0,0.28);                      /* Hover: stronger contrast        */
+    --widget-title:            var(--color-text-title);
+    --widget-subtitle:         var(--color-text-subtitle);
+    --widget-icon:             var(--color-icon-neutral-dark);
+    --widget-action-hover-bg:  var(--color-surface-neutral-default);
+
     --hc-bg:            var(--color-surface-neutral-white);
     --hc-text-label:    var(--color-text-subtitle);
     --hc-text-value:    var(--color-text-title);
@@ -1090,6 +1162,14 @@
     --color-surface-success-more-subtle:  #e5fdf8;                 /* Surface/Success/More Subtle lt */
     --color-border-success-lighter:       #009978;                 /* Border/Success/Lighter (static)*/
     --color-surface-purple-more-subtle:   #f3e9fd;                 /* Surface/Purple/More Subtle lt  */
+    --color-surface-success-default:      #00a07e;                 /* Surface/Success/Default        */
+    --color-surface-alert-default:        #ed6c02;                 /* Surface/Alert/Default          */
+    --color-surface-error-default:        #e05252;                 /* Surface/Error/Default          */
+    --color-surface-yellow-default:       #f59e0b;                 /* Surface/Yellow/Default         */
+    --color-surface-alert-more-subtle:    #FFF4E5;                 /* Surface/Alert/More Subtle lt   */
+    --color-surface-error-more-subtle:    #FEF5F5;                 /* Surface/Error/More Subtle lt   */
+    --color-surface-yellow-more-subtle:   #FFFAF0;                 /* Surface/Yellow/More Subtle lt  */
+    --pb-radius:                          2px;                     /* Progress Bar / Radius-XS       */
     --color-surface-neutral-default:      #f2f2f2;                 /* Surface/Neutral/Default light  */
     --color-surface-neutral-emphasis:     #d9d9d9;                 /* Surface/Neutral/Emphasis light */
     --slide-out-shadow:                   -24px -24px 60px 0px rgba(0,0,0,0.08);
@@ -1124,7 +1204,12 @@
     --color-button-primary-text-default:  #ffffff;   /* Button/Primary/Text/Default   */
     --color-button-primary-text-disabled: #f2f2f2;   /* Button/Primary/Text/Disabled  */
     --color-icon-neutral-light:           #ffffff;   /* Icon/Neutral/Light            */
+    --color-icon-neutral-dark:            rgba(92,92,92,1.00);   /* Icon/Neutral/Dark light */
     --color-icon-neutral-black:           #2a2a2a;   /* Icon/Neutral/Black            */
+    /* ── Header component tokens ──────────────────────────────────── */
+    --header-title:      var(--color-text-title);   /* Page title                     */
+    --header-desc:       var(--color-text-body);    /* Description subtitle           */
+    --header-back-icon:  var(--color-icon-neutral-dark);  /* Back arrow button         */
     --color-surface-purple-default:       #7b27ed;   /* Surface/Purple/Default        */
     --color-surface-purple-darker:        #2c075c;   /* Surface/Purple/Darker light   */
     --color-surface-purple-lighter:       #cfa7f9;   /* Surface/Purple/Lighter        */
@@ -1138,6 +1223,80 @@
     --chip-secondary-text-disabled:       #bababa;
     --chip-secondary-bg-hover:            #f2f2f2;
     --chip-secondary-bg-disabled:         #fafafa;
+    /* ── Switch Tab — canonical tokens (DS node 4591:349) ──────────────────── */
+    --color-surface-primary-more-subtle:  #f6f9ff;                  /* Surface/Primary/More Subtle    */
+    --st-bg:            var(--color-surface-neutral-white);          /* Container BG — white on light  */
+    --st-shadow:        8px 8px 16px 0px rgba(0, 0, 0, 0.08);       /* Elevation-5                    */
+    --st-active-bg:     var(--color-surface-primary-more-subtle);    /* #f6f9ff — blue tint on white   */
+    --st-active-text:   var(--primary);                              /* Text/Link = #2173ff            */
+    --st-text:          var(--foreground);                           /* #1a1a1a dark text on white     */
+    --st-item-radius:   4px;                                         /* Radius/Radius-S item           */
+    /* ── Skeleton — component tokens (DS node 5992:6760) ───────────────── */
+    --skeleton-base:    var(--color-surface-neutral-default);        /* #f2f2f2 light                  */
+    --skeleton-shimmer: rgba(217, 217, 217, 0.8);                    /* Surface/Neutral/Emphasis light */
+    /* ── Spinner — component tokens (DS node 7185:3933) ────────────────── */
+    --spinner-primary-fill:      var(--primary);                           /* Surface/Primary/Default light  */
+    --spinner-primary-track:     var(--color-surface-primary-subtle);      /* #E9F1FF light                  */
+    --spinner-success-fill:      var(--color-surface-success-default);     /* #00a07e light                  */
+    --spinner-success-track:     var(--color-surface-success-more-subtle); /* #e5fdf8 light                  */
+    --spinner-alert-fill:        var(--color-surface-alert-default);       /* #ed6c02 light                  */
+    --spinner-alert-track:       var(--color-surface-alert-more-subtle);   /* #FFF4E5 light                  */
+    --spinner-error-fill:        var(--color-surface-error-default);       /* #e05252 light                  */
+    --spinner-error-track:       var(--color-surface-error-more-subtle);   /* #FEF5F5 light                  */
+    --spinner-informative-fill:  var(--color-surface-light-blue-default);  /* #00b5d9 light                  */
+    --spinner-informative-track: var(--color-surface-light-blue-subtle);   /* #E5F8FF light                  */
+    --spinner-bw-fill:           var(--color-icon-neutral-black);          /* #2a2a2a on light               */
+    --spinner-bw-track:          rgba(0,0,0,0.08);                         /* subtle dark track on light     */
+    --stepper-icon-default:      #3F3F46;                                  /* Icon/Neutral/Dark light        */
+    --stepper-label-active:      #2a2a2a;                                  /* Text/Subtitle light            */
+    --stepper-connector:         #bababa;                                  /* Icon/Neutral/Disabled light    */
+    /* ── Elevation / Shadow scale ──────────────────────────────────────── */
+    /* Each level maps to a specific UI role — never skip levels */
+    --shadow-elevation-1: 0 1px 4px rgba(0,0,0,0.06);                                              /* Micro — toggles, focused chips        */
+    --shadow-elevation-2: 0 2px 8px rgba(0,0,0,0.10);                                              /* Low — card rest, subtle panels        */
+    --shadow-elevation-3: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);                /* Mid — dropdowns, menus, select        */
+    --shadow-elevation-4: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);                /* High — modals, large panels, topbar   */
+    --shadow-elevation-5: 8px 8px 16px rgba(0,0,0,0.08);                                           /* Float — diagonal (SwitchTab)          */
+  }
+
+  @keyframes skeleton-shimmer {
+    from { background-position: -200% 0; }
+    to   { background-position:  200% 0; }
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--skeleton-base) 0%,
+      var(--skeleton-shimmer) 50%,
+      var(--skeleton-base) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer {
+      animation: none;
+      background: var(--skeleton-base);
+    }
+  }
+
+  @keyframes spinner-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  .spinner-base {
+    border-radius: 50%;
+    border-style: solid;
+    display: inline-block;
+    flex-shrink: 0;
+    animation: spinner-spin 0.7s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner-base { animation: none; opacity: 0.6; }
   }
 
   html {
