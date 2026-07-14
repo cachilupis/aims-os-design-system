@@ -140,21 +140,69 @@ Each PM prototype lives in its own file in `src/screens/`. App.tsx only gets a r
 ```
 src/screens/[pm-name]-[feature].tsx
 ```
-Export a single default React component. Import DS components from `@/components/ui/`.
+Export a single default React component.
 
-**Step 2 — Register in App.tsx** (the only change to App.tsx):
+**Step 2 — ALWAYS wrap the screen in `ScreenLayout`** (mandatory — no exceptions):
+
 ```tsx
-// At the top of App.tsx, in PROTOTYPE_PAGES:
-import { MyScreen } from "./screens/pm-juan-dashboard"
+import { ScreenLayout }    from "@/components/layouts/screen-layout"
+import { ListViewSection } from "@/components/layouts/list-view-section"
+import type { SidebarItem } from "@/components/ui/sidebar"
+
+const SIDEBAR_ITEMS: SidebarItem[] = [
+  { id: "ai-workers", label: "AI Workers", icon: "Bot" },
+  // ... other app sections
+]
+
+export default function MyScreen() {
+  return (
+    <ScreenLayout
+      workspaceName="Tenant Name"
+      userName="PM Name"
+      userEmail="pm@company.com"
+      sidebarItems={SIDEBAR_ITEMS}
+      activeSidebarId="ai-workers"
+      header={(isScrolled) => (
+        <Header
+          size={isScrolled ? "compress" : "size-l"}
+          title="Page Title"
+          description="Page description."
+          primaryAction={<Button variant="main" size="sm">New Item</Button>}
+        />
+      )}
+    >
+      {/* Filters + entity list + pagination */}
+      <ListViewSection items={pagedItems} filterSlots={...} ... />
+    </ScreenLayout>
+  )
+}
+```
+
+`ScreenLayout` bakes in the DS-spec layout values so they can't drift:
+- Horizontal margin: **32px** (L Desktop 1440px — DS standard baseline, confirmed in all pattern previews)
+- Content padding: **8px top · 32px sides · 64px bottom**
+- Sidebar: collapsed by default (56px)
+- Header zone: outside the scrollable area — stays visible when the list scrolls
+- Scroll detection: `isScrolled` fires at `scrollTop > 16px` (matches Header compress threshold)
+
+`ListViewSection` handles Filters + filter dropdown + EntityList + Pagination with no extra padding (the parent already provides it). Key rules for ListViewSection:
+- Pass `currentPage`, `totalItems`, `itemsPerPage`, `onPageChange` to get the DS `<Pagination>` component — it auto-hides when `totalItems ≤ itemsPerPage`
+- Set `showPreview={false}` and wire your own `SlideOut` outside `ListViewSection` when you need custom detail content
+- Set `showPreview={true}` for a quick default preview without custom content
+
+**Step 3 — Register in App.tsx** (the only change to App.tsx):
+```tsx
+import MyScreen from "./screens/pm-juan-dashboard"
 
 { id: "proto-juan-dashboard", label: "Dashboard — Juan", description: "Adoption metrics view", author: "Juan", component: MyScreen },
 ```
 
-That's it. The screen appears in the "Prototypes" sidebar group automatically.
+The screen appears in the "Prototypes" sidebar group and opens full-screen (no DS library shell).
 
 **Rules:**
-- Screen files: only `var(--token)` colors, only `src/components/ui/` components.
+- Screen files: only `var(--token)` colors, only `src/components/ui/` and `src/components/layouts/` components.
 - App.tsx: only the import + registry entry. No new functions, no new routes.
+- NEVER hardcode pixel values for padding or spacing — use ScreenLayout and let it handle margins.
 - Validate with `npx tsc -b --noEmit` before marking complete.
 - Never push to production without Michael's visual sign-off on localhost first.
 

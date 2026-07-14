@@ -1,33 +1,37 @@
 /**
  * ListViewSection — AIMS OS DS Layout Component
  *
- * Encapsulates the canonical Filters + Chips + EntityList + Pagination pattern.
- * Drop this into any list view page to get consistent behavior:
- *   - Dropdown aligned to center of clicked filter slot
- *   - Optional nav chips below filters (24px spacing per DS spec)
- *   - 12px gap between entity cards
- *   - Eye (preview) button on every item opens a SlideOut
- *   - Pagination strip with row count
+ * The Filters + EntityList + Pagination block for list view screens.
+ * Always use inside ScreenLayout — horizontal padding (32px) is provided by
+ * the parent, so children here carry no extra padding.
  *
  * Usage:
  *   <ListViewSection
- *     items={MY_ITEMS}
+ *     items={pagedItems}
  *     filterSlots={[
- *       { placeholder: "Status",   value: status ?? undefined, onOpen: () => setOpenSlot("Status"),   onRemove: () => setStatus(null) },
- *       { placeholder: "Category", value: cat    ?? undefined, onOpen: () => setOpenSlot("Category"), onRemove: () => setCat(null)    },
+ *       { placeholder: "Status",   value: status ?? undefined, onOpen: () => setOpen("Status"),   onRemove: () => setStatus(null) },
+ *       { placeholder: "Category", value: cat    ?? undefined, onOpen: () => setOpen("Category"), onRemove: () => setCat(null)    },
  *     ]}
  *     filterOptions={{ Status: ["Active", "Running", "Draft"], Category: ["CX", "Analytics"] }}
  *     onFilterSelect={(slot, value) => { if (slot === "Status") setStatus(value); else setCat(value) }}
+ *     openSlot={openSlot}
+ *     onOpenSlotChange={setOpenSlot}
+ *     currentPage={page}
+ *     totalItems={filtered.length}
+ *     itemsPerPage={pageSize}
+ *     onPageChange={setPage}
+ *     onItemsPerPageChange={n => { setPageSize(n); setPage(1) }}
  *   />
  */
 
-import { useState, useRef } from "react"
+import { useRef, useState } from "react"
+import * as LucideIcons from "lucide-react"
 import { Filters } from "@/components/ui/filters"
+import { Pagination } from "@/components/ui/pagination"
 import { SlideOut } from "@/components/ui/slide-out"
 import { EntityList } from "@/components/ui/entity-list"
 import { CardContainer } from "@/components/ui/card-container"
 import { Chip } from "@/components/ui/chip"
-import * as LucideIcons from "lucide-react"
 import type { EntityListItemData } from "@/components/ui/entity-list"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -44,35 +48,41 @@ export interface NavChip {
 }
 
 export interface ListViewSectionProps {
-  // Items to render in the entity list
+  // Entity items to render
   items: EntityListItemData[]
 
-  // Filters bar
+  // ── Filters bar ──────────────────────────────────────────────────────────
   searchPlaceholder?: string
   filterSlots?: FilterSlot[]
   filterOptions?: Record<string, string[]>
   onFilterSelect?: (slot: string, value: string) => void
+  /** Controlled open-slot name (or null). Must pair with onOpenSlotChange. */
   openSlot?: string | null
   onOpenSlotChange?: (slot: string | null) => void
   showAllFilters?: boolean
   onAllFiltersClick?: () => void
   showViewToggle?: boolean
 
-  // Navigation chips (rendered below filters, 24px gap per DS spec)
+  // ── Nav chips (optional — 24px below Filters per DS spec) ────────────────
   chips?: NavChip[]
   selectedChip?: string
   onChipSelect?: (chip: string) => void
 
-  // Pagination
-  showPagination?: boolean
-  totalCount?: number
-  pageSize?: number
+  // ── Pagination (DS Pagination component) ─────────────────────────────────
+  currentPage?: number
+  totalItems?: number
+  itemsPerPage?: number
+  onPageChange?: (page: number) => void
+  onItemsPerPageChange?: (n: number) => void
+  rowsPerPageOptions?: number[]
 
-  // Item preview SlideOut — enabled by default
+  // ── Built-in item preview SlideOut (optional) ────────────────────────────
+  /** When true, appends an Eye button to each item and opens a default SlideOut.
+   *  Set to false (default) when the screen provides its own custom SlideOut. */
   showPreview?: boolean
 
-  // Padding around the section (default 0 32px)
-  paddingH?: number
+  /** Empty state label when items array is empty */
+  emptyLabel?: string
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -91,30 +101,32 @@ export function ListViewSection({
   chips = [],
   selectedChip,
   onChipSelect,
-  showPagination = false,
-  totalCount,
-  pageSize = 10,
-  showPreview = true,
-  paddingH = 32,
+  currentPage,
+  totalItems,
+  itemsPerPage = 10,
+  onPageChange,
+  onItemsPerPageChange,
+  rowsPerPageOptions,
+  showPreview = false,
+  emptyLabel = "No items match these filters.",
 }: ListViewSectionProps) {
-  const px = paddingH
 
-  // Uncontrolled mode: manage openSlot internally when no external handler
+  // Uncontrolled open-slot when no external controller is provided
   const [internalOpenSlot, setInternalOpenSlot] = useState<string | null>(null)
-  const openSlot  = controlledOpenSlot !== undefined ? controlledOpenSlot : internalOpenSlot
-  const setSlot   = (s: string | null) => { setInternalOpenSlot(s); onOpenSlotChange?.(s) }
+  const openSlot = controlledOpenSlot !== undefined ? controlledOpenSlot : internalOpenSlot
+  const setSlot  = (s: string | null) => { setInternalOpenSlot(s); onOpenSlotChange?.(s) }
 
-  // Dropdown anchor — center of the clicked filter button
+  // Dropdown anchor — centered below the clicked filter button
   const [dropdownAnchor, setDropdownAnchor] = useState<{ left: number; top: number } | null>(null)
 
-  // Item preview SlideOut
+  // Built-in item preview SlideOut
   const [slideoutItemId, setSlideoutItemId] = useState<string | null>(null)
   const previewItem = items.find(i => i.id === slideoutItemId)
 
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Items with Eye button appended
-  const itemsWithPreview: EntityListItemData[] = showPreview
+  // Append Eye button to each item when showPreview is enabled
+  const visibleItems: EntityListItemData[] = showPreview
     ? items.map(item => ({
         ...item,
         actions: [
@@ -129,21 +141,27 @@ export function ListViewSection({
       }))
     : items
 
+  const showPagination =
+    currentPage !== undefined &&
+    totalItems  !== undefined &&
+    onPageChange !== undefined &&
+    totalItems > itemsPerPage
+
   return (
     <>
       {/* ── Filters bar ── */}
       <div
-        className="shrink-0"
-        style={{ padding: `12px ${px}px 0` }}
+        ref={containerRef as React.RefObject<HTMLDivElement>}
         onClickCapture={(e: React.MouseEvent) => {
-          const btn = (e.target as HTMLElement).closest("button")
-          const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+          const btn  = (e.target as HTMLElement).closest("button")
           const left = btn
             ? btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2
             : e.clientX
-          setDropdownAnchor({ left, top: containerRect.bottom })
+          setDropdownAnchor({
+            left,
+            top: (e.currentTarget as HTMLElement).getBoundingClientRect().bottom,
+          })
         }}
-        ref={containerRef as React.RefObject<HTMLDivElement>}
       >
         <Filters
           showSearch
@@ -152,14 +170,14 @@ export function ListViewSection({
           showAllFilters={showAllFilters}
           onAllFiltersClick={onAllFiltersClick}
           showViewToggle={showViewToggle}
+          showSort={false}
         />
       </div>
 
-      {/* ── Filter dropdown — fixed, centered below slot ── */}
+      {/* ── Filter dropdown — fixed, centered below the clicked slot ── */}
       {openSlot !== null && dropdownAnchor !== null && (() => {
-        const opts    = filterOptions[openSlot] ?? []
-        const curSlot = filterSlots.find(s => s.placeholder === openSlot)
-        const curVal  = curSlot?.value
+        const opts   = filterOptions[openSlot] ?? []
+        const curVal = filterSlots.find(s => s.placeholder === openSlot)?.value
         return (
           <>
             <div
@@ -170,16 +188,16 @@ export function ListViewSection({
             <div
               className="flex flex-col overflow-hidden"
               style={{
-                position:  "fixed",
-                left:      dropdownAnchor.left,
-                top:       dropdownAnchor.top + 4,
-                transform: "translateX(-50%)",
-                zIndex:    10001,
-                background: "var(--surface)",
-                border:     "0.5px solid var(--field-border)",
+                position:     "fixed",
+                left:         dropdownAnchor.left,
+                top:          dropdownAnchor.top + 4,
+                transform:    "translateX(-50%)",
+                zIndex:       10001,
+                background:   "var(--surface)",
+                border:       "0.5px solid var(--field-border)",
                 borderRadius: 8,
-                minWidth:   200,
-                boxShadow:  "0 4px 24px 0 rgba(0,0,0,0.16), 0 1px 4px 0 rgba(0,0,0,0.08)",
+                minWidth:     200,
+                boxShadow:    "var(--shadow-elevation-3)",
               }}
             >
               <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
@@ -192,7 +210,7 @@ export function ListViewSection({
                 return (
                   <button
                     key={opt}
-                    className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full"
+                    className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full transition-colors"
                     style={{
                       background: isSel ? "var(--color-surface-primary-subtle)" : "transparent",
                       color:      isSel ? "var(--primary)" : "var(--foreground)",
@@ -213,12 +231,9 @@ export function ListViewSection({
         )
       })()}
 
-      {/* ── Navigation chips — 24px below filters per DS spec ── */}
+      {/* ── Nav chips — 24px below Filters per DS spec ── */}
       {chips.length > 0 && (
-        <div
-          className="shrink-0 flex items-center gap-[6px] flex-wrap"
-          style={{ padding: `24px ${px}px 0` }}
-        >
+        <div className="flex items-center gap-[6px] flex-wrap mt-[24px]">
           {chips.map(chip => (
             <Chip
               key={chip.label}
@@ -232,53 +247,40 @@ export function ListViewSection({
         </div>
       )}
 
-      {/* ── Entity list — 12px gap between cards per DS spec ── */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: `12px ${px}px 0` }}>
-        <div className="flex flex-col gap-[12px]">
-          {itemsWithPreview.map(item => (
-            <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
-              <EntityList items={[item]} />
-            </CardContainer>
-          ))}
-        </div>
+      {/* ── Entity list — 24px below Filters, 12px gap between cards ── */}
+      <div className="flex flex-col gap-[12px] mt-[24px]">
+        {visibleItems.length > 0
+          ? visibleItems.map(item => (
+              <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+                <EntityList items={[item]} />
+              </CardContainer>
+            ))
+          : (
+              <div
+                className="flex items-center justify-center"
+                style={{ padding: "40px 0", color: "var(--field-supporting)", fontSize: 13 }}
+              >
+                {emptyLabel}
+              </div>
+            )
+        }
       </div>
 
-      {/* ── Pagination strip ── */}
+      {/* ── Pagination — 16px below list, only when totalItems > itemsPerPage ── */}
       {showPagination && (
-        <div
-          className="flex items-center justify-between shrink-0"
-          style={{ padding: "10px 32px", borderTop: "0.5px solid var(--field-border)", background: "var(--canvas)" }}
-        >
-          <div className="flex items-center gap-[8px]">
-            <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Rows per page:</span>
-            <div
-              className="flex items-center gap-[4px]"
-              style={{ padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--field-border)", background: "var(--canvas)", fontSize: 12, color: "var(--foreground)" }}
-            >
-              {pageSize} <LucideIcons.ChevronDown size={11} />
-            </div>
-          </div>
-          <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>
-            1–{Math.min(pageSize, totalCount ?? items.length)} of {totalCount ?? items.length} items
-          </span>
-          <div className="flex gap-[6px]">
-            <button
-              className="h-[28px] px-[10px] rounded-[6px] text-[12px] font-medium"
-              style={{ background: "var(--muted)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}
-            >
-              ‹ Previous
-            </button>
-            <button
-              className="h-[28px] px-[10px] rounded-[6px] text-[12px] font-medium"
-              style={{ background: "var(--muted)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}
-            >
-              Next ›
-            </button>
-          </div>
+        <div className="mt-[16px]">
+          <Pagination
+            currentPage={currentPage!}
+            totalItems={totalItems!}
+            itemsPerPage={itemsPerPage}
+            onPageChange={onPageChange!}
+            onItemsPerPageChange={onItemsPerPageChange}
+            rowsPerPageOptions={rowsPerPageOptions}
+          />
         </div>
       )}
 
-      {/* ── Item preview SlideOut ── */}
+      {/* ── Built-in item preview SlideOut ── */}
       {showPreview && (
         <SlideOut
           open={slideoutItemId !== null}
@@ -287,33 +289,29 @@ export function ListViewSection({
           subtitle={previewItem?.description ?? ""}
           type="with-variants"
           size="m"
+          showTabs={false}
+          showSearchBar={false}
+          showChips={false}
+          showCta={false}
         >
           {previewItem && (
-            <div className="flex flex-col gap-[20px] p-[24px]">
-              <div className="flex flex-col gap-[8px]">
-                <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>Status</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>{previewItem.state?.label ?? "—"}</span>
-              </div>
-              {previewItem.aiInsight && (
-                <div className="flex flex-col gap-[8px]">
-                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>AI Summary</span>
-                  <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
-                    {Array.isArray(previewItem.aiInsight.detail)
-                      ? previewItem.aiInsight.detail.join(" ")
-                      : previewItem.aiInsight.detail}
-                  </p>
-                </div>
-              )}
-              {previewItem.secondaryMeta && previewItem.secondaryMeta.length > 0 && (
-                <div className="flex flex-col gap-[8px]">
-                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>Meta</span>
-                  <div className="flex flex-col gap-[4px]">
-                    {previewItem.secondaryMeta.map((m, i) => (
-                      <span key={i} style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{m.label}</span>
-                    ))}
+            <div className="flex flex-col gap-[8px] p-[24px]">
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>
+                Status
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>
+                {previewItem.state?.label ?? "—"}
+              </span>
+              {previewItem.secondaryMeta && previewItem.secondaryMeta.map((m, i) => (
+                <div key={i} style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 12, marginTop: 4 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", marginBottom: 4 }}>
+                    {m.label?.split(":")[0] ?? ""}
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--foreground)" }}>
+                    {m.label?.split(":")[1]?.trim() ?? m.label}
                   </div>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </SlideOut>
