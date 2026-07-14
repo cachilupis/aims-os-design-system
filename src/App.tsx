@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, Fragment, useRef, useLayoutEffect, type CSSProperties } from "react"
 import * as LucideIcons from "lucide-react"
+import PMJuanAIWorkersScreen from "./screens/pm-juan-ai-workers"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -107,8 +108,7 @@ const ExternalIcon = () => (
 //   2. Add an entry below:    { id: "proto-my-screen", label: "My Screen", description: "...", author: "PM Name", component: MyScreen }
 //
 const PROTOTYPE_PAGES: { id: string; label: string; description: string; author: string; component: React.FC }[] = [
-  // Example (uncomment to see it appear in the sidebar):
-  // { id: "proto-example", label: "Example Screen", description: "A sample PM prototype", author: "PM Name", component: () => <div className="p-8 text-[var(--foreground)]">Your screen renders here.</div> },
+  { id: "proto-juan-ai-workers", label: "AI Workers — Juan", description: "Tenant admin list view: Status/Category filters, Publish/Edit actions, Eye preview, pagination", author: "Juan", component: PMJuanAIWorkersScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
@@ -25464,10 +25464,15 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
 }) {
   const [collapsed, setCollapsed] = useState(false)
 
-  const allSections = useMemo(() => [
-    ...NAV_SECTIONS,
-    ...PROTOTYPE_PAGES.map(p => ({ id: p.id, label: p.label, group: "Prototypes", description: p.description })),
-  ], [])
+  const allSections = useMemo(() => {
+    const overviewItems = NAV_SECTIONS.filter(s => s.group === "Overview")
+    const restItems     = NAV_SECTIONS.filter(s => s.group !== "Overview")
+    return [
+      ...overviewItems,
+      ...PROTOTYPE_PAGES.map(p => ({ id: p.id, label: p.label, group: "Prototypes", description: p.description })),
+      ...restItems,
+    ]
+  }, [])
 
   const filtered = useMemo(
     () => allSections.filter(s => s.label.toLowerCase().includes(search.toLowerCase()) || s.description.toLowerCase().includes(search.toLowerCase())),
@@ -25586,7 +25591,7 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
         )}
         {Object.entries(groups).map(([group, items]) => (
           <div key={group} className="flex flex-col gap-[2px]">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] px-[8px] py-[4px]">{group}</p>
+            <p className={["text-[10px] font-semibold uppercase tracking-widest px-[8px] py-[4px]", group === "Prototypes" ? "text-[var(--primary)]" : "text-[var(--field-supporting)]"].join(" ")}>{group}</p>
             {items.map(item => (
               <button key={item.id} onClick={() => onSelect(item.id)}
                 className={["w-full text-left px-[10px] py-[7px] rounded-md text-[13px] transition-colors",
@@ -27188,6 +27193,9 @@ export default function App() {
     ? "radial-gradient(ellipse 900px 700px at -5% -5%, rgba(33,115,255,0.13), transparent), radial-gradient(ellipse 800px 600px at 105% 105%, rgba(9,226,171,0.09), transparent), var(--canvas)"
     : "radial-gradient(ellipse 1200px 900px at -8% -8%, rgba(33,115,255,0.24), transparent), radial-gradient(ellipse 1000px 750px at 108% 108%, rgba(9,226,171,0.18), transparent), radial-gradient(ellipse 700px 500px at 50% 100%, rgba(33,115,255,0.08), transparent), var(--canvas)"
 
+  const activeProto = PROTOTYPE_PAGES.find(p => p.id === active)
+  const ActiveProtoComponent = activeProto?.component
+
   return (
     <div className={`${theme} flex h-screen overflow-hidden text-[var(--foreground)]`} style={{ background: canvasBg }}>
       <AppNav
@@ -27258,6 +27266,26 @@ export default function App() {
 
       {specModal && (
         <SpecPanel spec={getSpec(specModal)} onClose={() => setSpecModal(null)} />
+      )}
+
+      {/* Full-screen prototype overlay — renders on top of DS shell, no sidebar */}
+      {activeProto && ActiveProtoComponent && (
+        <div className={`${theme} fixed inset-0`} style={{ zIndex: 9998, background: canvasBg }}>
+          <ActiveProtoComponent key={activeProto.id} />
+          <button
+            onClick={() => setActive("home")}
+            className="fixed top-[16px] left-[16px] flex items-center gap-[8px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-medium transition-opacity hover:opacity-70"
+            style={{
+              zIndex: 9999,
+              background: "var(--surface)",
+              border: "1px solid var(--field-border)",
+              color: "var(--foreground)",
+              boxShadow: "var(--shadow-elevation-2)",
+            }}
+          >
+            ← DS Library
+          </button>
+        </div>
       )}
     </div>
   )
