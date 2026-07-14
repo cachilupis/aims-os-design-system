@@ -1,9 +1,12 @@
 /**
  * ListViewSection — AIMS OS DS Layout Component
  *
- * The Filters + EntityList + Pagination block for list view screens.
+ * The Filters + EntityList block for list view screens.
  * Always use inside ScreenLayout — horizontal padding (32px) is provided by
  * the parent, so children here carry no extra padding.
+ *
+ * Pagination is handled by ScreenLayout (position: absolute; bottom: 0).
+ * Pass <Pagination ... /> to ScreenLayout's `pagination` prop — not here.
  *
  * Usage:
  *   <ListViewSection
@@ -16,18 +19,12 @@
  *     onFilterSelect={(slot, value) => { if (slot === "Status") setStatus(value); else setCat(value) }}
  *     openSlot={openSlot}
  *     onOpenSlotChange={setOpenSlot}
- *     currentPage={page}
- *     totalItems={filtered.length}
- *     itemsPerPage={pageSize}
- *     onPageChange={setPage}
- *     onItemsPerPageChange={n => { setPageSize(n); setPage(1) }}
  *   />
  */
 
 import { useRef, useState } from "react"
 import * as LucideIcons from "lucide-react"
 import { Filters } from "@/components/ui/filters"
-import { Pagination } from "@/components/ui/pagination"
 import { SlideOut } from "@/components/ui/slide-out"
 import { EntityList } from "@/components/ui/entity-list"
 import { CardContainer } from "@/components/ui/card-container"
@@ -68,14 +65,6 @@ export interface ListViewSectionProps {
   selectedChip?: string
   onChipSelect?: (chip: string) => void
 
-  // ── Pagination (DS Pagination component) ─────────────────────────────────
-  currentPage?: number
-  totalItems?: number
-  itemsPerPage?: number
-  onPageChange?: (page: number) => void
-  onItemsPerPageChange?: (n: number) => void
-  rowsPerPageOptions?: number[]
-
   // ── Built-in item preview SlideOut (optional) ────────────────────────────
   /** When true, appends an Eye button to each item and opens a default SlideOut.
    *  Set to false (default) when the screen provides its own custom SlideOut. */
@@ -101,12 +90,6 @@ export function ListViewSection({
   chips = [],
   selectedChip,
   onChipSelect,
-  currentPage,
-  totalItems,
-  itemsPerPage = 10,
-  onPageChange,
-  onItemsPerPageChange,
-  rowsPerPageOptions,
   showPreview = false,
   emptyLabel = "No items match these filters.",
 }: ListViewSectionProps) {
@@ -140,12 +123,6 @@ export function ListViewSection({
         ],
       }))
     : items
-
-  const showPagination =
-    currentPage !== undefined &&
-    totalItems  !== undefined &&
-    onPageChange !== undefined &&
-    totalItems > itemsPerPage
 
   return (
     <>
@@ -265,20 +242,6 @@ export function ListViewSection({
             )
         }
       </div>
-
-      {/* ── Pagination — 16px below list, only when totalItems > itemsPerPage ── */}
-      {showPagination && (
-        <div className="mt-[16px]">
-          <Pagination
-            currentPage={currentPage!}
-            totalItems={totalItems!}
-            itemsPerPage={itemsPerPage}
-            onPageChange={onPageChange!}
-            onItemsPerPageChange={onItemsPerPageChange}
-            rowsPerPageOptions={rowsPerPageOptions}
-          />
-        </div>
-      )}
 
       {/* ── Built-in item preview SlideOut ── */}
       {showPreview && (

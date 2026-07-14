@@ -13,6 +13,8 @@ import type { SidebarItem } from "@/components/ui/sidebar"
 //   Sidebar:           collapsed by default (56px)
 //   Header zone:       outside scrollable area — stays visible on scroll
 //   Scroll trigger:    isScrolled = scrollTop > 16px (matches Header compress threshold)
+//   Pagination:        position: absolute; bottom: 0 — floats over the list
+//                      Source: PatternListViewPage full-preview (App.tsx line ~9570)
 //
 // Usage:
 //   <ScreenLayout
@@ -21,6 +23,11 @@ import type { SidebarItem } from "@/components/ui/sidebar"
 //     header={(isScrolled) => (
 //       <Header size={isScrolled ? "compress" : "size-l"} title="AI Workers" ... />
 //     )}
+//     pagination={
+//       filtered.length > pageSize
+//         ? <Pagination currentPage={page} totalItems={filtered.length} ... />
+//         : undefined
+//     }
 //   >
 //     <ListViewSection items={...} filterSlots={...} ... />
 //   </ScreenLayout>
@@ -45,11 +52,26 @@ export interface ScreenLayoutProps {
    */
   header: (isScrolled: boolean) => ReactNode
   /**
-   * Scrollable content: Filters, entity cards, Pagination.
+   * Scrollable content: Filters + entity cards. No Pagination here.
    * Rendered with DS-spec L-desktop padding: 8px top · 32px sides · 64px bottom.
+   * The 64px bottom leaves space for the floating Pagination bar.
    * Do NOT add extra horizontal padding to children — it is already applied here.
    */
   children: ReactNode
+  /**
+   * Optional Pagination — rendered with position: absolute; bottom: 0 so it
+   * floats over the list (content scrolls behind the glass bar).
+   * Pass <Pagination ... /> directly; ScreenLayout handles the positioning.
+   * Omit when there is only one page of results.
+   *
+   * @example
+   * pagination={
+   *   filtered.length > pageSize
+   *     ? <Pagination currentPage={page} totalItems={filtered.length} itemsPerPage={pageSize} onPageChange={setPage} />
+   *     : undefined
+   * }
+   */
+  pagination?: ReactNode
 }
 
 export function ScreenLayout({
@@ -60,6 +82,7 @@ export function ScreenLayout({
   activeSidebarId,
   header,
   children,
+  pagination,
 }: ScreenLayoutProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
@@ -90,21 +113,30 @@ export function ScreenLayout({
 
         {/* Main column */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Header zone — NOT inside the scroll container.
-              Stays visible when the list below scrolls. */}
+          {/* Header zone — outside the scroll container, stays visible on scroll */}
           <div className="shrink-0">
             {header(isScrolled)}
           </div>
 
-          {/* Scrollable content area
-              DS spec L desktop (1440px): 8px top · 32px sides · 64px bottom
-              Source: PatternListViewPage full-preview (App.tsx line ~9547) */}
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto"
-            style={{ padding: "8px 32px 64px" }}
-          >
-            {children}
+          {/* Content area — relative so Pagination can float at the bottom */}
+          <div className="flex-1 relative overflow-hidden">
+
+            {/* Scrollable list — 64px bottom padding leaves room for floating Pagination */}
+            <div
+              ref={scrollRef}
+              className="h-full overflow-y-auto"
+              style={{ padding: "8px 32px 64px" }}
+            >
+              {children}
+            </div>
+
+            {/* Pagination floats over the list — content scrolls behind it */}
+            {pagination && (
+              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+                {pagination}
+              </div>
+            )}
+
           </div>
         </div>
       </div>

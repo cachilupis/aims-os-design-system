@@ -3955,80 +3955,115 @@ function HomePage() {
             <div className="rounded-md px-[16px] py-[12px] flex items-start gap-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
               <span style={{ fontSize: 18, lineHeight: 1 }}>📋</span>
               <div>
-                <p className="text-[13px] font-semibold text-[var(--foreground)]">This tab is for Product Managers and for Michael (Product Design).</p>
-                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px] leading-[1.5]">It documents the full pipeline: how PMs set up and use the repository, what happens automatically when something is missing from the DS, and how Michael receives and audits each delivery.</p>
+                <p className="text-[13px] font-semibold text-[var(--foreground)]">Este tab es para Product Managers y para Michael (Product Design).</p>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px] leading-[1.5]">Documenta el flujo completo: cómo los PMs generan pantallas funcionales usando los componentes reales del Design System — con Claude Code, desde este mismo repo React, sin necesitar conocimientos de código.</p>
               </div>
             </div>
 
-            {/* ── Section 1: PM Setup ── */}
-            <DocSection title="Part 1 — PM: One-time setup (done once, never again)">
+            {/* ── Architecture visual ── */}
+            <DocSection title="Cómo funciona el sistema">
               <Prose>
-                Each PM clones the Design System repository to their local machine once. From that point on, the folder is permanent — there is nothing to reinstall or re-download.
+                Los PMs trabajan directamente en este repo React. Claude Code lee el archivo <code>CLAUDE.md</code> que ya está en la raíz del repo — que documenta exactamente qué componentes existen, cómo usarlos, y qué patrones aplicar. El PM describe la pantalla que necesita, Claude genera el archivo <code>.tsx</code> con los componentes reales, y el resultado aparece en el browser en tiempo real. No hay CSS aproximado, no hay drift — son los mismos componentes que verá desarrollo.
+              </Prose>
+
+              {/* Flow diagram */}
+              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Arquitectura</span>
+                </div>
+                <div className="px-[16px] py-[16px] flex flex-col gap-[12px]">
+                  {/* Row 1 */}
+                  <div className="flex items-center gap-[10px] flex-wrap">
+                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)", color: "var(--primary)" }}>
+                      src/components/ui/
+                    </div>
+                    <div style={{ color: "var(--field-supporting)", fontSize: 13 }}>←</div>
+                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
+                      Componentes reales (React + Tailwind)
+                    </div>
+                  </div>
+                  {/* Vertical connector */}
+                  <div className="ml-[80px]" style={{ borderLeft: "1.5px dashed var(--field-border)", height: 16 }} />
+                  {/* Row 2 */}
+                  <div className="flex items-center gap-[10px] flex-wrap">
+                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
+                      PM describe pantalla
+                    </div>
+                    <div style={{ color: "var(--field-supporting)", fontSize: 13 }}>→</div>
+                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
+                      Claude genera src/screens/pm-[nombre].tsx
+                    </div>
+                    <div style={{ color: "var(--field-supporting)", fontSize: 13 }}>→</div>
+                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)", color: "var(--foreground)" }}>
+                      Aparece en Prototypes (sidebar)
+                    </div>
+                  </div>
+                  <p className="text-[11px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                    Claude Code usa el CLAUDE.md de este repo para saber exactamente qué componentes importar, qué patrones aplicar, y qué reglas respetar.
+                  </p>
+                </div>
+              </div>
+
+              {/* Why this approach */}
+              <div className="rounded-md px-[16px] py-[12px] flex items-start gap-[12px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Por qué este enfoque es source-of-truth</p>
+                  <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                    Otros enfoques (CSS estático, HTML snippets) son fotografías del DS que se desactualizan. Este repo es el DS. Cuando Michael actualiza un componente en <code style={{ fontSize: 11 }}>src/components/ui/</code>, todos los prototipos existentes lo reflejan automáticamente en el siguiente <code style={{ fontSize: 11 }}>git pull</code> — sin que el PM tenga que tocar nada del código.
+                  </p>
+                </div>
+              </div>
+
+              {/* Where PMs visualize */}
+              <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[12px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>¿Desde dónde se ven los prototipos?</p>
+                <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                  En <code style={{ fontSize: 11 }}>localhost:5173</code> mientras el servidor de desarrollo esté corriendo. Los prototipos aparecen en el grupo <strong>Prototypes</strong> del sidebar izquierdo. Para compartir con stakeholders que no tienen el repo, se necesita un deploy — Vercel o Netlify son las opciones recomendadas (tarea pendiente).
+                </p>
+              </div>
+            </DocSection>
+
+            <Divider />
+
+            {/* ── Section 1: PM Setup ── */}
+            <DocSection title="Part 1 — PM: Setup inicial (una sola vez, ~45 min)">
+              <Prose>
+                Solo se necesita hacer esto una vez. Michael debe agregar al PM como collaborator en el repo antes de empezar.
               </Prose>
 
               <div className="flex flex-col gap-[18px]">
-                <NumberedStep n={1} title="Install prerequisites (if not already installed)">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">You need Node.js, Git, and Claude Code on your machine. If you already have them, skip to step 2.</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal</span>
-                      </div>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`# Check if you have them (each should print a version number)
-node -v
-git -v
+                <NumberedStep n={1} title="Michael agrega al PM como collaborator">
+                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">En GitHub: <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>cachilupis/aims-os-design-system</code> → Settings → Collaborators → Add people → ingresar el email o usuario de GitHub del PM. El PM recibirá un email de invitación.</p>
+                </NumberedStep>
 
-# Install Claude Code (if not installed)
-npm install -g @anthropic-ai/claude-code`}
-                      </pre>
-                    </div>
+                <NumberedStep n={2} title="Instalar Node.js">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Descargar <strong>Node.js LTS</strong> desde <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>nodejs.org</code>. Es un instalador gráfico — siguiente, siguiente, instalar. No requiere configuración adicional. Solo se instala una vez.</p>
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={2} title="Clone the repository">
+                <NumberedStep n={3} title="Instalar Claude Code">
                   <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Open your Terminal app and run this command. It creates a folder called <code className="px-[5px] py-[1px] rounded text-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>aims-os-ds</code> on your machine.</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal — run once</span>
-                      </div>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`git clone https://github.com/cachilupis/aims-os-design-system.git aims-os-ds
-cd aims-os-ds
-npm install`}
-                      </pre>
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Abrir la terminal y ejecutar:</p>
+                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[12px] font-mono" style={{ color: "var(--field-supporting)" }}>npm install -g @anthropic-ai/claude-code</p>
                     </div>
+                    <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Luego iniciar sesión con la cuenta de Anthropic: ejecutar <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>claude</code> y seguir el flujo de autenticación.</p>
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={3} title="Open with Claude Code">
+                <NumberedStep n={4} title="Clonar el repo e instalar dependencias">
                   <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Every time you want to prototype, navigate to the folder and open Claude Code.</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal — every session</span>
-                      </div>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`cd ~/aims-os-ds   # navigate to the folder
-claude            # opens Claude Code in this directory`}
-                      </pre>
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">En la terminal (o GitHub Desktop → File → Clone Repository):</p>
+                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
+                        git clone https://github.com/cachilupis/aims-os-design-system<br/>
+                        cd aims-os-design-system<br/>
+                        npm install
+                      </p>
                     </div>
-                    <p className="text-[12px] text-[var(--field-supporting)]">Alternatively: open the Claude Code desktop app → click "Open project" → select the <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>aims-os-ds</code> folder.</p>
-                  </div>
-                </NumberedStep>
-
-                <NumberedStep n={4} title="Get updates when Design adds new components">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">When Michael adds a new component to the library, you pull the changes with one command.</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal — when notified by Design</span>
-                      </div>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`cd ~/aims-os-ds
-git pull`}
-                      </pre>
+                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
+                      <p className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}><code style={{ fontSize: 11 }}>npm install</code> solo se corre una vez (o después de un <code style={{ fontSize: 11 }}>git pull</code> que cambie package.json). Instala todas las dependencias del proyecto.</p>
                     </div>
                   </div>
                 </NumberedStep>
@@ -4038,283 +4073,147 @@ git pull`}
             <Divider />
 
             {/* ── Section 2: Day-to-day ── */}
-            <DocSection title="Part 2 — PM: Day-to-day prototyping">
+            <DocSection title="Part 2 — PM: Flujo día a día">
               <Prose>
-                Once the setup is done, the daily workflow is straightforward. You describe what you need and Claude assembles the screen using real Design System components.
+                Dos terminales abiertas: una corre el servidor, la otra corre Claude. El PM solo escribe en lenguaje natural — Claude hace el resto.
               </Prose>
 
               <div className="flex flex-col gap-[18px]">
-                <NumberedStep n={1} title="Open Claude Code in the repository folder">
-                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Always open Claude Code pointing to the <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>aims-os-ds</code> folder — not from a random directory. This is what gives Claude access to the DS components and tokens.</p>
+                <NumberedStep n={1} title="Actualizar el repo y levantar el servidor">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">En GitHub Desktop: <strong>Fetch origin → Pull</strong> (para tener los últimos cambios del DS). Luego en la terminal:</p>
+                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
+                        cd ~/Desktop/aims-os-design-system<br/>
+                        npm run dev
+                      </p>
+                    </div>
+                    <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Dejar esta terminal abierta. El servidor queda en <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>localhost:5173</code> — abrir en el browser.</p>
+                  </div>
                 </NumberedStep>
 
-                <NumberedStep n={2} title="Describe the screen or flow you need">
+                <NumberedStep n={2} title="Abrir Claude Code en otra terminal">
                   <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Be specific about the data, actions, and layout. The more context you give, the more faithful the result.</p>
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Abrir una segunda terminal y escribir:</p>
+                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
+                        cd ~/Desktop/aims-os-design-system<br/>
+                        claude
+                      </p>
+                    </div>
+                    <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Claude Code lee el <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>CLAUDE.md</code> automáticamente al iniciar — tiene todo el contexto del DS. No hay nada que copiar ni pegar.</p>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={3} title="Describir la pantalla">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">En Claude Code, describir qué pantalla se necesita. Ser específico con los datos, acciones y estados.</p>
                     <div className="rounded-md px-[14px] py-[11px] flex flex-col gap-[6px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Example prompt</p>
-                      <p className="text-[13px] italic" style={{ color: "var(--foreground)" }}>"Create a list view of workflows for a tenant admin. It should have filters by status (Active, Draft, Running) and category. Each item shows the workflow name, status badge, owner, and two buttons: Publish (primary) and Edit (secondary)."</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Ejemplo de prompt</p>
+                      <p className="text-[13px] italic" style={{ color: "var(--foreground)" }}>"Genera una vista de lista de AI Workers para un admin de tenant. Filtros por status (Active, Draft, Running) y categoría. Cada ítem muestra nombre, badge de status, owner, y dos botones: Publish (primario) y Edit (secundario). Paginación si hay más de 10 resultados. Nómbralo pm-juan-ai-workers."</p>
                     </div>
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={3} title="Claude builds the screen — DS components used automatically">
+                <NumberedStep n={4} title="Claude genera la pantalla">
                   <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Claude reads the Design System rules and composes your screen using existing components from <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/components/ui/</code>. You don't need to specify which component to use — it knows.</p>
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Claude crea el archivo en <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/screens/pm-juan-ai-workers.tsx</code> y lo registra en App.tsx automáticamente. El browser en <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>localhost:5173</code> se actualiza en tiempo real.</p>
                     <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
-                      <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}><strong>If a component you need doesn't exist in the DS yet:</strong> Claude builds it anyway using only DS tokens (colors, spacing, radii) and flags it automatically. You don't need to do anything extra — just keep prototyping.</p>
+                      <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}><strong>La pantalla aparece en el sidebar bajo "Prototypes".</strong> Si algún componente no existe en el DS, Claude lo marca con un comentario <code style={{ fontSize: 11 }}>// DS-GAP:</code> en el código — Michael lo verá para decidir si crearlo oficialmente.</p>
                     </div>
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={4} title="Review in the browser">
+                <NumberedStep n={5} title="Validar visualmente y publicar con GitHub Desktop">
                   <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Run the local dev server to see your prototype live.</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal</span>
-                      </div>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`npm run dev
-# Opens at http://localhost:5173 (may show as 5174 or 5175 if port is busy)`}
-                      </pre>
-                    </div>
-                    <p className="text-[12px] text-[var(--field-supporting)]">Iterate by describing changes to Claude: "Move the filters above the tabs", "Add a pagination bar at the bottom", "Replace the status text with a badge".</p>
-                  </div>
-                </NumberedStep>
-              </div>
-            </DocSection>
-
-            <Divider />
-
-            {/* ── Section 3: Delivery ── */}
-            <DocSection title="Part 3 — PM: Delivering your prototype to Design">
-              <Prose>
-                When your prototype is ready for review, you share your project folder with Michael. No extra steps, no additional documentation — just the folder. Everything Claude built, including any experimental components, is automatically included.
-              </Prose>
-
-              <div className="flex flex-col gap-[18px]">
-                <NumberedStep n={1} title="Share the folder">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Compress the <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>aims-os-ds</code> folder and share it via Slack, email, or Drive. Alternatively, if you use Git:</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal — optional Git delivery</span>
-                      </div>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`git add .
-git commit -m "Prototype: [brief description]"
-git push origin pm/[your-name]-[feature]
-# Share the branch name with Michael`}
-                      </pre>
-                    </div>
-                  </div>
-                </NumberedStep>
-
-                <NumberedStep n={2} title="What Design receives">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Your delivery always contains two relevant things:</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      {[
-                        { path: "src/screens/[your-prototype]/", desc: "The screens you built — fully composed from DS components.", color: "var(--primary)" },
-                        { path: "src/components/experimental/", desc: "Any new components Claude created that don't exist in the DS yet. May be empty if everything came from the DS.", color: "#ed6c02" },
-                      ].map((item, i) => (
-                        <div key={i} className={`flex items-start gap-[12px] px-[14px] py-[12px]`} style={{ borderBottom: i === 0 ? "0.5px solid var(--field-border)" : undefined }}>
-                          <div className="shrink-0 w-[6px] h-[6px] rounded-full mt-[6px]" style={{ background: item.color }} />
-                          <div>
-                            <code className="text-[12px] font-mono" style={{ color: item.color }}>{item.path}</code>
-                            <p className="text-[12px] text-[var(--field-supporting)] mt-[2px]">{item.desc}</p>
-                          </div>
-                        </div>
-                      ))}
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Revisar la pantalla en el browser. Si hay correcciones, pedírselas a Claude en la misma sesión. Cuando esté lista, en GitHub Desktop: <strong>Commit to main → Push origin</strong>.</p>
+                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Regla importante: <strong>Michael valida visualmente antes de cualquier deploy a producción</strong>. Para sharing externo se necesita el deploy (ver Part 4).</p>
                     </div>
                   </div>
                 </NumberedStep>
               </div>
 
               <Callout>
-                You don't need to write a summary of what's new or what components you added. The system handles that automatically — Michael runs one command and sees exactly what needs review.
+                El PM nunca toca los archivos en <code>src/components/ui/</code> ni modifica el sistema de tokens. Solo crea archivos en <code>src/screens/</code>. Claude maneja todo lo demás.
               </Callout>
             </DocSection>
 
             <Divider />
 
-            {/* ── Section 3b: Apply DS to existing prototype ── */}
-            <DocSection title="Part 3b — PM: Applying AIMS OS to an existing prototype">
+            {/* ── Section 3: DS updates ── */}
+            <DocSection title="Part 3 — Cuando el DS se actualiza">
               <Prose>
-                If you already have a rough prototype — an HTML file, a Figma export, or even a description of screens you built elsewhere — you don't need to start over. Claude can migrate it into the DS in one session.
+                Esta es la ventaja de trabajar directamente en el repo. El PM no necesita hacer nada especial — solo un pull.
               </Prose>
 
-              <div className="flex flex-col gap-[18px]">
-                <NumberedStep n={1} title="Open Claude Code in the DS repository folder">
-                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Same as always — Claude needs the DS folder open to have access to the components and tokens.</p>
-                </NumberedStep>
-
-                <NumberedStep n={2} title="Share your existing prototype with Claude">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Three ways to hand it over, depending on what you have:</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      {[
-                        {
-                          label: "You have an HTML file",
-                          instruction: `Copy the HTML into your message, or say:\n"I have this prototype at ~/Desktop/my-prototype.html — migrate it to AIMS OS components."`,
-                        },
-                        {
-                          label: "You have a screenshot or Figma link",
-                          instruction: `Paste the image or URL and say:\n"Recreate this screen using AIMS OS DS components."`,
-                        },
-                        {
-                          label: "You have a description",
-                          instruction: `Describe what screens exist and what they do:\n"I have a 3-screen flow: list → detail panel → confirmation modal. Here's what each shows: [...]"`,
-                        },
-                      ].map((item, i) => (
-                        <div key={i} className="px-[14px] py-[12px]" style={{ borderBottom: i < 2 ? "0.5px solid var(--field-border)" : undefined }}>
-                          <p className="text-[12px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>{item.label}</p>
-                          <pre className="text-[12px] leading-[1.7] whitespace-pre-wrap" style={{ color: "var(--field-supporting)", fontFamily: "inherit" }}>{item.instruction}</pre>
-                        </div>
-                      ))}
+              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                {[
+                  { actor: "Michael", step: "Actualiza un componente en src/components/ui/ — mejora visual, nuevo variant, fix de token", color: "#00a07e" },
+                  { actor: "Michael", step: "Commit + push al repo en GitHub", color: "#00a07e" },
+                  { actor: "PM", step: "GitHub Desktop → Fetch origin → Pull (o la terminal: git pull)", color: "#2173ff" },
+                  { actor: "Auto", step: "El servidor de dev recarga automáticamente — todos los prototipos existentes reflejan el componente actualizado sin cambiar una línea", color: "#9333ea" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < 3 ? "0.5px solid var(--field-border)" : undefined }}>
+                    <div className="shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: item.color + "20", border: `0.5px solid ${item.color}50`, color: item.color }}>
+                      {i + 1}
+                    </div>
+                    <div className="flex items-center gap-[8px] flex-1 flex-wrap pt-[2px]">
+                      <span className="text-[9px] font-bold uppercase tracking-widest px-[6px] py-[1px] rounded-full shrink-0" style={{ background: item.color + "18", color: item.color }}>{item.actor}</span>
+                      <p className="text-[13px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>{item.step}</p>
                     </div>
                   </div>
-                </NumberedStep>
-
-                <NumberedStep n={3} title="Claude rebuilds it with DS components">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Claude maps your existing structure to the correct DS components — replacing any raw HTML buttons with <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>&lt;Button&gt;</code>, tables with <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>&lt;Table&gt;</code>, status labels with <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>&lt;Tag&gt;</code>, and so on. All colors become DS tokens automatically.</p>
-                    <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
-                      <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}><strong>The result is not a reskin.</strong> Claude rebuilds the screen from scratch using DS components — your prototype becomes a proper DS screen with the right spacing, tokens, states, and dark mode support.</p>
-                    </div>
-                  </div>
-                </NumberedStep>
-
-                <NumberedStep n={4} title="Review and iterate">
-                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Open the dev server and compare your original with the rebuilt version. Iterate the same way as a new prototype — describe what to adjust and Claude applies the change.</p>
-                </NumberedStep>
+                ))}
               </div>
-
-              <Callout>
-                The end result of Part 3b is identical to Part 3 — a screen in <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/screens/</code> using DS components, ready for Design to audit.
-              </Callout>
             </DocSection>
 
             <Divider />
 
-            {/* ── Section 4: Michael receiving ── */}
-            <DocSection title="Part 4 — Design: Receiving and auditing a PM delivery">
+            {/* ── Section 4: Sharing / Deploy ── */}
+            <DocSection title="Part 4 — Compartir con stakeholders">
               <Prose>
-                When you receive a prototype from a PM, the audit process is structured and takes minutes, not hours. The experimental folder is the single place to look.
+                Los prototipos viven en localhost por ahora. Para compartir con stakeholders que no tienen el repo, se necesita un deploy.
               </Prose>
 
               <div className="flex flex-col gap-[18px]">
-                <NumberedStep n={1} title="Open the received folder in Claude Code">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">You have two ways to open a PM's project:</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Option A — Terminal (if PM sent a folder/zip)</span>
-                      </div>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`# Unzip if needed, then:
-cd ~/Downloads/aims-os-ds-juan   # or wherever you put it
-claude                           # Claude Code opens in this folder`}
-                      </pre>
-                    </div>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Option B — Git (if PM sent a branch name)</span>
-                      </div>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`cd ~/aims-os-ds                  # your local DS copy
-git fetch
-git checkout pm/juan-dashboard   # the branch name the PM shared
-claude                           # open Claude Code here`}
-                      </pre>
-                    </div>
-                    <p className="text-[12px] text-[var(--field-supporting)]">You can also open Claude Code desktop app → "Open project" → navigate to and select the folder.</p>
-                  </div>
+                <NumberedStep n={1} title="Opción A — Captura o Loom (inmediato, sin setup)">
+                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Grabar un Loom mostrando la pantalla en <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>localhost:5173</code> o tomar capturas de pantalla. Funciona para reviews rápidas con el equipo.</p>
                 </NumberedStep>
 
-                <NumberedStep n={2} title="Run the experimental component audit">
+                <NumberedStep n={2} title="Opción B — Deploy en Vercel (recomendado para sharing real)">
                   <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">One command shows you everything that needs your attention:</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <div className="px-[12px] py-[8px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Terminal</span>
-                      </div>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`grep -rn "DS-GAP" src/components/experimental/`}
-                      </pre>
-                    </div>
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Output example:</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      <pre className="px-[14px] py-[12px] text-[12px] leading-[1.8] overflow-x-auto" style={{ color: "var(--foreground)", background: "var(--canvas)" }}>
-{`experimental/MetricCard.tsx:1:  // DS-GAP: MetricCard — KPI with trend delta. Closest DS component: CardContainer.
-experimental/TenantRing.tsx:1:  // DS-GAP: TenantRing — donut chart per tenant. Closest DS component: none (new pattern).`}
-                      </pre>
-                    </div>
-                    <p className="text-[12px] text-[var(--field-supporting)]">If the command returns nothing, the PM's prototype uses only existing DS components — no design work needed from your side.</p>
-                  </div>
-                </NumberedStep>
-
-                <NumberedStep n={3} title="Decide what to do with each experimental component">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">For each entry in the grep output, open the file and apply one of three decisions:</p>
-                    <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                      {[
-                        {
-                          decision: "Replace with existing DS component",
-                          when: "The PM's component duplicates something already in ui/ — it just wasn't used correctly.",
-                          action: 'Tell Claude to swap it out: "Replace MetricCard with CardContainer using the existing variant X."',
-                          color: "#2173ff",
-                        },
-                        {
-                          decision: "Formalize as a new DS component",
-                          when: "The component fills a genuine gap that will recur across multiple screens.",
-                          action: "Design it in Figma → have Claude tokenize and document it → move to src/components/ui/.",
-                          color: "#00a07e",
-                        },
-                        {
-                          decision: "Keep as one-off for this prototype",
-                          when: "The component is very specific to this screen and unlikely to be reused.",
-                          action: "Leave in experimental/ for this prototype only. Don't promote it.",
-                          color: "#ed6c02",
-                        },
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < 2 ? "0.5px solid var(--field-border)" : undefined }}>
-                          <div className="shrink-0 w-[6px] h-[6px] rounded-full mt-[5px]" style={{ background: item.color }} />
-                          <div className="flex flex-col gap-[4px]">
-                            <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{item.decision}</p>
-                            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}><strong style={{ color: "var(--foreground)" }}>When:</strong> {item.when}</p>
-                            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}><strong style={{ color: "var(--foreground)" }}>Action:</strong> {item.action}</p>
-                          </div>
-                        </div>
-                      ))}
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Conectar el repo a <strong>Vercel</strong> (vercel.com — gratis). Cada push genera una URL pública con el DS completo. Stakeholders acceden desde el browser sin instalar nada.</p>
+                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Setup pendiente. Michael configura Vercel una sola vez — después cada PM puede pushear y la URL se actualiza automáticamente.</p>
                     </div>
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={4} title="Promote to the DS (if applicable)">
-                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">If a component is promoted: design it in Figma using the tokens already identified in the experimental file → Claude moves it to <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/components/ui/</code>, tokenizes it, and documents it in the DS library. All PMs get it on their next <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>git pull</code>.</p>
+                <NumberedStep n={3} title="Administrar muchos prototipos">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">El sidebar agrupa todos los prototipos bajo <strong>Prototypes</strong>. Convención de nombres: <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>pm-[nombre]-[feature].tsx</code> — hace fácil saber quién creó qué. El campo <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>author</code> en App.tsx permite filtrar por PM cuando crezca la lista.</p>
+                  </div>
                 </NumberedStep>
               </div>
             </DocSection>
 
             <Divider />
 
-            {/* ── Section 5: Full pipeline diagram ── */}
-            <DocSection title="Complete pipeline at a glance">
+            {/* ── Section 5: Pipeline diagram ── */}
+            <DocSection title="Pipeline completo de un vistazo">
               <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
                 <div className="px-[16px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>End-to-end flow</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Flujo end-to-end</p>
                 </div>
                 <div className="px-[16px] py-[16px] flex flex-col gap-[0px]">
                   {[
-                    { actor: "PM", step: "Clone repo once → permanent local folder", icon: "1", color: "#2173ff" },
-                    { actor: "PM", step: "Open Claude Code → describe screen → Claude assembles it with DS components", icon: "2", color: "#2173ff" },
-                    { actor: "Auto", step: "If component missing → Claude creates it in experimental/ with DS-GAP comment and DS tokens only", icon: "↓", color: "#9333ea" },
-                    { actor: "PM", step: "Review in browser, iterate with Claude, compress and share the folder with Design", icon: "3", color: "#2173ff" },
-                    { actor: "Design", step: "Open received folder in Claude Code → run grep -rn \"DS-GAP\" → see exactly what's new", icon: "4", color: "#00a07e" },
-                    { actor: "Design", step: "Decide: replace with existing DS component / formalize / keep as one-off", icon: "5", color: "#00a07e" },
-                    { actor: "Design", step: "Formalize in Figma → Claude promotes to ui/ → git pull updates all PMs", icon: "6", color: "#00a07e" },
+                    { actor: "Setup", step: "Michael agrega al PM como collaborator → PM clona repo, npm install, npm run dev (una vez)", icon: "0", color: "#9333ea" },
+                    { actor: "PM", step: "GitHub Desktop pull → abrir terminal → npm run dev + claude", icon: "1", color: "#2173ff" },
+                    { actor: "PM", step: "Describir la pantalla en Claude Code con datos, acciones y estados concretos", icon: "2", color: "#2173ff" },
+                    { actor: "Auto", step: "Claude genera src/screens/pm-[nombre].tsx con componentes reales + lo registra en App.tsx", icon: "↓", color: "#9333ea" },
+                    { actor: "PM", step: "Validar en localhost:5173 → pedir correcciones a Claude si es necesario", icon: "3", color: "#2173ff" },
+                    { actor: "PM", step: "GitHub Desktop: Commit → Push origin", icon: "4", color: "#2173ff" },
+                    { actor: "Design", step: "Michael valida visualmente → aprueba o ajusta. Deploy a Vercel cuando esté listo para compartir.", icon: "5", color: "#00a07e" },
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-[12px] py-[10px]" style={{ borderBottom: i < 6 ? "0.5px solid var(--field-border)" : undefined }}>
                       <div className="shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: item.color + "20", border: `0.5px solid ${item.color}50`, color: item.color }}>
@@ -4331,7 +4230,7 @@ experimental/TenantRing.tsx:1:  // DS-GAP: TenantRing — donut chart per tenant
 
               <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
                 <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
-                  <strong style={{ color: "var(--foreground)" }}>Key principle:</strong> PMs prototype freely without knowledge of the DS internals. Design maintains full control of what enters the official library. The experimental folder is the handoff boundary — nothing in it affects the DS until Design explicitly promotes it.
+                  <strong style={{ color: "var(--foreground)" }}>Principio clave:</strong> Los PMs crean solo en <code>src/screens/</code> — nunca tocan componentes ni tokens. Michael controla el DS. Claude conoce las reglas porque lee el <code>CLAUDE.md</code>. El resultado es consistente con el DS real, sin depender de Michael para cada pantalla.
                 </p>
               </div>
             </DocSection>
@@ -27259,8 +27158,7 @@ export default function App() {
           {active === "icons"           && <IconsPage        openSpec={setSpecModal} />}
           {active === "typography"      && <TypographyPage   openSpec={setSpecModal} />}
           {active === "colors"          && <ColorsPage       openSpec={setSpecModal} />}
-          {/* PM prototypes — rendered from src/screens/ via PROTOTYPE_PAGES registry */}
-          {PROTOTYPE_PAGES.map(p => active === p.id && <p.component key={p.id} />)}
+          {/* PM prototypes render full-screen via the overlay below (no DS shell) — not here, to avoid double-mounting */}
         </div>
       </main>
 

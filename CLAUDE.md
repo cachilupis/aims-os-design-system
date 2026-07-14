@@ -38,7 +38,10 @@ Stack in this exact order:
    - `EntityList` inside `CardContainer` — one card per item, 12px gap
    - `Pagination` — only when `total_results > rows_per_page`
 
+**HighlightCard**: ALWAYS use `style="default"` (or omit the prop entirely — default is neutral). NEVER use colored styles (`primary-bg`, `green-bg`, `orange-bg`, etc.) — those are deprecated. Color differentiation goes only in the `iconName` and `feedbackType` props.
+
 Entity items must include actions in this order: **primary → secondary → tertiary (Eye/preview)**.
+The Eye icon belongs ONLY in the tertiary action (`icon: "Eye"`). Never use `iconName: "Eye"` as the leading icon of an entity item — use a semantic icon (Bot, User, FileText, etc.) that represents the entity type.
 The Eye button always opens a `SlideOut` with item detail.
 
 Use `ListViewSection` from `src/components/layouts/list-view-section.tsx` to get this structure pre-wired.
@@ -60,6 +63,7 @@ Maximum 2 navigation layers:
 - `SwitchTab` — secondary view toggle (How am I viewing?)
 - `Filters` — dataset control (What do I see?)
 
+8px gap between Tabs and the Filter bar (`mb-[8px]` on the Tabs component).
 24px gap between Filters and the first chip/card row. 12px gap between entity cards.
 
 ### Overlays
@@ -170,8 +174,13 @@ export default function MyScreen() {
           primaryAction={<Button variant="main" size="sm">New Item</Button>}
         />
       )}
+      pagination={
+        filtered.length > pageSize
+          ? <Pagination currentPage={page} totalItems={filtered.length} itemsPerPage={pageSize} onPageChange={setPage} />
+          : undefined
+      }
     >
-      {/* Filters + entity list + pagination */}
+      {/* Filters + entity list only — no Pagination here */}
       <ListViewSection items={pagedItems} filterSlots={...} ... />
     </ScreenLayout>
   )
@@ -185,8 +194,8 @@ export default function MyScreen() {
 - Header zone: outside the scrollable area — stays visible when the list scrolls
 - Scroll detection: `isScrolled` fires at `scrollTop > 16px` (matches Header compress threshold)
 
-`ListViewSection` handles Filters + filter dropdown + EntityList + Pagination with no extra padding (the parent already provides it). Key rules for ListViewSection:
-- Pass `currentPage`, `totalItems`, `itemsPerPage`, `onPageChange` to get the DS `<Pagination>` component — it auto-hides when `totalItems ≤ itemsPerPage`
+`ListViewSection` handles Filters + filter dropdown + EntityList only — no Pagination. Key rules:
+- **Pagination lives in `ScreenLayout`** — pass `<Pagination .../>` to ScreenLayout's `pagination` prop, not to ListViewSection
 - Set `showPreview={false}` and wire your own `SlideOut` outside `ListViewSection` when you need custom detail content
 - Set `showPreview={true}` for a quick default preview without custom content
 

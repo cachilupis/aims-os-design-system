@@ -6,7 +6,10 @@ import type { SidebarItem } from "@/components/ui/sidebar"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Tag } from "@/components/ui/tag"
+import { Pagination } from "@/components/ui/pagination"
 import { SlideOut } from "@/components/ui/slide-out"
+import { Table, TableCellAvatar } from "@/components/ui/table"
+import type { TableColumn } from "@/components/ui/table"
 import type { EntityListItemData } from "@/components/ui/entity-list"
 
 // ── PM prototype — Juan · AI Workers list (tenant admin) ──────────────────────
@@ -60,6 +63,79 @@ const FILTER_OPTIONS: Record<string, string[]> = {
   Category: ["Analytics", "CX", "Operations"],
 }
 
+// ── Worker detail — Users + Logs tabs ──────────────────────────────────────────
+
+type WorkerUserRole = "Owner" | "Editor" | "Viewer"
+type WorkerUser = { name: string; email: string; role: WorkerUserRole; lastActive: string }
+
+type LogStatus = "Success" | "Warning" | "Failed"
+type WorkerLog = { id: string; status: LogStatus; startedAt: string; duration: string }
+
+const TEAM_POOL = ["Ana Torres", "Marco Silva", "Elena Ruiz", "David Kim", "Priya Patel", "James Chen", "Sofia Martins", "Liam O'Connor", "Nina Fischer"]
+
+function emailFor(name: string) {
+  return name.toLowerCase().replace(/[^a-z\s]/g, "").trim().split(/\s+/).join(".") + "@acme.com"
+}
+
+const ROLE_TAG_VARIANT: Record<WorkerUserRole, "success" | "informative" | "neutral"> = {
+  Owner:  "success",
+  Editor: "informative",
+  Viewer: "neutral",
+}
+
+function getWorkerUsers(w: Worker): WorkerUser[] {
+  const idx    = WORKERS.findIndex(x => x.id === w.id)
+  const editor = TEAM_POOL[(idx + 1) % TEAM_POOL.length]
+  const viewer = TEAM_POOL[(idx + 4) % TEAM_POOL.length]
+  return [
+    { name: w.owner, email: emailFor(w.owner), role: "Owner",  lastActive: w.lastRun === "—" ? "3d ago" : w.lastRun },
+    { name: editor,  email: emailFor(editor),  role: "Editor", lastActive: "1d ago" },
+    { name: viewer,  email: emailFor(viewer),  role: "Viewer", lastActive: "5d ago" },
+  ]
+}
+
+const LOG_TAG_VARIANT: Record<LogStatus, "success" | "alert" | "error"> = {
+  Success: "success",
+  Warning: "alert",
+  Failed:  "error",
+}
+
+function getWorkerLogs(w: Worker): WorkerLog[] {
+  const idx     = WORKERS.findIndex(x => x.id === w.id)
+  const pattern: LogStatus[] =
+    w.status === "Draft" ? ["Warning", "Success", "Success", "Failed"] :
+    idx % 3 === 0         ? ["Success", "Success", "Failed", "Success"] :
+    idx % 3 === 1         ? ["Success", "Warning", "Success", "Success"] :
+                             ["Success", "Success", "Success", "Warning"]
+  const startedAt = [w.lastRun === "—" ? "2d ago" : w.lastRun, "1d ago", "2d ago", "4d ago"]
+  const duration  = ["3.2s", "2.8s", "0.4s", "3.1s"]
+  return pattern.map((status, i) => ({
+    id: `#RUN-${String(idx + 1).padStart(2, "0")}${i + 1}`,
+    status,
+    startedAt: startedAt[i],
+    duration:  duration[i],
+  }))
+}
+
+const USERS_COLUMNS: TableColumn<WorkerUser>[] = [
+  { key: "name", header: "Name", render: u => (
+    <div className="flex items-center gap-[8px]">
+      <TableCellAvatar name={u.name} size="sm" />
+      <span>{u.name}</span>
+    </div>
+  ) },
+  { key: "email", header: "Email" },
+  { key: "role", header: "Role", render: u => <Tag variant={ROLE_TAG_VARIANT[u.role]} size="sm">{u.role}</Tag> },
+  { key: "lastActive", header: "Last active", align: "right" },
+]
+
+const LOGS_COLUMNS: TableColumn<WorkerLog>[] = [
+  { key: "id", header: "Run" },
+  { key: "status", header: "Status", render: l => <Tag variant={LOG_TAG_VARIANT[l.status]} size="sm">{l.status}</Tag> },
+  { key: "startedAt", header: "Started" },
+  { key: "duration", header: "Duration", align: "right" },
+]
+
 function toEntityItem(w: Worker, onPreview: (id: string) => void): EntityListItemData {
   return {
     id: w.id,
@@ -87,6 +163,9 @@ export default function PMJuanAIWorkersScreen() {
   const [page,     setPage]     = useState(1)
   const [pageSize, setPageSize] = useState(5)
   const [previewId, setPreviewId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState(0)
+
+  const openPreview = (id: string) => { setPreviewId(id); setActiveTab(0) }
 
   const filtered = useMemo(
     () => WORKERS.filter(w =>
@@ -124,9 +203,23 @@ export default function PMJuanAIWorkersScreen() {
           }
         />
       )}
+      pagination={
+        filtered.length > pageSize
+          ? (
+              <Pagination
+                currentPage={page}
+                totalItems={filtered.length}
+                itemsPerPage={pageSize}
+                onPageChange={setPage}
+                onItemsPerPageChange={n => { setPageSize(n); setPage(1) }}
+                rowsPerPageOptions={[5, 10, 25]}
+              />
+            )
+          : undefined
+      }
     >
       <ListViewSection
-        items={paged.map(w => toEntityItem(w, setPreviewId))}
+        items={paged.map(w => toEntityItem(w, openPreview))}
         searchPlaceholder="Search workers..."
         filterSlots={[
           {
@@ -151,16 +244,10 @@ export default function PMJuanAIWorkersScreen() {
         openSlot={openSlot}
         onOpenSlotChange={setOpenSlot}
         showPreview={false}
-        currentPage={page}
-        totalItems={filtered.length}
-        itemsPerPage={pageSize}
-        onPageChange={setPage}
-        onItemsPerPageChange={n => { setPageSize(n); setPage(1) }}
-        rowsPerPageOptions={[5, 10, 25]}
         emptyLabel="No workers match these filters."
       />
 
-      {/* Custom worker detail SlideOut — triggered by the Eye action */}
+      {/* Worker detail SlideOut — triggered by the Eye action. 3 tabs: Overview, Users, Logs */}
       <SlideOut
         open={previewId !== null}
         onClose={() => setPreviewId(null)}
@@ -168,32 +255,63 @@ export default function PMJuanAIWorkersScreen() {
         subtitle={previewWorker ? `${previewWorker.category} · ${previewWorker.status}` : ""}
         type="with-variants"
         size="m"
-        showTabs={false}
+        showStatus={false}
         showSearchBar={false}
         showChips={false}
         showCta={false}
+        showTabs
+        showTab3
+        tabLabels={["Overview", "Users", "Logs"]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       >
         {previewWorker && (
           <div className="flex flex-col gap-[20px] p-[24px]">
-            <Tag variant={STATUS_TAG_VARIANT[previewWorker.status]} size="sm">
-              {previewWorker.status}
-            </Tag>
-            {[
-              ["Category", previewWorker.category],
-              ["Owner",    previewWorker.owner],
-              ["Last run", previewWorker.lastRun],
-            ].map(([label, val]) => (
-              <div key={label} style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 16 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", marginBottom: 4 }}>
-                  {label}
+
+            {activeTab === 0 && (
+              <>
+                <Tag variant={STATUS_TAG_VARIANT[previewWorker.status]} size="sm">
+                  {previewWorker.status}
+                </Tag>
+                {[
+                  ["Category", previewWorker.category],
+                  ["Owner",    previewWorker.owner],
+                  ["Last run", previewWorker.lastRun],
+                ].map(([label, val]) => (
+                  <div key={label} style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 16 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", marginBottom: 4 }}>
+                      {label}
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--foreground)" }}>{val}</div>
+                  </div>
+                ))}
+                <div className="flex gap-[8px] mt-[8px]">
+                  <Button size="sm" variant="secondary" className="flex-1">Edit</Button>
+                  <Button size="sm" className="flex-1">Publish</Button>
                 </div>
-                <div style={{ fontSize: 13, color: "var(--foreground)" }}>{val}</div>
-              </div>
-            ))}
-            <div className="flex gap-[8px] mt-[8px]">
-              <Button size="sm" variant="secondary" className="flex-1">Edit</Button>
-              <Button size="sm" className="flex-1">Publish</Button>
-            </div>
+              </>
+            )}
+
+            {activeTab === 1 && (
+              <Table
+                columns={USERS_COLUMNS}
+                data={getWorkerUsers(previewWorker)}
+                size="sm"
+                emptyTitle="No users yet"
+                emptyDescription="No one has access to this worker yet."
+              />
+            )}
+
+            {activeTab === 2 && (
+              <Table
+                columns={LOGS_COLUMNS}
+                data={getWorkerLogs(previewWorker)}
+                size="sm"
+                emptyTitle="No runs yet"
+                emptyDescription="This worker hasn't run yet."
+              />
+            )}
+
           </div>
         )}
       </SlideOut>
