@@ -99,6 +99,11 @@ type TextareaState = "default" | "error" | "success" | "alert"
 
 type TextareaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> & {
   state?:        TextareaState
+  /**
+   * Floating label above the field.
+   * Desktop PM screens: omit this prop — use placeholder only.
+   * The floating label is valid for mobile/touch only.
+   */
   label?:        string
   supportingText?: string
   /** DS Feedback Characters — shows "current/max" char count at bottom-right */

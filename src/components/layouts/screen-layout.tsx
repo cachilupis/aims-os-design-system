@@ -114,8 +114,23 @@ export function ScreenLayout({
         {/* Main column */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header zone — outside the scroll container, stays visible on scroll */}
-          <div className="shrink-0">
+          <div className="shrink-0 relative">
             {header(isScrolled)}
+            {/* Gradient fade below compressed header — appears on scroll to signal content scrolling behind */}
+            {isScrolled && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: -20,
+                  left: 0,
+                  right: 0,
+                  height: 20,
+                  background: "linear-gradient(to bottom, var(--canvas), transparent)",
+                  pointerEvents: "none",
+                  zIndex: 5,
+                }}
+              />
+            )}
           </div>
 
           {/* Content area — relative so Pagination can float at the bottom */}

@@ -129,7 +129,11 @@ type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & {
   state?: "default" | "error" | "success" | "alert"
   /** DS Size — S=32px, M=40px (default) */
   size?: "sm" | "default"
-  /** Label rendered above the field — DS "Label" boolean */
+  /**
+   * Floating label above the field (DS "Label" boolean).
+   * Desktop PM screens: omit this prop — use placeholder only.
+   * The floating label is valid for mobile/touch only.
+   */
   label?: string
   /** Supporting text rendered below — color changes per state */
   supportingText?: string

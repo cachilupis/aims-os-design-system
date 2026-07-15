@@ -76,6 +76,95 @@ Maximum 2 navigation layers:
 - Scroll == 0 → DEFAULT (full header)
 - Scroll > 16px → COMPRESSED (60px, title + status + CTA)
 - Hover 0–24px from top AND cursor idle 3s → COMPRESSED_WITH_FILTERS
+- `ScreenLayout` renders a `linear-gradient(canvas → transparent)` at the bottom of the header zone when `isScrolled=true` — this is already built into the layout; no extra code needed.
+
+### Overview tabs — always Widget Canvas
+Any tab labelled "Overview" MUST use `WidgetCanvasView` from `src/components/layouts/widget-canvas-view.tsx`.
+**Never use `WidgetCanvasSection` or hand-roll a CSS grid for Overview tabs.**
+
+`WidgetCanvasView` is the interactive version extracted from the DS Live Canvas. It gives PMs:
+- Hover → drag handle visible on the widget
+- Drag-and-drop reordering with FLIP animation
+- Horizontal resize (left/right edge, snaps to 1/2/3 columns)
+- Vertical resize (bottom edge) + collapse (click bottom edge)
+
+```tsx
+import { WidgetCanvasView } from "@/components/layouts/widget-canvas-view"
+import type { CanvasSlot }  from "@/components/layouts/widget-canvas-view"
+import { HighlightIcon }    from "@/components/ui/highlight-icon"
+
+// KpiContent helper — use for every KPI widget slot:
+function KpiContent({ value, feedback, iconName, iconVariant }) {
+  return (
+    <div style={{ padding: "4px 16px 16px" }}>
+      <div className="flex items-center justify-between">
+        <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: "var(--color-text-title)" }}>{value}</span>
+        <HighlightIcon size="lg" variant={iconVariant} iconName={iconName} />
+      </div>
+      <span style={{ fontSize: 12, color: "var(--color-text-subtitle)", marginTop: 6, display: "block" }}>{feedback}</span>
+    </div>
+  )
+}
+
+<WidgetCanvasView
+  initialSlots={[
+    // colSpan: 1 = narrow (1/3), 2 = wide (2/3), 3 = full (3/3)
+    {
+      uid: "total-workers", title: "Total Workers", colSpan: 1,
+      content: <KpiContent value={9} feedback="All categories" iconName="Bot" iconVariant="informative" />,
+    },
+    {
+      uid: "recent-activity", title: "Recent Activity", colSpan: 2, widthClass: "wide",
+      content: (
+        <div style={{ padding: "0 16px 16px" }}>
+          <Table columns={...} data={...} size="sm" />
+        </div>
+      ),
+    },
+    {
+      uid: "timeline", title: "Timeline", colSpan: 3, widthClass: "full",
+      content: <MyTimelineContent />,
+    },
+  ] satisfies CanvasSlot[]}
+/>
+```
+
+Rules:
+- Every slot needs a unique `uid` string — used as React key and drag anchor.
+- `colSpan` drives the initial column span. `widthClass` defaults automatically from `colSpan` if omitted.
+- `content` is rendered INSIDE `WidgetFather`. Pass only the inner content — `WidgetFather` chrome (title, drag handle, resize handles) is added by `WidgetCanvasView`.
+- Do NOT wrap `content` in another `WidgetFather` — that would double the card shell.
+- KPI padding: `"4px 16px 16px"`. Table/feed padding: `"0 16px 16px"`.
+- HighlightIcon variants: `informative` (blue), `success` (green), `neutral` (grey), `alert` (yellow), `error` (red).
+- Reactive values (counts, live rows) in `content` update automatically — the slot array is rebuilt on each render.
+
+### Logs / activity tabs — always Pagination
+Any tab that shows log or run history MUST include a Pagination component.
+
+```tsx
+// Separate pagination state for logs (never share with Workers list state)
+const [logsPage, setLogsPage] = useState(1)
+const [logsPageSize, setLogsPageSize] = useState(10)
+
+// Pass to ScreenLayout's pagination prop, conditional on active tab
+pagination={
+  mainTab === "workers" && filtered.length > pageSize
+    ? <Pagination ... />
+    : mainTab === "logs"
+    ? <Pagination currentPage={logsPage} totalItems={allLogs.length} itemsPerPage={logsPageSize}
+        onPageChange={setLogsPage} onItemsPerPageChange={n => { setLogsPageSize(n); setLogsPage(1) }}
+        rowsPerPageOptions={[10, 25, 50]} />
+    : undefined
+}
+```
+
+Default page size for logs: 10. Options: [10, 25, 50].
+
+### Input and Textarea — no label prop on desktop
+**NEVER** pass the `label` prop to `Input` or `Textarea` in desktop PM screen files (`src/screens/*.tsx`).
+- Use `placeholder` to describe the field — it is the only field hint on desktop.
+- The floating label (absolute-positioned, overlaps the top border) is a mobile/touch convention only.
+- This applies to all form fields in modals, slide-outs, and inline edit flows in any PM prototype.
 
 ### Pagination
 - Show only when `total_results > rows_per_page`.
@@ -212,8 +301,12 @@ The screen appears in the "Prototypes" sidebar group and opens full-screen (no D
 - Screen files: only `var(--token)` colors, only `src/components/ui/` and `src/components/layouts/` components.
 - App.tsx: only the import + registry entry. No new functions, no new routes.
 - NEVER hardcode pixel values for padding or spacing — use ScreenLayout and let it handle margins.
-- Validate with `npx tsc -b --noEmit` before marking complete.
-- Never push to production without Michael's visual sign-off on localhost first.
+
+**Validation checklist — run in this exact order before marking complete:**
+1. `npx tsc -b --noEmit` → 0 errors (catches type mistakes)
+2. Take a browser screenshot of the screen on `localhost:5173` → compare against the DS pattern page for the same pattern. TypeScript passing ≠ screen rendering correctly.
+3. Check every tab of the screen in the screenshot: Overview uses `WidgetCanvasSection`, Workers uses `ListViewSection`, Logs shows `Pagination`.
+4. Never push to production without Michael's visual sign-off on localhost first.
 
 ---
 
