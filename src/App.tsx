@@ -4346,6 +4346,137 @@ function HomePage() {
                 </p>
               </div>
             </DocSection>
+
+            <Divider />
+
+            {/* ── Review scenarios ── */}
+            <DocSection title="When Michael reviews a prototype — 3 scenarios">
+              <Prose>
+                After a PM pushes a prototype, Michael reviews it visually. There are three types of issues he may find, each with a different resolution path.
+              </Prose>
+
+              <div className="flex flex-col gap-[12px]">
+                {[
+                  {
+                    tag: "Case 1",
+                    title: "Error in the prototype",
+                    subtitle: "Wrong token, wrong spacing, wrong variant, misaligned layout",
+                    color: "#e53935",
+                    steps: [
+                      "Michael opens Claude Code in the repo",
+                      'Asks: "Fix [specific issue] in src/screens/pm-[name].tsx"',
+                      "Claude fixes using the correct DS token or component",
+                      "Commit + push — PM sees it on next git pull",
+                    ],
+                    note: "Optional: if the same error keeps appearing, Michael adds a rule to CLAUDE.md so Claude never repeats it.",
+                  },
+                  {
+                    tag: "Case 2",
+                    title: "Component used incorrectly",
+                    subtitle: "The right DS component is there, but applied in the wrong context or with wrong props",
+                    color: "#ed6c02",
+                    steps: [
+                      "Same flow as Case 1 — fix directly in the screen file",
+                      "If it's a recurring pattern: add a usage rule to CLAUDE.md for that component",
+                    ],
+                    note: "The PM doesn't need to do anything — Michael handles all DS corrections.",
+                  },
+                  {
+                    tag: "Case 3",
+                    title: "DS-GAP found",
+                    subtitle: "The PM needed something that doesn't exist in the DS — Claude created it in src/components/experimental/ with a // DS-GAP: comment",
+                    color: "#9333ea",
+                    steps: [
+                      "Michael evaluates: is this a valid DS gap, or can it be solved with existing components?",
+                      "If YES → design the Figma node first → implement in src/components/ui/ with Claude Code → document in App.tsx → delete the experimental version",
+                      "If NO → refactor the PM screen to use composition of existing DS components → delete the experimental version",
+                    ],
+                    note: "The DS-GAP comment is the handoff artifact. Michael decides if it becomes official DS or gets dissolved into composition.",
+                  },
+                ].map((c, i) => (
+                  <div key={i} className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                    <div className="flex items-center gap-[10px] px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                      <span className="text-[9px] font-bold uppercase tracking-widest px-[6px] py-[1px] rounded-full shrink-0" style={{ background: c.color + "18", color: c.color, border: `0.5px solid ${c.color}40` }}>{c.tag}</span>
+                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{c.title}</p>
+                    </div>
+                    <div className="px-[14px] py-[12px] flex flex-col gap-[10px]">
+                      <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{c.subtitle}</p>
+                      <div className="flex flex-col gap-[4px]">
+                        {c.steps.map((s, j) => (
+                          <div key={j} className="flex items-start gap-[8px]">
+                            <div className="shrink-0 w-[16px] h-[16px] rounded-full flex items-center justify-center text-[8px] font-bold mt-[1px]" style={{ background: c.color + "18", color: c.color, border: `0.5px solid ${c.color}40` }}>{j + 1}</div>
+                            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{s}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {c.note && (
+                        <div className="rounded px-[10px] py-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+                          <p className="text-[11px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}><strong style={{ color: "var(--foreground)" }}>Note:</strong> {c.note}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </DocSection>
+
+            <Divider />
+
+            {/* ── FAQ ── */}
+            <DocSection title="Frequently asked questions">
+              <div className="flex flex-col gap-[8px]">
+                {([
+                  {
+                    q: "What is a DS-GAP and what should I do with it?",
+                    a: "A DS-GAP is a component Claude created in src/components/experimental/ because the PM needed something that doesn't exist in the official DS. As a PM you don't need to do anything — just continue prototyping. Michael reviews it and decides if it becomes an official DS component or gets replaced with a composition.",
+                    audience: "PM",
+                  },
+                  {
+                    q: "Michael found an issue in my prototype — do I need to fix it?",
+                    a: "No. Michael fixes it directly in your screen file since he has full repo access. You'll see the correction on your next git pull. If you want to know what changed, check the commit message in GitHub Desktop.",
+                    audience: "PM",
+                  },
+                  {
+                    q: "I need a UI element that doesn't exist in the DS — can I create it?",
+                    a: "Yes, but through Claude Code. Describe what you need and Claude will first try to compose it from existing DS components. If that's genuinely not possible, it creates the element in src/components/experimental/ with a DS-GAP comment — never in src/components/ui/. Always uses var(--token) — never hardcoded colors.",
+                    audience: "PM",
+                  },
+                  {
+                    q: "My prototype looks slightly different from the Figma design — why?",
+                    a: "The DS is the React repo, not Figma. If a Figma component and the React component look different, the React component is the current source of truth — Figma may be slightly behind on visual tweaks. If the difference seems like an actual bug, flag it to Michael.",
+                    audience: "PM",
+                  },
+                  {
+                    q: "Can I copy code from another PM's prototype?",
+                    a: "Yes — it's the same repo, all prototypes are visible. If another screen has a pattern you need, tell Claude which file to reference and it will use the same approach in your screen.",
+                    audience: "PM",
+                  },
+                  {
+                    q: "What happens if I accidentally edit a DS file?",
+                    a: "GitHub will block the merge until Michael reviews and approves — that's what CODEOWNERS does. Nothing is permanently broken. If it happened locally before pushing, you can discard the change in GitHub Desktop: right-click the file → Discard changes.",
+                    audience: "PM",
+                  },
+                  {
+                    q: "When should I use a ModalDialog vs a SlideOut?",
+                    a: "ModalDialog: the user must respond before continuing — destructive actions, confirmations, critical forms. SlideOut: the user can ignore it and keep browsing — details, filters, context panels. Rule of thumb: can the user click outside and nothing breaks? → SlideOut. Must they make a decision first? → Modal.",
+                    audience: "PM",
+                  },
+                  {
+                    q: "How do I know which components are available in the DS?",
+                    a: "Browse this Design System library — every component has its own page with variants, tokens, and usage guidelines. You can also ask Claude directly: 'What component should I use for X?' — it reads CLAUDE.md and knows exactly what exists.",
+                    audience: "PM",
+                  },
+                ] as { q: string; a: string; audience: string }[]).map((item, i) => (
+                  <div key={i} className="rounded-md px-[14px] py-[12px] flex flex-col gap-[6px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                    <div className="flex items-start gap-[8px]">
+                      <span className="text-[9px] font-bold uppercase tracking-widest px-[5px] py-[1px] rounded-full shrink-0 mt-[2px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--primary)" }}>{item.audience}</span>
+                      <p className="text-[13px] font-semibold leading-[1.4]" style={{ color: "var(--foreground)" }}>{item.q}</p>
+                    </div>
+                    <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)", paddingLeft: 38 }}>{item.a}</p>
+                  </div>
+                ))}
+              </div>
+            </DocSection>
           </>
         )}
 

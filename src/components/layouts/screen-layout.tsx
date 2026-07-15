@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
+import { Sparkles, Bell, Settings } from "lucide-react"
 import { Topbar } from "@/components/ui/topbar"
+import type { TopbarAction } from "@/components/ui/topbar"
 import { Sidebar } from "@/components/ui/sidebar"
 import type { SidebarItem } from "@/components/ui/sidebar"
+import { AppBackground } from "@/components/ui/app-background"
+import type { AppBgVariant } from "@/components/ui/app-background"
+
+const DEFAULT_TOPBAR_ACTIONS: TopbarAction[] = [
+  { icon: <Sparkles size={16} />, label: "AI",            variant: "primary" },
+  { icon: <Bell     size={16} />, label: "Notifications" },
+  { icon: <Settings size={16} />, label: "Settings"      },
+]
 
 // ── ScreenLayout ──────────────────────────────────────────────────────────────
 //
@@ -39,6 +49,12 @@ export interface ScreenLayoutProps {
   userName?: string
   /** Topbar user email */
   userEmail?: string
+  /** Topbar company name (right side) */
+  companyName?: string
+  /** Topbar action buttons — defaults to AI + Notifications + Settings */
+  topbarActions?: TopbarAction[]
+  /** AppBackground color variant — defaults to "default" */
+  bgVariant?: AppBgVariant
   /** Left sidebar navigation items */
   sidebarItems: SidebarItem[]
   /** ID of the active sidebar item */
@@ -78,6 +94,9 @@ export function ScreenLayout({
   workspaceName,
   userName,
   userEmail,
+  companyName = "AIMS OS",
+  topbarActions = DEFAULT_TOPBAR_ACTIONS,
+  bgVariant = "default",
   sidebarItems,
   activeSidebarId,
   header,
@@ -97,10 +116,13 @@ export function ScreenLayout({
 
   return (
     <div className="h-screen flex flex-col">
+      <AppBackground variant={bgVariant} />
       <Topbar
         workspaceName={workspaceName}
         userName={userName}
         userEmail={userEmail}
+        companyName={companyName}
+        actions={topbarActions}
       />
 
       <div className="flex flex-1 overflow-hidden">
