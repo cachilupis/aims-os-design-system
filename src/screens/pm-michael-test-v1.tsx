@@ -315,7 +315,7 @@ function toEntityItem(
 
 // ── Worker Detail View ────────────────────────────────────────────────────────
 
-function WorkerDetailView({ worker, onBack }: { worker: Worker; onBack: () => void }) {
+function WorkerDetailViewMichael({ worker, onBack }: { worker: Worker; onBack: () => void }) {
   const [tab,         setTab]         = useState<"overview" | "users" | "logs">("overview")
   const [logsPage,    setLogsPage]    = useState(1)
   const [logsPageSize,setLogsPageSize]= useState(5)
@@ -451,7 +451,7 @@ function WorkerDetailView({ worker, onBack }: { worker: Worker; onBack: () => vo
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
-export default function PMJuanAIWorkersScreen() {
+export default function PMMichaelTestV1Screen() {
   // Workers list state
   const [filterStatus,   setFilterStatus]   = useState<string | null>(null)
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
@@ -542,7 +542,7 @@ export default function PMJuanAIWorkersScreen() {
   // Early return — full-screen Worker detail page
   if (detailWorkerId) {
     const w = WORKERS.find(worker => worker.id === detailWorkerId)
-    if (w) return <WorkerDetailView worker={w} onBack={() => setDetailWorkerId(null)} />
+    if (w) return <WorkerDetailViewMichael worker={w} onBack={() => setDetailWorkerId(null)} />
   }
 
   return (
