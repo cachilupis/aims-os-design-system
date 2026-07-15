@@ -27330,15 +27330,17 @@ export default function App() {
         <SpecPanel spec={getSpec(specModal)} onClose={() => setSpecModal(null)} />
       )}
 
-      {/* Full-screen prototype overlay — renders on top of DS shell, no sidebar */}
+      {/* Full-screen prototype overlay — renders on top of DS shell, no sidebar.
+          z-index must stay BELOW z-50 (Tailwind) so SlideOut portals (createPortal → body, z-50)
+          appear on top of the prototype surface. Back button sits at z-[45] above the overlay. */}
       {activeProto && ActiveProtoComponent && (
-        <div className={`${theme} fixed inset-0`} style={{ zIndex: 9998, background: canvasBg }}>
+        <div className={`${theme} fixed inset-0`} style={{ zIndex: 40, background: canvasBg }}>
           <ActiveProtoComponent key={activeProto.id} />
           <button
             onClick={() => setActive("proto-gallery")}
             className="fixed top-[16px] left-[16px] flex items-center gap-[8px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-medium transition-opacity hover:opacity-70"
             style={{
-              zIndex: 9999,
+              zIndex: 45,
               background: "var(--surface)",
               border: "1px solid var(--field-border)",
               color: "var(--foreground)",
