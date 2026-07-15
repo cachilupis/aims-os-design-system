@@ -63,7 +63,7 @@ const FILTER_OPTIONS: Record<string, string[]> = {
   Category: ["Analytics", "CX", "Operations"],
 }
 
-// ── Worker detail — Users + Logs tabs ──────────────────────────────────────────
+// ── Worker detail — Overview + Users + Logs tabs ───────────────────────────────
 
 type WorkerUserRole = "Owner" | "Editor" | "Viewer"
 type WorkerUser = { name: string; email: string; role: WorkerUserRole; lastActive: string }
@@ -124,17 +124,31 @@ const USERS_COLUMNS: TableColumn<WorkerUser>[] = [
       <span>{u.name}</span>
     </div>
   ) },
-  { key: "email", header: "Email" },
   { key: "role", header: "Role", render: u => <Tag variant={ROLE_TAG_VARIANT[u.role]} size="sm">{u.role}</Tag> },
   { key: "lastActive", header: "Last active", align: "right" },
 ]
 
 const LOGS_COLUMNS: TableColumn<WorkerLog>[] = [
-  { key: "id", header: "Run" },
-  { key: "status", header: "Status", render: l => <Tag variant={LOG_TAG_VARIANT[l.status]} size="sm">{l.status}</Tag> },
+  { key: "id",        header: "Run" },
+  { key: "status",    header: "Status",   render: l => <Tag variant={LOG_TAG_VARIANT[l.status]} size="sm">{l.status}</Tag> },
   { key: "startedAt", header: "Started" },
-  { key: "duration", header: "Duration", align: "right" },
+  { key: "duration",  header: "Duration", align: "right" },
 ]
+
+// ── Overview detail rows ───────────────────────────────────────────────────────
+
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-[4px] py-[12px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+      <span className="text-[10px] font-bold uppercase tracking-[0.07em]" style={{ color: "var(--field-label)" }}>
+        {label}
+      </span>
+      <div className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>
+        {children}
+      </div>
+    </div>
+  )
+}
 
 function toEntityItem(w: Worker, onPreview: (id: string) => void): EntityListItemData {
   return {
@@ -160,10 +174,10 @@ export default function PMJuanAIWorkersScreen() {
   const [filterStatus,   setFilterStatus]   = useState<string | null>(null)
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
   const [openSlot,       setOpenSlot]       = useState<string | null>(null)
-  const [page,     setPage]     = useState(1)
-  const [pageSize, setPageSize] = useState(5)
-  const [previewId, setPreviewId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState(0)
+  const [page,           setPage]           = useState(1)
+  const [pageSize,       setPageSize]       = useState(5)
+  const [previewId,      setPreviewId]      = useState<string | null>(null)
+  const [activeTab,      setActiveTab]      = useState(0)
 
   const openPreview = (id: string) => { setPreviewId(id); setActiveTab(0) }
 
@@ -247,51 +261,46 @@ export default function PMJuanAIWorkersScreen() {
         emptyLabel="No workers match these filters."
       />
 
-      {/* Worker detail SlideOut — triggered by the Eye action. 3 tabs: Overview, Users, Logs */}
+      {/* Worker detail SlideOut — size "s" (420px) for laptop. Eye action triggers it.
+          Tabs: Overview (status + metadata), Users (team access), Logs (run history).
+          CTA footer: Edit (secondary) + Publish (primary) — always visible. */}
       <SlideOut
         open={previewId !== null}
         onClose={() => setPreviewId(null)}
         title={previewWorker?.name ?? "Worker detail"}
         subtitle={previewWorker ? `${previewWorker.category} · ${previewWorker.status}` : ""}
         type="with-variants"
-        size="m"
+        size="s"
         showStatus={false}
         showSearchBar={false}
         showChips={false}
-        showCta={false}
         showTabs
         showTab3
         tabLabels={["Overview", "Users", "Logs"]}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        showCta
+        ctaPrimaryLabel="Publish"
+        ctaSecondaryLabel="Edit"
       >
         {previewWorker && (
-          <div className="flex flex-col gap-[20px] p-[24px]">
+          <div className="flex flex-col">
 
+            {/* ── Overview ── */}
             {activeTab === 0 && (
-              <>
-                <Tag variant={STATUS_TAG_VARIANT[previewWorker.status]} size="sm">
-                  {previewWorker.status}
-                </Tag>
-                {[
-                  ["Category", previewWorker.category],
-                  ["Owner",    previewWorker.owner],
-                  ["Last run", previewWorker.lastRun],
-                ].map(([label, val]) => (
-                  <div key={label} style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 16 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--field-label)", marginBottom: 4 }}>
-                      {label}
-                    </div>
-                    <div style={{ fontSize: 13, color: "var(--foreground)" }}>{val}</div>
-                  </div>
-                ))}
-                <div className="flex gap-[8px] mt-[8px]">
-                  <Button size="sm" variant="secondary" className="flex-1">Edit</Button>
-                  <Button size="sm" className="flex-1">Publish</Button>
-                </div>
-              </>
+              <div className="flex flex-col">
+                <DetailRow label="Status">
+                  <Tag variant={STATUS_TAG_VARIANT[previewWorker.status]} size="sm">
+                    {previewWorker.status}
+                  </Tag>
+                </DetailRow>
+                <DetailRow label="Category">{previewWorker.category}</DetailRow>
+                <DetailRow label="Owner">{previewWorker.owner}</DetailRow>
+                <DetailRow label="Last run">{previewWorker.lastRun === "—" ? "Never" : previewWorker.lastRun}</DetailRow>
+              </div>
             )}
 
+            {/* ── Users ── */}
             {activeTab === 1 && (
               <Table
                 columns={USERS_COLUMNS}
@@ -302,6 +311,7 @@ export default function PMJuanAIWorkersScreen() {
               />
             )}
 
+            {/* ── Logs ── */}
             {activeTab === 2 && (
               <Table
                 columns={LOGS_COLUMNS}
