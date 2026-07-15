@@ -108,7 +108,7 @@ const ExternalIcon = () => (
 //   2. Add an entry below:    { id: "proto-my-screen", label: "My Screen", description: "...", author: "PM Name", component: MyScreen }
 //
 const PROTOTYPE_PAGES: { id: string; label: string; description: string; author: string; component: React.FC }[] = [
-  { id: "proto-juan-ai-workers", label: "AI Workers — Juan", description: "Tenant admin list view: Status/Category filters, Publish/Edit actions, Eye preview, pagination", author: "Juan", component: PMJuanAIWorkersScreen },
+  { id: "proto-juan-ai-workers", label: "AI Workers", description: "Tenant admin list view: Status/Category filters, Publish/Edit actions, Eye → SlideOut (Overview · Users · Logs), pagination", author: "Juan", component: PMJuanAIWorkersScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
@@ -3959,6 +3959,61 @@ function HomePage() {
                 <p className="text-[13px] text-[var(--field-supporting)] mt-[2px] leading-[1.5]">Documenta el flujo completo: cómo los PMs generan pantallas funcionales usando los componentes reales del Design System — con Claude Code, desde este mismo repo React, sin necesitar conocimientos de código.</p>
               </div>
             </div>
+
+            {/* ── Why this approach ── */}
+            <DocSection title="Por qué este enfoque">
+              <Prose>
+                Hay varias formas de que un PM genere vistas — Figma, HTML estático, prompts sin contexto. Esta es la única que produce pantallas que son source-of-truth real para desarrollo.
+              </Prose>
+
+              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                {[
+                  {
+                    label: "Figma",
+                    pro: "Alta fidelidad visual",
+                    con: "El PM no puede generarlo solo — necesita a Michael. Cada pantalla es un Figma manual. No escala.",
+                    ok: false,
+                  },
+                  {
+                    label: "HTML + CSS estático",
+                    pro: "Sin instalar nada — solo Claude.ai",
+                    con: "El CSS es una fotografía del DS de una fecha. Si el DS cambia, los prototipos quedan desactualizados. Tampoco tiene interacciones reales.",
+                    ok: false,
+                  },
+                  {
+                    label: "Claude sin contexto del repo",
+                    pro: "El más fácil de empezar",
+                    con: "Claude inventa los componentes desde cero en cada sesión. El resultado se parece al DS pero no es fiel — colores levemente distintos, spacing incorrecto, patrones inventados.",
+                    ok: false,
+                  },
+                  {
+                    label: "Claude Code + este repo React",
+                    pro: "Componentes reales, tokens reales, patrones correctos",
+                    con: "Requiere setup inicial (~45 min). Después es autónomo.",
+                    ok: true,
+                  },
+                ].map((row, i) => (
+                  <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < 3 ? "0.5px solid var(--field-border)" : undefined }}>
+                    <div className="shrink-0 mt-[1px] w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: row.ok ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", color: row.ok ? "#00a07e" : "#e53935", border: `0.5px solid ${row.ok ? "#00a07e40" : "#e5393540"}` }}>
+                      {row.ok ? "✓" : "✗"}
+                    </div>
+                    <div className="flex flex-col gap-[3px]">
+                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{row.label}</p>
+                      <p className="text-[12px] leading-[1.5]" style={{ color: row.ok ? "#00a07e" : "var(--field-supporting)" }}>{row.ok ? row.pro : row.con}</p>
+                      {row.ok && <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{row.con}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+                <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                  <strong>La diferencia clave:</strong> cuando Claude Code lee el CLAUDE.md de este repo, no está interpretando el DS — está importando los componentes exactos que Development va a usar. Lo que el PM ve en el browser es literalmente el mismo código que irá a producción.
+                </p>
+              </div>
+            </DocSection>
+
+            <Divider />
 
             {/* ── Architecture visual ── */}
             <DocSection title="Cómo funciona el sistema">
@@ -25361,14 +25416,15 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
   search: string; onSearch: (v: string) => void
   isDark: boolean; onToggle: () => void
 }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed,       setCollapsed]       = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
   const allSections = useMemo(() => {
     const overviewItems = NAV_SECTIONS.filter(s => s.group === "Overview")
     const restItems     = NAV_SECTIONS.filter(s => s.group !== "Overview")
     return [
       ...overviewItems,
-      ...PROTOTYPE_PAGES.map(p => ({ id: p.id, label: p.label, group: "Prototypes", description: p.description })),
+      { id: "proto-gallery", label: `PM Screen Gallery${PROTOTYPE_PAGES.length > 0 ? ` (${PROTOTYPE_PAGES.length})` : ""}`, group: "Prototypes", description: `${PROTOTYPE_PAGES.length} pantalla${PROTOTYPE_PAGES.length !== 1 ? "s" : ""} generada${PROTOTYPE_PAGES.length !== 1 ? "s" : ""} por PMs con componentes reales del DS` },
       ...restItems,
     ]
   }, [])
@@ -25488,19 +25544,62 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
         {Object.keys(groups).length === 0 && (
           <p className="text-[12px] text-[var(--field-supporting)] px-[8px] py-[4px]">No results found</p>
         )}
-        {Object.entries(groups).map(([group, items]) => (
-          <div key={group} className="flex flex-col gap-[2px]">
-            <p className={["text-[10px] font-semibold uppercase tracking-widest px-[8px] py-[4px]", group === "Prototypes" ? "text-[var(--primary)]" : "text-[var(--field-supporting)]"].join(" ")}>{group}</p>
-            {items.map(item => (
-              <button key={item.id} onClick={() => onSelect(item.id)}
-                className={["w-full text-left px-[10px] py-[7px] rounded-md text-[13px] transition-colors",
-                  item.id === active ? "bg-[#2173ff1a] text-[#2173ff] font-semibold" : "text-[var(--foreground)] hover:bg-[var(--field-bg)] font-medium",
-                ].join(" ")}>
-                {item.label}
+        {Object.entries(groups).map(([group, items], groupIndex) => {
+          const isGroupCollapsed = collapsedGroups.has(group)
+          const isProto          = group === "Prototypes"
+          const headerColor      = isProto ? "var(--primary)" : "var(--field-supporting)"
+          const isActiveInGroup  = items.some(i => i.id === active)
+          return (
+            <div key={group} style={{ marginTop: groupIndex > 0 ? 8 : 0 }}>
+              {/* Group header — clickable, collapsible */}
+              <button
+                onClick={() => setCollapsedGroups(prev => {
+                  const next = new Set(prev)
+                  if (next.has(group)) next.delete(group); else next.add(group)
+                  return next
+                })}
+                className="w-full flex items-center justify-between rounded-md transition-colors hover:bg-[var(--field-bg)]"
+                style={{ padding: "5px 8px", gap: 4 }}
+              >
+                <div className="flex items-center gap-[6px] min-w-0">
+                  {isActiveInGroup && !isGroupCollapsed && (
+                    <span className="shrink-0 w-[3px] h-[3px] rounded-full" style={{ background: headerColor }} />
+                  )}
+                  <p className="text-[10px] font-semibold uppercase tracking-widest truncate" style={{ color: headerColor }}>
+                    {group}
+                  </p>
+                </div>
+                <LucideIcons.ChevronDown
+                  size={11}
+                  style={{
+                    color: "var(--field-supporting)",
+                    flexShrink: 0,
+                    transform: isGroupCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                    transition: "transform 200ms ease",
+                    opacity: 0.6,
+                  }}
+                />
               </button>
-            ))}
-          </div>
-        ))}
+              {/* Items — hidden when group collapsed */}
+              {!isGroupCollapsed && (
+                <div className="flex flex-col gap-[1px] mt-[2px]">
+                  {items.map(item => (
+                    <button key={item.id} onClick={() => onSelect(item.id)}
+                      className={["w-full text-left rounded-md text-[13px] transition-colors",
+                        item.id === active
+                          ? "bg-[#2173ff1a] text-[#2173ff] font-semibold"
+                          : "text-[var(--foreground)] hover:bg-[var(--field-bg)] font-medium",
+                      ].join(" ")}
+                      style={{ padding: "6px 10px" }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </nav>
 
       {/* Footer — label fades, toggle stays */}
@@ -27060,6 +27159,70 @@ const [open, setOpen] = useState(false)
   )
 }
 
+// ── Prototype Gallery ──────────────────────────────────────────────────────
+
+function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
+  const byAuthor = PROTOTYPE_PAGES.reduce<Record<string, typeof PROTOTYPE_PAGES>>((acc, p) => {
+    if (!acc[p.author]) acc[p.author] = []
+    acc[p.author].push(p)
+    return acc
+  }, {})
+  const authors = Object.keys(byAuthor).sort()
+
+  return (
+    <div className="flex flex-col gap-[32px]">
+      <div>
+        <h1 className="text-[22px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>Prototypes</h1>
+        <p className="text-[14px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+          Pantallas generadas por los PMs con componentes reales del DS. Cada pantalla usa <code className="px-[4px] py-[1px] rounded text-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>ScreenLayout</code> + <code className="px-[4px] py-[1px] rounded text-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>ListViewSection</code> y respeta los tokens del DS.
+        </p>
+      </div>
+
+      {PROTOTYPE_PAGES.length === 0 ? (
+        <div className="rounded-[12px] px-[32px] py-[48px] flex flex-col items-center gap-[12px] text-center" style={{ border: "1px dashed var(--field-border)" }}>
+          <p className="text-[15px] font-medium" style={{ color: "var(--foreground)" }}>No hay prototipos todavía</p>
+          <p className="text-[13px] max-w-[360px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>Los prototipos aparecen aquí cuando un PM genera una pantalla con Claude Code y la registra en <code style={{ fontSize: 12 }}>PROTOTYPE_PAGES</code> en App.tsx.</p>
+        </div>
+      ) : (
+        authors.map(author => (
+          <div key={author} className="flex flex-col gap-[16px]">
+            <div className="flex items-center gap-[10px]">
+              <div className="w-[28px] h-[28px] rounded-full flex items-center justify-center text-[11px] font-bold shrink-0" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--primary)" }}>
+                {author[0].toUpperCase()}
+              </div>
+              <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{author}</p>
+              <span className="text-[11px] px-[6px] py-[1px] rounded-full" style={{ background: "var(--field-bg)", color: "var(--field-supporting)", border: "0.5px solid var(--field-border)" }}>
+                {byAuthor[author].length} {byAuthor[author].length === 1 ? "pantalla" : "pantallas"}
+              </span>
+            </div>
+            <div className="grid gap-[12px]" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
+              {byAuthor[author].map(p => (
+                <div
+                  key={p.id}
+                  className="rounded-[12px] flex flex-col gap-[12px] p-[16px] transition-all"
+                  style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}
+                >
+                  <div className="flex flex-col gap-[4px]">
+                    <p className="text-[13px] font-semibold leading-[1.3]" style={{ color: "var(--foreground)" }}>{p.label}</p>
+                    <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{p.description}</p>
+                  </div>
+                  <button
+                    onClick={() => onOpen(p.id)}
+                    className="w-full py-[7px] rounded-[8px] text-[12px] font-semibold transition-opacity hover:opacity-80"
+                    style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--primary)" }}
+                  >
+                    Abrir pantalla
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  )
+}
+
 // ── App ────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -27106,6 +27269,7 @@ export default function App() {
       <main className="flex-1 overflow-y-auto">
         <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
+          {active === "proto-gallery"   && <PrototypeGalleryPage onOpen={(id) => setActive(id)} />}
           {active === "alert-banner"    && <AlertBannerPage      openSpec={setSpecModal} />}
           {active === "app-background"  && <AppBackgroundPage   openSpec={setSpecModal} />}
           {active === "empty-state"     && <EmptyStatePage   openSpec={setSpecModal} />}
@@ -27171,7 +27335,7 @@ export default function App() {
         <div className={`${theme} fixed inset-0`} style={{ zIndex: 9998, background: canvasBg }}>
           <ActiveProtoComponent key={activeProto.id} />
           <button
-            onClick={() => setActive("home")}
+            onClick={() => setActive("proto-gallery")}
             className="fixed top-[16px] left-[16px] flex items-center gap-[8px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-medium transition-opacity hover:opacity-70"
             style={{
               zIndex: 9999,
@@ -27181,7 +27345,7 @@ export default function App() {
               boxShadow: "var(--shadow-elevation-2)",
             }}
           >
-            ← DS Library
+            ← Prototypes
           </button>
         </div>
       )}
