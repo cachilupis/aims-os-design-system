@@ -577,7 +577,7 @@ export default function PMMichaelTestV1Screen() {
                 rowsPerPageOptions={[5, 10, 25]}
               />
             )
-          : mainTab === "logs"
+          : mainTab === "logs" && allLogs.length > logsPageSize
           ? (
               <Pagination
                 currentPage={logsPage}

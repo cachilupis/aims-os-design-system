@@ -116,7 +116,7 @@ function WidgetCTAFooter({ cta }: { cta: WidgetCTAProps }) {
         background: "var(--primary)",
         border: "none",
         borderRadius: 100,
-        color: "#ffffff",
+        color: "var(--color-button-primary-text-default)",
         fontSize: 12,
         fontWeight: 500,
         cursor: "pointer",

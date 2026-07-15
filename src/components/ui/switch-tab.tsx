@@ -84,7 +84,7 @@ export function SwitchTab({
       ref={listRef}
       role="tablist"
       aria-label={ariaLabel}
-      className={cn("inline-flex items-center p-[8px] rounded-[8px]", className)}
+      className={cn("inline-flex w-fit items-center p-[8px] rounded-[8px]", className)}
       style={{
         background: "var(--st-bg)",
         boxShadow: "var(--st-shadow)",

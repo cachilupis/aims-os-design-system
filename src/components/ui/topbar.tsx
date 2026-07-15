@@ -112,7 +112,7 @@ function TopbarAvatar({
       style={{
         width: size, height: size,
         background:  src ? undefined : "var(--primary)",
-        color:       "#ffffff",
+        color:       "var(--color-button-primary-text-default)",
         fontSize:    size * 0.44, fontWeight: 700, lineHeight: 1,
         boxShadow:   "0 0 0 1px var(--topbar-avatar-ring)",
       }}
@@ -910,7 +910,7 @@ function FiltersCard({
                   style={{
                     padding:    "0 8px",
                     background: active ? "var(--primary)" : "var(--fc-chip-bg)",
-                    color:      active ? "#ffffff"        : "var(--fc-chip-fg)",
+                    color:      active ? "var(--color-button-primary-text-default)" : "var(--fc-chip-fg)",
                     border:     active ? "none" : `1px solid var(--fc-chip-bd)`,
                   }}
                 >
@@ -944,7 +944,7 @@ function FiltersCard({
             padding:    "4px 12px",
             borderRadius: 8,
             background: hasAny ? "var(--primary)" : "var(--primary)",
-            color:      hasAny ? "#ffffff" : "rgba(255,255,255,0.50)",  /* TODO: needs --btn-primary-disabled-* token from Figma */
+            color:      hasAny ? "var(--color-button-primary-text-default)" : "var(--color-button-primary-text-disabled)",
             opacity:    hasAny ? 1 : 0.5,
           }}
         >
@@ -1216,7 +1216,7 @@ export function GlobalSearch({
                 style={{
                   height:     22,
                   background: isActive ? "var(--primary)" : "var(--gs-chip-inactive-bg)",
-                  color:      isActive ? "#ffffff"        : "var(--gs-chip-inactive-fg)",
+                  color:      isActive ? "var(--color-button-primary-text-default)" : "var(--gs-chip-inactive-fg)",
                 }}
               >
                 <f.Icon size={11} strokeWidth={1.75} />
@@ -1456,7 +1456,7 @@ export function TopbarButton({
             boxShadow:    "4px 8px 12px 8px rgba(9,226,171,0.16)",
           }}
         >
-          <span style={{ color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "var(--color-icon-neutral-light)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {icon}
           </span>
           {badge && (

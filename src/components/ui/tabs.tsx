@@ -2,7 +2,7 @@
  * Tabs — AIMS OS DS  · node 856:11281
  *
  * Horizontal tab bar with active indicator and optional leading icon.
- * Sizes: M (default, 14px / px-16 py-10) · S (12px / px-12 py-8)
+ * Sizes: M (default, 14px / px-16 py-8) · S (12px / px-12 py-8)
  *
  * States:
  *   Active   → 2px indicator span (absolute) · --primary color · NO container border
@@ -29,7 +29,7 @@ export interface TabsProps {
   items:      TabItem[]
   activeId:   string
   onChange:   (id: string) => void
-  /** M = default (14 px, py-10 px-16) · S = compact (12 px, py-8 px-12) */
+  /** M = default (14 px, py-8 px-16) · S = compact (12 px, py-8 px-12) */
   size?:      "m" | "s"
   className?: string
 }
@@ -63,7 +63,7 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-1",
               sm
                 ? "gap-[4px] px-[12px] py-[8px] text-[12px]"
-                : "gap-[6px] px-[16px] py-[10px] text-[14px]",
+                : "gap-[6px] px-[16px] py-[8px] text-[14px]",
               isActive
                 ? "text-[var(--primary)]"
                 : "text-[var(--field-supporting)]",
@@ -78,7 +78,7 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
             */}
             {isActive && (
               <span
-                className="absolute left-0 right-0 bottom-[-1px] h-[2px]"
+                className="absolute left-0 right-0 bottom-[0] h-[2px]"
                 style={{ background: "var(--primary)", animation: "tab-indicator-in 180ms ease-out both" }}
               />
             )}

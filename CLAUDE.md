@@ -63,8 +63,8 @@ Maximum 2 navigation layers:
 - `SwitchTab` — secondary view toggle (How am I viewing?)
 - `Filters` — dataset control (What do I see?)
 
-8px gap between Tabs and the Filter bar (`mb-[8px]` on the Tabs component).
-24px gap between Filters and the first chip/card row. 12px gap between entity cards.
+**24px gap between every navigation layer** — Tabs → SwitchTab → Filters → Chips (nav). Confirmed from Figma DS node 14660-136237.
+24px gap from the last nav element to the first entity card. 12px gap between entity cards.
 
 ### Overlays
 - **`ModalDialog`** — user MUST stop (destructive action, confirmation, critical form)
@@ -211,6 +211,16 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 
 ---
 
+## Button hierarchy rules
+
+- `variant="main"` — **header-level CTA only** (the one action in the `Header` component's `primaryAction` prop). Maximum 1 per screen. Examples: "Export", "New Worker", "Create".
+- `variant="primary"` — content-area actions inside cards, widgets, SlideOuts, or table rows. Use when an action is the clear recommended next step within a contained context.
+- **Never repeat `main` more than once per view.** If a widget or card needs a call-to-action, use `primary`, not `main`.
+- **No more than 2 `primary` buttons visible at the same time** in a single scrolled viewport. If more actions compete, demote lower-priority ones to `secondary`.
+- Action order is always: `main` (header) → `primary` → `secondary` → `tertiary`.
+
+---
+
 ## Anti-patterns — never do these
 
 - Hardcoding `#hex` or `rgba(...)` in `.tsx` — use `var(--token)`.
@@ -218,6 +228,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 - Rendering dropdowns inside `overflow: hidden` parents — use fixed positioning to escape.
 - Creating a new button/input/card component when `src/components/ui/` has one.
 - Showing two secondary buttons side by side — order is always primary → secondary → tertiary.
+- Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead.
 - Adding a filter chip before Apply is clicked.
 - Opening a Modal for non-destructive/non-blocking content — use SlideOut instead.
 - Showing a loading indicator for operations under 300ms.

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, Fragment, useRef, useLayoutEffect, type CSSProperties } from "react"
 import * as LucideIcons from "lucide-react"
-import PMMichaelTestV1Screen from "./screens/pm-michael-test-v1"
+import PMMichaelTestV1Screen   from "./screens/pm-michael-test-v1"
+import PMLexHTLWorkQueueScreen from "./screens/pm-lex-htl-work-queue"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -109,6 +110,7 @@ const ExternalIcon = () => (
 //
 const PROTOTYPE_PAGES: { id: string; label: string; description: string; author: string; component: React.FC }[] = [
   { id: "proto-michael-test-v1", label: "AI Workers — Test v1", description: "Initial DS prototype test: Status/Category filters, Publish/Edit actions, Eye → SlideOut (Overview · Users · Logs), context menu, detail view, pagination", author: "Michael", component: PMMichaelTestV1Screen },
+  { id: "proto-lex-htl-work-queue", label: "HTL Work Queue", description: "Human Touch Layer Work Queue — Act Now / Critical / Action / Heads-up severity tiers, multi-studio filter, event detail SlideOut with blast radius, Studio Health overview, activity log", author: "Lex", component: PMLexHTLWorkQueueScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
@@ -2190,13 +2192,13 @@ const TABS_SPEC = {
     { name: "items",     type: "Array",    values: ["TabItem[]"],       default: "required",   note: "id · label · icon? · disabled?" },
     { name: "activeId",  type: "String",   values: ["string"],          default: "required",   note: "ID of the currently selected tab" },
     { name: "onChange",  type: "Function", values: ["(id) => void"],    default: "required",   note: "Called when user clicks a non-disabled tab. Receives tab id." },
-    { name: "size",      type: "Variant",  values: ["m", "s"],          default: "m",          note: "M: 14px / px-16 py-10 — S: 12px / px-12 py-8" },
+    { name: "size",      type: "Variant",  values: ["m", "s"],          default: "m",          note: "M: 14px / px-16 py-8 — S: 12px / px-12 py-8" },
     { name: "className", type: "String",   values: ["string"],          default: "undefined",  note: "Extra Tailwind classes applied to the tablist container" },
   ],
   sizes: [
-    { element: "Tab M",     padding: "10×16px", gap: "6px", radius: "8px", note: "Default · icon 16px · 14px label" },
+    { element: "Tab M",     padding: "8×16px",  gap: "6px", radius: "8px", note: "Default · icon 16px · 14px label" },
     { element: "Tab S",     padding: "8×12px",  gap: "4px", radius: "8px", note: "Compact · icon 14px · 12px label" },
-    { element: "Indicator", padding: "—",       gap: "—",   radius: "0",   note: "2px · active tab only · bottom-[-1px] · abs positioned" },
+    { element: "Indicator", padding: "—",       gap: "—",   radius: "0",   note: "2px · active tab only · bottom-[0] · abs positioned" },
   ],
   typography: [
     { element: "Label M", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
@@ -2911,11 +2913,24 @@ function ExtLink({ href, children }: { href: string; children: React.ReactNode }
   )
 }
 
-function DocSection({ title, children }: { title: string; children: React.ReactNode }) {
+function DocSection({ title, children, collapsible = false, defaultOpen = true }: { title: string; children: React.ReactNode; collapsible?: boolean; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
     <section className="flex flex-col gap-[12px]">
-      <h2 className="text-[18px] font-semibold text-[var(--foreground)]">{title}</h2>
-      {children}
+      {collapsible ? (
+        <button
+          className="flex items-center justify-between w-full text-left"
+          onClick={() => setOpen(v => !v)}
+        >
+          <h2 className="text-[18px] font-semibold text-[var(--foreground)]">{title}</h2>
+          <span style={{ color: "var(--field-supporting)", transition: "transform 200ms", transform: open ? "rotate(0deg)" : "rotate(-90deg)", display: "inline-flex" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </span>
+        </button>
+      ) : (
+        <h2 className="text-[18px] font-semibold text-[var(--foreground)]">{title}</h2>
+      )}
+      {(!collapsible || open) && children}
     </section>
   )
 }
@@ -3455,21 +3470,25 @@ function ProgressTab() {
             <div className="flex items-center gap-[10px]">
               <span className="text-[11px] font-semibold px-[8px] py-[2px] rounded-[4px]"
                 style={{ background: "var(--primary)", color: "var(--color-text-negative)" }}>
-                Milestone 1 — Priority
+                Milestone 1 — Near Complete
               </span>
               <span className="text-[14px] font-semibold text-[var(--foreground)]">
                 Prototype-ready MVP
               </span>
             </div>
-            <span className="text-[22px] font-bold" style={{ color: "var(--primary)" }}>2–4 weeks</span>
+            <div className="flex flex-col items-end gap-[1px]">
+              <span className="text-[22px] font-bold leading-none" style={{ color: "var(--primary)" }}>&lt;1 week</span>
+              <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>3 components remaining</span>
+            </div>
           </div>
           <div className="p-[16px] flex flex-col gap-[10px]" style={{ background: "var(--table-bg)" }}>
             <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">
-              With <strong className="text-[var(--foreground)]">{totalDone} core components</strong> built — including Sidebar, Modal, and Avatar — PMs can already prototype most AIMS OS screens.
-              Adding the remaining 5 components (~13h) completes the MVP prototype kit.
+              With <strong className="text-[var(--foreground)]">{totalDone} core components</strong> built — including Tabs, Pagination, Slide Out, and Filters — and{" "}
+              <strong className="text-[var(--foreground)]">2 screens already live in Prototypes</strong>, the MVP kit is nearly complete.
+              Adding the remaining 3 components (~9h) finishes it.
             </p>
             <div className="flex flex-wrap gap-[6px]">
-              {["Tabs", "Toast", "Breadcrumb", "Radio Button", "Empty State"].map(c => (
+              {["Toast", "Breadcrumb", "Radio Button"].map(c => (
                 <span key={c} className="text-[11px] font-medium px-[8px] py-[2px] rounded-[4px]"
                   style={{ background: "var(--tag-informative-bg)", color: "var(--tag-informative-fg)" }}>
                   {c}
@@ -3961,7 +3980,7 @@ function HomePage() {
             </div>
 
             {/* ── Why this approach ── */}
-            <DocSection title="Why this approach">
+            <DocSection title="Why this approach" collapsible defaultOpen={false}>
               <Prose>
                 There are several ways a PM can generate screens — Figma, static HTML, prompts without context. This is the only one that produces screens that are source-of-truth for development.
               </Prose>
@@ -4016,7 +4035,7 @@ function HomePage() {
             <Divider />
 
             {/* ── Architecture visual ── */}
-            <DocSection title="How the system works">
+            <DocSection title="How the system works" collapsible defaultOpen={false}>
               <Prose>
                 PMs work directly in this React repo. Claude Code reads the <code>CLAUDE.md</code> file already in the root — which documents exactly what components exist, how to use them, and what patterns to apply. The PM describes the screen they need, Claude generates the <code>.tsx</code> file with real components, and the result appears in the browser in real time. No approximate CSS, no drift — the same components development will see.
               </Prose>
@@ -4081,7 +4100,7 @@ function HomePage() {
             <Divider />
 
             {/* ── Part 1: Setup ── */}
-            <DocSection title="Part 1 — Setup (once, ~45 min)">
+            <DocSection title="Part 1 — Setup (once, ~45 min)" collapsible defaultOpen={false}>
               <Prose>
                 This only needs to be done once. Michael must add the PM as a collaborator in the repo before starting.
               </Prose>
@@ -4128,7 +4147,7 @@ function HomePage() {
             <Divider />
 
             {/* ── DS Protection — NEW SECTION ── */}
-            <DocSection title="Design System Protection — What PMs can and cannot edit">
+            <DocSection title="Design System Protection — What PMs can and cannot edit" collapsible defaultOpen={false}>
               <Prose>
                 PMs have write access to the repository, but there is a clear rule: <strong>PMs only create and edit files inside <code>src/screens/</code></strong>. Everything else belongs to Michael and must never be modified by PMs.
               </Prose>
@@ -4173,7 +4192,7 @@ function HomePage() {
             <Divider />
 
             {/* ── Part 2: Day-to-day ── */}
-            <DocSection title="Part 2 — Day-to-day workflow">
+            <DocSection title="Part 2 — Day-to-day workflow" collapsible defaultOpen={false}>
               <Prose>
                 Two terminals open: one runs the server, the other runs Claude. The PM only writes in natural language — Claude does the rest.
               </Prose>
@@ -4242,7 +4261,7 @@ function HomePage() {
             <Divider />
 
             {/* ── Part 3: DS updates ── */}
-            <DocSection title="Part 3 — When the DS updates">
+            <DocSection title="Part 3 — When the DS updates" collapsible defaultOpen={false}>
               <Prose>
                 This is the advantage of working directly in the repo. The PM doesn't need to do anything special — just a pull.
               </Prose>
@@ -4270,7 +4289,7 @@ function HomePage() {
             <Divider />
 
             {/* ── Part 4: Sharing ── */}
-            <DocSection title="Part 4 — Sharing prototypes with stakeholders">
+            <DocSection title="Part 4 — Sharing prototypes with stakeholders" collapsible defaultOpen={false}>
               <Prose>
                 Prototypes are deployed at <strong>aims-os-design-system.vercel.app</strong>. Each prototype has its own direct URL — stakeholders open the screen directly, no navigation required.
               </Prose>
@@ -4311,7 +4330,7 @@ function HomePage() {
             <Divider />
 
             {/* ── Pipeline diagram ── */}
-            <DocSection title="Full pipeline at a glance">
+            <DocSection title="Full pipeline at a glance" collapsible defaultOpen={false}>
               <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
                 <div className="px-[16px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
                   <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>End-to-end flow</p>
@@ -4350,7 +4369,7 @@ function HomePage() {
             <Divider />
 
             {/* ── Review scenarios ── */}
-            <DocSection title="When Michael reviews a prototype — 3 scenarios">
+            <DocSection title="When Michael reviews a prototype — 3 scenarios" collapsible defaultOpen={false}>
               <Prose>
                 After a PM pushes a prototype, Michael reviews it visually. There are three types of issues he may find, each with a different resolution path.
               </Prose>
@@ -4422,8 +4441,64 @@ function HomePage() {
 
             <Divider />
 
+            {/* ── Prototyping Skill ── */}
+            <DocSection title="Prototyping consistency skill — /aims-os-prototyping" collapsible defaultOpen={false}>
+              <Prose>
+                This repo includes a Claude Code slash command that loads the full DS interaction ruleset at the start of any prototyping session. Run it once at the beginning — Claude will enforce every rule automatically for the rest of the session.
+              </Prose>
+
+              {/* How to invoke */}
+              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>How to invoke</span>
+                </div>
+                <div className="px-[16px] py-[14px] flex flex-col gap-[10px]">
+                  <p className="text-[13px]" style={{ color: "var(--field-supporting)" }}>In Claude Code, type this at the start of the session — before describing any screen:</p>
+                  <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                    <p className="text-[13px] font-mono font-semibold" style={{ color: "var(--primary)" }}>/aims-os-prototyping</p>
+                  </div>
+                  <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Claude reads the command file at <code style={{ fontSize: 11 }}>.claude/commands/aims-os-prototyping.md</code> — available automatically to anyone with the repo cloned.</p>
+                </div>
+              </div>
+
+              {/* What it enforces */}
+              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>What the skill enforces</span>
+                </div>
+                <div className="flex flex-col">
+                  {[
+                    { rule: "Interaction completeness", detail: "Every button, filter slot, and chip must be wired — no onClick left undefined. All filters → FiltersSlideout. Chips → state + page reset. Filters → real dropdown." },
+                    { rule: "Correct component pairing", detail: "Maps each use case to the exact DS component: Filters for filter bars, FiltersSlideout for the full panel, SwitchTab for view toggles, SlideOut for item detail — never custom-built equivalents." },
+                    { rule: "Token compliance", detail: "Zero hardcoded hex or rgba in .tsx. Every color must be var(--token). If a token doesn't exist, Claude stops and asks before creating one." },
+                    { rule: "Navigation spacing", detail: "24px between every nav layer (Tabs → SwitchTab → Filters → Chips). 12px between entity cards. Matches the Navigation Depth pattern page." },
+                    { rule: "Pre-delivery checklist", detail: "TypeScript check → screenshot of every tab → verify all handlers → verify no hardcoded colors. In that exact order." },
+                  ].map((item, i, arr) => (
+                    <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--field-border)" : undefined }}>
+                      <div className="shrink-0 w-[6px] h-[6px] rounded-full mt-[6px]" style={{ background: "var(--primary)" }} />
+                      <div className="flex flex-col gap-[2px]">
+                        <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{item.rule}</p>
+                        <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{item.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Why this matters for PMs</p>
+                  <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                    Without this skill, Claude may generate screens where interactive elements look correct but don't respond — an "All filters" button that opens nothing, filter chips that have no dropdown, spacing that differs from the DS standard. The skill prevents these gaps by loading the full ruleset before any code is written. It's the difference between a screen that looks right and one that actually works.
+                  </p>
+                </div>
+              </div>
+            </DocSection>
+
+            <Divider />
+
             {/* ── FAQ ── */}
-            <DocSection title="Frequently asked questions">
+            <DocSection title="Frequently asked questions" collapsible defaultOpen={false}>
               <div className="flex flex-col gap-[8px]">
                 {([
                   {
@@ -9581,7 +9656,7 @@ function PatternListViewPage() {
                     }}>
                     <div
                       className="shrink-0"
-                      style={{ padding: "12px 32px 0" }}
+                      style={{ padding: "24px 32px 0" }}
                       onClickCapture={(e: React.MouseEvent) => {
                         const btn = (e.target as HTMLElement).closest('button')
                         const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -9686,7 +9761,7 @@ function PatternListViewPage() {
 
                     {/* Content area — Pagination floats absolute at bottom */}
                     <div className="flex-1 relative overflow-hidden">
-                      <div ref={mainScrollRef} className="h-full overflow-y-auto" style={{ padding: "8px 32px 64px" }}>
+                      <div ref={mainScrollRef} className="h-full overflow-y-auto" style={{ padding: "24px 32px 64px" }}>
                         <div className="flex flex-col gap-[12px]">
                           {MEMBER_ENTITY_ITEMS
                             .filter(item =>
@@ -10124,7 +10199,7 @@ function PatternFilterPage() {
                         }}
                       >
                         <div
-                          style={{ padding: "12px 32px 0" }}
+                          style={{ padding: "24px 32px 0" }}
                           onClickCapture={(e: React.MouseEvent) => {
                             const btn = (e.target as HTMLElement).closest('button')
                             const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -10165,7 +10240,7 @@ function PatternFilterPage() {
 
                     {/* Layer 3 — Applied filter tags (multi-color, one per category) */}
                     {fpFiltersApplied && (
-                      <div className="flex items-center gap-[6px] flex-wrap" style={{ padding: "8px 32px 6px" }}>
+                      <div className="flex items-center gap-[6px] flex-wrap" style={{ padding: "24px 32px 6px" }}>
                         <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Active:</span>
                         {([
                           { label: "Status",   value: "Published",  tagVariant: "success"  as TagVariant },
@@ -10181,7 +10256,7 @@ function PatternFilterPage() {
                     )}
 
                     {/* Entity list — triple-repeated for scroll room */}
-                    <div style={{ padding: "8px 32px 80px" }}>
+                    <div style={{ padding: "24px 32px 80px" }}>
                       <div className="flex flex-col gap-[12px]">
                         {[...MEMBER_ENTITY_ITEMS, ...MEMBER_ENTITY_ITEMS, ...MEMBER_ENTITY_ITEMS].map((item, idx) => (
                           <CardContainer key={`fp-${item.id}-${idx}`} size="sm" className="!p-0 overflow-hidden">
@@ -10897,7 +10972,7 @@ function PatternHeaderPage() {
                         }}
                       >
                         <div
-                          style={{ padding: "12px 32px 0" }}
+                          style={{ padding: "24px 32px 0" }}
                           onClickCapture={(e: React.MouseEvent) => {
                             const btn = (e.target as HTMLElement).closest('button')
                             const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -11392,7 +11467,7 @@ function PatternNavDepthPage() {
 
                   {/* Layer 2 — SwitchTab (only on All Workers tab, hidden when compressed) */}
                   {stTab === "all" && !ndScrolled && (
-                    <div className="shrink-0 flex items-center gap-[12px]" style={{ padding: "12px 32px 0" }}>
+                    <div className="shrink-0 flex items-center gap-[12px]" style={{ padding: "24px 32px 0" }}>
                       <SwitchTab items={subItems} value={swTab} onChange={setSwTab} size="s" />
                     </div>
                   )}
@@ -11407,7 +11482,7 @@ function PatternNavDepthPage() {
                   }}>
                   <div
                     className="shrink-0"
-                    style={{ padding: "12px 32px 0" }}
+                    style={{ padding: "24px 32px 0" }}
                     onClickCapture={(e: React.MouseEvent) => {
                       const btn = (e.target as HTMLElement).closest('button')
                       const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -11480,7 +11555,7 @@ function PatternNavDepthPage() {
                     )
                   })()}
 
-                  {/* Navigation sub-category chips — BELOW Filters per Figma spec, 24px from filters */}
+                  {/* Navigation chips — Layer 4, 24px below Filters (DS spec: 24px between all nav layers) */}
                   {stTab === "all" && (
                     <div className="shrink-0 flex items-center gap-[6px] flex-wrap" style={{ padding: "24px 32px 12px" }}>
                       {["All", "Analytics", "Operations", "Research", "CX", "Validation"].map(cat => (
@@ -11570,7 +11645,7 @@ function PatternNavDepthPage() {
 
           <PatternCard>
             <SectionLabel>Compact Demo — Layer Structure</SectionLabel>
-            <div className="flex flex-col gap-[8px]">
+            <div className="flex flex-col gap-[24px]">
               <div className="flex flex-col gap-[4px]">
                 <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Layer 1 — Tabs (Where am I?)</span>
                 <Tabs items={mainTabs} activeId={stTab} onChange={setStTab} />
@@ -11585,8 +11660,18 @@ function PatternNavDepthPage() {
                 <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Layer 3 — Filters (What subset?)</span>
                 <Filters showSearch slots={[{ placeholder: "Status" }]} showAllFilters />
               </div>
+              <div className="flex flex-col gap-[4px] pl-[2px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Layer 4 — Chips (deeper nav · 24px below Filters)</span>
+                <div className="flex items-center gap-[6px] flex-wrap">
+                  {["All", "Analytics", "Operations", "Research"].map(cat => (
+                    <Chip key={cat} variant={ndNavChip === cat ? "primary" : "secondary"} size="s" onClick={() => setNdNavChip(cat)}>
+                      {cat}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
               <div className="p-[12px] rounded-[6px] text-[13px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)", color: "var(--field-supporting)" }}>
-                Entity List — {stTab} / {swTab} view
+                Entity List — {stTab} / {swTab} / {ndNavChip}
               </div>
             </div>
           </PatternCard>
@@ -12443,7 +12528,7 @@ function PatternLogsPage() {
 
                   <div
                     className="shrink-0"
-                    style={{ padding: "12px 32px 0" }}
+                    style={{ padding: "24px 32px 0" }}
                     onClickCapture={(e: React.MouseEvent) => {
                       const btn = (e.target as HTMLElement).closest("button")
                       if (!btn) return
@@ -12507,7 +12592,7 @@ function PatternLogsPage() {
                   })()}
 
                   {/* Table — scrollable area */}
-                  <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ padding: "8px 32px" }}>
+                  <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ padding: "24px 32px" }}>
                     <Table
                       columns={logsColumns}
                       data={paginatedLogs}
@@ -25648,15 +25733,25 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
       <div
         className="flex items-center border-b shrink-0"
         style={{
-          padding: collapsed ? "16px 0" : "18px 16px",
+          padding: collapsed ? "14px 0" : "18px 16px",
           justifyContent: collapsed ? "center" : "space-between",
           borderColor: glassBorder,
-          transition: `padding 280ms ${EASE}`,
-          gap: 10,
+          gap: collapsed ? 0 : 10,
+          transition: `padding 280ms ${EASE}, gap 280ms ${EASE}`,
         }}
       >
-        {/* Isotype — always visible */}
-        <div className="flex items-center gap-[10px] min-w-0">
+        {/* Isotype + wordmark — entire block fades out when collapsed */}
+        <div
+          className="flex items-center gap-[10px] min-w-0"
+          style={{
+            maxWidth: collapsed ? 0 : 200,
+            opacity: collapsed ? 0 : 1,
+            overflow: "hidden",
+            transition: collapsed
+              ? `opacity 80ms ease, max-width 180ms ${EASE}`
+              : `opacity 160ms ease 160ms, max-width 220ms ${EASE} 40ms`,
+          }}
+        >
           <svg
             width="26" height="21" viewBox="0 0 234 187" fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -25671,22 +25766,13 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
             </defs>
             <path d="M232.854 166.743L146.1 16.7697C140.025 6.26923 129.146 0 117 0C104.854 0 93.9747 6.26923 87.8998 16.7697L1.14583 166.743C-0.381945 169.385 -0.381945 172.64 1.14583 175.285C2.67361 177.927 5.50109 179.556 8.55665 179.556H51.9318C54.991 179.556 57.8149 177.927 59.3426 175.285L95.307 113.11L123.861 162.472H108.735C105.889 158.003 100.9 155.021 95.2129 155.021C86.3793 155.021 79.1929 162.194 79.1929 171.011C79.1929 179.827 86.3793 187 95.2129 187C100.9 187 105.889 184.019 108.735 179.549H138.682C141.741 179.549 144.565 177.92 146.093 175.278C147.621 172.637 147.621 169.381 146.093 166.736L102.721 91.7583C101.194 89.1169 98.3662 87.4873 95.3106 87.4873C92.2514 87.4873 89.4276 89.1169 87.8998 91.7583L46.9937 162.472H23.3819L102.725 25.3118C105.705 20.1591 111.041 17.0841 117 17.0841C122.959 17.0841 128.295 20.1591 131.275 25.3118L210.618 162.472H187.006L131.177 65.9588C132.35 63.7365 133.02 61.2144 133.02 58.5332C133.02 49.7166 125.834 42.544 117 42.544C108.166 42.544 100.98 49.7166 100.98 58.5332C100.98 67.1295 107.819 74.1467 116.352 74.49L174.657 175.282C176.185 177.923 179.013 179.553 182.068 179.553H225.443C228.503 179.553 231.326 177.923 232.854 175.282C234.382 172.644 234.382 169.388 232.854 166.743Z" fill="url(#aims-nav-grad)" />
           </svg>
-          {/* Wordmark — fades out when collapsed */}
-          <div style={{
-            overflow: "hidden",
-            maxWidth: collapsed ? 0 : 160,
-            opacity: collapsed ? 0 : 1,
-            transition: collapsed
-              ? `opacity 100ms ease, max-width 160ms ${EASE}`
-              : `opacity 160ms ease 140ms, max-width 200ms ${EASE} 60ms`,
-            whiteSpace: "nowrap",
-          }}>
+          <div style={{ whiteSpace: "nowrap" }}>
             <p className="text-[13px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>AIMS OS</p>
             <p className="text-[10px] leading-none mt-[3px]" style={{ color: "var(--field-supporting)" }}>Design System</p>
           </div>
         </div>
 
-        {/* Collapse/expand toggle — same icon set as DS Sidebar */}
+        {/* Collapse/expand toggle */}
         <button
           onClick={() => setCollapsed(c => !c)}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -27350,19 +27436,18 @@ const [open, setOpen] = useState(false)
 // ── Prototype Gallery ──────────────────────────────────────────────────────
 
 function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
-  const byAuthor = PROTOTYPE_PAGES.reduce<Record<string, typeof PROTOTYPE_PAGES>>((acc, p) => {
-    if (!acc[p.author]) acc[p.author] = []
-    acc[p.author].push(p)
-    return acc
-  }, {})
-  const authors = Object.keys(byAuthor).sort()
+  const total = PROTOTYPE_PAGES.length
 
   return (
-    <div className="flex flex-col gap-[32px]">
+    <div className="flex flex-col gap-[24px]">
       <div>
         <h1 className="text-[22px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>Prototypes</h1>
         <p className="text-[14px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
-          Screens generated by PMs using real DS components. Each screen uses <code className="px-[4px] py-[1px] rounded text-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>ScreenLayout</code> + <code className="px-[4px] py-[1px] rounded text-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>ListViewSection</code> and respects DS tokens.
+          {total} {total === 1 ? "screen" : "screens"} generated by PMs using real DS components — built with{" "}
+          <code className="px-[4px] py-[1px] rounded text-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>ScreenLayout</code>
+          {" "}+{" "}
+          <code className="px-[4px] py-[1px] rounded text-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>ListViewSection</code>
+          {" "}and DS tokens.
         </p>
       </div>
 
@@ -27372,40 +27457,34 @@ function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
           <p className="text-[13px] max-w-[360px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>Prototypes appear here once a PM generates a screen with Claude Code and registers it in <code style={{ fontSize: 12 }}>PROTOTYPE_PAGES</code> in App.tsx.</p>
         </div>
       ) : (
-        authors.map(author => (
-          <div key={author} className="flex flex-col gap-[16px]">
-            <div className="flex items-center gap-[10px]">
-              <div className="w-[28px] h-[28px] rounded-full flex items-center justify-center text-[11px] font-bold shrink-0" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--primary)" }}>
-                {author[0].toUpperCase()}
-              </div>
-              <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{author}</p>
-              <span className="text-[11px] px-[6px] py-[1px] rounded-full" style={{ background: "var(--field-bg)", color: "var(--field-supporting)", border: "0.5px solid var(--field-border)" }}>
-                {byAuthor[author].length} {byAuthor[author].length === 1 ? "screen" : "screens"}
-              </span>
-            </div>
-            <div className="grid gap-[12px]" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
-              {byAuthor[author].map(p => (
-                <div
-                  key={p.id}
-                  className="rounded-[12px] flex flex-col gap-[12px] p-[16px] transition-all"
-                  style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}
-                >
-                  <div className="flex flex-col gap-[4px]">
-                    <p className="text-[13px] font-semibold leading-[1.3]" style={{ color: "var(--foreground)" }}>{p.label}</p>
-                    <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{p.description}</p>
-                  </div>
-                  <button
-                    onClick={() => onOpen(p.id)}
-                    className="w-full py-[7px] rounded-[8px] text-[12px] font-semibold transition-opacity hover:opacity-80"
-                    style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--primary)" }}
-                  >
-                    Open screen
-                  </button>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          {PROTOTYPE_PAGES.map(p => {
+            const category = p.label.includes(" — ") ? p.label.split(" — ")[0] : p.label
+            return (
+              <CardContainer key={p.id} variant="default" size="lg" className="flex flex-col gap-[16px]">
+                <Tag variant="informative" size="sm" className="self-start">{category}</Tag>
+                <div className="flex flex-col gap-[6px] flex-1">
+                  <p className="text-[14px] font-semibold leading-[1.3]" style={{ color: "var(--foreground)" }}>
+                    {p.label}
+                  </p>
+                  <p className="text-[12px] leading-[1.6] line-clamp-2" style={{ color: "var(--field-supporting)" }}>
+                    {p.description}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        ))
+                <div className="flex items-center gap-[6px]">
+                  <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                    style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--primary)" }}>
+                    {p.author[0].toUpperCase()}
+                  </div>
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{p.author}</span>
+                </div>
+                <Button variant="secondary" size="sm" className="w-full" onClick={() => onOpen(p.id)}>
+                  Open screen
+                </Button>
+              </CardContainer>
+            )
+          })}
+        </div>
       )}
     </div>
   )
@@ -27426,20 +27505,27 @@ export default function App() {
     document.body.classList.toggle("light", !isDark)
   }, [isDark])
 
-  // Deep-link: read ?proto= on mount
+  // Deep-link: read ?proto= or ?page= on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const protoId = params.get("proto")
-    if (protoId && PROTOTYPE_PAGES.some(p => p.id === protoId)) setActive(protoId)
+    const pageId  = params.get("page")
+    if (protoId && PROTOTYPE_PAGES.some(p => p.id === protoId)) {
+      setActive(protoId)
+    } else if (pageId) {
+      setActive(pageId)
+    }
   }, [])
 
-  // Sync URL when active proto changes
+  // Sync URL on every active change — enables shareable links for every page
   useEffect(() => {
     const isProto = PROTOTYPE_PAGES.some(p => p.id === active)
     if (isProto) {
       window.history.replaceState(null, "", `?proto=${active}`)
-    } else if (new URLSearchParams(window.location.search).has("proto")) {
+    } else if (active === "home") {
       window.history.replaceState(null, "", window.location.pathname)
+    } else {
+      window.history.replaceState(null, "", `?page=${active}`)
     }
   }, [active])
 
@@ -27472,7 +27558,7 @@ export default function App() {
         isDark={isDark} onToggle={() => setIsDark(d => !d)}
       />
       <main className="flex-1 overflow-y-auto">
-        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
+        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
           {active === "proto-gallery"   && <PrototypeGalleryPage onOpen={(id) => setActive(id)} />}
           {active === "alert-banner"    && <AlertBannerPage      openSpec={setSpecModal} />}

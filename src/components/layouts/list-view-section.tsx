@@ -208,7 +208,7 @@ export function ListViewSection({
         )
       })()}
 
-      {/* ── Nav chips — 24px below Filters per DS spec ── */}
+      {/* ── Nav chips — 24px below Filters (DS spec: 24px between all nav layers) ── */}
       {chips.length > 0 && (
         <div className="flex items-center gap-[6px] flex-wrap mt-[24px]">
           {chips.map(chip => (
@@ -224,7 +224,7 @@ export function ListViewSection({
         </div>
       )}
 
-      {/* ── Entity list — 24px below Filters, 12px gap between cards ── */}
+      {/* ── Entity list — 24px below last nav element (chips or Filters) ── */}
       <div className="flex flex-col gap-[12px] mt-[24px]">
         {visibleItems.length > 0
           ? visibleItems.map(item => (
