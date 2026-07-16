@@ -58,6 +58,9 @@ export interface ListViewSectionProps {
   onOpenSlotChange?: (slot: string | null) => void
   showAllFilters?: boolean
   onAllFiltersClick?: () => void
+  /** When true, shows a "Clear filters" button inside the Filters bar. Reflects FiltersSlideout applied state. */
+  showClearFilters?: boolean
+  onClearFilters?: () => void
   showViewToggle?: boolean
 
   // ── Nav chips (optional — 24px below Filters per DS spec) ────────────────
@@ -86,6 +89,8 @@ export function ListViewSection({
   onOpenSlotChange,
   showAllFilters = false,
   onAllFiltersClick,
+  showClearFilters = false,
+  onClearFilters,
   showViewToggle = false,
   chips = [],
   selectedChip,
@@ -146,6 +151,8 @@ export function ListViewSection({
           slots={filterSlots}
           showAllFilters={showAllFilters}
           onAllFiltersClick={onAllFiltersClick}
+          showClearFilters={showClearFilters}
+          onClearFilters={onClearFilters}
           showViewToggle={showViewToggle}
           showSort={false}
         />

@@ -25,6 +25,12 @@ export interface HeaderProps {
   primaryAction?: React.ReactNode
   /** Secondary CTA slot — use <Button variant="secondary" size="sm"> */
   secondaryAction?: React.ReactNode
+  /**
+   * Sticky filters row — shown only in compress mode, directly below the title row.
+   * No border between the title row and this row. Renders after the gradient fade.
+   * Use to keep Filters always visible when the header is compressed on scroll.
+   */
+  filters?: React.ReactNode
   className?: string
   style?: React.CSSProperties
 }
@@ -51,64 +57,76 @@ export function Header({
   iconVariant = "informative",
   primaryAction,
   secondaryAction,
+  filters,
   className,
   style,
 }: HeaderProps) {
   const isCompress = size === "compress"
+  const hasFilters = isCompress && !!filters
 
   return (
-    <div
-      className={cn("flex items-center justify-between gap-[16px] w-full", className)}
-      style={{ padding: PADDING[size], ...style }}
-    >
-      {/* Left zone: back button + icon + title + tag + description */}
-      <div className="flex items-start gap-[8px] min-w-0 flex-1">
-        {!isCompress && backButton && (
-          <button
-            type="button"
-            aria-label="Back"
-            className="shrink-0 flex items-center justify-center rounded-[6px] hover:bg-[var(--field-bg)] transition-colors mt-[3px]"
-            style={{
-              width: 24, height: 24,
-              color: "var(--header-back-icon)",
-              background: "none", border: "none", cursor: "pointer", padding: 0,
-            }}
-          >
-            <ArrowLeft size={16} strokeWidth={2} />
-          </button>
-        )}
-        {!isCompress && Icon && (
-          <HighlightIcon
-            size="sm"
-            variant={iconVariant}
-            iconColor="dark"
-            icon={<Icon size={14} strokeWidth={1.75} />}
-            className="shrink-0 mt-[1px]"
-          />
-        )}
-        <div className="flex flex-col gap-[4px] min-w-0">
-          <div className="flex items-center gap-[8px]">
-            <h1
-              className="font-semibold leading-tight m-0"
-              style={{ fontSize: TITLE_PX[size], color: "var(--header-title)" }}
+    <div className={cn("flex flex-col w-full", className)} style={style}>
+      {/* Title row */}
+      <div
+        className="flex items-center justify-between gap-[16px]"
+        style={{ padding: hasFilters ? "8px 24px 8px" : PADDING[size] }}
+      >
+        {/* Left zone: back button + icon + title + tag + description */}
+        <div className="flex items-start gap-[8px] min-w-0 flex-1">
+          {!isCompress && backButton && (
+            <button
+              type="button"
+              aria-label="Back"
+              className="shrink-0 flex items-center justify-center rounded-[6px] hover:bg-[var(--field-bg)] transition-colors mt-[3px]"
+              style={{
+                width: 24, height: 24,
+                color: "var(--header-back-icon)",
+                background: "none", border: "none", cursor: "pointer", padding: 0,
+              }}
             >
-              {title}
-            </h1>
-            {!isCompress && tag}
-          </div>
-          {!isCompress && description && (
-            <p className="text-[14px] leading-[20px] m-0" style={{ color: "var(--header-desc)" }}>
-              {description}
-            </p>
+              <ArrowLeft size={16} strokeWidth={2} />
+            </button>
           )}
+          {!isCompress && Icon && (
+            <HighlightIcon
+              size="sm"
+              variant={iconVariant}
+              iconColor="dark"
+              icon={<Icon size={14} strokeWidth={1.75} />}
+              className="shrink-0 mt-[1px]"
+            />
+          )}
+          <div className="flex flex-col gap-[4px] min-w-0">
+            <div className="flex items-center gap-[8px]">
+              <h1
+                className="font-semibold leading-tight m-0"
+                style={{ fontSize: TITLE_PX[size], color: "var(--header-title)" }}
+              >
+                {title}
+              </h1>
+              {!isCompress && tag}
+            </div>
+            {!isCompress && description && (
+              <p className="text-[14px] leading-[20px] m-0" style={{ color: "var(--header-desc)" }}>
+                {description}
+              </p>
+            )}
+          </div>
         </div>
+
+        {/* Right zone: secondary + primary CTAs */}
+        {(primaryAction || secondaryAction) && (
+          <div className="flex items-center gap-[8px] shrink-0">
+            {secondaryAction}
+            {primaryAction}
+          </div>
+        )}
       </div>
 
-      {/* Right zone: secondary + primary CTAs */}
-      {(primaryAction || secondaryAction) && (
-        <div className="flex items-center gap-[8px] shrink-0">
-          {secondaryAction}
-          {primaryAction}
+      {/* Sticky filters row — only in compress when filters prop is provided. No border. */}
+      {hasFilters && (
+        <div style={{ padding: "0 24px 10px" }}>
+          {filters}
         </div>
       )}
     </div>

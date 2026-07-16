@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import { Check } from "lucide-react"
 import { ScreenLayout }     from "@/components/layouts/screen-layout"
 import { ListViewSection }  from "@/components/layouts/list-view-section"
 import { WidgetCanvasView } from "@/components/layouts/widget-canvas-view"
@@ -1062,7 +1063,10 @@ export default function PMLexHTLWorkQueueScreen() {
   const [filterStudio, setFilterStudio] = useState<string | null>(null)
   const [filterType,   setFilterType]   = useState<string | null>(null)
   const [openSlot,     setOpenSlot]     = useState<string | null>(null)
-  const [wqFiltersOpen, setWqFiltersOpen] = useState(false)
+  const [wqFiltersOpen,    setWqFiltersOpen]    = useState(false)
+  const [wqFiltersApplied, setWqFiltersApplied] = useState(false)
+  const [headerOpenSlot,   setHeaderOpenSlot]   = useState<string | null>(null)
+  const [headerAnchor,     setHeaderAnchor]     = useState<{ left: number; top: number } | null>(null)
 
   // Pagination
   const [page,     setPage]     = useState(1)
@@ -1163,6 +1167,41 @@ export default function PMLexHTLWorkQueueScreen() {
             title="Work Queue"
             description="Human Touch Layer — review and resolve events that require your attention."
             primaryAction={<Button variant="main" size="sm">Export</Button>}
+            filters={isScrolled && mainTab === "queues" ? (
+              <div
+                onClickCapture={(e: React.MouseEvent) => {
+                  const btn  = (e.target as HTMLElement).closest("button")
+                  const left = btn
+                    ? btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2
+                    : e.clientX
+                  setHeaderAnchor({ left, top: (e.currentTarget as HTMLElement).getBoundingClientRect().bottom })
+                }}
+              >
+                <Filters
+                  showSearch={false}
+                  slots={[
+                    {
+                      placeholder: "Studio",
+                      value:    filterStudio ?? undefined,
+                      onOpen:   () => setHeaderOpenSlot(s => s === "Studio" ? null : "Studio"),
+                      onRemove: () => { setFilterStudio(null); setPage(1) },
+                    },
+                    {
+                      placeholder: "Type",
+                      value:    filterType ?? undefined,
+                      onOpen:   () => setHeaderOpenSlot(s => s === "Type" ? null : "Type"),
+                      onRemove: () => { setFilterType(null); setPage(1) },
+                    },
+                  ]}
+                  showAllFilters={true}
+                  onAllFiltersClick={() => setWqFiltersOpen(true)}
+                  showSort={false}
+                  showViewToggle={false}
+                  showClearFilters={wqFiltersApplied}
+                  onClearFilters={() => { setWqFiltersApplied(false); setFilterStudio(null); setFilterType(null); setPage(1) }}
+                />
+              </div>
+            ) : undefined}
           />
         )}
         pagination={
@@ -1356,33 +1395,36 @@ export default function PMLexHTLWorkQueueScreen() {
               }}
               showAllFilters={true}
               onAllFiltersClick={() => setWqFiltersOpen(true)}
+              showClearFilters={wqFiltersApplied}
+              onClearFilters={() => { setWqFiltersApplied(false); setFilterStudio(null); setFilterType(null); setPage(1) }}
               showPreview={false}
               emptyLabel="No events match these filters."
             />
             <FiltersSlideout
               isOpen={wqFiltersOpen}
               onClose={() => setWqFiltersOpen(false)}
-              onApply={() => setWqFiltersOpen(false)}
-              onClearAll={() => setWqFiltersOpen(false)}
+              onApply={() => { setWqFiltersApplied(true); setWqFiltersOpen(false) }}
+              onClearAll={() => { setWqFiltersApplied(false); setWqFiltersOpen(false) }}
             />
           </div>
         )}
 
         {/* ── Activity ── */}
         {mainTab === "activity" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Sub-tabs */}
-            <Tabs
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {/* SwitchTab: secondary view toggle — Level 2 nav per DS spec */}
+            <SwitchTab
               items={[
                 { id: "transfers", label: "Transfers"    },
                 { id: "audit",     label: "Audit Ledger" },
               ]}
-              activeId={actSubTab}
+              value={actSubTab}
               onChange={(id) => {
                 setActSubTab(id as typeof actSubTab)
                 setActPage(1)
               }}
-              className="mb-[8px]"
+              size="s"
+              className="mb-[24px]"
             />
 
             {/* Transfers sub-tab */}
@@ -1525,6 +1567,70 @@ export default function PMLexHTLWorkQueueScreen() {
         </SlideOut>
 
       </ScreenLayout>
+
+      {/* ── Header sticky filter dropdown — position:fixed, appears above the header zone ── */}
+      {headerOpenSlot !== null && headerAnchor !== null && (() => {
+        const opts   = FILTER_OPTIONS[headerOpenSlot] ?? []
+        const curVal = headerOpenSlot === "Studio" ? (filterStudio ?? undefined) : (filterType ?? undefined)
+        return (
+          <>
+            <div
+              className="fixed inset-0"
+              style={{ zIndex: 10000 }}
+              onClick={() => setHeaderOpenSlot(null)}
+            />
+            <div
+              className="flex flex-col overflow-hidden"
+              style={{
+                position:     "fixed",
+                left:         headerAnchor.left,
+                top:          headerAnchor.top + 4,
+                transform:    "translateX(-50%)",
+                zIndex:       10001,
+                background:   "var(--surface)",
+                border:       "0.5px solid var(--field-border)",
+                borderRadius: 8,
+                minWidth:     200,
+                boxShadow:    "var(--shadow-elevation-3)",
+              }}
+            >
+              <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>
+                  {headerOpenSlot}
+                </span>
+              </div>
+              {opts.map(opt => {
+                const isSel = curVal === opt
+                return (
+                  <button
+                    key={opt}
+                    className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full transition-colors"
+                    style={{
+                      background: isSel ? "var(--color-surface-primary-subtle)" : "transparent",
+                      color:      isSel ? "var(--primary)" : "var(--foreground)",
+                      fontWeight: isSel ? 600 : 400,
+                      fontSize:   13,
+                      border:     "none",
+                      cursor:     "pointer",
+                    }}
+                    onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "var(--color-surface-neutral-default)" }}
+                    onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent" }}
+                    onClick={() => {
+                      if (headerOpenSlot === "Studio") setFilterStudio(opt)
+                      else setFilterType(opt)
+                      setPage(1)
+                      setHeaderOpenSlot(null)
+                    }}
+                  >
+                    <span className="flex-1">{opt}</span>
+                    {isSel && <Check size={13} style={{ flexShrink: 0 }} />}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )
+      })()}
     </>
   )
 }

@@ -3544,7 +3544,21 @@ function ProgressTab() {
 }
 
 function HomePage() {
-  const [tab, setTab] = useState<"overview" | "problem" | "solution" | "evidence" | "progress" | "pm-guide">("overview")
+  const VALID_TABS = ["overview", "problem", "solution", "evidence", "progress", "pm-guide"] as const
+  type HomeTab = typeof VALID_TABS[number]
+
+  const [tab, setTab] = useState<HomeTab>(() => {
+    const t = new URLSearchParams(window.location.search).get("tab")
+    return (VALID_TABS as readonly string[]).includes(t ?? "") ? (t as HomeTab) : "overview"
+  })
+
+  // Keep URL in sync — `?page=home&tab={tab}` — so every tab is shareable.
+  // Guard: don't overwrite a ?proto= deep-link before App's mount effect can read it.
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).get("proto")) {
+      window.history.replaceState(null, "", `?page=home&tab=${tab}`)
+    }
+  }, [tab])
 
   const homeTabs = [
     { id: "overview",  label: "Overview" },
@@ -27523,7 +27537,10 @@ export default function App() {
     if (isProto) {
       window.history.replaceState(null, "", `?proto=${active}`)
     } else if (active === "home") {
-      window.history.replaceState(null, "", window.location.pathname)
+      // Preserve ?tab= set by HomePage so the deep-link survives sidebar navigation
+      const currentTab = new URLSearchParams(window.location.search).get("tab")
+      const tabSuffix  = currentTab ? `&tab=${currentTab}` : ""
+      window.history.replaceState(null, "", `?page=home${tabSuffix}`)
     } else {
       window.history.replaceState(null, "", `?page=${active}`)
     }
