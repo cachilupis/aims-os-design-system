@@ -4257,18 +4257,62 @@ function HomePage() {
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={5} title="Validate visually and publish with GitHub Desktop">
+                <NumberedStep n={5} title="Review visually and iterate">
                   <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Review the screen in the browser. If there are corrections, ask Claude in the same session. When it's ready, in GitHub Desktop: <strong>Commit to main → Push origin</strong>.</p>
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Open <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>localhost:5173</code> and review the screen. If anything needs adjustment, describe it to Claude in the same session — it already has full context and will update the file immediately.</p>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={6} title="Publish via branch → PR → merge">
+                  <div className="flex flex-col gap-[12px]">
+                    <div className="rounded-md px-[14px] py-[12px] flex flex-col gap-[6px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[12px] font-semibold leading-[1.4]" style={{ color: "var(--foreground)" }}>Why we use branches — not a direct push to main</p>
+                      <p className="text-[12px] leading-[1.7]" style={{ color: "var(--field-supporting)" }}>
+                        The DS repo contains critical shared files — components, design tokens, App.tsx. If a PM accidentally edits one and pushes directly to <code className="text-[11px] px-[3px] py-[1px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>main</code>, it could break every prototype and every review session for the entire team. Branches are a safe buffer: your work lives in isolation until it's merged. GitHub automatically allows the merge only when you touched files inside <code className="text-[11px] px-[3px] py-[1px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>src/screens/</code> — no approval needed. If your changes touch a DS-owned file, the merge is blocked and Michael reviews first. You never have to think about what's safe — the repo enforces it automatically.
+                      </p>
+                    </div>
+
+                    <p className="text-[13px] font-semibold leading-[1.4]" style={{ color: "var(--foreground)" }}>Option A — ask Claude (recommended, no commands to memorize)</p>
+                    <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>In the same Claude Code session, just describe what you want in plain language. Claude runs all the git commands for you:</p>
+                    <div className="rounded-md px-[14px] py-[12px] flex flex-col gap-[6px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Suggested prompt for Claude Code</p>
+                      <p className="text-[13px] italic leading-[1.6]" style={{ color: "var(--foreground)" }}>"Create a branch called pm-juan/ai-workers-view, commit my changes in src/screens/ with the message 'Add AI Workers list view', push it to GitHub, and open a PR."</p>
+                    </div>
+                    <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Adapt the branch name and commit message to your screen. Convention: <code className="text-[11px] px-[3px] py-[1px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>pm-[yourname]/[screen-description]</code>.</p>
+
+                    <p className="text-[13px] font-semibold leading-[1.4]" style={{ color: "var(--foreground)" }}>Option B — run the commands yourself (copy + paste)</p>
                     <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                      <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Important rule: <strong>Michael validates visually before any production deploy</strong>. For external sharing, use the Vercel URL (see Part 4).</p>
+                      <p className="text-[12px] font-mono leading-[2.2]" style={{ color: "var(--field-supporting)" }}>
+                        git checkout -b pm-juan/ai-workers-view<br/>
+                        git add src/screens/<br/>
+                        git commit -m "Add AI Workers list view"<br/>
+                        git push -u origin pm-juan/ai-workers-view
+                      </p>
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={7} title="Open a Pull Request on GitHub">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">After pushing, GitHub shows a yellow banner with a shortcut link. You can also go to <strong>github.com → cachilupis/aims-os-design-system → Pull requests → New pull request</strong>, select your branch, add a short description, and click <strong>Create pull request</strong>.</p>
+                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[12px] italic" style={{ color: "var(--field-supporting)" }}>Or ask Claude in the same session: "Open a PR for my branch with the title 'Add AI Workers list view'."</p>
+                    </div>
+                  </div>
+                </NumberedStep>
+
+                <NumberedStep n={8} title="Merge and confirm your screen is live">
+                  <div className="flex flex-col gap-[8px]">
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">If your PR only touches <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/screens/</code>, you can merge it yourself — no need to wait for Michael. Click <strong>Merge pull request</strong> on GitHub. Vercel deploys automatically within ~1 minute. Share the Vercel URL (see Part 4).</p>
+                    <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
+                      <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}><strong>If the merge is blocked:</strong> your PR touched a DS-owned file (components, tokens, App.tsx, or config). This is the safety net working as intended — not an error. Tag Michael in the PR; he reviews and approves.</p>
                     </div>
                   </div>
                 </NumberedStep>
               </div>
 
               <Callout>
-                PMs never touch files in <code>src/components/ui/</code> or the token system. Only create files in <code>src/screens/</code>. Claude handles everything else.
+                PMs only create files inside <code>src/screens/</code>. GitHub enforces this automatically — screen-only PRs can be merged without waiting for Michael; DS file changes always need his review. Claude handles all git operations conversationally so there are no commands to memorize.
               </Callout>
             </DocSection>
 
