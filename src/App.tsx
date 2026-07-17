@@ -51,7 +51,7 @@ import { WidgetFather, type WidgetWidthClass } from "@/components/ui/widget-fath
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "widget-father" | "widgets"
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "widget-father" | "widgets"
 type SpecModal = "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -121,6 +121,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   // Components — keep sorted A→Z by label so new entries stay predictable in the sidebar
   { id: "alert-banner",    label: "Alert Banner",      group: "Components",  description: "Full-width contextual notice. 3 states: Error, Success, Alert · optional CTA + dismiss · adaptive dark/light tokens." },
   { id: "avatar",          label: "Avatar",            group: "Components",  description: "User & workspace avatars · 4 sizes (S/M/L/XL) · 6 color variants · initials fallback · stacked group" },
+  { id: "breadcrumb",      label: "Breadcrumb",        group: "Components",  description: "Hierarchical back-navigation trail · L3+ depth only · back arrow for L2 · DS-GAP: component in design, pending Figma → code implementation" },
   { id: "button",          label: "Button",            group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
   { id: "card-container",  label: "Card Container",    group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
@@ -22882,6 +22883,100 @@ function FiltersInteractivePlayground() {
   )
 }
 
+// ── BreadcrumbPage ────────────────────────────────────────────────────────────
+
+function BreadcrumbPage() {
+  return (
+    <div className="flex flex-col gap-[32px]">
+      {/* Title row */}
+      <div className="flex items-start justify-between gap-[16px]">
+        <div>
+          <div className="flex items-center gap-[10px] mb-[6px]">
+            <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Breadcrumb</h1>
+            <span className="text-[11px] font-semibold px-[8px] py-[3px] rounded-[4px]"
+              style={{ background: "var(--color-surface-warning-subtle)", color: "var(--color-feedback-warning)", border: "0.5px solid var(--color-feedback-warning)" }}>
+              In design — DS-GAP
+            </span>
+          </div>
+          <p className="text-[14px] text-[var(--field-supporting)] max-w-[600px]">
+            Hierarchical trail for multi-level navigation. Tells the user where they are and lets them jump to any ancestor level. Use only at depth L3 and above — for L2, use the Header back button instead.
+          </p>
+        </div>
+      </div>
+
+      {/* Navigation rule */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[16px] font-semibold text-[var(--foreground)]">When to use</h2>
+        <p className="text-[13px] text-[var(--field-supporting)]">
+          The platform has up to 5 levels of navigation depth. The right back-navigation pattern depends on the current depth level.
+        </p>
+        <div className="rounded-[8px] border border-[var(--field-border)] overflow-hidden">
+          <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "0.5px solid var(--field-border)", background: "var(--field-bg)" }}>
+                <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--foreground)]">Depth level</th>
+                <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--foreground)]">Pattern</th>
+                <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--foreground)]">Example</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["L1 — Root list", "No back navigation", "AI Workers (top-level list)"],
+                ["L2 — Item detail", "Header backButton={true}", "AI Workers → Meridian (single worker)"],
+                ["L3+ — Nested detail", "Breadcrumb trail", "AI Workers → Meridian → Run #42 → Log entry"],
+              ].map(([level, pattern, example], i) => (
+                <tr key={i} style={{ borderBottom: i < 2 ? "0.5px solid var(--field-border)" : "none" }}>
+                  <td className="px-[16px] py-[10px] font-semibold text-[var(--foreground)]">{level}</td>
+                  <td className="px-[16px] py-[10px]" style={{ color: "var(--primary)" }}>
+                    <code className="text-[11px] px-[4px] py-[1px] rounded" style={{ background: "var(--color-surface-primary-subtle)" }}>{pattern}</code>
+                  </td>
+                  <td className="px-[16px] py-[10px] text-[var(--field-supporting)]">{example}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Design status */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Component status</h2>
+        <div className="rounded-[8px] border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
+          {[
+            { label: "Navigation rule", status: "done", note: "Defined — L2 = back arrow · L3+ = breadcrumbs. Documented in CLAUDE.md." },
+            { label: "Figma design", status: "progress", note: "In progress — being designed in Figma DS file." },
+            { label: "React component", status: "pending", note: "Pending Figma sign-off. Will live in src/components/ui/breadcrumb.tsx." },
+            { label: "Token bindings", status: "pending", note: "Pending — tokens will be extracted from Figma once design is finalized." },
+          ].map(({ label, status, note }) => (
+            <div key={label} className="flex items-start gap-[12px]">
+              <span className="text-[11px] font-semibold px-[7px] py-[2px] rounded-[4px] shrink-0 mt-[1px]"
+                style={{
+                  background: status === "done" ? "var(--color-surface-success-subtle)" : status === "progress" ? "var(--color-surface-warning-subtle)" : "var(--color-surface-neutral-default)",
+                  color: status === "done" ? "var(--color-feedback-success)" : status === "progress" ? "var(--color-feedback-warning)" : "var(--field-supporting)",
+                }}>
+                {status === "done" ? "Done" : status === "progress" ? "In progress" : "Pending"}
+              </span>
+              <div>
+                <p className="text-[13px] font-semibold text-[var(--foreground)]">{label}</p>
+                <p className="text-[12px] text-[var(--field-supporting)]">{note}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Guardrail callout */}
+      <div className="rounded-[8px] px-[16px] py-[14px] flex flex-col gap-[6px]"
+        style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+        <p className="text-[12px] font-semibold text-[var(--foreground)]">Until the component ships</p>
+        <p className="text-[13px] text-[var(--field-supporting)]">
+          When a prototype requires L3+ navigation, Claude will mark the gap with a <code className="text-[11px] px-[3px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>// DS-GAP: Breadcrumbs</code> comment and use a temporary placeholder. The navigation rule is enforced regardless — back arrow at L2, breadcrumb trail at L3+.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ── HeaderPage ────────────────────────────────────────────────────────────────
 
 function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
@@ -22966,15 +23061,50 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <div className="rounded-[8px] border border-[var(--field-border)] overflow-hidden">
                     <Header
                       size={s}
-                      title="AI Workers"
-                      description="Manage and monitor your AI workers across all categories."
-                      tag={<Tag variant="success" size="sm">24 Published</Tag>}
-                      primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New Worker</Button>}
+                      title="Meridian"
+                      description="AI Worker · Customer support automation · Lexington HTL"
+                      tag={<Tag variant="success" size="sm">Active</Tag>}
+                      primaryAction={<Button variant="main" size="sm"><LucideIcons.Settings2 size={13} /> Configure</Button>}
                       secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
                     />
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Tag usage */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Tag usage — when to show it</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                The tag slot is for a single status label only. It should only appear on <strong>detail views</strong> — never on list views, and never with counters or statistics.
+              </p>
+              <div className="grid grid-cols-2 gap-[12px]">
+                {/* Correct — detail view */}
+                <div className="flex flex-col gap-[8px]">
+                  <div className="flex items-center gap-[6px]">
+                    <LucideIcons.Check size={12} style={{ color: "var(--color-feedback-success)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-feedback-success)" }}>Detail view — correct</span>
+                  </div>
+                  <div className="rounded-[8px] border overflow-hidden" style={{ borderColor: "var(--color-feedback-success)", opacity: 0.9 }}>
+                    <Header size="size-l" title="Meridian" tag={<Tag variant="success" size="sm">Active</Tag>} primaryAction={<Button variant="main" size="sm">Configure</Button>} />
+                  </div>
+                  <p className="text-[12px] text-[var(--field-supporting)]">One item open → one state → tag makes sense.</p>
+                </div>
+                {/* Wrong — list view */}
+                <div className="flex flex-col gap-[8px]">
+                  <div className="flex items-center gap-[6px]">
+                    <LucideIcons.X size={12} style={{ color: "var(--color-feedback-error)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-feedback-error)" }}>List view — never use tag here</span>
+                  </div>
+                  <div className="rounded-[8px] border overflow-hidden" style={{ borderColor: "var(--color-feedback-error)", opacity: 0.9 }}>
+                    <Header size="size-l" title="AI Workers" tag={<Tag variant="primary" size="sm">24 Active</Tag>} primaryAction={<Button variant="main" size="sm">New Worker</Button>} />
+                  </div>
+                  <p className="text-[12px] text-[var(--field-supporting)]">A list has many states simultaneously — one tag is misleading. Remove it.</p>
+                </div>
+              </div>
+              <div className="rounded-[6px] px-[12px] py-[10px] text-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                <strong>Tag values:</strong> status labels only — <code className="text-[11px] px-[3px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>Active</code> <code className="text-[11px] px-[3px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>Draft</code> <code className="text-[11px] px-[3px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>Running</code> <code className="text-[11px] px-[3px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>Paused</code> <code className="text-[11px] px-[3px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>Archived</code>. Never a counter (<code className="text-[11px] px-[3px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>9 Workers</code>) or a statistic (<code className="text-[11px] px-[3px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>24 Published</code>).
+              </div>
             </div>
 
             {/* Do / Don't */}
@@ -22986,7 +23116,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   {[
                     "Use Compress only as a scroll-triggered state — never set it statically.",
                     "Keep the title under 40 characters to prevent wrapping.",
-                    "Place the Tag inline after the title so status is always visible.",
+                    "Show the tag only on detail views with a single item's state.",
                     "Use Size L for top-level pages and Size M for sub-sections.",
                   ].map((t, i) => (
                     <p key={i} className="text-[13px] text-[var(--field-supporting)] pl-[14px]">{t}</p>
@@ -22995,10 +23125,10 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <div className="flex flex-col gap-[8px]">
                   <p className="text-[12px] font-semibold text-[var(--foreground)]">Don't</p>
                   {[
-                    "Don't add more than one Tag — use a single status chip.",
+                    "Don't show a tag on list views — a list has many states, one chip is misleading.",
+                    "Don't put counters or statistics in the tag (e.g. '9 Workers', '24 Published').",
                     "Don't use Back Button on root-level pages.",
                     "Don't place more than 2 CTAs (one primary, one secondary).",
-                    "Don't show description or tag in Compress mode — those slots are hidden.",
                   ].map((t, i) => (
                     <p key={i} className="text-[13px] text-[var(--field-supporting)] pl-[14px]">{t}</p>
                   ))}
@@ -27694,6 +27824,7 @@ export default function App() {
           {active === "entity-list"     && <EntityListPage    openSpec={setSpecModal} />}
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
+          {active === "breadcrumb"      && <BreadcrumbPage />}
           {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}
           {active === "pagination"      && <PaginationPage      openSpec={setSpecModal} />}
           {active === "filters"         && <FiltersPage         openSpec={setSpecModal} />}
