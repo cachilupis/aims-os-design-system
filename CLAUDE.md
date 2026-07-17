@@ -66,11 +66,59 @@ Maximum 2 navigation layers:
 **24px gap between every navigation layer** — Tabs → SwitchTab → Filters → Chips (nav). Confirmed from Figma DS node 14660-136237.
 24px gap from the last nav element to the first entity card. 12px gap between entity cards.
 
+### Back navigation and breadcrumbs — which to use
+
+The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs based on depth level:
+
+| Depth level | Pattern | When |
+|---|---|---|
+| Level 2 (one step below a list) | `backButton={true}` on `Header` | User is inside a single item detail — one tap gets them back |
+| Level 3+ (e.g. item → sub-section → detail) | Breadcrumb trail | User needs to see and jump to any ancestor level, not just "back one" |
+
+**Never show both** — if breadcrumbs are present, omit `backButton`. If it's L2, omit breadcrumbs.
+
+**Breadcrumb component status: DS-GAP** — not yet in `src/components/ui/`. When a screen requires L3+ navigation, add a `// DS-GAP: Breadcrumbs` comment and use a placeholder text trail until the component ships. Do NOT improvise a custom breadcrumb without flagging the gap.
+
+```tsx
+// ✅ Level 2 — single item detail, use back button
+<Header title="Meridian" backButton={true} size={isScrolled ? "compress" : "size-l"} />
+
+// ✅ Level 3+ — nested detail, use breadcrumbs (component pending)
+// DS-GAP: Breadcrumbs — needed for L3+ navigation. Waiting on DS component.
+
+// ❌ Never both at once
+<Header title="Meridian" backButton={true} breadcrumbs={[...]} />
+```
+
 ### Overlays
 - **`ModalDialog`** — user MUST stop (destructive action, confirmation, critical form)
 - **`SlideOut`** — user can continue browsing (details, filters, context)
 - Rule: can the user ignore it? → SlideOut. Must they respond? → Modal.
 - Only 1 Modal + 1 SlideOut active at a time.
+
+### Header `tag` prop — when to show it
+
+The `tag` prop renders a chip/badge inline next to the title. Use it only when it adds meaningful context — wrong usage is one of the most common AI-generated inconsistencies.
+
+**Rule: tag = state only, never counters or statistics.**
+
+| View type | Use `tag`? | Why |
+|---|---|---|
+| **List view** (multiple items, each with its own state) | ❌ Never | A list contains many states simultaneously — a single tag is meaningless and misleading |
+| **Detail view** (one specific item open, e.g. a SlideOut or full-screen detail) | ✅ Yes, show the item's current state | A single item has one state; the tag gives immediate context |
+
+**What goes in the tag:** a status label only — `Active`, `Draft`, `Running`, `Paused`, `Archived`. Never a count (`4 Workers`), never a statistic (`24 Polish`), never a category label.
+
+```tsx
+// ✅ Correct — detail view of a single AI Worker
+<Header title="Meridian" tag={<Tag variant="success" size="s">Active</Tag>} />
+
+// ❌ Wrong — list view of all AI Workers
+<Header title="AI Workers" tag={<Tag>9 Workers</Tag>} />
+
+// ❌ Wrong — statistics don't belong in the tag slot
+<Header title="AI Workers" tag={<Tag>24 Active</Tag>} />
+```
 
 ### Header sticky
 - Scroll == 0 → DEFAULT (full header)
