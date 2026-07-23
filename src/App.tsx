@@ -21305,6 +21305,8 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
   type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
+  const [slideoutOpen, setSlideoutOpen] = useState(false)
+  const [slideoutTab, setSlideoutTab] = useState(0)
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
   const iconStyle: React.CSSProperties = { color: "var(--color-text-subtitle)" }
   const dot = (key: string) => <span key={key} style={{ fontSize: 10, color: "var(--field-supporting)" }}>·</span>
@@ -21351,6 +21353,98 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
           {tooltip.text}
         </div>
       )}
+      {/* SlideOut — opens when an activity item is clicked */}
+      {slideoutOpen && selectedIdx !== null && (() => {
+        const act = ACTIVITY_DATA[selectedIdx]
+        const cfg = ACTIVITY_TYPE_CONFIG[act.type] ?? ACTIVITY_TYPE_CONFIG["call"]
+        const CfgIcon = (LucideIcons as unknown as Record<string, LIcon>)[cfg.icon]
+        const statusVariants: Record<string, string> = {
+          alert: "Alert",
+          error:   "Error",
+          default: "Completed",
+        }
+        return (
+          <SlideOut
+            open={slideoutOpen}
+            onClose={() => { setSlideoutOpen(false); setSelectedIdx(null) }}
+            type="with-variants"
+            size="m"
+            title={act.title}
+            subtitle={`${act.type.charAt(0).toUpperCase() + act.type.slice(1)} · ${act.time}`}
+            showStatus={true}
+            statusLabel={statusVariants[act.status] ?? "Completed"}
+            showIcon={true}
+            iconContent={CfgIcon ? <CfgIcon size={20} style={{ color: cfg.color }} /> : undefined}
+            showTopButton={false}
+            showTabs={true}
+            tabLabels={["Overview", "Context", "Related"]}
+            activeTab={slideoutTab}
+            onTabChange={setSlideoutTab}
+          >
+            {slideoutTab === 0 && (
+              <div className="flex flex-col gap-[20px]">
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Description</p>
+                  <p className="text-[14px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{act.desc}</p>
+                </div>
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Details</p>
+                  <div className="flex flex-col gap-[6px]">
+                    {[
+                      { icon: "Clock",       label: "Time",   value: act.time },
+                      { icon: "Activity",    label: "Type",   value: act.type.charAt(0).toUpperCase() + act.type.slice(1) },
+                      { icon: "AlertCircle", label: "Status", value: statusVariants[act.status] ?? "Completed" },
+                    ].map(row => (
+                      <div key={row.label} className="flex items-center gap-[10px] h-[36px] px-[12px] rounded-[8px]"
+                        style={{ border: "0.5px solid var(--color-border-neutral-lighter)", background: "var(--color-surface-neutral-subtle)" }}>
+                        {(() => { const I = (LucideIcons as unknown as Record<string, LIcon>)[row.icon]; return I ? <I size={13} style={{ color: "var(--field-supporting)" }} /> : null })()}
+                        <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)", width: 60 }}>{row.label}</span>
+                        <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {slideoutTab === 1 && (
+              <div className="flex flex-col gap-[16px]">
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Entity</p>
+                  <div className="flex items-center gap-[10px] h-[40px] px-[12px] rounded-[8px]"
+                    style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                    <div style={{ width: 24, height: 24, borderRadius: 6, background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {CfgIcon && <CfgIcon size={11} style={{ color: cfg.color }} />}
+                    </div>
+                    <span className="text-[13px] font-medium font-mono" style={{ color: "var(--foreground)" }}>{`{User-ID}`}</span>
+                  </div>
+                </div>
+                <div className="p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Full entity context will be linked here in the product — name, company, health score, contract stage, and open tasks.</p>
+                </div>
+              </div>
+            )}
+            {slideoutTab === 2 && (
+              <div className="flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Recent activity</p>
+                {ACTIVITY_DATA.filter((_, j) => j !== selectedIdx).slice(0, 3).map((other, j) => {
+                  const oc = ACTIVITY_TYPE_CONFIG[other.type] ?? ACTIVITY_TYPE_CONFIG["call"]
+                  const OI = (LucideIcons as unknown as Record<string, LIcon>)[oc.icon]
+                  return (
+                    <div key={j} className="flex items-center gap-[10px] h-[40px] px-[12px] rounded-[8px]"
+                      style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                      <div style={{ width: 24, height: 24, borderRadius: 6, background: oc.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {OI && <OI size={11} style={{ color: oc.color }} />}
+                      </div>
+                      <span className="text-[12px] font-medium flex-1" style={{ color: "var(--foreground)" }}>{other.title}</span>
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{other.time}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </SlideOut>
+        )
+      })()}
       <div className="flex flex-col gap-[6px]" style={{ overflowY: "auto", maxHeight: 280 }}>
         {ACTIVITY_DATA.map((activity, i) => {
           const cfg = ACTIVITY_TYPE_CONFIG[activity.type] ?? ACTIVITY_TYPE_CONFIG["call"]
@@ -21372,7 +21466,7 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
               key={i}
               onMouseEnter={() => setHoveredIdx(i)}
               onMouseLeave={() => setHoveredIdx(null)}
-              onClick={() => setSelectedIdx(isSelected ? null : i)}
+              onClick={() => { setSelectedIdx(i); setSlideoutOpen(true); setSlideoutTab(0) }}
               style={{
                 display: "flex", flexDirection: "column", gap: 4,
                 padding: "8px 10px", borderRadius: 8,
@@ -21441,23 +21535,133 @@ const NOTES_ITEMS_DATA = [
 
 function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+  const [selectedNote, setSelectedNote] = useState<number | null>(null)
+  const [slideoutTab, setSlideoutTab] = useState(0)
   const iconSt: React.CSSProperties = { color: "var(--color-text-subtitle)" }
   const dot = (key: string) => <span key={key} style={{ fontSize: 10, color: "var(--field-supporting)" }}>·</span>
   return (
+    <>
+    {/* SlideOut — opens when a note item is clicked */}
+    {selectedNote !== null && (() => {
+      const note = NOTES_ITEMS_DATA[selectedNote]
+      return (
+        <SlideOut
+          open={true}
+          onClose={() => { setSelectedNote(null); setSlideoutTab(0) }}
+          type="with-variants"
+          size="m"
+          title={note.title}
+          subtitle={`Note · ${note.time}`}
+          showStatus={true}
+          statusLabel="Note"
+          showIcon={true}
+          iconContent={
+            <div style={{ width: 24, height: 24, borderRadius: 6, background: note.bg,
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: note.color }}>{note.initial}</span>
+            </div>
+          }
+          showTopButton={false}
+          showTabs={true}
+          tabLabels={["Content", "Tasks & Files", "Related"]}
+          activeTab={slideoutTab}
+          onTabChange={setSlideoutTab}
+        >
+          {slideoutTab === 0 && (
+            <div className="flex flex-col gap-[20px]">
+              <div className="flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Note</p>
+                <div className="p-[14px] rounded-[10px] leading-[1.6]" style={{ background: note.bg, border: `1px solid ${note.accentBorder}`, fontSize: 14, color: "var(--foreground)" }}>
+                  {note.text}
+                </div>
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                {[
+                  { icon: "User",     label: "Author",  value: note.initial === "A" ? "Alice Johnson" : note.initial === "T" ? "Team" : "Maria Torres" },
+                  { icon: "Clock",    label: "Created", value: note.time },
+                  { icon: "Link",     label: "Linked",  value: "1 entity linked" },
+                ].map(row => (
+                  <div key={row.label} className="flex items-center gap-[10px] h-[36px] px-[12px] rounded-[8px]"
+                    style={{ border: "0.5px solid var(--color-border-neutral-lighter)", background: "var(--color-surface-neutral-subtle)" }}>
+                    {(() => { const I = (LucideIcons as unknown as Record<string, React.FC<{ size?: number; style?: React.CSSProperties }>>)[row.icon]; return I ? <I size={13} style={{ color: "var(--field-supporting)" }} /> : null })()}
+                    <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)", width: 60 }}>{row.label}</span>
+                    <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {slideoutTab === 1 && (
+            <div className="flex flex-col gap-[16px]">
+              {note.taskCount > 0 && (
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Tasks ({note.taskCount})</p>
+                  {Array.from({ length: note.taskCount }).map((_, j) => (
+                    <div key={j} className="flex items-center gap-[10px] h-[36px] px-[12px] rounded-[8px]"
+                      style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                      <LucideIcons.CheckSquare size={13} style={{ color: j === 0 ? "var(--color-text-success)" : "var(--field-supporting)" }} />
+                      <span className="text-[13px]" style={{ color: "var(--foreground)", textDecoration: j === 0 ? "line-through" : "none", opacity: j === 0 ? 0.5 : 1 }}>
+                        {["Follow up before Thursday", "Send pricing proposal", "CC account manager"][j] ?? `Task ${j + 1}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {note.fileCount > 0 && (
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Files ({note.fileCount})</p>
+                  {Array.from({ length: note.fileCount }).map((_, j) => (
+                    <div key={j} className="flex items-center gap-[10px] h-[36px] px-[12px] rounded-[8px]"
+                      style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                      <LucideIcons.FileText size={13} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[13px]" style={{ color: "var(--foreground)" }}>
+                        {["Renewal_Proposal_Q3.pdf", "Pricing_Tier_Options.xlsx"][j] ?? `File ${j + 1}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {note.taskCount === 0 && note.fileCount === 0 && (
+                <p className="text-[13px]" style={{ color: "var(--field-supporting)" }}>No tasks or files attached to this note.</p>
+              )}
+            </div>
+          )}
+          {slideoutTab === 2 && (
+            <div className="flex flex-col gap-[8px]">
+              <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Other notes</p>
+              {NOTES_ITEMS_DATA.filter((_, j) => j !== selectedNote).map((other, j) => (
+                <div key={j} className="flex items-start gap-[10px] p-[10px] rounded-[8px]"
+                  style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: other.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: other.color }}>{other.initial}</span>
+                  </div>
+                  <div className="flex flex-col gap-[2px] flex-1 min-w-0">
+                    <span className="text-[13px] font-medium truncate" style={{ color: "var(--foreground)" }}>{other.title}</span>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{other.time}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </SlideOut>
+      )
+    })()}
     <div className="flex flex-col gap-[6px]" style={{ overflowY: "auto", maxHeight: 280 }}>
       {NOTES_ITEMS_DATA.map((note, i) => {
         const isHov = hoveredIdx === i
+        const isSelected = selectedNote === i
         const showExpanded = showMeta || isHov
         return (
           <div
             key={i}
             onMouseEnter={() => setHoveredIdx(i)}
             onMouseLeave={() => setHoveredIdx(null)}
+            onClick={() => { setSelectedNote(i); setSlideoutTab(0) }}
             style={{
               display: "flex", flexDirection: "column", gap: 4,
               padding: "8px 10px", borderRadius: 8,
-              border: `1px solid ${isHov ? "var(--color-border-primary-default)" : "var(--hi-informative-bg)"}`,
-              background: isHov ? "var(--color-surface-primary-subtle)" : "var(--widget-bg)",
+              border: `1px solid ${isSelected || isHov ? "var(--color-border-primary-default)" : "var(--hi-informative-bg)"}`,
+              background: isSelected || isHov ? "var(--color-surface-primary-subtle)" : "var(--widget-bg)",
               cursor: "pointer", transition: "background 150ms, border-color 150ms", flexShrink: 0,
             }}
           >
@@ -21516,6 +21720,7 @@ function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
         )
       })}
     </div>
+    </>
   )
 }
 
@@ -31243,10 +31448,113 @@ useEffect(() => {
   )
 }
 
+// ── PaginationLiveView ────────────────────────────────────────────────────────
+
+const PG_LIVE_ITEMS: EntityListItemData[] = [
+  { id: "t01", title: "Acme Corp",           iconVariant: "success",     iconName: "Building2",  state: { label: "Active",    variant: "success"     }, timestamp: "2m ago",    showMenu: true, description: "Enterprise · Healthcare · 240 seats", secondaryMeta: [{ label: "Sarah Chen" }, { iconName: "Users", label: "240" }, { iconName: "TrendingUp", label: "98.2%" }] },
+  { id: "t02", title: "TechNova Inc",         iconVariant: "info",        iconName: "Cpu",        state: { label: "Trial",     variant: "informative" }, timestamp: "15m ago",   showMenu: true, description: "Startup · SaaS · 12 seats",           secondaryMeta: [{ label: "Mike Torres" }, { iconName: "Users", label: "12" }, { iconName: "TrendingUp", label: "76.4%" }] },
+  { id: "t03", title: "GlobalMed Partners",   iconVariant: "yellow",      iconName: "HeartPulse", state: { label: "At Risk",   variant: "alert"       }, timestamp: "1h ago",    showMenu: true, description: "Enterprise · Healthcare · 450 seats", secondaryMeta: [{ label: "Alice Kim" },  { iconName: "Users", label: "450" }, { iconName: "TrendingDown", label: "61.0%" }] },
+  { id: "t04", title: "Streamline Solutions", iconVariant: "success",     iconName: "Workflow",   state: { label: "Active",    variant: "success"     }, timestamp: "2h ago",    showMenu: true, description: "Mid-Market · Operations · 80 seats",  secondaryMeta: [{ label: "James Park" }, { iconName: "Users", label: "80" },  { iconName: "TrendingUp", label: "91.7%" }] },
+  { id: "t05", title: "Nexus Ventures",       iconVariant: "error",       iconName: "AlertCircle",state: { label: "Churned",   variant: "error"       }, timestamp: "3h ago",    showMenu: true, description: "SMB · Finance · 28 seats",            secondaryMeta: [{ label: "Laura Vega" }, { iconName: "Users", label: "28" },  { iconName: "TrendingDown", label: "30.0%" }] },
+  { id: "t06", title: "Brightfield Analytics",iconVariant: "success",     iconName: "BarChart2",  state: { label: "Active",    variant: "success"     }, timestamp: "4h ago",    showMenu: true, description: "Enterprise · Analytics · 320 seats",  secondaryMeta: [{ label: "Owen Clark" }, { iconName: "Users", label: "320" }, { iconName: "TrendingUp", label: "95.3%" }] },
+  { id: "t07", title: "Vertex Cloud",         iconVariant: "info",        iconName: "Cloud",      state: { label: "Onboarding",variant: "informative" }, timestamp: "5h ago",    showMenu: true, description: "Startup · Infrastructure · 35 seats", secondaryMeta: [{ label: "Nora Singh" }, { iconName: "Users", label: "35" },  { iconName: "TrendingUp", label: "55.0%" }] },
+  { id: "t08", title: "Pinnacle Retail Group",iconVariant: "yellow",      iconName: "ShoppingBag",state: { label: "At Risk",   variant: "alert"       }, timestamp: "6h ago",    showMenu: true, description: "Enterprise · Retail · 510 seats",     secondaryMeta: [{ label: "Ethan Moore"},  { iconName: "Users", label: "510" }, { iconName: "TrendingDown", label: "67.5%" }] },
+  { id: "t09", title: "Clarity Legal",        iconVariant: "success",     iconName: "Scale",      state: { label: "Active",    variant: "success"     }, timestamp: "Yesterday", showMenu: true, description: "Mid-Market · Legal · 95 seats",       secondaryMeta: [{ label: "Chloe Davis"},  { iconName: "Users", label: "95" },  { iconName: "TrendingUp", label: "88.9%" }] },
+  { id: "t10", title: "Orion Manufacturing",  iconVariant: "success",     iconName: "Factory",    state: { label: "Active",    variant: "success"     }, timestamp: "Yesterday", showMenu: true, description: "Enterprise · Manufacturing · 600 seats",secondaryMeta: [{ label: "Alex Ruiz" },  { iconName: "Users", label: "600" }, { iconName: "TrendingUp", label: "93.1%" }] },
+  { id: "t11", title: "Crestwave Media",      iconVariant: "info",        iconName: "Radio",      state: { label: "Trial",     variant: "informative" }, timestamp: "2d ago",    showMenu: true, description: "Startup · Media · 8 seats",           secondaryMeta: [{ label: "Sophie Lee" }, { iconName: "Users", label: "8" },   { iconName: "TrendingUp", label: "42.0%" }] },
+  { id: "t12", title: "Apex Financial Group", iconVariant: "success",     iconName: "TrendingUp", state: { label: "Active",    variant: "success"     }, timestamp: "2d ago",    showMenu: true, description: "Enterprise · Finance · 275 seats",    secondaryMeta: [{ label: "Marco Hill" }, { iconName: "Users", label: "275" }, { iconName: "TrendingUp", label: "97.0%" }] },
+  { id: "t13", title: "BlueRidge Logistics",  iconVariant: "yellow",      iconName: "Truck",      state: { label: "At Risk",   variant: "alert"       }, timestamp: "3d ago",    showMenu: true, description: "Mid-Market · Logistics · 130 seats",  secondaryMeta: [{ label: "Tina Brooks"}, { iconName: "Users", label: "130" }, { iconName: "TrendingDown", label: "58.3%" }] },
+  { id: "t14", title: "Solara Energy",        iconVariant: "success",     iconName: "Zap",        state: { label: "Active",    variant: "success"     }, timestamp: "3d ago",    showMenu: true, description: "Enterprise · Energy · 380 seats",     secondaryMeta: [{ label: "Raj Patel" },  { iconName: "Users", label: "380" }, { iconName: "TrendingUp", label: "90.5%" }] },
+  { id: "t15", title: "Harbor Digital",       iconVariant: "error",       iconName: "Server",     state: { label: "Churned",   variant: "error"       }, timestamp: "4d ago",    showMenu: true, description: "SMB · IT Services · 22 seats",        secondaryMeta: [{ label: "Fiona Gray" }, { iconName: "Users", label: "22" },  { iconName: "TrendingDown", label: "20.0%" }] },
+  { id: "t16", title: "Meridian Healthcare",  iconVariant: "success",     iconName: "Activity",   state: { label: "Active",    variant: "success"     }, timestamp: "5d ago",    showMenu: true, description: "Enterprise · Healthcare · 520 seats", secondaryMeta: [{ label: "David Wu" },   { iconName: "Users", label: "520" }, { iconName: "TrendingUp", label: "94.6%" }] },
+  { id: "t17", title: "Ironclad Security",    iconVariant: "info",        iconName: "Shield",     state: { label: "Onboarding",variant: "informative" }, timestamp: "5d ago",    showMenu: true, description: "Startup · Cybersecurity · 45 seats",  secondaryMeta: [{ label: "Priya Shah" }, { iconName: "Users", label: "45" },  { iconName: "TrendingUp", label: "68.0%" }] },
+  { id: "t18", title: "Summit Consulting",    iconVariant: "success",     iconName: "Briefcase",  state: { label: "Active",    variant: "success"     }, timestamp: "1w ago",    showMenu: true, description: "Mid-Market · Consulting · 60 seats",  secondaryMeta: [{ label: "Leo Navarro"},  { iconName: "Users", label: "60" },  { iconName: "TrendingUp", label: "86.7%" }] },
+  { id: "t19", title: "AquaFlow Technologies",iconVariant: "yellow",      iconName: "Droplets",   state: { label: "At Risk",   variant: "alert"       }, timestamp: "1w ago",    showMenu: true, description: "Enterprise · Utilities · 200 seats",  secondaryMeta: [{ label: "Hana Bloom" }, { iconName: "Users", label: "200" }, { iconName: "TrendingDown", label: "63.5%" }] },
+  { id: "t20", title: "Fusion Retail Co.",    iconVariant: "success",     iconName: "Store",      state: { label: "Active",    variant: "success"     }, timestamp: "1w ago",    showMenu: true, description: "Enterprise · Retail · 410 seats",     secondaryMeta: [{ label: "Tom Chen" },   { iconName: "Users", label: "410" }, { iconName: "TrendingUp", label: "92.8%" }] },
+  { id: "t21", title: "CloudBase Systems",    iconVariant: "info",        iconName: "Database",   state: { label: "Trial",     variant: "informative" }, timestamp: "2w ago",    showMenu: true, description: "Startup · DevOps · 18 seats",         secondaryMeta: [{ label: "Amy Reyes" },  { iconName: "Users", label: "18" },  { iconName: "TrendingUp", label: "50.0%" }] },
+  { id: "t22", title: "Verity Insurance",     iconVariant: "success",     iconName: "FileCheck",  state: { label: "Active",    variant: "success"     }, timestamp: "2w ago",    showMenu: true, description: "Enterprise · Insurance · 480 seats",  secondaryMeta: [{ label: "Ian Foster" }, { iconName: "Users", label: "480" }, { iconName: "TrendingUp", label: "96.2%" }] },
+  { id: "t23", title: "Momentum Sports",      iconVariant: "success",     iconName: "Trophy",     state: { label: "Active",    variant: "success"     }, timestamp: "2w ago",    showMenu: true, description: "Mid-Market · Sports · 75 seats",      secondaryMeta: [{ label: "Kai Ortega" }, { iconName: "Users", label: "75" },  { iconName: "TrendingUp", label: "84.0%" }] },
+  { id: "t24", title: "Cascade Education",    iconVariant: "yellow",      iconName: "GraduationCap",state:{label:"At Risk",  variant: "alert"       }, timestamp: "3w ago",    showMenu: true, description: "Enterprise · EdTech · 300 seats",     secondaryMeta: [{ label: "Vera Mills" },  { iconName: "Users", label: "300" }, { iconName: "TrendingDown", label: "59.1%" }] },
+  { id: "t25", title: "Titan Pharmaceuticals",iconVariant: "success",     iconName: "Pill",       state: { label: "Active",    variant: "success"     }, timestamp: "3w ago",    showMenu: true, description: "Enterprise · Pharma · 560 seats",     secondaryMeta: [{ label: "Felix Grant" }, { iconName: "Users", label: "560" }, { iconName: "TrendingUp", label: "95.9%" }] },
+  { id: "t26", title: "Keystone Realty",      iconVariant: "info",        iconName: "Home",       state: { label: "Onboarding",variant: "informative" }, timestamp: "1m ago",    showMenu: true, description: "Mid-Market · Real Estate · 50 seats", secondaryMeta: [{ label: "Gina Cruz" },  { iconName: "Users", label: "50" },  { iconName: "TrendingUp", label: "72.0%" }] },
+  { id: "t27", title: "Northgate Publishing", iconVariant: "error",       iconName: "BookOpen",   state: { label: "Churned",   variant: "error"       }, timestamp: "1m ago",    showMenu: true, description: "SMB · Publishing · 16 seats",         secondaryMeta: [{ label: "Ben Walsh" },  { iconName: "Users", label: "16" },  { iconName: "TrendingDown", label: "15.0%" }] },
+  { id: "t28", title: "Polaris Aerospace",    iconVariant: "success",     iconName: "Rocket",     state: { label: "Active",    variant: "success"     }, timestamp: "1m ago",    showMenu: true, description: "Enterprise · Aerospace · 420 seats",  secondaryMeta: [{ label: "Diane Ross"},   { iconName: "Users", label: "420" }, { iconName: "TrendingUp", label: "91.3%" }] },
+  { id: "t29", title: "Stellar Fintech",      iconVariant: "success",     iconName: "CreditCard", state: { label: "Active",    variant: "success"     }, timestamp: "1m ago",    showMenu: true, description: "Startup · Fintech · 55 seats",        secondaryMeta: [{ label: "Ray Nguyen" }, { iconName: "Users", label: "55" },  { iconName: "TrendingUp", label: "82.5%" }] },
+  { id: "t30", title: "Bridgemark Capital",   iconVariant: "info",        iconName: "Landmark",   state: { label: "Trial",     variant: "informative" }, timestamp: "2m ago",    showMenu: true, description: "Enterprise · Capital · 190 seats",    secondaryMeta: [{ label: "Clara Diaz" }, { iconName: "Users", label: "190" }, { iconName: "TrendingUp", label: "47.0%" }] },
+]
+
+function PaginationLiveView({ onBack }: { onBack: () => void }) {
+  const [page, setPage]       = useState(1)
+  const [perPage, setPerPage] = useState(5)
+
+  const start     = (page - 1) * perPage
+  const pageItems = PG_LIVE_ITEMS.slice(start, start + perPage)
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9100, background: "var(--canvas)", display: "flex", flexDirection: "column" }}>
+      {/* Header bar */}
+      <div style={{ padding: "12px 24px", borderBottom: "1px solid var(--field-border)", background: "var(--surface)", flexShrink: 0, display: "flex", alignItems: "center", gap: 16 }}>
+        <button
+          onClick={onBack}
+          className="flex items-center gap-[6px] text-[13px] font-medium transition-colors"
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: 0 }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--foreground)" }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--field-supporting)" }}
+        >
+          <LucideIcons.ArrowLeft size={14} /> Back
+        </button>
+        <div style={{ width: 1, height: 16, background: "var(--field-border)" }} />
+        <span className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>Tenant Overview</span>
+        <div style={{ flex: 1 }} />
+        <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+          {PG_LIVE_ITEMS.length} tenants · Pagination live example
+        </span>
+      </div>
+
+      {/* Sub-header: filter chips */}
+      <div style={{ padding: "10px 24px", borderBottom: "1px solid var(--field-border)", background: "var(--surface)", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+        {(["All", "Active", "At Risk", "Trial", "Churned"] as const).map(label => {
+          const count = label === "All" ? PG_LIVE_ITEMS.length : PG_LIVE_ITEMS.filter(i => i.state?.label === label).length
+          return (
+            <div key={label} className="flex items-center gap-[4px] px-[10px] rounded-[6px]" style={{ height: 28, fontSize: 12, fontWeight: 500, cursor: "default", background: "var(--color-surface-neutral-subtle)", color: "var(--field-supporting)", border: "0.5px solid var(--field-border)" }}>
+              {label} <span style={{ color: "var(--color-text-subtitle)" }}>{count}</span>
+            </div>
+          )
+        })}
+        <div style={{ flex: 1 }} />
+        <span className="text-[11px] font-medium" style={{ color: "var(--field-supporting)" }}>
+          Showing {start + 1}–{Math.min(start + perPage, PG_LIVE_ITEMS.length)} of {PG_LIVE_ITEMS.length}
+        </span>
+      </div>
+
+      {/* List area — Pagination floats at bottom (position: absolute) */}
+      <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+        {/* Scrollable entity list */}
+        <div style={{ height: "100%", overflowY: "auto", paddingBottom: 60 }}>
+          <EntityList items={pageItems} />
+        </div>
+
+        {/* Pagination — floats over the list at the bottom (DS spec: position absolute; bottom 0) */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+          <Pagination
+            currentPage={page}
+            totalItems={PG_LIVE_ITEMS.length}
+            itemsPerPage={perPage}
+            onPageChange={p => setPage(p)}
+            onItemsPerPageChange={n => { setPerPage(n); setPage(1) }}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── PaginationPage ────────────────────────────────────────────────────────────
 
 function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+  const [pgLiveView, setPgLiveView] = useState(false)
 
   // Playground state
   const [pgTotal,    setPgTotal]    = useState(120)
@@ -31255,6 +31563,7 @@ function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
   return (
     <div className="flex flex-col gap-0">
+      {pgLiveView && <PaginationLiveView onBack={() => setPgLiveView(false)} />}
       <div className="flex items-start justify-between gap-[16px] mb-[28px]">
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Pagination</h1>
@@ -31442,6 +31751,37 @@ function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   ].map((t, i) => <p key={i} className="text-[13px] text-[var(--field-supporting)] pl-[14px]">{t}</p>)}
                 </div>
               </div>
+            </div>
+
+            {/* Live example CTA */}
+            <div
+              className="flex items-center justify-between rounded-[12px] p-[20px]"
+              style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-default)" }}
+            >
+              <div className="flex flex-col gap-[4px]">
+                <span className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>
+                  See it live — Tenant Overview with real Pagination
+                </span>
+                <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                  30 real tenant items, interactive prev/next, rows-per-page selector, and frosted glass blur in context.
+                </span>
+              </div>
+              <button
+                onClick={() => setPgLiveView(true)}
+                className="flex items-center gap-[6px] shrink-0 rounded-[8px] px-[14px] text-[13px] font-semibold transition-colors"
+                style={{
+                  height: 36,
+                  background: "var(--primary)",
+                  border: "none",
+                  color: "#fff",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.88" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1" }}
+              >
+                Open live example <LucideIcons.ArrowRight size={13} />
+              </button>
             </div>
           </div>
         )}
