@@ -89,23 +89,21 @@ export function Pagination({
   )
 
   return (
-    /* Outer wrapper — BG-Blur 10 sits here, behind the floating card */
+    /* Outer wrapper — provides the 8px 12px padding around the floating card */
     <div
       ref={containerRef}
       className={cn("flex items-center w-full", className)}
-      style={{
-        padding: "8px 12px",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-      }}
+      style={{ padding: "8px 12px" }}
     >
-      {/* Inner container — floating surface (Surface/Floating/Default) + Elevation-5 shadow */}
+      {/* Inner floating card — blur lives HERE, on the semi-transparent surface fill */}
       <div
         className="flex items-center justify-between w-full"
         style={{
           padding: "4px 8px",
           gap: 40,
           background: "var(--surface-floating-default)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
           border: "0.5px solid var(--color-border-neutral-subtle)",
           borderRadius: 8,
           height: 32,

@@ -3,7 +3,6 @@ import { createPortal } from "react-dom"
 import * as LucideIcons from "lucide-react"
 import PMMichaelTestV1Screen      from "./screens/pm-michael-test-v1"
 import PMLexHTLWorkQueueScreen    from "./screens/pm-lex-htl-work-queue"
-import PaginationLiveExampleScreen from "./screens/pagination-live-example"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -128,7 +127,6 @@ const ExternalIcon = () => (
 const PROTOTYPE_PAGES: { id: string; label: string; description: string; author: string; component: React.FC }[] = [
   { id: "proto-michael-test-v1",       label: "AI Workers — Test v1",          description: "Initial DS prototype test: Status/Category filters, Publish/Edit actions, Eye → SlideOut (Overview · Users · Logs), context menu, detail view, pagination", author: "Michael", component: PMMichaelTestV1Screen },
   { id: "proto-lex-htl-work-queue",    label: "HTL Work Queue",                description: "Human Touch Layer Work Queue — Act Now / Critical / Action / Heads-up severity tiers, multi-studio filter, event detail SlideOut with blast radius, Studio Health overview, activity log", author: "Lex", component: PMLexHTLWorkQueueScreen },
-  { id: "proto-pagination-live",       label: "Pagination — Live example",     description: "30 real tenant items with full DS ScreenLayout + Sidebar + Header + Filters + EntityList + Pagination floating at bottom. Interactive page/rows-per-page controls.", author: "Michael", component: PaginationLiveExampleScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
@@ -31451,8 +31449,35 @@ useEffect(() => {
 }
 // ── PaginationPage ────────────────────────────────────────────────────────────
 
-function PaginationPage({ openSpec, onNavigate }: { openSpec: (s: SpecModal) => void; onNavigate: (id: string) => void }) {
+const PAGINATION_LIVE_ITEMS: EntityListItemData[] = [
+  { id: "p01", title: "Acme Corp",             iconVariant: "success", iconName: "Building2",   state: { label: "Active",     variant: "success"     }, timestamp: "2m ago",    showMenu: true, description: "Enterprise · Healthcare · 240 seats",   secondaryMeta: [{ label: "Sarah Chen"  }, { iconName: "Users", label: "240" }, { iconName: "TrendingUp",   label: "98.2%" }] },
+  { id: "p02", title: "TechNova Inc",          iconVariant: "info",    iconName: "Cpu",         state: { label: "Trial",      variant: "informative" }, timestamp: "15m ago",   showMenu: true, description: "Startup · SaaS · 12 seats",             secondaryMeta: [{ label: "Mike Torres" }, { iconName: "Users", label: "12"  }, { iconName: "TrendingUp",   label: "76.4%" }] },
+  { id: "p03", title: "GlobalMed Partners",    iconVariant: "yellow",  iconName: "HeartPulse",  state: { label: "At Risk",    variant: "alert"       }, timestamp: "1h ago",    showMenu: true, description: "Enterprise · Healthcare · 450 seats",   secondaryMeta: [{ label: "Alice Kim"   }, { iconName: "Users", label: "450" }, { iconName: "TrendingDown", label: "61.0%" }] },
+  { id: "p04", title: "Streamline Solutions",  iconVariant: "success", iconName: "Workflow",    state: { label: "Active",     variant: "success"     }, timestamp: "2h ago",    showMenu: true, description: "Mid-Market · Operations · 80 seats",    secondaryMeta: [{ label: "James Park"  }, { iconName: "Users", label: "80"  }, { iconName: "TrendingUp",   label: "91.7%" }] },
+  { id: "p05", title: "Nexus Ventures",        iconVariant: "error",   iconName: "AlertCircle", state: { label: "Churned",    variant: "error"       }, timestamp: "3h ago",    showMenu: true, description: "SMB · Finance · 28 seats",              secondaryMeta: [{ label: "Laura Vega"  }, { iconName: "Users", label: "28"  }, { iconName: "TrendingDown", label: "30.0%" }] },
+  { id: "p06", title: "Brightfield Analytics", iconVariant: "success", iconName: "BarChart2",   state: { label: "Active",     variant: "success"     }, timestamp: "4h ago",    showMenu: true, description: "Enterprise · Analytics · 320 seats",    secondaryMeta: [{ label: "Owen Clark"  }, { iconName: "Users", label: "320" }, { iconName: "TrendingUp",   label: "95.3%" }] },
+  { id: "p07", title: "Vertex Cloud",          iconVariant: "info",    iconName: "Cloud",       state: { label: "Onboarding", variant: "informative" }, timestamp: "5h ago",    showMenu: true, description: "Startup · Infrastructure · 35 seats",   secondaryMeta: [{ label: "Nora Singh"  }, { iconName: "Users", label: "35"  }, { iconName: "TrendingUp",   label: "55.0%" }] },
+  { id: "p08", title: "Pinnacle Retail Group", iconVariant: "yellow",  iconName: "ShoppingBag", state: { label: "At Risk",    variant: "alert"       }, timestamp: "6h ago",    showMenu: true, description: "Enterprise · Retail · 510 seats",       secondaryMeta: [{ label: "Ethan Moore" }, { iconName: "Users", label: "510" }, { iconName: "TrendingDown", label: "67.5%" }] },
+  { id: "p09", title: "Clarity Legal",         iconVariant: "success", iconName: "Scale",       state: { label: "Active",     variant: "success"     }, timestamp: "Yesterday", showMenu: true, description: "Mid-Market · Legal · 95 seats",         secondaryMeta: [{ label: "Chloe Davis" }, { iconName: "Users", label: "95"  }, { iconName: "TrendingUp",   label: "88.9%" }] },
+  { id: "p10", title: "Orion Manufacturing",   iconVariant: "success", iconName: "Factory",     state: { label: "Active",     variant: "success"     }, timestamp: "Yesterday", showMenu: true, description: "Enterprise · Manufacturing · 600 seats", secondaryMeta: [{ label: "Alex Ruiz"   }, { iconName: "Users", label: "600" }, { iconName: "TrendingUp",   label: "93.1%" }] },
+  { id: "p11", title: "Crestwave Media",       iconVariant: "info",    iconName: "Radio",       state: { label: "Trial",      variant: "informative" }, timestamp: "2d ago",    showMenu: true, description: "Startup · Media · 8 seats",             secondaryMeta: [{ label: "Sophie Lee"  }, { iconName: "Users", label: "8"   }, { iconName: "TrendingUp",   label: "42.0%" }] },
+  { id: "p12", title: "Apex Financial Group",  iconVariant: "success", iconName: "TrendingUp",  state: { label: "Active",     variant: "success"     }, timestamp: "2d ago",    showMenu: true, description: "Enterprise · Finance · 275 seats",       secondaryMeta: [{ label: "Marco Hill"  }, { iconName: "Users", label: "275" }, { iconName: "TrendingUp",   label: "97.0%" }] },
+  { id: "p13", title: "BlueRidge Logistics",   iconVariant: "yellow",  iconName: "Truck",       state: { label: "At Risk",    variant: "alert"       }, timestamp: "3d ago",    showMenu: true, description: "Mid-Market · Logistics · 130 seats",    secondaryMeta: [{ label: "Tina Brooks" }, { iconName: "Users", label: "130" }, { iconName: "TrendingDown", label: "58.3%" }] },
+  { id: "p14", title: "Solara Energy",         iconVariant: "success", iconName: "Zap",         state: { label: "Active",     variant: "success"     }, timestamp: "3d ago",    showMenu: true, description: "Enterprise · Energy · 380 seats",        secondaryMeta: [{ label: "Raj Patel"   }, { iconName: "Users", label: "380" }, { iconName: "TrendingUp",   label: "90.5%" }] },
+  { id: "p15", title: "Harbor Digital",        iconVariant: "error",   iconName: "Server",      state: { label: "Churned",    variant: "error"       }, timestamp: "4d ago",    showMenu: true, description: "SMB · IT Services · 22 seats",          secondaryMeta: [{ label: "Fiona Gray"  }, { iconName: "Users", label: "22"  }, { iconName: "TrendingDown", label: "20.0%" }] },
+  { id: "p16", title: "Meridian Healthcare",   iconVariant: "success", iconName: "Activity",    state: { label: "Active",     variant: "success"     }, timestamp: "5d ago",    showMenu: true, description: "Enterprise · Healthcare · 520 seats",   secondaryMeta: [{ label: "David Wu"    }, { iconName: "Users", label: "520" }, { iconName: "TrendingUp",   label: "94.6%" }] },
+  { id: "p17", title: "Ironclad Security",     iconVariant: "info",    iconName: "Shield",      state: { label: "Onboarding", variant: "informative" }, timestamp: "5d ago",    showMenu: true, description: "Startup · Cybersecurity · 45 seats",    secondaryMeta: [{ label: "Priya Shah"  }, { iconName: "Users", label: "45"  }, { iconName: "TrendingUp",   label: "68.0%" }] },
+  { id: "p18", title: "Summit Consulting",     iconVariant: "success", iconName: "Briefcase",   state: { label: "Active",     variant: "success"     }, timestamp: "1w ago",    showMenu: true, description: "Mid-Market · Consulting · 60 seats",    secondaryMeta: [{ label: "Leo Navarro" }, { iconName: "Users", label: "60"  }, { iconName: "TrendingUp",   label: "86.7%" }] },
+  { id: "p19", title: "AquaFlow Technologies", iconVariant: "yellow",  iconName: "Droplets",    state: { label: "At Risk",    variant: "alert"       }, timestamp: "1w ago",    showMenu: true, description: "Enterprise · Utilities · 200 seats",     secondaryMeta: [{ label: "Hana Bloom"  }, { iconName: "Users", label: "200" }, { iconName: "TrendingDown", label: "63.5%" }] },
+  { id: "p20", title: "Bridgemark Capital",    iconVariant: "info",    iconName: "Landmark",    state: { label: "Trial",      variant: "informative" }, timestamp: "1w ago",    showMenu: true, description: "Enterprise · Capital · 190 seats",       secondaryMeta: [{ label: "Clara Diaz"  }, { iconName: "Users", label: "190" }, { iconName: "TrendingUp",   label: "47.0%" }] },
+]
+
+function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+
+  // Live example state
+  const [livePage,   setLivePage]   = useState(1)
+  const [livePerPage, setLivePerPage] = useState(5)
 
   // Playground state
   const [pgTotal,    setPgTotal]    = useState(120)
@@ -31650,35 +31675,34 @@ function PaginationPage({ openSpec, onNavigate }: { openSpec: (s: SpecModal) => 
               </div>
             </div>
 
-            {/* Live example CTA */}
-            <div
-              className="flex items-center justify-between rounded-[12px] p-[20px]"
-              style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-default)" }}
-            >
-              <div className="flex flex-col gap-[4px]">
-                <span className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>
-                  See it live — Tenant Overview with real Pagination
-                </span>
-                <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
-                  30 real tenant items, interactive prev/next, rows-per-page selector, and frosted glass blur in context.
-                </span>
+            {/* Live example — inline preview */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Live Example</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                20 tenant records. Scroll the list and notice the frosted glass blur — list rows are visible through the semi-transparent card. Use prev/next and the rows-per-page selector to interact with pagination in context.
+              </p>
+
+              {/* Preview container — mimics a list content area */}
+              <div style={{ position: "relative", height: 500, borderRadius: 12, border: "0.5px solid var(--field-border)", overflow: "hidden", background: "var(--canvas)" }}>
+                {/* Scrollable list — 60px bottom padding leaves room for floating Pagination */}
+                <div style={{ height: "100%", overflowY: "auto", paddingBottom: 60 }}>
+                  <EntityList
+                    items={PAGINATION_LIVE_ITEMS.slice((livePage - 1) * livePerPage, livePage * livePerPage)}
+                  />
+                </div>
+
+                {/* Pagination floats over the list — position absolute; bottom 0 (DS spec) */}
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
+                  <Pagination
+                    currentPage={livePage}
+                    totalItems={PAGINATION_LIVE_ITEMS.length}
+                    itemsPerPage={livePerPage}
+                    onPageChange={setLivePage}
+                    onItemsPerPageChange={n => { setLivePerPage(n); setLivePage(1) }}
+                    rowsPerPageOptions={[5, 10, 20]}
+                  />
+                </div>
               </div>
-              <button
-                onClick={() => onNavigate("proto-pagination-live")}
-                className="flex items-center gap-[6px] shrink-0 rounded-[8px] px-[14px] text-[13px] font-semibold transition-colors"
-                style={{
-                  height: 36,
-                  background: "var(--primary)",
-                  border: "none",
-                  color: "#fff",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.88" }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1" }}
-              >
-                Open live example <LucideIcons.ArrowRight size={13} />
-              </button>
             </div>
           </div>
         )}
@@ -36350,7 +36374,7 @@ export default function App() {
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "breadcrumb"      && <BreadcrumbPage openSpec={setSpecModal} />}
           {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}
-          {active === "pagination"      && <PaginationPage      openSpec={setSpecModal} onNavigate={setActive} />}
+          {active === "pagination"      && <PaginationPage      openSpec={setSpecModal} />}
           {active === "filters"         && <FiltersPage         openSpec={setSpecModal} />}
           {active === "breakpoints"     && <BreakpointsPage isDark={isDark} openSpec={setSpecModal} />}
           {active === "corner-radius"   && <CornerRadiusPage openSpec={setSpecModal} />}
