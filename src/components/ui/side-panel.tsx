@@ -4,7 +4,7 @@
  * Opening shifts main content; closing shows a 48px strip (showCollapsedStrip).
  *
  * Side          : right (default) | left
- * Width presets : 300px (min) · 450px (default 1/3) · 704px (expanded 1/2)
+ * Width presets : 350px (default) · 450px · half-screen (window.innerWidth / 2)
  * Resize handle : absolute on open edge — 1px blue line + grip dots, drag-to-snap
  * Collapsed     : 48px strip with panel-toggle icon + optional nav icons with Tooltip labels
  *
@@ -108,9 +108,9 @@ export interface SidePanelProps {
   /** Sticky footer — pass <Button primary> + <Button secondary> */
   footer?: ReactNode
   children?: ReactNode
-  /** Starting width in px. Default 450. */
+  /** Starting width in px. Default 350. */
   defaultWidth?: number
-  /** Snap presets for drag-to-resize. Default [450, 704]. */
+  /** Snap presets for drag-to-resize (excluding half-screen, which is always a snap). Default [350, 450]. */
   widthPresets?: number[]
   /** Called when width snaps to a new preset via drag. */
   onWidthChange?: (width: number) => void
@@ -146,7 +146,7 @@ export function SidePanel({
   showMenu = false,
   footer,
   children,
-  defaultWidth = 450,
+  defaultWidth = 350,
   widthPresets,
   onWidthChange,
   showCollapsedStrip = true,
@@ -162,13 +162,15 @@ export function SidePanel({
   })
 
   const isRight     = side === "right"
-  const presets     = widthPresets ?? [450, 704]
+  const presets     = widthPresets ?? [350, 450]
   const COLLAPSED_W = 48
-  // ── Drag-to-resize (same pattern as Slide Out) ─────────────────────────────
+  // ── Drag-to-resize — 3 snap points: presets[0] · presets[1] · half-screen ───
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    const snapMax = presets[presets.length - 1]
+    const snapHalf  = Math.floor(window.innerWidth / 2)
+    const snapPoints = [...presets, snapHalf]
+    const snapMin   = presets[0]
     dragRef.current = { startX: e.clientX, startWidth: currentWidth, active: true }
     setIsActiveDrag(true)
 
@@ -176,11 +178,10 @@ export function SidePanel({
       if (!dragRef.current.active) return
       document.body.style.cursor     = "col-resize"
       document.body.style.userSelect = "none"
-      // Right panel: drag left = expand. Left panel: drag right = expand.
       const delta = isRight
         ? dragRef.current.startX - ev.clientX
         : ev.clientX - dragRef.current.startX
-      const newW = Math.max(presets[0], Math.min(snapMax, dragRef.current.startWidth + delta))
+      const newW = Math.max(snapMin, Math.min(snapHalf, dragRef.current.startWidth + delta))
       setCurrentWidth(newW)
       onWidthChange?.(newW)
     }
@@ -190,13 +191,15 @@ export function SidePanel({
       document.body.style.cursor     = ""
       document.body.style.userSelect = ""
       setIsActiveDrag(false)
-      const delta = isRight
+      const delta  = isRight
         ? dragRef.current.startX - ev.clientX
         : ev.clientX - dragRef.current.startX
-      const finalW   = Math.max(presets[0], Math.min(snapMax, dragRef.current.startWidth + delta))
-      const midpoint = presets[0] + (snapMax - presets[0]) * 0.4
-      setCurrentWidth(finalW > midpoint ? snapMax : presets[0])
-      onWidthChange?.(finalW > midpoint ? snapMax : presets[0])
+      const finalW  = Math.max(snapMin, Math.min(snapHalf, dragRef.current.startWidth + delta))
+      const closest = snapPoints.reduce((prev, curr) =>
+        Math.abs(curr - finalW) < Math.abs(prev - finalW) ? curr : prev
+      )
+      setCurrentWidth(closest)
+      onWidthChange?.(closest)
       document.removeEventListener("mousemove", onMouseMove)
       document.removeEventListener("mouseup",   onMouseUp)
     }

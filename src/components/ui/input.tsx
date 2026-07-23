@@ -180,13 +180,19 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     >
       {/* DS: floating label — absolute, overlaps the top border of the field */}
       {label && (
-        <span className={cn(
-          "absolute top-[-6px] left-[16px] z-[1]",
-          "inline-flex items-center px-[4px] rounded-sm",
-          "bg-[var(--field-bg)]",
-          "text-[12px] font-semibold leading-normal select-none whitespace-nowrap",
-          "text-[var(--field-label)]"
-        )}>
+        <span
+          className={cn(
+            "absolute top-[-6px] left-[16px] z-[1]",
+            "inline-flex items-center px-[4px] rounded-sm",
+            "text-[12px] font-semibold leading-normal select-none whitespace-nowrap",
+            "text-[var(--field-label)]"
+          )}
+          style={{
+            background: "color-mix(in srgb, var(--field-bg) 80%, transparent)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+          }}
+        >
           {label}
         </span>
       )}

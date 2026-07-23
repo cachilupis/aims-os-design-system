@@ -305,7 +305,7 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
             <ELIconHighlight variant={item.iconVariant} iconName={item.iconName} />
           )}
           {item.avatarName && <ELAvatar name={item.avatarName} src={item.avatarSrc} />}
-          <span className="text-[16px] font-semibold leading-none whitespace-nowrap" style={{ color: "var(--foreground)" }}>
+          <span className="text-[16px] font-semibold leading-none whitespace-nowrap overflow-hidden text-ellipsis min-w-0" style={{ color: "var(--foreground)" }}>
             {item.title}
           </span>
           {/* Primary meta always shows icon + text */}

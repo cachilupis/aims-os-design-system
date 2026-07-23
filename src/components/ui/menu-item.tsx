@@ -46,7 +46,7 @@ function Menu({ children, className }: MenuProps) {
       data-slot="menu"
       className={cn(
         "w-[260px] max-h-[288px] overflow-y-auto rounded-[8px] py-[4px]",
-        "bg-[var(--menu-bg)] shadow-[0_4px_24px_rgba(0,0,0,0.12)] backdrop-blur-[16px]",
+        "bg-[var(--menu-bg)] shadow-[0_4px_24px_rgba(0,0,0,0.12)] backdrop-blur-[8px]",
         className
       )}
     >

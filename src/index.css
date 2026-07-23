@@ -55,6 +55,14 @@
     --input:               #ffffff1a;
     --ring:                #2b7fff;
     --radius:              0.5rem;
+    /* ── DS Radius scale (Figma: Radius/* variables — static, same in both modes) ── */
+    --radius-xs:           2px;   /* Radius/Radius-XS */
+    --radius-s:            4px;   /* Radius/Radius-S  */
+    --radius-m:            8px;   /* Radius/Radius-M  */
+    --radius-l:            12px;  /* Radius/Radius-L  */
+    --radius-xl:           16px;  /* Radius/Radius-XL */
+    --radius-xxl:          24px;  /* Radius/Radius-XXL */
+    --radius-full:         9999px; /* Radius/Radius-Full */
     --sidebar:             #0D1120;
     --sidebar-foreground:  #ffffffcc;
     --sidebar-primary:     #2b7fff;
@@ -312,18 +320,18 @@
 
     /* ── Table — dark ────────────────────────────────── */
     /* Source: 👩‍💻 Developer Reference — Table (node 13859:2959) + Dark Mode Preview (node 13859:2932) */
-    /*   Surface/Neutral/White dark     = rgba(255,255,255,0.10) → row bg (header + body, same token)  */
-    /*   Surface/Neutral/Default dark   = rgba(255,255,255,0.08) → checkbox / row hover bg             */
+    /*   Surface/Neutral/Subtle dark    = rgba(255,255,255,0.05) → row bg (body rows)                   */
+    /*   Surface/Neutral/Default dark   = rgba(255,255,255,0.06) → header bg (slightly darker)         */
     /*   Surface/Primary/More Subtle dk = rgba(43,127,255,0.08)  → selected row bg                     */
-    /*   Text/Subtitle dark             = rgba(255,255,255,0.60) → header column text                  */
-    /*   Text/Body dark                 = rgba(255,255,255,0.60) → row cell text                       */
-    --table-bg:               rgba(255,255,255,0.10);   /* Surface/Neutral/White dark = White/10        */
-    --table-header-bg:        rgba(255,255,255,0.10);   /* Surface/Neutral/White dark (same as body)    */
-    --table-border:           rgba(255,255,255,0.08);   /* Border/Neutral/Lighter dark                  */
-    --table-header-text:      rgba(255,255,255,0.60);   /* Text/Subtitle dark                           */
-    --table-cell-text:        rgba(255,255,255,0.60);   /* Text/Body dark                               */
-    --table-row-hover-bg:     rgba(255,255,255,0.08);   /* Surface/Neutral/Default dark                 */
-    --table-row-selected-bg:  rgba(43,127,255,0.08);    /* Surface/Primary/More Subtle dark             */
+    /*   Text/Subtitle dark             = rgba(255,255,255,0.60) → header text (selected/sort state)   */
+    /*   Text/Body dark                 = #94A3B8               → cell text                           */
+    --table-bg:               transparent;                        /* Table Content rows have no fill (Figma confirmed)     */
+    --table-header-bg:        var(--color-surface-neutral-default); /* Surface/Neutral/Default dark = rgba(255,255,255,0.06) */
+    --table-border:           var(--color-border-neutral-lighter);  /* Border/Neutral/Lighter dark = rgba(255,255,255,0.08) */
+    --table-header-text:      var(--color-text-subtitle);           /* Text/Subtitle dark = rgba(255,255,255,0.60) */
+    --table-cell-text:        var(--color-text-body);               /* Text/Body dark     = #94A3B8              */
+    --table-row-hover-bg:     rgba(255,255,255,0.08);          /* Surface/Neutral/Hover dark = White/8  */
+    --table-row-selected-bg:  rgba(43,127,255,0.08);           /* Surface/Primary/More Subtle dark      */
 
     /* ── Topbar — dark ─────────────────────────────────────────── */
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Dev Reference 12706:849 + Dark Mode frame 12684:252150 */
@@ -424,14 +432,14 @@
 
     /* ── Sidebar — dark ──────────────────────────────────────────────────── */
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Sidebar page · variable bindings resolved */
-    --sb-bg:               rgba(15,23,43,1);          /* Surface/Neutral/Black dark   → #0F172B       */
-    --sb-icon-default:     rgba(128,175,255,0.90);    /* Icon/Primary/Lighter dark    → #80AFFF 90%   */
-    --sb-icon-active:      rgba(255,255,255,0.70);    /* Icon/Neutral/Light dark      → White/70      */
-    --sb-text:             rgba(255,255,255,1);       /* Text/Negative dark           → White/100     */
-    --sb-row-hover:        rgba(255,255,255,0.20);    /* Surface/Neutral/Darker dark  → White/20      */
-    --sb-icon-hover-bg:    rgba(15,23,43,1);          /* Surface/Neutral/Black dark   (icon hover bg) */
-    --sb-separator:        rgba(255,255,255,0.15);    /* Border/Neutral/Lighter dark  → White/15      */
-    --sb-chevron-active:   rgba(233,241,255,1);       /* Icon/Primary/Subtle          → Primary/300   */
+    --sb-bg:               var(--color-surface-neutral-black);  /* Surface/Neutral/Black dark = #0F172B       */
+    --sb-icon-default:     rgba(128,175,255,0.90);              /* Icon/Primary/Lighter dark  = #80AFFF 90%   */
+    --sb-icon-active:      var(--color-icon-neutral-dark);      /* Icon/Neutral/Dark dark     = White/70      */
+    --sb-text:             var(--color-text-negative);          /* Text/Negative              = #ffffff       */
+    --sb-row-hover:        rgba(255,255,255,0.20);              /* Surface/Neutral/Darker dark = White/20     */
+    --sb-icon-hover-bg:    var(--color-surface-neutral-black);  /* Surface/Neutral/Black dark = #0F172B       */
+    --sb-separator:        rgba(255,255,255,0.15);              /* Border/Neutral/Lighter dark = White/15     */
+    --sb-chevron-active:   rgba(233,241,255,1);                 /* Icon/Primary/Subtle        = Primary/300   */
 
     /* ── Global Search overlay — dark mode ──────────────────────────────── */
     /* Surface/Floating dark = rgba(16,22,40) + BACKGROUND_BLUR radius:16  */
@@ -605,6 +613,10 @@
     --color-surface-purple-darker:        #2c075c;                   /* Surface/Purple/Darker dark     */
     --color-surface-purple-lighter:       rgba(123,39,237,0.40);    /* Surface/Purple/Lighter dark    */
     --color-text-purple:                  #d8b4fe;                   /* Text/Purple dark               */
+    --color-text-info:                    #A8C8FF;                   /* Text/Info dark                 */
+    --color-text-lime-green:              #bef264;                   /* Text/LimeGreen dark            */
+    --color-text-light-blue:              #67e8f9;                   /* Text/Light Blue dark           */
+    --color-text-yellow:                  #fcd34d;                   /* Text/Yellow dark               */
     --color-border-purple-lighter:        rgba(123,39,237,0.30);    /* Border/Purple/Lighter dark     */
     --color-surface-light-blue-default:   #00b5d9;                   /* Surface/LightBlue/Default      */
     --color-surface-light-blue-darker:    #02445a;                   /* Surface/LightBlue/Darker dark  */
@@ -616,7 +628,7 @@
     --chip-secondary-bg-hover:            rgba(255,255,255,0.15);   /* Surface/Neutral/Lighter dark   */
     --chip-secondary-bg-disabled:         rgba(255,255,255,0.05);   /* Surface/Neutral/Subtle dark    */
     /* ── Switch Tab — canonical tokens (DS node 4591:349) ──────────────────── */
-    --color-surface-primary-more-subtle:  #f6f9ff;                  /* Surface/Primary/More Subtle    */
+    --color-surface-primary-more-subtle:  rgba(43,127,255,0.08);     /* Surface/Primary/More Subtle dk */
     --st-bg:            var(--surface-raised);                        /* Dark elevated surface #131C2E  */
     --st-shadow:        8px 8px 24px 0px rgba(0, 0, 0, 0.32);       /* Stronger shadow on dark bg     */
     --st-active-bg:     rgba(43, 127, 255, 0.15);                    /* Blue tint on dark surface      */
@@ -648,6 +660,17 @@
     --stepper-label-active:   var(--color-text-subtitle);                  /* Text/Subtitle — Subtitle/S     */
     --stepper-label-default:  var(--color-text-body);                      /* Text/Body — Body/M             */
     --stepper-connector:      var(--color-text-disabled);                  /* Icon/Neutral/Disabled          */
+    /* ── StepperNavFooter — component tokens (DS node 8210:21937) ─────────── */
+    --step-nav-footer-bg:         var(--surface);                          /* Matches panel surface — #0D1120 dark  */
+    --step-nav-footer-separator:  var(--color-border-neutral-lighter);     /* rgba(255,255,255,0.08) dark            */
+    /* ── Slider / Range — component tokens (DS node 16997:20603) ──────────── */
+    --slider-track-bg:        var(--color-surface-neutral-default);  /* empty track — Surface/Neutral/Default  */
+    --slider-fill-bg:         var(--primary);                         /* filled region — Surface/Primary/Default */
+    --slider-thumb-bg:        var(--surface);                         /* thumb fill — page surface (white/dark)  */
+    --slider-thumb-border:    var(--primary);                         /* thumb ring                              */
+    --slider-label-color:     var(--field-label);                     /* field label                             */
+    --slider-value-color:     var(--foreground);                      /* current value text                      */
+    --slider-end-label-color: var(--field-supporting);                /* track end labels (min / max)            */
     /* ── Elevation / Shadow scale (dark mode — stronger for depth on dark bg) */
     --shadow-elevation-1: 0 1px 4px rgba(0,0,0,0.16);
     --shadow-elevation-2: 0 2px 8px rgba(0,0,0,0.24);
@@ -931,21 +954,29 @@
     --toggle-border-off-disabled: rgba(186,186,186,1.00);
     --toggle-track-on-disabled:  #80afff;
     --toggle-thumb-disabled:     rgba(186,186,186,1.00);
+    /* ── Slider / Range — light (aliases resolve from light-mode tokens below) */
+    --slider-track-bg:        var(--color-surface-neutral-default);
+    --slider-fill-bg:         var(--primary);
+    --slider-thumb-bg:        var(--surface);
+    --slider-thumb-border:    var(--primary);
+    --slider-label-color:     var(--field-label);
+    --slider-value-color:     var(--foreground);
+    --slider-end-label-color: var(--field-supporting);
 
     /* ── Table — light ───────────────────────────────── */
     /* Source: 👩‍💻 Developer Reference — Table (node 13859:2959) + component fillVars inspection       */
     /*   Surface/Neutral/White light    = #ffffff         → row bg (header + body use same token)     */
-    /*   Surface/Neutral/Default light  = #f2f2f2         → checkbox / row hover bg                   */
-    /*   Surface/Primary/More Subtle lt = #f6f9ff         → selected row bg (rgba(246,249,255,1))     */
+    /*   Surface/Neutral/Default light  = #f2f2f2         → row hover bg                             */
+    /*   Surface/Primary/More Subtle lt = #f6f9ff         → selected row bg                           */
     /*   Text/Subtitle light            = #2a2a2a         → header column text (darker, hierarchy)    */
     /*   Text/Body light                = #5c5c5c         → row cell text                             */
-    --table-bg:               #F8FBFF;                  /* Blue-tinted surface for glass feel         */
-    --table-header-bg:        #EEF5FF;                  /* Slightly deeper tint for header contrast   */
-    --table-border:           rgba(33,115,255,0.10);    /* Brand-blue subtle border                   */
-    --table-header-text:      #2a2a2a;                  /* Text/Subtitle light = Gray/700             */
-    --table-cell-text:        #5c5c5c;                  /* Text/Body light = Gray/600                 */
-    --table-row-hover-bg:     #f2f2f2;                  /* Surface/Neutral/Default light              */
-    --table-row-selected-bg:  rgba(246,249,255,1.00);   /* Surface/Primary/More Subtle light = #f6f9ff */
+    --table-bg:               transparent;                        /* Table Content rows have no fill (Figma confirmed) */
+    --table-header-bg:        #EEF5FF;                              /* Slightly deeper tint — no canonical match */
+    --table-border:           rgba(33,115,255,0.10);                /* Brand-blue border — no canonical match  */
+    --table-header-text:      var(--color-text-subtitle);           /* Text/Subtitle light = #2a2a2a            */
+    --table-cell-text:        var(--color-text-body);               /* Text/Body light     = #5C5C5C            */
+    --table-row-hover-bg:     var(--color-surface-neutral-default); /* Surface/Neutral/Default light = #f2f2f2  */
+    --table-row-selected-bg:  var(--color-surface-primary-more-subtle); /* Surface/Primary/More Subtle = #f6f9ff */
 
     /* ── Topbar — light ────────────────────────────────────────── */
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Dev Reference 12706:849 + Light Mode frame 12684:252030 */
@@ -1045,14 +1076,14 @@
 
     /* ── Sidebar — light ─────────────────────────────────────────────────── */
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Sidebar page · variable bindings resolved */
-    --sb-bg:               rgba(0,0,0,1);             /* Surface/Neutral/Black light  → #000000       */
-    --sb-icon-default:     rgba(128,175,255,1);       /* Icon/Primary/Lighter light   → #80AFFF       */
-    --sb-icon-active:      rgba(255,255,255,1);       /* Icon/Neutral/Light light     → White/100     */
-    --sb-text:             rgba(255,255,255,1);       /* Text/Negative light          → White/100     */
-    --sb-row-hover:        rgba(42,42,42,1);          /* Surface/Neutral/Darker light → #2A2A2A       */
-    --sb-icon-hover-bg:    rgba(0,0,0,1);             /* Surface/Neutral/Black light  (icon hover bg) */
-    --sb-separator:        rgba(186,186,186,1);       /* Border/Neutral/Lighter light → Gray/500      */
-    --sb-chevron-active:   rgba(233,241,255,1);       /* Icon/Primary/Subtle          → Primary/300   */
+    --sb-bg:               var(--color-surface-neutral-black);  /* Surface/Neutral/Black light = #000000      */
+    --sb-icon-default:     rgba(128,175,255,1);                 /* Icon/Primary/Lighter light  = #80AFFF      */
+    --sb-icon-active:      var(--color-text-negative);          /* Icon/Neutral/Light light    = #ffffff      */
+    --sb-text:             var(--color-text-negative);          /* Text/Negative               = #ffffff      */
+    --sb-row-hover:        rgba(42,42,42,1);                    /* Surface/Neutral/Darker light = #2A2A2A     */
+    --sb-icon-hover-bg:    var(--color-surface-neutral-black);  /* Surface/Neutral/Black light = #000000      */
+    --sb-separator:        rgba(186,186,186,1);                 /* Border/Neutral/Lighter light = Gray/500    */
+    --sb-chevron-active:   rgba(233,241,255,1);                 /* Icon/Primary/Subtle         = Primary/300  */
 
     /* ── Global Search overlay — light ──────────────────────────────────── */
     --gs-bg:               rgba(255,255,255,0.97);    /* Surface/Neutral/White light                  */
@@ -1179,7 +1210,7 @@
     --color-text-body:                    #5C5C5C;                 /* Text/Body light                */
     --color-icon-neutral-default:         #52525B;                 /* Icon/Neutral/Default light     */
     --color-surface-overlay:              rgba(0,0,0,0.30);        /* Overlay/Scrim/Default (same)   */
-    --color-surface-neutral-black:        #0f172b;                 /* Surface/Neutral/Black (static) */
+    --color-surface-neutral-black:        #000000;                 /* Surface/Neutral/Black light    */
     /* ── Slide Out — component tokens (light) ───────────────────────────── */
     --slide-out-bg:      var(--surface-floating-default);
     --slide-out-title:   var(--color-text-title);
@@ -1214,6 +1245,10 @@
     --color-surface-purple-darker:        #2c075c;   /* Surface/Purple/Darker light   */
     --color-surface-purple-lighter:       #cfa7f9;   /* Surface/Purple/Lighter        */
     --color-text-purple:                  #2c075c;   /* Text/Purple light             */
+    --color-text-info:                    #001740;   /* Text/Info light               */
+    --color-text-lime-green:              #3e5c0a;   /* Text/LimeGreen light          */
+    --color-text-light-blue:              #02445a;   /* Text/Light Blue light         */
+    --color-text-yellow:                  #5c3500;   /* Text/Yellow light             */
     --color-border-purple-lighter:        #cfa7f9;   /* Border/Purple/Lighter         */
     --color-surface-light-blue-default:   #00b5d9;   /* Surface/LightBlue/Default     */
     --color-surface-light-blue-darker:    #02445a;   /* Surface/LightBlue/Darker      */
@@ -1250,6 +1285,8 @@
     --stepper-icon-default:      #3F3F46;                                  /* Icon/Neutral/Dark light        */
     --stepper-label-active:      #2a2a2a;                                  /* Text/Subtitle light            */
     --stepper-connector:         #bababa;                                  /* Icon/Neutral/Disabled light    */
+    --step-nav-footer-bg:        var(--color-surface-neutral-white);       /* #FFFFFF light — white wizard footer */
+    --step-nav-footer-separator: var(--color-border-neutral-lighter);      /* #E8E8E8 light                       */
     /* ── Elevation / Shadow scale ──────────────────────────────────────── */
     /* Each level maps to a specific UI role — never skip levels */
     --shadow-elevation-1: 0 1px 4px rgba(0,0,0,0.06);                                              /* Micro — toggles, focused chips        */

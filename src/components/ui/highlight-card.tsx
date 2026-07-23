@@ -6,6 +6,7 @@
  */
 import { cn } from "@/lib/utils"
 import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highlight-icon"
+import { Tooltip } from "@/components/ui/tooltip"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -112,18 +113,23 @@ export function HighlightCard({
       }}
     >
       {/* Row 1: label + icon */}
-      <div className="flex items-center justify-between">
-        <span
-          className="text-sm font-medium leading-none"
-          style={{ color: "var(--hc-text-label)" }}
-        >
-          {label}
-        </span>
+      <div className="flex items-center justify-between gap-[4px]">
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <Tooltip content={label} side="top">
+            <span
+              className="text-sm font-medium leading-none truncate block"
+              style={{ color: "var(--hc-text-label)" }}
+            >
+              {label}
+            </span>
+          </Tooltip>
+        </div>
         <HighlightIcon
           iconName={iconName}
           variant={STYLE_ICON_VARIANT[style]}
           size="lg"
           iconColor="dark"
+          className="shrink-0"
         />
       </div>
 

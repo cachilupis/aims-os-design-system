@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, Fragment, useRef, useLayoutEffect, type CSSProperties } from "react"
+import { useState, useEffect, useMemo, Fragment, useRef, useLayoutEffect, type CSSProperties, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import * as LucideIcons from "lucide-react"
 import PMMichaelTestV1Screen   from "./screens/pm-michael-test-v1"
 import PMLexHTLWorkQueueScreen from "./screens/pm-lex-htl-work-queue"
@@ -10,9 +11,11 @@ import { CardContainer, type CardVariant } from "@/components/ui/card-container"
 import { Tag, type TagVariant } from "@/components/ui/tag"
 import { Menu, MenuItem, MenuDivider, MenuSection } from "@/components/ui/menu-item"
 import { HighlightIcon, type HighlightIconVariant, type HighlightIconSize } from "@/components/ui/highlight-icon"
+import { HighlightNumber, type HighlightNumberVariant } from "@/components/ui/highlight-number"
 import { Header, type HeaderSize } from "@/components/ui/header"
 import { Pagination } from "@/components/ui/pagination"
 import { HighlightCard, type HighlightCardStyle, type HighlightCardFeedback } from "@/components/ui/highlight-card"
+import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
 import { Select, type SelectState } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Toggle } from "@/components/ui/toggle"
@@ -47,12 +50,25 @@ import { ProgressBar, type ProgressBarStyle, type ProgressBarSize } from "@/comp
 import { Skeleton, type SkeletonShape } from "@/components/ui/skeleton"
 import { Spinner, type SpinnerStyle, type SpinnerSize } from "@/components/ui/spinner"
 import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
+import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { WidgetFather, type WidgetWidthClass } from "@/components/ui/widget-father"
+import { Breadcrumb, type BreadcrumbItem } from "@/components/ui/breadcrumb"
+import { ProcessItem, ProcessList, type ProcessStatus } from "@/components/ui/process-item"
+import { Slider } from "@/components/ui/slider"
+import { TagInput } from "@/components/ui/tag-input"
+import { AddFields, type FieldItem } from "@/components/ui/add-fields"
+import { BreadcrumbExampleScreen }            from "./screens/breadcrumb-example"
+import { StepperNavFooterExampleScreen }      from "./screens/stepper-nav-footer-example"
+import { FormsSettingsExampleScreen }         from "./screens/forms-settings-example"
+import { FormsCreatePageExampleScreen }       from "./screens/forms-create-page-example"
+import { SlideOutDetailExampleScreen }        from "./screens/slideout-detail-example"
+import { SlideOutFormExampleScreen }          from "./screens/slideout-form-example"
+import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "widget-father" | "widgets"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets"
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -121,7 +137,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   // Components — keep sorted A→Z by label so new entries stay predictable in the sidebar
   { id: "alert-banner",    label: "Alert Banner",      group: "Components",  description: "Full-width contextual notice. 3 states: Error, Success, Alert · optional CTA + dismiss · adaptive dark/light tokens." },
   { id: "avatar",          label: "Avatar",            group: "Components",  description: "User & workspace avatars · 4 sizes (S/M/L/XL) · 6 color variants · initials fallback · stacked group" },
-  { id: "breadcrumb",      label: "Breadcrumb",        group: "Components",  description: "Hierarchical back-navigation trail · L3+ depth only · back arrow for L2 · DS-GAP: component in design, pending Figma → code implementation" },
+  { id: "breadcrumb",      label: "Breadcrumb",        group: "Components",  description: "Hierarchical back-navigation trail · L3+ depth only · Header backButton for L2 · never shown at L1" },
   { id: "button",          label: "Button",            group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
   { id: "card-container",  label: "Card Container",    group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
@@ -145,7 +161,8 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "skeleton",        label: "Skeleton",          group: "Components",  description: "Loading placeholder · 3 shapes (Rectangle 12px / Circle / Text 4px) · linear shimmer 1.2s left→right loop · matches content layout · prefers-reduced-motion safe · --skeleton-* tokens" },
   { id: "slide-out",       label: "Slide Out",         group: "Components",  description: "Overlay panel from the right · 2 sizes M (635px) / S (420px) · header with title + subtitle + close · divider · scrollable body · optional footer · Escape key + backdrop dismiss" },
   { id: "spinner",         label: "Spinner",           group: "Components",  description: "Circular indeterminate loading indicator · 6 semantic styles · 5 sizes (XS 12px → XL 48px) · 0.7s linear rotation · ARIA status · prefers-reduced-motion safe · --spinner-* tokens" },
-  { id: "stepper",         label: "Stepper",           group: "Components",  description: "Horizontal multi-step progress indicator · 5 states (Default, Active, Completed, Locked, View-only) · 24×24px dot with Radius-S · Check/Lock icons · connector line · --stepper-* tokens" },
+  { id: "stepper",             label: "Stepper",             group: "Components",  description: "Horizontal multi-step progress indicator · 5 states (Default, Active, Completed, Locked, View-only) · 24×24px dot with Radius-S · Check/Lock icons · connector line · --stepper-* tokens" },
+  { id: "stepper-nav-footer",  label: "Stepper Nav Footer",  group: "Components",  description: "Sticky bottom navigation bar for multi-step wizards · 2 variants: Cancel/Next (first step) and Back/Next (subsequent steps) · 72px height · 24px padding · optional secondary CTA · --step-nav-footer-* tokens" },
   { id: "switch-tab",      label: "Switch Tab",        group: "Components",  description: "Segmented tab switcher · white pill container · 2–7 tabs · M (48px) / S (44px) · active blue fill · ARIA tablist · keyboard nav (← →)" },
   { id: "table",           label: "Table",             group: "Components",  description: "Data table · 2 sizes · row selection · checkboxes · hover & selected states" },
   { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · inside card or standalone · active indicator · icon · 2 sizes (M/S) · disabled state · use for in-context view switching, not page navigation" },
@@ -161,8 +178,13 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "corner-radius", label: "Corner Radius",  group: "Foundations", description: "8-token radius scale · none/XS/S/M/L/XL/XXL/Full · component mapping · do/don't guidelines" },
   { id: "elevation",     label: "Elevation",      group: "Foundations", description: "5-level shadow scale · Elevation-1 micro → Elevation-5 float · dark/light mode values · component mapping" },
   { id: "icons",       label: "Icons",       group: "Foundations", description: "141 icons mapped from Material Design DS to Lucide · 12 semantic categories" },
+  { id: "spacing",     label: "Spacing",     group: "Foundations", description: "4px grid · 11 tokens (0–64px) · governs padding, gap, and margin across all views" },
   { id: "typography",  label: "Typography",  group: "Foundations", description: "Type scale DS → Tailwind · Display, Title, Subtitle, Body, Label, Caption, Link" },
   // Patterns — behavioral guides for PMs and engineers
+  { id: "patterns-guardrails",  label: "Guardrails",         group: "Patterns", description: "Reglas consolidadas para vistas generadas por IA · Tokens · Headers · Botones · 3-dot menu · Sidebar sub-nav · SlideOut composition" },
+  { id: "patterns-forms",       label: "Forms",              group: "Patterns", description: "Composición de formularios: cuándo usar wizard vs modal vs slideout · field spacing 16px / section gap 24px · validación en blur · Next disabled en campos requeridos vacíos" },
+  { id: "patterns-slideout",    label: "SlideOut / SidePanel",   group: "Patterns", description: "SlideOut vs SidePanel: cuándo usar cada uno · Shell anatomy · 4 header variants · ejemplos reales de detail view, form y node config · content types · tabs · footer · guardrails" },
+  { id: "patterns-panel-content", label: "SlideOut/SidePanel — Content", group: "Patterns", description: "Content vocabulary for panels — AI Summary (8 variants) · Insights (HighlightCard grid) · List Sections · Form fields: Input, Textarea, Select, Toggle · Section Headers" },
   { id: "patterns-list-view",  label: "List View Layout",  group: "Patterns", description: "Stack obligatorio: Topbar + Sidebar + EntityList + Pagination · AppBackground siempre · Side Panel para detalles · Filters como única fuente de verdad del dataset" },
   { id: "patterns-filter",     label: "Filter System",     group: "Patterns", description: "3 capas: Visible Filters → All Filters button → Slideout (completo) → Chips (opcional) · estado draft/applied · Apply resets pagination" },
   { id: "patterns-overlay",    label: "Overlay Decision",  group: "Patterns", description: "Modal cuando el usuario debe detenerse y decidir · Slide-out cuando puede seguir explorando · solo 1 de cada tipo activo a la vez" },
@@ -2507,6 +2529,7 @@ const SLIDE_OUT_SPEC = {
 // ── Unified Spec Panel ─────────────────────────────────────────────────────
 
 function getSpec(id: NonNullable<SpecModal>): AnySpec {
+  if (id === "breadcrumb")       return BREADCRUMB_SPEC       as AnySpec
   if (id === "button")           return BUTTON_SPEC           as AnySpec
   if (id === "input")            return INPUT_SPEC            as AnySpec
   if (id === "textarea")         return TEXTAREA_SPEC         as AnySpec
@@ -2533,7 +2556,8 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "progress-bar")     return PROGRESS_BAR_SPEC     as AnySpec
   if (id === "skeleton")         return SKELETON_SPEC          as AnySpec
   if (id === "spinner")          return SPINNER_SPEC           as AnySpec
-  if (id === "stepper")          return STEPPER_SPEC           as AnySpec
+  if (id === "stepper")              return STEPPER_SPEC               as AnySpec
+  if (id === "stepper-nav-footer")   return STEPPER_NAV_FOOTER_SPEC    as AnySpec
   if (id === "switch-tab")       return SWITCH_TAB_SPEC       as AnySpec
   if (id === "tabs")             return TABS_SPEC             as AnySpec
   if (id === "scroll-area")     return SCROLL_AREA_SPEC      as AnySpec
@@ -13678,6 +13702,6898 @@ const CANVAS_COLS = (canvasWidth: number): number => {
   )
 }
 
+// ── PatternGuardrailsPage ─────────────────────────────────────────────────────
+
+function GuardrailRuleItem({ type, rule, detail }: { type: "never" | "always" | "default"; rule: string; detail: string }) {
+  const labelMap = { never: "NEVER", always: "ALWAYS", default: "DEFAULT" }
+  const styleMap = {
+    never:   { background: "var(--color-status-error-subtle)",       color: "var(--color-status-error-default)"   },
+    always:  { background: "var(--color-status-success-subtle)",     color: "var(--color-status-success-default)" },
+    default: { background: "var(--color-surface-primary-subtle)",    color: "var(--primary)"                      },
+  }
+  return (
+    <div className="flex gap-[12px] items-start p-[14px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
+      <span className="text-[10px] font-bold px-[6px] py-[2px] rounded-[3px] shrink-0 mt-[1px] leading-[1.4]" style={styleMap[type]}>{labelMap[type]}</span>
+      <div>
+        <span className="text-[13px] font-semibold text-[var(--foreground)]">{rule}</span>
+        <p className="text-[12px] text-[var(--field-supporting)] mt-[2px] leading-[1.5]">{detail}</p>
+      </div>
+    </div>
+  )
+}
+
+function PatternGuardrailsPage() {
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[32px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern · Reference</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Guardrails</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          Consolidated rules for consistent AI-generated views. These are the most commonly violated patterns — review this block before generating any screen or component.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-[16px]">
+
+        {/* Tokens & Components */}
+        <PatternCard>
+          <SectionLabel>Tokens & Components</SectionLabel>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="never" rule="Hardcode hex or rgba in .tsx" detail="Every color must be var(--token-name). If a token doesn't exist, stop and tell the user before creating one." />
+            <GuardrailRuleItem type="never" rule="Build a custom replica of a DS component" detail="If it exists in src/components/ui/, import and use it. A replica silently loses hover states, token bindings, and accessibility — bugs invisible in TypeScript." />
+            <GuardrailRuleItem type="never" rule="Add borderBottom on a Tabs wrapper div" detail="The Tabs component owns its own active indicator (2px bottom border, active tab only). A wrapper border creates a line under ALL tabs." />
+          </div>
+        </PatternCard>
+
+        {/* Navigation & Headers */}
+        <PatternCard>
+          <SectionLabel>Navigation & Headers</SectionLabel>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="never" rule="Show tag on a list-view Header" detail="tag = current state of a single item. A list contains many simultaneous states — a single tag is meaningless. Only use on detail views (SlideOut, full-screen item detail)." />
+            <GuardrailRuleItem type="never" rule="Show both backButton and breadcrumbs together" detail="L2 depth (one step below a list) → backButton only. L3+ depth → breadcrumbs only. Never both at once." />
+            <GuardrailRuleItem type="never" rule='Use WidgetCanvasSection or a hand-rolled grid for Overview tabs' detail='Any tab labelled "Overview" must use WidgetCanvasView from src/components/layouts/widget-canvas-view.tsx.' />
+            <GuardrailRuleItem type="never" rule="Pass the label prop to Input or Textarea in desktop screens" detail="Use placeholder only. The floating label is a mobile/touch convention — it is incorrect on desktop." />
+          </div>
+        </PatternCard>
+
+        {/* Buttons & Overlays */}
+        <PatternCard>
+          <SectionLabel>Buttons & Overlays</SectionLabel>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="never" rule='Use variant="main" inside a widget, card, SlideOut, or modal' detail='variant="main" belongs only in the Header primaryAction — max 1 per screen. Use variant="primary" for all content-area actions.' />
+            <GuardrailRuleItem type="never" rule="Open a ModalDialog for non-blocking content" detail="Modal = user must stop and respond. SlideOut = user can continue browsing. If the user can ignore it, it belongs in a SlideOut." />
+            <GuardrailRuleItem type="never" rule="Show a filter chip before Apply is clicked" detail="Chips represent applied state only. Draft selections inside FiltersSlideout are discarded on close without Apply — chips must not appear before that." />
+          </div>
+        </PatternCard>
+
+        {/* 3-dot Context Menu */}
+        <PatternCard>
+          <SectionLabel>3-dot Context Menu (•••)</SectionLabel>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="default" rule="Archive + Duplicate are global defaults" detail="Always present in that order unless the entity type explicitly excludes them. Do not omit without a defined reason in DS documentation." />
+            <GuardrailRuleItem type="never" rule="Add Delete as a global default" detail="Delete is context-dependent — include it only when the entity type explicitly supports deletion. It is not a universal action." />
+            <GuardrailRuleItem type="always" rule="Use icon + text variant, size S" detail="Never icon-only. Never size M or L. The icon + text menu-item variant at size S is mandatory across all 3-dot menus in the platform." />
+            <GuardrailRuleItem type="never" rule="Add undocumented actions" detail="Every action in a 3-dot menu must be defined for that entity type in DS documentation. Do not improvise options not listed there." />
+          </div>
+        </PatternCard>
+
+        {/* Sidebar Sub-navigation */}
+        <PatternCard>
+          <SectionLabel>Sidebar Sub-navigation</SectionLabel>
+          <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Two behaviors — apply based on the sidebar's current collapse state.</p>
+          <div className="overflow-x-auto rounded-[6px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr style={{ borderBottom: "0.5px solid var(--table-border)", background: "var(--color-surface-neutral-default)" }}>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)] w-[200px]">Sidebar state</th>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">Sub-item behavior</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                  <td className="px-[12px] py-[10px]">
+                    <span className="font-semibold text-[var(--foreground)]">Collapsed</span>
+                    <span className="text-[11px] ml-[6px]" style={{ color: "var(--field-supporting)" }}>56px · icon-only</span>
+                  </td>
+                  <td className="px-[12px] py-[10px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                    Active item with sub-items → <strong className="text-[var(--foreground)]">fly-out popup</strong> appears to the right of the sidebar (~260px wide, dark surface) showing sub-items as <code className="text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-neutral-default)" }}>Menu-items</code>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-[12px] py-[10px]">
+                    <span className="font-semibold text-[var(--foreground)]">Expanded</span>
+                    <span className="text-[11px] ml-[6px]" style={{ color: "var(--field-supporting)" }}>250px · with labels</span>
+                  </td>
+                  <td className="px-[12px] py-[10px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                    Active item with sub-items → sub-items <strong className="text-[var(--foreground)]">expand inline below parent</strong>, indented, each with icon + label as <code className="text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-neutral-default)" }}>Menu-items</code>. A <strong className="text-[var(--foreground)]">›</strong> chevron on the parent indicates sub-items exist.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+            Toggle at sidebar top switches states. Tooltip: <strong className="text-[var(--foreground)]">"Expand"</strong> (collapsed) / <strong className="text-[var(--foreground)]">"Collapse"</strong> (expanded). Figma ref: node <code className="text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-neutral-default)" }}>8602-48775</code> in DS file.
+          </p>
+        </PatternCard>
+
+        {/* SlideOut Content Composition */}
+        <PatternCard>
+          <SectionLabel>SlideOut Content Composition</SectionLabel>
+          <div className="p-[14px] rounded-[6px]" style={{ background: "var(--color-status-warning-subtle)", border: "0.5px solid var(--color-status-warning-default)" }}>
+            <p className="text-[13px] font-semibold" style={{ color: "var(--color-status-warning-default)" }}>Composition guide pending</p>
+            <p className="text-[12px] mt-[4px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+              A dedicated page documenting what content to show inside a SlideOut depending on context (entity type, panel purpose, available data) is in progress. Patterns will be extracted from the Agentic Workflow Builder Nodes Configuration section.
+            </p>
+          </div>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="never" rule="Use a custom overlay div instead of SlideOut" detail="Always use the SlideOut component from src/components/ui/ as the container. Never a custom fixed-position panel." />
+            <GuardrailRuleItem type="default" rule="Entity detail content order (interim)" detail="Entity name + status tag → primary action buttons → metadata fields → related items list. Use this order until the full composition guide ships." />
+            <GuardrailRuleItem type="always" rule="Flag edge cases with a DS-GAP comment" detail="// DS-GAP: SlideOut content pattern — pending composition guide" />
+          </div>
+        </PatternCard>
+
+        {/* Entity Click Behavior */}
+        <PatternCard>
+          <SectionLabel>Entity Click Behavior</SectionLabel>
+          <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Two distinct interactions on every entity card — never conflate them.</p>
+          <div className="overflow-x-auto rounded-[6px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr style={{ borderBottom: "0.5px solid var(--table-border)", background: "var(--color-surface-neutral-default)" }}>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)] w-[160px]">Interaction</th>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">Behavior</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                  <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">Card click</td>
+                  <td className="px-[12px] py-[10px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                    Always <strong className="text-[var(--foreground)]">navigates to the full detail view</strong> for that entity — full-page or section transition. Never opens a SlideOut.
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">Eye button</td>
+                  <td className="px-[12px] py-[10px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                    Always opens a <strong className="text-[var(--foreground)]">SlideOut preview</strong>. Only render this button when preview content exists. <strong className="text-[var(--foreground)]">Omit it entirely</strong> when there is nothing to preview — never show a disabled Eye.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="never" rule="Open a SlideOut on card click" detail="Card click = navigation. SlideOut = Eye button only. Mixing these breaks the mental model: users learn that clicking a card goes somewhere, and the Eye gives a peek without leaving the list." />
+            <GuardrailRuleItem type="never" rule="Show the Eye button when there is no preview content" detail="An Eye button with no content is misleading. Conditionally render it: hasPreview ? [eye action] : []" />
+          </div>
+        </PatternCard>
+
+        {/* Empty States */}
+        <PatternCard>
+          <SectionLabel>Empty States</SectionLabel>
+          <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Use the <code className="text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-neutral-default)" }}>EmptyState</code> component from <code className="text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-neutral-default)" }}>src/components/ui/empty-state.tsx</code> for every zero-result scenario.</p>
+          <div className="overflow-x-auto rounded-[6px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr style={{ borderBottom: "0.5px solid var(--table-border)", background: "var(--color-surface-neutral-default)" }}>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">Scenario</th>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">title</th>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">CTA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { scenario: "No records yet (first visit)", title: '"No [Entities] yet"', cta: '"Create your first [Entity]"' },
+                  { scenario: "Filtered/search returns 0 results", title: '"No [entities] found"', cta: '"Clear filters"' },
+                  { scenario: "Global search returns 0 matches", title: '"No results for \'[query]\'"', cta: "—" },
+                ].map((row, i, arr) => (
+                  <tr key={row.scenario} style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--table-border)" : undefined }}>
+                    <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{row.scenario}</td>
+                    <td className="px-[12px] py-[10px] font-mono text-[11px] text-[var(--foreground)]">{row.title}</td>
+                    <td className="px-[12px] py-[10px] font-mono text-[11px] text-[var(--foreground)]">{row.cta}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="never" rule="Hardcode a custom empty state" detail="Custom divs, illustrations, or inline messages break visual consistency across the platform. EmptyState is the single source of truth for zero-result UI." />
+            <GuardrailRuleItem type="never" rule="Show EmptyState and Pagination at the same time" detail="0 results = no pagination. If count is 0, the Pagination component must be hidden." />
+            <GuardrailRuleItem type="always" rule="Override icon with the entity's semantic icon" detail="icon={Bot} for Workers, icon={Zap} for Automations, icon={BookOpen} for Knowledge, etc. The default Inbox icon is a fallback, not a deliberate choice." />
+            <GuardrailRuleItem type="always" rule="Place EmptyState where the list would have been" detail="Same container, same padding, same vertical position as the entity list it replaces. Never offset it or change the layout when switching to the empty state." />
+          </div>
+        </PatternCard>
+
+        {/* Detail Page Layout */}
+        <PatternCard>
+          <SectionLabel>Detail Page Layout (full-screen entity detail)</SectionLabel>
+          <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Every entity detail page uses the same tab order. Deviations require explicit justification.</p>
+          <div className="overflow-x-auto rounded-[6px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr style={{ borderBottom: "0.5px solid var(--table-border)", background: "var(--color-surface-neutral-default)" }}>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)] w-[130px]">Tab</th>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)] w-[100px]">Position</th>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">Component</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { tab: "Overview", pos: "Always first", comp: "WidgetCanvasView — never a hand-rolled widget grid" },
+                  { tab: "[Entity-specific]", pos: "Middle", comp: "Varies by entity type (Runs, Members, Triggers, Settings, etc.)" },
+                  { tab: "Logs", pos: "Always last", comp: "Table component following the Logs Table pattern" },
+                ].map((row, i, arr) => (
+                  <tr key={row.tab} style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--table-border)" : undefined }}>
+                    <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">{row.tab}</td>
+                    <td className="px-[12px] py-[10px]" style={{ color: "var(--primary)" }}>{row.pos}</td>
+                    <td className="px-[12px] py-[10px]" style={{ color: "var(--field-supporting)" }}>{row.comp}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="always" rule="Show status tag on detail page Header" detail="Detail view = one entity, one state. The tag always reflects the current status (Active, Draft, Running, Paused, Archived)." />
+            <GuardrailRuleItem type="always" rule="Use backButton (L2) or breadcrumbs (L3+) on detail Header" detail="Never omit navigation back. Never show both simultaneously. Pick based on depth." />
+            <GuardrailRuleItem type="never" rule="Use WidgetCanvasSection or a hand-rolled grid for the Overview tab" detail="Overview = WidgetCanvasView. This is the same rule as list-view Overview — it applies to detail pages too." />
+          </div>
+        </PatternCard>
+
+        {/* SwitchTab */}
+        <PatternCard>
+          <SectionLabel>SwitchTab — when to show it</SectionLabel>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="default" rule="Default view is always entity cards — SwitchTab not shown" detail="EntityList + CardContainer is the standard. Do not add SwitchTab unless the use case explicitly requires an alternate view." />
+            <GuardrailRuleItem type="never" rule="Hand-roll a grid or custom table when SwitchTab is active" detail='If the table option is needed, always use the DS Table component. Filters and Pagination remain unchanged regardless of which view is active.' />
+            <GuardrailRuleItem type="always" rule='Map SwitchTab options to DS components only' detail='"List" option → EntityList. "Table" option → DS Table component with the same dataset and columns. No other components.' />
+          </div>
+        </PatternCard>
+
+        {/* Confirmation Modals */}
+        <PatternCard>
+          <SectionLabel>Confirmation Modals (destructive actions)</SectionLabel>
+          <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Always use <code className="text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-neutral-default)" }}>ModalDialog variant="confirmation"</code>. Match <code className="text-[11px] px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-neutral-default)" }}>tone</code> to the severity of the action.</p>
+          <div className="overflow-x-auto rounded-[6px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr style={{ borderBottom: "0.5px solid var(--table-border)", background: "var(--color-surface-neutral-default)" }}>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">Action</th>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">tone</th>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">iconName</th>
+                  <th className="px-[12px] py-[10px] text-left font-semibold text-[var(--foreground)]">destructive</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { action: "Archive", tone: '"warning"', icon: '"Archive"', destr: "false" },
+                  { action: "Delete", tone: '"error"', icon: '"Trash2"', destr: "true" },
+                  { action: "Other irreversible", tone: '"warning"', icon: "semantic", destr: "true" },
+                ].map((row, i, arr) => (
+                  <tr key={row.action} style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--table-border)" : undefined }}>
+                    <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">{row.action}</td>
+                    <td className="px-[12px] py-[10px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.tone}</td>
+                    <td className="px-[12px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.icon}</td>
+                    <td className="px-[12px] py-[10px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.destr}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-col gap-[8px]">
+            <GuardrailRuleItem type="always" rule='title as a question, ctaSecondary always "Cancel"' detail='title → "Delete this worker?" | "Archive automation?". ctaPrimary label matches the verb ("Delete", "Archive"). ctaSecondary is always { label: "Cancel", onClick: onClose }.' />
+            <GuardrailRuleItem type="always" rule="description states the consequence" detail='"This action cannot be undone." or entity-specific impact. Never leave description empty on a destructive confirmation.' />
+            <GuardrailRuleItem type="never" rule="Improvise a custom confirmation UI" detail="Never use a hand-rolled modal, popover, or inline confirm for destructive actions. ModalDialog variant=confirmation is the only accepted pattern." />
+          </div>
+        </PatternCard>
+
+      </div>
+    </div>
+  )
+}
+
+// ── ConditionalFieldDemo (used in PatternFormsPage Examples tab) ─────────────
+
+function ConditionalFieldDemo() {
+  const [triggerType, setTriggerType] = useState<string>("")
+  const showWebhook = triggerType === "Webhook"
+
+  return (
+    <div className="flex flex-col gap-[16px]">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Trigger type</div>
+        <select
+          value={triggerType}
+          onChange={e => setTriggerType(e.target.value)}
+          style={{
+            width: "100%",
+            height: 40,
+            padding: "0 12px",
+            borderRadius: 8,
+            border: "1px solid var(--field-border)",
+            background: "var(--field-bg)",
+            color: triggerType ? "var(--foreground)" : "var(--field-placeholder)",
+            fontSize: 13,
+            outline: "none",
+            cursor: "pointer",
+          }}
+        >
+          <option value="" disabled>Select trigger type</option>
+          <option value="Schedule">Schedule</option>
+          <option value="Webhook">Webhook</option>
+          <option value="Manual">Manual</option>
+        </select>
+      </div>
+      {showWebhook && (
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Webhook URL</div>
+          <Input placeholder="https://your-endpoint.example.com/webhook" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternFormsPage ──────────────────────────────────────────────────────────
+
+function PatternFormsPage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+  const [demoInput, setDemoInput] = useState("")
+  const [demoInputTouched, setDemoInputTouched] = useState(false)
+  const [demoSelect, setDemoSelect] = useState("")
+  const [demoSelectTouched, setDemoSelectTouched] = useState(false)
+  const [settingsPreviewOpen,  setSettingsPreviewOpen]  = useState(false)
+  const [createPreviewOpen,    setCreatePreviewOpen]    = useState(false)
+  const [wizardPreviewOpen,    setWizardPreviewOpen]    = useState(false)
+  const [wizardStep,           setWizardStep]           = useState(0)
+  const [wizardSuccessOpen,    setWizardSuccessOpen]    = useState(false)
+
+  const inputError  = demoInputTouched  && demoInput.trim() === ""  ? "This field is required" : undefined
+  const selectError = demoSelectTouched && demoSelect === ""         ? "Please select a category" : undefined
+
+  return (
+    <div>
+      {/* Full-screen overlays */}
+      {settingsPreviewOpen && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+          <AppBackground />
+          <button
+            onClick={() => setSettingsPreviewOpen(false)}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} /> Close Preview
+          </button>
+          <FormsSettingsExampleScreen onClose={() => setSettingsPreviewOpen(false)} />
+        </div>
+      )}
+
+      {createPreviewOpen && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+          <AppBackground />
+          <button
+            onClick={() => setCreatePreviewOpen(false)}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} /> Close Preview
+          </button>
+          <FormsCreatePageExampleScreen onClose={() => setCreatePreviewOpen(false)} />
+        </div>
+      )}
+
+      {wizardPreviewOpen && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+          <AppBackground />
+          <button
+            onClick={() => { setWizardPreviewOpen(false); setWizardStep(0); setWizardSuccessOpen(false) }}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} /> Close Preview
+          </button>
+          <StepperNavFooterExampleScreen
+            activeStep={wizardStep}
+            onCancel={() => { setWizardPreviewOpen(false); setWizardStep(0) }}
+            onBack={() => setWizardStep(s => Math.max(s - 1, 0))}
+            onNext={() => {
+              if (wizardStep === 3) {
+                setWizardSuccessOpen(true)
+              } else {
+                setWizardStep(s => Math.min(s + 1, 3))
+              }
+            }}
+          />
+          <ModalDialog
+            isOpen={wizardSuccessOpen}
+            onClose={() => { setWizardSuccessOpen(false); setWizardPreviewOpen(false); setWizardStep(0) }}
+            tone="success"
+            iconName="CheckCircle"
+            title="Automation created"
+            description="Your automation has been set up and will start running based on your trigger configuration."
+            ctaPrimary={{ label: "View automation", onClick: () => { setWizardSuccessOpen(false); setWizardPreviewOpen(false); setWizardStep(0) } }}
+            ctaSecondary={{ label: "Create another", onClick: () => { setWizardSuccessOpen(false); setWizardStep(0) } }}
+          />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Forms</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          How to compose fields, sections, validation, and CTAs into forms that are consistent across the platform — on dedicated pages, in modals, or in slide-out panels.
+        </p>
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {([
+          { id: "when-to-use", label: "When to Use" },
+          { id: "anatomy",     label: "Anatomy"     },
+          { id: "examples",    label: "Examples"    },
+          { id: "rules",       label: "Rules"       },
+        ] as { id: string; label: string }[]).map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold transition-colors"
+            style={{ color: tab === t.id ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── When to Use ───────────────────────────────────────────────────── */}
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>Form Context Decision Table</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Situation", "Form context", "Container"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Dedicated page — create or edit a single record", "Full-page form", "ScreenLayout · Header CTAs"],
+                    ["Multi-step process (3+ steps, 8+ total fields)", "Full-page wizard", "ScreenLayout + StepperNavFooter"],
+                    ["Destructive or must-stop action requiring input", "Blocking form", "ModalDialog"],
+                    ["Contextual create / edit (user can continue later)", "Side panel form", "SlideOut"],
+                    ["Quick single-field inline edit", "Inline edit", "Input (no container)"],
+                  ].map(([sit, ctx, comp]) => (
+                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ctx}</td>
+                      <td className="px-[12px] py-[10px]">
+                        <span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{comp}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Use StepperNavFooter for wizards with 3+ steps — distributes cognitive load and keeps each step focused." },
+                { type: "dont", text: "Don't open a ModalDialog for forms with more than 5 fields — the user needs room. Use SlideOut instead." },
+                { type: "do",   text: "Group related fields into named sections with a 24px gap between groups and a 4px gap between the section label and the first field." },
+                { type: "dont", text: "Don't show validation errors on each keystroke — validate on blur. Clear errors immediately once the field becomes valid." },
+                { type: "do",   text: "Disable Next/Submit when any required field is empty. This pattern is mandatory for all multi-step forms." },
+                { type: "dont", text: "Don't mix form contexts — no modal nested inside a slide-out, no wizard step that opens another modal for a required sub-form." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{
+                    background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                    border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}`,
+                  }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>
+                    {item.type === "do" ? "DO" : "DON'T"}
+                  </span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+        </div>
+      )}
+
+      {/* ── Anatomy ───────────────────────────────────────────────────────── */}
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>Field & Section Spacing</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[4px]">
+              Two spacing values govern every form layout regardless of context.
+            </p>
+            <div className="flex gap-[40px] items-start">
+              {/* Diagram */}
+              <div className="flex flex-col" style={{ minWidth: 260 }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Layout diagram</div>
+                <WireBlock label="Section label — 11px uppercase" h={28} flex={1} />
+                <div className="flex items-center gap-[8px] my-[4px]">
+                  <div className="w-[2px] self-stretch rounded-full" style={{ background: "var(--primary)", minHeight: 8 }} />
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--primary)" }}>4px</span>
+                </div>
+                <WireBlock label="Field 1" h={40} flex={1} />
+                <div className="flex items-center gap-[8px] my-[4px]">
+                  <div className="w-[2px] self-stretch rounded-full" style={{ background: "var(--color-border-success-default)", minHeight: 8 }} />
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--color-border-success-default)" }}>16px</span>
+                </div>
+                <WireBlock label="Field 2" h={40} flex={1} />
+                <div className="flex items-center gap-[8px] my-[4px]">
+                  <div className="w-[2px] self-stretch rounded-full" style={{ background: "var(--color-border-success-default)", minHeight: 8 }} />
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--color-border-success-default)" }}>16px</span>
+                </div>
+                <WireBlock label="Field 3" h={40} flex={1} />
+                <div className="flex items-center gap-[8px] my-[4px]">
+                  <div className="w-[2px] self-stretch rounded-full" style={{ background: "var(--color-border-alert-default)", minHeight: 8 }} />
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--color-border-alert-default)" }}>24px</span>
+                </div>
+                <WireBlock label="Section label 2 — 11px uppercase" h={28} flex={1} />
+                <div className="flex items-center gap-[8px] my-[4px]">
+                  <div className="w-[2px] self-stretch rounded-full" style={{ background: "var(--primary)", minHeight: 8 }} />
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--primary)" }}>4px</span>
+                </div>
+                <WireBlock label="Field 4" h={40} flex={1} />
+              </div>
+              {/* Legend */}
+              <div className="flex flex-col gap-[12px] pt-[32px]">
+                {[
+                  { color: "var(--primary)",                   value: "4px",  label: "Section label → first field of that section" },
+                  { color: "var(--color-border-success-default)", value: "16px", label: "Between fields inside the same section" },
+                  { color: "var(--color-border-alert-default)",  value: "24px", label: "Between sections (section gap)" },
+                ].map(row => (
+                  <div key={row.value} className="flex items-center gap-[10px]">
+                    <div className="w-[12px] h-[12px] rounded-[2px] shrink-0" style={{ background: row.color }} />
+                    <span className="text-[12px] font-bold w-[36px] shrink-0" style={{ color: row.color }}>{row.value}</span>
+                    <span className="text-[12px] text-[var(--field-supporting)]">{row.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Two-Column Grid</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
+              Use a 2-column grid when two fields are semantically paired (e.g. First name / Last name, Start date / End date). Gap is always 16px. Never force more than 2 columns.
+            </p>
+            <div className="grid grid-cols-2 gap-[16px]">
+              <WireBlock label="First name" h={40} flex={1} />
+              <WireBlock label="Last name" h={40} flex={1} />
+            </div>
+            <div className="mt-[16px]">
+              <WireBlock label="Email (full width — no pair)" h={40} flex={1} />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Validation States — Live Demo</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Click into each field and blur without filling it to trigger the error state. Errors appear on blur — never on keystroke.
+            </p>
+            <div className="flex flex-col gap-[16px] max-w-[400px]">
+              <Input
+                placeholder="Workflow name *"
+                value={demoInput}
+                onChange={e => { setDemoInput(e.target.value); if (inputError) setDemoInputTouched(true) }}
+                onBlur={() => setDemoInputTouched(true)}
+                state={inputError ? "error" : demoInput.trim() ? "success" : "default"}
+                supportingText={inputError ?? (demoInput.trim() ? "Looks good" : undefined)}
+              />
+              <Select
+                placeholder="Category *"
+                value={demoSelect || undefined}
+                onClear={() => { setDemoSelect(""); setDemoSelectTouched(true) }}
+                state={selectError ? "error" : "default"}
+                supportingText={selectError ?? undefined}
+              />
+              <div className="flex justify-end gap-[8px] pt-[8px]">
+                <Button variant="secondary" size="sm">Cancel</Button>
+                <Button
+                  variant="primary" size="sm"
+                  disabled={!demoInput.trim() || !demoSelect}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+            <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
+              Save is disabled until both required fields (*) are filled — this is the standard DS behavior for all forms.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>CTA Placement per Form Context</SectionLabel>
+            <div className="flex flex-col gap-[12px]">
+              {[
+                {
+                  context: "Full-page form",
+                  cta: "Header — right-aligned primary + secondary",
+                  detail: "Primary 'Save changes' or action verb. Secondary 'Discard' or 'Cancel'. Both live in the Header component's action slots — never in a sticky footer.",
+                },
+                {
+                  context: "Full-page wizard",
+                  cta: "StepperNavFooter — sticky, full width, bottom of viewport",
+                  detail: "Cancel (step 1) or ← Back (steps 2+) on the left. Optional secondary + primary Next/Finish on the right. Disabled until required fields are filled.",
+                },
+                {
+                  context: "Modal form",
+                  cta: "Button row — right-aligned, inside modal footer",
+                  detail: "Secondary 'Cancel' + Primary 'Save' or action verb. Max 2 buttons. Never use variant='main' inside a modal — use 'primary'.",
+                },
+                {
+                  context: "SlideOut form",
+                  cta: "Sticky footer inside the panel",
+                  detail: "Same button pattern as modal. The SlideOut component provides the sticky footer slot — use it, don't hand-roll a fixed div.",
+                },
+                {
+                  context: "Inline edit",
+                  cta: "Inline check / cancel icons",
+                  detail: "No formal CTA row. A small ✓ confirms the edit; × cancels. Both appear adjacent to the field — no buttons, no footer.",
+                },
+              ].map(row => (
+                <div key={row.context} className="flex gap-[12px] p-[12px] rounded-[6px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <div className="w-[160px] shrink-0">
+                    <span className="text-[12px] font-semibold text-[var(--foreground)]">{row.context}</span>
+                  </div>
+                  <div className="flex flex-col gap-[4px]">
+                    <span className="text-[12px] font-medium" style={{ color: "var(--primary)" }}>{row.cta}</span>
+                    <span className="text-[12px] text-[var(--field-supporting)]">{row.detail}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+        </div>
+      )}
+
+      {/* ── Examples ──────────────────────────────────────────────────────── */}
+      {tab === "examples" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <p className="text-[13px] text-[var(--field-supporting)] max-w-[640px]">
+            Each example opens full-screen using real DS components. No floating field labels on desktop — placeholders are sufficient. CTAs in the Header for single-page forms; in StepperNavFooter for wizards.
+          </p>
+
+          {/* Example cards */}
+          <div className="flex flex-col gap-[12px]">
+
+            {/* Card 1: Settings / Edit */}
+            <div className="rounded-[10px] p-[24px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+              <div className="flex items-start justify-between gap-[16px]">
+                <div className="flex-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-widest mb-[4px]" style={{ color: "var(--primary)" }}>Example 1 · Edit existing record</div>
+                  <div className="text-[16px] font-semibold text-[var(--foreground)] mb-[6px]">Automation Settings</div>
+                  <p className="text-[13px] text-[var(--field-supporting)] mb-[14px]">
+                    <strong className="text-[var(--foreground)]">Editing a record that already exists.</strong> Fields arrive pre-filled — success state visible on load. CTAs are "Discard" + "Save changes" in the Header. No stepper, no sticky footer.
+                  </p>
+                  <div className="flex flex-col gap-[4px]">
+                    <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">3 sections · 8 fields · success state visible on load</span></div>
+                    <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Save changes → success confirmation modal</span></div>
+                    <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">max-w-[680px] — recommended form content width</span></div>
+                  </div>
+                </div>
+                <Button variant="primary" size="sm" icon={<LucideIcons.ArrowUpRight size={13} />} iconPosition="right" onClick={() => setSettingsPreviewOpen(true)}>
+                  Open example
+                </Button>
+              </div>
+            </div>
+
+            {/* Card 2: Create new */}
+            <div className="rounded-[10px] p-[24px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+              <div className="flex items-start justify-between gap-[16px]">
+                <div className="flex-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-widest mb-[4px]" style={{ color: "var(--primary)" }}>Example 2 · Create new record</div>
+                  <div className="text-[16px] font-semibold text-[var(--foreground)] mb-[6px]">New Automation</div>
+                  <p className="text-[13px] text-[var(--field-supporting)] mb-[14px]">
+                    <strong className="text-[var(--foreground)]">Creating a brand-new record from scratch.</strong> Fields start empty. The primary CTA stays disabled until required fields are filled. Blur the name field and clear it to trigger inline error validation.
+                  </p>
+                  <div className="flex flex-col gap-[4px]">
+                    <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">2 sections · 6 fields · Create disabled until Name is filled</span></div>
+                    <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Create automation → success modal with "Create another" option</span></div>
+                    <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Blur + clear name to see inline error state</span></div>
+                  </div>
+                </div>
+                <Button variant="primary" size="sm" icon={<LucideIcons.ArrowUpRight size={13} />} iconPosition="right" onClick={() => setCreatePreviewOpen(true)}>
+                  Open example
+                </Button>
+              </div>
+            </div>
+
+            {/* Card 3: Multi-step wizard */}
+            <div className="rounded-[10px] p-[24px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+              <div className="flex items-start justify-between gap-[16px]">
+                <div className="flex-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-widest mb-[4px]" style={{ color: "var(--primary)" }}>Example 3 · Multi-step wizard</div>
+                  <div className="text-[16px] font-semibold text-[var(--foreground)] mb-[6px]">Create Automation — 4 Steps</div>
+                  <p className="text-[13px] text-[var(--field-supporting)] mb-[14px]">
+                    <strong className="text-[var(--foreground)]">Complex creation split across multiple steps.</strong> When the form is too long for a single page (3+ steps, 8+ fields). Progress shown in the Stepper. Navigation (Back / Next / Cancel) lives in a sticky footer — never in the Header.
+                  </p>
+                  <div className="flex flex-col gap-[4px]">
+                    <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">4 steps · Next locked until required fields per step are filled</span></div>
+                    <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Submit on step 4 → success confirmation modal</span></div>
+                    <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Step 1: Cancel/Next · Steps 2–3: Back/Next · Step 4: Back/Submit</span></div>
+                  </div>
+                </div>
+                <Button variant="primary" size="sm" icon={<LucideIcons.ArrowUpRight size={13} />} iconPosition="right" onClick={() => setWizardPreviewOpen(true)}>
+                  Open example
+                </Button>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Validation states */}
+          <PatternCard>
+            <SectionLabel>Validation States — 4 States of the Same Form</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">Pre-set previews showing each stage of the validation lifecycle. Errors appear on blur — never on keystroke.</p>
+            <div className="grid grid-cols-2 gap-[16px]">
+
+              <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-supporting)" }}>① Default — fresh form</div>
+                <p className="text-[11px] text-[var(--field-supporting)]">User hasn't touched anything yet. No indicators. Button disabled.</p>
+                <Input placeholder="Automation name *" readOnly />
+                <Select placeholder="Category *" />
+                <div className="flex justify-end gap-[8px] pt-[4px]">
+                  <Button variant="secondary" size="sm">Cancel</Button>
+                  <Button variant="primary" size="sm" disabled>Save</Button>
+                </div>
+              </div>
+
+              <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-supporting)" }}>② Partial fill</div>
+                <p className="text-[11px] text-[var(--field-supporting)]">Name filled → success indicator. Category still empty. Button still disabled.</p>
+                <Input placeholder="Automation name *" value="Customer Churn Alert" readOnly state="success" />
+                <Select placeholder="Category *" />
+                <div className="flex justify-end gap-[8px] pt-[4px]">
+                  <Button variant="secondary" size="sm">Cancel</Button>
+                  <Button variant="primary" size="sm" disabled>Save</Button>
+                </div>
+              </div>
+
+              <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-border-error-default)" }}>③ Error state — blurred empty</div>
+                <p className="text-[11px] text-[var(--field-supporting)]">Both fields blurred empty. Inline errors appear. Button still disabled.</p>
+                <Input placeholder="Automation name *" readOnly state="error" supportingText="This field is required" />
+                <Select placeholder="Category *" state="error" supportingText="Please select a category" />
+                <div className="flex justify-end gap-[8px] pt-[4px]">
+                  <Button variant="secondary" size="sm">Cancel</Button>
+                  <Button variant="primary" size="sm" disabled>Save</Button>
+                </div>
+              </div>
+
+              <div className="rounded-[8px] p-[16px] flex flex-col gap-[12px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-border-success-default)" }}>④ All valid — ready to submit</div>
+                <p className="text-[11px] text-[var(--field-supporting)]">All required fields filled. Success indicators. Button enabled.</p>
+                <Input placeholder="Automation name *" value="Customer Churn Alert" readOnly state="success" />
+                <Select placeholder="Category *" value="Monitoring" />
+                <div className="flex justify-end gap-[8px] pt-[4px]">
+                  <Button variant="secondary" size="sm">Cancel</Button>
+                  <Button variant="primary" size="sm">Save</Button>
+                </div>
+              </div>
+
+            </div>
+          </PatternCard>
+
+          {/* 3 — Layout variants */}
+          <PatternCard>
+            <SectionLabel>Layout Variants</SectionLabel>
+            <div className="flex flex-col gap-[16px]">
+
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Standard — single column, two sections</div>
+                <div className="rounded-[8px] p-[20px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Basic information</div>
+                  <div className="flex flex-col gap-[16px]">
+                    <Input placeholder="Automation name *" readOnly />
+                    <Input placeholder="Description (optional)" readOnly />
+                    <Select placeholder="Category *" />
+                  </div>
+                  <div className="h-[24px]" />
+                  <div className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Settings</div>
+                  <div className="flex flex-col gap-[16px]">
+                    <Select placeholder="Priority *" />
+                    <Select placeholder="Assigned team *" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Two-column — paired fields + full-width rows</div>
+                <div className="rounded-[8px] p-[20px] flex flex-col gap-[16px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <div className="grid grid-cols-2 gap-[16px]">
+                    <Input placeholder="First name *" readOnly />
+                    <Input placeholder="Last name *" readOnly />
+                  </div>
+                  <Input placeholder="Email address *" readOnly />
+                  <div className="grid grid-cols-2 gap-[16px]">
+                    <Select placeholder="Department *" />
+                    <Select placeholder="Role *" />
+                  </div>
+                  <Textarea placeholder="Notes (optional)" />
+                </div>
+              </div>
+
+            </div>
+          </PatternCard>
+
+          {/* 4 — Edge cases */}
+          <PatternCard>
+            <SectionLabel>Edge Cases</SectionLabel>
+            <div className="flex flex-col gap-[20px]">
+
+              <div>
+                <div className="flex items-center gap-[8px] mb-[8px]">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Max fields per wizard step — 7 (at the limit)</div>
+                  <span className="text-[10px] font-semibold px-[6px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-alert-more-subtle)", color: "var(--color-border-alert-default)" }}>⚠ Limit</span>
+                </div>
+                <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div className="p-[20px] flex flex-col gap-[16px]" style={{ background: "var(--surface)" }}>
+                    <div className="grid grid-cols-2 gap-[16px]">
+                      <Input placeholder="First name *" readOnly />
+                      <Input placeholder="Last name *" readOnly />
+                    </div>
+                    <Input placeholder="Email address *" readOnly />
+                    <div className="grid grid-cols-2 gap-[16px]">
+                      <Select placeholder="Department *" />
+                      <Select placeholder="Role *" />
+                    </div>
+                    <Input placeholder="Phone (optional)" readOnly />
+                    <Select placeholder="Country *" />
+                  </div>
+                  <StepperNavFooter variant="cancel-next" cancelLabel="Cancel" nextLabel="Next" nextDisabled={true} />
+                </div>
+                <p className="text-[11px] text-[var(--field-supporting)] mt-[6px]">7 fields is the ceiling for a single step. More than 7 → split into two steps with a clear thematic divide.</p>
+              </div>
+
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Required vs optional mix — clear visual contract</div>
+                <div className="rounded-[8px] p-[20px] flex flex-col gap-[16px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <Input placeholder="Automation name *" readOnly />
+                  <Select placeholder="Category *" />
+                  <Input placeholder="External ID (optional)" readOnly />
+                  <Input placeholder="Description (optional)" readOnly />
+                  <Textarea placeholder="Notes (optional)" />
+                </div>
+                <p className="text-[11px] text-[var(--field-supporting)] mt-[6px]">Required fields carry * in placeholder. Optional fields have no indicator. Never use "Required" as placeholder text — it's redundant.</p>
+              </div>
+
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Multiple simultaneous errors — user attempted submit with empty required fields</div>
+                <div className="rounded-[8px] p-[20px] flex flex-col gap-[16px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <div className="grid grid-cols-2 gap-[16px]">
+                    <Input placeholder="First name *" readOnly state="error" supportingText="Required" />
+                    <Input placeholder="Last name *" readOnly state="error" supportingText="Required" />
+                  </div>
+                  <Input placeholder="Email address *" value="not-an-email" readOnly state="error" supportingText="Enter a valid email address" />
+                  <Select placeholder="Department *" state="error" supportingText="Please select a department" />
+                  <div className="flex justify-end gap-[8px] pt-[4px]">
+                    <Button variant="secondary" size="sm">Cancel</Button>
+                    <Button variant="primary" size="sm" disabled>Save</Button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-[var(--field-supporting)] mt-[6px]">All errors inline — never in a global AlertBanner. Each message specific to the field. Button stays disabled.</p>
+              </div>
+
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Long textarea — form adapts, no fixed heights</div>
+                <div className="rounded-[8px] p-[20px] flex flex-col gap-[16px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <Input placeholder="Automation name *" value="Customer Churn Risk Intervention" readOnly state="success" />
+                  <Textarea
+                    placeholder="Description (optional)"
+                    value={"This automation monitors customer health scores in real time. When a score drops below the defined threshold, it triggers the CS playbook, creates a follow-up task for the assigned account manager, and sends a personalized email sequence to the at-risk account. All actions are logged in the activity feed."}
+                    readOnly
+                  />
+                </div>
+                <p className="text-[11px] text-[var(--field-supporting)] mt-[6px]">Textarea grows to fit content. The form section below it shifts down — no fixed heights, no overflow clipping.</p>
+              </div>
+
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Back / Next with secondary CTA — mid-wizard step</div>
+                <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div className="px-[24px] pt-[20px] pb-[4px] flex flex-col gap-[16px]" style={{ background: "var(--surface)" }}>
+                    <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Trigger configuration · Step 2 of 4</div>
+                    <Select placeholder="Trigger type *" value="Score threshold" />
+                    <div className="grid grid-cols-2 gap-[16px]">
+                      <Input placeholder="Threshold value *" value="< 60" readOnly state="success" />
+                      <Select placeholder="Evaluation window *" value="Last 30 days" />
+                    </div>
+                  </div>
+                  <StepperNavFooter
+                    variant="back-next"
+                    backLabel="Back"
+                    nextLabel="Next"
+                    secondaryLabel="Save as draft"
+                    onSecondary={() => {}}
+                    nextDisabled={false}
+                  />
+                </div>
+                <p className="text-[11px] text-[var(--field-supporting)] mt-[6px]">Back replaces Cancel from step 2 onwards. "Save as draft" is optional — only include when the platform supports persistent draft state. Max 3 buttons in the footer.</p>
+              </div>
+
+              {/* Edge case 6: Unsaved changes guard */}
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Unsaved changes guard — user clicks Discard with a modified field</div>
+                <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <ModalDialog
+                    isOpen
+                    onClose={() => {}}
+                    embedded
+                    tone="warning"
+                    iconName="AlertTriangle"
+                    title="Discard changes?"
+                    description="Your edits will be lost. This cannot be undone."
+                    ctaPrimary={{ label: "Discard changes" }}
+                    ctaSecondary={{ label: "Keep editing" }}
+                    showClose={false}
+                  />
+                </div>
+                <p className="text-[11px] text-[var(--field-supporting)] mt-[6px]">Triggered when the user clicks Discard, Cancel, or navigates away from a form with unsaved changes. Required on full-page forms and wizards. Not required on SlideOut forms (ephemeral / auto-save context).</p>
+              </div>
+
+              {/* Edge case 7: Conditional field */}
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Conditional field — appears instantly when controlling field is filled</div>
+                <div className="rounded-[8px] p-[20px] flex flex-col gap-[16px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <ConditionalFieldDemo />
+                </div>
+                <p className="text-[11px] text-[var(--field-supporting)] mt-[6px]">Conditional fields appear/disappear instantly — no fade, no animation. Use conditional rendering (not disabled state). Keep the conditional field directly below its controlling field in the same section.</p>
+              </div>
+
+            </div>
+          </PatternCard>
+
+        </div>
+      )}
+
+      {/* ── Rules ─────────────────────────────────────────────────────────── */}
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>Spacing Spec</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Property", "Value", "Notes"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Gap between fields (same section)",  "16px",  "Always. Applies to Input, Textarea, Select, Checkbox rows."],
+                    ["Gap between sections",               "24px",  "Between the last field of one section and the section label of the next."],
+                    ["Section label → first field",        "4px",   "Below a SectionLabel (11px uppercase text) and before the first field."],
+                    ["Form horizontal padding (modal)",    "24px",  "Matches ModalDialog internal padding."],
+                    ["Form horizontal padding (slideout)", "24px",  "Matches SlideOut panel padding."],
+                    ["Two-column grid gap",                "16px",  "Same as field gap. Max 2 columns — never 3."],
+                    ["Max fields per wizard step",         "5–7",   "Recommendation. More than 7 fields on one step → split the step."],
+                    ["Max fields in a modal form",         "4–5",   "Recommendation. More than 5 fields → use SlideOut."],
+                  ].map(([prop, val, note]) => (
+                    <tr key={prop} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] font-medium text-[var(--foreground)]">{prop}</td>
+                      <td className="px-[12px] py-[10px]">
+                        <span className="text-[12px] font-mono px-[6px] py-[2px] rounded-[3px] font-semibold" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{val}</span>
+                      </td>
+                      <td className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Validation Rules</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                { rule: "Trigger error on blur",      detail: "Show the error state (Input state='error' + supportingText) only when the field loses focus — not while the user is typing." },
+                { rule: "Clear error on valid input", detail: "As soon as the field value becomes valid, remove the error immediately (no second blur needed). Switch to state='success' if appropriate." },
+                { rule: "Submit guard",               detail: "Run full validation before allowing Next/Submit. If any required field is empty or invalid, keep the button disabled and focus the first invalid field." },
+                { rule: "Never toast for field errors", detail: "Field-level errors always appear inline under the field via supportingText. Never use AlertBanner or a toast for individual field validation." },
+                { rule: "Required field indicator",   detail: "Append * to the placeholder text of required fields (e.g. 'Workflow name *'). No separate label in desktop — placeholder is the only field hint on desktop." },
+              ].map(row => (
+                <div key={row.rule} className="flex gap-[12px] p-[12px] rounded-[6px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <span className="text-[12px] font-semibold w-[180px] shrink-0 text-[var(--foreground)]">{row.rule}</span>
+                  <span className="text-[12px] text-[var(--field-supporting)]">{row.detail}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Interaction Patterns</SectionLabel>
+            <div className="flex flex-col gap-[0px]" style={{ border: "0.5px solid var(--field-border)", borderRadius: 8, overflow: "hidden" }}>
+              {[
+                {
+                  name: "Unsaved changes guard",
+                  detail: "When the user clicks Discard, Cancel, or navigates away with unsaved changes: open a ModalDialog tone='warning', iconName='AlertTriangle', title='Discard changes?', description='Your edits will be lost. This cannot be undone.', ctaPrimary='Discard changes' + ctaSecondary='Keep editing'. Apply to all full-page forms and wizards. Not required for SlideOut forms (auto-saved or ephemeral context).",
+                },
+                {
+                  name: "Submit / loading state",
+                  detail: "While the API call is in progress after the user clicks the primary CTA: (1) primary button switches to loading/spinner state, (2) all form fields become disabled. Re-enable on API error; show success modal on success. Prevents double-submit and communicates processing. Use Button loading prop if available; otherwise disable + show spinner icon.",
+                },
+                {
+                  name: "Character count",
+                  detail: "Show the showCount prop on Textarea only when the field has a meaningful maxLength that affects the user's content (e.g. titles ≤80 chars, short descriptions ≤160 chars). Free-form fields (Notes, Internal comments, long descriptions with no enforced limit) must NOT show a counter — it adds noise without value.",
+                },
+                {
+                  name: "Conditional fields",
+                  detail: "Fields that appear or disappear based on another field's value use instant show/hide (no animation, no fade). Render conditionally — do NOT use the disabled state to hide intent. The layout shifts immediately and the user fills in the new field. Keep the conditional field in the same section as its controlling field.",
+                },
+              ].map((row, i, arr) => (
+                <div key={row.name} className="flex gap-[12px] p-[12px]" style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+                  <div className="w-[180px] shrink-0 text-[12px] font-semibold text-[var(--foreground)]">{row.name}</div>
+                  <div className="text-[12px] text-[var(--field-supporting)]">{row.detail}</div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Form State & Validation Pattern (Code)</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
+              Mandatory pattern for all multi-step forms in the platform. Required fields empty → Next disabled. No exceptions.
+            </p>
+            <PatternRules code={`// 1. Define typed form state
+type FormState = {
+  name:     string
+  category: string
+}
+const [form, setForm] = useState<FormState>({ name: "", category: "" })
+
+// 2. Derive step validity — useMemo to avoid recalculation on every render
+const isStepValid = useMemo(() =>
+  form.name.trim() !== "" && form.category !== "",
+  [form.name, form.category]
+)
+
+// 3. Pass to StepperNavFooter — disabled until all required fields are filled
+<StepperNavFooter
+  variant="cancel-next"
+  nextDisabled={!isStepValid}
+  onNext={() => setActiveStep(s => s + 1)}
+  onCancel={handleCancel}
+/>
+
+// 4. Per-field error state — trigger only after blur
+const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>>({})
+
+<Input
+  placeholder="Workflow name *"
+  value={form.name}
+  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+  onBlur={() => setTouched(t => ({ ...t, name: true }))}
+  state={touched.name && !form.name.trim() ? "error" : form.name.trim() ? "success" : "default"}
+  supportingText={touched.name && !form.name.trim() ? "This field is required" : undefined}
+/>`} />
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Implementation guardrails</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[10px]">
+              Rules enforced in <code className="text-[11px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--code-bg)" }}>CLAUDE.md</code> that are specific to code generation — not covered by the design Do/Don't above.
+            </p>
+            <div className="flex flex-col gap-[6px]">
+              {[
+                "NEVER pass the label prop to Input or Textarea on desktop — use placeholder only. Labels are mobile/touch only.",
+                "NEVER use variant='main' inside a modal, slideout, or widget — use 'primary'. variant='main' is reserved for the single Header CTA.",
+              ].map((rule, i) => (
+                <div key={i} className="flex items-start gap-[8px] text-[12px] text-[var(--foreground)]">
+                  <span className="shrink-0 font-mono text-[10px] mt-[2px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-error-more-subtle)", color: "var(--color-surface-error-default)" }}>✕</span>
+                  <span>{rule}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PlaygroundModal — reusable two-pane playground overlay ────────────────────
+// Portal-based (escapes overflow containers). Controls on the left, live
+// component preview on the right. Closes on backdrop click or X button.
+
+function PlaygroundModal({
+  isOpen,
+  onClose,
+  title,
+  controls,
+  preview,
+}: {
+  isOpen:   boolean
+  onClose:  () => void
+  title:    string
+  controls: ReactNode
+  preview:  ReactNode
+}) {
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [isOpen, onClose])
+
+  if (!isOpen) return null
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center px-[16px]"
+      style={{ background: "rgba(0,0,0,0.64)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        className="w-[960px] max-w-full flex flex-col rounded-[12px] overflow-hidden"
+        style={{
+          background:  "var(--surface)",
+          border:      "1px solid var(--field-border)",
+          maxHeight:   "90vh",
+          boxShadow:   "0 24px 48px rgba(0,0,0,0.40)",
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-[24px] py-[14px] shrink-0"
+          style={{ borderBottom: "1px solid var(--field-border)" }}
+        >
+          <div className="flex items-center gap-[12px]">
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.12em] px-[7px] py-[3px] rounded-[4px]"
+              style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}
+            >
+              Playground
+            </span>
+            <h2 className="text-[15px] font-semibold text-[var(--foreground)]">{title}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close playground"
+            className="w-[32px] h-[32px] rounded-[6px] flex items-center justify-center transition-colors hover:bg-[var(--color-surface-neutral-default)]"
+            style={{ color: "var(--field-label)" }}
+          >
+            <LucideIcons.X size={16} />
+          </button>
+        </div>
+
+        {/* Body: controls left + preview right */}
+        <div className="flex flex-1 overflow-hidden min-h-0">
+          {/* Controls panel */}
+          <div
+            className="w-[280px] shrink-0 flex flex-col gap-[16px] p-[20px] overflow-y-auto"
+            style={{ borderRight: "1px solid var(--field-border)" }}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--field-supporting)]">Props</p>
+            {controls}
+          </div>
+
+          {/* Preview panel */}
+          <div
+            className="flex-1 flex items-center justify-center p-[40px] overflow-y-auto"
+            style={{ background: "var(--canvas)" }}
+          >
+            {preview}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+// ── ProcessItemExpandDemo — interactive expand demo for documentation ─────────
+function ProcessItemExpandDemo() {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <ProcessItem
+      status="done"
+      title="Data enrichment"
+      description="Fetched from Clearbit — 4 fields added"
+      timestamp="2 min ago"
+      tag="Completed"
+      showLine={false}
+      showExpand
+      expanded={expanded}
+      onExpand={() => setExpanded(v => !v)}
+    >
+      {expanded && (
+        <div className="flex flex-col gap-[4px] p-[8px] rounded-[6px] text-[12px]"
+          style={{ background: "var(--color-surface-neutral-default)" }}>
+          {[
+            { label: "Company size",  value: "201–500 employees" },
+            { label: "Tech stack",    value: "Salesforce, Slack" },
+            { label: "Growth signal", value: "+28% headcount YoY" },
+          ].map(row => (
+            <div key={row.label} className="flex items-center justify-between">
+              <span style={{ color: "var(--field-label)" }}>{row.label}</span>
+              <span style={{ color: "var(--foreground)" }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </ProcessItem>
+  )
+}
+
+// ── PatternPanelContentPage ───────────────────────────────────────────────────
+
+function PatternPanelContentPage() {
+  const [activeTab, setActiveTab] = useState<"playground" | "view-overview" | "view-detail" | "configuration">("playground");
+  const [activeSlideoutItem, setActiveSlideoutItem] = useState<string>("overview")
+  const [activeFormItem, setActiveFormItem]         = useState<string>("text-input")
+  const [showSpecOv, setShowSpecOv]   = useState(false)
+  const [showSpecSt, setShowSpecSt]   = useState(false)
+  const [showSpecAi, setShowSpecAi]   = useState(false)
+  const [showSpecIns, setShowSpecIns] = useState(false)
+  const [showSpecLs, setShowSpecLs]   = useState(false)
+  const [showSpecPi, setShowSpecPi]   = useState(false)
+  const [showSpecBl, setShowSpecBl]   = useState(false)
+  const [showSpecDt, setShowSpecDt]   = useState(false)
+  const [showSpecTi, setShowSpecTi]   = useState(false)
+  const [showSpecTa, setShowSpecTa]   = useState(false)
+  const [showSpecSel, setShowSpecSel] = useState(false)
+  const [showSpecTog, setShowSpecTog] = useState(false)
+  const [showSpecNum, setShowSpecNum] = useState(false)
+  const [showSpecSc, setShowSpecSc]   = useState(false)
+  const [showSpecSli, setShowSpecSli] = useState(false)
+  const [showSpecTagInput, setShowSpecTagInput] = useState(false)
+  const [tagInputTags1, setTagInputTags1] = useState<string[]>(["dev", "staging", "prod"])
+  const [tagInputTags2, setTagInputTags2] = useState<string[]>([])
+  const [tagInputTagsErr, setTagInputTagsErr] = useState<string[]>(["api"])
+  const [tagInputTagsOverflow, setTagInputTagsOverflow] = useState<string[]>(["dev","staging","prod","api","worker","queue","cron","webhook","auth","billing","analytics","search","cache","db","email","sms","export","import","report","monitor"])
+  const [tagInputTagsMax, setTagInputTagsMax] = useState<string[]>(["dev","staging","prod","api","worker"])
+  const [tiPgTags, setTiPgTags] = useState<string[]>(["dev","staging"])
+  const [tiPgError, setTiPgError] = useState(false)
+  const [tiPgDisabled, setTiPgDisabled] = useState(false)
+  // Add Fields states
+  const [afFields1, setAfFields1] = useState<FieldItem[]>([{ id: "af1-1", label: "source_url" }])
+  const [afFields2, setAfFields2] = useState<FieldItem[]>([{ id: "af2-1", label: "api_key" }, { id: "af2-2", label: "" }])
+  const [afFieldsMax, setAfFieldsMax] = useState<FieldItem[]>([{ id: "afm-1", label: "field_one" }, { id: "afm-2", label: "field_two" }, { id: "afm-3", label: "field_three" }])
+  const [afPgFields, setAfPgFields] = useState<FieldItem[]>([{ id: "afpg-1", label: "output_key" }])
+  const [afPgDisabled, setAfPgDisabled] = useState(false)
+  const [afPgMaxFields, setAfPgMaxFields] = useState(5)
+  const [afPgPlaceholder, setAfPgPlaceholder] = useState("Field name")
+  const [taExpandOpen, setTaExpandOpen] = useState(false)
+  const [taExpandText, setTaExpandText] = useState("# Customer Service Framework\n\n## Core Principles\n- Always maintain a professional, helpful, and empathetic tone\n- Personalize interactions by using the customer's name when available\n- Respond promptly and acknowledge the customer's request\n- Provide clear, actionable information\n\n## Interaction Flow\n\n### 1. Greeting\n- Greet customers warmly: \"Hello {customerName}, thank you for contacting {companyName}!\"\n- For new customers: \"Welcome to {companyName}! How can I assist you today?\"\n- For returning customers: \"Great to hear from you again! How can I help?\"\n\n### 2. Understanding the Request\n- Listen actively to the customer's needs\n- Ask clarifying questions if needed: \"Could you provide more details about...?\"\n- Confirm understanding: \"Let me make sure I understand correctly...\"\n\n### 3. Providing Assistance\n- Offer specific, helpful solutions\n- Provide step-by-step instructions when needed\n- Share relevant resources or documentation\n- Set clear expectations about next steps")
+  const [showSpecAddFields, setShowSpecAddFields] = useState(false)
+  const [gpTagInputTags, setGpTagInputTags]   = useState<string[]>(["critical"])
+  const [gpOpen, setGpOpen]         = useState(false)
+  const [gpItems, setGpItems]       = useState<string[]>(["section-title", "ai-summary", "insights", "list"])
+  const [gpPanelType, setGpPanelType] = useState<"slideout" | "sidepanel">("slideout")
+  const [gpSidePanelOpen, setGpSidePanelOpen] = useState(false)
+  const [gpFormItems, setGpFormItems] = useState<string[]>(["text-input", "select", "toggle"])
+  const [gpShowCta, setGpShowCta]   = useState(false)
+  const [gpPanelTab, setGpPanelTab] = useState(0)
+  // ── Global playground — interactive form states ───────────────────────────
+  const [gpInputValue,    setGpInputValue]    = useState("Customer Churn Alert")
+  const [gpTextareaValue, setGpTextareaValue] = useState("Monitors health score drops across all active accounts...")
+  const [gpSelectValue,   setGpSelectValue]   = useState("Health Score Drop")
+  const [gpSelectOpen,    setGpSelectOpen]    = useState(false)
+  const [gpSelectAnchor,  setGpSelectAnchor]  = useState<{ left: number; top: number } | null>(null)
+  const gpSelectRef = useRef<HTMLDivElement>(null)
+  const [gpToggleOn,      setGpToggleOn]      = useState(true)
+  const [gpNumber,        setGpNumber]        = useState(60)
+  const [gpSelCard,       setGpSelCard]       = useState<"Low" | "Medium" | "High">("Medium")
+  const [gpSliderVal,     setGpSliderVal]     = useState(60)
+  const [aiV5Open, setAiV5Open] = useState(false);
+  const [contentExOpen, setContentExOpen] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [sectionTitleExpand4, setSectionTitleExpand4] = useState(true);
+  const [sectionTitleExpand6, setSectionTitleExpand6] = useState(true);
+  const [liveExpandOpen, setLiveExpandOpen] = useState(true);
+  const [liveExpand6Open, setLiveExpand6Open] = useState(false);
+  const [selCardSingle, setSelCardSingle] = useState<string>("trigger");
+  const [selCardMulti, setSelCardMulti] = useState<string[]>(["email"]);
+  const [sliderVal, setSliderVal] = useState(40);
+  const [sliderVal2, setSliderVal2] = useState(25);
+  const [sliderRange, setSliderRange] = useState<[number, number]>([20, 70]);
+
+  // ── Playground modals ────────────────────────────────────────────────────
+  type PgModal = "section-title" | "ai-summary" | "insights" | "list" | "process-item" | "by-layers" | "detail-table" | "form-input" | "form-textarea" | "form-select" | "form-toggle" | "form-number" | "form-selection-card" | "form-slider" | null
+  const [pgModal, setPgModal] = useState<PgModal>(null)
+
+  // Section Title playground
+  const [pgStVariant, setPgStVariant]   = useState<"title-only" | "with-cta" | "title-desc" | "title-desc-cta" | "title-expand" | "title-desc-expand">("title-only")
+
+  // AI Summary playground
+  const [pgAiState, setPgAiState]       = useState<"default" | "loading" | "empty">("default")
+  const [pgAiBullets, setPgAiBullets]   = useState<"1" | "2" | "3">("3")
+
+  // Insights playground
+  const [pgInsCount, setPgInsCount]     = useState<"1" | "2" | "3">("3")
+  const [pgInsFeedback, setPgInsFeedback] = useState(true)
+
+  // List Content Slideout playground (Figma: v6rmYKA2zmyXWOahlxLOeI · 753-24036)
+  const [pgLcsButtons, setPgLcsButtons]           = useState(true)
+  const [pgLcsCta, setPgLcsCta]                   = useState(true)
+  const [pgLcsCtaVariant, setPgLcsCtaVariant]     = useState<"primary" | "secondary" | "tertiary">("primary")
+  const [pgLcsDescription, setPgLcsDescription]   = useState(true)
+  const [pgLcsExpand, setPgLcsExpand]             = useState(true)
+  const [pgLcsHighlightedNumber, setPgLcsHighlightedNumber] = useState(true)
+  const [pgLcsNumberValue, setPgLcsNumberValue]   = useState<string>("3")
+  const [pgLcsIcon, setPgLcsIcon]                 = useState(true)
+  const [pgLcsIconName, setPgLcsIconName]         = useState<string>("FileText")
+  const [pgLcsIconVariant, setPgLcsIconVariant]   = useState<"primary" | "success" | "error" | "alert" | "neutral" | "purple">("primary")
+  const [pgLcsMetaData, setPgLcsMetaData]         = useState(true)
+  const [pgLcsProperty, setPgLcsProperty]         = useState<"Default" | "Slot">("Default")
+  const [pgLcsStatus, setPgLcsStatus]             = useState(true)
+  const [pgLcsTitle, setPgLcsTitle]               = useState(true)
+
+  // Form: Text Input playground
+  const [pgFiState, setPgFiState]           = useState<"default" | "error" | "disabled">("default")
+  const [pgFiFilled, setPgFiFilled]         = useState(false)
+  const [pgFiSupportingText, setPgFiSupportingText] = useState(false)
+  const [pgFiLabel, setPgFiLabel]           = useState(true)
+
+  // Form: Textarea playground
+  const [pgTaState, setPgTaState]           = useState<"default" | "error" | "disabled">("default")
+  const [pgTaFilled, setPgTaFilled]         = useState(false)
+  const [pgTaSupportingText, setPgTaSupportingText] = useState(false)
+  const [pgTaRows, setPgTaRows]             = useState<"2" | "3" | "4">("3")
+
+  // Form: Select playground
+  const [pgSelState, setPgSelState]         = useState<"default" | "error" | "disabled">("default")
+  const [pgSelFilled, setPgSelFilled]       = useState(false)
+
+  // Form: Toggle playground
+  const [pgTglChecked, setPgTglChecked]     = useState(false)
+  const [pgTglDisabled, setPgTglDisabled]   = useState(false)
+
+  // Form: Number playground
+  const [pgNumType, setPgNumType]           = useState<"native" | "stepper" | "unit">("native")
+  const [pgNumError, setPgNumError]         = useState(false)
+  const [pgNumValue, setPgNumValue]         = useState(25)
+
+  // Form: Selection Card playground
+  const [pgScMode, setPgScMode]             = useState<"single" | "multi">("single")
+  const [pgScSingle, setPgScSingle]         = useState("event")
+  const [pgScMulti, setPgScMulti]           = useState<string[]>(["email"])
+
+  // Form: Slider playground
+  const [pgSliderType, setPgSliderType]     = useState<"basic" | "semantic" | "range">("basic")
+  const [pgSliderValue, setPgSliderValue]   = useState(50)
+  const [pgSliderRange, setPgSliderRange]   = useState<[number, number]>([20, 70])
+
+  // By Layers playground (Figma: UKtmHXtZZ20gZjfwc0tnJl · 317-13135 / 317-13136 / 318-13310)
+  const [pgBlTitle, setPgBlTitle]               = useState(true)
+  const [pgBlDate, setPgBlDate]                 = useState(true)
+  const [pgBlThreadLine, setPgBlThreadLine]     = useState(true)
+  const [pgBlDepth, setPgBlDepth]               = useState<"1" | "2" | "3" | "4" | "5+">("2")
+  const [pgBlTags, setPgBlTags]                 = useState(true)
+  const [pgBlTagCount, setPgBlTagCount]         = useState<"1" | "2" | "3" | "overflow">("2")
+  const [pgBlTagColor, setPgBlTagColor]         = useState<"purple" | "informative" | "success" | "neutral" | "alert">("purple")
+
+  // Detail Table playground (Figma: UKtmHXtZZ20gZjfwc0tnJl · 320-13846 / 320-13621)
+  const [pgDtRows, setPgDtRows]             = useState<"3" | "6" | "8">("6")
+  const [pgDtValueType, setPgDtValueType]   = useState<"text" | "tag" | "unknown">("text")
+
+  // Process Item playground
+  const [pgPiStatus, setPgPiStatus]     = useState<ProcessStatus>("done")
+  const [pgPiState, setPgPiState]       = useState<"default" | "selected">("default")
+  const [pgPiDesc, setPgPiDesc]         = useState(true)
+  const [pgPiTimestamp, setPgPiTimestamp] = useState(true)
+  const [pgPiTag, setPgPiTag]           = useState(false)
+  const [pgPiNumber, setPgPiNumber]     = useState(false)
+  const [pgPiLine, setPgPiLine]         = useState(false)
+  const [pgPiExpand, setPgPiExpand]     = useState(false)
+  const [pgPiExpanded, setPgPiExpanded] = useState(false)
+  const [pgPiSlot, setPgPiSlot]         = useState(false)
+
+  const SAMPLE_LIST_ITEMS: EntityListItemData[] = [
+    { id: "r1", title: "Acme Corp",  iconName: "Building2", iconVariant: "error",   state: { label: "At risk",    variant: "error"   }, timestamp: "2h ago" },
+    { id: "r2", title: "Globex Inc", iconName: "Building2", iconVariant: "success", state: { label: "Healthy",    variant: "success" }, timestamp: "4h ago" },
+    { id: "r3", title: "Initech",    iconName: "Building2", iconVariant: "yellow",  state: { label: "Monitoring", variant: "alert"   }, timestamp: "1d ago" },
+  ];
+
+  // ── Playground modal content ────────────────────────────────────────────────
+  const PG_SECTION_TITLE_ITEMS = [
+    { label: "Title Only",             value: "title-only"        },
+    { label: "With CTA",               value: "with-cta"          },
+    { label: "Title + Desc",           value: "title-desc"        },
+    { label: "Title + Desc + CTA",     value: "title-desc-cta"    },
+    { label: "Title Expand",           value: "title-expand"      },
+    { label: "Title + Desc + Expand",  value: "title-desc-expand" },
+  ] as const
+
+  const pgSectionTitlePreview = (
+    <div className="w-full max-w-[360px] flex flex-col gap-[8px]">
+      <div className="flex items-start justify-between gap-[8px]" style={{ minHeight: "32px" }}>
+        <div className="flex flex-col gap-[2px]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--field-label)]">Accounts affected</span>
+          {(pgStVariant === "title-desc" || pgStVariant === "title-desc-cta" || pgStVariant === "title-desc-expand") && (
+            <span className="text-[11px] text-[var(--field-supporting)]">Based on the last 30 days</span>
+          )}
+        </div>
+        {(pgStVariant === "with-cta" || pgStVariant === "title-desc-cta") && (
+          <Button variant="tertiary" size="sm" className="shrink-0">
+            View all <LucideIcons.ChevronRight size={12} />
+          </Button>
+        )}
+        {(pgStVariant === "title-expand" || pgStVariant === "title-desc-expand") && (
+          <button className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] shrink-0 transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--field-label)", border: "none", background: "transparent" }}>
+            <LucideIcons.ChevronDown size={16} />
+          </button>
+        )}
+      </div>
+      <EntityList items={SAMPLE_LIST_ITEMS.slice(0, 2)} />
+    </div>
+  )
+
+  const AI_BULLETS = [
+    "Health score dropped to 42/100 — below the 50-point intervention threshold",
+    "2 open support tickets linked to churn risk signals",
+    "Executive sponsor changed in October — follow-up recommended",
+  ]
+  const pgAiSummaryPreview = (
+    <div className="w-full max-w-[360px]">
+      {pgAiState === "empty" ? (
+        <div className="flex flex-col items-center gap-[8px] py-[20px] text-center">
+          <LucideIcons.Sparkles size={20} style={{ color: "var(--color-text-purple)" }} />
+          <p className="text-[12px] text-[var(--field-supporting)]">No AI summary generated yet</p>
+        </div>
+      ) : pgAiState === "loading" ? (
+        <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+          style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+          <div className="flex items-center gap-[6px]">
+            <Spinner style="primary" size="s" />
+            <span className="text-[11px] font-semibold text-[var(--color-text-purple)]">Generating summary…</span>
+          </div>
+          {[60, 80, 50].slice(0, Number(pgAiBullets)).map((w, i) => (
+            <div key={i} className="h-[10px] rounded-full animate-pulse" style={{ background: "var(--color-surface-purple-subtle)", width: `${w}%` }} />
+          ))}
+        </div>
+      ) : (
+        <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+          style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+          <div className="flex items-center gap-[6px]">
+            <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+            <span className="text-[11px] font-semibold text-[var(--color-text-purple)]">AI Summary</span>
+          </div>
+          <ul className="flex flex-col gap-[4px] pl-[4px]">
+            {AI_BULLETS.slice(0, Number(pgAiBullets)).map((b, i) => (
+              <li key={i} className="flex items-start gap-[6px] text-[12px] text-[var(--foreground)] leading-[1.5]">
+                <span className="mt-[5px] shrink-0 w-[4px] h-[4px] rounded-full" style={{ background: "var(--color-text-purple)" }} />
+                {b}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+
+  const INS_ITEMS = [
+    { label: "Health score", value: "42/100", iconName: "Activity",     feedbackType: "negative" as const },
+    { label: "Open tickets", value: "3",       iconName: "AlertTriangle", feedbackType: "neutral"  as const },
+    { label: "Total runs",   value: "847",     iconName: "Play",          feedbackType: "positive" as const },
+  ]
+  const pgInsightsPreview = (
+    <div className={`grid gap-[8px] w-full max-w-[440px]`} style={{ gridTemplateColumns: `repeat(${pgInsCount}, 1fr)` }}>
+      {INS_ITEMS.slice(0, Number(pgInsCount)).map(item => (
+        <HighlightCard
+          key={item.label}
+          label={item.label}
+          value={item.value}
+          iconName={item.iconName}
+          feedbackType={pgInsFeedback ? item.feedbackType : undefined}
+          className="!w-full"
+        />
+      ))}
+    </div>
+  )
+
+  const LCS_META_ITEMS = [
+    { label: "Category",   tooltip: "Classification assigned during intake"   },
+    { label: "Q3 2024",    tooltip: "Quarter this item was last updated"       },
+    { label: "3 linked",   tooltip: "3 related records attached to this item"  },
+  ]
+
+  const pgListPreview = (
+    <div className="w-full max-w-[420px]">
+      {/* List Content Slideout — Figma v6rmYKA2zmyXWOahlxLOeI · 753-24036 */}
+      <div className="flex flex-col gap-[8px] p-[8px] rounded-[8px]"
+        style={{ border: "1px solid var(--field-border)" }}>
+        {/* Main Container */}
+        <div className="flex gap-[4px] items-start w-full">
+          {/* Icon highlight */}
+          {pgLcsIcon && (() => {
+            const LCS_ICON_TOKENS: Record<string, { bg: string; fg: string }> = {
+              primary: { bg: "var(--color-surface-primary-subtle)",     fg: "var(--primary)" },
+              success: { bg: "var(--color-surface-success-subtle)",     fg: "var(--color-icon-success-default)" },
+              error:   { bg: "var(--color-surface-error-subtle)",       fg: "var(--color-icon-error-default)" },
+              alert:   { bg: "var(--color-surface-alert-subtle)",       fg: "var(--color-icon-alert-default)" },
+              neutral: { bg: "var(--color-surface-neutral-subtle)",     fg: "var(--color-icon-neutral-default)" },
+              purple:  { bg: "var(--color-surface-purple-subtle)",      fg: "var(--color-text-purple)" },
+            }
+            const tok = LCS_ICON_TOKENS[pgLcsIconVariant]
+            const IconComp = (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number; style?: React.CSSProperties }>>)[pgLcsIconName] ?? LucideIcons.FileText
+            return (
+              <div className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] shrink-0"
+                style={{ background: tok.bg }}>
+                <IconComp size={14} style={{ color: tok.fg }} />
+              </div>
+            )
+          })()}
+          {/* Highlighted number badge */}
+          {pgLcsHighlightedNumber && (
+            <div className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] shrink-0 text-[11px] font-semibold"
+              style={{ background: "var(--color-surface-success-more-subtle)", color: "var(--color-text-success)" }}>
+              {pgLcsNumberValue}
+            </div>
+          )}
+          {/* Text Container */}
+          <div className="flex flex-1 flex-col gap-[2px] items-start min-w-0">
+            {pgLcsTitle && (
+              <div className="flex gap-[4px] items-start flex-wrap">
+                <span className="text-[14px] font-medium text-[var(--foreground)]">Name of the item</span>
+                {pgLcsStatus && (
+                  <span className="inline-flex items-center px-[8px] py-[4px] rounded-[8px] text-[12px] font-medium h-[20px] shrink-0"
+                    style={{ background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-lighter)", color: "var(--color-text-success)" }}>
+                    Status
+                  </span>
+                )}
+              </div>
+            )}
+            {pgLcsDescription && (
+              <span className="text-[14px] font-medium w-full" style={{ color: "var(--field-supporting)" }}>This is an example of the text that could be shown</span>
+            )}
+            {pgLcsMetaData && (
+              <div className="flex items-center gap-[4px] flex-wrap">
+                {LCS_META_ITEMS.map((m, i) => (
+                  <Fragment key={m.label}>
+                    {i > 0 && <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>·</span>}
+                    <Tooltip content={m.tooltip}>
+                      <span className="text-[12px] font-medium cursor-default" style={{ color: "var(--field-supporting)" }}>
+                        {m.label}
+                      </span>
+                    </Tooltip>
+                  </Fragment>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Buttons */}
+          {pgLcsButtons && (
+            <div className="flex gap-[4px] items-center self-stretch shrink-0">
+              {pgLcsCta && (
+                <Button variant={pgLcsCtaVariant} size="sm">
+                  Call to action
+                </Button>
+              )}
+              {pgLcsExpand && (
+                <button className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] transition-colors hover:bg-[var(--color-surface-neutral-default)]"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none" }}>
+                  <LucideIcons.ChevronDown size={16} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        {/* Slot — visible cuando property1 = "Slot" */}
+        {pgLcsProperty === "Slot" && (
+          <div className="flex flex-col gap-[8px] mt-[2px] w-full">
+            <div className="flex flex-col gap-[6px] p-[10px] rounded-[6px]"
+              style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-label)" }}>Slot content</span>
+              <div className="flex flex-col gap-[4px]">
+                {[["Company size","201–500 employees"],["Tech stack","Salesforce, Slack"],["Region","LATAM · México"]].map(([l, v]) => (
+                  <div key={l} className="flex items-center justify-between">
+                    <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>{l}</span>
+                    <span className="text-[12px] font-medium" style={{ color: "var(--foreground)" }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  // ── Form playground previews ─────────────────────────────────────────────────
+
+  const pgFormInputPreview = (
+    <div className="w-full max-w-[340px] flex flex-col gap-[6px]">
+      {pgFiLabel && (
+        <label className="text-[12px] font-semibold" style={{ color: "var(--field-label)" }}>Automation name</label>
+      )}
+      <Input
+        placeholder="Enter automation name…"
+        value={pgFiFilled ? "Customer Churn Alert" : undefined}
+        state={pgFiState === "error" ? "error" : undefined}
+        disabled={pgFiState === "disabled"}
+        supportingText={pgFiSupportingText
+          ? pgFiState === "error" ? "This field is required" : "Used to identify this automation"
+          : undefined}
+      />
+    </div>
+  )
+
+  const pgFormTextareaPreview = (
+    <div className="w-full max-w-[340px] flex flex-col gap-[6px]">
+      <label className="text-[12px] font-semibold" style={{ color: "var(--field-label)" }}>Description</label>
+      <Textarea
+        placeholder="Describe what this automation does…"
+        value={pgTaFilled ? "Monitors customer health scores and triggers interventions when thresholds are exceeded." : undefined}
+        state={pgTaState === "error" ? "error" : undefined}
+        disabled={pgTaState === "disabled"}
+        supportingText={pgTaSupportingText
+          ? pgTaState === "error" ? "Description is required for published automations" : "Optional — shown in the automation list"
+          : undefined}
+        rows={Number(pgTaRows)}
+      />
+    </div>
+  )
+
+  const pgFormSelectPreview = (
+    <div className="w-full max-w-[340px] flex flex-col gap-[6px]">
+      <label className="text-[12px] font-semibold" style={{ color: "var(--field-label)" }}>Category</label>
+      <Select
+        placeholder="Select a category"
+        value={pgSelFilled ? "Monitoring" : undefined}
+        state={pgSelState === "error" ? "error" : pgSelState === "disabled" ? "disabled" : undefined}
+      />
+    </div>
+  )
+
+  const pgFormTogglePreview = (
+    <div className="w-full max-w-[340px]">
+      <div className="flex items-center gap-[12px] p-[16px] rounded-[8px]" style={{ border: "1px solid var(--field-border)", background: "var(--canvas)" }}>
+        <Toggle checked={pgTglChecked} disabled={pgTglDisabled} onChange={v => setPgTglChecked(v)} />
+        <div>
+          <div className="text-[13px] font-semibold text-[var(--foreground)]">Enable automation</div>
+          <div className="text-[11px] mt-[1px]" style={{ color: "var(--field-supporting)" }}>
+            {pgTglDisabled ? "Managed by organization policy" : pgTglChecked ? "Automation is active" : "Automation is paused"}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const pgFormNumberPreview = (
+    <div className="w-full max-w-[280px] flex flex-col gap-[6px]">
+      <label className="text-[12px] font-semibold" style={{ color: "var(--field-label)" }}>
+        {pgNumType === "stepper" ? "Retry attempts" : pgNumType === "unit" ? "Cooldown window" : "Threshold value"}
+      </label>
+      {pgNumType === "native" && (
+        <div className="flex flex-col gap-[4px]">
+          <div className="flex items-center rounded-[8px]"
+            style={{ border: `1px solid ${pgNumError ? "var(--field-error)" : "var(--field-border)"}`, background: "var(--field-bg)" }}>
+            <input
+              type="number"
+              value={pgNumValue}
+              onChange={e => setPgNumValue(Number(e.target.value))}
+              className="flex-1 bg-transparent outline-none text-[13px] px-[12px] py-[8px]"
+              style={{ color: "var(--foreground)" }}
+            />
+          </div>
+          {pgNumError && (
+            <div className="flex items-center gap-[4px]">
+              <LucideIcons.AlertCircle size={11} style={{ color: "var(--field-error)" }} />
+              <span className="text-[11px]" style={{ color: "var(--field-error)" }}>Value must be 0 or greater</span>
+            </div>
+          )}
+        </div>
+      )}
+      {pgNumType === "stepper" && (
+        <div className="flex items-center rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--field-border)", background: "var(--field-bg)" }}>
+          <button className="w-[36px] h-[36px] flex items-center justify-center shrink-0 transition-colors"
+            style={{ color: "var(--field-supporting)", borderRight: "1px solid var(--field-border)" }}
+            onClick={() => setPgNumValue(v => Math.max(0, v - 1))}>
+            <LucideIcons.Minus size={12} />
+          </button>
+          <span className="flex-1 text-center text-[13px] font-semibold text-[var(--foreground)]">{pgNumValue}</span>
+          <button className="w-[36px] h-[36px] flex items-center justify-center shrink-0 transition-colors"
+            style={{ color: "var(--field-supporting)", borderLeft: "1px solid var(--field-border)" }}
+            onClick={() => setPgNumValue(v => Math.min(10, v + 1))}>
+            <LucideIcons.Plus size={12} />
+          </button>
+        </div>
+      )}
+      {pgNumType === "unit" && (
+        <div className="flex items-center rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--field-border)", background: "var(--field-bg)" }}>
+          <input
+            type="number"
+            value={pgNumValue}
+            onChange={e => setPgNumValue(Number(e.target.value))}
+            className="flex-1 bg-transparent outline-none text-[13px] px-[12px] py-[8px]"
+            style={{ color: "var(--foreground)", minWidth: 0 }}
+          />
+          <span className="shrink-0 px-[10px] text-[12px] font-semibold" style={{ color: "var(--field-supporting)", borderLeft: "1px solid var(--field-border)", background: "var(--color-surface-neutral-subtle)" }}>ms</span>
+        </div>
+      )}
+    </div>
+  )
+
+  const PG_SC_OPTIONS = [
+    { id: "event",    iconName: "Zap",           variant: "alert"       as HighlightIconVariant, label: "Event trigger",  desc: "Fires when a customer event matches conditions" },
+    { id: "schedule", iconName: "Clock",          variant: "informative" as HighlightIconVariant, label: "Scheduled",      desc: "Runs on a cron expression you define" },
+    { id: "manual",   iconName: "Play",           variant: "neutral"     as HighlightIconVariant, label: "Manual",         desc: "Triggered by a user or external API call" },
+  ]
+  const pgFormSelectionCardPreview = (
+    <div className="w-full max-w-[380px] flex flex-col gap-[8px]">
+      {PG_SC_OPTIONS.map(opt => {
+        const active = pgScMode === "single" ? pgScSingle === opt.id : pgScMulti.includes(opt.id)
+        return (
+          <CardContainer
+            key={opt.id}
+            size="sm"
+            selected={active}
+            onClick={() => {
+              if (pgScMode === "single") {
+                setPgScSingle(opt.id)
+              } else {
+                setPgScMulti(prev => active ? prev.filter(id => id !== opt.id) : [...prev, opt.id])
+              }
+            }}
+            className="flex items-center gap-[12px]"
+          >
+            <HighlightIcon size="sm" variant={opt.variant} iconName={opt.iconName} />
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-semibold text-[var(--foreground)]">{opt.label}</div>
+              <div className="text-[11px] mt-[1px]" style={{ color: "var(--field-supporting)" }}>{opt.desc}</div>
+            </div>
+            {pgScMode === "single" ? (
+              <div className="w-[16px] h-[16px] rounded-full shrink-0 flex items-center justify-center"
+                style={{ border: `1.5px solid ${active ? "var(--primary)" : "var(--field-border)"}` }}>
+                {active && <div className="w-[8px] h-[8px] rounded-full" style={{ background: "var(--primary)" }} />}
+              </div>
+            ) : (
+              <div className="w-[16px] h-[16px] rounded-[4px] shrink-0 flex items-center justify-center transition-all"
+                style={{ background: active ? "var(--primary)" : "transparent", border: `1.5px solid ${active ? "var(--primary)" : "var(--field-border)"}` }}>
+                {active && <LucideIcons.Check size={10} style={{ color: "var(--color-text-negative)" }} />}
+              </div>
+            )}
+          </CardContainer>
+        )
+      })}
+    </div>
+  )
+
+  const pgFormSliderPreview = (
+    <div className="w-full max-w-[360px]">
+      {pgSliderType === "range" ? (
+        <Slider
+          type="range"
+          label="Score window"
+          value={pgSliderRange}
+          onChange={setPgSliderRange}
+          min={0}
+          max={100}
+        />
+      ) : pgSliderType === "basic" ? (
+        <Slider
+          label="Health score threshold"
+          value={pgSliderValue}
+          onChange={setPgSliderValue}
+          min={0}
+          max={100}
+        />
+      ) : (
+        /* semantic — custom override, not a Slider prop */
+        <div className="flex flex-col gap-[8px]">
+          <div className="flex items-center justify-between">
+            <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Alert threshold</span>
+            <span className="text-[13px] font-semibold" style={{ color: pgSliderValue >= 70 ? "var(--color-text-error)" : pgSliderValue >= 40 ? "var(--color-text-warning)" : "var(--color-text-success)" }}>
+              {pgSliderValue}%
+            </span>
+          </div>
+          <div className="relative h-[20px] flex items-center">
+            <div className="absolute w-full h-[4px] rounded-full" style={{ background: "var(--slider-track-bg)" }} />
+            <div className="absolute h-[4px] rounded-full transition-colors"
+              style={{
+                width: `${pgSliderValue}%`,
+                background: pgSliderValue >= 70 ? "var(--color-border-error-default)" : pgSliderValue >= 40 ? "var(--color-border-alert-default)" : "var(--color-text-success)",
+              }} />
+            <input type="range" min={0} max={100} value={pgSliderValue}
+              onChange={e => setPgSliderValue(Number(e.target.value))}
+              className="absolute w-full opacity-0 cursor-pointer h-[20px]" />
+            <div className="absolute w-[16px] h-[16px] rounded-full pointer-events-none transition-colors"
+              style={{
+                left: `calc(${pgSliderValue}% - 8px)`,
+                background: "var(--slider-thumb-bg)",
+                border: `2px solid ${pgSliderValue >= 70 ? "var(--color-border-error-default)" : pgSliderValue >= 40 ? "var(--color-border-alert-default)" : "var(--color-text-success)"}`,
+                boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+              }} />
+          </div>
+          <div className="flex justify-between text-[10px]" style={{ color: "var(--field-supporting)" }}>
+            <span>0% — Safe</span><span>40% — Warning</span><span>70% — Critical</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  const BL_TAG_PALETTES: Record<string, { bg: string; bd: string; fg: string }> = {
+    purple:      { bg: "var(--tag-purple-bg)",      bd: "var(--tag-purple-bd)",      fg: "var(--tag-purple-fg)"      },
+    informative: { bg: "var(--tag-informative-bg)", bd: "var(--tag-informative-bd)", fg: "var(--tag-informative-fg)" },
+    success:     { bg: "var(--tag-success-bg)",     bd: "var(--tag-success-bd)",     fg: "var(--tag-success-fg)"     },
+    neutral:     { bg: "var(--tag-neutral-bg)",     bd: "var(--tag-neutral-bd)",     fg: "var(--tag-neutral-fg)"     },
+    alert:       { bg: "var(--tag-alert-bg)",       bd: "var(--tag-alert-bd)",       fg: "var(--tag-alert-fg)"       },
+  }
+  const BL_TAG_LABELS = ["AIML", "v2.1", "Prod", "Batch"]
+  const pgByLayersTags = (() => {
+    const pal = BL_TAG_PALETTES[pgBlTagColor]
+    const tagStyle = { background: pal.bg, border: `1px solid ${pal.bd}`, color: pal.fg }
+    const count = pgBlTagCount === "overflow" ? 2 : Number(pgBlTagCount)
+    const labels = BL_TAG_LABELS.slice(0, count)
+    return (
+      <div className="flex gap-[4px] flex-wrap mt-[2px]">
+        {labels.map(t => (
+          <span key={t} className="text-[11px] font-medium px-[7px] py-[1px] rounded-[8px]" style={tagStyle}>{t}</span>
+        ))}
+        {pgBlTagCount === "overflow" && (
+          <span className="text-[11px] font-medium px-[7px] py-[1px] rounded-[8px]" style={tagStyle}>+2 more</span>
+        )}
+      </div>
+    )
+  })()
+
+  const pgByLayersPreview = (
+    <div className="w-full max-w-[320px] flex flex-col gap-[8px]">
+      {(pgBlDepth === "4" || pgBlDepth === "5+") && (
+        <div className="flex items-start gap-[8px] p-[8px] rounded-[6px]"
+          style={{ background: "var(--color-surface-alert-more-subtle)", border: "1px solid var(--color-border-alert-subtle)" }}>
+          <LucideIcons.AlertTriangle size={13} className="shrink-0 mt-[1px]" style={{ color: "var(--color-icon-alert-default)" }} />
+          <span className="text-[11px] leading-[1.4]" style={{ color: "var(--foreground)" }}>
+            <strong>{pgBlDepth === "5+" ? "Depth 5+ — breadcrumb pattern required." : "Depth 4 — use progressive disclosure."}</strong>{" "}
+            {pgBlDepth === "5+" ? "Replace the tree with a compact path. Always include a 'View full lineage' link." : "Collapse levels 3–4 behind an expand toggle. Show only levels 1–2 by default."}
+          </span>
+        </div>
+      )}
+      {/* Depth 5+: breadcrumb path pattern */}
+      {pgBlDepth === "5+" ? (
+        <div className="flex gap-[8px] items-start p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+          {pgBlThreadLine && (
+            <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+          )}
+          <div className="flex flex-col gap-[8px] flex-1 min-w-0">
+            {pgBlTitle && (
+              <div className="flex flex-col gap-[4px]">
+                <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Acme Corp — Churn Analysis</span>
+                {pgBlDate && <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>JSON · Jan · 15 · 2024</span>}
+              </div>
+            )}
+            <div className="flex flex-col gap-[6px]">
+              <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Lineage path</span>
+              <div className="flex items-center gap-[4px] flex-wrap">
+                {["CRM", "Ingest", "…", "AI Engine", "Scorer", "Dashboard"].map((step, i, arr) => (
+                  <span key={i} className="flex items-center gap-[4px]">
+                    <span className={`text-[11px] font-medium ${step === "…" ? "px-[2px]" : "px-[6px] py-[1px] rounded-[4px]"}`}
+                      style={step === "…"
+                        ? { color: "var(--field-supporting)" }
+                        : { background: "var(--color-surface-neutral-subtle)", color: "var(--foreground)", border: "0.5px solid var(--field-border)" }}>
+                      {step}
+                    </span>
+                    {i < arr.length - 1 && <LucideIcons.ChevronRight size={10} style={{ color: "var(--field-supporting)" }} />}
+                  </span>
+                ))}
+              </div>
+              <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>6 layers total · 3 hidden</span>
+              {pgBlTags && pgByLayersTags}
+            </div>
+            <button className="flex items-center gap-[4px] self-start text-[11px] font-semibold"
+              style={{ color: "var(--primary)" }}>
+              View full lineage <LucideIcons.ArrowUpRight size={11} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-[8px] items-start p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+          {pgBlThreadLine && (
+            <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+          )}
+          <div className="flex flex-col gap-[5px] flex-1 min-w-0">
+            {pgBlTitle && (
+              <div className="flex flex-col gap-[4px]">
+                <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Acme Corp — Churn Analysis</span>
+                {pgBlDate && <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>JSON · Jan · 15 · 2024</span>}
+              </div>
+            )}
+            {/* Depth 1: flat */}
+            {pgBlDepth === "1" && (
+              <div className="flex flex-col gap-[4px]">
+                <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>CRM database</span>
+                {pgBlTags && pgByLayersTags}
+              </div>
+            )}
+            {/* Depth 2: standard */}
+            {pgBlDepth === "2" && (
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[4px]">
+                  <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                  <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>CRM database</span>
+                </div>
+                <div className="flex gap-[8px] pl-[12px]">
+                  <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                  <div className="flex flex-col gap-[10px] flex-1 min-w-0">
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Layer</span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>AI scoring engine</span>
+                      {pgBlTags && pgByLayersTags}
+                    </div>
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Output</span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Risk dashboard</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Depth 3: complex pipeline */}
+            {pgBlDepth === "3" && (
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[4px]">
+                  <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                  <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Data warehouse</span>
+                </div>
+                <div className="flex gap-[8px] pl-[12px]">
+                  <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                  <div className="flex flex-col gap-[10px] flex-1 min-w-0">
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Layer</span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>ML pipeline</span>
+                      {pgBlTags && pgByLayersTags}
+                    </div>
+                    <div className="flex gap-[8px] pl-[12px]">
+                      <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                      <div className="flex flex-col gap-[10px] flex-1 min-w-0">
+                        <div className="flex flex-col gap-[4px]">
+                          <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Sub-layer</span>
+                          <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Feature extractor</span>
+                        </div>
+                        <div className="flex flex-col gap-[4px]">
+                          <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Output</span>
+                          <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Risk dashboard</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Depth 4: progressive disclosure — levels 3-4 collapsed */}
+            {pgBlDepth === "4" && (
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[4px]">
+                  <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                  <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Data warehouse</span>
+                </div>
+                <div className="flex gap-[8px] pl-[12px]">
+                  <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                  <div className="flex flex-col gap-[10px] flex-1 min-w-0">
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Layer</span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>ML pipeline</span>
+                      {pgBlTags && pgByLayersTags}
+                    </div>
+                    {/* Collapsed group — progressive disclosure */}
+                    <button className="flex items-center gap-[6px] px-[8px] py-[4px] rounded-[6px] self-start"
+                      style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)", color: "var(--field-supporting)" }}>
+                      <LucideIcons.ChevronRight size={11} />
+                      <span className="text-[11px] font-medium">Show 2 more layers</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  const pgProcessItemPreview = (
+    <div className="w-full max-w-[380px]">
+      <ProcessItem
+        status={pgPiStatus}
+        state={pgPiState}
+        title="Data enrichment completed"
+        description={pgPiDesc ? "Fetched from Clearbit — 4 new fields added to entity" : undefined}
+        timestamp={pgPiTimestamp ? "2 min ago" : undefined}
+        tag={pgPiTag ? "Completed" : undefined}
+        number={pgPiNumber ? "1" : undefined}
+        showLine={pgPiLine}
+        showExpand={pgPiExpand}
+        expanded={pgPiExpanded}
+        onExpand={() => setPgPiExpanded(v => !v)}
+      >
+        {pgPiSlot && pgPiExpanded && (
+          <div className="flex flex-col gap-[4px] p-[8px] rounded-[6px] text-[12px]"
+            style={{ background: "var(--color-surface-neutral-default)" }}>
+            {[["Company size","201–500 employees"],["Tech stack","Salesforce, Slack"]].map(([l,v]) => (
+              <div key={l} className="flex items-center justify-between">
+                <span style={{ color: "var(--field-label)" }}>{l}</span>
+                <span style={{ color: "var(--foreground)" }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </ProcessItem>
+    </div>
+  )
+
+  // Detail Table preview
+  const DT_ALL_ROWS: { label: string; value: string; tag?: { label: string; bg: string; bd: string; fg: string } | null }[] = [
+    { label: "Type",         value: "JSON",          tag: { label: "JSON",      bg: "var(--tag-informative-bg)", bd: "var(--tag-informative-bd)", fg: "var(--tag-informative-fg)" } },
+    { label: "Version",      value: "v2.1.3",        tag: { label: "v2.1.3",    bg: "var(--tag-purple-bg)",      bd: "var(--tag-purple-bd)",      fg: "var(--tag-purple-fg)"      } },
+    { label: "Owner",        value: "ml-ops-team",   tag: { label: "ml-ops",    bg: "var(--tag-neutral-bg)",     bd: "var(--tag-neutral-bd)",     fg: "var(--tag-neutral-fg)"     } },
+    { label: "Status",       value: "Active",        tag: { label: "Active",    bg: "var(--tag-success-bg)",     bd: "var(--tag-success-bd)",     fg: "var(--tag-success-fg)"     } },
+    { label: "Created",      value: "Jan · 15 · 2024", tag: null },
+    { label: "Last updated", value: "Jun · 12 · 2024", tag: null },
+    { label: "Pipeline",     value: "ingest-v3",       tag: null },
+    { label: "Region",       value: "us-east-1",       tag: null },
+  ]
+  const dtRows = DT_ALL_ROWS.slice(0, pgDtRows === "3" ? 3 : pgDtRows === "6" ? 6 : 8)
+  const pgDetailTablePreview = (
+    <div className="w-full max-w-[320px] flex flex-col gap-[8px]">
+      <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Technical details</span>
+      <div className="flex flex-col p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+        {dtRows.map((row, i) => (
+          <div key={row.label}>
+            <div className="flex items-center gap-[19px] py-[8px]">
+              <span className="w-[120px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{row.label}</span>
+              {pgDtValueType === "tag" && row.tag ? (
+                <span className="text-[11px] font-medium px-[7px] py-[1px] rounded-[8px]"
+                  style={{ background: row.tag.bg, border: `1px solid ${row.tag.bd}`, color: row.tag.fg }}>
+                  {row.tag.label}
+                </span>
+              ) : pgDtValueType === "unknown" ? (
+                <span className="text-[12px] font-medium leading-[20px] italic" style={{ color: "var(--color-border-neutral-default)" }}>Unknown</span>
+              ) : (
+                <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{row.value}</span>
+              )}
+            </div>
+            {i < dtRows.length - 1 && (
+              <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  // Global playground — shared panel slot content
+  const GP_CONTENT_ORDER = ["section-title","ai-summary","insights","list","process-item","by-layers","detail-table"]
+  const GP_FORM_ORDER    = ["text-input","textarea","select","toggle","number","selection-card","slider","tag-input"]
+
+  const gpHasDetailItems = gpItems.some(id => id === "by-layers" || id === "detail-table")
+  const gpTabLabels = gpHasDetailItems
+    ? (gpFormItems.length > 0 ? ["Overview", "Details", "Config"] : ["Overview", "Details"])
+    : (gpFormItems.length > 0 ? ["Overview", "Config"] : ["Overview"])
+
+  const gpOverviewItems = GP_CONTENT_ORDER.filter(id => gpItems.includes(id) && id !== "by-layers" && id !== "detail-table")
+  const gpDetailItems   = GP_CONTENT_ORDER.filter(id => gpItems.includes(id) && (id === "by-layers" || id === "detail-table"))
+
+  const gpActiveTabLabel = gpTabLabels[gpPanelTab] ?? "Overview"
+
+  const gpPanelSlotContent = (
+    <div className="flex flex-col gap-[20px] pb-[4px]">
+      {/* Overview tab — section-title, ai-summary, insights, list, process-item */}
+      {(gpActiveTabLabel === "Overview" || gpTabLabels.length === 1) && (
+        <>
+          {gpOverviewItems.map(id => (
+            <div key={id} className="flex flex-col gap-[8px]">
+              {id === "section-title" && (
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
+              )}
+              {id === "ai-summary" && (
+                <div className="flex flex-col gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>AI Summary</span>
+                  <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+                    style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                    <div className="flex items-center gap-[6px]">
+                      <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+                      <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
+                    </div>
+                    <ul className="flex flex-col gap-[4px]">
+                      {["Health score dropped to 42/100 — below intervention threshold","2 open support tickets linked to churn risk","Executive sponsor changed in October — follow-up recommended"].map((b,bi) => (
+                        <li key={bi} className="flex items-start gap-[6px] text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>
+                          <span className="mt-[6px] w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--color-text-purple)" }} />{b}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+              {id === "insights" && (
+                <div className="flex flex-col gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Key Metrics</span>
+                  <AdaptiveMetricGrid cards={[
+                    { label: "Health", value: "42/100", iconName: "Activity"      },
+                    { label: "At risk", value: "3",     iconName: "AlertTriangle"  },
+                    { label: "Runs",    value: "847",   iconName: "Play"           },
+                  ]} />
+                </div>
+              )}
+              {id === "list" && (
+                <div className="flex flex-col gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Recent runs</span>
+                  <EntityList items={[
+                    { id:"r1", title:"Acme Corp",  iconName:"Building2", iconVariant:"error",   state:{ label:"Triggered",  variant:"error"   }, timestamp:"2h ago" },
+                    { id:"r2", title:"Globex Inc", iconName:"Building2", iconVariant:"success", state:{ label:"Monitoring", variant:"success" }, timestamp:"4h ago" },
+                    { id:"r3", title:"Initech",    iconName:"Building2", iconVariant:"neutral", state:{ label:"Skipped",    variant:"neutral" }, timestamp:"8h ago" },
+                  ]} />
+                </div>
+              )}
+              {id === "process-item" && (
+                <div className="flex flex-col gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Process steps</span>
+                  <ProcessItem title="Data enrichment"  status="done"    description="Clearbit — 4 fields added"  timestamp="5 min ago" showLine />
+                  <ProcessItem title="Risk scoring"     status="done"    description="Score: 42/100"              timestamp="4 min ago" showLine />
+                  <ProcessItem title="Alert dispatched" status="loading" description="Sending to CSM team..."                          showLine={false} />
+                </div>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* Details tab — by-layers (Data origin) + detail-table (Technical details) */}
+      {gpActiveTabLabel === "Details" && (
+        <>
+          {gpDetailItems.map(id => (
+            <div key={id} className="flex flex-col gap-[8px]">
+              {id === "by-layers" && (
+                <div className="flex flex-col gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Data origin</span>
+                  <div className="flex gap-[8px] items-start p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                    <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+                    <div className="flex flex-col gap-[8px] flex-1 min-w-0">
+                      <div className="flex flex-col gap-[4px]">
+                        <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Churn probability</span>
+                        <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>Float · Nov · 14 · 2024</span>
+                      </div>
+                      <div className="flex flex-col gap-[4px]">
+                        <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                        <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Data warehouse</span>
+                      </div>
+                      <div className="flex gap-[8px] pl-[12px]">
+                        <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                        <div className="flex flex-col gap-[4px] flex-1 min-w-0">
+                          <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Layer</span>
+                          <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>ML scoring engine</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {id === "detail-table" && (
+                <div className="flex flex-col gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Technical details</span>
+                  <div className="flex flex-col rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                    {([["Type","JSON"],["Version","v2.1.3"],["Owner","ml-ops-team"],["Status","Active"]] as [string,string][]).map(([lbl,val],i,arr) => (
+                      <div key={lbl}>
+                        <div className="flex items-center gap-[19px] py-[8px] px-[12px]">
+                          <span className="w-[120px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{lbl}</span>
+                          <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{val}</span>
+                        </div>
+                        {i < arr.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {gpDetailItems.length === 0 && (
+            <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Enable "Detail — By Layers" or "Detail — Table" from the playground controls.</span>
+          )}
+        </>
+      )}
+
+      {/* Config tab — form & config items (or inline when no tabs) */}
+      {gpFormItems.length > 0 && (gpActiveTabLabel === "Config" || !gpTabLabels.includes("Config")) && (
+        <>
+          {/* Divider only when inline (single-tab mode with content above) */}
+          {gpItems.length > 0 && !gpTabLabels.includes("Config") && (
+            <div className="w-full h-[1px]" style={{ background: "var(--field-border)" }} />
+          )}
+
+          {/* Select dropdown portal */}
+          {gpSelectOpen && gpSelectAnchor && typeof document !== "undefined" && (() => {
+        const OPTIONS = ["Health Score Drop", "Usage Threshold", "Payment Overdue", "Support Ticket Volume", "NPS Score Change"]
+        return createPortal(
+          <div
+            className="fixed z-[9999] rounded-[8px] py-[4px] overflow-hidden"
+            style={{ left: gpSelectAnchor.left, top: gpSelectAnchor.top + 4, minWidth: 200, background: "var(--surface)", border: "1px solid var(--field-border)", boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}
+          >
+            {OPTIONS.map(opt => (
+              <button
+                key={opt}
+                onClick={() => { setGpSelectValue(opt); setGpSelectOpen(false); setGpSelectAnchor(null) }}
+                className="flex items-center w-full px-[12px] py-[8px] text-[13px] font-medium text-left transition-colors"
+                style={{
+                  color: opt === gpSelectValue ? "var(--primary)" : "var(--foreground)",
+                  background: opt === gpSelectValue ? "var(--color-surface-primary-subtle)" : "transparent",
+                }}
+              >
+                {opt === gpSelectValue && <LucideIcons.Check size={12} className="mr-[8px] shrink-0" style={{ color: "var(--primary)" }} />}
+                {opt !== gpSelectValue && <span className="w-[20px] shrink-0" />}
+                {opt}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )
+      })()}
+      {GP_FORM_ORDER.filter(id => gpFormItems.includes(id)).map(id => (
+        <div key={id} className="flex flex-col gap-[8px]">
+          {id === "text-input" && (
+            <div className="flex flex-col gap-[6px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Configuration</span>
+              <label className="text-[12px] font-medium" style={{ color: "var(--field-label)" }}>Name</label>
+              <Input
+                placeholder="Automation name"
+                value={gpInputValue}
+                onChange={e => setGpInputValue(e.target.value)}
+                state={gpInputValue.trim() ? "success" : "error"}
+              />
+            </div>
+          )}
+          {id === "textarea" && (
+            <div className="flex flex-col gap-[6px]">
+              {!gpFormItems.includes("text-input") && <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Configuration</span>}
+              <label className="text-[12px] font-medium" style={{ color: "var(--field-label)" }}>Description</label>
+              <Textarea
+                placeholder="Describe what this automation does..."
+                value={gpTextareaValue}
+                onChange={e => setGpTextareaValue(e.target.value)}
+              />
+            </div>
+          )}
+          {id === "select" && (
+            <div className="flex flex-col gap-[6px]">
+              {!gpFormItems.includes("text-input") && !gpFormItems.includes("textarea") && <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Configuration</span>}
+              <label className="text-[12px] font-medium" style={{ color: "var(--field-label)" }}>Trigger type</label>
+              <div ref={gpSelectRef}>
+                <Select
+                  value={gpSelectValue}
+                  onClear={() => setGpSelectValue("")}
+                  onClick={() => {
+                    if (gpSelectRef.current) {
+                      const rect = gpSelectRef.current.getBoundingClientRect()
+                      setGpSelectAnchor({ left: rect.left, top: rect.bottom })
+                    }
+                    setGpSelectOpen(o => !o)
+                  }}
+                />
+              </div>
+            </div>
+          )}
+          {id === "toggle" && (
+            <Toggle
+              checked={gpToggleOn}
+              onChange={setGpToggleOn}
+              label="Enable notifications"
+              description="Send alert when automation fires"
+            />
+          )}
+          {id === "number" && (
+            <div className="flex flex-col gap-[6px]">
+              <label className="text-[12px] font-medium" style={{ color: "var(--field-label)" }}>Score threshold</label>
+              <div className="flex h-[40px] items-center rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
+                <button
+                  onClick={() => setGpNumber(n => Math.max(0, n - 5))}
+                  className="flex items-center justify-center w-[40px] h-full shrink-0 transition-colors hover:opacity-80"
+                  style={{ borderRight: "1px solid var(--field-border)", background: "var(--color-surface-neutral-subtle)" }}
+                >
+                  <LucideIcons.Minus size={13} style={{ color: "var(--field-supporting)" }} />
+                </button>
+                <span className="flex-1 text-center text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>{gpNumber}</span>
+                <button
+                  onClick={() => setGpNumber(n => Math.min(100, n + 5))}
+                  className="flex items-center justify-center w-[40px] h-full shrink-0 transition-colors hover:opacity-80"
+                  style={{ borderLeft: "1px solid var(--field-border)", background: "var(--color-surface-neutral-subtle)" }}
+                >
+                  <LucideIcons.Plus size={13} style={{ color: "var(--field-supporting)" }} />
+                </button>
+              </div>
+            </div>
+          )}
+          {id === "selection-card" && (
+            <div className="flex flex-col gap-[6px]">
+              <label className="text-[12px] font-medium" style={{ color: "var(--field-label)" }}>Severity level</label>
+              <div className="grid grid-cols-3 gap-[6px]">
+                {([
+                  { label: "Low"    as const, sub: "Score 70–100" },
+                  { label: "Medium" as const, sub: "Score 50–69"  },
+                  { label: "High"   as const, sub: "Score < 50"   },
+                ]).map(opt => {
+                  const selected = gpSelCard === opt.label
+                  return (
+                    <button
+                      key={opt.label}
+                      onClick={() => setGpSelCard(opt.label)}
+                      className="flex flex-col gap-[2px] p-[10px] rounded-[8px] text-left transition-all"
+                      style={{
+                        background: selected ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-subtle)",
+                        border: `1px solid ${selected ? "var(--color-border-primary-default)" : "var(--field-border)"}`,
+                      }}
+                    >
+                      <span className="text-[11px] font-semibold" style={{ color: selected ? "var(--primary)" : "var(--foreground)" }}>{opt.label}</span>
+                      <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{opt.sub}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {id === "slider" && (
+            <Slider
+              label="Alert sensitivity"
+              value={gpSliderVal}
+              onChange={setGpSliderVal}
+              min={0}
+              max={100}
+            />
+          )}
+          {id === "tag-input" && (
+            <TagInput
+              tags={gpTagInputTags}
+              onAddTag={v => setGpTagInputTags(t => [...t, v])}
+              onRemoveTag={v => setGpTagInputTags(t => t.filter(x => x !== v))}
+              placeholder="Write the tag name"
+            />
+          )}
+        </div>
+      ))}
+        </>
+      )}
+
+      {/* Empty state */}
+      {gpItems.length === 0 && gpFormItems.length === 0 && (
+        <div className="flex flex-col items-center gap-[8px] py-[24px]" style={{ color: "var(--field-supporting)" }}>
+          <LucideIcons.LayoutTemplate size={24} style={{ opacity: 0.4 }} />
+          <span className="text-[12px]">No content selected — toggle items above to add them</span>
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <>
+      {/* ── Global Playground SlideOut ── */}
+      <SlideOut
+        open={gpOpen}
+        onClose={() => setGpOpen(false)}
+        size="m"
+        type="with-variants"
+        title="Customer Churn Alert"
+        subtitle="Automation · Monitoring"
+        statusLabel="Active"
+        showIcon
+        showStatus
+        showTabs={gpTabLabels.length > 1}
+        showTab3={gpTabLabels.length === 3}
+        tabLabels={[gpTabLabels[0] ?? "Overview", gpTabLabels[1] ?? "Details", gpTabLabels[2] ?? "Config"]}
+        activeTab={gpPanelTab}
+        onTabChange={setGpPanelTab}
+        showSearchBar={false}
+        showChips={false}
+        showCta={gpShowCta}
+        ctaPrimaryLabel="Save"
+        ctaSecondaryLabel="Cancel"
+        onCtaPrimary={() => setGpOpen(false)}
+        onCtaSecondary={() => setGpOpen(false)}
+      >
+        {gpPanelSlotContent}
+      </SlideOut>
+
+      {/* ── Global Playground SidePanel full-screen overlay ── */}
+      {gpSidePanelOpen && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9997 }}>
+          <AppBackground />
+          <Topbar
+            workspaceName="AI Workers"
+            companyName="AIMS OS"
+            actions={[
+              { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
+              { icon: <LucideIcons.Bell size={16} />,     label: "Notifications"           },
+              { icon: <LucideIcons.X    size={16} />,     label: "Close", onClick: () => setGpSidePanelOpen(false) },
+            ]}
+          />
+          <div className="flex flex-1 overflow-hidden">
+            <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId="automations" onItemClick={() => {}} />
+            <main className="flex flex-1 flex-col overflow-hidden">
+              <Header
+                title="Customer Churn Alert"
+                description="Workflow builder — SidePanel playground preview"
+                backButton
+                size="size-l"
+                primaryAction={<Button variant="main" size="sm">Save workflow</Button>}
+                secondaryAction={<Button variant="secondary" size="sm" onClick={() => setGpSidePanelOpen(false)}>Close preview</Button>}
+              />
+              <div className="flex flex-1 overflow-hidden">
+                {/* Canvas */}
+                <div className="flex-1 relative" style={{ background: "var(--canvas)" }}>
+                  <div className="absolute inset-0 pointer-events-none" style={{
+                    backgroundImage: "radial-gradient(circle, var(--field-border) 1px, transparent 1px)",
+                    backgroundSize: "28px 28px",
+                    opacity: 0.5,
+                  }} />
+                  <div className="absolute inset-0 flex items-center justify-center flex-col gap-[12px]">
+                    <div className="w-[48px] h-[48px] rounded-[10px] flex items-center justify-center"
+                      style={{ background: "var(--color-surface-primary-subtle)", border: "1px solid var(--color-border-primary-default)" }}>
+                      <LucideIcons.Zap size={20} style={{ color: "var(--primary)" }} />
+                    </div>
+                    <span className="text-[13px] font-medium" style={{ color: "var(--field-supporting)" }}>Workflow canvas</span>
+                    <span className="text-[11px]" style={{ color: "var(--color-border-neutral-default)" }}>SidePanel renders alongside, no backdrop</span>
+                  </div>
+                </div>
+                {/* SidePanel */}
+                <SidePanel
+                  open={gpSidePanelOpen}
+                  onClose={() => setGpSidePanelOpen(false)}
+                  title="Automation Config"
+                  description="Customer Churn Alert"
+                  titleIcon={<LucideIcons.Zap size={14} />}
+                  titleIconVariant="success"
+                  titleTag="Active"
+                  titleTagVariant="success"
+                  showSearch={false}
+                  showMenu={false}
+                  showCollapsedStrip
+                  footer={gpShowCta ? (
+                    <div className="flex gap-[8px] p-[12px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <Button variant="primary"   size="sm" className="flex-1" onClick={() => setGpSidePanelOpen(false)}>Save</Button>
+                      <Button variant="secondary" size="sm" className="flex-1" onClick={() => setGpSidePanelOpen(false)}>Cancel</Button>
+                    </div>
+                  ) : undefined}
+                >
+                  {gpTabLabels.length > 1 ? (
+                    <div className="flex flex-col gap-[16px]">
+                      <Tabs
+                        items={gpTabLabels.map((label, i) => ({ id: String(i), label }))}
+                        activeId={String(gpPanelTab)}
+                        onChange={id => setGpPanelTab(Number(id))}
+                      />
+                      {gpPanelSlotContent}
+                    </div>
+                  ) : gpPanelSlotContent}
+                </SidePanel>
+              </div>
+            </main>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Playground modals ── */}
+      <PlaygroundModal
+        isOpen={pgModal === "section-title"}
+        onClose={() => setPgModal(null)}
+        title="Section Title"
+        controls={<>
+          <CtrlGroup label="Variant" options={PG_SECTION_TITLE_ITEMS as unknown as { label: string; value: string }[]} value={pgStVariant} onChange={v => setPgStVariant(v as typeof pgStVariant)} />
+        </>}
+        preview={pgSectionTitlePreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "ai-summary"}
+        onClose={() => setPgModal(null)}
+        title="AI Summary"
+        controls={<>
+          <CtrlGroup label="State"   options={[{label:"Default",value:"default"},{label:"Loading",value:"loading"},{label:"Empty",value:"empty"}]} value={pgAiState} onChange={setPgAiState} />
+          <CtrlGroup label="Bullets" options={[{label:"1",value:"1"},{label:"2",value:"2"},{label:"3",value:"3"}]} value={pgAiBullets} onChange={setPgAiBullets} />
+        </>}
+        preview={pgAiSummaryPreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "insights"}
+        onClose={() => setPgModal(null)}
+        title="Insights"
+        controls={<>
+          <CtrlGroup label="Count"    options={[{label:"1 card",value:"1"},{label:"2 cards",value:"2"},{label:"3 cards",value:"3"}]} value={pgInsCount}    onChange={setPgInsCount} />
+          <CtrlToggle label="Feedback type" value={pgInsFeedback} onChange={setPgInsFeedback} />
+        </>}
+        preview={pgInsightsPreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "list"}
+        onClose={() => setPgModal(null)}
+        title="List Content Slideout"
+        controls={<>
+          <CtrlGroup label="property1"       options={[{label:"Default",value:"Default"},{label:"Slot",value:"Slot"}]} value={pgLcsProperty} onChange={v => setPgLcsProperty(v as "Default" | "Slot")} />
+          <CtrlToggle label="title"          value={pgLcsTitle}           onChange={setPgLcsTitle} />
+          <CtrlToggle label="description"    value={pgLcsDescription}     onChange={setPgLcsDescription} />
+          <CtrlToggle label="status"         value={pgLcsStatus}          onChange={setPgLcsStatus} />
+          <CtrlToggle label="metaData"       value={pgLcsMetaData}        onChange={setPgLcsMetaData} />
+          <CtrlToggle label="icon"           value={pgLcsIcon}            onChange={setPgLcsIcon} />
+          {pgLcsIcon && <>
+            <CtrlGroup label="Icon"        options={[{label:"File",value:"FileText"},{label:"Building",value:"Building2"},{label:"User",value:"User"},{label:"Star",value:"Star"},{label:"Activity",value:"Activity"},{label:"Zap",value:"Zap"}]} value={pgLcsIconName} onChange={setPgLcsIconName} />
+            <CtrlGroup label="Icon color"  options={[{label:"Primary",value:"primary"},{label:"Success",value:"success"},{label:"Error",value:"error"},{label:"Alert",value:"alert"},{label:"Neutral",value:"neutral"},{label:"Purple",value:"purple"}]} value={pgLcsIconVariant} onChange={v => setPgLcsIconVariant(v as typeof pgLcsIconVariant)} />
+          </>}
+          <CtrlToggle label="highlightedNumber" value={pgLcsHighlightedNumber} onChange={setPgLcsHighlightedNumber} />
+          {pgLcsHighlightedNumber && (
+            <CtrlGroup label="Number"      options={[{label:"0",value:"0"},{label:"1",value:"1"},{label:"5",value:"5"},{label:"12",value:"12"},{label:"99+",value:"99+"}]} value={pgLcsNumberValue} onChange={setPgLcsNumberValue} />
+          )}
+          <CtrlToggle label="buttons"        value={pgLcsButtons}         onChange={v => { setPgLcsButtons(v); if (!v) { setPgLcsCta(false); setPgLcsExpand(false) }}} />
+          {pgLcsButtons && <>
+            <CtrlToggle label="cta"          value={pgLcsCta}             onChange={setPgLcsCta} />
+            {pgLcsCta && (
+              <CtrlGroup label="CTA variant"   options={[{label:"Primary",value:"primary"},{label:"Secondary",value:"secondary"},{label:"Tertiary",value:"tertiary"}]} value={pgLcsCtaVariant} onChange={v => setPgLcsCtaVariant(v as "primary" | "secondary" | "tertiary")} />
+            )}
+            <CtrlToggle label="expand"       value={pgLcsExpand}          onChange={setPgLcsExpand} />
+          </>}
+        </>}
+        preview={pgListPreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "process-item"}
+        onClose={() => setPgModal(null)}
+        title="Process Item"
+        controls={<>
+          <CtrlGroup label="Status"      options={[{label:"Done",value:"done"},{label:"Loading",value:"loading"},{label:"Error",value:"error"},{label:"Pending",value:"pending"},{label:"Warning",value:"warning"}]} value={pgPiStatus}    onChange={setPgPiStatus} />
+          <CtrlGroup label="State"       options={[{label:"Default",value:"default"},{label:"Selected",value:"selected"}]}                                                                                           value={pgPiState}     onChange={setPgPiState} />
+          <CtrlToggle label="Description" value={pgPiDesc}      onChange={setPgPiDesc} />
+          <CtrlToggle label="Timestamp"   value={pgPiTimestamp} onChange={setPgPiTimestamp} />
+          <CtrlToggle label="Tag"         value={pgPiTag}       onChange={setPgPiTag} />
+          <CtrlToggle label="Number badge" value={pgPiNumber}   onChange={v => { setPgPiNumber(v); if (v) setPgPiExpand(false) }} />
+          <CtrlToggle label="Line"        value={pgPiLine}      onChange={setPgPiLine} />
+          <CtrlToggle label="Expand btn"  value={pgPiExpand}    onChange={v => { setPgPiExpand(v); if (!v) { setPgPiExpanded(false); setPgPiSlot(false) }}} />
+          {pgPiExpand && <>
+            <CtrlToggle label="Expanded"  value={pgPiExpanded}  onChange={setPgPiExpanded} />
+            <CtrlToggle label="Slot"      value={pgPiSlot}      onChange={setPgPiSlot} />
+          </>}
+        </>}
+        preview={pgProcessItemPreview}
+      />
+
+      <PlaygroundModal
+        isOpen={pgModal === "by-layers"}
+        onClose={() => setPgModal(null)}
+        title="Detail — By Layers"
+        controls={<>
+          <CtrlToggle label="title"      value={pgBlTitle}      onChange={setPgBlTitle} />
+          <CtrlToggle label="date"       value={pgBlDate}       onChange={setPgBlDate} />
+          <CtrlToggle label="threadLine" value={pgBlThreadLine} onChange={setPgBlThreadLine} />
+          <CtrlGroup  label="depth"      options={[{label:"1 — Flat",value:"1"},{label:"2 — Standard",value:"2"},{label:"3 — Complex",value:"3"},{label:"4 — Progressive disclosure",value:"4"},{label:"5+ — Breadcrumb path",value:"5+"}]} value={pgBlDepth} onChange={v => setPgBlDepth(v as typeof pgBlDepth)} />
+          <CtrlToggle label="tags"       value={pgBlTags}       onChange={setPgBlTags} />
+          {pgBlTags && <>
+            <CtrlGroup label="Tag count" options={[{label:"1",value:"1"},{label:"2",value:"2"},{label:"3",value:"3"},{label:"Overflow (+2)",value:"overflow"}]} value={pgBlTagCount} onChange={v => setPgBlTagCount(v as typeof pgBlTagCount)} />
+            <CtrlGroup label="Tag color" options={[{label:"Purple",value:"purple"},{label:"Informative",value:"informative"},{label:"Success",value:"success"},{label:"Neutral",value:"neutral"},{label:"Alert",value:"alert"}]} value={pgBlTagColor} onChange={v => setPgBlTagColor(v as typeof pgBlTagColor)} />
+          </>}
+        </>}
+        preview={pgByLayersPreview}
+      />
+
+      <PlaygroundModal
+        isOpen={pgModal === "detail-table"}
+        onClose={() => setPgModal(null)}
+        title="Detail — Table"
+        controls={<>
+          <CtrlGroup  label="Rows"          options={[{label:"3",value:"3"},{label:"6",value:"6"},{label:"8",value:"8"}]} value={pgDtRows} onChange={v => setPgDtRows(v as typeof pgDtRows)} />
+          <CtrlGroup  label="Value type"    options={[{label:"Text",value:"text"},{label:"Tag",value:"tag"},{label:"Unknown",value:"unknown"}]} value={pgDtValueType} onChange={v => setPgDtValueType(v as typeof pgDtValueType)} />
+        </>}
+        preview={pgDetailTablePreview}
+      />
+
+      {/* ── Form & Config Content playground modals ── */}
+      <PlaygroundModal
+        isOpen={pgModal === "form-input"}
+        onClose={() => setPgModal(null)}
+        title="Text Input"
+        controls={<>
+          <CtrlGroup label="State"    options={[{label:"Default",value:"default"},{label:"Error",value:"error"},{label:"Disabled",value:"disabled"}]} value={pgFiState} onChange={v => setPgFiState(v as typeof pgFiState)} />
+          <CtrlToggle label="Filled"          value={pgFiFilled}        onChange={setPgFiFilled} />
+          <CtrlToggle label="Label"           value={pgFiLabel}         onChange={setPgFiLabel} />
+          <CtrlToggle label="Supporting text" value={pgFiSupportingText} onChange={setPgFiSupportingText} />
+        </>}
+        preview={pgFormInputPreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "form-textarea"}
+        onClose={() => setPgModal(null)}
+        title="Textarea"
+        controls={<>
+          <CtrlGroup label="State"    options={[{label:"Default",value:"default"},{label:"Error",value:"error"},{label:"Disabled",value:"disabled"}]} value={pgTaState} onChange={v => setPgTaState(v as typeof pgTaState)} />
+          <CtrlGroup label="Rows"     options={[{label:"2",value:"2"},{label:"3",value:"3"},{label:"4",value:"4"}]}                                   value={pgTaRows}  onChange={v => setPgTaRows(v as typeof pgTaRows)} />
+          <CtrlToggle label="Filled"          value={pgTaFilled}        onChange={setPgTaFilled} />
+          <CtrlToggle label="Supporting text" value={pgTaSupportingText} onChange={setPgTaSupportingText} />
+        </>}
+        preview={pgFormTextareaPreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "form-select"}
+        onClose={() => setPgModal(null)}
+        title="Select"
+        controls={<>
+          <CtrlGroup label="State"  options={[{label:"Default",value:"default"},{label:"Error",value:"error"},{label:"Disabled",value:"disabled"}]} value={pgSelState} onChange={v => setPgSelState(v as typeof pgSelState)} />
+          <CtrlToggle label="Filled" value={pgSelFilled} onChange={setPgSelFilled} />
+        </>}
+        preview={pgFormSelectPreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "form-toggle"}
+        onClose={() => setPgModal(null)}
+        title="Toggle"
+        controls={<>
+          <CtrlToggle label="Checked"  value={pgTglChecked}  onChange={setPgTglChecked} />
+          <CtrlToggle label="Disabled" value={pgTglDisabled} onChange={v => { setPgTglDisabled(v); if (v) setPgTglChecked(false) }} />
+        </>}
+        preview={pgFormTogglePreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "form-number"}
+        onClose={() => setPgModal(null)}
+        title="Number"
+        controls={<>
+          <CtrlGroup label="Type"  options={[{label:"Native",value:"native"},{label:"Stepper",value:"stepper"},{label:"With unit",value:"unit"}]} value={pgNumType} onChange={v => setPgNumType(v as typeof pgNumType)} />
+          <CtrlToggle label="Error state" value={pgNumError} onChange={setPgNumError} />
+        </>}
+        preview={pgFormNumberPreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "form-selection-card"}
+        onClose={() => setPgModal(null)}
+        title="Selection Card"
+        controls={<>
+          <CtrlGroup label="Mode" options={[{label:"Single select",value:"single"},{label:"Multi select",value:"multi"}]} value={pgScMode} onChange={v => setPgScMode(v as typeof pgScMode)} />
+        </>}
+        preview={pgFormSelectionCardPreview}
+      />
+      <PlaygroundModal
+        isOpen={pgModal === "form-slider"}
+        onClose={() => setPgModal(null)}
+        title="Slider / Range"
+        controls={<>
+          <CtrlGroup label="Type" options={[{label:"Basic",value:"basic"},{label:"Range",value:"range"},{label:"Semantic fill",value:"semantic"}]} value={pgSliderType} onChange={v => setPgSliderType(v as typeof pgSliderType)} />
+        </>}
+        preview={pgFormSliderPreview}
+      />
+
+    <div className="flex flex-col gap-[32px] pb-[80px]">
+      {/* Page header */}
+      <div className="flex flex-col gap-[4px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-label)" }}>Pattern</span>
+        <h1 className="text-[24px] font-bold text-[var(--foreground)]">SlideOut / SidePanel — Content Types</h1>
+        <p className="text-[14px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+          Panel content vocabulary organized by use case — Overview (AI Summary, Insights), Detail (List, Process, Tables), and Configuration (form fields). Applies to both SlideOut and SidePanel.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex" style={{ borderBottom: "1px solid var(--field-border)" }}>
+        {([
+          { id: "playground",    label: "Playground",    default: ""           },
+          { id: "view-overview", label: "Overview",      default: "overview"   },
+          { id: "view-detail",   label: "Detail",        default: "section-title" },
+          { id: "configuration", label: "Configuration", default: "text-input" },
+        ] as { id: "playground" | "view-overview" | "view-detail" | "configuration"; label: string; default: string }[]).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => {
+              setActiveTab(tab.id)
+              if (tab.id === "view-overview") setActiveSlideoutItem("overview")
+              else if (tab.id === "view-detail") setActiveSlideoutItem("section-title")
+              else if (tab.id === "configuration") setActiveFormItem("text-input")
+            }}
+            className="px-[16px] py-[8px] text-[13px] font-semibold"
+            style={{
+              color: activeTab === tab.id ? "var(--foreground)" : "var(--field-supporting)",
+              borderBottom: activeTab === tab.id ? "2px solid var(--foreground)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── TAB: playground / view-overview / view-detail ── */}
+      {(activeTab === "playground" || activeTab === "view-overview" || activeTab === "view-detail") && (
+        <div className="flex gap-[24px] items-start">
+          {/* Left nav — hidden in Playground tab */}
+          {activeTab !== "playground" && (
+          <div className="w-[180px] shrink-0 flex flex-col gap-[2px] sticky top-[16px]">
+            {(activeTab === "view-overview" ? [
+              { id: "overview",      label: "Overview" },
+              { id: "ai-summary",    label: "AI Summary" },
+              { id: "insights",      label: "Insights" },
+              { id: "list",          label: "List" },
+            ] : [
+              { id: "section-title", label: "Section Title" },
+              { id: "process-item",  label: "Process Item" },
+              { id: "by-layers",     label: "By Layers" },
+              { id: "detail-table",  label: "Detail Table" },
+            ]).map(item => (
+              <button key={item.id} onClick={() => setActiveSlideoutItem(item.id)}
+                style={{
+                  borderLeft: `2px solid ${activeSlideoutItem === item.id ? "var(--primary)" : "transparent"}`,
+                  background: activeSlideoutItem === item.id ? "var(--color-surface-primary-subtle)" : "transparent",
+                  color: activeSlideoutItem === item.id ? "var(--primary)" : "var(--field-supporting)",
+                  fontWeight: activeSlideoutItem === item.id ? 600 : 500,
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  width: "100%",
+                  borderTop: "none",
+                  borderRight: "none",
+                  borderBottom: "none",
+                }}
+                onMouseEnter={e => { if (activeSlideoutItem !== item.id) (e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-neutral-default)" }}
+                onMouseLeave={e => { if (activeSlideoutItem !== item.id) (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+          )}
+          {/* Right content */}
+          <div className="flex-1 min-w-0 flex flex-col gap-[40px]">
+
+          {(activeTab === "playground" || activeSlideoutItem === "playground") && (
+            <div className="flex flex-col gap-[24px]">
+
+              {/* Header */}
+              <div className="flex items-start justify-between gap-[16px]">
+                <div className="flex flex-col gap-[4px]">
+                  <h2 className="text-[16px] font-semibold" style={{ color: "var(--foreground)" }}>
+                    Global Playground — Content Scalability
+                  </h2>
+                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                    Configure which content types appear in the panel. Toggle both SlideOut and Form &amp; Config items to test all combinations. Switch between SlideOut and SidePanel to see how the same content adapts.
+                  </p>
+                </div>
+                <Button variant="primary" size="sm" onClick={() => { if (gpPanelType === "slideout") { setGpPanelTab(0); setGpOpen(true) } else setGpSidePanelOpen(v => !v) }}>
+                  <LucideIcons.Play size={13} />
+                  {gpPanelType === "slideout" ? "Preview in SlideOut" : (gpSidePanelOpen ? "Close SidePanel" : "Open SidePanel")}
+                </Button>
+              </div>
+
+              {/* Panel type switcher */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Panel type</span>
+                <div className="flex gap-[8px]">
+                  {([
+                    { id: "slideout",  label: "SlideOut",  desc: "Overlay with backdrop · task-focused · closes on action" },
+                    { id: "sidepanel", label: "SidePanel", desc: "Inline persistent · layout-level · no backdrop" },
+                  ] as { id: "slideout" | "sidepanel"; label: string; desc: string }[]).map(pt => (
+                    <button key={pt.id}
+                      onClick={() => setGpPanelType(pt.id)}
+                      className="flex flex-col gap-[2px] flex-1 p-[12px] rounded-[8px] text-left transition-all"
+                      style={{
+                        background: gpPanelType === pt.id ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-subtle)",
+                        border: `1px solid ${gpPanelType === pt.id ? "var(--color-border-primary-default)" : "var(--field-border)"}`,
+                      }}>
+                      <span className="text-[12px] font-semibold" style={{ color: gpPanelType === pt.id ? "var(--primary)" : "var(--foreground)" }}>{pt.label}</span>
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{pt.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* SlideOut content toggles */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center gap-[6px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>SlideOut content</span>
+                  <span className="text-[10px] px-[5px] py-[1px] rounded-[3px] font-medium" style={{ background: "var(--color-surface-neutral-subtle)", color: "var(--field-supporting)" }}>
+                    {gpItems.length} active
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-[6px]">
+                  {([
+                    { id: "section-title",  label: "Section Title",              icon: "Heading2"     },
+                    { id: "ai-summary",     label: "AI Summary",                 icon: "Sparkles"     },
+                    { id: "insights",       label: "Insights (Highlight Cards)",  icon: "BarChart2"    },
+                    { id: "list",           label: "List",                        icon: "List"         },
+                    { id: "process-item",   label: "Process Item",               icon: "CheckCircle2" },
+                    { id: "by-layers",      label: "Detail — By Layers",         icon: "GitBranch"    },
+                    { id: "detail-table",   label: "Detail — Table",             icon: "Table2"       },
+                  ] as { id: string; label: string; icon: string }[]).map(item => {
+                    const active = gpItems.includes(item.id)
+                    const IconComp = (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number; style?: React.CSSProperties }>>)[item.icon]
+                    return (
+                      <button key={item.id}
+                        onClick={() => setGpItems(prev => active ? prev.filter(i => i !== item.id) : [...prev, item.id])}
+                        className="flex items-center gap-[8px] px-[10px] py-[8px] rounded-[6px] text-left transition-all"
+                        style={{
+                          background: active ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-subtle)",
+                          border: `1px solid ${active ? "var(--color-border-primary-default)" : "var(--field-border)"}`,
+                        }}>
+                        {IconComp && <IconComp size={12} style={{ color: active ? "var(--primary)" : "var(--field-supporting)", flexShrink: 0 }} />}
+                        <span className="text-[11px] font-medium flex-1" style={{ color: active ? "var(--primary)" : "var(--foreground)" }}>{item.label}</span>
+                        {active
+                          ? <LucideIcons.Check size={11} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                          : <LucideIcons.Plus  size={11} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />
+                        }
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Form & Config content toggles */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center gap-[6px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Form &amp; Config content</span>
+                  <span className="text-[10px] px-[5px] py-[1px] rounded-[3px] font-medium" style={{ background: "var(--color-surface-neutral-subtle)", color: "var(--field-supporting)" }}>
+                    {gpFormItems.length} active
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-[6px]">
+                  {([
+                    { id: "text-input",     label: "Text Input",        icon: "Type"              },
+                    { id: "textarea",       label: "Textarea",           icon: "AlignLeft"         },
+                    { id: "select",         label: "Select",             icon: "ChevronDown"       },
+                    { id: "toggle",         label: "Toggle",             icon: "ToggleLeft"        },
+                    { id: "number",         label: "Number / Stepper",   icon: "Hash"              },
+                    { id: "selection-card", label: "Selection Card",     icon: "LayoutGrid"        },
+                    { id: "slider",         label: "Slider / Range",     icon: "SlidersHorizontal" },
+                    { id: "tag-input",      label: "Tag Input",          icon: "Tag"               },
+                  ] as { id: string; label: string; icon: string }[]).map(item => {
+                    const active = gpFormItems.includes(item.id)
+                    const IconComp = (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number; style?: React.CSSProperties }>>)[item.icon]
+                    return (
+                      <button key={item.id}
+                        onClick={() => setGpFormItems(prev => active ? prev.filter(i => i !== item.id) : [...prev, item.id])}
+                        className="flex items-center gap-[8px] px-[10px] py-[8px] rounded-[6px] text-left transition-all"
+                        style={{
+                          background: active ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-subtle)",
+                          border: `1px solid ${active ? "var(--color-border-primary-default)" : "var(--field-border)"}`,
+                        }}>
+                        {IconComp && <IconComp size={12} style={{ color: active ? "var(--primary)" : "var(--field-supporting)", flexShrink: 0 }} />}
+                        <span className="text-[11px] font-medium flex-1" style={{ color: active ? "var(--primary)" : "var(--foreground)" }}>{item.label}</span>
+                        {active
+                          ? <LucideIcons.Check size={11} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                          : <LucideIcons.Plus  size={11} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />
+                        }
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Panel options — CTA applies to both SlideOut and SidePanel */}
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Panel options</span>
+                <button
+                  onClick={() => setGpShowCta(v => !v)}
+                  className="flex items-center gap-[8px] px-[10px] py-[8px] rounded-[6px] text-left transition-all w-full"
+                  style={{
+                    background: gpShowCta ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-subtle)",
+                    border: `1px solid ${gpShowCta ? "var(--color-border-primary-default)" : "var(--field-border)"}`,
+                  }}>
+                  <LucideIcons.MousePointerClick size={12} style={{ color: gpShowCta ? "var(--primary)" : "var(--field-supporting)", flexShrink: 0 }} />
+                  <span className="text-[11px] font-medium flex-1" style={{ color: gpShowCta ? "var(--primary)" : "var(--foreground)" }}>CTA Buttons (Save / Cancel)</span>
+                  {gpShowCta
+                    ? <LucideIcons.Check size={11} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                    : <LucideIcons.Plus  size={11} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />
+                  }
+                </button>
+              </div>
+
+              {/* Quick actions */}
+              <div className="flex items-center gap-[12px]">
+                <button
+                  onClick={() => { setGpItems([]); setGpFormItems([]); setGpShowCta(false) }}
+                  className="text-[11px] font-medium"
+                  style={{ color: "var(--field-supporting)" }}>
+                  Clear all
+                </button>
+                <button
+                  onClick={() => { setGpItems(["section-title","ai-summary","insights","list","process-item","by-layers","detail-table"]); setGpFormItems(["text-input","textarea","select","toggle","number","selection-card","slider","tag-input"]) }}
+                  className="text-[11px] font-medium"
+                  style={{ color: "var(--primary)" }}>
+                  Select all
+                </button>
+              </div>
+
+              {/* Info callout */}
+              <div className="flex items-start gap-[8px] p-[10px] rounded-[8px]"
+                style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                <LucideIcons.Info size={12} className="shrink-0 mt-[1px]" style={{ color: "var(--field-supporting)" }} />
+                <span className="text-[11px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                  Overview items appear in the <strong style={{ color: "var(--foreground)" }}>Overview</strong> tab. Detail items (By Layers, Table) move to a <strong style={{ color: "var(--foreground)" }}>Details</strong> tab. Form items go to a <strong style={{ color: "var(--foreground)" }}>Config</strong> tab. Tabs appear automatically when needed.
+                </span>
+              </div>
+
+              {/* SidePanel full-screen note */}
+              {gpPanelType === "sidepanel" && (
+                <div className="flex items-center gap-[8px] px-[10px] py-[8px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                  <LucideIcons.Maximize2 size={12} style={{ color: "var(--field-supporting)" }} />
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    Click <strong style={{ color: "var(--foreground)" }}>Open SidePanel</strong> to see it deployed in a full app shell with all interactive components active.
+                  </span>
+                </div>
+              )}
+
+            </div>
+          )}
+
+
+          {activeSlideoutItem === "overview" && <PatternCard>
+            <SectionLabel>Content Hierarchy — Mandatory Order</SectionLabel>
+            <p className="text-[13px] mb-[16px]" style={{ color: "var(--field-supporting)" }}>
+              Content inside a SlideOut must always follow this order when present. Never rearrange. If a zone has no data, skip it — never leave empty placeholders.
+            </p>
+            <div className="mb-[20px] p-[10px] rounded-[8px] flex items-start gap-[8px]"
+              style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <LucideIcons.Info size={13} className="shrink-0 mt-[1px]" style={{ color: "var(--field-label)" }} />
+              <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Every zone is introduced by a <strong style={{ color: "var(--foreground)" }}>Section Title</strong> — the structural label that separates and names each content block. Section Titles are documented separately (see ↓ below).
+              </span>
+            </div>
+            <div className="flex items-center gap-[8px] mb-[20px] flex-wrap">
+              {[
+                { num: "1", label: "AI Summary",    sub: "Context & risk" },
+                { num: "2", label: "Insights",       sub: "KPI cards" },
+                { num: "3", label: "List",           sub: "Related records" },
+                { num: "4", label: "Detail (tabs)",  sub: "Tables / timelines" },
+              ].map((zone, i) => (
+                <div key={zone.num} className="flex items-center gap-[8px]">
+                  <div className="flex flex-col gap-[4px] px-[16px] py-[12px] rounded-[8px]"
+                    style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", minWidth: 120 }}>
+                    <span className="text-[11px] font-bold uppercase" style={{ color: "var(--field-label)" }}>{zone.num}. {zone.label}</span>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{zone.sub}</span>
+                  </div>
+                  {i < 3 && <span className="text-[16px]" style={{ color: "var(--field-supporting)" }}>→</span>}
+                </div>
+              ))}
+            </div>
+            <table className="w-full text-[12px]" style={{ borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--field-border)" }}>
+                  {["Zone", "When to include", "Skip if"].map(h => (
+                    <th key={h} className="text-left py-[8px] pr-[16px] text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { zone: "AI Summary",      when: "Entity has AI-generated context",     skip: "Entity type has no AI model" },
+                  { zone: "Insights",        when: "Entity has quantitative KPIs",         skip: "No numeric data to surface" },
+                  { zone: "List",            when: "Entity has related sub-records",       skip: "No relationships to show" },
+                  { zone: "Detail (tabs)",   when: "Deep data: tables, timelines, layers", skip: "Simple entities with no history" },
+                ].map(row => (
+                  <tr key={row.zone} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                    <td className="py-[8px] pr-[16px] font-semibold text-[var(--foreground)]">{row.zone}</td>
+                    <td className="py-[8px] pr-[16px]" style={{ color: "var(--field-supporting)" }}>{row.when}</td>
+                    <td className="py-[8px]" style={{ color: "var(--field-supporting)" }}>{row.skip}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecOv(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecOv ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecOv && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--field-label", usage: "hierarchy label" },
+                        { token: "--field-supporting", usage: "description" },
+                        { token: "--field-border", usage: "divider" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 753-24036</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeSlideoutItem === "section-title" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>1. Section Titles</SectionLabel>
+              <button onClick={() => setPgModal("section-title")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>
+              Labeled row that introduces a content group inside a panel. Choose the variant that fits the context: plain title, title with description, a CTA to navigate, or a toggle to collapse the section.
+            </p>
+
+            <div className="grid grid-cols-2 gap-[24px]">
+
+              {/* ① Title only */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center h-[32px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Accounts affected</span>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">① Title only</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Use when the section name is self-explanatory. Fixed height 32px with bottom border.</div>
+                </div>
+              </div>
+
+              {/* ② Title — Description */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col justify-center gap-[2px] py-[6px]" style={{ minHeight: "32px" }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Accounts affected</span>
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>3 accounts require immediate attention</span>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">② Title — Description</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Add a short description below the title when context is needed. Max 3 lines.</div>
+                </div>
+              </div>
+
+              {/* ③ With CTA */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center justify-between h-[32px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Accounts affected</span>
+                  <Button variant="tertiary" size="sm">View all <LucideIcons.ArrowRight size={12} /></Button>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">③ With CTA</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Tertiary button right-aligned. Use when there are more records than shown — navigates to the full view.</div>
+                </div>
+              </div>
+
+              {/* ④ Title Expand — interactive */}
+              <div className="flex flex-col gap-[8px]">
+                <button
+                  className="flex items-center justify-between h-[32px] w-full"
+                  onClick={() => setSectionTitleExpand4(v => !v)}
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Accounts affected</span>
+                  <LucideIcons.ChevronDown
+                    size={14}
+                    style={{
+                      color: "var(--field-label)",
+                      transition: "transform 0.2s",
+                      transform: sectionTitleExpand4 ? "rotate(0deg)" : "rotate(-90deg)",
+                    }}
+                  />
+                </button>
+                {sectionTitleExpand4 && (
+                  <div className="text-[12px] px-[2px] py-[6px]" style={{ color: "var(--field-supporting)" }}>Collapsible content appears here when expanded.</div>
+                )}
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">④ Title Expand</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Full row is a click target. Chevron points down (0°) when expanded, right (−90°) when collapsed. Click to try it.</div>
+                </div>
+              </div>
+
+              {/* ⑤ Title — Description — CTA */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-start justify-between gap-[8px] py-[6px]" style={{ minHeight: "32px" }}>
+                  <div className="flex flex-col gap-[2px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Accounts affected</span>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>3 accounts require immediate attention</span>
+                  </div>
+                  <Button variant="tertiary" size="sm" className="shrink-0">View all <LucideIcons.ArrowRight size={12} /></Button>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">⑤ Title — Description — CTA</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Description column on the left, CTA right-aligned to the top of the row.</div>
+                </div>
+              </div>
+
+              {/* ⑥ Title — Description — Expand — interactive */}
+              <div className="flex flex-col gap-[8px]">
+                <button
+                  className="flex items-start justify-between gap-[8px] w-full py-[6px]"
+                  style={{ minHeight: "32px" }}
+                  onClick={() => setSectionTitleExpand6(v => !v)}
+                >
+                  <div className="flex flex-col gap-[2px] text-left">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Accounts affected</span>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>3 accounts require immediate attention</span>
+                  </div>
+                  <LucideIcons.ChevronDown
+                    size={14}
+                    className="shrink-0 mt-[2px]"
+                    style={{
+                      color: "var(--field-label)",
+                      transition: "transform 0.2s",
+                      transform: sectionTitleExpand6 ? "rotate(0deg)" : "rotate(-90deg)",
+                    }}
+                  />
+                </button>
+                {sectionTitleExpand6 && (
+                  <div className="text-[12px] px-[2px] py-[6px]" style={{ color: "var(--field-supporting)" }}>Collapsible content appears here when expanded.</div>
+                )}
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">⑥ Title — Description — Expand</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Description with collapse toggle. Chevron aligns to the top-right. Full row is clickable. Click to try it.</div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Usage rules */}
+            <div className="mt-[24px] flex flex-col gap-[8px] p-[14px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Usage rules</span>
+              <ul className="flex flex-col gap-[6px]">
+                {[
+                  "No bottom border in the component — visual separation comes from spacing and label/content contrast.",
+                  "Title is always 11px semibold uppercase with tracking — never change size, weight, or casing.",
+                  "CTA must always be tertiary size sm — never primary or secondary inside a section title.",
+                  "Expand toggle: chevron at 0° = expanded (content visible), −90° = collapsed (content hidden).",
+                  "Description max 3 lines. If more context is needed, place a description block below the section, not inside the header.",
+                ].map((rule, i) => (
+                  <li key={i} className="flex items-start gap-[8px] text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                    <span className="shrink-0 mt-[6px] w-[4px] h-[4px] rounded-full inline-block" style={{ background: "var(--field-supporting)" }} />
+                    {rule}
+                  </li>
+                ))}
+              </ul>
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecSt(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecSt ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecSt && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--field-label", usage: "title text" },
+                        { token: "--field-supporting", usage: "subtitle" },
+                        { token: "--field-border", usage: "bottom divider" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 753-24036</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeSlideoutItem === "ai-summary" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>2. AI Summary</SectionLabel>
+              <button onClick={() => setPgModal("ai-summary")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>
+              Purple contextual card. Always the first content zone. Use when the entity has AI-generated context, risk analysis, or recommendations.
+            </p>
+            <div className="grid grid-cols-2 gap-[16px]">
+
+              <div className="flex flex-col gap-[8px]">
+                <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+                  style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                  <div className="flex items-center gap-[6px]">
+                    <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
+                  </div>
+                  <p className="text-[12px] text-[var(--foreground)] leading-[1.5]">Health score 42/100 over the last 14 days. 3 accounts at risk — intervention playbook triggered automatically.</p>
+                </div>
+                <div>
+                  <div className="text-[13px] font-bold text-[var(--foreground)]">① Text only</div>
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Default. Free-form paragraph. Max 8 lines before requiring expand.</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+                  style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                  <div className="flex items-center gap-[6px]">
+                    <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
+                  </div>
+                  <p className="text-[12px] text-[var(--foreground)] leading-[1.5]">3 key findings from the last 7 days:</p>
+                  <ul className="flex flex-col gap-[4px] pl-[4px]">
+                    {["Customer health dropped below threshold in 3 accounts", "2 open support tickets linked to churn risk", "Upsell opportunity detected in Globex Inc"].map((b, i) => (
+                      <li key={i} className="flex items-start gap-[6px] text-[12px] text-[var(--foreground)] leading-[1.5]">
+                        <span className="mt-[5px] shrink-0 w-[4px] h-[4px] rounded-full" style={{ background: "var(--color-text-purple)" }} />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <div className="text-[13px] font-bold text-[var(--foreground)]">② With bullet points</div>
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Use when the AI output identifies 3 or fewer distinct findings. Never use for continuous prose.</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+                  style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                  <div className="flex items-center gap-[6px]">
+                    <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
+                  </div>
+                  <p className="text-[12px] text-[var(--foreground)] leading-[1.5]">Score trend is negative. Intervention recommended before next renewal cycle.</p>
+                  <div className="flex flex-wrap gap-[4px] mt-[4px]">
+                    {["High risk", "Churn signal", "Renewal at risk"].map(t => (
+                      <Tag key={t} variant="purple" size="sm">{t}</Tag>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[13px] font-bold text-[var(--foreground)]">③ With tags</div>
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Use when the AI output is classifiable. Tags help scan multiple items quickly. Max 4 tags.</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+                  style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-[6px]">
+                      <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+                      <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
+                    </div>
+                    <Button variant="tertiary" size="sm">Start playbook <LucideIcons.ArrowRight size={12} /></Button>
+                  </div>
+                  <p className="text-[12px] text-[var(--foreground)] leading-[1.5]">Churn risk detected. Recommended playbook: schedule a CS touchpoint within 5 days.</p>
+                </div>
+                <div>
+                  <div className="text-[13px] font-bold text-[var(--foreground)]">④ With action button</div>
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Use when the AI surfaces a clear next best action the user can trigger immediately.</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+                  style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                  <div className="flex items-center gap-[6px]">
+                    <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
+                  </div>
+                  <p className="text-[12px] text-[var(--foreground)] leading-[1.5]"
+                    style={{ display: "-webkit-box", WebkitLineClamp: aiV5Open ? undefined : 3, WebkitBoxOrient: "vertical", overflow: aiV5Open ? "visible" : "hidden" }}>
+                    Health score 42/100 over the last 14 days. 3 accounts flagged at risk — intervention playbook triggered automatically. Two of the three accounts also have open support tickets. The third account, Acme Corp, has shown a consistent downward trend over 45 days.
+                  </p>
+                  <button onClick={() => setAiV5Open(o => !o)}
+                    className="flex items-center gap-[4px] text-[11px] font-semibold mt-[2px]"
+                    style={{ color: "var(--color-text-purple)" }}>
+                    <LucideIcons.ChevronDown size={12} style={{ transform: aiV5Open ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
+                    {aiV5Open ? "Show less" : "Show more"}
+                  </button>
+                </div>
+                <div>
+                  <div className="text-[13px] font-bold text-[var(--foreground)]">⑤ Collapsed — expand available</div>
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>When text is ≤ 8 lines. Show first 3 lines with a 'Show more' toggle. No modal needed.</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+                  style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                  <div className="flex items-center gap-[6px]">
+                    <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
+                  </div>
+                  <p className="text-[12px] text-[var(--foreground)] leading-[1.5]"
+                    style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    Health score declining since Q3. Root cause analysis identified 4 contributing factors: support response latency above SLA, 3 feature requests closed without resolution, executive sponsor change in October, and a competing vendor evaluation started in November. Renewal at high risk — probability of loss currently at 73%.
+                  </p>
+                  <Button variant="tertiary" size="sm" onClick={() => setAiModalOpen(true)}>
+                    View full analysis <LucideIcons.ArrowRight size={12} />
+                  </Button>
+                </div>
+                <div>
+                  <div className="text-[13px] font-bold text-[var(--foreground)]">⑥ Long content → modal</div>
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>When content exceeds 8 lines, show the first 4 truncated + a tertiary button. Clicking opens a ModalDialog with the full analysis. Never expand inline.</div>
+                </div>
+              </div>
+
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecAi(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecAi ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecAi && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--color-surface-purple-more-subtle", usage: "card bg" },
+                        { token: "--card-purple-border", usage: "card border" },
+                        { token: "--color-text-purple", usage: "text + icon" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: UKtmHXtZZ20gZjfwc0tnJl · 317-13137</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeSlideoutItem === "insights" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>3. Insights</SectionLabel>
+              <button onClick={() => setPgModal("insights")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>
+              Grid of HighlightCard components. Surfaces 2–4 key KPIs immediately after the AI Summary. Cards always fill their container — pass <code>className="!w-full"</code> to override the default fixed width. Max 4 cards. Use the <code>style</code> prop to convey status at a glance.
+            </p>
+
+            {/* ── Grid layout variants ── */}
+            <div className="flex flex-col gap-[24px]">
+
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>2 cards — most common in narrow panels</span>
+                <div className="grid grid-cols-2 gap-[8px]">
+                  <HighlightCard label="Health score"    value="42/100" iconName="Activity"      style="red"       className="!w-full" />
+                  <HighlightCard label="Accounts at risk" value="3"     iconName="AlertTriangle"  style="orange-bg" className="!w-full" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>3 cards — standard SlideOut (size M)</span>
+                <div className="grid grid-cols-3 gap-[8px]">
+                  <HighlightCard label="Health score" value="42/100" iconName="Activity"     style="red"       className="!w-full" />
+                  <HighlightCard label="At risk"       value="3"      iconName="AlertTriangle" style="orange-bg" className="!w-full" />
+                  <HighlightCard label="Total runs"    value="847"    iconName="Play"                            className="!w-full" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>4 cards — max (always 2×2, never 4-in-a-row)</span>
+                <div className="grid grid-cols-2 gap-[8px]">
+                  <HighlightCard label="Health score" value="42/100" iconName="Activity"     style="red"       className="!w-full" />
+                  <HighlightCard label="At risk"       value="3"      iconName="AlertTriangle" style="orange-bg" className="!w-full" />
+                  <HighlightCard label="Total runs"    value="847"    iconName="Play"                            className="!w-full" />
+                  <HighlightCard label="Avg duration"  value="1.4s"   iconName="Clock"                          className="!w-full" />
+                </div>
+              </div>
+
+            </div>
+
+            {/* ── State variants (Figma: Visual State Examples) ── */}
+            <div className="flex flex-col gap-[12px] mt-[8px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>State variants — style prop</span>
+              <div className="grid grid-cols-2 gap-[8px]">
+
+                <div className="flex flex-col gap-[6px]">
+                  <HighlightCard
+                    label="Config nodes loaded"
+                    value="24"
+                    unit="active"
+                    iconName="Info"
+                    style="default"
+                    feedback="Contextual guidance — helps understand what the field does."
+                    className="!w-full"
+                  />
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    <strong>Informative</strong> — <code>style="default"</code>. Onboarding nodes or complex configs. Never blocks execution.
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-[6px]">
+                  <HighlightCard
+                    label="Connection status"
+                    value="Passed"
+                    iconName="CheckCircle"
+                    style="green-bg"
+                    feedback="API credentials validated successfully."
+                    feedbackType="positive"
+                    className="!w-full"
+                  />
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    <strong>Success</strong> — <code>style="green-bg"</code>. Confirms completed action or valid config. Dismiss after 3–5 s.
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-[6px]">
+                  <HighlightCard
+                    label="Rate limit usage"
+                    value="84%"
+                    iconName="AlertTriangle"
+                    style="orange-bg"
+                    feedback="Approaching threshold — reduce call frequency to avoid blocking."
+                    feedbackType="negative"
+                    className="!w-full"
+                  />
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    <strong>Warning</strong> — <code>style="orange-bg"</code>. Non-blocking. Message must state what happens if left unaddressed.
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-[6px]">
+                  <HighlightCard
+                    label="Authentication"
+                    value="Failed"
+                    iconName="XCircle"
+                    style="red"
+                    feedback="Invalid credentials — workflow cannot run until resolved."
+                    feedbackType="negative"
+                    className="!w-full"
+                  />
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    <strong>Error</strong> — <code>style="red"</code>. Blocking. Persists until user takes corrective action.
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* ── Edge cases ── */}
+            <div className="flex flex-col gap-[12px] mt-[8px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Edge cases</span>
+              <div className="grid grid-cols-3 gap-[8px]">
+                <div className="flex flex-col gap-[6px]">
+                  <HighlightCard
+                    label="Accounts synced"
+                    value="1,243"
+                    unit="total"
+                    iconName="Database"
+                    style="default"
+                    className="!w-full"
+                  />
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    <strong>With unit</strong> — <code>unit</code> prop appended after value.
+                  </div>
+                </div>
+                <div className="flex flex-col gap-[6px]">
+                  <HighlightCard
+                    label="Health score"
+                    value="—"
+                    iconName="Activity"
+                    style="default"
+                    feedback="No data available for this period."
+                    className="!w-full"
+                  />
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    <strong>No data</strong> — value is <code>"—"</code> + feedback explains why. Never hide the card.
+                  </div>
+                </div>
+                <div className="flex flex-col gap-[6px]">
+                  <HighlightCard
+                    label="Automation runs"
+                    value="847"
+                    iconName="Play"
+                    style="default"
+                    disabled
+                    className="!w-full"
+                  />
+                  <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    <strong>Disabled</strong> — <code>disabled</code> prop. Use when metric is unavailable or feature is locked.
+                  </div>
+                </div>
+              </div>
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecIns(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecIns ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecIns && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--color-surface-primary-subtle", usage: "default bg" },
+                        { token: "--color-surface-success-default", usage: "green" },
+                        { token: "--color-surface-error-default", usage: "red" },
+                        { token: "--color-surface-alert-default", usage: "orange" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 4109-6583</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeSlideoutItem === "list" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>4. List Sections</SectionLabel>
+              <button onClick={() => setPgModal("list")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>
+              Labeled groups of entity rows inside a slide-out. Always a Section Title first, then <code>EntityList</code> rows — except Pattern D (Validation Signals) which uses plain div rows. Max 4–5 rows visible per section; always include a 'View all' button when there are more.
+            </p>
+
+            <div className="flex flex-col gap-[24px]">
+
+              {/* A — Navigation rows */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>A · Navigation rows — "What can I do?"</span>
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex items-center h-[32px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Actions</span>
+                  </div>
+                  <div className="flex flex-col gap-[8px]">
+                    {([
+                      { icon: <LucideIcons.FolderSearch size={14} />, bg: "var(--color-surface-informative-subtle)", fg: "var(--color-icon-informative-default)", title: "Review Sandbox", desc: "8 items need attention" },
+                      { icon: <LucideIcons.FilePlus2    size={14} />, bg: "var(--color-surface-neutral-subtle)",     fg: "var(--color-icon-neutral-default)",     title: "Add Files",       desc: "Upload documents to this drive" },
+                      { icon: <LucideIcons.Eye          size={14} />, bg: "var(--color-surface-success-subtle)",     fg: "var(--color-icon-success-default)",     title: "Watch Rules",     desc: "Configure auto-watch conditions" },
+                    ]).map(item => (
+                      <div key={item.title} className="flex gap-[4px] items-start p-[8px] rounded-[8px] cursor-pointer" style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                        <div className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] shrink-0" style={{ background: item.bg }}>
+                          <span style={{ color: item.fg }}>{item.icon}</span>
+                        </div>
+                        <div className="flex flex-1 flex-col gap-[2px] min-w-0">
+                          <span className="text-[14px] font-medium text-[var(--foreground)]">{item.title}</span>
+                          <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>{item.desc}</span>
+                        </div>
+                        <span className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] shrink-0" style={{ color: "var(--field-label)" }}>
+                          <LucideIcons.ChevronRight size={16} />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">When: action menus and quick-action zones</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Each item is its own independent card with a border. Use <code>icon</code> + <code>title</code> + <code>desc</code>. The full row is clickable — include a right arrow as a visual affordance. Do not combine with <code>state</code> or <code>timestamp</code>.</div>
+                </div>
+              </div>
+
+              {/* B — Alert expandable rows */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>B · Alert expandable rows</span>
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex items-center h-[32px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Alerts</span>
+                  </div>
+                  <div className="flex flex-col gap-[8px]">
+                    {([
+                      { icon: <LucideIcons.ShieldAlert   size={14} />, bg: "var(--color-surface-error-subtle)",  fg: "var(--color-icon-error-default)",  title: "PII Detected",       badge: "High Risk",   badgeBg: "var(--color-surface-error-subtle)",  badgeFg: "var(--color-text-error)",  badgeBorder: "var(--color-border-error-default)",  desc: "PII found in Section: Financial Terms · Payment Schedule. Review before promoting." },
+                      { icon: <LucideIcons.AlertTriangle size={14} />, bg: "var(--color-surface-alert-subtle)",  fg: "var(--color-icon-alert-default)",  title: "Confidential Data",  badge: "Medium Risk", badgeBg: "var(--color-surface-alert-subtle)",  badgeFg: "var(--color-text-alert)",  badgeBorder: "var(--color-border-alert-default)",  desc: "Confidential clause detected in Section: Liability. Requires legal review." },
+                    ]).map(item => (
+                      <div key={item.title} className="flex gap-[4px] items-start p-[8px] rounded-[8px]" style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                        <div className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] shrink-0" style={{ background: item.bg }}>
+                          <span style={{ color: item.fg }}>{item.icon}</span>
+                        </div>
+                        <div className="flex flex-1 flex-col gap-[2px] min-w-0">
+                          <div className="flex gap-[4px] items-start flex-wrap">
+                            <span className="text-[14px] font-medium text-[var(--foreground)]">{item.title}</span>
+                            <span className="inline-flex items-center px-[8px] h-[20px] rounded-[8px] text-[12px] font-medium shrink-0"
+                              style={{ background: item.badgeBg, border: `1px solid ${item.badgeBorder}`, color: item.badgeFg }}>
+                              {item.badge}
+                            </span>
+                          </div>
+                          <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>{item.desc}</span>
+                        </div>
+                        <button className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] shrink-0 transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--field-label)", background: "transparent", border: "none" }}>
+                          <LucideIcons.ChevronDown size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">When: risks, issues, and alerts that need detail on demand</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Each item is its own independent card. Use the status badge (<code>High Risk / Medium Risk</code>) and the expand chevron to reveal detail. Do not add action buttons in the same row — the action lives inside the expanded content.</div>
+                </div>
+              </div>
+
+              {/* C — Data record rows with CTA */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>C · Data record rows with CTA</span>
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex items-center h-[32px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Items</span>
+                  </div>
+                  <div className="flex flex-col gap-[8px]">
+                    {([
+                      { icon: <LucideIcons.FileCheck size={14} />, bg: "var(--color-surface-success-subtle)", fg: "var(--color-icon-success-default)", title: "Financial Terms",   badge: "Promoted", badgeBg: "var(--color-surface-success-more-subtle)", badgeFg: "var(--color-text-success)", badgeBorder: "var(--color-border-success-lighter)", desc: "Promoted by Sarah Chen · 2 months ago", cta: null },
+                      { icon: <LucideIcons.FileText  size={14} />, bg: "var(--color-surface-neutral-subtle)", fg: "var(--color-icon-neutral-default)",  title: "Payment Schedule", badge: null,       badgeBg: "",  badgeFg: "",  badgeBorder: "",  desc: "Section: Liability · awaiting review",   cta: "Promote" },
+                      { icon: <LucideIcons.FileText  size={14} />, bg: "var(--color-surface-neutral-subtle)", fg: "var(--color-icon-neutral-default)",  title: "Indemnification",  badge: null,       badgeBg: "",  badgeFg: "",  badgeBorder: "",  desc: "Section: Legal Notices · pending action", cta: "Promote" },
+                    ]).map(item => (
+                      <div key={item.title} className="flex gap-[4px] items-start p-[8px] rounded-[8px]" style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                        <div className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] shrink-0" style={{ background: item.bg }}>
+                          <span style={{ color: item.fg }}>{item.icon}</span>
+                        </div>
+                        <div className="flex flex-1 flex-col gap-[2px] min-w-0">
+                          <div className="flex gap-[4px] items-start flex-wrap">
+                            <span className="text-[14px] font-medium text-[var(--foreground)]">{item.title}</span>
+                            {item.badge && (
+                              <span className="inline-flex items-center px-[8px] h-[20px] rounded-[8px] text-[12px] font-medium shrink-0"
+                                style={{ background: item.badgeBg, border: `1px solid ${item.badgeBorder}`, color: item.badgeFg }}>
+                                {item.badge}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>{item.desc}</span>
+                        </div>
+                        {item.cta && (
+                          <Button variant="primary" size="sm" className="shrink-0">{item.cta}</Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">When: actionable records that may already be resolved</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Resolved item → status badge, no button. Pending item → CTA button (<code>primary</code>), no badge. <strong style={{ color: "var(--foreground)" }}>Never combine badge + button in the same item</strong> — there is not enough horizontal space for both.</div>
+                </div>
+              </div>
+
+              {/* D — Validation Signal rows */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>D · Validation Signal rows — NOT List Content Slideout</span>
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex items-center h-[32px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Validation Signals</span>
+                  </div>
+                  <div className="flex flex-col gap-[8px]">
+                    {([
+                      { count: 5,  variant: "success" as HighlightNumberVariant, label: "Ready to promote", action: "Go to promote"  },
+                      { count: 3,  variant: "error"   as HighlightNumberVariant, label: "Conflicts",        action: "View details"   },
+                      { count: 10, variant: "purple"  as HighlightNumberVariant, label: "Promoted",         action: "View details"   },
+                    ]).map((row, i) => (
+                      <div key={i} className="flex items-center gap-[10px] px-[12px] h-[40px] rounded-[8px]"
+                        style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
+                        <HighlightNumber value={row.count} variant={row.variant} />
+                        <span className="text-[13px] font-medium flex-1 text-[var(--foreground)]">{row.label}</span>
+                        <Button variant="tertiary" size="sm" className="shrink-0 flex items-center gap-[4px]">
+                          {row.action} <LucideIcons.ArrowRight size={11} />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">When: KPI counts with a navigation action</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}><strong style={{ color: "var(--foreground)" }}>Do not use <code>EntityList</code> for this pattern.</strong> Build as plain <code>div</code> rows inside a <code>CardContainer</code> (no padding). Each row: <code>HighlightNumber</code> left (24×24px badge with the count), label center (<code>flex-1</code>), text link with arrow right (<code>shrink-0</code>). Height 40px per row. Divider between rows via <code>borderBottom</code>; omit on last row. Use <code>variant</code> on <code>HighlightNumber</code> to convey semantic meaning: <code>success</code> = ready, <code>error</code> = conflict/blocking, <code>purple</code> = completed/promoted, <code>alert</code> = warning.</div>
+                </div>
+              </div>
+
+              {/* Truncation rule */}
+              <div className="flex items-start gap-[10px] p-[10px] rounded-[8px]" style={{ background: "var(--color-surface-alert-subtle)", border: "0.5px solid var(--color-border-alert-default)" }}>
+                <LucideIcons.AlertTriangle size={13} className="shrink-0 mt-[1px]" style={{ color: "var(--color-border-alert-default)" }} />
+                <div className="flex flex-col gap-[3px]">
+                  <span className="text-[12px] font-semibold text-[var(--foreground)]">Truncation rule — narrow containers</span>
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    When a row has both a long title <em>and</em> a right-zone element (action button, state badge, timestamp), the title will be cut off with <code>…</code> automatically. This is built into <code>EntityList</code>. To avoid losing important title context: keep titles short (&lt; 40 chars in a SlideOut), or omit the timestamp if the title is long, or reduce to a single action button. Never rely on the full title string being visible when the row has competing right-zone elements.
+                  </span>
+                </div>
+              </div>
+
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecLs(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecLs ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecLs && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--field-border", usage: "divider" },
+                        { token: "--foreground", usage: "title" },
+                        { token: "--field-supporting", usage: "metadata" },
+                        { token: "--primary", usage: "CTA" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 753-24036</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeSlideoutItem === "process-item" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>5. Process Items</SectionLabel>
+              <button onClick={() => setPgModal("process-item")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>
+              Shows the step-by-step status of a workflow or pipeline run. Each item represents a single stage with a status icon, title, optional tag, description, timestamp, and an expand slot. Use a vertical connector line between consecutive items.
+            </p>
+
+            {/* ── Statuses — Default state ── */}
+            <div className="mb-[16px]">
+              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>All statuses — Default state</p>
+              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                {([
+                  { status: "done",    title: "Data enrichment",     description: "Fetched from Clearbit — 4 fields added",   timestamp: "2 min ago",  tag: "Completed" },
+                  { status: "loading", title: "AI analysis running",  description: "Scoring customer health signal",            timestamp: "Just now"                        },
+                  { status: "error",   title: "CRM sync failed",      description: "Connection timeout — retrying in 60s",      timestamp: "1 min ago"                       },
+                  { status: "pending", title: "Notification queued",  description: "Waiting for AI step to finish",             timestamp: "Pending"                         },
+                  { status: "warning", title: "Low confidence score", description: "Below threshold — manual review recommended",timestamp: "5 min ago", tag: "Review"     },
+                ] as { status: ProcessStatus; title: string; description: string; timestamp: string; tag?: string }[]).map((item, i, arr) => (
+                  <ProcessItem
+                    key={item.status}
+                    status={item.status}
+                    title={item.title}
+                    description={item.description}
+                    timestamp={item.timestamp}
+                    tag={item.tag}
+                    showLine={i < arr.length - 1}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* ── Selected state ── */}
+            <div className="mb-[16px]">
+              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Selected state</p>
+              <div className="flex flex-col gap-[4px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                <ProcessItem
+                  status="done"
+                  state="selected"
+                  title="Data enrichment"
+                  description="Fetched from Clearbit — 4 fields added"
+                  timestamp="2 min ago"
+                  tag="Completed"
+                  showLine={false}
+                />
+              </div>
+            </div>
+
+            {/* ── Number badge variant ── */}
+            <div className="mb-[16px]">
+              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Number badge (step indicator)</p>
+              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                {([
+                  { status: "done" as ProcessStatus,    number: "1", title: "Trigger received",  description: "Health score dropped below 50" },
+                  { status: "done" as ProcessStatus,    number: "2", title: "Playbook executed",  description: "Sent alert to CSM team" },
+                  { status: "loading" as ProcessStatus, number: "3", title: "CRM update",         description: "Writing risk flag to Salesforce" },
+                  { status: "pending" as ProcessStatus, number: "4", title: "Notification",        description: "Queued — waiting for step 3" },
+                ]).map((item, i, arr) => (
+                  <ProcessItem
+                    key={item.number}
+                    status={item.status}
+                    number={item.number}
+                    title={item.title}
+                    description={item.description}
+                    showLine={i < arr.length - 1}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* ── With expand slot ── */}
+            <div className="mb-[20px]">
+              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>With expand slot</p>
+              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                <ProcessItemExpandDemo />
+              </div>
+            </div>
+
+            {/* ── ProcessList states ── */}
+            <div className="mb-[4px]">
+              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>ProcessList — all 3 states</p>
+              <div className="grid grid-cols-3 gap-[12px]">
+                {/* Empty */}
+                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>EMPTY</p>
+                  <ProcessList
+                    title="Process"
+                    state="empty"
+                    emptyTitle="No activity yet"
+                    emptyDescription="Steps appear when the workflow runs."
+                  />
+                </div>
+                {/* Loading */}
+                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>LOADING</p>
+                  <ProcessList title="Process" state="loading" />
+                </div>
+                {/* Populated */}
+                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>POPULATED</p>
+                  <ProcessList
+                    title="Process"
+                    state="populated"
+                    onViewAll={() => {}}
+                    items={[
+                      { id: "p1", title: "Data enrichment",  status: "done",    description: "4 fields added", timestamp: "2m ago" },
+                      { id: "p2", title: "AI scoring",        status: "loading", description: "Running…" },
+                      { id: "p3", title: "CRM update",        status: "pending", description: "Waiting" },
+                    ]}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Usage rules ── */}
+            <div className="mt-[20px] flex flex-col gap-[12px]">
+              {[
+                { type: "do",   text: "Use showLine=true on all items except the last — the connector visually chains steps." },
+                { type: "do",   text: "Use status='loading' only for the currently active step — never for future steps." },
+                { type: "do",   text: "Combine with ProcessList to get the section title, CTA, and empty/loading states for free." },
+                { type: "dont", text: "Don't mix number badges and status icons in the same list — use one pattern consistently." },
+                { type: "dont", text: "Don't show more than 5–6 items without a 'View all' CTA in the ProcessList header." },
+              ].map((rule, i) => (
+                <div key={i} className="flex items-start gap-[8px]">
+                  <span
+                    className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
+                    style={{
+                      background: rule.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                      color: rule.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
+                    }}
+                  >
+                    {rule.type === "do" ? "Do" : "Don't"}
+                  </span>
+                  <span className="text-[12px] text-[var(--foreground)]">{rule.text}</span>
+                </div>
+              ))}
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecPi(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecPi ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecPi && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--color-surface-success-default", usage: "done icon bg" },
+                        { token: "--color-surface-error-default", usage: "error icon bg" },
+                        { token: "--color-border-neutral-lighter", usage: "connector line" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 13501-28579</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeSlideoutItem === "by-layers" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>6. Detail — By Layers</SectionLabel>
+              <button onClick={() => setPgModal("by-layers")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[16px]" style={{ color: "var(--field-supporting)" }}>
+              Shows <strong>the provenance of a data item</strong> — where it came from, which layers transformed it, and where it landed. Primarily used in "Details" tabs to answer "how was this value generated?" Use a vertical thread line to visualize parent → child layer relationships.
+            </p>
+
+            {/* ── When to use / When not to use ── */}
+            <div className="grid grid-cols-2 gap-[10px] mb-[20px]">
+              <div className="flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                style={{ background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-subtle)" }}>
+                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-success)" }}>Use when</span>
+                {[
+                  "A data item has a traceable origin: source system → transformation → output",
+                  "The PM needs to answer 'where did this value come from?'",
+                  "Layers are real and distinct stages, not just metadata labels",
+                  "The data is read-only and purely informational",
+                ].map((t, i) => (
+                  <div key={i} className="flex items-start gap-[6px]">
+                    <LucideIcons.Check size={11} className="shrink-0 mt-[2px]" style={{ color: "var(--color-text-success)" }} />
+                    <span className="text-[11px] leading-[1.4]" style={{ color: "var(--foreground)" }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                style={{ background: "var(--color-surface-error-more-subtle)", border: "1px solid var(--color-border-error-subtle)" }}>
+                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-error)" }}>Don't use when</span>
+                {[
+                  "Content is chronological (history, events, audit log) → use Process Items",
+                  "Data is flat with no real hierarchy → use a key-value list instead",
+                  "The user needs to edit a value → use Form fields",
+                  "You have no confirmed lineage — avoid fabricating layers that aren't real",
+                ].map((t, i) => (
+                  <div key={i} className="flex items-start gap-[6px]">
+                    <LucideIcons.X size={11} className="shrink-0 mt-[2px]" style={{ color: "var(--color-text-error)" }} />
+                    <span className="text-[11px] leading-[1.4]" style={{ color: "var(--foreground)" }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Depth model ── */}
+            <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Depth model</p>
+            <div className="flex flex-col gap-[6px] mb-[20px] p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              {[
+                { level: "1", badge: "normal",  label: "Depth 1 — Flat",                      desc: "A single origin with no intermediate layers. Use when the data comes directly from one source with no transformations." },
+                { level: "2", badge: "normal",  label: "Depth 2 — Standard",                   desc: "Source + nested layers with thread line. The default for most AIMS OS contexts. Source, one processing layer, and output." },
+                { level: "3", badge: "normal",  label: "Depth 3 — Complex pipeline",           desc: "Three distinct stages. Use when the architecture genuinely has three layers (e.g. ingest → transform → scoring). Always add a 'View full detail' link." },
+                { level: "4", badge: "edge",    label: "Depth 4 — Progressive disclosure",     desc: "Show only levels 1–2 by default. Collapse levels 3–4 behind a 'Show N more layers' toggle. Prevents cognitive overload." },
+                { level: "5+", badge: "edge",   label: "Depth 5+ — Breadcrumb path (required)", desc: "Replace the tree with a compact horizontal path (Source → … → Output) + layer count + a mandatory 'View full lineage →' link. Never render 5+ levels as a nested tree." },
+              ].map(row => (
+                <div key={row.level} className="flex items-start gap-[10px]">
+                  <div className="w-[22px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-[1px]"
+                    style={{
+                      background: row.badge === "edge" ? "var(--color-surface-alert-more-subtle)" : "var(--color-surface-primary-subtle)",
+                      color: row.badge === "edge" ? "var(--color-icon-alert-default)" : "var(--primary)",
+                    }}>
+                    {row.level}
+                  </div>
+                  <div className="flex flex-col gap-[1px]">
+                    <span className="text-[12px] font-semibold" style={{ color: row.badge === "edge" ? "var(--color-icon-alert-default)" : "var(--foreground)" }}>{row.label}</span>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Tag usage ── */}
+            <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Tags — colors and limits</p>
+            <div className="flex flex-col gap-[6px] mb-[20px] p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <div className="grid grid-cols-2 gap-[8px] mb-[8px]">
+                {([
+                  { key: "purple",      label: "Purple",      desc: "AI/ML categories, model names, system version numbers",      bg: "var(--tag-purple-bg)",      bd: "var(--tag-purple-bd)",      fg: "var(--tag-purple-fg)"      },
+                  { key: "informative", label: "Informative", desc: "Environments (Prod, Staging), data types, identifiers",       bg: "var(--tag-informative-bg)", bd: "var(--tag-informative-bd)", fg: "var(--tag-informative-fg)" },
+                  { key: "success",     label: "Success",     desc: "Completed, validated, or synced states",                     bg: "var(--tag-success-bg)",     bd: "var(--tag-success-bd)",     fg: "var(--tag-success-fg)"     },
+                  { key: "alert",       label: "Alert",       desc: "Data quality warnings, low confidence, degraded signals",    bg: "var(--tag-alert-bg)",       bd: "var(--tag-alert-bd)",       fg: "var(--tag-alert-fg)"       },
+                  { key: "neutral",     label: "Neutral",     desc: "Generic metadata with no status semantic",                   bg: "var(--tag-neutral-bg)",     bd: "var(--tag-neutral-bd)",     fg: "var(--tag-neutral-fg)"     },
+                ] as { key: string; label: string; desc: string; bg: string; bd: string; fg: string }[]).map(t => (
+                  <div key={t.key} className="flex items-start gap-[6px]">
+                    <span className="text-[11px] font-medium px-[7px] py-[1px] rounded-[8px] shrink-0 mt-[1px]"
+                      style={{ background: t.bg, border: `1px solid ${t.bd}`, color: t.fg }}>
+                      {t.label}
+                    </span>
+                    <span className="text-[11px] leading-[1.3]" style={{ color: "var(--field-supporting)" }}>{t.desc}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-start gap-[6px] pt-[6px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                <LucideIcons.Info size={11} className="shrink-0 mt-[1px]" style={{ color: "var(--field-supporting)" }} />
+                <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                  Max 3 tags per subsection. If there are more, show the 2–3 most relevant + a <strong>"+N more"</strong> chip of the same color. Never mix tag colors within the same subsection.
+                </span>
+              </div>
+            </div>
+
+            {/* ── Examples ── */}
+            <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Examples</p>
+            <div className="grid grid-cols-2 gap-[12px] mb-[20px]">
+
+              {/* A — Depth 1: flat */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>A — Depth 1 (flat, single origin)</span>
+                <div className="flex gap-[8px] items-start p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+                  <div className="flex flex-col gap-[5px] flex-1 min-w-0">
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Customer record</span>
+                      <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>JSON · Mar · 04 · 2024</span>
+                    </div>
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Salesforce CRM</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* B — Depth 2: standard */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>B — Depth 2 (standard, default)</span>
+                <div className="flex gap-[8px] items-start p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+                  <div className="flex flex-col gap-[5px] flex-1 min-w-0">
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Health score</span>
+                      <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>Float · Jun · 12 · 2024</span>
+                    </div>
+                    <div className="flex flex-col gap-[8px]">
+                      <div className="flex flex-col gap-[4px]">
+                        <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                        <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Telemetry pipeline</span>
+                      </div>
+                      <div className="flex gap-[8px] pl-[12px]">
+                        <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                        <div className="flex flex-col gap-[10px] flex-1 min-w-0">
+                          <div className="flex flex-col gap-[4px]">
+                            <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Layer</span>
+                            <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Enrichment engine</span>
+                          </div>
+                          <div className="flex flex-col gap-[4px]">
+                            <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Output</span>
+                            <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Risk dashboard</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* C — Tags: color usage */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>C — Tags per subsection</span>
+                <div className="flex gap-[8px] items-start p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+                  <div className="flex flex-col gap-[5px] flex-1 min-w-0">
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Intent signal</span>
+                      <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>JSON · Feb · 28 · 2024</span>
+                    </div>
+                    <div className="flex flex-col gap-[8px]">
+                      <div className="flex flex-col gap-[4px]">
+                        <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                        <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Behavioral tracker</span>
+                        <div className="flex gap-[4px] flex-wrap mt-[2px]">
+                          <span className="text-[11px] font-medium px-[7px] py-[1px] rounded-[8px]" style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)", color: "var(--tag-informative-fg)" }}>Prod</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-[8px] pl-[12px]">
+                        <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                        <div className="flex flex-col gap-[4px] flex-1 min-w-0">
+                          <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Layer</span>
+                          <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>AI scoring engine</span>
+                          <div className="flex gap-[4px] flex-wrap mt-[2px]">
+                            {["AIML", "v2.1"].map(t => (
+                              <span key={t} className="text-[11px] font-medium px-[7px] py-[1px] rounded-[8px]"
+                                style={{ background: "var(--tag-purple-bg)", border: "1px solid var(--tag-purple-bd)", color: "var(--tag-purple-fg)" }}>
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* D — Tag overflow */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>D — Tag overflow (+N more)</span>
+                <div className="flex gap-[8px] items-start p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+                  <div className="flex flex-col gap-[5px] flex-1 min-w-0">
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Workflow config</span>
+                      <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>YAML · Jul · 01 · 2024</span>
+                    </div>
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Layer</span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Orchestration engine</span>
+                      <div className="flex gap-[4px] flex-wrap mt-[2px]">
+                        {["AIML", "v3.0"].map(t => (
+                          <span key={t} className="text-[11px] font-medium px-[7px] py-[1px] rounded-[8px]"
+                            style={{ background: "var(--tag-purple-bg)", border: "1px solid var(--tag-purple-bd)", color: "var(--tag-purple-fg)" }}>
+                            {t}
+                          </span>
+                        ))}
+                        <span className="text-[11px] font-medium px-[7px] py-[1px] rounded-[8px]"
+                          style={{ background: "var(--tag-purple-bg)", border: "1px solid var(--tag-purple-bd)", color: "var(--tag-purple-fg)" }}>
+                          +3 more
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* E — Depth 3 complex pipeline */}
+              <div className="flex flex-col gap-[8px] col-span-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>E — Depth 3 (complex pipeline — three distinct stages)</span>
+                <div className="flex gap-[8px] items-start p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+                  <div className="flex flex-col gap-[5px] flex-1 min-w-0">
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Risk composite score</span>
+                      <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>Float · Sep · 01 · 2024</span>
+                    </div>
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Data warehouse</span>
+                    </div>
+                    <div className="flex gap-[8px] pl-[12px]">
+                      <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                      <div className="flex flex-col gap-[10px] flex-1 min-w-0">
+                        <div className="flex flex-col gap-[4px]">
+                          <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Layer</span>
+                          <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>ML pipeline</span>
+                        </div>
+                        <div className="flex gap-[8px] pl-[12px]">
+                          <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                          <div className="flex flex-col gap-[10px] flex-1 min-w-0">
+                            <div className="flex flex-col gap-[4px]">
+                              <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Sub-layer</span>
+                              <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Feature extractor v2</span>
+                            </div>
+                            <div className="flex flex-col gap-[4px]">
+                              <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Output</span>
+                              <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Scoring dashboard</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* F — Depth 4: progressive disclosure */}
+              <div className="flex flex-col gap-[8px] col-span-2">
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>F — Depth 4 (progressive disclosure — collapse levels 3–4)</span>
+                  <span className="text-[10px] font-bold px-[5px] py-[1px] rounded-[3px] uppercase"
+                    style={{ background: "var(--color-surface-alert-more-subtle)", color: "var(--color-icon-alert-default)" }}>Edge case</span>
+                </div>
+                <div className="flex gap-[8px]">
+                  <div className="flex gap-[8px] items-start p-[8px] rounded-[8px] flex-1" style={{ border: "1px solid var(--color-border-alert-subtle)" }}>
+                    <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+                    <div className="flex flex-col gap-[5px] flex-1 min-w-0">
+                      <div className="flex flex-col gap-[4px]">
+                        <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Churn probability</span>
+                        <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>Float · Nov · 14 · 2024</span>
+                      </div>
+                      <div className="flex flex-col gap-[4px]">
+                        <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                        <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Data warehouse</span>
+                      </div>
+                      <div className="flex gap-[8px] pl-[12px]">
+                        <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "12px" }} />
+                        <div className="flex flex-col gap-[10px] flex-1 min-w-0">
+                          <div className="flex flex-col gap-[4px]">
+                            <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Layer</span>
+                            <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>ML pipeline</span>
+                          </div>
+                          <button className="flex items-center gap-[6px] px-[8px] py-[4px] rounded-[6px] self-start"
+                            style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)", color: "var(--field-supporting)" }}>
+                            <LucideIcons.ChevronRight size={11} />
+                            <span className="text-[11px] font-medium">Show 2 more layers</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-[4px] w-[180px] shrink-0 p-[10px] rounded-[8px] self-start"
+                    style={{ background: "var(--color-surface-alert-more-subtle)", border: "1px solid var(--color-border-alert-subtle)" }}>
+                    <LucideIcons.AlertTriangle size={12} style={{ color: "var(--color-icon-alert-default)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>Complexity signal</span>
+                    <span className="text-[11px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>
+                      Show only levels 1–2 by default. Collapse deeper levels behind a toggle. Always link to a full detail view.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* G — Depth 5+: breadcrumb path */}
+              <div className="flex flex-col gap-[8px] col-span-2">
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>G — Depth 5+ (breadcrumb path — tree is mandatory to replace)</span>
+                  <span className="text-[10px] font-bold px-[5px] py-[1px] rounded-[3px] uppercase"
+                    style={{ background: "var(--color-surface-alert-more-subtle)", color: "var(--color-icon-alert-default)" }}>Edge case</span>
+                </div>
+                <div className="flex gap-[8px]">
+                  <div className="flex gap-[8px] items-start p-[8px] rounded-[8px] flex-1" style={{ border: "1px solid var(--color-border-alert-subtle)" }}>
+                    <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+                    <div className="flex flex-col gap-[8px] flex-1 min-w-0">
+                      <div className="flex flex-col gap-[4px]">
+                        <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Acme Corp — Churn Analysis</span>
+                        <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>JSON · Jan · 15 · 2024</span>
+                      </div>
+                      <div className="flex flex-col gap-[6px]">
+                        <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Lineage path</span>
+                        <div className="flex items-center gap-[4px] flex-wrap">
+                          {["CRM", "Ingest", "…", "AI Engine", "Scorer", "Dashboard"].map((step, i, arr) => (
+                            <span key={i} className="flex items-center gap-[4px]">
+                              <span className={`text-[11px] font-medium ${step === "…" ? "px-[2px]" : "px-[6px] py-[1px] rounded-[4px]"}`}
+                                style={step === "…"
+                                  ? { color: "var(--field-supporting)" }
+                                  : { background: "var(--color-surface-neutral-subtle)", color: "var(--foreground)", border: "0.5px solid var(--field-border)" }}>
+                                {step}
+                              </span>
+                              {i < arr.length - 1 && <LucideIcons.ChevronRight size={10} style={{ color: "var(--field-supporting)" }} />}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>6 layers total · 3 hidden</span>
+                      </div>
+                      <button className="flex items-center gap-[4px] self-start text-[11px] font-semibold"
+                        style={{ color: "var(--primary)" }}>
+                        View full lineage <LucideIcons.ArrowUpRight size={11} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-[4px] w-[180px] shrink-0 p-[10px] rounded-[8px] self-start"
+                    style={{ background: "var(--color-surface-alert-more-subtle)", border: "1px solid var(--color-border-alert-subtle)" }}>
+                    <LucideIcons.AlertTriangle size={12} style={{ color: "var(--color-icon-alert-default)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>Required at 5+ levels</span>
+                    <span className="text-[11px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>
+                      Never render 5+ levels as a nested tree. Switch to the breadcrumb pattern and make the 'View full lineage' link mandatory.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* H — Unknown/missing value */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>H — Unknown value</span>
+                <div className="flex gap-[8px] items-start p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  <div className="w-[1px] self-stretch shrink-0" style={{ background: "var(--color-border-neutral-lighter)", minHeight: "20px" }} />
+                  <div className="flex flex-col gap-[5px] flex-1 min-w-0">
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[14px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>Conversion score</span>
+                      <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>Float · — · — · —</span>
+                    </div>
+                    <div className="flex flex-col gap-[4px]">
+                      <span className="text-[10px] font-medium" style={{ color: "var(--field-supporting)" }}>Source</span>
+                      <span className="text-[12px] font-medium italic" style={{ color: "var(--color-border-neutral-default)" }}>Unknown</span>
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Use "Unknown" in italic when the value is unavailable. Never leave a cell blank.</span>
+              </div>
+
+            </div>
+
+            {/* ── Do / Don't ── */}
+            <div className="flex flex-col gap-[10px]">
+              {[
+                { type: "do",   text: "Default to depth 2. Only go deeper when the data architecture genuinely requires it." },
+                { type: "do",   text: "Switch to progressive disclosure at depth 4: show levels 1–2, collapse the rest behind a toggle." },
+                { type: "do",   text: "Switch to the breadcrumb path pattern at depth 5+. Never render that many levels as a nested tree." },
+                { type: "do",   text: "Max 3 tags per subsection. If there are more, show the most relevant ones + a '+N more' chip of the same color." },
+                { type: "do",   text: "Use a single tag color per subsection. Do not mix purple + informative on the same tag row." },
+                { type: "do",   text: "Format dates as: {File format} · {Month} · {Day} · {Year}. Use '— · — · —' when the date is unknown." },
+                { type: "dont", text: "Don't use for chronological events (history, audit log, activity feed) — that's Process Items." },
+                { type: "dont", text: "Don't hide the thread line at depth 2+. The line is the primary visual signal of hierarchy." },
+                { type: "dont", text: "Don't leave values blank. If the data doesn't exist, show 'Unknown' in italic." },
+                { type: "dont", text: "Don't fabricate layers. Only show layers that correspond to real data pipeline stages." },
+              ].map((rule, i) => (
+                <div key={i} className="flex items-start gap-[8px]">
+                  <span className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
+                    style={{
+                      background: rule.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                      color: rule.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
+                    }}>
+                    {rule.type === "do" ? "Do" : "Don't"}
+                  </span>
+                  <span className="text-[12px] text-[var(--foreground)]">{rule.text}</span>
+                </div>
+              ))}
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecBl(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecBl ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecBl && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--color-border-neutral-lighter", usage: "thread line" },
+                        { token: "--field-supporting", usage: "label" },
+                        { token: "--foreground", usage: "value" },
+                        { token: "--tag-purple-bg", usage: "tag bg" },
+                        { token: "--tag-purple-bd", usage: "tag border" },
+                        { token: "--tag-purple-fg", usage: "tag text" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: UKtmHXtZZ20gZjfwc0tnJl · 317-13135</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeSlideoutItem === "detail-table" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>7. Detail — Table</SectionLabel>
+              <button onClick={() => setPgModal("detail-table")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[16px]" style={{ color: "var(--field-supporting)" }}>
+              Displays <strong>structured technical metadata</strong> as a two-column key-value table — label on the left (fixed 140px), value on the right. Used in Detail tabs when data has multiple flat attributes with no hierarchy. The visual structure is a bordered card with a horizontal divider between rows.
+            </p>
+
+            {/* ── Anatomy ── */}
+            <div className="flex flex-col gap-[6px] mb-[20px] p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Anatomy</p>
+              {[
+                { slot: "Container",     desc: "Bordered card — border: 1px solid (--field-border), border-radius: 8px, padding: 8px" },
+                { slot: "Label column",  desc: "Fixed 120–140px, 12px Medium, color: var(--foreground). Always a concise noun phrase." },
+                { slot: "Value column",  desc: "Flex-1, 12px Medium, color: var(--field-supporting). Text, tag, or 'Unknown' italic." },
+                { slot: "Row",          desc: "py-8px per row. gap-19px between label and value." },
+                { slot: "Divider",       desc: "1px solid var(--color-border-neutral-lighter) between rows. Last row has no divider." },
+              ].map((row, i) => (
+                <div key={i} className="flex items-start gap-[10px]">
+                  <span className="w-[110px] shrink-0 text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{row.slot}</span>
+                  <span className="flex-1 text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.desc}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* ── When to use / When not to use ── */}
+            <div className="grid grid-cols-2 gap-[10px] mb-[20px]">
+              <div className="flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                style={{ background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-subtle)" }}>
+                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-success)" }}>Use when</span>
+                {[
+                  "Displaying flat technical attributes with no hierarchy between them",
+                  "The PM needs a quick 'fact sheet' view: type, version, owner, status",
+                  "Values are read-only and primarily for transparency or audit",
+                  "There are 3–8 attributes — enough to justify a structured table, not just inline text",
+                ].map((t, i) => (
+                  <div key={i} className="flex items-start gap-[6px]">
+                    <LucideIcons.Check size={11} className="shrink-0 mt-[2px]" style={{ color: "var(--color-text-success)" }} />
+                    <span className="text-[11px] leading-[1.4]" style={{ color: "var(--foreground)" }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                style={{ background: "var(--color-surface-error-more-subtle)", border: "1px solid var(--color-border-error-subtle)" }}>
+                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-error)" }}>Don't use when</span>
+                {[
+                  "Data has parent-child relationships or stages → use Detail — By Layers",
+                  "Content is chronological (events, history, audit log) → use Process Items",
+                  "There are only 1–2 attributes — use inline key-value in the section header instead",
+                  "The user needs to edit values → use Form fields",
+                ].map((t, i) => (
+                  <div key={i} className="flex items-start gap-[6px]">
+                    <LucideIcons.X size={11} className="shrink-0 mt-[2px]" style={{ color: "var(--color-text-error)" }} />
+                    <span className="text-[11px] leading-[1.4]" style={{ color: "var(--foreground)" }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Value types ── */}
+            <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Value types</p>
+            <div className="flex flex-col gap-[6px] mb-[20px] p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              {[
+                { type: "Text",    desc: "Plain string. Use for dates, IDs, names, paths, and most scalar values.", example: "ml-ops-team" },
+                { type: "Tag",     desc: "Colored badge. Use for enum values (status, environment, category) to add visual scannability.", example: "Active" },
+                { type: "Unknown", desc: "Italic 'Unknown' in a muted color. Use when the value is not available — never leave a cell blank.", example: "Unknown" },
+              ].map(row => (
+                <div key={row.type} className="flex items-start gap-[10px]">
+                  <span className="w-[68px] shrink-0 text-[11px] font-semibold mt-[1px]" style={{ color: "var(--foreground)" }}>{row.type}</span>
+                  <div className="flex flex-col gap-[2px] flex-1 min-w-0">
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.desc}</span>
+                    <span className={`text-[11px] font-medium ${row.type === "Unknown" ? "italic" : ""}`}
+                      style={{ color: row.type === "Unknown" ? "var(--color-border-neutral-default)" : "var(--field-supporting)" }}>
+                      e.g. "{row.example}"
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Examples ── */}
+            <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Examples</p>
+            <div className="grid grid-cols-2 gap-[12px] mb-[20px]">
+
+              {/* A — Standard text values */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>A — Text values (default)</span>
+                <div className="flex flex-col p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  {[
+                    ["Type",    "JSON"],
+                    ["Version", "v2.1.3"],
+                    ["Owner",   "ml-ops-team"],
+                    ["Created", "Jan · 15 · 2024"],
+                  ].map(([label, value], i, arr) => (
+                    <div key={label}>
+                      <div className="flex items-center gap-[19px] py-[8px]">
+                        <span className="w-[100px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{label}</span>
+                        <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{value}</span>
+                      </div>
+                      {i < arr.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* B — Mixed text + tag values */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>B — Tag values for enum fields</span>
+                <div className="flex flex-col p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  {([
+                    { label: "Type",    value: "JSON",      tag: { label: "JSON",    bg: "var(--tag-informative-bg)", bd: "var(--tag-informative-bd)", fg: "var(--tag-informative-fg)" } },
+                    { label: "Version", value: "v2.1.3",    tag: { label: "v2.1.3",  bg: "var(--tag-purple-bg)",      bd: "var(--tag-purple-bd)",      fg: "var(--tag-purple-fg)"      } },
+                    { label: "Status",  value: "Active",    tag: { label: "Active",  bg: "var(--tag-success-bg)",     bd: "var(--tag-success-bd)",     fg: "var(--tag-success-fg)"     } },
+                    { label: "Env",     value: "Prod",      tag: { label: "Prod",    bg: "var(--tag-alert-bg)",       bd: "var(--tag-alert-bd)",       fg: "var(--tag-alert-fg)"       } },
+                  ] as { label: string; value: string; tag: { label: string; bg: string; bd: string; fg: string } }[]).map((row, i, arr) => (
+                    <div key={row.label}>
+                      <div className="flex items-center gap-[19px] py-[8px]">
+                        <span className="w-[100px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{row.label}</span>
+                        <span className="text-[11px] font-medium px-[7px] py-[1px] rounded-[8px]"
+                          style={{ background: row.tag.bg, border: `1px solid ${row.tag.bd}`, color: row.tag.fg }}>
+                          {row.tag.label}
+                        </span>
+                      </div>
+                      {i < arr.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* C — Unknown values */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>C — Unknown / missing values</span>
+                <div className="flex flex-col p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  {[
+                    ["Type",    "JSON",    false],
+                    ["Version", "",        true],
+                    ["Owner",   "",        true],
+                    ["Created", "Jan · 15 · 2024", false],
+                  ].map(([label, value, unknown], i, arr) => (
+                    <div key={String(label)}>
+                      <div className="flex items-center gap-[19px] py-[8px]">
+                        <span className="w-[100px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{label}</span>
+                        {unknown
+                          ? <span className="flex-1 text-[12px] font-medium leading-[20px] italic" style={{ color: "var(--color-border-neutral-default)" }}>Unknown</span>
+                          : <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{String(value)}</span>
+                        }
+                      </div>
+                      {i < arr.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
+                    </div>
+                  ))}
+                </div>
+                <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Never leave a cell empty. Use italic "Unknown" when the value is unavailable.</span>
+              </div>
+
+              {/* D — 6-row full table (typical technical object) */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>D — Full table (6 rows, mixed types)</span>
+                <div className="flex flex-col p-[8px] rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                  {([
+                    { label: "Type",         value: "JSON",          tag: { label: "JSON",    bg: "var(--tag-informative-bg)", bd: "var(--tag-informative-bd)", fg: "var(--tag-informative-fg)" } },
+                    { label: "Version",      value: "v2.1.3",        tag: null },
+                    { label: "Owner",        value: "ml-ops-team",   tag: null },
+                    { label: "Status",       value: "Active",        tag: { label: "Active",  bg: "var(--tag-success-bg)",     bd: "var(--tag-success-bd)",     fg: "var(--tag-success-fg)"     } },
+                    { label: "Created",      value: "Jan · 15 · 2024", tag: null },
+                    { label: "Last updated", value: "Jun · 12 · 2024", tag: null },
+                  ] as { label: string; value: string; tag: { label: string; bg: string; bd: string; fg: string } | null }[]).map((row, i, arr) => (
+                    <div key={row.label}>
+                      <div className="flex items-center gap-[19px] py-[6px]">
+                        <span className="w-[100px] shrink-0 text-[11px] font-medium leading-[18px]" style={{ color: "var(--foreground)" }}>{row.label}</span>
+                        {row.tag
+                          ? <span className="text-[10px] font-medium px-[6px] py-[1px] rounded-[8px]"
+                              style={{ background: row.tag.bg, border: `1px solid ${row.tag.bd}`, color: row.tag.fg }}>{row.tag.label}</span>
+                          : <span className="flex-1 text-[11px] font-medium leading-[18px]" style={{ color: "var(--field-supporting)" }}>{row.value}</span>
+                        }
+                      </div>
+                      {i < arr.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* ── Do / Don't ── */}
+            <div className="flex flex-col gap-[10px]">
+              {[
+                { type: "do",   text: "Keep label text concise — a noun or noun phrase, never a full sentence. Max ~20 characters." },
+                { type: "do",   text: "Use tags for enum values (status, environment, category) to make the table more scannable." },
+                { type: "do",   text: "Use 'Unknown' in italic for missing values. Never leave a row blank or skip it." },
+                { type: "do",   text: "Add a section title above the table when there are multiple content blocks in the same panel." },
+                { type: "do",   text: "Limit to ~8 rows max. Beyond that, consider splitting into groups or linking to a dedicated detail view." },
+                { type: "dont", text: "Don't mix this with By Layers in the same slot — they answer different questions (what? vs. where from?)." },
+                { type: "dont", text: "Don't use mixed tag colors in the same table column — one semantic color per field type." },
+                { type: "dont", text: "Don't use this to show relationships or history — use By Layers or Process Items instead." },
+              ].map((rule, i) => (
+                <div key={i} className="flex items-start gap-[8px]">
+                  <span className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
+                    style={{
+                      background: rule.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                      color: rule.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
+                    }}>
+                    {rule.type === "do" ? "Do" : "Don't"}
+                  </span>
+                  <span className="text-[12px] text-[var(--foreground)]">{rule.text}</span>
+                </div>
+              ))}
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecDt(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecDt ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecDt && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--field-border", usage: "container border" },
+                        { token: "--foreground", usage: "label col" },
+                        { token: "--field-supporting", usage: "value col" },
+                        { token: "--color-border-neutral-lighter", usage: "row divider" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: UKtmHXtZZ20gZjfwc0tnJl · 320-13846</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeSlideoutItem === "overview" && (
+          <SlideOut
+            open={contentExOpen}
+            onClose={() => setContentExOpen(false)}
+            size="m"
+            type="with-variants"
+            title="Customer Churn Alert"
+            subtitle="Automation · Monitoring"
+            statusLabel="Active"
+            showIcon
+            showStatus
+            showTabs
+            tabLabels={["Overview", "History", "Config"]}
+            activeTab={0}
+            onTabChange={() => {}}
+            showSearchBar={false}
+            showChips={false}
+            showCta={false}
+          >
+            <div className="flex flex-col gap-[16px] pt-[8px] pb-[20px]">
+
+              {/* Section Title ① — Title only → AI Summary */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>AI Summary</span>
+                <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]"
+                  style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                  <div className="flex items-center gap-[6px]">
+                    <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
+                  </div>
+                  <ul className="flex flex-col gap-[4px] pl-[4px]">
+                    {[
+                      "Health score dropped to 42/100 — below the 50-point intervention threshold",
+                      "2 open support tickets linked to churn risk signals",
+                      "Executive sponsor changed in October — follow-up recommended",
+                    ].map((b, i) => (
+                      <li key={i} className="flex items-start gap-[6px] text-[12px] text-[var(--foreground)] leading-[1.5]">
+                        <span className="mt-[5px] shrink-0 w-[4px] h-[4px] rounded-full" style={{ background: "var(--color-text-purple)" }} />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Section Title ② — Title + Description → Key Metrics */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[2px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Key Metrics</span>
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Based on the last 14 days</span>
+                </div>
+                <div className="grid grid-cols-3 gap-[8px]">
+                  <HighlightCard label="Health score" value="42/100" iconName="Activity"     style="red"       className="!w-full" />
+                  <HighlightCard label="At risk"       value="3"      iconName="AlertTriangle" style="orange-bg" className="!w-full" />
+                  <HighlightCard label="Total runs"    value="847"    iconName="Play"          className="!w-full" />
+                </div>
+              </div>
+
+              {/* Section Title ③ — With CTA → Accounts affected */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center justify-between h-[32px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Accounts affected</span>
+                  <Button variant="tertiary" size="sm">View all <LucideIcons.ArrowRight size={12} /></Button>
+                </div>
+                <EntityList items={SAMPLE_LIST_ITEMS} />
+              </div>
+
+              {/* Section Title ④ — Expand toggle → Activity log */}
+              <div className="flex flex-col gap-[8px]">
+                <button
+                  className="flex items-center justify-between h-[32px] w-full"
+                  onClick={() => setLiveExpandOpen(v => !v)}
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Activity log</span>
+                  <LucideIcons.ChevronDown
+                    size={14}
+                    style={{
+                      color: "var(--field-label)",
+                      transition: "transform 0.2s",
+                      transform: liveExpandOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                    }}
+                  />
+                </button>
+                {liveExpandOpen && (
+                  <EntityList items={[
+                    { id: "a1", title: "Playbook triggered", iconName: "Zap",      iconVariant: "error",   timestamp: "2h ago",  state: { label: "Auto",   variant: "alert"   } },
+                    { id: "a2", title: "Score updated",       iconName: "Activity", iconVariant: "info",    timestamp: "6h ago",  state: { label: "System", variant: "neutral" } },
+                  ]} />
+                )}
+              </div>
+
+              {/* Section Title ⑤ — Title + Description + CTA → Configuration */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-start justify-between gap-[8px]" style={{ minHeight: "32px" }}>
+                  <div className="flex flex-col gap-[2px]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Configuration</span>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Settings applied to all active runs</span>
+                  </div>
+                  <Button variant="tertiary" size="sm" className="shrink-0">Edit <LucideIcons.ArrowRight size={12} /></Button>
+                </div>
+                <div className="flex flex-col gap-[6px]">
+                  {[
+                    { label: "Trigger",    value: "Health score drop" },
+                    { label: "Threshold",  value: "Below 50" },
+                    { label: "Frequency",  value: "Once per account" },
+                  ].map(row => (
+                    <div key={row.label} className="flex items-center justify-between text-[12px]">
+                      <span style={{ color: "var(--field-label)" }}>{row.label}</span>
+                      <span style={{ color: "var(--foreground)" }}>{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section Title ⑥ — Title + Description + Expand → Related workflows */}
+              <div className="flex flex-col gap-[8px]">
+                <button
+                  className="flex items-start justify-between gap-[8px] w-full"
+                  style={{ minHeight: "32px" }}
+                  onClick={() => setLiveExpand6Open(v => !v)}
+                >
+                  <div className="flex flex-col gap-[2px] text-left">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Related workflows</span>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Automations linked as dependencies</span>
+                  </div>
+                  <LucideIcons.ChevronDown
+                    size={14}
+                    className="shrink-0 mt-[2px]"
+                    style={{
+                      color: "var(--field-label)",
+                      transition: "transform 0.2s",
+                      transform: liveExpand6Open ? "rotate(0deg)" : "rotate(-90deg)",
+                    }}
+                  />
+                </button>
+                {liveExpand6Open && (
+                  <EntityList items={[
+                    { id: "rw1", title: "Upsell Opportunity",     iconName: "Zap", iconVariant: "success", state: { label: "Active",  variant: "success" } },
+                    { id: "rw2", title: "Renewal Risk Detection",  iconName: "Zap", iconVariant: "error",   state: { label: "Active",  variant: "success" } },
+                  ]} />
+                )}
+              </div>
+
+            </div>
+          </SlideOut>
+          )}
+
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: configuration ── */}
+      {activeTab === "configuration" && (
+        <div className="flex gap-[24px] items-start">
+          {/* Left nav */}
+          <div className="w-[180px] shrink-0 flex flex-col gap-[2px] sticky top-[16px]">
+            {[
+              { id: "text-input",     label: "Text Input" },
+              { id: "textarea",       label: "Textarea" },
+              { id: "select",         label: "Select" },
+              { id: "toggle",         label: "Toggle" },
+              { id: "number",         label: "Number" },
+              { id: "selection-card", label: "Selection Card" },
+              { id: "slider",         label: "Slider" },
+              { id: "tag-input",      label: "Tag Input" },
+              { id: "add-fields",     label: "Add Fields" },
+            ].map(item => (
+              <button key={item.id} onClick={() => setActiveFormItem(item.id)}
+                style={{
+                  borderLeft: `2px solid ${activeFormItem === item.id ? "var(--primary)" : "transparent"}`,
+                  background: activeFormItem === item.id ? "var(--color-surface-primary-subtle)" : "transparent",
+                  color: activeFormItem === item.id ? "var(--primary)" : "var(--field-supporting)",
+                  fontWeight: activeFormItem === item.id ? 600 : 500,
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  width: "100%",
+                  borderTop: "none",
+                  borderRight: "none",
+                  borderBottom: "none",
+                }}
+                onMouseEnter={e => { if (activeFormItem !== item.id) (e.currentTarget as HTMLButtonElement).style.background = "var(--color-surface-neutral-default)" }}
+                onMouseLeave={e => { if (activeFormItem !== item.id) (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+          {/* Right content */}
+          <div className="flex-1 min-w-0 flex flex-col gap-[40px]">
+
+          {activeFormItem === "text-input" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>Text Input</SectionLabel>
+              <button onClick={() => setPgModal("form-input")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>Standard single-line text field. States below cover all conditions.</p>
+            <div className="grid grid-cols-2 gap-[12px]">
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Default</span>
+                <Input placeholder="Automation name" />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Filled</span>
+                <Input placeholder="Automation name" value="Customer Churn Alert" readOnly />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Error</span>
+                <Input placeholder="Automation name" state="error" supportingText="This field is required" />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Disabled</span>
+                <Input placeholder="Automation name" value="Customer Churn Alert" disabled />
+              </div>
+            </div>
+            <div className="mt-[8px] p-[10px] rounded-[6px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+              <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Always pair with a label above the field (not as placeholder alone). Use <code>supportingText</code> for helper text and errors.</span>
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecTi(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecTi ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecTi && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--field-border", usage: "border" },
+                        { token: "--field-label", usage: "label" },
+                        { token: "--field-supporting", usage: "placeholder" },
+                        { token: "--color-border-error-default", usage: "error border" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: height 40px, padding 12px, radius 6px</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeFormItem === "textarea" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>Textarea</SectionLabel>
+              <button onClick={() => setPgModal("form-textarea")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>Multi-line text input for longer content such as descriptions or notes.</p>
+            <div className="grid grid-cols-2 gap-[12px]">
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Default</span>
+                <Textarea placeholder="Description (optional)" />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Filled</span>
+                <Textarea placeholder="Description" value="Monitors customer health scores and triggers interventions when thresholds are exceeded." readOnly />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Error</span>
+                <Textarea placeholder="Description" state="error" supportingText="Description cannot be empty for published automations." />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Disabled</span>
+                <Textarea placeholder="Description" value="Disabled content" disabled />
+              </div>
+            </div>
+
+              {/* Long text edge case */}
+              <div className="mt-[20px] flex flex-col gap-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Long content — Expand to modal</span>
+                <div className="relative">
+                  <div className="flex items-center justify-between px-[12px] pt-[10px] pb-[8px] rounded-t-[8px]"
+                    style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", borderBottom: "none" }}>
+                    <span className="text-[12px] font-semibold" style={{ color: "var(--field-label)" }}>Agent Instructions</span>
+                    <button
+                      onClick={() => setTaExpandOpen(true)}
+                      className="flex items-center justify-center w-[24px] h-[24px] rounded-[4px] transition-colors hover:bg-[var(--color-surface-neutral-default)]"
+                      style={{ color: "var(--field-supporting)", background: "transparent", border: "none", cursor: "pointer" }}
+                      aria-label="Expand to full editor"
+                    >
+                      <LucideIcons.Maximize2 size={13} />
+                    </button>
+                  </div>
+                  <Textarea
+                    value={taExpandText}
+                    onChange={e => setTaExpandText(e.target.value)}
+                    className="rounded-t-none !rounded-b-[8px]"
+                    style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+                  />
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Edge case — long content</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>When a configuration field may contain very long text (e.g. agent instructions, system prompts, policy definitions), add a titled header with an expand button. Clicking ↗ opens a modal where the user can read or edit the full content without layout constraints. The modal textarea is fully editable — changes sync back to the original field.</div>
+                </div>
+              </div>
+
+              {/* Expand modal */}
+              {taExpandOpen && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}>
+                  <div className="flex flex-col rounded-[12px] w-[600px] max-w-[90vw]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
+                    <div className="flex items-center justify-between px-[20px] py-[16px]" style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                      <span className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>Agent Instructions</span>
+                      <button onClick={() => setTaExpandOpen(false)} className="flex items-center justify-center w-[28px] h-[28px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]"
+                        style={{ color: "var(--field-supporting)", background: "transparent", border: "none", cursor: "pointer" }}>
+                        <LucideIcons.X size={16} />
+                      </button>
+                    </div>
+                    <div className="p-[20px]">
+                      <Textarea value={taExpandText} onChange={e => setTaExpandText(e.target.value)} expand style={{ minHeight: 280 }} autoFocus />
+                    </div>
+                    <div className="flex justify-end gap-[8px] px-[20px] pb-[16px]">
+                      <Button variant="secondary" size="sm" onClick={() => setTaExpandOpen(false)}>Close</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecTa(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecTa ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecTa && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--field-border", usage: "border" },
+                        { token: "--field-label", usage: "label" },
+                        { token: "--field-supporting", usage: "placeholder" },
+                        { token: "--color-border-error-default", usage: "error border" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: height varies</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeFormItem === "select" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>Select</SectionLabel>
+              <button onClick={() => setPgModal("form-select")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>Dropdown field for choosing from a predefined set of options. Always use the DS Select — never a native HTML select.</p>
+            <div className="grid grid-cols-2 gap-[12px]">
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Default</span>
+                <Select placeholder="Select category" />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Filled</span>
+                <Select placeholder="Select category" value="Monitoring" />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Error</span>
+                <Select placeholder="Select category" state="error" />
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Disabled</span>
+                <Select placeholder="Select category" state="disabled" />
+              </div>
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecSel(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecSel ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecSel && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--field-border", usage: "border" },
+                        { token: "--field-label", usage: "label" },
+                        { token: "--field-supporting", usage: "placeholder" },
+                        { token: "--primary", usage: "focus ring" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: height 40px, radius 6px</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeFormItem === "toggle" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>Toggle</SectionLabel>
+              <button onClick={() => setPgModal("form-toggle")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>Boolean on/off field. Sends a JSON boolean, not a string. Label always to the right of the toggle.</p>
+            <div className="flex flex-col gap-[16px]">
+              {[
+                { label: "Off (default)",  checked: false, disabled: false, sublabel: "Enable automation" },
+                { label: "On",             checked: true,  disabled: false, sublabel: "Enable automation" },
+                { label: "Disabled / Off", checked: false, disabled: true,  sublabel: "Requires admin access" },
+                { label: "Disabled / On",  checked: true,  disabled: true,  sublabel: "Managed by organization" },
+              ].map(v => (
+                <div key={v.label} className="flex items-center gap-[12px] p-[12px] rounded-[6px]"
+                  style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <Toggle checked={v.checked} disabled={v.disabled} onChange={() => {}} />
+                  <div>
+                    <div className="text-[12px] font-semibold text-[var(--foreground)]">{v.sublabel}</div>
+                    <div className="text-[10px] mt-[1px]" style={{ color: "var(--field-supporting)" }}>{v.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecTog(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecTog ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecTog && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--primary", usage: "checked bg" },
+                        { token: "--color-surface-neutral-default", usage: "unchecked bg" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: track 36x20px, thumb 16px circle</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeFormItem === "number" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>Number</SectionLabel>
+              <button onClick={() => setPgModal("form-number")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>
+              Numeric input with optional min/max/step constraints. No DS component — compose with <code>Input</code> using <code>type="number"</code>, or build a stepper with +/− buttons for whole-number ranges.
+            </p>
+            <div className="grid grid-cols-2 gap-[16px]">
+
+              {/* ① Native number input */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Default — Input type number</span>
+                  <Input placeholder="0" type="number" />
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">① Native</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Use <code>Input</code> with <code>type="number"</code> for free-entry numeric values. Hide browser spinners with CSS.</div>
+                </div>
+              </div>
+
+              {/* ② Stepper with +/− */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Stepper — whole numbers</span>
+                  <div className="flex items-center rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)", background: "var(--field-bg)" }}>
+                    <button className="w-[36px] h-[36px] flex items-center justify-center shrink-0 transition-colors"
+                      style={{ color: "var(--field-supporting)", borderRight: "0.5px solid var(--field-border)" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "var(--color-surface-neutral-subtle)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                      onClick={() => setSliderVal2(v => Math.max(0, v - 1))}>
+                      <LucideIcons.Minus size={12} />
+                    </button>
+                    <span className="flex-1 text-center text-[13px] font-semibold text-[var(--foreground)]">{sliderVal2}</span>
+                    <button className="w-[36px] h-[36px] flex items-center justify-center shrink-0 transition-colors"
+                      style={{ color: "var(--field-supporting)", borderLeft: "0.5px solid var(--field-border)" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "var(--color-surface-neutral-subtle)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                      onClick={() => setSliderVal2(v => Math.min(100, v + 1))}>
+                      <LucideIcons.Plus size={12} />
+                    </button>
+                  </div>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">② Stepper</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Build from a div + two <code>Button variant="tertiary"</code> + a display span. Use for small integer ranges (0–10, 1–30).</div>
+                </div>
+              </div>
+
+              {/* ③ With unit suffix */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>With unit suffix</span>
+                  <div className="flex items-center rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)", background: "var(--field-bg)" }}>
+                    <input
+                      type="number"
+                      defaultValue={5000}
+                      className="flex-1 bg-transparent outline-none text-[13px] px-[12px] py-[8px]"
+                      style={{ color: "var(--foreground)", minWidth: 0 }}
+                    />
+                    <span className="shrink-0 px-[10px] text-[12px] font-semibold" style={{ color: "var(--field-supporting)", borderLeft: "0.5px solid var(--field-border)", background: "var(--color-surface-neutral-subtle)" }}>ms</span>
+                  </div>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">③ With unit</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Suffix badge for units (ms, %, px, etc.). Same border-radius wrapper, unit area gets a subtle tint.</div>
+                </div>
+              </div>
+
+              {/* ④ Error state */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[6px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Error — out of range</span>
+                  <div>
+                    <div className="flex items-center rounded-[8px]" style={{ border: "1px solid var(--field-error)", background: "var(--field-bg)" }}>
+                      <input
+                        type="number"
+                        defaultValue={-5}
+                        className="flex-1 bg-transparent outline-none text-[13px] px-[12px] py-[8px]"
+                        style={{ color: "var(--foreground)" }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-[4px] mt-[4px]">
+                      <LucideIcons.AlertCircle size={11} style={{ color: "var(--field-error)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-error)" }}>Value must be 0 or greater</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">④ Error</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Border switches to <code>var(--field-error)</code>. Show message below with icon + <code>var(--field-error)</code> text.</div>
+                </div>
+              </div>
+
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecNum(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecNum ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecNum && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--field-border", usage: "border" },
+                        { token: "--field-label", usage: "label" },
+                        { token: "--field-supporting", usage: "placeholder" },
+                        { token: "--color-border-error-default", usage: "error border" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: same as text input</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeFormItem === "selection-card" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>Selection Card</SectionLabel>
+              <button onClick={() => setPgModal("form-selection-card")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>
+              Full-width card with <code>HighlightIcon</code> + label + description. Use when options need visual context to compare — trigger types, AI model selection, output channels. Each option is a <code>CardContainer</code> row; the entire surface is a click target.
+            </p>
+            <div className="flex flex-col gap-[24px]">
+
+              {/* Single-select */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Single-select — trigger type</span>
+                <div className="flex flex-col gap-[8px]">
+                  {([
+                    { id: "event",    iconName: "Zap",          variant: "alert",       label: "Event trigger",  desc: "Fires when a detected customer event matches your conditions" },
+                    { id: "schedule", iconName: "Clock",         variant: "informative", label: "Scheduled",      desc: "Runs on a cron expression you define — daily, weekly, or custom" },
+                    { id: "manual",   iconName: "Play",          variant: "neutral",     label: "Manual",         desc: "Triggered explicitly by a user or external API call" },
+                  ] as { id: string; iconName: string; variant: HighlightIconVariant; label: string; desc: string }[]).map(opt => {
+                    const active = selCardSingle === opt.id;
+                    return (
+                      <CardContainer
+                        key={opt.id}
+                        size="sm"
+                        selected={active}
+                        onClick={() => setSelCardSingle(opt.id)}
+                        className="flex items-center gap-[12px]"
+                      >
+                        <HighlightIcon size="sm" variant={opt.variant} iconName={opt.iconName} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-semibold text-[var(--foreground)]">{opt.label}</div>
+                          <div className="text-[11px] mt-[1px]" style={{ color: "var(--field-supporting)" }}>{opt.desc}</div>
+                        </div>
+                        <div
+                          className="w-[16px] h-[16px] rounded-full shrink-0 flex items-center justify-center"
+                          style={{ border: `1.5px solid ${active ? "var(--primary)" : "var(--field-border)"}` }}
+                        >
+                          {active && <div className="w-[8px] h-[8px] rounded-full" style={{ background: "var(--primary)" }} />}
+                        </div>
+                      </CardContainer>
+                    );
+                  })}
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Single-select</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Each option is a <code>CardContainer</code> with <code>selected</code> prop — applies <code>var(--card-default-selected-bd)</code> border automatically. Trailing radio circle fills with <code>var(--primary)</code> when selected. Click to try it.</div>
+                </div>
+              </div>
+
+              {/* Multi-select */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Multi-select — notification channels</span>
+                <div className="flex flex-col gap-[8px]">
+                  {([
+                    { id: "email",   iconName: "Mail",          variant: "informative", label: "Email",   desc: "Sends a templated email to the assigned CSM" },
+                    { id: "slack",   iconName: "MessageSquare",  variant: "success",     label: "Slack",   desc: "Posts to the configured channel via webhook" },
+                    { id: "webhook", iconName: "Link2",          variant: "neutral",     label: "Webhook", desc: "Calls the endpoint with a JSON payload" },
+                    { id: "sms",     iconName: "Phone",          variant: "alert",       label: "SMS",     desc: "Sends a text message to the on-call number" },
+                  ] as { id: string; iconName: string; variant: HighlightIconVariant; label: string; desc: string }[]).map(opt => {
+                    const active = selCardMulti.includes(opt.id);
+                    return (
+                      <CardContainer
+                        key={opt.id}
+                        size="sm"
+                        selected={active}
+                        onClick={() => setSelCardMulti(prev =>
+                          active ? prev.filter(id => id !== opt.id) : [...prev, opt.id]
+                        )}
+                        className="flex items-center gap-[12px]"
+                      >
+                        <HighlightIcon size="sm" variant={opt.variant} iconName={opt.iconName} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-semibold text-[var(--foreground)]">{opt.label}</div>
+                          <div className="text-[11px] mt-[1px]" style={{ color: "var(--field-supporting)" }}>{opt.desc}</div>
+                        </div>
+                        <div
+                          className="w-[16px] h-[16px] rounded-[4px] shrink-0 flex items-center justify-center transition-all"
+                          style={{
+                            background: active ? "var(--primary)" : "transparent",
+                            border: `1.5px solid ${active ? "var(--primary)" : "var(--field-border)"}`,
+                          }}
+                        >
+                          {active && <LucideIcons.Check size={10} style={{ color: "var(--color-text-negative)" }} />}
+                        </div>
+                      </CardContainer>
+                    );
+                  })}
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Multi-select</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Trailing checkbox instead of radio — each card toggles independently. Same <code>CardContainer</code> + <code>selected</code> prop pattern. Click each to toggle.</div>
+                </div>
+              </div>
+
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecSc(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecSc ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecSc && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--color-border-primary-default", usage: "selected border" },
+                        { token: "--color-surface-primary-subtle", usage: "selected bg" },
+                        { token: "--field-border", usage: "unselected" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: radius 8px, padding 12px</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeFormItem === "slider" && <PatternCard>
+            <div className="flex items-center justify-between mb-[12px]">
+              <SectionLabel>Slider / Range</SectionLabel>
+              <button onClick={() => setPgModal("form-slider")} className="flex items-center gap-[6px] text-[11px] font-semibold px-[10px] py-[5px] rounded-[6px] transition-colors hover:bg-[var(--color-surface-neutral-default)]" style={{ color: "var(--primary)", border: "1px solid var(--color-border-primary-default)" }}>
+                <LucideIcons.Play size={10} />Playground
+              </button>
+            </div>
+            <p className="text-[13px] mb-[20px]" style={{ color: "var(--field-supporting)" }}>
+              Numeric range control for continuous or stepped values. Use when exact keyboard entry matters less than relative position — thresholds, percentages, time windows. Supports single-thumb (<code>type="single"</code>) and dual-thumb range selection (<code>type="range"</code>).
+            </p>
+            <div className="flex flex-col gap-[24px]">
+
+              {/* ① Single — with label */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>① Single — with label</span>
+                <Slider
+                  label="Health score threshold"
+                  value={sliderVal}
+                  onChange={setSliderVal}
+                  min={0}
+                  max={100}
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Single slider</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Track: 4px, <code>--slider-track-bg</code>. Fill: <code>--slider-fill-bg</code> (primary blue). Thumb: 16px, white with primary ring. Use for single continuous values.</div>
+                </div>
+              </div>
+
+              {/* ② Range — dual thumb */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>② Range — dual thumb</span>
+                <Slider
+                  type="range"
+                  label="Score window"
+                  value={sliderRange}
+                  onChange={setSliderRange}
+                  min={0}
+                  max={100}
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Range slider</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Two thumbs define a selected interval. Current min/max values shown adjacent to the track. Use for date windows, score bands, or price ranges. Drag either thumb — they cannot cross.</div>
+                </div>
+              </div>
+
+              {/* ③ With semantic fill */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>③ Semantic fill — risk level</span>
+                <div className="flex flex-col gap-[10px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Alert threshold</span>
+                    <span className="text-[13px] font-semibold" style={{ color: sliderVal2 >= 70 ? "var(--color-text-error)" : sliderVal2 >= 40 ? "var(--color-text-warning)" : "var(--color-text-success)" }}>
+                      {sliderVal2}%
+                    </span>
+                  </div>
+                  <div className="relative h-[20px] flex items-center">
+                    <div className="absolute w-full h-[4px] rounded-full" style={{ background: "var(--slider-track-bg)" }} />
+                    <div
+                      className="absolute h-[4px] rounded-full transition-colors"
+                      style={{
+                        width: `${sliderVal2}%`,
+                        background: sliderVal2 >= 70 ? "var(--color-border-error-default)" : sliderVal2 >= 40 ? "var(--color-border-alert-default)" : "var(--color-text-success)",
+                      }}
+                    />
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={sliderVal2}
+                      onChange={e => setSliderVal2(Number(e.target.value))}
+                      className="absolute w-full opacity-0 cursor-pointer h-[20px]"
+                    />
+                    <div
+                      className="absolute w-[16px] h-[16px] rounded-full pointer-events-none transition-colors"
+                      style={{
+                        left: `calc(${sliderVal2}% - 8px)`,
+                        background: "var(--slider-thumb-bg)",
+                        border: `2px solid ${sliderVal2 >= 70 ? "var(--color-border-error-default)" : sliderVal2 >= 40 ? "var(--color-border-alert-default)" : "var(--color-text-success)"}`,
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px]" style={{ color: "var(--field-supporting)" }}>
+                    <span>0% — Safe</span>
+                    <span>40% — Warning</span>
+                    <span>70% — Critical</span>
+                  </div>
+                </div>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Semantic fill</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Override the fill and thumb border with a semantic color (success/warning/error). Build from the base <code>Slider</code> markup — not a prop. Only use when the value carries a risk level.</div>
+                </div>
+              </div>
+
+              {/* ④ Disabled */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>④ Disabled</span>
+                <Slider
+                  label="Cooldown window (managed by org)"
+                  value={60}
+                  onChange={() => {}}
+                  disabled
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Disabled</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Pass <code>disabled</code> — applies <code>opacity-40</code> + <code>pointer-events-none</code> to the whole control. Works for both single and range variants.</div>
+                </div>
+              </div>
+
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecSli(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecSli ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecSli && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    {[
+                        { token: "--slider-track-bg",        usage: "empty track — Surface/Neutral/Default" },
+                        { token: "--slider-fill-bg",         usage: "filled region — primary blue" },
+                        { token: "--slider-thumb-bg",        usage: "thumb fill — page surface (white)" },
+                        { token: "--slider-thumb-border",    usage: "thumb ring — primary blue" },
+                        { token: "--slider-label-color",     usage: "label text" },
+                        { token: "--slider-end-label-color", usage: "min / max end labels" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma node 16997:20603 — track 4px, thumb 16px, range fills between the two thumbs</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeFormItem === "tag-input" && <PatternCard>
+            <div className="flex flex-col gap-[24px]">
+              <div>
+                <div className="text-[14px] font-semibold mb-[4px]" style={{ color: "var(--foreground)" }}>Tag Input</div>
+                <div className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Free-form categorical labels committed via Enter or the Add tag button. Chips wrap to new rows; overflow collapses to a "+N" counter. Duplicate tags (case-insensitive) are silently ignored. Node 16937:21999.</div>
+              </div>
+
+              {/* ① Default — 6-color palette visible */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>① Default — color palette</span>
+                <TagInput
+                  tags={tagInputTags1}
+                  onAddTag={v => setTagInputTags1(t => [...t, v])}
+                  onRemoveTag={v => setTagInputTags1(t => t.filter(x => x !== v))}
+                  placeholder="Write the tag name"
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Color rotation</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Chips cycle through 6 DS palettes by insertion index: blue → neutral → lime → light blue → yellow → purple. Add tags to see all 6. Duplicate tags (case-insensitive) are silently ignored.</div>
+                </div>
+              </div>
+
+              {/* ② Empty */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>② Empty</span>
+                <TagInput
+                  tags={tagInputTags2}
+                  onAddTag={v => setTagInputTags2(t => [...t, v])}
+                  onRemoveTag={v => setTagInputTags2(t => t.filter(x => x !== v))}
+                  placeholder="Write the tag name"
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Empty</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Initial state — only the input row is visible (40px). Clicking anywhere in the field focuses the cursor. The chip row appears only after the first tag is committed.</div>
+                </div>
+              </div>
+
+              {/* ③ Error */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>③ Error</span>
+                <TagInput
+                  tags={tagInputTagsErr}
+                  onAddTag={v => setTagInputTagsErr(t => [...t, v])}
+                  onRemoveTag={v => setTagInputTagsErr(t => t.filter(x => x !== v))}
+                  error="At least one environment tag is required"
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Error</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Red border on input + error message below. Pass an <code>error</code> string to trigger. The field remains interactive — the user can add a tag to resolve the error (parent clears the <code>error</code> prop).</div>
+                </div>
+              </div>
+
+              {/* ④ Disabled */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>④ Disabled</span>
+                <TagInput
+                  tags={["system", "readonly", "org-managed"]}
+                  onAddTag={() => {}}
+                  onRemoveTag={() => {}}
+                  disabled
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Disabled</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Pass <code>disabled</code> — entire field is inert (opacity 40%, pointer-events none). Existing tags show without × remove buttons. Use when tags are controlled by the system or a preceding step in a wizard.</div>
+                </div>
+              </div>
+
+              {/* ⑤ Overflow — large set */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>⑤ Overflow — large set (20 tags)</span>
+                <TagInput
+                  tags={tagInputTagsOverflow}
+                  onAddTag={v => setTagInputTagsOverflow(t => [...t, v])}
+                  onRemoveTag={v => setTagInputTagsOverflow(t => t.filter(x => x !== v))}
+                  maxVisibleTags={8}
+                  placeholder="Write the tag name"
+                />
+                <div className="p-[8px] rounded-[6px] flex flex-col gap-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>DS behavior with large tag sets</div>
+                  <div className="flex flex-col gap-[4px]">
+                    {[
+                      { label: "Collapsed", desc: "Only the first 8 tags are visible in 2 rows of 4. The rest is collapsed into a \"View more: +12\" counter — prevents the field from expanding indefinitely." },
+                      { label: "Expanded", desc: "Clicking the counter reveals all tags. Field height grows to accommodate all rows (20 tags → 5 rows of 4)." },
+                      { label: "Collapse", desc: "Collapses via \"View less\", the Escape key, or clicking outside the field." },
+                      { label: "Color palette", desc: "With 20 tags, the 6-color palette cycles 3 full times + 2 extras (blue, neutral). Visual variety is guaranteed regardless of tag count." },
+                    ].map(row => (
+                      <div key={row.label} className="flex gap-[6px]">
+                        <span className="text-[11px] font-semibold shrink-0 w-[70px]" style={{ color: "var(--foreground)" }}>{row.label}</span>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ⑥ Max tags reached */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>⑥ Max tags reached</span>
+                <TagInput
+                  tags={tagInputTagsMax}
+                  onAddTag={v => setTagInputTagsMax(t => [...t, v])}
+                  onRemoveTag={v => setTagInputTagsMax(t => t.filter(x => x !== v))}
+                  maxTags={5}
+                  placeholder="Write the tag name"
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">Cap reached</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>When <code>tags.length ≥ maxTags</code> the input and Add tag button are disabled and a "Maximum tags reached" message appears below. Existing tags remain editable (remove only). Remove a tag to re-enable the input. Here <code>maxTags={"{5}"}</code>.</div>
+                </div>
+              </div>
+
+              {/* ── Playground ─────────────────────────────────────────────── */}
+              <div className="flex flex-col gap-[12px] pt-[8px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Playground</div>
+
+                {/* Controls */}
+                <div className="flex flex-wrap gap-[8px] items-center">
+                  {/* Disabled toggle */}
+                  <button
+                    onClick={() => setTiPgDisabled(v => !v)}
+                    className="flex items-center gap-[6px] text-[12px] font-medium px-[10px] rounded-[6px]"
+                    style={{ height: 28, border: "1px solid var(--field-border)", background: tiPgDisabled ? "var(--color-surface-primary-subtle)" : "transparent", color: tiPgDisabled ? "var(--color-text-info)" : "var(--foreground)", cursor: "pointer" }}>
+                    <LucideIcons.Lock size={12} />
+                    {tiPgDisabled ? "Disabled ON" : "Disabled OFF"}
+                  </button>
+                  {/* Error toggle */}
+                  <button
+                    onClick={() => setTiPgError(v => !v)}
+                    className="flex items-center gap-[6px] text-[12px] font-medium px-[10px] rounded-[6px]"
+                    style={{ height: 28, border: "1px solid var(--field-border)", background: tiPgError ? "var(--color-surface-error-subtle)" : "transparent", color: tiPgError ? "var(--color-text-error)" : "var(--foreground)", cursor: "pointer" }}>
+                    <LucideIcons.AlertCircle size={12} />
+                    {tiPgError ? "Error ON" : "Error OFF"}
+                  </button>
+                  {/* Reset */}
+                  <button
+                    onClick={() => setTiPgTags(["dev", "staging"])}
+                    className="flex items-center gap-[6px] text-[12px] font-medium px-[10px] rounded-[6px]"
+                    style={{ height: 28, border: "1px solid var(--field-border)", background: "transparent", color: "var(--foreground)", cursor: "pointer" }}>
+                    <LucideIcons.RotateCcw size={12} />
+                    Reset
+                  </button>
+                </div>
+
+                {/* Live preview */}
+                <TagInput
+                  tags={tiPgTags}
+                  onAddTag={v => setTiPgTags(t => [...t, v])}
+                  onRemoveTag={v => setTiPgTags(t => t.filter(x => x !== v))}
+                  disabled={tiPgDisabled}
+                  error={tiPgError ? "This field requires at least one tag" : undefined}
+                  placeholder="Write the tag name"
+                />
+
+                <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                  Type a tag name and press <kbd className="px-[4px] py-[0px] rounded-[3px] font-mono text-[10px]" style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)", border: "0.5px solid var(--field-border)" }}>Enter</kbd> or click Add tag. Toggle error/disabled to test states. Add 6+ tags to see the full color palette cycle.
+                </div>
+              </div>
+
+            </div>
+              <div className="mt-[16px]">
+                <button onClick={() => setShowSpecTagInput(v => !v)}
+                  className="flex items-center gap-[6px] text-[11px] font-semibold"
+                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecTagInput ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                  Design Spec
+                </button>
+                {showSpecTagInput && (
+                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide mb-[2px]" style={{ color: "var(--field-supporting)" }}>Field tokens</div>
+                    {[
+                      { token: "--field-border",                  usage: "input + button default border" },
+                      { token: "--field-border-focus",            usage: "input border on focus (blue)" },
+                      { token: "--field-border-error",            usage: "input border in error state" },
+                      { token: "--color-border-neutral-lighter",  usage: "input + button border when disabled" },
+                      { token: "--field-placeholder",             usage: "placeholder + disabled text + max-tags message" },
+                      { token: "--color-surface-neutral-subtle",  usage: "Add tag button bg when disabled" },
+                      { token: "--color-text-error",              usage: "error message text" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="text-[10px] font-semibold uppercase tracking-wide mt-[4px] mb-[2px]" style={{ color: "var(--field-supporting)" }}>Chip palette tokens (6 × 3)</div>
+                    {[
+                      { token: "--color-surface-primary-subtle + --color-border-primary-default + --color-text-info",       usage: "① Blue chip" },
+                      { token: "--color-surface-neutral-default + --color-border-neutral-default + --color-text-subtitle",  usage: "② Neutral chip" },
+                      { token: "--color-surface-lime-subtle + --color-border-lime-green-default + --color-text-lime-green", usage: "③ Lime chip" },
+                      { token: "--color-surface-light-blue-subtle + --color-border-light-blue-default + --color-text-light-blue", usage: "④ Light blue chip" },
+                      { token: "--color-surface-yellow-more-subtle + --color-border-yellow-default + --color-text-yellow",  usage: "⑤ Yellow chip" },
+                      { token: "--color-surface-purple-more-subtle + --color-border-purple-default + --color-text-purple",  usage: "⑥ Purple chip" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0 max-w-[220px]"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)", wordBreak: "break-all" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma node 16937:21999 — input 40px · chip 24px · radius 8px · chip gap 8px</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </PatternCard>}
+
+          {activeFormItem === "add-fields" && <PatternCard>
+            <div className="flex flex-col gap-[24px]">
+              <div>
+                <div className="text-[14px] font-semibold mb-[4px]" style={{ color: "var(--foreground)" }}>Add Fields</div>
+                <div className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Dynamic field list for Node Configuration panels. Each row is a 32px text input. The + button appends a new empty row and auto-focuses it. Inline validation catches empty labels and duplicates. Node 16924:17092.</div>
+              </div>
+
+              {/* ① 1 Field — starting state */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>① 1 Field — starting state</span>
+                <AddFields
+                  fields={afFields1}
+                  onAddField={() => setAfFields1(f => [...f, { id: crypto.randomUUID(), label: "" }])}
+                  onRemoveField={id => setAfFields1(f => f.filter(x => x.id !== id))}
+                  onChange={(id, val) => setAfFields1(f => f.map(x => x.id === id ? { ...x, label: val } : x))}
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Starting state</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>One field row pre-populated by the system. The + button is always visible below the last row. The × button appears on hover for each row, and is always visible when the row has content.</div>
+                </div>
+              </div>
+
+              {/* ② 2 Fields — inline validation */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>② 2 Fields — inline validation</span>
+                <AddFields
+                  fields={afFields2}
+                  onAddField={() => setAfFields2(f => [...f, { id: crypto.randomUUID(), label: "" }])}
+                  onRemoveField={id => setAfFields2(f => f.filter(x => x.id !== id))}
+                  onChange={(id, val) => setAfFields2(f => f.map(x => x.id === id ? { ...x, label: val } : x))}
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Inline validation</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Each row is independent. Blur the empty row to trigger the "required" error. Type the same label in both rows to trigger the "duplicate" error on both. The form cannot be saved while errors exist.</div>
+                </div>
+              </div>
+
+              {/* ③ Max reached */}
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>③ Max reached — maxFields={"{3}"}</span>
+                <AddFields
+                  fields={afFieldsMax}
+                  onAddField={() => setAfFieldsMax(f => [...f, { id: crypto.randomUUID(), label: "" }])}
+                  onRemoveField={id => setAfFieldsMax(f => f.filter(x => x.id !== id))}
+                  onChange={(id, val) => setAfFieldsMax(f => f.map(x => x.id === id ? { ...x, label: val } : x))}
+                  maxFields={3}
+                />
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Cap reached</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>When <code>fields.length ≥ maxFields</code>, the + button is replaced by "Maximum fields reached". The user must remove a row to add another. DS recommends a max of 20 for most node types — this example uses 3 to demonstrate the state early.</div>
+                </div>
+              </div>
+
+              {/* ── Playground ─────────────────────────────────────────────── */}
+              <div className="flex flex-col gap-[12px] pt-[8px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Playground</div>
+
+                {/* Controls row */}
+                <div className="flex flex-wrap gap-[8px] items-center">
+                  {/* Disabled toggle */}
+                  <button
+                    onClick={() => setAfPgDisabled(v => !v)}
+                    className="flex items-center gap-[6px] text-[12px] font-medium px-[10px] rounded-[6px]"
+                    style={{ height: 28, border: "1px solid var(--field-border)", background: afPgDisabled ? "var(--color-surface-primary-subtle)" : "transparent", color: afPgDisabled ? "var(--color-text-info)" : "var(--foreground)", cursor: "pointer" }}>
+                    <LucideIcons.Lock size={12} />
+                    {afPgDisabled ? "Disabled ON" : "Disabled OFF"}
+                  </button>
+
+                  {/* maxFields control */}
+                  <div className="flex items-center gap-[4px]">
+                    <span className="text-[11px] font-medium" style={{ color: "var(--field-supporting)" }}>Max:</span>
+                    {[2, 3, 5, 10].map(n => (
+                      <button key={n} onClick={() => setAfPgMaxFields(n)}
+                        className="text-[11px] font-medium rounded-[4px] px-[8px]"
+                        style={{ height: 24, border: "1px solid var(--field-border)", cursor: "pointer", background: afPgMaxFields === n ? "var(--color-surface-primary-subtle)" : "transparent", color: afPgMaxFields === n ? "var(--color-text-info)" : "var(--foreground)" }}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Reset */}
+                  <button
+                    onClick={() => { setAfPgFields([{ id: crypto.randomUUID(), label: "output_key" }]); setAfPgDisabled(false); setAfPgMaxFields(5) }}
+                    className="flex items-center gap-[6px] text-[12px] font-medium px-[10px] rounded-[6px]"
+                    style={{ height: 28, border: "1px solid var(--field-border)", background: "transparent", color: "var(--foreground)", cursor: "pointer" }}>
+                    <LucideIcons.RotateCcw size={12} />
+                    Reset
+                  </button>
+                </div>
+
+                {/* Counter badge */}
+                <div className="flex items-center gap-[6px]">
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    {afPgFields.length} / {afPgMaxFields} fields
+                  </span>
+                  {afPgFields.length >= afPgMaxFields && (
+                    <span className="text-[10px] font-semibold px-[6px] py-[1px] rounded-[4px]"
+                      style={{ background: "var(--color-surface-error-subtle)", color: "var(--color-text-error)" }}>
+                      MAX REACHED
+                    </span>
+                  )}
+                </div>
+
+                {/* Live component */}
+                <AddFields
+                  fields={afPgFields}
+                  onAddField={() => setAfPgFields(f => [...f, { id: crypto.randomUUID(), label: "" }])}
+                  onRemoveField={id => setAfPgFields(f => f.filter(x => x.id !== id))}
+                  onChange={(id, val) => setAfPgFields(f => f.map(x => x.id === id ? { ...x, label: val } : x))}
+                  disabled={afPgDisabled}
+                  maxFields={afPgMaxFields}
+                  placeholder={afPgPlaceholder}
+                />
+
+                {/* Component variables inspector */}
+                <div className="rounded-[8px] p-[10px] flex flex-col gap-[8px]"
+                  style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-supporting)" }}>Component variables</div>
+                  <div className="grid grid-cols-2 gap-x-[16px] gap-y-[6px]">
+                    {[
+                      { prop: "fields.length",   value: String(afPgFields.length),    type: "number"  },
+                      { prop: "maxFields",        value: String(afPgMaxFields),        type: "number"  },
+                      { prop: "disabled",         value: String(afPgDisabled),         type: "boolean" },
+                      { prop: "placeholder",      value: `"${afPgPlaceholder}"`,       type: "string"  },
+                    ].map(row => (
+                      <div key={row.prop} className="flex items-center gap-[6px]">
+                        <code className="text-[10px] font-mono shrink-0" style={{ color: "var(--color-text-info)" }}>{row.prop}</code>
+                        <span className="text-[10px] font-medium" style={{ color: row.type === "boolean" ? (row.value === "true" ? "var(--color-text-lime-green)" : "var(--field-supporting)") : row.type === "number" ? "var(--color-text-yellow)" : "var(--foreground)" }}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Placeholder control */}
+                  <div className="flex items-center gap-[8px] pt-[6px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                    <span className="text-[10px] font-medium shrink-0" style={{ color: "var(--field-supporting)" }}>placeholder:</span>
+                    <input
+                      value={afPgPlaceholder}
+                      onChange={e => setAfPgPlaceholder(e.target.value)}
+                      className="flex-1 text-[11px] font-medium bg-transparent outline-none border-none"
+                      style={{ color: "var(--foreground)", borderBottom: "1px solid var(--field-border)" }}
+                      placeholder="Field name"
+                    />
+                  </div>
+                </div>
+
+                {/* Edge case hints */}
+                <div className="flex flex-col gap-[4px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide mb-[2px]" style={{ color: "var(--field-supporting)" }}>Edge cases to explore</div>
+                  {[
+                    { label: "Empty on blur",   desc: "Click +, leave the new row empty, then click outside → required error." },
+                    { label: "Duplicate label", desc: "Type the same label in two different rows → error on both rows simultaneously." },
+                    { label: "Max reached",     desc: "Set Max to 2 or 3, then add until the + disappears and the cap message appears." },
+                    { label: "Disabled",        desc: "Toggle Disabled ON → entire list is inert; rows show without × remove buttons." },
+                    { label: "Auto-focus",      desc: "Click + and observe the new row gets focus automatically." },
+                  ].map(row => (
+                    <div key={row.label} className="flex gap-[6px]">
+                      <span className="text-[10px] font-semibold shrink-0 w-[90px]" style={{ color: "var(--foreground)" }}>{row.label}</span>
+                      <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{row.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-[16px]">
+              <button onClick={() => setShowSpecAddFields(v => !v)}
+                className="flex items-center gap-[6px] text-[11px] font-semibold"
+                style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                <LucideIcons.ChevronRight size={12} style={{ transform: showSpecAddFields ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+                Design Spec
+              </button>
+              {showSpecAddFields && (
+                <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                  {[
+                    { token: "--field-border",                  usage: "default row border (0.5px)" },
+                    { token: "--field-border-focus",            usage: "row border on focus (1px, blue)" },
+                    { token: "--field-border-error",            usage: "row border in error state (0.5px, red)" },
+                    { token: "--color-border-neutral-lighter",  usage: "max-reached row border" },
+                    { token: "--field-placeholder",             usage: "placeholder text + max-reached message text" },
+                    { token: "--field-supporting",              usage: "+ icon color + × icon color" },
+                    { token: "--color-surface-neutral-subtle",  usage: "max-reached row background" },
+                    { token: "--color-text-error",              usage: "inline validation error text" },
+                    { token: "--surface",                       usage: "row background + + button background" },
+                    { token: "--foreground",                    usage: "filled input text" },
+                  ].map(row => (
+                    <div key={row.token} className="flex items-start gap-[8px]">
+                      <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                        style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                        {row.token}
+                      </code>
+                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                    <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma node 16924:17092 — row 32px · radius 8px · px 16px · gap 12px between rows</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </PatternCard>}
+
+          </div>
+        </div>
+      )}
+
+      {/* AI Summary full analysis modal */}
+      <ModalDialog
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        variant="content"
+        showIcon
+        iconName="Sparkles"
+        iconVariant="purple"
+        title="AI Summary — Customer Churn Alert"
+        slotUnstyled
+        slot={
+          <div className="flex flex-col gap-[12px]">
+            <p className="text-[13px] text-[var(--foreground)] leading-[1.6]">
+              Health score declining since Q3. Root cause analysis identified 4 contributing factors:
+            </p>
+            <ul className="flex flex-col gap-[8px]">
+              {[
+                "Support response latency above SLA — avg. 4.2h vs. 2h target",
+                "3 feature requests closed without resolution over the past 90 days",
+                "Executive sponsor changed in October — no re-engagement on record",
+                "Competing vendor evaluation started in November — sourced from 3rd-party intent data",
+              ].map((b, i) => (
+                <li key={i} className="flex items-start gap-[8px] text-[13px] text-[var(--foreground)] leading-[1.6]">
+                  <span className="mt-[8px] shrink-0 w-[4px] h-[4px] rounded-full" style={{ background: "var(--color-text-purple)" }} />
+                  {b}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[13px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+              Renewal probability: <strong style={{ color: "var(--foreground)" }}>27%</strong>. Recommended action: escalate to senior CSM and schedule executive touchpoint within 5 business days.
+            </p>
+          </div>
+        }
+        ctaPrimary={{ label: "Start playbook", onClick: () => setAiModalOpen(false) }}
+        ctaSecondary={{ label: "Dismiss", onClick: () => setAiModalOpen(false) }}
+      />
+    </div>
+    </>
+  );
+}
+
+// ── PatternSlideOutPage ───────────────────────────────────────────────────────
+
+function PatternSlideOutPage() {
+  const [tab,             setTab]             = useState<string>("when-to-use")
+  const [detailExOpen,    setDetailExOpen]    = useState(false)
+  const [formExOpen,      setFormExOpen]      = useState(false)
+  const [sidepanelExOpen, setSidepanelExOpen] = useState(false)
+
+  return (
+    <div>
+      {/* Full-screen example overlays */}
+      {detailExOpen && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 40 }}>
+          <AppBackground />
+          <button
+            onClick={() => setDetailExOpen(false)}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 45, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} /> Close Preview
+          </button>
+          <SlideOutDetailExampleScreen onClose={() => setDetailExOpen(false)} />
+        </div>
+      )}
+      {formExOpen && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 40 }}>
+          <AppBackground />
+          <button
+            onClick={() => setFormExOpen(false)}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 45, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} /> Close Preview
+          </button>
+          <SlideOutFormExampleScreen onClose={() => setFormExOpen(false)} />
+        </div>
+      )}
+      {sidepanelExOpen && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 40 }}>
+          <AppBackground />
+          <button
+            onClick={() => setSidepanelExOpen(false)}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 45, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} /> Close Preview
+          </button>
+          <SidePanelExampleScreen onClose={() => setSidepanelExOpen(false)} />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">SlideOut / SidePanel — Anatomy, Examples & Rules</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          When to use each panel type, real examples with DS components, how to structure content inside them, and implementation rules.
+        </p>
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {([
+          { id: "when-to-use",   label: "When to Use"   },
+          { id: "anatomy",       label: "Anatomy"       },
+          { id: "content-types", label: "Content Types" },
+          { id: "rules",         label: "Rules"         },
+        ] as { id: string; label: string }[]).map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold transition-colors"
+            style={{ color: tab === t.id ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Examples tab removed — see SlideOut/SidePanel Content page for full examples ── */}
+
+      {/* placeholder so JSX below stays valid */ false && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* ── Component selection guide for PMs / agents ── */}
+          <div className="rounded-[10px] p-[20px] flex flex-col gap-[16px]"
+            style={{ background: "var(--color-surface-primary-subtle)", border: "1px solid var(--color-border-primary-default)" }}>
+            <div className="flex items-center gap-[8px]">
+              <LucideIcons.Bot size={16} style={{ color: "var(--primary)" }} />
+              <span className="text-[14px] font-semibold" style={{ color: "var(--primary)" }}>How to pick the right component & variant</span>
+            </div>
+            <p className="text-[12px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+              Use this table when generating a view or describing a UI to the agent. The decision depends on two things: <strong>temporality</strong> (is this a temporary task or a persistent layout?) and <strong>content type</strong> (is this a detail, a form, or a configuration panel?).
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[12px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--color-border-primary-default)" }}>
+                    {["Use case", "Component", "variant / props", "Key signal"].map(h => (
+                      <th key={h} className="px-[10px] py-[8px] text-left font-semibold text-[11px] uppercase tracking-wide" style={{ color: "var(--primary)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Eye button on a list row → preview entity detail", "SlideOut", 'type="with-variants" size="m"', "Temporary, task-bound, disappears on close"],
+                    ["Create or edit a record without leaving the page", "SlideOut", 'type="with-variants" size="s" showCta', "Form with cancel/save, dismissable"],
+                    ["All Filters side panel", "SlideOut", 'type="with-variants" size="s" showChips showCta', "Task-focused, scrim blocks content below"],
+                    ["Node/config panel alongside a canvas", "SidePanel", 'defaultWidth={350} showCollapsedStrip', "Persistent, no scrim, canvas stays interactive"],
+                    ["Master-detail layout (always-visible detail pane)", "SidePanel", 'defaultWidth={350} showCollapsedStrip={false}', "Structural layout — user never dismisses it"],
+                  ].map(([useCase, comp, props, signal]) => (
+                    <tr key={useCase} style={{ borderBottom: "0.5px solid var(--color-border-primary-default)" }}>
+                      <td className="px-[10px] py-[10px]" style={{ color: "var(--foreground)" }}>{useCase}</td>
+                      <td className="px-[10px] py-[10px]">
+                        <span className="font-mono text-[11px] px-[6px] py-[2px] rounded-[3px] font-semibold" style={{ background: "var(--primary)", color: "white" }}>{comp}</span>
+                      </td>
+                      <td className="px-[10px] py-[10px]">
+                        <code className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>{props}</code>
+                      </td>
+                      <td className="px-[10px] py-[10px] text-[11px]" style={{ color: "var(--field-supporting)" }}>{signal}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-col gap-[6px] pt-[4px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Content organization inside the panel</span>
+              {[
+                ["Overview tab", "AI Summary · Key Metrics (HighlightCards) · Recent list · Process steps"],
+                ["Details tab", "Technical detail table · Data origin / By Layers — always in a separate tab to avoid scroll"],
+                ["Config tab", "Form fields: Input, Textarea, Select, Toggle, Stepper, Slider, SelectionCard — with CTA buttons at the bottom"],
+              ].map(([tab2, desc]) => (
+                <div key={tab2} className="flex items-start gap-[8px]">
+                  <span className="text-[11px] font-semibold shrink-0 w-[80px]" style={{ color: "var(--primary)" }}>{tab2}</span>
+                  <span className="text-[11px]" style={{ color: "var(--foreground)" }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Example cards ── */}
+          <p className="text-[13px] text-[var(--field-supporting)] max-w-[640px]">
+            Full-screen examples using real DS components. Each opens the complete app shell — Topbar, Sidebar, Header, and content — with the panel already open and interactive.
+          </p>
+
+          {/* Card 1: Detail view — SlideOut */}
+          <div className="rounded-[10px] p-[24px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <div className="flex items-start justify-between gap-[16px]">
+              <div className="flex-1">
+                <div className="flex items-center gap-[6px] mb-[4px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Example 1 · SlideOut — Detail view</span>
+                  <span className="text-[9px] font-mono px-[5px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>type="with-variants" size="m"</span>
+                </div>
+                <div className="text-[15px] font-semibold text-[var(--foreground)] mb-[6px]">Automation detail from a list row</div>
+                <p className="text-[13px] text-[var(--field-supporting)] mb-[14px]">
+                  <strong className="text-[var(--foreground)]">Click the Eye button on any row to open the SlideOut.</strong> Tabs (Overview / Details / Config), AI Summary, responsive HighlightCards grid, recent runs list, and a technical details table in the Details tab. No sticky footer — read-only detail view.
+                </p>
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Eye → SlideOut preview. Card click would navigate to the full detail page (two different interactions).</span></div>
+                  <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">HighlightCards adapt: 3-col at 450px, 2+1 at 350px. Text truncates with tooltip on hover.</span></div>
+                  <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Drag left edge to resize: 350px → 450px → half-screen.</span></div>
+                </div>
+              </div>
+              <Button variant="primary" size="sm" icon={<LucideIcons.ArrowUpRight size={13} />} iconPosition="right" onClick={() => setDetailExOpen(true)}>
+                Open example
+              </Button>
+            </div>
+          </div>
+
+          {/* Card 2: Form inside SlideOut */}
+          <div className="rounded-[10px] p-[24px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <div className="flex items-start justify-between gap-[16px]">
+              <div className="flex-1">
+                <div className="flex items-center gap-[6px] mb-[4px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Example 2 · SlideOut — Form</span>
+                  <span className="text-[9px] font-mono px-[5px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>type="with-variants" size="s" showCta</span>
+                </div>
+                <div className="text-[15px] font-semibold text-[var(--foreground)] mb-[6px]">Create form in a SlideOut overlay</div>
+                <p className="text-[13px] text-[var(--field-supporting)] mb-[14px]">
+                  <strong className="text-[var(--foreground)]">"New Automation" in the Header opens a SlideOut form.</strong> No tabs. Sticky CTA footer with Cancel + "Create automation". Validation fires on blur — blur and clear the name field to see the error state.
+                </p>
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Create stays disabled until Name is filled (required field).</span></div>
+                  <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--primary)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Submit → success modal. Backdrop click dismisses the SlideOut.</span></div>
+                </div>
+              </div>
+              <Button variant="primary" size="sm" icon={<LucideIcons.ArrowUpRight size={13} />} iconPosition="right" onClick={() => setFormExOpen(true)}>
+                Open example
+              </Button>
+            </div>
+          </div>
+
+          {/* Card 3: SidePanel — node config */}
+          <div className="rounded-[10px] p-[24px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <div className="flex items-start justify-between gap-[16px]">
+              <div className="flex-1">
+                <div className="flex items-center gap-[6px] mb-[4px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--color-border-success-default)" }}>Example 3 · SidePanel — Config</span>
+                  <span className="text-[9px] font-mono px-[5px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-success-subtle)", color: "var(--color-border-success-default)" }}>defaultWidth={350} showCollapsedStrip</span>
+                </div>
+                <div className="text-[15px] font-semibold text-[var(--foreground)] mb-[6px]">Workflow builder — persistent node config panel</div>
+                <p className="text-[13px] text-[var(--field-supporting)] mb-[14px]">
+                  <strong className="text-[var(--foreground)]">Canvas stays fully interactive while SidePanel is open.</strong> No backdrop, no scrim — this is part of the layout. Click any node to configure it. Collapse arrow toggles the panel width. Footer: Cancel + Save.
+                </p>
+                <div className="flex flex-col gap-[4px]">
+                  <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--color-border-success-default)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Click a node → SidePanel content updates (no dismiss, no backdrop).</span></div>
+                  <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--color-border-success-default)" }} /><span className="text-[12px] text-[var(--field-supporting)]">Drag edge: 350px → 450px → half-screen. Collapse strip collapses to 40px.</span></div>
+                  <div className="flex items-center gap-[8px]"><div className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--color-border-success-default)" }} /><span className="text-[12px] text-[var(--field-supporting)]">CTAs (Reset / Save node) always in the SidePanel footer — never in the Header.</span></div>
+                </div>
+              </div>
+              <Button variant="primary" size="sm" icon={<LucideIcons.ArrowUpRight size={13} />} iconPosition="right" onClick={() => setSidepanelExOpen(true)}>
+                Open example
+              </Button>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── When to Use ───────────────────────────────────────────────────── */}
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>SlideOut vs SidePanel — Decision Table</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Scenario", "Use", "Key reason"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Record detail from a list (click row → see details)", "SlideOut", "Task-bound: user views detail then returns to list"],
+                    ["Create or edit a record in context", "SlideOut", "Temporary task with entry/exit; backdrop focuses attention"],
+                    ["All Filters panel", "SlideOut", "Task-focused overlay; scrim communicates 'choose, then apply'"],
+                    ["Node configuration in workflow builder", "SidePanel", "Persistent alongside canvas; user configures while canvas is live"],
+                    ["Master-detail layout (always-visible detail pane)", "SidePanel", "Both panes structural; no overlay, no dismiss — layout-level"],
+                  ].map(([scenario, use, reason]) => (
+                    <tr key={scenario} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{scenario}</td>
+                      <td className="px-[12px] py-[10px]">
+                        <span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px] font-semibold" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{use}</span>
+                      </td>
+                      <td className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Quick Reference</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { label: "SlideOut", color: "var(--primary)", items: ["Temporary / task-bound", "Backdrop scrim blocks content below", "Triggered by a specific action (click row, button)", "Content varies per instance", "User returns to origin on close"] },
+                { label: "SidePanel", color: "var(--color-border-success-default)", items: ["Persistent alongside main view", "No scrim — no focus isolation", "Selection-driven: content updates on click", "Part of the layout architecture", "No dismiss — navigate away to close"] },
+              ].map(col => (
+                <div key={col.label} className="flex flex-col gap-[8px] p-[16px] rounded-[6px]" style={{ border: `1px solid ${col.color}`, background: "var(--canvas)" }}>
+                  <span className="text-[12px] font-bold" style={{ color: col.color }}>{col.label}</span>
+                  {col.items.map(item => (
+                    <div key={item} className="flex items-start gap-[8px]">
+                      <div className="w-[4px] h-[4px] rounded-full mt-[5px] shrink-0" style={{ background: col.color }} />
+                      <span className="text-[12px] text-[var(--foreground)]">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Use SlideOut for detail views launched from a list — the user always returns to the list context when done." },
+                { type: "dont", text: "Don't use SidePanel when the interaction is task-bound or temporary — it removes the scrim that signals a focused flow." },
+                { type: "do",   text: "Use SidePanel when the user needs to see and interact with both the main content and the panel simultaneously." },
+                { type: "dont", text: "Don't layer a SlideOut on top of another SlideOut — max 1 active at a time. Use ModalDialog for secondary confirmation flows." },
+                { type: "do",   text: "Always include a close × button in the SlideOut header — even if backdrop click also dismisses." },
+                { type: "dont", text: "Don't put primary navigation inside a SlideOut — it's for contextual detail and task flows, not for moving between sections of the app." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{
+                    background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                    border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}`,
+                  }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>
+                    {item.type === "do" ? "DO" : "DON'T"}
+                  </span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+        </div>
+      )}
+
+      {/* ── Anatomy ───────────────────────────────────────────────────────── */}
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>Shell Anatomy</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[4px]">Three zones stacked vertically. Header and footer are fixed; content area scrolls.</p>
+            <div className="flex gap-[40px] items-start">
+              {/* Diagram */}
+              <div className="flex flex-col shrink-0" style={{ width: 240 }}>
+                <div className="rounded-t-[8px] p-[12px] flex flex-col gap-[6px]" style={{ background: "var(--color-surface-primary-subtle)", border: "1px solid var(--primary)" }}>
+                  <div className="flex items-center justify-between gap-[8px]">
+                    <div className="flex items-center gap-[6px]">
+                      <div className="w-[20px] h-[20px] rounded-[4px]" style={{ background: "var(--primary)", opacity: 0.4 }} />
+                      <span className="text-[11px] font-bold" style={{ color: "var(--primary)" }}>Title</span>
+                      <span className="px-[4px] py-[1px] rounded-[3px] text-[9px] font-bold" style={{ background: "var(--primary)", color: "white" }}>Tag</span>
+                    </div>
+                    <div className="flex gap-[4px]">
+                      <div className="w-[16px] h-[16px] rounded-[3px]" style={{ background: "var(--primary)", opacity: 0.3 }} />
+                      <div className="w-[16px] h-[16px] rounded-[3px]" style={{ background: "var(--primary)", opacity: 0.3 }} />
+                    </div>
+                  </div>
+                  <span className="text-[9px]" style={{ color: "var(--primary)" }}>Description (optional)</span>
+                  <div className="flex gap-[4px] pt-[4px]" style={{ borderTop: "0.5px solid var(--primary)" }}>
+                    {["Tab 1", "Tab 2"].map((t, i) => (
+                      <span key={t} className="text-[9px] font-semibold px-[6px] py-[2px] rounded-[3px]" style={{ background: i === 0 ? "var(--primary)" : "transparent", color: i === 0 ? "white" : "var(--primary)", opacity: i === 0 ? 1 : 0.6 }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-[8px] my-[4px]">
+                  <div className="w-[2px] self-stretch rounded-full" style={{ background: "var(--color-border-success-default)", minHeight: 8 }} />
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--color-border-success-default)" }}>scrollable</span>
+                </div>
+                <div className="p-[12px] flex flex-col gap-[8px]" style={{ background: "var(--canvas)", border: "1px dashed var(--field-border)", minHeight: 120 }}>
+                  <WireBlock label="Section header" h={28} flex={1} />
+                  <WireBlock label="Content rows" h={40} flex={1} />
+                  <WireBlock label="Section header" h={28} flex={1} />
+                  <WireBlock label="Content rows" h={40} flex={1} />
+                </div>
+                <div className="flex items-center gap-[8px] my-[4px]">
+                  <div className="w-[2px] self-stretch rounded-full" style={{ background: "var(--color-border-alert-default)", minHeight: 8 }} />
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--color-border-alert-default)" }}>sticky (forms only)</span>
+                </div>
+                <div className="rounded-b-[8px] p-[10px] flex justify-end gap-[6px]" style={{ background: "var(--surface)", border: "1px solid var(--color-border-alert-default)" }}>
+                  <WireBlock label="Cancel" h={28} />
+                  <WireBlock label="Save" h={28} bg="var(--color-surface-primary-subtle)" />
+                </div>
+              </div>
+              {/* Legend */}
+              <div className="flex flex-col gap-[16px] pt-[8px]">
+                {[
+                  { color: "var(--primary)",                      label: "Header",        detail: "Fixed. Title + optional tag + description. Action buttons (close ×, ⋮ menu) right-aligned. Optional tabs row at the bottom of the header zone." },
+                  { color: "var(--color-border-success-default)",  label: "Content area",  detail: "Scrollable. Stacked sections with 24px horizontal padding. Order: AI Summary → List → Insights → Detail. Scrollbar hidden by default." },
+                  { color: "var(--color-border-alert-default)",    label: "Footer",        detail: "Sticky. Only present in form or filter context. Detail-only panels have no footer — close via × only." },
+                ].map(row => (
+                  <div key={row.label} className="flex items-start gap-[10px]" style={{ maxWidth: 380 }}>
+                    <div className="w-[12px] h-[12px] rounded-[2px] shrink-0 mt-[2px]" style={{ background: row.color }} />
+                    <div className="flex flex-col gap-[2px]">
+                      <span className="text-[12px] font-bold" style={{ color: row.color }}>{row.label}</span>
+                      <span className="text-[12px] text-[var(--field-supporting)]">{row.detail}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Header Variants</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">Four variants depending on whether the section links to a detail page or has collapsible content.</p>
+            <div className="grid grid-cols-2 gap-[16px]">
+              {[
+                {
+                  name: "Title Only",
+                  when: "Section has no linked detail view — all content is inline.",
+                  preview: (
+                    <div className="flex items-center h-[32px] px-[12px]" style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                      <span className="text-[12px] font-semibold text-[var(--foreground)]">Recent activity</span>
+                    </div>
+                  ),
+                },
+                {
+                  name: "With CTA",
+                  when: "Section has a linked full detail page. CTA text matches destination.",
+                  preview: (
+                    <div className="flex items-center justify-between h-[32px] px-[12px]" style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                      <div className="flex items-center gap-[6px]">
+                        <span className="text-[12px] font-semibold text-[var(--foreground)]">Run history</span>
+                        <span className="text-[10px] font-semibold px-[5px] py-[1px] rounded-full" style={{ background: "var(--canvas)", color: "var(--field-supporting)" }}>24</span>
+                      </div>
+                      <span className="text-[11px] font-semibold" style={{ color: "var(--primary)" }}>View all →</span>
+                    </div>
+                  ),
+                },
+                {
+                  name: "With CTA + Description",
+                  when: "Same as above + extra context below the title (max 3 lines).",
+                  preview: (
+                    <div className="flex flex-col gap-[2px] px-[12px] py-[8px]" style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] font-semibold text-[var(--foreground)]">Validation signals</span>
+                        <span className="text-[11px] font-semibold" style={{ color: "var(--primary)" }}>View config →</span>
+                      </div>
+                      <span className="text-[11px] text-[var(--field-supporting)]">Rules applied when this trigger fires.</span>
+                    </div>
+                  ),
+                },
+                {
+                  name: "Collapsible",
+                  when: "Section can be hidden to reduce visual load. Chevron toggles open/closed.",
+                  preview: (
+                    <div className="flex items-center justify-between h-[32px] px-[12px]" style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                      <span className="text-[12px] font-semibold text-[var(--foreground)]">Advanced settings</span>
+                      <span className="text-[14px]" style={{ color: "var(--field-supporting)" }}>›</span>
+                    </div>
+                  ),
+                },
+              ].map(variant => (
+                <div key={variant.name} className="flex flex-col gap-[8px]">
+                  <div className="rounded-[6px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+                    {variant.preview}
+                  </div>
+                  <div>
+                    <span className="text-[12px] font-semibold text-[var(--foreground)]">{variant.name}</span>
+                    <span className="text-[12px] text-[var(--field-supporting)]"> — {variant.when}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Width — Default & Expand Behavior</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              Both SlideOut and SidePanel open at <strong className="text-[var(--foreground)]">350px by default</strong>. The user can expand the panel by dragging the left edge. The drag snaps to two wider presets.
+            </p>
+            <div className="overflow-x-auto mb-[16px]">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Snap point", "Width", "How to reach", "Applies to"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Default",      "350px",         "Opens at this width — no interaction required", "SlideOut + SidePanel"],
+                    ["Expanded",     "450px",         "Drag left edge past midpoint to first snap",    "SlideOut + SidePanel"],
+                    ["Half-screen",  "50% of window", "Drag left edge to second snap",                 "SlideOut + SidePanel"],
+                  ].map(([snap, width, how, applies]) => (
+                    <tr key={snap} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px]">
+                        <span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px] font-semibold" style={{ background: snap === "Default" ? "var(--color-surface-success-subtle)" : "var(--color-surface-primary-subtle)", color: snap === "Default" ? "var(--color-border-success-default)" : "var(--primary)" }}>{snap}</span>
+                      </td>
+                      <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">{width}</td>
+                      <td className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{how}</td>
+                      <td className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{applies}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Visual snap diagram */}
+            <div className="flex items-end gap-[12px] px-[8px] py-[16px] rounded-[8px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+              {([
+                { label: "Default", w: 88,  color: "var(--color-surface-success-subtle)",   border: "var(--color-border-success-default)",  text: "var(--color-border-success-default)",  sub: "350px" },
+                { label: "Expanded", w: 114, color: "var(--color-surface-primary-subtle)", border: "var(--primary)",                        text: "var(--primary)",                       sub: "450px" },
+                { label: "Half",    w: 160, color: "var(--color-surface-neutral-subtle)",   border: "var(--field-border)",                  text: "var(--foreground)",                    sub: "50% screen" },
+              ] as { label: string; w: number; color: string; border: string; text: string; sub: string }[]).map(({ label, w, color, border, text, sub }) => (
+                <div key={label} className="flex flex-col items-center gap-[6px]">
+                  <span className="text-[10px] font-semibold" style={{ color: text }}>{label}</span>
+                  <div className="rounded-[6px] flex items-center justify-center" style={{ width: w, height: 56, background: color, border: `1.5px solid ${border}` }}>
+                    <span className="text-[11px] font-mono font-semibold" style={{ color: text }}>{sub}</span>
+                  </div>
+                </div>
+              ))}
+              <div className="flex-1 flex items-center pb-[20px]">
+                <div className="flex-1 h-[1px]" style={{ background: "var(--field-border)" }} />
+                <span className="text-[10px] px-[6px]" style={{ color: "var(--field-supporting)" }}>drag →</span>
+              </div>
+            </div>
+            <p className="text-[11px] mt-[10px]" style={{ color: "var(--field-supporting)" }}>
+              On release the panel snaps to the nearest preset. Dragging back to 350px resets to default. The resize handle is a 2px blue line that appears on hover of the left edge — only active in full overlay/inline mode (not in <code className="text-[10px]">previewMode</code>).
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>SlideOut Header — All Configurations</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">Every valid prop combination for the SlideOut header zone. Use only combinations listed here — do not invent new ones.</p>
+            <div className="flex flex-col gap-[24px]">
+
+              {/* Row 1: Base configs */}
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>Base configurations — no tabs</div>
+                <div className="grid grid-cols-2 gap-[16px]">
+                  {[
+                    {
+                      id: "h1", label: "① Title + Subtitle + Status",
+                      note: "Detail view default. No footer.",
+                      el: (
+                        <SlideOut previewMode open onClose={() => {}} size="m" type="with-variants"
+                          title="Customer Churn Alert" subtitle="Automation · Monitoring" statusLabel="Active"
+                          showIcon showStatus showTabs={false} showSearchBar={false} showChips={false} showCta={false}>
+                          <div />
+                        </SlideOut>
+                      ),
+                    },
+                    {
+                      id: "h2", label: "② Title + Subtitle only",
+                      note: "When there's no status or the status is implicit.",
+                      el: (
+                        <SlideOut previewMode open onClose={() => {}} size="m" type="with-variants"
+                          title="Node Configuration" subtitle="Score Threshold · Condition"
+                          showIcon={false} showStatus={false} showTabs={false} showSearchBar={false} showChips={false} showCta={false}>
+                          <div />
+                        </SlideOut>
+                      ),
+                    },
+                  ].map(v => (
+                    <div key={v.id} className="flex flex-col gap-[8px]">
+                      <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)", height: 80, background: "var(--canvas)" }}>
+                        {v.el}
+                      </div>
+                      <div>
+                        <span className="text-[12px] font-semibold text-[var(--foreground)]">{v.label}</span>
+                        <p className="text-[11px] text-[var(--field-supporting)] mt-[2px]">{v.note}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 2: Tab variants */}
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>With tabs</div>
+                <div className="grid grid-cols-2 gap-[16px]">
+                  {[
+                    {
+                      id: "h3", label: "③ Tabs only",
+                      note: "Standard multi-section detail panel. No search, no chips, no footer.",
+                      el: (
+                        <SlideOut previewMode open onClose={() => {}} size="m" type="with-variants"
+                          title="Customer Churn Alert" subtitle="Automation · Monitoring" statusLabel="Active"
+                          showIcon showStatus
+                          showTabs tabLabels={["Overview", "History", "Config"]} activeTab={0} onTabChange={() => {}}
+                          showSearchBar={false} showChips={false} showCta={false}>
+                          <div />
+                        </SlideOut>
+                      ),
+                    },
+                    {
+                      id: "h4", label: "④ Tabs + Search bar",
+                      note: "Use when the tab content is a filterable list (e.g. Users, Logs).",
+                      el: (
+                        <SlideOut previewMode open onClose={() => {}} size="m" type="with-variants"
+                          title="Customer Churn Alert" subtitle="Automation · Monitoring" statusLabel="Active"
+                          showIcon showStatus
+                          showTabs tabLabels={["Members", "Permissions", "Config"]} activeTab={0} onTabChange={() => {}}
+                          showSearchBar showChips={false} showCta={false}>
+                          <div />
+                        </SlideOut>
+                      ),
+                    },
+                  ].map(v => (
+                    <div key={v.id} className="flex flex-col gap-[8px]">
+                      <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)", height: 100, background: "var(--canvas)" }}>
+                        {v.el}
+                      </div>
+                      <div>
+                        <span className="text-[12px] font-semibold text-[var(--foreground)]">{v.label}</span>
+                        <p className="text-[11px] text-[var(--field-supporting)] mt-[2px]">{v.note}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 3: With footer */}
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>With footer (form and filter contexts)</div>
+                <div className="grid grid-cols-2 gap-[16px]">
+                  {[
+                    {
+                      id: "h5", label: "⑤ No tabs + CTA footer",
+                      note: "Create / edit forms. Always: secondary 'Cancel' + primary action verb.",
+                      el: (
+                        <SlideOut previewMode open onClose={() => {}} size="m" type="with-variants"
+                          title="New Automation" subtitle="Configure your automation"
+                          showIcon={false} showStatus={false} showTabs={false} showSearchBar={false} showChips={false}
+                          showCta ctaPrimaryLabel="Create automation" ctaSecondaryLabel="Cancel">
+                          <div />
+                        </SlideOut>
+                      ),
+                    },
+                    {
+                      id: "h6", label: "⑥ Chips + CTA footer",
+                      note: "Filters SlideOut. Chips show active filter groups. Apply / Clear all in footer.",
+                      el: (
+                        <SlideOut previewMode open onClose={() => {}} size="m" type="with-variants"
+                          title="All Filters" subtitle=""
+                          showIcon={false} showStatus={false} showTabs={false} showSearchBar
+                          showChips chipLabels={["Status", "Category", "Date range"]}
+                          showCta ctaPrimaryLabel="Apply filters" ctaSecondaryLabel="Clear all">
+                          <div />
+                        </SlideOut>
+                      ),
+                    },
+                  ].map(v => (
+                    <div key={v.id} className="flex flex-col gap-[8px]">
+                      <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)", height: 120, background: "var(--canvas)" }}>
+                        {v.el}
+                      </div>
+                      <div>
+                        <span className="text-[12px] font-semibold text-[var(--foreground)]">{v.label}</span>
+                        <p className="text-[11px] text-[var(--field-supporting)] mt-[2px]">{v.note}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>SlideOut Body — Content Zone Reference</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
+              What can appear in the scrollable body. Content always follows this fixed order — never rearrange.
+            </p>
+            <div className="flex flex-col gap-[0px]">
+              {[
+                {
+                  order: "1",
+                  name: "AI Summary",
+                  when: "Always first if present. Purple tinted card. Max 8 lines — if longer, use 'View more →' to open a ModalDialog.",
+                  required: false,
+                  tokens: "bg: --color-surface-purple-more-subtle · border: --card-purple-border · text: --color-text-purple",
+                  component: "Styled div (no DS component — DS-GAP pending)",
+                  preview: (
+                    <div className="p-[12px] rounded-[8px] flex flex-col gap-[6px]" style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                      <div className="flex items-center gap-[6px]">
+                        <LucideIcons.Sparkles size={11} style={{ color: "var(--color-text-purple)" }} />
+                        <span className="text-[10px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
+                      </div>
+                      <p className="text-[11px] text-[var(--foreground)] leading-[1.5]">Health score 42/100. 3 accounts at risk — intervention triggered for 2.</p>
+                    </div>
+                  ),
+                },
+                {
+                  order: "2",
+                  name: "Insights / Metrics",
+                  when: "KPI grid after AI Summary. 2–4 cards. Use the style prop for semantic status: style='red' for critical metrics, style='orange-bg' for warnings, default for neutral.",
+                  required: false,
+                  tokens: "HighlightCard DS component",
+                  component: "HighlightCard (src/components/ui/highlight-card.tsx)",
+                  preview: (
+                    <div className="grid grid-cols-3 gap-[6px]">
+                      <HighlightCard label="Score" value="42/100" iconName="Activity" />
+                      <HighlightCard label="At risk" value="3" iconName="AlertTriangle" />
+                      <HighlightCard label="Runs" value="847" iconName="Play" />
+                    </div>
+                  ),
+                },
+                {
+                  order: "3",
+                  name: "List sections",
+                  when: "Labeled list of related records. Section header first (Title Only / With CTA), then EntityList rows.",
+                  required: false,
+                  tokens: "EntityList DS component + section header pattern",
+                  component: "EntityList (src/components/ui/entity-list.tsx)",
+                  preview: (
+                    <div>
+                      <div className="flex items-center justify-between h-[28px]" style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span className="text-[11px] font-semibold text-[var(--foreground)]">Recent runs</span>
+                        <span className="text-[10px] font-semibold" style={{ color: "var(--primary)" }}>View all →</span>
+                      </div>
+                      <EntityList items={[
+                        { id: "r1", title: "Acme Corp",  iconName: "Building2", iconVariant: "error",   state: { label: "Triggered",  variant: "error" },   timestamp: "2h ago" },
+                        { id: "r2", title: "Globex Inc", iconName: "Building2", iconVariant: "success", state: { label: "Monitoring", variant: "success" }, timestamp: "4h ago" },
+                      ]} />
+                    </div>
+                  ),
+                },
+                {
+                  order: "4",
+                  name: "Form fields",
+                  when: "Only in form SlideOuts (create / edit). Section label → gap-[8px] → fields gap-[16px] between sections gap-[24px].",
+                  required: false,
+                  tokens: "Input, Select, Textarea DS components",
+                  component: "Input · Select · Textarea (src/components/ui/)",
+                  preview: (
+                    <div className="flex flex-col gap-[12px]">
+                      <Input placeholder="Automation name *" value="Customer Churn Alert" />
+                      <Select placeholder="Category *" value="Monitoring" />
+                    </div>
+                  ),
+                },
+              ].map((item, idx, arr) => (
+                <div key={item.order} className="flex gap-[16px] py-[20px]" style={{ borderBottom: idx < arr.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+                  <div className="flex flex-col gap-[8px] flex-1">
+                    <div className="flex items-center gap-[8px]">
+                      <span className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: "var(--primary)", color: "#fff" }}>{item.order}</span>
+                      <span className="text-[13px] font-semibold text-[var(--foreground)]">{item.name}</span>
+                      {!item.required && <span className="text-[10px] font-semibold px-[6px] py-[1px] rounded-full" style={{ background: "var(--canvas)", color: "var(--field-supporting)" }}>optional</span>}
+                    </div>
+                    <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">{item.when}</p>
+                    <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>Component: <code className="px-[3px] py-[1px] rounded-[2px]" style={{ background: "var(--canvas)", fontFamily: "monospace" }}>{item.component}</code></span>
+                  </div>
+                  <div className="w-[260px] shrink-0">
+                    <div className="rounded-[8px] p-[12px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                      {item.preview}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+        </div>
+      )}
+
+      {/* ── Content Types ─────────────────────────────────────────────────── */}
+      {tab === "content-types" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>Content Hierarchy — Order Always Respected</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
+              Not all content types are always present — depends on the item. But when multiple are present, this order is mandatory.
+            </p>
+            <div className="flex items-stretch" style={{ border: "0.5px solid var(--field-border)", borderRadius: 8, overflow: "hidden" }}>
+              {[
+                { n: "1", label: "Overview",    desc: "AI Summary, key metrics, highlight cards" },
+                { n: "2", label: "Definitions", desc: "Configuration, editable fields, rules" },
+                { n: "3", label: "Details",     desc: "By Layers / Timeline / Table breakdowns" },
+                { n: "4", label: "Other",       desc: "Bundles, Claims, context-specific extras" },
+              ].map((step, i, arr) => (
+                <div key={step.n} className="flex-1 flex flex-col gap-[4px] p-[16px]"
+                  style={{ borderRight: i < arr.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+                  <div className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold text-white mb-[4px]" style={{ background: "var(--primary)" }}>{step.n}</div>
+                  <span className="text-[12px] font-semibold text-[var(--foreground)]">{step.label}</span>
+                  <span className="text-[11px] text-[var(--field-supporting)]">{step.desc}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-[var(--field-supporting)]">If a type is absent, skip it — never leave empty sections. AI Summary always renders before any List content when both are present.</p>
+          </PatternCard>
+
+          {[
+            {
+              name: "AI Summary",
+              badge: "Overview",
+              desc: "Summarized AI-generated content that gives the user context and, if needed, quick access to recommendations or next best actions.",
+              rules: [
+                "Always use the Purple variant — it distinguishes AI-generated content from regular data at a glance",
+                "Up to 8 lines + 3 bullet points → show inline with an expand toggle",
+                "More than 8 lines → show truncated + 'View details' button → opens a ModalDialog",
+                "Always placed at the very top of the content area, before any other section",
+                "Read-only — no direct interaction. Optional CTA only for next best action buttons",
+              ],
+            },
+            {
+              name: "List Items",
+              badge: "Overview / Definitions",
+              desc: "Rows of structured information with metadata, statuses, and icons. Supports optional inline actions.",
+              rules: [
+                "Use the ListContent SlideOut DS component — not a custom div",
+                "Group related rows under a Section Header (use the appropriate variant)",
+                "Supports row-level expand to reveal more detail without leaving the panel",
+                "Panel content area handles overflow — never set a fixed height on the list",
+                "Row-level actions (icon buttons) only for infrequent actions. Frequent or important actions → CTA Card instead",
+              ],
+            },
+            {
+              name: "Insights / Highlights",
+              badge: "Overview",
+              desc: "Key data points rendered as Highlight Dashboard cards — scannable and read-only.",
+              rules: [
+                "Use Highlight Dashboard cards in horizontal grid layouts — adapt to panel width",
+                "Read-only — no direct interaction unless the card navigates to related data",
+                "Never mix with editable inputs in the same block",
+                "Group: primary metrics first ('Title'), then secondary metrics ('Extracted entities')",
+                "Keep content concise — short label, prominent value",
+              ],
+            },
+            {
+              name: "Detail — By Layers",
+              badge: "Details",
+              desc: "Shows the origin of an item across the system layers it passed through. Traceable provenance.",
+              rules: [
+                "Use when the item has a traceable origin: source system → enrichment → output",
+                "Render as a vertical stack of Process item components",
+                "Purely informational — no editable fields in this view",
+                "Tab label: 'Layers' or 'Origin'",
+              ],
+            },
+            {
+              name: "Detail — Timeline",
+              badge: "Details",
+              desc: "Shows the processes an item has gone through and its current state. Provides transparency on what is happening.",
+              rules: [
+                "Use when the item moves through statuses or workflow stages over time",
+                "Each event: timestamp + status change + optional actor",
+                "Most recent event at the top",
+                "Tab label: 'Timeline' or 'History'",
+              ],
+            },
+            {
+              name: "Detail — Table",
+              badge: "Details",
+              desc: "A structured breakdown of item data for technical users who need full transparency.",
+              rules: [
+                "Use the DS Table component — not a custom grid",
+                "Wide variant (640px) recommended when the table has more than 4 columns",
+                "Supports sorting — not filtering (filters are in the main view, not inside the panel)",
+                "Tab label: 'Data' or 'Breakdown'",
+              ],
+            },
+            {
+              name: "All Filters — Special Variant",
+              badge: "Special",
+              desc: "Opened from the 'All filters' button in the main view. Structurally different from a standard SlideOut.",
+              rules: [
+                "No tabs — full-height filter section stack only",
+                "Header: 'All Filters' title + close × button — no description, no ⋮ menu",
+                "Sticky footer: 'Clear' (secondary) + 'Apply' (primary) — not the standard Cancel/Save pattern",
+                "Width: 360px Narrow by default",
+                "See the Filter System pattern for full documentation of each filter section type",
+              ],
+            },
+          ].map(ct => (
+            <PatternCard key={ct.name}>
+              <div className="flex items-center gap-[8px] mb-[2px]">
+                <SectionLabel>{ct.name}</SectionLabel>
+                <span className="text-[10px] font-semibold px-[6px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{ct.badge}</span>
+              </div>
+              <p className="text-[12px] text-[var(--field-supporting)] mb-[10px]">{ct.desc}</p>
+              <div className="flex flex-col gap-[5px]">
+                {ct.rules.map((rule, i) => (
+                  <div key={i} className="flex items-start gap-[8px]">
+                    <div className="w-[4px] h-[4px] rounded-full mt-[5px] shrink-0" style={{ background: "var(--primary)" }} />
+                    <span className="text-[12px] text-[var(--foreground)]">{rule}</span>
+                  </div>
+                ))}
+              </div>
+            </PatternCard>
+          ))}
+
+        </div>
+      )}
+
+      {/* ── Rules ─────────────────────────────────────────────────────────── */}
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+
+          <PatternCard>
+            <SectionLabel>Shell Rules</SectionLabel>
+            <div className="flex flex-col gap-[0px]" style={{ border: "0.5px solid var(--field-border)", borderRadius: 8, overflow: "hidden" }}>
+              {[
+                { name: "Entry direction",  detail: "Always slides in from the right. Exit is the reverse. No bottom sheet, no left-side panel for SlideOut." },
+                { name: "Backdrop",         detail: "Semi-transparent overlay behind the panel. Click on backdrop closes the SlideOut (same as ×). SidePanel has no backdrop." },
+                { name: "Animation",        detail: "200ms ease-in-out. Fast enough to feel responsive, slow enough to not feel jarring. No bounce, no spring." },
+                { name: "Z-index",          detail: "SlideOut renders above all page content via createPortal(document.body) + position:fixed. Never inside an overflow container." },
+                { name: "Stacking",         detail: "Maximum 1 SlideOut active at a time. Secondary confirmation flows → ModalDialog on top. Never a second SlideOut." },
+                { name: "Close triggers",   detail: "× button in header · Click backdrop · Escape key. All three must always work. Closing returns focus to the triggering element." },
+              ].map((row, i, arr) => (
+                <div key={row.name} className="flex gap-[12px] p-[12px]" style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+                  <div className="w-[160px] shrink-0 text-[12px] font-semibold text-[var(--foreground)]">{row.name}</div>
+                  <div className="text-[12px] text-[var(--field-supporting)]">{row.detail}</div>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Tab Rules</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                { rule: "Maximum 3 tabs",               detail: "No exceptions. If content doesn't fit in 3 tabs, use collapsible accordion sections within a tab." },
+                { rule: "First tab = primary content",  detail: "Always the most used content. Advanced settings and metadata always go in secondary tabs." },
+                { rule: "Persist active tab",           detail: "Returning to the same record restores the last active tab. Tab switch is client-side only — no API call, no re-render." },
+                { rule: "Min threshold for tabs",       detail: "Only add tabs when field groups are mutually exclusive concerns. Fewer than 4 total fields → use a flat layout with a divider." },
+                { rule: "Error badge on tab",           detail: "When a tab has a validation error, show the Info badge variant on the tab label. Never auto-switch tabs on error." },
+              ].map(row => (
+                <div key={row.rule} className="flex gap-[12px] p-[12px] rounded-[6px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <span className="text-[12px] font-semibold w-[200px] shrink-0 text-[var(--foreground)]">{row.rule}</span>
+                  <span className="text-[12px] text-[var(--field-supporting)]">{row.detail}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Footer Rules</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Content context", "Footer?", "CTA pattern"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Detail view (read-only)",   "No",  "Close via × only — no sticky footer needed"],
+                    ["Form (create / edit)",       "Yes", "Cancel (secondary) + Save or Create (primary) — right-aligned"],
+                    ["All Filters",                "Yes", "Clear (secondary) + Apply (primary) — right-aligned"],
+                    ["Node config (SidePanel)",    "Yes", "Cancel + Save — right-aligned, 40px height"],
+                  ].map(([ctx, present, cta]) => (
+                    <tr key={ctx} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{ctx}</td>
+                      <td className="px-[12px] py-[10px]">
+                        <span className="text-[11px] font-semibold px-[6px] py-[1px] rounded-[3px]" style={{
+                          background: present === "Yes" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                          color: present === "Yes" ? "var(--color-border-success-default)" : "var(--color-border-error-default)",
+                        }}>{present}</span>
+                      </td>
+                      <td className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{cta}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Loading State</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                { rule: "Initial load (detail view)",  detail: "Show Skeleton components matching the expected content layout — not a centered spinner. The skeleton reflects the actual sections and rows expected." },
+                { rule: "Form submit / save",          detail: "Same as the Forms pattern: primary button → loading/spinner state + all fields disabled. Re-enable on error. Close panel on success." },
+                { rule: "Section lazy-load",           detail: "When a section loads independently (e.g. run history loads after main data), show a Skeleton scoped to that section only — don't block the full panel." },
+              ].map(row => (
+                <div key={row.rule} className="flex gap-[12px] p-[12px] rounded-[6px]" style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}>
+                  <span className="text-[12px] font-semibold w-[200px] shrink-0 text-[var(--foreground)]">{row.rule}</span>
+                  <span className="text-[12px] text-[var(--field-supporting)]">{row.detail}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Implementation guardrails</SectionLabel>
+            <div className="flex flex-col gap-[6px]">
+              {[
+                "NEVER render a SlideOut inside an overflow:hidden container — always use createPortal(document.body) + position:fixed.",
+                "NEVER open a second SlideOut from inside a SlideOut — use ModalDialog for secondary confirmations.",
+                "NEVER put navigation links or top-level routes inside a SlideOut — it's for contextual task flows only.",
+                "ALWAYS include a close × button in the header regardless of whether backdrop click also closes.",
+                "ALWAYS restore focus to the triggering element when the SlideOut closes — trap focus while open, return on close.",
+              ].map((rule, i) => (
+                <div key={i} className="flex items-start gap-[8px] text-[12px] text-[var(--foreground)]">
+                  <span className="shrink-0 font-mono text-[10px] mt-[2px] px-[5px] py-[1px] rounded-[3px]" style={{ background: "var(--color-surface-error-more-subtle)", color: "var(--color-surface-error-default)" }}>✕</span>
+                  <span>{rule}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── WidgetFatherPage ──────────────────────────────────────────────────────────
 
 function WidgetFatherPage() {
@@ -16915,6 +23831,45 @@ const STEPPER_SPEC = {
   ],
 }
 
+const STEPPER_NAV_FOOTER_SPEC = {
+  name: "Stepper Nav Footer",
+  figmaNodeId: "8210:21937",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=8210-21937",
+  description: "Sticky bottom navigation bar for multi-step wizards and guided forms. Provides consistent Cancel/Back ← and Next → controls. Always white (#FFFFFF) with a 1px top separator, anchored to the bottom of the scroll container so it remains visible regardless of scroll position.",
+  properties: [
+    { name: "variant",        type: "StepperNavFooterVariant", values: ["cancel-next", "back-next"], default: "cancel-next",  note: '"cancel-next" on the first step (no Back arrow). "back-next" on all subsequent steps (Back with ArrowLeft icon).' },
+    { name: "cancelLabel",    type: "string",                  values: ["string"],                   default: '"Cancel"',     note: "Label for the left Cancel button. Only rendered in cancel-next variant." },
+    { name: "backLabel",      type: "string",                  values: ["string"],                   default: '"Back"',       note: "Label for the left Back button. Only rendered in back-next variant." },
+    { name: "onCancel",       type: "() => void",              values: ["function"],                 default: "undefined",    note: "Called when Cancel is clicked. Typically dismisses the wizard or routes back to the list view." },
+    { name: "onBack",         type: "() => void",              values: ["function"],                 default: "undefined",    note: "Called when Back is clicked. Typically decrements the current step index." },
+    { name: "nextLabel",      type: "string",                  values: ["string"],                   default: '"Next"',       note: 'Change to "Submit" or "Finish" on the last step.' },
+    { name: "nextDisabled",   type: "boolean",                 values: ["true", "false"],            default: "false",        note: "Disables the Next button when the current step has unmet requirements. aria-label communicates the reason to screen readers." },
+    { name: "onNext",         type: "() => void",              values: ["function"],                 default: "undefined",    note: "Called when Next is clicked. Typically increments the step index or submits the form." },
+    { name: "secondaryLabel", type: "string",                  values: ["string", "undefined"],      default: "undefined",    note: 'Optional secondary CTA in the right group, e.g. "Save as draft". Only rendered when both secondaryLabel and onSecondary are defined.' },
+    { name: "onSecondary",    type: "() => void",              values: ["function", "undefined"],    default: "undefined",    note: "Called when the optional secondary CTA is clicked." },
+    { name: "className",      type: "string",                  values: ["string"],                   default: "—",            note: "Extra classes applied to the footer container." },
+  ],
+  sizes: [
+    { element: "Footer bar",      padding: "0 24px",  gap: "—",    radius: "0",    note: "72px total height · position: sticky; bottom: 0 · z-index: 40" },
+    { element: "Separator",       padding: "—",       gap: "—",    radius: "—",    note: "1px top border · var(--step-nav-footer-separator) · #E0E0E8 static" },
+    { element: "Right button group", padding: "—",    gap: "12px", radius: "—",    note: "flex-row gap-[12px] · secondary CTA (optional) + Next (always)" },
+    { element: "Buttons",         padding: "0 16px",  gap: "8px",  radius: "6px",  note: "Size=M (40px height) · matches DS Button size='default'" },
+  ],
+  typography: [
+    { element: "Button label", family: "Inter", size: "14px", weight: "500 (Medium)", lineHeight: "20px" },
+  ],
+  variants: [
+    { name: "Cancel / Next", description: "First step — left button has no icon, dismisses the wizard", cssPrefix: "snf-cancel", tokens: [
+      { role: "Footer background", variable: "--step-nav-footer-bg",        varId: "Surface (adaptive)", light: "#FFFFFF",              dark: "#0D1120" },
+      { role: "Top separator",     variable: "--step-nav-footer-separator",  varId: "Border/Neutral/Lighter", light: "#E8E8E8",          dark: "rgba(255,255,255,0.08)" },
+    ]},
+    { name: "Back / Next",   description: "Subsequent steps — Back button has ArrowLeft icon, navigates to previous step", cssPrefix: "snf-back", tokens: [
+      { role: "Footer background", variable: "--step-nav-footer-bg",        varId: "Surface (adaptive)", light: "#FFFFFF",              dark: "#0D1120" },
+      { role: "Top separator",     variable: "--step-nav-footer-separator",  varId: "Border/Neutral/Lighter", light: "#E8E8E8",          dark: "rgba(255,255,255,0.08)" },
+    ]},
+  ],
+}
+
 const STEP_STATES: { state: StepState; label: string; desc: string }[] = [
   { state: "default",   label: "Default",   desc: "Upcoming step, not yet accessible. Neutral dot, muted label." },
   { state: "active",    label: "Active",    desc: "Current step in progress. Primary-tinted dot, bold label, aria-current='step'." },
@@ -17602,6 +24557,458 @@ const DEMO_ITEMS_6 = [
   { id: "insights",  label: "Insights"  },
   { id: "history",   label: "History"   },
 ]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// StepperNavFooterPage
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StepperNavFooterPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab]                   = useState<"overview" | "playground" | "reference">("overview")
+  const [pgSecondary, setPgSecondary]   = useState(false)
+  const [snfPreviewOpen, setSnfPreviewOpen] = useState(false)
+  const [snfStep, setSnfStep]           = useState(0)
+
+  return (
+    <div>
+      {/* Full-screen wizard preview overlay */}
+      {snfPreviewOpen && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+          <AppBackground />
+
+          {/* Close */}
+          <button
+            onClick={() => { setSnfPreviewOpen(false); setSnfStep(0) }}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} /> Close Preview
+          </button>
+
+          {/* Step jump controls */}
+          <div className="fixed" style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001 }}>
+            <SwitchTab
+              items={[
+                { id: "0", label: "Step 1" },
+                { id: "1", label: "Step 2" },
+                { id: "2", label: "Step 3" },
+                { id: "3", label: "Step 4" },
+              ]}
+              value={String(snfStep)}
+              onChange={(v: string) => setSnfStep(Number(v))}
+              size="s"
+            />
+          </div>
+
+          <StepperNavFooterExampleScreen
+            activeStep={snfStep}
+            onCancel={() => { setSnfPreviewOpen(false); setSnfStep(0) }}
+            onBack={() => setSnfStep(s => Math.max(s - 1, 0))}
+            onNext={() => setSnfStep(s => Math.min(s + 1, 3))}
+            secondaryLabel={pgSecondary ? "Save as draft" : undefined}
+            onSecondary={pgSecondary ? () => {} : undefined}
+          />
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Stepper Nav Footer</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            Sticky bottom navigation bar for multi-step wizards and guided forms. Provides Cancel/Back and Next controls anchored to the bottom of the scroll container so they're always reachable without scrolling. Two variants cover all steps in a wizard flow.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("stepper-nav-footer")} />
+      </div>
+
+      {/* Tab row */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── OVERVIEW ── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Anatomy */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Anatomy</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["#", "Element", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["1", "Footer container",    "72px high bar · position: sticky; bottom: 0; z-index: 40 · background: var(--step-nav-footer-bg) = always #FFFFFF · 24px horizontal padding."],
+                    ["2", "Top separator",        "1px solid var(--step-nav-footer-separator) = #E0E0E8 · visually separates footer from the scrollable form body."],
+                    ["3", "Left button (Cancel)", "In cancel-next: secondary Button, no icon, label 'Cancel'. Dismisses the wizard. Visible only on the first step."],
+                    ["4", "Left button (Back)",   "In back-next: secondary Button with ArrowLeft 20px icon, label 'Back'. Navigates to the previous step. Visible on all steps after the first."],
+                    ["5", "Secondary CTA (opt.)", "Optional secondary Button in the right group, e.g. 'Save as draft'. Rendered only when both secondaryLabel and onSecondary props are provided."],
+                    ["6", "Next button",          "Primary Button with ArrowRight 20px icon. Right-aligned. Label customizable (use 'Submit' or 'Finish' on the last step). Disabled via nextDisabled prop."],
+                  ].map(([n, el, desc]) => (
+                    <tr key={n} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{n}</td>
+                      <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{el}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Variants */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Variants</SectionLabel>
+            <div className="flex flex-col gap-[24px]">
+
+              {/* ── Variant 1: Cancel / Next ── */}
+              <div className="flex flex-col gap-[10px]">
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[13px] font-semibold text-[var(--foreground)]">Cancel / Next</span>
+                  <span className="text-[10px] font-semibold px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>First step</span>
+                </div>
+                <p className="text-[12px] text-[var(--field-supporting)]">Left button is Cancel (no arrow) — used on step 1 where going back would exit the flow entirely.</p>
+                {/* Light / Dark side by side — each wrapper sets the mode explicitly */}
+                <div className="grid grid-cols-2 gap-[12px]">
+                  <div className="flex flex-col gap-[6px]">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Light mode</span>
+                    <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid #D0D8E8" }}>
+                      <div className="h-[64px] flex items-center px-[24px] gap-[8px]" style={{ background: "#DDE7F5" }}>
+                        <div className="h-[10px] rounded-[3px]" style={{ width: 140, background: "rgba(30,50,90,0.18)" }} />
+                        <div className="h-[10px] rounded-[3px]" style={{ width: 80, background: "rgba(30,50,90,0.10)" }} />
+                      </div>
+                      <div className="light" style={{
+                        "--step-nav-footer-bg":        "#ffffff",
+                        "--step-nav-footer-separator": "#e8e8e8",
+                        "--btn-secondary-fg":          "#2a2a2a",
+                        "--btn-secondary-bg":          "#ffffff",
+                        "--btn-secondary-border":      "#5c5c5c",
+                        "--btn-secondary-hover-bg":    "#f2f2f2",
+                        "--btn-secondary-hover-bd":    "#d9d9d9",
+                      } as React.CSSProperties}>
+                        <StepperNavFooter variant="cancel-next" cancelLabel="Cancel" nextLabel="Next" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-[6px]">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Dark mode</span>
+                    <div className="dark rounded-[8px] overflow-hidden" style={{ border: "0.5px solid rgba(255,255,255,0.08)" }}>
+                      <div className="h-[56px]" style={{ background: "#0F1729" }} />
+                      <StepperNavFooter variant="cancel-next" cancelLabel="Cancel" nextLabel="Next" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Variant 2: Back / Next ── */}
+              <div className="flex flex-col gap-[10px]">
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[13px] font-semibold text-[var(--foreground)]">Back / Next</span>
+                  <span className="text-[10px] font-semibold px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>Steps 2+</span>
+                </div>
+                <p className="text-[12px] text-[var(--field-supporting)]">Left button is ← Back — used on all steps after the first where navigating backwards is safe.</p>
+                <div className="grid grid-cols-2 gap-[12px]">
+                  <div className="flex flex-col gap-[6px]">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Light mode</span>
+                    <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid #D0D8E8" }}>
+                      <div className="h-[64px] flex items-center px-[24px] gap-[8px]" style={{ background: "#DDE7F5" }}>
+                        <div className="h-[10px] rounded-[3px]" style={{ width: 140, background: "rgba(30,50,90,0.18)" }} />
+                        <div className="h-[10px] rounded-[3px]" style={{ width: 80, background: "rgba(30,50,90,0.10)" }} />
+                      </div>
+                      <div className="light" style={{
+                        "--step-nav-footer-bg":        "#ffffff",
+                        "--step-nav-footer-separator": "#e8e8e8",
+                        "--btn-secondary-fg":          "#2a2a2a",
+                        "--btn-secondary-bg":          "#ffffff",
+                        "--btn-secondary-border":      "#5c5c5c",
+                        "--btn-secondary-hover-bg":    "#f2f2f2",
+                        "--btn-secondary-hover-bd":    "#d9d9d9",
+                      } as React.CSSProperties}>
+                        <StepperNavFooter variant="back-next" backLabel="Back" nextLabel="Next" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-[6px]">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Dark mode</span>
+                    <div className="dark rounded-[8px] overflow-hidden" style={{ border: "0.5px solid rgba(255,255,255,0.08)" }}>
+                      <div className="h-[56px]" style={{ background: "#0F1729" }} />
+                      <StepperNavFooter variant="back-next" backLabel="Back" nextLabel="Next" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── With secondary CTA ── */}
+              <div className="flex flex-col gap-[10px]">
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[13px] font-semibold text-[var(--foreground)]">With secondary CTA</span>
+                  <span className="text-[10px] font-semibold px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-neutral-default)", color: "var(--field-supporting)" }}>Optional</span>
+                </div>
+                <p className="text-[12px] text-[var(--field-supporting)]">Add up to 1 secondary CTA in the right group for non-destructive parallel actions (e.g. 'Save as draft'). Never exceed 3 total actions.</p>
+                <div className="grid grid-cols-2 gap-[12px]">
+                  <div className="flex flex-col gap-[6px]">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Light mode</span>
+                    <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid #D0D8E8" }}>
+                      <div className="h-[64px] flex items-center px-[24px] gap-[8px]" style={{ background: "#DDE7F5" }}>
+                        <div className="h-[10px] rounded-[3px]" style={{ width: 140, background: "rgba(30,50,90,0.18)" }} />
+                        <div className="h-[10px] rounded-[3px]" style={{ width: 80, background: "rgba(30,50,90,0.10)" }} />
+                      </div>
+                      <div className="light" style={{
+                        "--step-nav-footer-bg":        "#ffffff",
+                        "--step-nav-footer-separator": "#e8e8e8",
+                        "--btn-secondary-fg":          "#2a2a2a",
+                        "--btn-secondary-bg":          "#ffffff",
+                        "--btn-secondary-border":      "#5c5c5c",
+                        "--btn-secondary-hover-bg":    "#f2f2f2",
+                        "--btn-secondary-hover-bd":    "#d9d9d9",
+                      } as React.CSSProperties}>
+                        <StepperNavFooter variant="back-next" backLabel="Back" nextLabel="Next" secondaryLabel="Save as draft" onSecondary={() => {}} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-[6px]">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Dark mode</span>
+                    <div className="dark rounded-[8px] overflow-hidden" style={{ border: "0.5px solid rgba(255,255,255,0.08)" }}>
+                      <div className="h-[56px]" style={{ background: "#0F1729" }} />
+                      <StepperNavFooter variant="back-next" backLabel="Back" nextLabel="Next" secondaryLabel="Save as draft" onSecondary={() => {}} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Theme note ── */}
+              <div className="flex gap-[10px] p-[14px] rounded-[6px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+                <LucideIcons.Info size={14} className="shrink-0 mt-[1px]" style={{ color: "var(--primary)" }} />
+                <p className="text-[12px] text-[var(--foreground)] leading-[1.6]">
+                  <strong>Theme behavior:</strong> The footer inherits the app's color mode. Background = <code>var(--step-nav-footer-bg)</code> — white (<code>#FFFFFF</code>) in light mode, dark panel surface (<code>#0D1120</code>) in dark mode. Buttons use their native DS tokens per mode: dark text on white in light, semi-transparent white text on dark surface in dark.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[16px]">
+              {[
+                { type: "do"   as const, items: [
+                  "Use cancel-next only on the first step — it's the exit point for the entire flow.",
+                  "Switch to back-next from step 2 onwards — users need to navigate backwards.",
+                  "Change nextLabel to 'Submit' or 'Finish' on the last step.",
+                  "Disable Next (nextDisabled) when required fields are empty or invalid.",
+                  "Use position: sticky so the footer stays visible during long form scroll.",
+                ]},
+                { type: "dont" as const, items: [
+                  "Don't hide the Cancel button on the first step — always provide a clear exit.",
+                  "Don't add more than 3 total actions (Back/Cancel + optional secondary + Next).",
+                  "Don't use this component outside of multi-step flows — for single-page forms use standard CTA buttons.",
+                  "Don't use variant='main' for any button inside this footer.",
+                  "Don't place the footer outside a full-width container — it must span the entire form width.",
+                ]},
+              ].map(({ type, items }) => (
+                <div key={type} className="flex flex-col gap-[8px] p-[16px] rounded-[6px]" style={{ background: type === "do" ? "var(--color-status-success-subtle)" : "var(--color-status-error-subtle)", border: `0.5px solid ${type === "do" ? "var(--color-status-success-default)" : "var(--color-status-error-default)"}` }}>
+                  <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: type === "do" ? "var(--color-status-success-default)" : "var(--color-status-error-default)" }}>{type === "do" ? "✓ Do" : "✗ Don't"}</p>
+                  <ul className="flex flex-col gap-[6px]">
+                    {items.map((item, i) => (
+                      <li key={i} className="text-[12px] flex gap-[6px] text-[var(--foreground)]">
+                        <span className="shrink-0 mt-[1px]" style={{ color: type === "do" ? "var(--color-status-success-default)" : "var(--color-status-error-default)" }}>{type === "do" ? "✓" : "✗"}</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── PLAYGROUND ── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Controls */}
+          <div className="flex flex-col gap-[16px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Controls</SectionLabel>
+            <CtrlToggle label="Secondary CTA"  value={pgSecondary}  onChange={setPgSecondary} />
+          </div>
+
+          {/* Usage example — full-screen launch */}
+          <div className="flex flex-col gap-[16px]">
+            <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage example</h2>
+            <div className="rounded-[8px] p-[20px] flex items-start justify-between gap-[16px]"
+              style={{ border: "0.5px solid var(--field-border)", background: "var(--field-bg)" }}>
+              <div className="flex flex-col gap-[4px]">
+                <span className="text-[14px] font-semibold text-[var(--foreground)]">Wizard screen — Create Automation</span>
+                <span className="text-[13px] text-[var(--field-supporting)]">
+                  Full screen: Topbar · Sidebar · Header (backButton) · Stepper (4 steps) · form with Input/Select/Textarea · StepperNavFooter sticky. Navigate through all 4 steps with the tab controls.
+                </span>
+              </div>
+              <Button onClick={() => { setSnfStep(0); setSnfPreviewOpen(true) }} style={{ flexShrink: 0 }}>
+                <LucideIcons.Expand size={14} />
+                Launch Preview
+              </Button>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── REFERENCE ── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Design tokens */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Design Tokens</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Token", "Mode", "Value", "Usage"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { token: "--step-nav-footer-bg",         mode: "Light",  value: "#FFFFFF",              usage: "Footer background in light mode — white (#FFFFFF = var(--color-surface-neutral-white))" },
+                    { token: "--step-nav-footer-bg",         mode: "Dark",   value: "#0D1120",              usage: "Footer background in dark mode — matches panel surface (var(--surface))" },
+                    { token: "--step-nav-footer-separator",  mode: "Light",  value: "#E8E8E8",              usage: "1px top border in light mode — var(--color-border-neutral-lighter)" },
+                    { token: "--step-nav-footer-separator",  mode: "Dark",   value: "rgba(255,255,255,0.08)", usage: "1px top border in dark mode — var(--color-border-neutral-lighter)" },
+                  ].map(({ token, mode, value, usage }) => (
+                    <tr key={`${token}-${mode}`} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--primary)]">{token}</td>
+                      <td className="px-[12px] py-[8px]">
+                        <span className="text-[10px] font-semibold px-[5px] py-[1px] rounded-[3px]" style={{ background: mode === "Light" ? "#F6F9FF" : "#0D1120", color: mode === "Light" ? "#2a2a2a" : "rgba(255,255,255,0.6)", border: `0.5px solid ${mode === "Light" ? "#E8E8E8" : "rgba(255,255,255,0.08)"}` }}>{mode}</span>
+                      </td>
+                      <td className="px-[12px] py-[8px]">
+                        <div className="flex items-center gap-[8px]">
+                          <span className="inline-block w-[14px] h-[14px] rounded-[3px] border border-[var(--field-border)]" style={{ background: value }} />
+                          <code className="text-[11px]">{value}</code>
+                        </div>
+                      </td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{usage}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>JSX Usage</SectionLabel>
+            <pre className="text-[12px] leading-[20px] overflow-x-auto p-[16px] rounded-[6px]" style={{ background: "var(--canvas)", color: "var(--foreground)" }}>{`import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
+
+// First step — Cancel on the left
+<StepperNavFooter
+  variant="cancel-next"
+  onCancel={() => router.push("/automations")}
+  onNext={() => setStep(prev => prev + 1)}
+/>
+
+// Subsequent steps — Back on the left
+<StepperNavFooter
+  variant="back-next"
+  onBack={() => setStep(prev => prev - 1)}
+  onNext={() => setStep(prev => prev + 1)}
+  nextDisabled={!isStepValid}
+/>
+
+// Last step — change label to Submit
+<StepperNavFooter
+  variant="back-next"
+  onBack={() => setStep(prev => prev - 1)}
+  nextLabel="Submit"
+  onNext={handleSubmit}
+  nextDisabled={isSubmitting}
+/>
+
+// With optional secondary CTA
+<StepperNavFooter
+  variant="back-next"
+  onBack={() => setStep(prev => prev - 1)}
+  onNext={() => setStep(prev => prev + 1)}
+  secondaryLabel="Save as draft"
+  onSecondary={handleSaveDraft}
+/>`}</pre>
+          </div>
+
+          {/* Props table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Props</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { prop: "variant",        type: '"cancel-next" | "back-next"', def: '"cancel-next"',  desc: "Switches left button between Cancel (first step) and Back ← (subsequent steps)." },
+                    { prop: "cancelLabel",    type: "string",                      def: '"Cancel"',       desc: 'Label for the Cancel button. Applies to cancel-next variant only.' },
+                    { prop: "backLabel",      type: "string",                      def: '"Back"',         desc: 'Label for the Back button. Applies to back-next variant only.' },
+                    { prop: "onCancel",       type: "() => void",                  def: "—",              desc: "Called on Cancel click. Route back to the list or dismiss the modal." },
+                    { prop: "onBack",         type: "() => void",                  def: "—",              desc: "Called on Back click. Decrement step index." },
+                    { prop: "nextLabel",      type: "string",                      def: '"Next"',         desc: 'Change to "Submit" or "Finish" on the final step.' },
+                    { prop: "nextDisabled",   type: "boolean",                     def: "false",          desc: "Disables the Next button. Use when the current step has unmet requirements." },
+                    { prop: "onNext",         type: "() => void",                  def: "—",              desc: "Called on Next click. Increment step index or submit." },
+                    { prop: "secondaryLabel", type: "string | undefined",          def: "—",              desc: "Optional secondary CTA label in the right group. Requires onSecondary." },
+                    { prop: "onSecondary",    type: "() => void | undefined",      def: "—",              desc: "Called on secondary CTA click. Requires secondaryLabel." },
+                    { prop: "className",      type: "string",                      def: "—",              desc: "Extra classes applied to the footer container." },
+                  ].map(({ prop, type, def, desc }) => (
+                    <tr key={prop} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--primary)]">{prop}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[11px] text-[var(--field-supporting)]">{type}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{def}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Figma usage steps */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Figma Usage Steps</SectionLabel>
+            <ol className="flex flex-col gap-[10px]">
+              {[
+                "① Open the DS Figma file → search for 'Stepper Navigation Footer' (node 8210:21937).",
+                "② Insert the component via Assets panel or Ctrl+Alt+K (Mac: Cmd+Option+K) → select the Stepper Navigation Footer variant.",
+                "③ In the Properties panel, select the variant: 'Cancel / Next' for the first step, 'Back / Next' for step 2+.",
+                "④ The component spans the full width of its parent. Position it at the bottom of the form/wizard frame — it will sticky to the bottom at runtime.",
+                "⑤ Override button labels directly inside the component if using custom action names (e.g. 'Submit', 'Finish', 'Save and continue').",
+                "⑥ To add the optional secondary CTA, duplicate the footer and manually add a secondary Button between the right group gap — or use the prop in code.",
+                "⑦ Always pair with a Stepper component at the top of the wizard to show step progress alongside this navigation footer.",
+              ].map((step, i) => (
+                <li key={i} className="text-[13px] text-[var(--field-supporting)] leading-[1.6]">{step}</li>
+              ))}
+            </ol>
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
 
 function SwitchTabPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab]             = useState<"overview" | "playground" | "reference">("overview")
@@ -20489,12 +27896,27 @@ export function MyList() {
                     "Don't combine both iconHighlight and avatar on the same row — pick one identity marker.",
                     "Don't add more than 6–8 tags per row — use a '+N more' label for overflow.",
                     "Don't disable the description collapse if rows are very tall — always allow the user to hide it.",
+                    "Don't use EntityList for Validation Signal rows (colored number + label + text link). That pattern is a separate layout — not an EntityList variant.",
                   ].map((t, i) => (
                     <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
                       <span className="shrink-0">·</span>{t}
                     </p>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* Truncation rule */}
+            <div
+              className="flex items-start gap-[10px] rounded-[8px] p-[14px]"
+              style={{ background: "var(--color-surface-alert-subtle)", border: "0.5px solid var(--color-border-alert-default)" }}
+            >
+              <LucideIcons.AlertTriangle size={14} className="shrink-0 mt-[1px]" style={{ color: "var(--color-border-alert-default)" }} />
+              <div className="flex flex-col gap-[4px]">
+                <span className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>Title truncation — narrow containers</span>
+                <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                  In narrow contexts (SlideOut, SidePanel, CardContainer with limited width) the title will truncate with <code>…</code> when it would collide with the right zone (actions, state badge, timestamp). This is built into the component. <strong style={{ color: "var(--foreground)" }}>Never force a long title into a row that also has a CTA</strong> — the title always loses horizontal space to the right zone. If the title is long, omit the timestamp or reduce the number of action buttons.
+                </span>
               </div>
             </div>
 
@@ -20609,6 +28031,123 @@ export function MyList() {
                   }]} />
                 </CardContainer>
               </div>
+            </div>
+
+            {/* Slide-out patterns */}
+            <div className="flex flex-col gap-[16px]">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Slide-out context — 4 named use cases</h2>
+                <p className="text-[13px] text-[var(--field-supporting)] mt-[2px]">Inside a SlideOut each content zone uses EntityList differently. These are the 4 patterns from the Governance prototype — every agent prototyping a slide-out should use one of these.</p>
+              </div>
+
+              {/* Pattern A — Navigation/action rows */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>A · Navigation rows ("What can I do?")</span>
+                </div>
+                <CardContainer size="sm">
+                  <EntityList items={[
+                    { id: "nav1", title: "Review Sandbox",  iconVariant: "info",    iconName: "FolderSearch", description: "8 items need attention" },
+                    { id: "nav2", title: "Add Files",       iconVariant: "neutral", iconName: "FilePlus2",    description: "Upload documents to this drive" },
+                    { id: "nav3", title: "Watch Rules",     iconVariant: "success", iconName: "Eye",          description: "Configure auto-watch conditions" },
+                  ]} />
+                </CardContainer>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">When: action menus and quick-action zones</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Use <code>description</code> as the subtitle line. No <code>actions</code>, no <code>state</code>, no <code>timestamp</code>. The entire row is a single navigation target — wire <code>onClick</code> on the item directly.</div>
+                </div>
+              </div>
+
+              {/* Pattern B — Alert/expandable rows */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>B · Alert expandable rows</span>
+                </div>
+                <CardContainer size="sm">
+                  <EntityList items={[
+                    {
+                      id: "alert1",
+                      title: "PII Detected",
+                      iconVariant: "error", iconName: "ShieldAlert",
+                      state: { label: "High Risk", variant: "error" },
+                      description: "Personally identifiable information found in Section: Financial Terms · Payment Schedule. Promoted by Sarah Chen · 2 months ago.",
+                      defaultDescExpanded: false,
+                    },
+                    {
+                      id: "alert2",
+                      title: "Confidential Data",
+                      iconVariant: "yellow", iconName: "AlertTriangle",
+                      state: { label: "Medium Risk", variant: "alert" },
+                      description: "Confidential data clause detected in Section: Liability. Requires legal review before promoting.",
+                      defaultDescExpanded: false,
+                    },
+                  ]} />
+                </CardContainer>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">When: alerts, risk signals, issues that need detail on demand</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Use <code>state</code> for the risk badge + <code>description</code> for the expandable detail. Set <code>defaultDescExpanded: false</code> so the row is collapsed by default. The chevron expand/collapse is built in — no custom toggle needed. Titles truncate automatically if the state badge reduces available width.</div>
+                </div>
+              </div>
+
+              {/* Pattern C — Data record rows with CTA */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>C · Data record rows with CTA</span>
+                </div>
+                <CardContainer size="sm">
+                  <EntityList items={[
+                    {
+                      id: "rec1",
+                      title: "PII Detected",
+                      iconVariant: "success", iconName: "FileCheck",
+                      state: { label: "Promoted", variant: "success" },
+                      description: "Section: Financial Terms · Payment Schedule · Promoted by Sarah Chen · 2 months ago",
+                    },
+                    {
+                      id: "rec2",
+                      title: "PII Detected",
+                      iconVariant: "neutral", iconName: "FileText",
+                      actions: [{ label: "Promote", variant: "primary" }],
+                      description: "Section: Financial Terms · Payment Schedule · Promoted by Sarah Chen · 2 months ago",
+                    },
+                  ]} />
+                </CardContainer>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">When: actionable data records inside a panel</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Use <code>state</code> for already-actioned rows (no button). Use <code>actions</code> with a single <code>variant="primary"</code> button for rows that still need action. Don't show both <code>state</code> + <code>actions</code> on the same row — the right zone is too narrow. Use <code>description</code> for the metadata line (section path, author, date).</div>
+                </div>
+              </div>
+
+              {/* Pattern D — Validation Signal rows (NOT EntityList) */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>D · Validation Signal rows — NOT EntityList</span>
+                </div>
+                <CardContainer size="sm" className="!p-0">
+                  {([
+                    { count: 5,  variant: "success" as HighlightNumberVariant, label: "Ready to promote", action: "Go to promote" },
+                    { count: 3,  variant: "error"   as HighlightNumberVariant, label: "Conflicts",        action: "View details"  },
+                    { count: 10, variant: "purple"  as HighlightNumberVariant, label: "Promoted",         action: "View details"  },
+                  ]).map((row, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-[10px] px-[12px] h-[40px]"
+                      style={{ borderBottom: i < 2 ? "0.5px solid var(--field-border)" : undefined }}
+                    >
+                      <HighlightNumber value={row.count} variant={row.variant} />
+                      <span className="text-[13px] font-medium flex-1 text-[var(--foreground)]">{row.label}</span>
+                      <Button variant="tertiary" size="sm" className="shrink-0 flex items-center gap-[4px]">
+                        {row.action} <LucideIcons.ArrowRight size={11} />
+                      </Button>
+                    </div>
+                  ))}
+                </CardContainer>
+                <div className="p-[8px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-subtle)" }}>
+                  <div className="text-[12px] font-semibold text-[var(--foreground)]">When: KPI counts with a navigation action</div>
+                  <div className="text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>This pattern is <strong style={{ color: "var(--foreground)" }}>not an EntityList variant</strong>. Build it as plain <code>div</code> rows inside a <code>CardContainer</code> (no padding). Each row uses <code>HighlightNumber</code> on the left (24×24px badge with the count), label center (<code>flex-1</code>), text link with arrow right (<code>shrink-0</code>). Height 40px per row, dividers between rows via <code>borderBottom</code>. Use <code>variant</code> on <code>HighlightNumber</code> to convey semantic meaning.</div>
+                </div>
+              </div>
+
             </div>
 
           </div>
@@ -22885,93 +30424,388 @@ function FiltersInteractivePlayground() {
 
 // ── BreadcrumbPage ────────────────────────────────────────────────────────────
 
-function BreadcrumbPage() {
+const BREADCRUMB_SPEC = {
+  name: "Breadcrumb",
+  figmaNodeId: "18352:45",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18352-45",
+  description: "Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
+  properties: [
+    { name: "depth",      type: "number",             values: ["2","3","4","4+"],               default: "3",   note: "depth<2 → no breadcrumb · depth=2 → Depth=2 variant · depth=3 → Depth=3 · depth≥4 → Depth=4 (middle items truncated with …)" },
+    { name: "items",      type: "BreadcrumbItem[]",   values: ["{ label: string; href?: string }[]"], default: "[]",  note: "items[0] is always 'Home' with href='/'. items[last] is the Selected item (no href)." },
+    { name: "onNavigate", type: "(href: string) => void", values: ["—"],                        default: "—",   note: "Called when a Default (non-selected) item is clicked." },
+    { name: "className",  type: "string",             values: ["—"],                            default: "—",   note: "Optional class override for the root <nav> element." },
+  ],
+  typography: [
+    { element: "Breadcrumb item", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "20px" },
+  ],
+  variants: [
+    {
+      name: "Default item",
+      description: "Ancestor links — clickable. Hover changes text to Text/Subtitle.",
+      tokens: [
+        { role: "Text (rest)",  variable: "Text/Body",    varId: "4465:4469", light: "#5C5C5C",              dark: "#94A3B8" },
+        { role: "Text (hover)", variable: "Text/Subtitle", varId: "4465:4468", light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
+      ],
+    },
+    {
+      name: "Selected item",
+      description: "Current page — last item, non-interactive.",
+      tokens: [
+        { role: "Text",         variable: "Text/Subtitle", varId: "4465:4468", light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
+      ],
+    },
+    {
+      name: "Separator",
+      description: "ChevronRight icon between items.",
+      tokens: [
+        { role: "Icon",         variable: "Icon/Neutral/Light", varId: "4465:4467", light: "#ffffff",         dark: "#ffffff" },
+      ],
+    },
+  ],
+}
+
+function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+  const [pgDepth, setPgDepth] = useState(3)
+  const [bcPreviewOpen, setBcPreviewOpen] = useState(false)
+  const [bcPreviewL3, setBcPreviewL3]     = useState(false)
+
+  const depthItems: Record<number, BreadcrumbItem[]> = {
+    2: [{ label: "Home", href: "/" }, { label: "Page Title" }],
+    3: [{ label: "Home", href: "/" }, { label: "Section Name", href: "/section" }, { label: "Page Title" }],
+    4: [{ label: "Home", href: "/" }, { label: "AI Workers", href: "/ai-workers" }, { label: "Section Name", href: "/section" }, { label: "Page Title" }],
+    5: [{ label: "Home", href: "/" }, { label: "AI Workers", href: "/ai-workers" }, { label: "Churn Risk", href: "/churn" }, { label: "Run #42", href: "/run" }, { label: "Log Entry" }],
+  }
+
   return (
-    <div className="flex flex-col gap-[32px]">
-      {/* Title row */}
-      <div className="flex items-start justify-between gap-[16px]">
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
         <div>
-          <div className="flex items-center gap-[10px] mb-[6px]">
-            <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Breadcrumb</h1>
-            <span className="text-[11px] font-semibold px-[8px] py-[3px] rounded-[4px]"
-              style={{ background: "var(--color-surface-warning-subtle)", color: "var(--color-feedback-warning)", border: "0.5px solid var(--color-feedback-warning)" }}>
-              In design — DS-GAP
-            </span>
-          </div>
-          <p className="text-[14px] text-[var(--field-supporting)] max-w-[600px]">
-            Hierarchical trail for multi-level navigation. Tells the user where they are and lets them jump to any ancestor level. Use only at depth L3 and above — for L2, use the Header back button instead.
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Breadcrumb</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
+            Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to current page with all ancestors clickable. At L2, use Header <code className="text-[11px] px-[4px] py-[1px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>backButton</code> instead.
           </p>
         </div>
+        <SpecButton onClick={() => openSpec("breadcrumb")} />
       </div>
 
-      {/* Navigation rule */}
-      <div className="flex flex-col gap-[12px]">
-        <h2 className="text-[16px] font-semibold text-[var(--foreground)]">When to use</h2>
-        <p className="text-[13px] text-[var(--field-supporting)]">
-          The platform has up to 5 levels of navigation depth. The right back-navigation pattern depends on the current depth level.
-        </p>
-        <div className="rounded-[8px] border border-[var(--field-border)] overflow-hidden">
-          <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "0.5px solid var(--field-border)", background: "var(--field-bg)" }}>
-                <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--foreground)]">Depth level</th>
-                <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--foreground)]">Pattern</th>
-                <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--foreground)]">Example</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ["L1 — Root list", "No back navigation", "AI Workers (top-level list)"],
-                ["L2 — Item detail", "Header backButton={true}", "AI Workers → Meridian (single worker)"],
-                ["L3+ — Nested detail", "Breadcrumb trail", "AI Workers → Meridian → Run #42 → Log entry"],
-              ].map(([level, pattern, example], i) => (
-                <tr key={i} style={{ borderBottom: i < 2 ? "0.5px solid var(--field-border)" : "none" }}>
-                  <td className="px-[16px] py-[10px] font-semibold text-[var(--foreground)]">{level}</td>
-                  <td className="px-[16px] py-[10px]" style={{ color: "var(--primary)" }}>
-                    <code className="text-[11px] px-[4px] py-[1px] rounded" style={{ background: "var(--color-surface-primary-subtle)" }}>{pattern}</code>
-                  </td>
-                  <td className="px-[16px] py-[10px] text-[var(--field-supporting)]">{example}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "playground", label: "Playground" },
+          { id: "reference",  label: "Reference"  },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
 
-      {/* Design status */}
-      <div className="flex flex-col gap-[12px]">
-        <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Component status</h2>
-        <div className="rounded-[8px] border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
-          {[
-            { label: "Navigation rule", status: "done", note: "Defined — L2 = back arrow · L3+ = breadcrumbs. Documented in CLAUDE.md." },
-            { label: "Figma design", status: "progress", note: "In progress — being designed in Figma DS file." },
-            { label: "React component", status: "pending", note: "Pending Figma sign-off. Will live in src/components/ui/breadcrumb.tsx." },
-            { label: "Token bindings", status: "pending", note: "Pending — tokens will be extracted from Figma once design is finalized." },
-          ].map(({ label, status, note }) => (
-            <div key={label} className="flex items-start gap-[12px]">
-              <span className="text-[11px] font-semibold px-[7px] py-[2px] rounded-[4px] shrink-0 mt-[1px]"
-                style={{
-                  background: status === "done" ? "var(--color-surface-success-subtle)" : status === "progress" ? "var(--color-surface-warning-subtle)" : "var(--color-surface-neutral-default)",
-                  color: status === "done" ? "var(--color-feedback-success)" : status === "progress" ? "var(--color-feedback-warning)" : "var(--field-supporting)",
-                }}>
-                {status === "done" ? "Done" : status === "progress" ? "In progress" : "Pending"}
-              </span>
-              <div>
-                <p className="text-[13px] font-semibold text-[var(--foreground)]">{label}</p>
-                <p className="text-[12px] text-[var(--field-supporting)]">{note}</p>
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {/* ── Overview ─────────────────────────────────────────────────── */}
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Navigation depth rule */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">When to use</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                The platform has up to 5 levels of navigation depth. The right back-navigation pattern depends on the current depth level.
+              </p>
+              <div className="rounded-[8px] border border-[var(--field-border)] overflow-hidden">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "0.5px solid var(--field-border)", background: "var(--field-bg)" }}>
+                      <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--foreground)]">Depth</th>
+                      <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--foreground)]">Pattern</th>
+                      <th className="text-left px-[16px] py-[10px] font-semibold text-[var(--foreground)]">Example path</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { depth: "L1 — Root list",    pattern: "No back navigation",          code: null,                       example: "AI Workers list" },
+                      { depth: "L2 — Item detail",   pattern: "Header backButton only",      code: "backButton={true}",        example: "AI Workers → Meridian" },
+                      { depth: "L3 — Nested detail", pattern: "Breadcrumb + Header back",    code: "depth={3}",                example: "AI Workers → Meridian → Run #42" },
+                      { depth: "L4+ — Deep nested",  pattern: "Breadcrumb truncates middle", code: "depth={4+} → shows …",     example: "Home → … → Run #42 → Log entry" },
+                    ].map(({ depth, pattern, code, example }, i, arr) => (
+                      <tr key={i} style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+                        <td className="px-[16px] py-[10px] font-semibold text-[var(--foreground)]">{depth}</td>
+                        <td className="px-[16px] py-[10px]" style={{ color: "var(--field-supporting)" }}>
+                          {pattern}
+                          {code && <code className="ml-[6px] text-[11px] px-[4px] py-[1px] rounded" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{code}</code>}
+                        </td>
+                        <td className="px-[16px] py-[10px] text-[var(--field-supporting)]">{example}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Guardrail callout */}
-      <div className="rounded-[8px] px-[16px] py-[14px] flex flex-col gap-[6px]"
-        style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-        <p className="text-[12px] font-semibold text-[var(--foreground)]">Until the component ships</p>
-        <p className="text-[13px] text-[var(--field-supporting)]">
-          When a prototype requires L3+ navigation, Claude will mark the gap with a <code className="text-[11px] px-[3px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>// DS-GAP: Breadcrumbs</code> comment and use a temporary placeholder. The navigation rule is enforced regardless — back arrow at L2, breadcrumb trail at L3+.
-        </p>
+            {/* Depth variants */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Depth variants</h2>
+              <div className="flex flex-col gap-[24px]">
+                {([2, 3, 4] as const).map(d => (
+                  <div key={d} className="flex flex-col gap-[8px]">
+                    <span className="text-[12px] font-semibold text-[var(--field-supporting)] uppercase tracking-wider">Depth={d}</span>
+                    <div className="rounded-[8px] p-[16px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <Breadcrumb depth={d} items={depthItems[d]} onNavigate={() => {}} />
+                    </div>
+                  </div>
+                ))}
+                <div className="flex flex-col gap-[8px]">
+                  <span className="text-[12px] font-semibold text-[var(--field-supporting)] uppercase tracking-wider">Depth=5+ (truncated)</span>
+                  <div className="rounded-[8px] p-[16px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                    <Breadcrumb depth={5} items={depthItems[5]} onNavigate={() => {}} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Usage examples — L2 vs L3+ (full-fidelity screen previews) */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage examples</h2>
+              <div className="rounded-[8px] p-[20px] flex items-start justify-between gap-[16px]"
+                style={{ border: "0.5px solid var(--field-border)", background: "var(--field-bg)" }}>
+                <div className="flex flex-col gap-[4px]">
+                  <span className="text-[14px] font-semibold text-[var(--foreground)]">Screen preview — L2 and L3+</span>
+                  <span className="text-[13px] text-[var(--field-supporting)]">
+                    Two identical screens — toggle between L2 (header back only) and L3+ (breadcrumb + header back) to compare.
+                  </span>
+                </div>
+                <Button onClick={() => setBcPreviewOpen(true)} style={{ flexShrink: 0 }}>
+                  <LucideIcons.Expand size={14} />
+                  Launch Full Preview
+                </Button>
+              </div>
+            </div>
+
+            {/* Full-screen overlay */}
+            {bcPreviewOpen && (
+              <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+                <AppBackground />
+
+                {/* Close button */}
+                <button
+                  onClick={() => setBcPreviewOpen(false)}
+                  className="fixed flex items-center gap-[6px] rounded-[6px]"
+                  style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-surface-error-default)", color: "var(--color-surface-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+                >
+                  <LucideIcons.X size={12} /> Close Preview
+                </button>
+
+                {/* L2 / L3 toggle — centered at top */}
+                <div className="fixed" style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001 }}>
+                  <SwitchTab
+                    items={[
+                      { id: "l2", label: "L2 — Section view"  },
+                      { id: "l3", label: "L3+ — Detail view" },
+                    ]}
+                    value={bcPreviewL3 ? "l3" : "l2"}
+                    onChange={(v: string) => setBcPreviewL3(v === "l3")}
+                    size="s"
+                  />
+                </div>
+
+                <BreadcrumbExampleScreen showBreadcrumb={bcPreviewL3} />
+              </div>
+            )}
+
+            {/* Do / Don't */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Do / Don't</h2>
+              <div className="flex gap-[16px]">
+                <div className="flex-1 rounded-[8px] p-[16px] flex flex-col gap-[10px]" style={{ border: "1px solid var(--color-feedback-success)", background: "var(--color-surface-success-subtle)" }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-feedback-success)" }}>Do</span>
+                  <ul className="text-[13px] flex flex-col gap-[6px]" style={{ color: "var(--foreground)" }}>
+                    <li>Show breadcrumb only at L3 and deeper</li>
+                    <li>Always include Home as the first item</li>
+                    <li>Keep the last item (current page) non-clickable</li>
+                    <li>Place breadcrumb between Topbar and Header</li>
+                    <li>Truncate middle items with "…" at depth 5+</li>
+                  </ul>
+                </div>
+                <div className="flex-1 rounded-[8px] p-[16px] flex flex-col gap-[10px]" style={{ border: "1px solid var(--color-feedback-error)", background: "var(--color-surface-error-subtle)" }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-feedback-error)" }}>Don't</span>
+                  <ul className="text-[13px] flex flex-col gap-[6px]" style={{ color: "var(--foreground)" }}>
+                    <li>Don't show breadcrumb at L1 or L2</li>
+                    <li>Don't co-locate breadcrumb with Header back arrow on different lines</li>
+                    <li>Don't make the last (selected) item clickable</li>
+                    <li>Don't use breadcrumb as a standalone page title</li>
+                    <li>Don't skip levels — every ancestor must appear</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Playground ───────────────────────────────────────────────── */}
+        {tab === "playground" && (
+          <div className="flex flex-col gap-[20px]">
+            <div className="rounded-md border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
+              <CtrlGroup
+                label="Depth"
+                options={[
+                  { label: "L2 — Item detail",  value: "2" },
+                  { label: "L3 — Nested",       value: "3" },
+                  { label: "L4 — Deep nested",  value: "4" },
+                  { label: "L5+ — Truncated",   value: "5" },
+                ]}
+                value={String(pgDepth)}
+                onChange={v => setPgDepth(Number(v))}
+              />
+            </div>
+            <div
+              className="flex items-center min-h-[80px] rounded-md border border-dashed border-[var(--field-border)] px-[24px]"
+              style={{ background: "var(--field-bg)" }}
+            >
+              <Breadcrumb
+                depth={pgDepth}
+                items={depthItems[pgDepth] ?? depthItems[5]}
+                onNavigate={() => {}}
+              />
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)]">
+              At depth 5+ the middle items are collapsed to "…". The first (Home) and last two items are always shown.
+            </p>
+          </div>
+        )}
+
+        {/* ── Reference ────────────────────────────────────────────────── */}
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Tokens table */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Design tokens</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Token", "Role", "Dark", "Light"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { token: "--color-text-body",          role: "Default item text",        dark: "#94A3B8",               light: "#5C5C5C" },
+                      { token: "--color-text-subtitle",      role: "Selected item text / hover",dark: "rgba(255,255,255,0.60)", light: "#2a2a2a" },
+                      { token: "--color-icon-neutral-light", role: "Separator icon",            dark: "#ffffff",               light: "#ffffff" },
+                    ].map((row, i, arr) => (
+                      <tr key={row.token} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.token}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.role}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.dark}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.light}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Typography */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Typography</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Element", "Family", "Size", "Weight", "Line height"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">Breadcrumb item</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">Inter</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">14px</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">Medium (500)</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">20px</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Props table */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Prop", "Type", "Default", "Notes"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { prop: "depth",      type: "number",                 def: "—",   note: "Current navigation depth. depth<2 renders nothing." },
+                      { prop: "items",      type: "BreadcrumbItem[]",        def: "[]",  note: "items[0]='Home' with href='/'. items[last]=selected (no href)." },
+                      { prop: "onNavigate", type: "(href: string) => void",  def: "—",   note: "Called when a Default (non-selected) item is clicked." },
+                      { prop: "className",  type: "string",                  def: "—",   note: "Optional class override for the root <nav> element." },
+                    ].map((row, i, arr) => (
+                      <tr key={row.prop} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px] font-semibold" style={{ color: "var(--primary)" }}>{row.prop}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.type}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.def}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{row.note}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Code snippet */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
+              <pre className="rounded-[8px] p-[16px] text-[12px] overflow-x-auto" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)", fontFamily: "monospace" }}>{`import { Breadcrumb } from "@/components/ui/breadcrumb"
+
+// L3 — shows Home > Section Name > Page Title
+<Breadcrumb
+  depth={3}
+  items={[
+    { label: "Home",         href: "/"        },
+    { label: "Section Name", href: "/section" },
+    { label: "Page Title" },   // no href → Selected state
+  ]}
+  onNavigate={(href) => router.push(href)}
+/>
+
+// L2 — depth<2 means Breadcrumb renders null; use Header backButton instead
+<Header title="Page Title" backButton />`}
+              </pre>
+            </div>
+
+            {/* Figma usage */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Figma usage</h2>
+              <ol className="flex flex-col gap-[8px] text-[13px] text-[var(--field-supporting)]">
+                {[
+                  "Open the DS file and go to the Breadcrumb page.",
+                  "In the Components frame, find the Breadcrumb COMPONENT_SET (Depth=2 / Depth=3 / Depth=4).",
+                  "Drag the desired Depth variant onto your screen — position it between the Topbar and the Header.",
+                  "Set layoutSizingHorizontal=FILL on the breadcrumb bar so it stretches edge-to-edge.",
+                  "Update the text overrides for each Default item and the Selected item to match your screen's path.",
+                  "For L2 screens: do not use the breadcrumb — only add backButton=true to the Header instead.",
+                ].map((step, i) => (
+                  <li key={i} className="flex gap-[10px]">
+                    <span className="shrink-0 w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{i + 1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+          </div>
+        )}
       </div>
     </div>
   )
@@ -23451,7 +31285,7 @@ function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <div className="flex flex-col gap-[12px]">
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Anatomy — In context</h2>
               <p className="text-[13px] text-[var(--field-supporting)]">
-                Pagination floats over the list with <code className="font-mono text-[11px]">position: absolute; bottom: 0</code> — it does not divide or shrink the content area. The list keeps its full height; Pagination overlays it. The glass background (<code className="font-mono text-[11px]">backdrop-filter: blur(16px)</code>) lets rows behind it remain visible.
+                Pagination floats over the list with <code className="font-mono text-[11px]">position: absolute; bottom: 0</code> — it does not divide or shrink the content area. The list keeps its full height; Pagination overlays it. The outer wrapper has <code className="font-mono text-[11px]">backdrop-filter: blur(10px)</code> (BG-Blur 10, Elevation-5 shadow) so rows behind it remain visible through the frosted glass surface.
               </p>
 
               {/* Frame mockup */}
@@ -23467,16 +31301,23 @@ function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     </div>
                   </div>
 
-                  {/* Mocked entity rows — fills remaining height */}
+                  {/* Mocked entity rows — contrasting colors make the blur visible */}
                   <div style={{ flex: 1, overflow: "hidden" }}>
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} style={{ padding: "10px 24px", borderBottom: "0.5px solid var(--field-border)", display: "flex", gap: 12, alignItems: "center" }}>
-                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-surface-neutral-default)", flexShrink: 0 }} />
+                    {([
+                      { accent: "var(--color-surface-primary-subtle)",  tag: "var(--color-border-primary-default)", w: "62%"  },
+                      { accent: "var(--color-surface-success-subtle)",  tag: "var(--color-border-success-default)", w: "48%"  },
+                      { accent: "var(--color-surface-error-subtle)",    tag: "var(--color-border-error-default)",   w: "71%"  },
+                      { accent: "var(--color-surface-yellow-subtle)",   tag: "var(--color-border-yellow-default)",  w: "55%"  },
+                      { accent: "var(--color-surface-purple-subtle)",   tag: "var(--color-border-purple-default)",  w: "42%"  },
+                      { accent: "var(--color-surface-primary-subtle)",  tag: "var(--color-border-primary-default)", w: "67%"  },
+                    ]).map(({ accent, tag, w }, i) => (
+                      <div key={i} style={{ padding: "10px 24px", borderBottom: "0.5px solid var(--field-border)", display: "flex", gap: 12, alignItems: "center", background: i % 2 === 0 ? "var(--surface)" : "transparent" }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: accent, border: `1px solid ${tag}`, flexShrink: 0 }} />
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
-                          <div style={{ height: 11, width: `${55 + i * 6}%`, borderRadius: 3, background: "var(--color-surface-neutral-default)" }} />
-                          <div style={{ height: 9, width: `${35 + i * 4}%`, borderRadius: 3, background: "var(--color-surface-neutral-default)", opacity: 0.5 }} />
+                          <div style={{ height: 11, width: w, borderRadius: 3, background: "var(--color-surface-neutral-default)" }} />
+                          <div style={{ height: 9, width: `${parseInt(w) - 15}%`, borderRadius: 3, background: accent, opacity: 0.7 }} />
                         </div>
-                        <div style={{ height: 20, width: 52, borderRadius: 10, background: "var(--color-surface-neutral-default)", opacity: 0.6 }} />
+                        <div style={{ height: 20, width: 52, borderRadius: 10, background: accent, border: `1px solid ${tag}` }} />
                       </div>
                     ))}
                   </div>
@@ -25620,6 +33461,447 @@ function CornerRadiusPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{note}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
+// ── Spacing ───────────────────────────────────────────────────────────────────
+
+const SPACING_TOKENS = [
+  { step: "0x",  px: 0,  token: "spacing.0",  use: "Reset — remove spacing between elements"              },
+  { step: "1x",  px: 4,  token: "spacing.1",  use: "Micro — icon to text, tight inline spacing"           },
+  { step: "2x",  px: 8,  token: "spacing.2",  use: "Small — gaps inside buttons, inputs, chips"           },
+  { step: "3x",  px: 12, token: "spacing.3",  use: "Compact — grouping inside dense components"           },
+  { step: "4x",  px: 16, token: "spacing.4",  use: "Standard — card padding, container insets"            },
+  { step: "5x",  px: 20, token: "spacing.5",  use: "Medium — stacked elements, list item padding"         },
+  { step: "6x",  px: 24, token: "spacing.6",  use: "Section — gap between modules and nav layers"         },
+  { step: "8x",  px: 32, token: "spacing.8",  use: "Layout — horizontal page padding, modal insets"       },
+  { step: "10x", px: 40, token: "spacing.10", use: "Loose — large layout separation, form groups"         },
+  { step: "12x", px: 48, token: "spacing.12", use: "Page — section padding, panel top insets"             },
+  { step: "16x", px: 64, token: "spacing.16", use: "Hero — full-page section spacing, scroll guard"       },
+]
+
+const SPACING_DO = [
+  "Use spacing tokens in multiples of 4 — choose from the 11-step scale.",
+  "Apply 24px (6x) as the default gap between nav layers — Tabs → Filters.",
+  "Use 32px (8x) as the horizontal padding for full-width page content areas.",
+  "Reserve 64px (16x) for scroll guard padding at the bottom (floating Pagination).",
+  "Use 12px (3x) as the gap between entity cards in a list.",
+  "Use 8px (2x) as the gap between icon and label inside a button, chip, or badge.",
+]
+
+const SPACING_DONT = [
+  "Do not hardcode arbitrary px values — always pick from the 4px-grid token scale.",
+  "Do not use per-element margin for spacing between sibling blocks — prefer gap on a flex parent.",
+  "Do not mix padding and gap to achieve the same effect on the same container.",
+  "Do not skip the 24px gap between Tabs and the first filter row.",
+  "Do not use 0px spacing between interactive elements that need a touch target gap.",
+]
+
+function SpacingPage(_: { openSpec: (s: SpecModal) => void }) {
+  return (
+    <div className="flex flex-col gap-[40px]">
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-[16px]">
+        <div>
+          <h1 className="text-[24px] font-semibold" style={{ color: "var(--foreground)" }}>Spacing Scale</h1>
+          <p className="text-[14px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+            4px base grid · 11 tokens (0–64px) · governs all padding, gap, and margin across AIMS OS views.{" "}
+            Sourced from Figma DS node{" "}
+            <code className="text-[12px] font-mono px-[5px] py-[1px] rounded-[4px]" style={{ background: "var(--code-bg)" }}>4492:12478</code>.
+          </p>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          <FigmaLink href="https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4492-12478" />
+        </div>
+      </div>
+
+      {/* ── Token scale ── */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Token scale</h2>
+        <div className="flex flex-col rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+          {SPACING_TOKENS.map((t, i) => (
+            <div
+              key={t.token}
+              className="flex items-center gap-[16px] px-[16px] py-[10px]"
+              style={{
+                background: i % 2 === 0 ? "var(--field-bg)" : "transparent",
+                borderBottom: i < SPACING_TOKENS.length - 1 ? "0.5px solid var(--field-border)" : "none",
+              }}
+            >
+              <div className="flex items-baseline gap-[6px] shrink-0" style={{ width: 72 }}>
+                <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{t.step}</span>
+                <span className="text-[12px] font-mono" style={{ color: "var(--field-supporting)" }}>{t.px}px</span>
+              </div>
+              <code className="text-[12px] font-mono shrink-0" style={{ color: "var(--fi-view-active-bg)", width: 96 }}>{t.token}</code>
+              <div className="flex-1 flex items-center">
+                {t.px > 0 ? (
+                  <div
+                    style={{
+                      height: 8,
+                      width: `${Math.max(Math.round((t.px / 64) * 100), 1)}%`,
+                      borderRadius: 4,
+                      background: "linear-gradient(90deg, rgba(33,115,255,0.75) 0%, rgba(9,226,171,0.75) 100%)",
+                    }}
+                  />
+                ) : (
+                  <div style={{ width: 2, height: 8, borderRadius: 1, background: "var(--field-border)" }} />
+                )}
+              </div>
+              <span className="text-[12px] shrink-0 text-right" style={{ color: "var(--field-supporting)", width: 240 }}>{t.use}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Applied in AIMS OS views ── */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Applied in AIMS OS views</h2>
+        <p className="text-[13px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+          The actual AIMS OS list view from Figma, with spacing tokens annotated directly on the view.
+          Colored overlays mark structural gaps; labels show the DS token value.
+          Note: Pagination is a static component positioned below the scroll container — it is not shown
+          as a spacing annotation here because the entity list can continue with more cards beyond the visible area.
+          Use <code style={{ fontFamily: "monospace", fontSize: 12, background: "var(--code-bg)", padding: "1px 5px", borderRadius: 3 }}>padding-bottom: spacing.16 (64px)</code> on
+          the scroll container to ensure the last card is never hidden behind Pagination.
+        </p>
+
+        {/* Annotated screenshot — overlay positions based on pixel measurements (1440×900 source) */}
+        <div className="rounded-[10px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)", position: "relative" }}>
+          <img src="/spacing-reference.png" alt="AIMS OS list view — spacing reference" style={{ width: "100%", display: "block" }} />
+
+          {/* 32px left content padding — header band */}
+          <div style={{ position: "absolute", left: "3.47%", top: "3.89%", width: "2.22%", height: "7.56%", background: "rgba(33,115,255,0.26)", borderRight: "1.5px dashed rgba(33,115,255,0.75)" }} />
+          <div style={{ position: "absolute", right: "3.47%", top: "3.89%", width: "2.22%", height: "7.56%", background: "rgba(33,115,255,0.26)", borderLeft: "1.5px dashed rgba(33,115,255,0.75)" }} />
+          <div style={{ position: "absolute", left: "3.47%", top: "3.89%", background: "#2173FF", borderRadius: "0 3px 3px 0", padding: "2px 5px", lineHeight: 1 }}>
+            <span style={{ fontSize: 8, fontWeight: 700, color: "white", fontFamily: "monospace" }}>32px</span>
+          </div>
+
+          {/* 8px scroll gap — y 104-111 (11.56%–12.33%) */}
+          <div style={{ position: "absolute", left: "5.69%", right: "3.47%", top: "11.56%", height: "0.89%", minHeight: 2, background: "rgba(245,158,11,0.32)" }} />
+          <div style={{ position: "absolute", right: "1.5%", top: "11.56%", transform: "translateY(-50%)" }}>
+            <div style={{ background: "#f59e0b", borderRadius: 3, padding: "2px 7px" }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: "white", fontFamily: "monospace" }}>8px</span>
+            </div>
+          </div>
+
+          {/* 24px Tabs → Filters — y 149-172 (16.56%–19.11%) */}
+          <div style={{ position: "absolute", left: "5.69%", right: "3.47%", top: "16.56%", height: "2.67%", background: "rgba(9,226,171,0.22)" }} />
+          <div style={{ position: "absolute", right: "1.5%", top: "17.89%", transform: "translateY(-50%)" }}>
+            <div style={{ background: "#09E2AB", borderRadius: 3, padding: "2px 7px", display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,0,0,0.85)", fontFamily: "monospace" }}>24px</span>
+              <span style={{ fontSize: 8, color: "rgba(0,0,0,0.60)", fontFamily: "monospace" }}>Tabs → Filters</span>
+            </div>
+          </div>
+
+          {/* 24px Filters → List — y 213-236 (23.67%–26.22%) */}
+          <div style={{ position: "absolute", left: "5.69%", right: "3.47%", top: "23.67%", height: "2.67%", background: "rgba(9,226,171,0.22)" }} />
+          <div style={{ position: "absolute", right: "1.5%", top: "25%", transform: "translateY(-50%)" }}>
+            <div style={{ background: "#09E2AB", borderRadius: 3, padding: "2px 7px", display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(0,0,0,0.85)", fontFamily: "monospace" }}>24px</span>
+              <span style={{ fontSize: 8, color: "rgba(0,0,0,0.60)", fontFamily: "monospace" }}>Filters → List</span>
+            </div>
+          </div>
+
+          {/* 12px gap card 1 → 2 — y 409-419 (45.44%–46.56%) */}
+          <div style={{ position: "absolute", left: "5.69%", right: "3.47%", top: "45.44%", height: "1.22%", minHeight: 3, background: "rgba(167,139,250,0.35)" }} />
+          <div style={{ position: "absolute", right: "1.5%", top: "46%", transform: "translateY(-50%)" }}>
+            <div style={{ background: "#a78bfa", borderRadius: 3, padding: "2px 7px" }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: "white", fontFamily: "monospace" }}>12px</span>
+            </div>
+          </div>
+
+          {/* 12px gap card 2 → 3 — y 593-603 (65.89%–67.00%) */}
+          <div style={{ position: "absolute", left: "5.69%", right: "3.47%", top: "65.89%", height: "1.22%", minHeight: 3, background: "rgba(167,139,250,0.35)" }} />
+          <div style={{ position: "absolute", right: "1.5%", top: "66.44%", transform: "translateY(-50%)" }}>
+            <div style={{ background: "#a78bfa", borderRadius: 3, padding: "2px 7px" }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: "white", fontFamily: "monospace" }}>12px</span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-[20px] flex-wrap px-[16px] py-[10px] rounded-[8px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+          {[
+            { color: "#2173FF", label: "32px (8x)",   desc: "Horizontal content padding" },
+            { color: "#f59e0b", label: "8px (2x)",    desc: "Scroll area top gap" },
+            { color: "#09E2AB", label: "24px (6x)",   desc: "Nav layer gap — Tabs → Filters and Filters → List" },
+            { color: "#a78bfa", label: "12px (3x)",   desc: "Gap between entity cards" },
+          ].map(l => (
+            <div key={l.label} className="flex items-center gap-[6px]">
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "monospace", color: l.color }}>{l.label}</span>
+              <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>— {l.desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+        {/* !! old two-column wireframe removed — screenshot overlay above replaces it !! */}
+        <div className="flex rounded-[10px] overflow-hidden" style={{ display: "none" }}>
+          <div style={{ flex: "0 0 74%", background: "#0C1222", display: "flex", flexDirection: "column", borderRight: "0.5px solid rgba(255,255,255,0.08)" }}>
+
+            {/* Topbar — H:40 */}
+            <div style={{ height: 40, flexShrink: 0, display: "flex", alignItems: "center", gap: 8, padding: "0 14px", background: "#111827", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ width: 18, height: 18, borderRadius: 4, background: "rgba(255,255,255,0.14)" }} />
+              <div style={{ width: 56, height: 7, borderRadius: 3, background: "rgba(255,255,255,0.14)" }} />
+              <div style={{ flex: 1 }} />
+              <div style={{ width: 130, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.06)", border: "0.5px solid rgba(255,255,255,0.10)" }} />
+              <div style={{ flex: 1 }} />
+              <div style={{ display: "flex", gap: 6 }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />)}
+              </div>
+            </div>
+
+            {/* Main row */}
+            <div style={{ flex: 1, display: "flex" }}>
+
+              {/* Sidebar — W:44 */}
+              <div style={{ width: 44, flexShrink: 0, background: "#0E1628", borderRight: "0.5px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingTop: 10 }}>
+                {[true,false,false,false,false].map((active, j) => (
+                  <div key={j} style={{ width: 24, height: 24, borderRadius: 6, background: active ? "rgba(33,115,255,0.30)" : "rgba(255,255,255,0.07)", border: active ? "0.5px solid rgba(33,115,255,0.40)" : "none" }} />
+                ))}
+              </div>
+
+              {/* Content column */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+
+                {/* Header — H:60 — shows 32px left/right padding as dashed strips */}
+                <div style={{ height: 60, flexShrink: 0, display: "flex", alignItems: "center", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
+                  {/* Left 32px indicator */}
+                  <div style={{ width: 32, height: "100%", flexShrink: 0, background: "rgba(33,115,255,0.11)", borderRight: "1.5px dashed rgba(33,115,255,0.38)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 7, fontWeight: 700, color: "#2173FF", fontFamily: "monospace", writingMode: "vertical-rl", transform: "rotate(180deg)" }}>32px</span>
+                  </div>
+                  {/* Header content */}
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "0 12px" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ height: 10, width: "42%", borderRadius: 3, background: "rgba(255,255,255,0.28)", marginBottom: 7 }} />
+                      <div style={{ height: 6, width: "62%", borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      <div style={{ width: 40, height: 18, borderRadius: 999, background: "rgba(33,115,255,0.20)", border: "0.5px solid rgba(33,115,255,0.30)" }} />
+                      <div style={{ width: 54, height: 22, borderRadius: 6, background: "rgba(33,115,255,0.38)", border: "0.5px solid rgba(33,115,255,0.50)" }} />
+                    </div>
+                  </div>
+                  {/* Right 32px indicator */}
+                  <div style={{ width: 32, height: "100%", flexShrink: 0, background: "rgba(33,115,255,0.11)", borderLeft: "1.5px dashed rgba(33,115,255,0.38)" }} />
+                </div>
+
+                {/* Scroll area — padding 0 32px */}
+                <div style={{ flex: 1, padding: "0 32px", display: "flex", flexDirection: "column" }}>
+
+                  {/* Gap 8px — H:8 */}
+                  <div style={{ height: 8, flexShrink: 0, background: "rgba(245,158,11,0.16)" }} />
+
+                  {/* Tabs — H:28 */}
+                  <div style={{ height: 28, flexShrink: 0, display: "flex", alignItems: "flex-end", gap: 16, borderBottom: "0.5px solid rgba(255,255,255,0.08)" }}>
+                    {[1,0].map(active => (
+                      <div key={active} style={{ paddingBottom: 6, borderBottom: active ? "2px solid #2173FF" : "none" }}>
+                        <div style={{ height: 7, width: active ? 30 : 24, borderRadius: 3, background: active ? "rgba(33,115,255,0.65)" : "rgba(255,255,255,0.18)" }} />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Gap 24px (Tabs → Filters) — H:24 */}
+                  <div style={{ height: 24, flexShrink: 0, background: "rgba(9,226,171,0.10)" }} />
+
+                  {/* Filters — H:32 */}
+                  <div style={{ height: 32, flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 100, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.10)", display: "flex", alignItems: "center", padding: "0 8px", gap: 5 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.20)" }} />
+                      <div style={{ flex: 1, height: 5, borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
+                    </div>
+                    {[54,68,50].map((w,k) => (
+                      <div key={k} style={{ width: w, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.10)" }} />
+                    ))}
+                    <div style={{ flex: 1 }} />
+                    <div style={{ width: 56, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.10)" }} />
+                  </div>
+
+                  {/* Gap 24px (Filters → List) — H:24 */}
+                  <div style={{ height: 24, flexShrink: 0, background: "rgba(9,226,171,0.10)" }} />
+
+                  {/* Entity cards — H:84 each, H:12 gap */}
+                  {[0,1,2].map(i => (
+                    <div key={i}>
+                      <div style={{ height: 84, flexShrink: 0, borderRadius: 8, border: "0.5px solid rgba(255,255,255,0.10)", background: "#141E30", display: "flex", flexDirection: "column", padding: "10px 12px", gap: 5 }}>
+                        {/* Title row */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 22, height: 22, borderRadius: 5, background: i === 0 ? "rgba(16,185,129,0.25)" : i === 1 ? "rgba(33,115,255,0.25)" : "rgba(255,255,255,0.10)", flexShrink: 0 }} />
+                          <div style={{ height: 8, width: "38%", borderRadius: 3, background: "rgba(255,255,255,0.30)" }} />
+                          <div style={{ flex: 1 }} />
+                          <div style={{ width: 38, height: 14, borderRadius: 999, background: i === 0 ? "rgba(16,185,129,0.22)" : i === 1 ? "rgba(33,115,255,0.22)" : "rgba(255,255,255,0.09)" }} />
+                          <div style={{ width: 24, height: 6, borderRadius: 2, background: "rgba(255,255,255,0.10)" }} />
+                        </div>
+                        {/* Description */}
+                        <div style={{ height: 6, width: "80%", borderRadius: 2, background: "rgba(255,255,255,0.11)" }} />
+                        {/* AI summary strip */}
+                        <div style={{ height: 18, borderRadius: 4, background: "rgba(124,58,237,0.18)", border: "0.5px solid rgba(124,58,237,0.28)", display: "flex", alignItems: "center", gap: 6, padding: "0 8px" }}>
+                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(167,139,250,0.75)" }} />
+                          <div style={{ height: 5, width: "68%", borderRadius: 2, background: "rgba(167,139,250,0.28)" }} />
+                        </div>
+                        {/* Meta row */}
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                          {[28,42,18,30,14].map((w,m) => (
+                            <div key={m} style={{ height: 5, width: w, borderRadius: 2, background: "rgba(255,255,255,0.10)" }} />
+                          ))}
+                        </div>
+                      </div>
+                      {/* Gap 12px between cards */}
+                      {i < 2 && <div style={{ height: 12, flexShrink: 0, background: "rgba(167,139,250,0.12)" }} />}
+                    </div>
+                  ))}
+
+                  {/* 64px scroll guard — H:48 visual */}
+                  <div style={{ height: 48, flexShrink: 0, background: "rgba(255,100,103,0.09)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ position: "relative", width: "55%", height: 1, background: "rgba(255,100,103,0.35)" }}>
+                      <div style={{ position: "absolute", left: 0, top: -3, width: 1, height: 7, background: "rgba(255,100,103,0.55)" }} />
+                      <div style={{ position: "absolute", right: 0, top: -3, width: 1, height: 7, background: "rgba(255,100,103,0.55)" }} />
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Pagination — H:36 */}
+                <div style={{ height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, padding: "0 32px", background: "#0E1628", borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
+                  {[1,2,3,"…",8].map((p,k) => (
+                    <div key={k} style={{ width: 20, height: 20, borderRadius: 4, background: k === 0 ? "rgba(33,115,255,0.35)" : "rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, color: k === 0 ? "#5B9BFF" : "rgba(255,255,255,0.28)", fontFamily: "monospace" }}>{p}</span>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {/* ── Annotation rail (right 26%) ── Heights must match wireframe exactly */}
+          <div style={{ flex: "0 0 26%", display: "flex", flexDirection: "column", background: "var(--field-bg)" }}>
+
+            {/* Topbar spacer — H:40 */}
+            <div style={{ height: 40, flexShrink: 0 }} />
+
+            {/* Header spacer — H:60 — shows 32px horizontal padding callout */}
+            <div style={{ height: 60, flexShrink: 0, display: "flex", alignItems: "center", paddingLeft: 16, gap: 8, borderTop: "0.5px solid var(--field-border)" }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: "#2173FF", flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#2173FF", fontFamily: "monospace" }}>32px</div>
+                <div style={{ fontSize: 9, color: "var(--field-supporting)", fontFamily: "monospace", lineHeight: 1.3 }}>horizontal padding</div>
+              </div>
+            </div>
+
+            {/* 8px gap annotation — H:8 */}
+            <div style={{ height: 8, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 12px", gap: 4, background: "rgba(245,158,11,0.09)", borderTop: "0.5px solid rgba(245,158,11,0.25)" }}>
+              <div style={{ flex: 1, height: 1, background: "rgba(245,158,11,0.50)" }} />
+              <span style={{ fontSize: 8, fontWeight: 700, color: "#f59e0b", fontFamily: "monospace", whiteSpace: "nowrap" }}>8px</span>
+              <div style={{ width: 4, height: 1, background: "rgba(245,158,11,0.50)" }} />
+            </div>
+
+            {/* Tabs spacer — H:28 */}
+            <div style={{ height: 28, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
+
+            {/* 24px gap: Tabs → Filters — H:24 */}
+            <div style={{ height: 24, flexShrink: 0, display: "flex", alignItems: "center", paddingLeft: 12, gap: 8, background: "rgba(9,226,171,0.07)", borderTop: "0.5px solid rgba(9,226,171,0.25)" }}>
+              <div style={{ display: "flex", flexDirection: "column", height: "100%", width: 10, flexShrink: 0 }}>
+                <div style={{ height: 1, width: 10, background: "#09E2AB" }} />
+                <div style={{ flex: 1, width: 1, background: "#09E2AB", marginLeft: 5 }} />
+                <div style={{ height: 1, width: 10, background: "#09E2AB" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#09E2AB", fontFamily: "monospace" }}>24px</div>
+                <div style={{ fontSize: 8, color: "#09E2AB", opacity: 0.65, fontFamily: "monospace" }}>Tabs → Filters</div>
+              </div>
+            </div>
+
+            {/* Filters spacer — H:32 */}
+            <div style={{ height: 32, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
+
+            {/* 24px gap: Filters → List — H:24 */}
+            <div style={{ height: 24, flexShrink: 0, display: "flex", alignItems: "center", paddingLeft: 12, gap: 8, background: "rgba(9,226,171,0.07)", borderTop: "0.5px solid rgba(9,226,171,0.25)" }}>
+              <div style={{ display: "flex", flexDirection: "column", height: "100%", width: 10, flexShrink: 0 }}>
+                <div style={{ height: 1, width: 10, background: "#09E2AB" }} />
+                <div style={{ flex: 1, width: 1, background: "#09E2AB", marginLeft: 5 }} />
+                <div style={{ height: 1, width: 10, background: "#09E2AB" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#09E2AB", fontFamily: "monospace" }}>24px</div>
+                <div style={{ fontSize: 8, color: "#09E2AB", opacity: 0.65, fontFamily: "monospace" }}>Filters → List</div>
+              </div>
+            </div>
+
+            {/* Card 1 spacer — H:84 */}
+            <div style={{ height: 84, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
+
+            {/* 12px gap annotation — H:12 */}
+            <div style={{ height: 12, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 12px", gap: 4, background: "rgba(167,139,250,0.08)", borderTop: "0.5px solid rgba(167,139,250,0.25)" }}>
+              <div style={{ flex: 1, height: 1, background: "rgba(167,139,250,0.55)" }} />
+              <span style={{ fontSize: 8, fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", whiteSpace: "nowrap" }}>12px</span>
+              <div style={{ width: 4, height: 1, background: "rgba(167,139,250,0.55)" }} />
+            </div>
+
+            {/* Card 2 spacer — H:84 */}
+            <div style={{ height: 84, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
+
+            {/* 12px gap annotation — H:12 */}
+            <div style={{ height: 12, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 12px", gap: 4, background: "rgba(167,139,250,0.08)", borderTop: "0.5px solid rgba(167,139,250,0.25)" }}>
+              <div style={{ flex: 1, height: 1, background: "rgba(167,139,250,0.55)" }} />
+              <span style={{ fontSize: 8, fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", whiteSpace: "nowrap" }}>12px</span>
+              <div style={{ width: 4, height: 1, background: "rgba(167,139,250,0.55)" }} />
+            </div>
+
+            {/* Card 3 spacer — H:84 */}
+            <div style={{ height: 84, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
+
+            {/* 64px scroll guard annotation — H:48 */}
+            <div style={{ height: 48, flexShrink: 0, display: "flex", alignItems: "center", paddingLeft: 12, gap: 8, background: "rgba(255,100,103,0.07)", borderTop: "0.5px solid rgba(255,100,103,0.25)" }}>
+              <div style={{ display: "flex", flexDirection: "column", height: "100%", width: 10, flexShrink: 0 }}>
+                <div style={{ height: 1, width: 10, background: "#ff6467" }} />
+                <div style={{ flex: 1, width: 1, background: "#ff6467", marginLeft: 5 }} />
+                <div style={{ height: 1, width: 10, background: "#ff6467" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#ff6467", fontFamily: "monospace" }}>64px</div>
+                <div style={{ fontSize: 8, color: "#ff6467", opacity: 0.65, fontFamily: "monospace" }}>scroll guard</div>
+              </div>
+            </div>
+
+            {/* Pagination spacer — H:36 */}
+            <div style={{ height: 36, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
+
+          </div>
+        </div>
+
+      {/* ── Usage guidelines ── */}
+      <div className="flex flex-col gap-[12px]">
+        <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Usage guidelines</h2>
+        <div className="grid grid-cols-2 gap-[12px]">
+          <div className="flex flex-col gap-[8px] rounded-[8px] p-[16px]" style={{ background: "rgba(110,231,183,0.06)", border: "0.5px solid rgba(110,231,183,0.2)" }}>
+            <span className="text-[12px] font-semibold" style={{ color: "#6ee7b7" }}>✓ Do</span>
+            <div className="flex flex-col gap-[8px]">
+              {SPACING_DO.map((rule, i) => (
+                <div key={i} className="flex items-start gap-[8px]">
+                  <span className="text-[13px] shrink-0 mt-[1px]" style={{ color: "#6ee7b7" }}>·</span>
+                  <span className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{rule}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-[8px] rounded-[8px] p-[16px]" style={{ background: "rgba(255,100,103,0.06)", border: "0.5px solid rgba(255,100,103,0.2)" }}>
+            <span className="text-[12px] font-semibold" style={{ color: "#ff6467" }}>✕ Don't</span>
+            <div className="flex flex-col gap-[8px]">
+              {SPACING_DONT.map((rule, i) => (
+                <div key={i} className="flex items-start gap-[8px]">
+                  <span className="text-[13px] shrink-0 mt-[1px]" style={{ color: "#ff6467" }}>·</span>
+                  <span className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{rule}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -27800,7 +36082,8 @@ export default function App() {
           {active === "progress-bar"    && <ProgressBarPage   openSpec={setSpecModal} />}
           {active === "skeleton"        && <SkeletonPage      openSpec={setSpecModal} />}
           {active === "spinner"         && <SpinnerPage       openSpec={setSpecModal} />}
-          {active === "stepper"         && <StepperPage       openSpec={setSpecModal} />}
+          {active === "stepper"             && <StepperPage            openSpec={setSpecModal} />}
+          {active === "stepper-nav-footer"  && <StepperNavFooterPage   openSpec={setSpecModal} />}
           {active === "patterns-list-view"  && <PatternListViewPage />}
           {active === "patterns-filter"     && <PatternFilterPage />}
           {active === "patterns-overlay"    && <PatternOverlayPage />}
@@ -27810,6 +36093,10 @@ export default function App() {
           {active === "patterns-feedback"      && <PatternFeedbackPage />}
           {active === "patterns-logs"          && <PatternLogsPage />}
           {active === "patterns-widget-canvas" && <PatternWidgetCanvasPage />}
+          {active === "patterns-guardrails"   && <PatternGuardrailsPage />}
+          {active === "patterns-forms"        && <PatternFormsPage />}
+          {active === "patterns-panel-content" && <PatternPanelContentPage />}
+          {active === "patterns-slideout"     && <PatternSlideOutPage />}
           {active === "widget-father"         && <WidgetFatherPage />}
           {active === "widgets"               && <WidgetsPage />}
           {active === "switch-tab"      && <SwitchTabPage     openSpec={setSpecModal} />}
@@ -27824,7 +36111,7 @@ export default function App() {
           {active === "entity-list"     && <EntityListPage    openSpec={setSpecModal} />}
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
-          {active === "breadcrumb"      && <BreadcrumbPage />}
+          {active === "breadcrumb"      && <BreadcrumbPage openSpec={setSpecModal} />}
           {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}
           {active === "pagination"      && <PaginationPage      openSpec={setSpecModal} />}
           {active === "filters"         && <FiltersPage         openSpec={setSpecModal} />}
@@ -27834,6 +36121,7 @@ export default function App() {
           {active === "icons"           && <IconsPage        openSpec={setSpecModal} />}
           {active === "typography"      && <TypographyPage   openSpec={setSpecModal} />}
           {active === "colors"          && <ColorsPage       openSpec={setSpecModal} />}
+          {active === "spacing"         && <SpacingPage      openSpec={setSpecModal} />}
           {/* PM prototypes render full-screen via the overlay below (no DS shell) — not here, to avoid double-mounting */}
         </div>
       </main>

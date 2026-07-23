@@ -57,7 +57,7 @@ const buttonVariants = cva(
         // Disabled: DS-specific bg/border/text instead of generic opacity
         secondary: [
           "border border-[var(--btn-secondary-border)]",
-          "bg-[var(--btn-secondary-bg)] text-[var(--btn-secondary-fg)]",
+          "bg-[var(--btn-secondary-bg)] [color:var(--btn-secondary-fg)]",
           "hover:bg-[var(--btn-secondary-hover-bg)] hover:border-[var(--btn-secondary-hover-bd)]",
           "focus-visible:border-[var(--btn-secondary-focus-bd)]",
           "active:bg-[var(--btn-secondary-active-bg)]",
@@ -67,7 +67,7 @@ const buttonVariants = cva(
         // Tertiary — text-only; hover/focus use Surface/Neutral/Subtle|Default per DS
         tertiary: [
           "border border-transparent",
-          "bg-transparent text-[var(--btn-tertiary-fg)]",
+          "bg-transparent [color:var(--btn-tertiary-fg)]",
           "hover:bg-[var(--btn-tertiary-hover-bg)]",
           "focus-visible:bg-[var(--btn-tertiary-focus-bg)]",
           "active:bg-[var(--btn-tertiary-active-bg)]",

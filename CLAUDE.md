@@ -13,6 +13,97 @@ Stack: React + Tailwind + shadcn/ui. TypeScript.
 - Font is Inter. Use the typographic scale in `tailwind.config`, not arbitrary sizes.
 - All colors via `var(--token-name)`. No exceptions in `.tsx` files.
 
+### Example screens and DS documentation pages (`src/screens/`)
+
+These rules apply to ALL files in `src/screens/` — both PM prototypes and DS component example screens:
+
+- **NEVER build a custom component that replicates an existing DS component.** If `EntityList` exists, use it. If `CardContainer` exists, use it. Building a custom entity card, custom tab bar, custom filter row, etc. silently loses all DS behaviors: hover effects, AI insight sizing, token bindings, accessibility. The bugs are invisible until runtime.
+- **Entity items** → always `CardContainer size="sm" className="!p-0 overflow-hidden"` + `EntityList items={[item]}`. Never a custom div that mimics the card layout.
+- **Tabs** → never add `borderBottom` to the wrapper div. The `Tabs` component manages its own active indicator (2px span, active tab only). A container border creates a full-width line under ALL tabs — wrong per DS spec ("NO container border").
+- **AI insight** → always use `EntityListItemData.aiInsight`. The DS component applies `self-start` when text < 80 chars (auto-width). A custom purple div always stretches full-width.
+- **Spacing between nav layers** → always 24px. Tabs → Filters: `className="mb-[24px]"` on `<Tabs>`. Filters → EntityList: `marginTop: 24` or `mt-[24px]`. Never 8px, 16px, or 20px.
+- **DS composition checklist before writing any JSX in a screen file:**
+  1. Is there a DS component in `src/components/ui/` for what I need? → Use it.
+  2. Can I compose the result from existing DS components? → Compose.
+  3. Only if neither applies: use a plain HTML element with `var(--token)` colors and `// DS-GAP:` comment.
+
+---
+
+## GUARDRAILS — read this before generating any component or screen
+
+These are the rules most often violated in AI-generated views. Scan this block every time before writing screen code.
+
+### Tokens & components
+- **NEVER** hardcode `#hex` / `rgba()` in `.tsx` — always `var(--token-name)`.
+- **NEVER** build a custom version of a DS component that exists in `src/components/ui/` — import it.
+- **NEVER** add `borderBottom` on a `<Tabs>` wrapper — the component manages its own active indicator.
+
+### Navigation & headers
+- **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
+- **NEVER** show both `backButton` and breadcrumbs — pick based on depth (L2 → backButton, L3+ → breadcrumbs).
+- **NEVER** use `WidgetCanvasSection` or a hand-rolled grid for Overview tabs — always `WidgetCanvasView`.
+- **NEVER** pass the `label` prop to `Input` or `Textarea` in desktop screen files.
+
+### Buttons & overlays
+- **NEVER** use `variant="main"` inside a widget, card, SlideOut, or modal — use `primary`.
+- **NEVER** open a `ModalDialog` for non-blocking or non-destructive content — use `SlideOut`.
+- **NEVER** show a filter chip before the user clicks Apply.
+
+### 3-dot context menu (kebab `•••`)
+- Global default actions: **Archive** + **Duplicate** — always in that order, always present unless the entity type explicitly excludes them.
+- **Delete** is context-dependent — only include it when the entity type supports deletion. It is NOT a global default.
+- Any additional actions depend on the specific entity type.
+- ALWAYS use the **icon + text** menu-item variant, **size S** — no icon-only, no size M or L.
+- Never add actions that are not defined for the entity type in DS documentation.
+
+### Sidebar sub-navigation
+Two behaviors — choose based on the sidebar's current collapse state:
+
+| Sidebar state | Sub-item behavior |
+|---|---|
+| **Collapsed** (56px, icon-only) | Active item with sub-items → **fly-out popup** appears to the RIGHT of the sidebar (~260px wide, dark surface), showing sub-items as `Menu-items` components |
+| **Expanded** (250px, with labels) | Active item with sub-items → sub-items **expand inline below the parent**, indented, each with their own icon + label as `Menu-items` components. A `›` chevron on the parent indicates it has sub-items |
+
+Toggle button at the top of the sidebar switches states. Tooltip: **"Expand"** (when collapsed) / **"Collapse"** (when expanded).
+Figma reference: node `8602-48775` in the DS file (`v6rmYKA2zmyXWOahlxLOeI`).
+
+### SlideOut content composition
+A dedicated composition guide is **pending** — patterns will be extracted from the Agentic Workflow Builder Nodes Configuration section and documented in a new DS page.
+
+Until that page ships:
+- Use `SlideOut` as the container — never a custom overlay `div`.
+- For entity detail content: header with entity name + status tag → primary action buttons → metadata fields → related items list.
+- Flag edge cases with `// DS-GAP: SlideOut content pattern — pending composition guide`.
+
+### Entity click behavior
+Two distinct interactions — never conflate them:
+- **Card click** (anywhere on the entity row/card) → always **navigates to the full detail view** for that entity (full-page or section transition). Never opens a SlideOut.
+- **Eye button (preview)** → always opens a `SlideOut` with a lightweight preview. Only render the Eye button when preview content is available for that entity. If there is nothing to preview, **omit the button entirely** — do not show a disabled Eye.
+
+```tsx
+// ✅ Eye shown only when preview data exists
+actions={[
+  ...(hasPreview ? [{ icon: "Eye", onClick: () => setPreviewId(item.id) }] : []),
+]}
+
+// ❌ Eye always present (wrong when no preview content)
+actions={[{ icon: "Eye", onClick: () => {} }]}
+```
+
+### Empty states
+**ALWAYS** use `EmptyState` from `src/components/ui/empty-state.tsx` when a view, section, or search has no content to display. **NEVER** hardcode a custom div, illustration, or message — custom empty states break visual consistency and are invisible to the DS.
+
+Show `EmptyState` in every zero-result scenario:
+- **Filtered empty** — active filters or search return 0 results → title: "No [entities] found", CTA: "Clear filters"
+- **Global search empty** — global search returns 0 matches → title: "No results for '[query]'"
+- **Page empty** — the list has no records yet (first visit or truly empty) → title: "No [entities] yet", CTA: "Create your first [entity]"
+
+Key rules:
+- Always set `title` (required) and `description` (recommended).
+- Add `ctaLabel` + `onCta` only when there is a clear next action — do not add a CTA just to have one.
+- Override `icon` with a semantic Lucide icon matching the entity type (`Bot` for Workers, `Zap` for Automations, etc.). Default is `Inbox`.
+- **Never show `EmptyState` and `Pagination` at the same time** — if count is 0, pagination must be hidden.
+
 ---
 
 ## Before generating any screen
@@ -42,9 +133,54 @@ Stack in this exact order:
 
 Entity items must include actions in this order: **primary → secondary → tertiary (Eye/preview)**.
 The Eye icon belongs ONLY in the tertiary action (`icon: "Eye"`). Never use `iconName: "Eye"` as the leading icon of an entity item — use a semantic icon (Bot, User, FileText, etc.) that represents the entity type.
-The Eye button always opens a `SlideOut` with item detail.
+
+**Entity click vs Eye button — two separate interactions:**
+- **Card click** → always navigates to the full detail view for that entity. Never opens a SlideOut.
+- **Eye button** → opens a `SlideOut` preview. Render the Eye button ONLY when preview content exists for that entity. Omit it entirely when there is nothing to preview — never show a disabled Eye.
+
+If the filtered or unfiltered entity list is empty, replace the list with `EmptyState` (see Empty States below). Never render an empty `EntityList`.
 
 Use `ListViewSection` from `src/components/layouts/list-view-section.tsx` to get this structure pre-wired.
+
+### Detail page layout (entity detail — full screen)
+Every entity detail page follows this structure — tabs always in this order:
+
+1. **Overview** → always `WidgetCanvasView`. Never a hand-rolled widget grid. (See Overview tabs rule.)
+2. **[Entity-specific tabs]** → vary by entity type (e.g. Runs, Members, Triggers, Settings). Content defined per entity.
+3. **Logs** → always the `Table` component following the Logs Table pattern. (See PatternLogsPage.)
+
+Header rules on detail pages:
+- `backButton={true}` if L2 depth (arrived from a list). Breadcrumbs if L3+.
+- Always show status `tag` — detail view = one entity, one state.
+- Primary action in `Header.primaryAction` (`variant="main"`).
+
+```tsx
+// ✅ Standard detail page structure
+<Header
+  title="Meridian"
+  tag={<Tag variant="success" size="s">Active</Tag>}
+  backButton={true}
+  size={isScrolled ? "compress" : "size-l"}
+  primaryAction={<Button variant="main" size="sm">Edit</Button>}
+/>
+<Tabs items={[
+  { id: "overview", label: "Overview" },   // always first
+  { id: "runs",     label: "Runs"     },   // entity-specific
+  { id: "logs",     label: "Logs"     },   // always last
+]} />
+
+// Overview tab → WidgetCanvasView
+// Logs tab     → Table + Filters + Pagination (PatternLogsPage)
+```
+
+### SwitchTab — when to show it
+Default view in all list views is **entity cards** (`EntityList`). The `SwitchTab` component is **not shown by default**.
+
+Only add `SwitchTab` when the use case explicitly requires an alternative view. If shown:
+- `List` option → `EntityList` inside `CardContainer` (default)
+- `Table` option → DS `Table` component rendering the same dataset with the same columns
+
+**NEVER** hand-roll a custom grid or table when SwitchTab is active — always use the DS `Table` component for the table option. Filters and Pagination stay the same regardless of the active view.
 
 ### Filter system
 Three layers — always compose in this order:
@@ -95,6 +231,139 @@ The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs ba
 - **`SlideOut`** — user can continue browsing (details, filters, context)
 - Rule: can the user ignore it? → SlideOut. Must they respond? → Modal.
 - Only 1 Modal + 1 SlideOut active at a time.
+
+### Panel overlays — PM component selection guide
+
+**Which panel component to use:**
+
+| Context | Component | Why |
+|---|---|---|
+| Entity detail preview from a list (Eye button) | `SlideOut` | Overlay on top of the list — user browses back quickly |
+| Node / item configuration within a canvas or builder | `SidePanel` | Inline with the canvas — no backdrop, user sees context while editing |
+| Filters panel (full filter set) | `SlideOut` type `"filters"` | Standard pattern, always overlays list |
+| Step-by-step guided form (multi-step) | `SlideOut` | Focused flow, backdrop keeps user on task |
+
+**SlideOut — which `type` variant to use:**
+
+| Use case | `type` prop | When to add `showTabs` |
+|---|---|---|
+| Entity preview (name, status, key metrics, AI summary, recent runs) | `"with-variants"` | Yes, when content splits into Overview / History / Config |
+| Filter set (full filter controls) | `"filters"` | No — filters panel has its own layout |
+| Generic content / form without entity header | `"default"` | Only if content naturally separates into sections |
+
+**SlideOut — mandatory props for `type="with-variants"` (entity detail):**
+
+```tsx
+<SlideOut
+  open={open}
+  onClose={onClose}
+  type="with-variants"
+  size="m"                          // default — always start with "m" (350px)
+  title="Entity Name"               // required
+  subtitle="Category · Subcategory" // required (format: "Type · Category")
+  statusLabel="Active"              // required — entity current status
+  showIcon                          // required — entity icon circle
+  showStatus                        // required — status badge
+  showTabs={hasSections}            // true when content splits into tabs
+  tabLabels={["Overview", "History", "Config"]}  // always exactly 3 strings
+  activeTab={tab}
+  onTabChange={setTab}
+  showSearchBar={false}
+  showChips={false}
+  showCta={needsCta}                // true only when panel has a Save/Cancel action
+>
+  {slotContent}
+</SlideOut>
+```
+
+**Default sizes and drag behavior:**
+- `size="m"` → starts at **350px**, drags to **450px** → **half-screen**. This is the default.
+- `size="l"` → starts at **450px**, drags to **half-screen** → **full-screen**. Use only for complex forms or rich content.
+- Never set a fixed pixel width — the snap system handles resizing.
+
+**SlideOut content composition (inside the slot):**
+
+Structure content top-to-bottom in this order:
+1. **AI Summary block** (if AI-generated insight exists) — purple surface, `var(--color-surface-purple-more-subtle)`
+2. **Key Metrics** — `AdaptiveMetricGrid` with 2–4 `HighlightCard` components. Max 4.
+3. **Primary list** (`EntityList`) — recent runs, related items, linked records
+4. **Process steps** (`ProcessItem`) — execution steps with status
+5. **Detail table** — key-value pairs in a bordered table (type, owner, pipeline, timestamps)
+6. **Form fields** (Config tab only) — `Input`, `Select`, `Toggle`, `Textarea` using DS components
+
+**SidePanel — mandatory props:**
+
+```tsx
+<SidePanel
+  open={open}
+  onClose={onClose}
+  title="Item Name"
+  description="Brief description of the item"
+  titleTag="Active"
+  titleTagVariant="success"         // "success" | "alert" | "neutral"
+  titleIcon={<Icon size={14} />}
+  showCollapsedStrip                // required — shows the collapsed state strip
+  showMenu={false}                  // omit unless panel has overflow actions
+  showSearch={false}                // omit unless panel has search
+  footer={                          // optional — use for Save/Cancel in config panels
+    <div className="flex justify-end gap-[8px] p-[12px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+      <Button variant="secondary" size="sm">Cancel</Button>
+      <Button variant="primary"   size="sm">Save</Button>
+    </div>
+  }
+>
+  {slotContent}
+</SidePanel>
+```
+
+**SidePanel default sizes and drag behavior:**
+- Starts at **350px**, drags to **450px** → **half-screen**. Same snap logic as SlideOut.
+- Always set `showCollapsedStrip` — the collapsed strip is the only affordance when the panel is closed; without it, there's no way to reopen it.
+
+**Quick decision:** Is the panel overlapping a browsable list? → `SlideOut`. Is it embedded alongside a canvas or builder where the user edits something in context? → `SidePanel`.
+
+### Confirmation modals — standard composition
+Use `variant="confirmation"` (the default) on `ModalDialog`. Always set `tone` to match the severity of the action:
+
+| Action | `tone` | `iconName` | `ctaPrimary.destructive` |
+|---|---|---|---|
+| Archive | `"warning"` | `"Archive"` | `false` |
+| Delete | `"error"` | `"Trash2"` | `true` |
+| Other irreversible | `"warning"` | semantic icon | `true` |
+
+Always include:
+- `title` — frame as a question: `"Archive this worker?"`, `"Delete automation?"`.
+- `description` — state the consequence: `"This action cannot be undone."` or entity-specific impact.
+- `ctaPrimary` — the action label, matching the verb used to trigger it ("Archive", "Delete").
+- `ctaSecondary` — always `{ label: "Cancel", onClick: onClose }`.
+
+```tsx
+// ✅ Delete confirmation
+<ModalDialog
+  isOpen={isOpen}
+  onClose={onClose}
+  tone="error"
+  iconName="Trash2"
+  title="Delete this worker?"
+  description="All runs and logs associated with Meridian will be permanently removed."
+  ctaPrimary={{ label: "Delete", destructive: true, onClick: handleDelete }}
+  ctaSecondary={{ label: "Cancel", onClick: onClose }}
+/>
+
+// ✅ Archive confirmation
+<ModalDialog
+  isOpen={isOpen}
+  onClose={onClose}
+  tone="warning"
+  iconName="Archive"
+  title="Archive this worker?"
+  description="Meridian will stop running and be moved to the archive. You can restore it later."
+  ctaPrimary={{ label: "Archive", onClick: handleArchive }}
+  ctaSecondary={{ label: "Cancel", onClick: onClose }}
+/>
+```
+
+**NEVER** improvise a custom confirmation UI — always use `ModalDialog variant="confirmation"`.
 
 ### Header `tag` prop — when to show it
 
@@ -213,6 +482,21 @@ Default page size for logs: 10. Options: [10, 25, 50].
 - Use `placeholder` to describe the field — it is the only field hint on desktop.
 - The floating label (absolute-positioned, overlaps the top border) is a mobile/touch convention only.
 - This applies to all form fields in modals, slide-outs, and inline edit flows in any PM prototype.
+
+### Empty States
+Use `EmptyState` from `src/components/ui/empty-state.tsx` whenever a view, section, or search has no content. **NEVER** hardcode a custom empty message, illustration, or div.
+
+| Scenario | title | description | CTA |
+|---|---|---|---|
+| No records yet (first visit) | "No [Entities] yet" | Brief explanation of what goes here | "Create your first [Entity]" |
+| Filtered empty (filter/search returns 0) | "No [entities] found" | "Try adjusting your filters or search term." | "Clear filters" |
+| Global search returns 0 | "No results for '[query]'" | Suggest broadening the search | — |
+
+Rules:
+- Override `icon` with a Lucide icon matching the entity type (`Bot` → Workers, `Zap` → Automations, `BookOpen` → Knowledge, etc.). Default `Inbox` is a fallback, not a choice.
+- Add `ctaLabel` + `onCta` only when there is a concrete next action — never add a CTA just to fill the space.
+- **Never show `EmptyState` and `Pagination` simultaneously** — 0 results means no pagination.
+- Place `EmptyState` where the entity list would have been — same padding, same vertical position.
 
 ### Pagination
 - Show only when `total_results > rows_per_page`.

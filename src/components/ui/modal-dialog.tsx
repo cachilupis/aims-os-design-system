@@ -23,6 +23,7 @@ export type ModalDialogProps = {
   title?:             string
   description?:       string
   slot?:              ReactNode             // custom content zone (content variant)
+  slotUnstyled?:      boolean               // skip the surface wrapper on slot (no bg, no padding)
   informativeCard?:   string | boolean      // true → default text; string → custom title
   ctaPrimary?:        { label: string; destructive?: boolean; onClick?: () => void }
   ctaSecondary?:      { label: string; onClick?: () => void }
@@ -44,6 +45,7 @@ export function ModalDialog({
   title,
   description,
   slot,
+  slotUnstyled,
   informativeCard,
   ctaPrimary,
   ctaSecondary,
@@ -172,12 +174,14 @@ export function ModalDialog({
 
       {/* ── Slot — custom content area ─────────────────────────────────────── */}
       {slot && (
-        <div
-          className="rounded-[12px] p-[16px] min-h-[80px]"
-          style={{ background: "var(--modal-slot-bg)" }}
-        >
-          {slot}
-        </div>
+        slotUnstyled ? slot : (
+          <div
+            className="rounded-[12px] p-[16px] min-h-[80px]"
+            style={{ background: "var(--modal-slot-bg)" }}
+          >
+            {slot}
+          </div>
+        )
       )}
 
       {/* ── Informative card ──────────────────────────────────────────────── */}

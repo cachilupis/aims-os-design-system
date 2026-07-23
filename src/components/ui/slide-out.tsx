@@ -1,14 +1,15 @@
 /**
  * Slide Out — AIMS OS DS · node 5066:9783
  * Frosted-glass overlay panel from the right.
- * type="with-variants" | "full-slot"  ×  size="m" (635px) | "s" (420px)
+ * type="with-variants" | "full-slot"  ×  size="m" | "s"
+ * Default width : 350px · Expands to 450px → half-screen via drag-to-resize
  *
  * Panel surface : Surface/Floating/Default — rgba(255,255,255,0.92) light | rgba(16,22,40,0.92) dark
  * Backdrop-blur : 30px
  * Shadow        : -24px -24px 60px 0px rgba(0,0,0,0.08)
  * Radius        : Radius-XL 24px (M) | Radius-L 16px (S) — top-left + bottom-left only
  *
- * Resize handle : hover left edge → blue 2px line + grip dots → drag to snap to window.innerWidth/2
+ * Resize handle : hover left edge → blue 2px line + grip dots → drag snaps to 350 / 450 / half-screen
  */
 import { useEffect, useState, useRef } from "react"
 import { createPortal } from "react-dom"
@@ -155,7 +156,7 @@ export function SlideOut({
     startX: 0, startWidth: 0, active: false,
   })
 
-  const defaultWidth = isWithVariants && isM ? 635 : isM ? 600 : 420
+  const defaultWidth = 350
   const panelWidth = dragWidth ?? defaultWidth
 
   // ── Chips scroll ref ────────────────────────────────────────────────────
@@ -164,40 +165,44 @@ export function SlideOut({
     chipsContainerRef.current?.scrollBy({ left: 200, behavior: "smooth" })
   }
 
+  const SNAP_MEDIUM = 450
+
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     if (previewMode) return
     e.preventDefault()
     e.stopPropagation()
-    const snapDefault = defaultWidth
-    const snapHalf = window.innerWidth / 2
+    const snapHalf  = Math.floor(window.innerWidth / 2)
+    const snapPoints = [defaultWidth, SNAP_MEDIUM, snapHalf]
     const startWidth = dragWidth ?? defaultWidth
     dragRef.current = { startX: e.clientX, startWidth, active: true }
     setIsActiveDrag(true)
 
     const onMouseMove = (ev: MouseEvent) => {
       if (!dragRef.current.active) return
-      document.body.style.cursor = "col-resize"
+      document.body.style.cursor     = "col-resize"
       document.body.style.userSelect = "none"
       const delta = dragRef.current.startX - ev.clientX
-      const newW = Math.max(snapDefault, Math.min(snapHalf, dragRef.current.startWidth + delta))
+      const newW  = Math.max(defaultWidth, Math.min(snapHalf, dragRef.current.startWidth + delta))
       setDragWidth(newW)
     }
 
     const onMouseUp = (ev: MouseEvent) => {
-      dragRef.current.active = false
-      document.body.style.cursor = ""
+      dragRef.current.active         = false
+      document.body.style.cursor     = ""
       document.body.style.userSelect = ""
       setIsActiveDrag(false)
-      const delta = dragRef.current.startX - ev.clientX
-      const finalW = Math.max(snapDefault, Math.min(snapHalf, dragRef.current.startWidth + delta))
-      const threshold = (snapHalf - snapDefault) * 0.4
-      setDragWidth(finalW > snapDefault + threshold ? snapHalf : null)
+      const delta  = dragRef.current.startX - ev.clientX
+      const finalW = Math.max(defaultWidth, Math.min(snapHalf, dragRef.current.startWidth + delta))
+      const closest = snapPoints.reduce((prev, curr) =>
+        Math.abs(curr - finalW) < Math.abs(prev - finalW) ? curr : prev
+      )
+      setDragWidth(closest === defaultWidth ? null : closest)
       document.removeEventListener("mousemove", onMouseMove)
-      document.removeEventListener("mouseup", onMouseUp)
+      document.removeEventListener("mouseup",   onMouseUp)
     }
 
     document.addEventListener("mousemove", onMouseMove)
-    document.addEventListener("mouseup", onMouseUp)
+    document.addEventListener("mouseup",   onMouseUp)
   }
 
   // ── Escape key ─────────────────────────────────────────────────────────
@@ -258,7 +263,7 @@ export function SlideOut({
       style={{
         width: panelWidth,
         padding: "32px 24px",
-        gap: isWithVariants && isM ? 24 : !isWithVariants && isM ? 32 : isWithVariants ? 16 : 24,
+        gap: isWithVariants ? 16 : isM ? 32 : 24,
         background: "var(--slide-out-bg)",
         boxShadow: "var(--slide-out-shadow)",
         borderRadius: isM ? "24px 0 0 24px" : "16px 0 0 16px",

@@ -149,12 +149,16 @@ function Select({
           className={cn(
             "absolute top-[-6px] left-[16px] z-[1]",
             "inline-flex items-center px-[4px] rounded-sm",
-            "bg-[var(--field-bg)]",
             "text-[12px] font-semibold leading-normal whitespace-nowrap select-none",
             isDisabled
               ? "text-[var(--field-placeholder)]"
               : "text-[var(--field-label)]"
           )}
+          style={{
+            background: "color-mix(in srgb, var(--field-bg) 80%, transparent)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+          }}
         >
           {label}
         </span>

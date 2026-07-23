@@ -1,5 +1,5 @@
 import { type ReactNode } from "react"
-import { type LucideIcon } from "lucide-react"
+import { type LucideIcon, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -8,9 +8,9 @@ import { EmptyState } from "@/components/ui/empty-state"
  * Table — AIMS OS Design System
  * Source: Figma v6rmYKA2zmyXWOahlxLOeI · nodes 4687:5051 (Table Title) + 4687:5139 (Table-content)
  *
- * Sizes (DS exact):
- *   default (M) → header 48px (py-12 px-8) · row 60px (py-16 px-8) · text 14px Medium
- *   sm      (S) → header 40px (py-8 px-8)  · row 48px (py-12 px-8) · text 12px Medium
+ * Sizes (DS exact — all rows same fixed height):
+ *   default (M) → header + row 60px (py-20 px-8) · text 14px Medium
+ *   sm      (S) → header + row 40px (py-10 px-8) · text 12px Medium
  *
  * States (DS exact):
  *   row default  → bg Surface/Neutral/White
@@ -79,16 +79,14 @@ function Table<T extends object,>({
   const allSelected  = data.length > 0 && data.every((_, i) => selectedRows.has(i))
   const someSelected = !allSelected && data.some((_, i) => selectedRows.has(i))
 
-  // DS exact heights (Figma COMPONENT_SET 4687:5051 / 4687:5139):
-  //   M header 48px = py-14 + leading-20 (14+20+14)
-  //   S header 40px = py-10 + leading-20 (10+20+10)
-  //   M content 60px = py-20 + leading-20 (20+20+20)
-  //   S content 40px = py-10 + leading-20 (10+20+10)
+  // DS exact heights (Figma COMPONENT_SET 4687:5051 / 4687:5139 — all rows fixed):
+  //   M header + content: 60px = py-20 + leading-20 (20+20+20)
+  //   S header + content: 40px = py-10 + leading-20 (10+20+10)
   // All text is Medium (500). Hierarchy header→cell via color (Text/Subtitle vs Text/Body).
   const thClass = cn(
     "text-left font-medium leading-[20px] text-[var(--table-header-text)]",
     "border-b border-[var(--table-border)]",
-    isSm ? "py-[10px] px-[8px] text-[12px]" : "py-[14px] px-[8px] text-[14px]",
+    isSm ? "py-[10px] px-[8px] text-[12px]" : "py-[20px] px-[8px] text-[14px]",
   )
   const tdClass = cn(
     "font-medium leading-[20px] text-[var(--table-cell-text)]",
@@ -141,7 +139,6 @@ function Table<T extends object,>({
               >
                 <EmptyState
                   icon={emptyIcon}
-                  showIcon={!!emptyIcon}
                   title={emptyTitle}
                   description={emptyDescription}
                   ctaLabel={emptyCtaLabel}
@@ -350,7 +347,8 @@ export function TableCellIconText({ icon, children, isLink, onClick }: TableCell
   )
 }
 
-// ── TableCellMenu — DS variant: Button=Yes (kebab) ────────────────────────────
+// ── TableCellMenu — DS variant: Button=Yes, LinkText=No (kebab/dots menu) ─────
+// Use for standalone row-action columns (three-dot menu).
 
 export type TableCellMenuProps = { onClick?: () => void }
 
@@ -367,6 +365,30 @@ export function TableCellMenu({ onClick }: TableCellMenuProps) {
       )}
     >
       ⋮
+    </button>
+  )
+}
+
+// ── TableCellAISuggest — DS variant: Button=Yes, LinkText=Yes (AI action) ─────
+// Blue circle button with AI icon. Appears inline alongside a link-text cell
+// to trigger AI-suggested actions for that row item. On hover → visible; by
+// default it can be shown or hidden via the parent cell's hover state.
+
+export type TableCellAISuggestProps = { onClick?: () => void; size?: TableSize }
+
+export function TableCellAISuggest({ onClick, size = "default" }: TableCellAISuggestProps) {
+  const px = size === "sm" ? 16 : 16
+  return (
+    <button
+      aria-label="AI suggestions"
+      onClick={e => { e.stopPropagation(); onClick?.() }}
+      className={cn(
+        "flex items-center justify-center rounded-full p-[4px] shrink-0 cursor-pointer transition-opacity",
+        "bg-[var(--color-surface-primary-default)]",
+        "text-[var(--color-text-negative)]",
+      )}
+    >
+      <Sparkles width={px} height={px} strokeWidth={1.5} />
     </button>
   )
 }
