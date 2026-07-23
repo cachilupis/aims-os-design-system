@@ -31475,17 +31475,67 @@ const PAGINATION_LIVE_ITEMS: EntityListItemData[] = [
 function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
 
-  // Live example state
-  const [livePage,   setLivePage]   = useState(1)
-  const [livePerPage, setLivePerPage] = useState(5)
+  // Full-screen live preview state
+  const [liveOpen,    setLiveOpen]    = useState(false)
+  const [livePage,    setLivePage]    = useState(1)
+  const [livePerPage, setLivePerPage] = useState(10)
 
   // Playground state
   const [pgTotal,    setPgTotal]    = useState(120)
   const [pgPerPage,  setPgPerPage]  = useState(25)
   const [pgPage,     setPgPage]     = useState(1)
 
+  const livePageItems = PAGINATION_LIVE_ITEMS.slice((livePage - 1) * livePerPage, livePage * livePerPage)
+
   return (
     <div className="flex flex-col gap-0">
+      {/* ── Full-screen live preview overlay ── */}
+      {liveOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9100, background: "var(--canvas)", display: "flex", flexDirection: "column" }}>
+          {/* Thin header bar */}
+          <div style={{ height: 52, padding: "0 32px", borderBottom: "0.5px solid var(--field-border)", background: "var(--surface)", flexShrink: 0, display: "flex", alignItems: "center", gap: 16 }}>
+            <button
+              onClick={() => { setLiveOpen(false); setLivePage(1) }}
+              className="flex items-center gap-[6px] text-[13px] font-medium"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: 0 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--foreground)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--field-supporting)" }}
+            >
+              <LucideIcons.ArrowLeft size={14} /> Close preview
+            </button>
+            <div style={{ width: 1, height: 16, background: "var(--field-border)" }} />
+            <span className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>Tenant Overview</span>
+            <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>— {PAGINATION_LIVE_ITEMS.length} tenants</span>
+          </div>
+
+          {/* Content area — position: relative so Pagination can be absolute at bottom */}
+          <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+            {/* Scrollable list — 72px bottom padding leaves room for floating Pagination */}
+            <div style={{ height: "100%", overflowY: "auto", padding: "24px 32px", paddingBottom: 72 }}>
+              <div className="flex flex-col gap-[12px]">
+                {livePageItems.map(item => (
+                  <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[item]} />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+
+            {/* Pagination — position: absolute; bottom: 0 (DS spec — floats over the list) */}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
+              <Pagination
+                currentPage={livePage}
+                totalItems={PAGINATION_LIVE_ITEMS.length}
+                itemsPerPage={livePerPage}
+                onPageChange={setLivePage}
+                onItemsPerPageChange={n => { setLivePerPage(n); setLivePage(1) }}
+                rowsPerPageOptions={[5, 10, 20]}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-[16px] mb-[28px]">
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Pagination</h1>
@@ -31675,33 +31725,16 @@ function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             </div>
 
-            {/* Live example — inline preview */}
+            {/* Live example */}
             <div className="flex flex-col gap-[12px]">
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Live Example</h2>
               <p className="text-[13px] text-[var(--field-supporting)]">
-                20 tenant records. Scroll the list and notice the frosted glass blur — list rows are visible through the semi-transparent card. Use prev/next and the rows-per-page selector to interact with pagination in context.
+                Opens a full-screen preview with real DS entity cards, real scroll, and Pagination floating at the bottom. Scroll the list to see the frosted glass blur in context.
               </p>
-
-              {/* Preview container — mimics a list content area */}
-              <div style={{ position: "relative", height: 500, borderRadius: 12, border: "0.5px solid var(--field-border)", overflow: "hidden", background: "var(--canvas)" }}>
-                {/* Scrollable list — 60px bottom padding leaves room for floating Pagination */}
-                <div style={{ height: "100%", overflowY: "auto", paddingBottom: 60 }}>
-                  <EntityList
-                    items={PAGINATION_LIVE_ITEMS.slice((livePage - 1) * livePerPage, livePage * livePerPage)}
-                  />
-                </div>
-
-                {/* Pagination floats over the list — position absolute; bottom 0 (DS spec) */}
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
-                  <Pagination
-                    currentPage={livePage}
-                    totalItems={PAGINATION_LIVE_ITEMS.length}
-                    itemsPerPage={livePerPage}
-                    onPageChange={setLivePage}
-                    onItemsPerPageChange={n => { setLivePerPage(n); setLivePage(1) }}
-                    rowsPerPageOptions={[5, 10, 20]}
-                  />
-                </div>
+              <div>
+                <Button variant="secondary" size="sm" onClick={() => setLiveOpen(true)}>
+                  Open live preview
+                </Button>
               </div>
             </div>
           </div>
