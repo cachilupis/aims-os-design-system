@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { CardContainer, type CardVariant } from "@/components/ui/card-container"
 import { Tag, type TagVariant } from "@/components/ui/tag"
+import { Badge, type BadgeVariant } from "@/components/ui/badge"
 import { Menu, MenuItem, MenuDivider, MenuSection } from "@/components/ui/menu-item"
 import { HighlightIcon, type HighlightIconVariant, type HighlightIconSize } from "@/components/ui/highlight-icon"
 import { HighlightNumber, type HighlightNumberVariant } from "@/components/ui/highlight-number"
@@ -68,8 +69,8 @@ import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets"
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -139,6 +140,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   // Components — keep sorted A→Z by label so new entries stay predictable in the sidebar
   { id: "alert-banner",    label: "Alert Banner",      group: "Components",  description: "Full-width contextual notice. 3 states: Error, Success, Alert · optional CTA + dismiss · adaptive dark/light tokens." },
   { id: "avatar",          label: "Avatar",            group: "Components",  description: "User & workspace avatars · 4 sizes (S/M/L/XL) · 6 color variants · initials fallback · stacked group" },
+  { id: "badge",           label: "Badge",             group: "Components",  description: "8×8px filled status dot · 9 semantic states · no text or icon, color-only signal · pairs with a label or tooltip · dense contexts: tables, lists, avatar stacks" },
   { id: "breadcrumb",      label: "Breadcrumb",        group: "Components",  description: "Hierarchical back-navigation trail · L3+ depth only · Header backButton for L2 · never shown at L1" },
   { id: "button",          label: "Button",            group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
   { id: "card-container",  label: "Card Container",    group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
@@ -791,6 +793,32 @@ const TAG_USAGE = [
     avoid: ["Status states — use the semantic variants."],
   },
 ]
+
+const BADGE_SPEC = {
+  name: "Badge",
+  figmaNodeId: "13072:7066",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=13072-7066",
+  description: "A compact 8×8px filled circle used as an inline status indicator. Contains no text or icon — meaning is conveyed entirely by color. Purpose-built for dense interfaces such as tables, lists, and data visualizations. Each badge maps directly to a Badge/* semantic token, keeping it consistent across light and dark themes.",
+  properties: [
+    { name: "variant", type: "BadgeVariant", values: ["error","alert","inProgress","success","neutral","lightBlue","limeGreen","yellow","purple"], default: "neutral" },
+    { name: "label",   type: "string",       values: ["any string"], default: "undefined", note: "Accessible label — sets role=\"status\" + aria-label. The dot alone conveys nothing to screen readers." },
+  ],
+  sizes: [
+    { size: "Default", height: "8px", paddingX: "—", paddingY: "—", fontSize: "—", gap: "—", radius: "Full (4px = 50%)" },
+  ],
+  typography: [],
+  variants: [
+    { name: "error",      description: "Error / Notification — alerts needing immediate attention", cssPrefix: "badge-error",       tokens: [{ role: "Fill", variable: "Badge/Error",       varId: "—", light: "#d32f2f", dark: "#ff6467" }] },
+    { name: "alert",      description: "Alert — pending, needs attention",                          cssPrefix: "badge-alert",       tokens: [{ role: "Fill", variable: "Badge/Alert",       varId: "—", light: "#ed6c02", dark: "#fdc700" }] },
+    { name: "inProgress", description: "In Progress — async/loading row-level indicators",           cssPrefix: "badge-in-progress", tokens: [{ role: "Fill", variable: "Badge/In Progress", varId: "—", light: "#2173ff", dark: "#2b7fff" }] },
+    { name: "success",    description: "Success — completed, verified, healthy",                     cssPrefix: "badge-success",     tokens: [{ role: "Fill", variable: "Badge/Success",     varId: "—", light: "#00765f", dark: "#05df72" }] },
+    { name: "neutral",    description: "Neutral — inactive or unknown status",                       cssPrefix: "badge-neutral",     tokens: [{ role: "Fill", variable: "Badge/Neutral",     varId: "—", light: "#bababa", dark: "rgba(255,255,255,0.50)" }] },
+    { name: "lightBlue",  description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-light-blue",  tokens: [{ role: "Fill", variable: "Badge/Light Blue",  varId: "—", light: "#00b5d9", dark: "#51a2ff" }] },
+    { name: "limeGreen",  description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-lime-green",  tokens: [{ role: "Fill", variable: "Badge/Lime Green",  varId: "—", light: "#a0da1d", dark: "#bdee49" }] },
+    { name: "yellow",     description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-yellow",      tokens: [{ role: "Fill", variable: "Badge/Yellow",      varId: "—", light: "#ff9900", dark: "#fdc700" }] },
+    { name: "purple",     description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-purple",      tokens: [{ role: "Fill", variable: "Badge/Purple",      varId: "—", light: "#7b27ed", dark: "#ad46ff" }] },
+  ],
+}
 
 const TAG_SPEC = {
   name: "Tag",
@@ -2535,6 +2563,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "button")           return BUTTON_SPEC           as AnySpec
   if (id === "input")            return INPUT_SPEC            as AnySpec
   if (id === "textarea")         return TEXTAREA_SPEC         as AnySpec
+  if (id === "badge")            return BADGE_SPEC             as AnySpec
   if (id === "tag")              return TAG_SPEC              as AnySpec
   if (id === "menu-item")        return MENU_SPEC             as AnySpec
   if (id === "header")           return HEADER_SPEC           as AnySpec
@@ -5701,6 +5730,259 @@ function resolveTagIcon(mode: TagIconMode) {
   if (mode === "dot")   return <TagDotIcon />
   if (mode === "check") return <TagCheckIcon />
   return undefined
+}
+
+const BADGE_VARIANTS: { value: BadgeVariant; label: string; desc: string }[] = [
+  { value: "error",      label: "Error / Notification", desc: "Alerts needing immediate attention" },
+  { value: "alert",      label: "Alert",                desc: "Pending, needs attention, expiring" },
+  { value: "inProgress", label: "In Progress",          desc: "Async / loading row-level indicator" },
+  { value: "success",    label: "Success",               desc: "Completed, verified, healthy" },
+  { value: "neutral",    label: "Neutral",                desc: "Inactive or unknown status" },
+  { value: "lightBlue",  label: "Light Blue",             desc: "Extended palette — taxonomy / category" },
+  { value: "limeGreen",  label: "Lime Green",             desc: "Extended palette — taxonomy / category" },
+  { value: "yellow",     label: "Yellow",                 desc: "Extended palette — taxonomy / category" },
+  { value: "purple",     label: "Purple",                 desc: "Extended palette — taxonomy / category" },
+]
+
+function BadgePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab]           = useState<"overview" | "playground" | "reference">("overview")
+  const [pgVariant, setPgVariant] = useState<BadgeVariant>("neutral")
+  const [pgLabel, setPgLabel]     = useState("")
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Badge</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            A compact 8×8px filled dot used as an inline status indicator. Contains no text or icon — meaning is conveyed entirely by color. Best for dense interfaces like tables, lists, and data visualizations. Pair with a label or tooltip when clarity is required.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("badge")} />
+      </div>
+
+      {/* Tab row */}
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ── */}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[32px]">
+
+          {/* Anatomy */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Anatomy</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Element", "Type", "Size"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Dot",           "Frame (circle)", "8×8px"],
+                    ["Corner radius", "Full",            "4px (50%)"],
+                    ["Fill",          "Solid color",     "Badge/* token"],
+                    ["Stroke",        "None",             "—"],
+                  ].map(([el, type, size]) => (
+                    <tr key={el} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{el}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{type}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{size}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* States */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>States</SectionLabel>
+            <div className="grid grid-cols-3 gap-[16px]">
+              {BADGE_VARIANTS.map(v => (
+                <div key={v.value} className="flex items-center gap-[10px] p-[12px] rounded-[6px]" style={{ background: "var(--canvas)" }}>
+                  <Badge variant={v.value} label={v.label} />
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-medium text-[var(--foreground)]">{v.label}</span>
+                    <span className="text-[11px] text-[var(--field-supporting)]">{v.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[16px]">
+              {[
+                { type: "do",   text: "Use as a status indicator in tables, list rows, and avatar stacks." },
+                { type: "dont", text: "Don't use as the sole indicator in critical contexts — always pair with a label or tooltip." },
+                { type: "do",   text: "Use Error/Notification for alerts needing immediate attention, In Progress for async row-level state." },
+                { type: "dont", text: "Don't stack multiple badges on the same element." },
+                { type: "do",   text: "Use the extended palette (Light Blue, Lime Green, Yellow, Purple) for taxonomy or category classification." },
+                { type: "dont", text: "Don't use the extended palette for error/success semantics — those have their own dedicated states." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[14px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>
+                    {item.type === "do" ? "DO" : "DON'T"}
+                  </span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Playground ── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[24px]">
+          {/* Controls */}
+          <div className="flex flex-col gap-[16px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Controls</SectionLabel>
+            <div className="flex flex-col gap-[12px]">
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Variant</span>
+                <CtrlGroup<BadgeVariant>
+                  label="Variant"
+                  value={pgVariant} onChange={setPgVariant}
+                  options={BADGE_VARIANTS.map(v => ({ value: v.value, label: v.label }))}
+                />
+              </div>
+              <div className="flex items-center gap-[12px]">
+                <span className="text-[12px] font-semibold text-[var(--field-label)] w-[80px]">Label</span>
+                <input
+                  value={pgLabel}
+                  onChange={e => setPgLabel(e.target.value)}
+                  placeholder="Accessible label (optional)"
+                  className="text-[13px] px-[10px] py-[6px] rounded-[6px] flex-1 max-w-[280px]"
+                  style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Preview</SectionLabel>
+            <div className="py-[32px] px-[24px] flex justify-center">
+              <Badge variant={pgVariant} label={pgLabel || undefined} />
+            </div>
+            <div className="flex justify-center">
+              <span className="text-[12px] text-[var(--field-supporting)]">
+                variant="{pgVariant}"{pgLabel ? ` label="${pgLabel}"` : ""}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reference ── */}
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[24px]">
+
+          {/* Tokens table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Design Tokens</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["State", "CSS Variable", "DS Token", "Light", "Dark"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {BADGE_SPEC.variants.map((v, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{v.description}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">--{v.cssPrefix}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{v.tokens[0].variable}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{v.tokens[0].light}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{v.tokens[0].dark}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Code snippet */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Usage</SectionLabel>
+            <pre className="text-[12px] leading-[20px] overflow-x-auto p-[16px] rounded-[6px]" style={{ background: "var(--canvas)", color: "var(--foreground)" }}>{`import { Badge } from "@/components/ui/badge"
+
+// Status dot in a table row
+<Badge variant="success" label="Healthy" />
+
+// Async / loading row-level indicator
+<Badge variant="inProgress" label="Syncing" />
+
+// Extended palette for category classification
+<Badge variant="purple" label="Beta" />`}</pre>
+          </div>
+
+          {/* Props table */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Props</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Prop", "Type", "Default", "Description"].map(h => (
+                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(BADGE_SPEC.properties as { name: string; type: string; values: string[]; default: string; note?: string }[]).map((p, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--primary)]">{p.name}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{p.type}</td>
+                      <td className="px-[12px] py-[8px] font-mono text-[12px] text-[var(--field-supporting)]">{p.default}</td>
+                      <td className="px-[12px] py-[8px] text-[var(--foreground)]">{p.note ?? ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Figma usage steps */}
+          <div className="flex flex-col gap-[12px] p-[20px] rounded-[8px]" style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+            <SectionLabel>Figma Usage Steps</SectionLabel>
+            <div className="flex flex-col gap-[10px]">
+              {[
+                "① Locate the 'Badge' component in the AIMS OS DS library (node 13072:7066).",
+                "② Select the State property to pick one of the 9 semantic colors.",
+                "③ Never resize below 8×8px — smaller sizes lose legibility as a status signal.",
+                "④ Always pair with a text label or tooltip when the status must be unambiguous.",
+              ].map((step, i) => (
+                <p key={i} className="text-[13px] text-[var(--field-supporting)]">{step}</p>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
 }
 
 function TagPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
@@ -36363,6 +36645,7 @@ export default function App() {
           {active === "app-background"  && <AppBackgroundPage   openSpec={setSpecModal} />}
           {active === "empty-state"     && <EmptyStatePage   openSpec={setSpecModal} />}
           {active === "avatar"          && <AvatarPage          openSpec={setSpecModal} />}
+          {active === "badge"           && <BadgePage           openSpec={setSpecModal} />}
           {active === "button"          && <ButtonPage        openSpec={setSpecModal} />}
           {active === "input"           && <InputPage         openSpec={setSpecModal} />}
           {active === "textarea"        && <TextareaPage      openSpec={setSpecModal} />}
