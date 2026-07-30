@@ -1,13 +1,19 @@
 /**
  * tailwind.config.js — AIMS OS Design System
  *
- * AUTO-GENERATED from Figma variable collections (file: v6rmYKA2zmyXWOahlxLOeI)
- * Collections synced:
- *   - "Semantic Color Tokens" (162 vars) → colors, Dark mode
+ * Collections synced from Figma variable collections (file: v6rmYKA2zmyXWOahlxLOeI):
  *   - "Space and Radios Tokens" (21 vars) → spacing + borderRadius
  *   - "Type Tokens" (54 vars) → fontSize, fontWeight
  *
- * DO NOT edit values by hand. Re-sync from Figma when DS updates.
+ * `colors` below is NOT currently consumed by any component — every
+ * component in src/components/ui/ reads color via `var(--token-name)`
+ * directly (arbitrary-value classes or inline style), sourced from
+ * src/index.css, which is the canonical, actively-synced token layer.
+ * These hex values were an earlier one-time snapshot and had drifted from
+ * Figma (e.g. the old `badge` entries below were copied from the wrong
+ * token collection). Kept only for `canvas`/`node-bg` (used, var()-backed)
+ * and `badge` (now var()-backed, matches src/index.css --badge-*).
+ * Do not add new hardcoded hex here — reference index.css vars instead.
  */
 module.exports = {
   darkMode: "class",
@@ -209,17 +215,18 @@ module.exports = {
           "light-blue":  { default: "#7dd3fc", darker: "#7dd3fc" },
         },
 
-        // ─── Badge ───────────────────────────────────────────────────────────
+        // ─── Badge — was copied from the wrong token collection (matched
+        // `text.*`, not the real Figma "Badge/*" tokens); now var()-backed ──
         badge: {
-          error:         "#ff6467",
-          alert:         "#fcd34d",
-          "in-progress": "#2b7fff",
-          success:       "#6ee7b7",
-          neutral:       "#ffffff80",
-          "light-blue":  "#7dd3fc",
-          "lime-green":  "#bdee49",
-          yellow:        "#fcd34d",
-          purple:        "#d8b4fe",
+          error:         "var(--badge-error)",
+          alert:         "var(--badge-alert)",
+          "in-progress": "var(--badge-in-progress)",
+          success:       "var(--badge-success)",
+          neutral:       "var(--badge-neutral)",
+          "light-blue":  "var(--badge-light-blue)",
+          "lime-green":  "var(--badge-lime-green)",
+          yellow:        "var(--badge-yellow)",
+          purple:        "var(--badge-purple)",
         },
 
         // ─── Overlay ─────────────────────────────────────────────────────────
