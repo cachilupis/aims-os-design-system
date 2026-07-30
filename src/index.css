@@ -56,12 +56,13 @@
     --ring:                #2b7fff;
     --radius:              0.5rem;
     /* ── DS Radius scale (Figma: Radius/* variables — static, same in both modes) ── */
+    --radius-none:         0px;   /* Radius/Radius-none — was missing entirely */
     --radius-xs:           2px;   /* Radius/Radius-XS */
     --radius-s:            4px;   /* Radius/Radius-S  */
     --radius-m:            8px;   /* Radius/Radius-M  */
-    --radius-l:            12px;  /* Radius/Radius-L  */
-    --radius-xl:           16px;  /* Radius/Radius-XL */
-    --radius-xxl:          24px;  /* Radius/Radius-XXL */
+    --radius-l:            16px;  /* Radius/Radius-L — was 12px, confirmed drift vs live Figma (tailwind.config.js already had the correct value) */
+    --radius-xl:           24px;  /* Radius/Radius-XL — was 16px, confirmed drift vs live Figma */
+    --radius-xxl:          32px;  /* Radius/Radius-XXL — was 24px, confirmed drift vs live Figma */
     --radius-full:         9999px; /* Radius/Radius-Full */
     --sidebar:             #0D1120;
     --sidebar-foreground:  #ffffffcc;
@@ -341,7 +342,7 @@
     /*   Text/Body dark                 = #94A3B8               → cell text                           */
     --table-bg:               transparent;                        /* Table Content rows have no fill (Figma confirmed)     */
     --table-header-bg:        var(--color-surface-neutral-default); /* Surface/Neutral/Default dark = rgba(255,255,255,0.06) */
-    --table-border:           var(--color-border-neutral-lighter);  /* Border/Neutral/Lighter dark = rgba(255,255,255,0.08) */
+    --table-border:           var(--color-border-neutral-lighter);  /* Border/Neutral/Lighter dark = rgba(255,255,255,0.15) */
     --table-header-text:      var(--color-text-subtitle);           /* Text/Subtitle dark = rgba(255,255,255,0.60) */
     --table-cell-text:        var(--color-text-body);               /* Text/Body dark     = #94A3B8              */
     --table-row-hover-bg:     rgba(255,255,255,0.08);          /* Surface/Neutral/Hover dark = White/8  */
@@ -517,7 +518,7 @@
     --tooltip-text: var(--color-text-negative);
     /* ── Canonical color tokens (shared across components) ──────────────── */
     --color-surface-neutral-white:      #FFFFFF;                  /* Surface/Neutral/White            */
-    --color-border-neutral-lighter:     rgba(255,255,255,0.08);   /* Border/Neutral/Lighter           */
+    --color-border-neutral-lighter:     rgba(255,255,255,0.15);   /* Border/Neutral/Lighter — was 0.08; 3 independent components (Toggle, Filters, Modal) already used 0.15 */
     --color-text-title:                 rgba(255,255,255,0.80);   /* Text/Title                       */
     --color-text-subtitle:              rgba(255,255,255,0.60);   /* Text/Subtitle                    */
     --color-text-success:               #6ee7b7;                  /* Text/Success                     */
@@ -1167,8 +1168,8 @@
     --tooltip-text: var(--color-text-negative);
     /* ── Canonical color tokens — light overrides ───────────────────────── */
     --color-surface-neutral-white:      #FFFFFF;                  /* Surface/Neutral/White            */
-    --color-border-neutral-lighter:     #E8E8E8;                  /* Border/Neutral/Lighter           */
-    --color-text-title:                 #1A1A1A;                  /* Text/Title                       */
+    --color-border-neutral-lighter:     #BABABA;                  /* Border/Neutral/Lighter — was #E8E8E8, confirmed drift vs live Figma */
+    --color-text-title:                 #000000;                  /* Text/Title — was #1A1A1A, confirmed drift vs live Figma */
     --color-text-subtitle:              #2a2a2a;                  /* Text/Subtitle                    */
     --color-text-success:               #003328;                  /* Text/Success                     */
     --color-text-error:                 #5f2120;                  /* Text/Error                       */
@@ -1183,12 +1184,12 @@
     --color-border-lime-green-default:  #a0da1d;                  /* Border/LimeGreen/Default         */
     --color-border-error-default:       #992222;                  /* Border/Error/Default             */
     --color-surface-primary-subtle:     #E9F1FF;                  /* Surface/Primary/Subtle           */
-    --color-surface-success-subtle:     #E5FDF8;                  /* Surface/Success/Subtle           */
-    --color-surface-alert-subtle:       #FFF4E5;                  /* Surface/Alert/Subtle             */
+    --color-surface-success-subtle:     #CBFFF4;                  /* Surface/Success/Subtle — was #E5FDF8 (that's actually More Subtle) */
+    --color-surface-alert-subtle:       #FFEEDB;                  /* Surface/Alert/Subtle — was #FFF4E5 (that's actually More Subtle) */
     --color-surface-yellow-subtle:      #FFFAF0;                  /* Surface/Yellow/Subtle            */
-    --color-surface-purple-subtle:      #F3E9FD;                  /* Surface/Purple/Subtle            */
-    --color-surface-light-blue-subtle:  #E5F8FF;                  /* Surface/LightBlue/Subtle         */
-    --color-surface-lime-subtle:        #F9FEE5;                  /* Surface/Lime/Subtle              */
+    --color-surface-purple-subtle:      #E4CEFC;                  /* Surface/Purple/Subtle — was #F3E9FD (that's actually More Subtle) */
+    --color-surface-light-blue-subtle:  #CCF1FF;                  /* Surface/LightBlue/Subtle — was #E5F8FF (that's actually More Subtle) */
+    --color-surface-lime-subtle:        #E7F9B5;                  /* Surface/Lime/Subtle — was #F9FEE5 (that's actually More Subtle) */
     --color-surface-error-subtle:       #FDECED;                  /* Surface/Error/Subtle             */
     /* ── Highlight Card — component tokens (alias → canonical) ──────────── */
     /* ── Widget Father — light overrides ──────────────────────────────────── */
@@ -1311,7 +1312,7 @@
     --stepper-label-active:      #2a2a2a;                                  /* Text/Subtitle light            */
     --stepper-connector:         #bababa;                                  /* Icon/Neutral/Disabled light    */
     --step-nav-footer-bg:        var(--color-surface-neutral-white);       /* #FFFFFF light — white wizard footer */
-    --step-nav-footer-separator: var(--color-border-neutral-lighter);      /* #E8E8E8 light                       */
+    --step-nav-footer-separator: var(--color-border-neutral-lighter);      /* #BABABA light                       */
     /* ── Elevation / Shadow scale ──────────────────────────────────────── */
     /* Each level maps to a specific UI role — never skip levels */
     --shadow-elevation-1: 0 1px 4px rgba(0,0,0,0.06);                                              /* Micro — toggles, focused chips        */
