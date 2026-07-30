@@ -111,7 +111,7 @@
 
     /* Secondary: Surface/Neutral/White dark + Border/Neutral/Default dark */
     --btn-secondary-bg:          rgba(255,255,255,0.1);    /* Surface/Neutral/White dark  = White/10  */
-    --btn-secondary-fg:          rgba(255,255,255,0.6);    /* Text/Label dark             = White/60  */
+    --btn-secondary-fg:          var(--color-text-label);  /* Text/Label dark = rgba(255,255,255,0.80) — was hardcoded White/60, drifted from canonical token */
     --btn-secondary-border:      rgba(255,255,255,0.1);    /* Border/Neutral/Default dark = White/10  */
     --btn-secondary-hover-bg:    rgba(255,255,255,0.08);   /* Surface/Neutral/Default dark = White/8  */
     --btn-secondary-hover-bd:    rgba(255,255,255,0.2);    /* Surface/Neutral/Emphasis dark = White/20 */
@@ -123,7 +123,7 @@
     --btn-secondary-ring:        rgba(255,255,255,0.25);
 
     /* Tertiary : text-only, no border */
-    --btn-tertiary-fg:           rgba(255,255,255,0.6);    /* Text/Label dark = White/60  */
+    --btn-tertiary-fg:           var(--color-text-label);  /* Text/Label dark = rgba(255,255,255,0.80) — was hardcoded White/60, drifted from canonical token */
     --btn-tertiary-hover-bg:     rgba(255,255,255,0.05);   /* Surface/Neutral/Subtle dark = White/5   */
     --btn-tertiary-focus-bg:     rgba(255,255,255,0.08);   /* Surface/Neutral/Default dark = White/8  */
     --btn-tertiary-active-bg:    rgba(255,255,255,0.149);
@@ -258,6 +258,20 @@
     --tag-neutral-bg:     rgba(255,255,255,0.08);  /* White/8             */
     --tag-neutral-bd:     rgba(255,255,255,0.10);  /* White/10            */
     --tag-neutral-fg:     rgba(255,255,255,0.60);  /* White/60            */
+
+    /* ── Badge Status — canonical tokens (DS node 13072:7066) ──────────────
+       8×8px filled dot, no border/text — single solid Badge/* fill per state.
+       Dark mode uses solid/near-solid colors (80–100% opacity) for legibility
+       at 8px — do not swap in surface overlay tokens here (see Figma notes). */
+    --badge-error:        #ff6467;                 /* Badge/Error dark        */
+    --badge-alert:        #fdc700;                 /* Badge/Alert dark        */
+    --badge-in-progress:  #2b7fff;                 /* Badge/In Progress dark  */
+    --badge-success:      #05df72;                 /* Badge/Success dark      */
+    --badge-neutral:      rgba(255,255,255,0.50);  /* Badge/Neutral dark      */
+    --badge-light-blue:   #51a2ff;                 /* Badge/Light Blue dark   */
+    --badge-lime-green:   #bdee49;                 /* Badge/Lime Green dark   */
+    --badge-yellow:       #fdc700;                 /* Badge/Yellow dark       */
+    --badge-purple:       #ad46ff;                 /* Badge/Purple dark       */
 
     /* ── Menu / Dropdown tokens — dark ──────────────────────────────────── */
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · node 4762:7152                */
@@ -755,7 +769,7 @@
 
     /* Secondary */
     --btn-secondary-bg:          #ffffff;    /* Surface/Neutral/White light  = Gray/100  */
-    --btn-secondary-fg:          #2a2a2a;    /* Text/Label light             = Gray/700  */
+    --btn-secondary-fg:          var(--color-text-label);  /* Text/Label light = #2a2a2a — now derives from canonical token */
     --btn-secondary-border:      #5c5c5c;    /* Border/Neutral/Default light = Gray/600  */
     --btn-secondary-hover-bg:    #f2f2f2;    /* Surface/Neutral/Default light = Gray/300 */
     --btn-secondary-hover-bd:    #d9d9d9;    /* Surface/Neutral/Emphasis light = Gray/400 */
@@ -767,7 +781,7 @@
     --btn-secondary-ring:        rgba(0,0,0,0.15);
 
     /* Tertiary */
-    --btn-tertiary-fg:           #2a2a2a;    /* Text/Label light = Gray/700   */
+    --btn-tertiary-fg:           var(--color-text-label);  /* Text/Label light = #2a2a2a — now derives from canonical token */
     --btn-tertiary-hover-bg:     #fafafa;    /* Surface/Neutral/Subtle light = Gray/200  */
     --btn-tertiary-focus-bg:     #f2f2f2;    /* Surface/Neutral/Default light = Gray/300 */
     --btn-tertiary-active-bg:    #ebebeb;    /* no DS ref — step below Gray/300 */
@@ -896,6 +910,17 @@
     --tag-neutral-bg:     #f2f2f2;                 /* Gray/300            */
     --tag-neutral-bd:     #5c5c5c;                 /* Gray/600            */
     --tag-neutral-fg:     #2a2a2a;                 /* Text/Subtitle light */
+
+    /* ── Badge Status — canonical tokens (DS node 13072:7066) — light ──── */
+    --badge-error:        #d32f2f;                 /* Badge/Error light        */
+    --badge-alert:        #ed6c02;                 /* Badge/Alert light        */
+    --badge-in-progress:  #2173ff;                 /* Badge/In Progress light  */
+    --badge-success:      #00765f;                 /* Badge/Success light      */
+    --badge-neutral:      #bababa;                 /* Badge/Neutral light      */
+    --badge-light-blue:   #00b5d9;                 /* Badge/Light Blue light   */
+    --badge-lime-green:   #a0da1d;                 /* Badge/Lime Green light   */
+    --badge-yellow:       #ff9900;                 /* Badge/Yellow light       */
+    --badge-purple:       #7b27ed;                 /* Badge/Purple light       */
 
     /* ── Menu / Dropdown tokens — light ─────────────────────────────────── */
     /* Variables resolved from Figma Primitives (light mode = collection 4461:3) */
