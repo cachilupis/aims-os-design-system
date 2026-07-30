@@ -13,6 +13,14 @@ Stack: React + Tailwind + shadcn/ui. TypeScript.
 - Font is Inter. Use the typographic scale in `tailwind.config`, not arbitrary sizes.
 - All colors via `var(--token-name)`. No exceptions in `.tsx` files.
 
+## Syncing a DS component with Figma (new component, new variant, new tokens)
+
+**Any time you're asked to add a component, add/update a variant, or bring a component's colors in line with the Figma DS file (`v6rmYKA2zmyXWOahlxLOeI`) — use the `/aims-ds-component [component] [Figma node ID]` skill (`.claude/commands/aims-ds-component.md`).** This applies even when the user doesn't type the slash command literally — phrases like "update the Chip with the new colors from Figma," "add the Error/Alert/Success variants," or "sync this component" all mean: follow that skill's 6-phase workflow (extract real token values from Figma via the plugin API → map to CSS variable names → write both the `:root/.dark` and `.light` blocks in `src/index.css` → implement the component with `cva` → update the `[COMPONENT]_SPEC` in `App.tsx` → visually verify against a Figma screenshot).
+
+Do not improvise a different sync approach (no re-deriving colors from memory, no approximating a dark-mode value from a light-mode one — they frequently differ by more than opacity). The skill's anti-hallucination rules exist because every prior manual attempt without them introduced drift.
+
+**Known state (2026-07-28):** `chip.tsx` only implements `primary | secondary | purple-primary | purple-secondary | light-blue-primary` — the Figma DS file now also has `error-primary/secondary`, `alert-primary/secondary`, and `success-primary/secondary` (added to Figma 2026-07-23/24, with dark-mode-specific contrast fixes documented in that file's own A11y notes). `light-blue-secondary` is also missing from this repo. Treat any of these as a real sync job, not a new design decision — the Figma side is already finalized.
+
 ### Example screens and DS documentation pages (`src/screens/`)
 
 These rules apply to ALL files in `src/screens/` — both PM prototypes and DS component example screens:
@@ -389,6 +397,33 @@ The `tag` prop renders a chip/badge inline next to the title. Use it only when i
 <Header title="AI Workers" tag={<Tag>24 Active</Tag>} />
 ```
 
+### Chip — color variants are semantic, not decorative
+
+Chip supports 11 color variants, but **color signals meaning — it is not a styling choice.** Default to `primary` / `secondary` for the overwhelming majority of chips (selected vs. unselected state, active filter, generic category toggle). Only reach for a semantic-color variant (`error-*`, `alert-*`, `success-*`) when the chip represents that actual outcome or state — never to add visual variety, make a section "pop," or because a color happens to look good next to another element.
+
+| Variant | Use when | Never use for |
+|---|---|---|
+| `primary` / `secondary` | Default choice — selected/unselected state, active filter, generic category toggle | — |
+| `purple-primary` / `-secondary` | Categorical or brand tagging with no status meaning (e.g. "Premium," "Internal") | Signaling an outcome, result, or state |
+| `light-blue-primary` / `-secondary` | Informational/system-level tagging — same non-status role as Purple | Signaling an outcome, result, or state |
+| `error-primary` / `-secondary` | The item genuinely failed, is blocked, or needs correction | Decorative red, or "make this stand out" |
+| `alert-primary` / `-secondary` | The item needs attention or is in a warning state | Decorative orange/yellow |
+| `success-primary` / `-secondary` | The item completed, passed, or is in a confirmed positive state | Decorative green, or as a generic "active" indicator — use `primary` for that |
+
+```tsx
+// ✅ Semantic — the run actually failed
+<Chip variant="error-secondary" size="s">Failed</Chip>
+
+// ✅ Default — just an active/inactive filter toggle, no status meaning
+<Chip variant={i === activeChip ? "primary" : "secondary"} size="s">{label}</Chip>
+
+// ❌ Decorative — using Success just because green reads nicely here
+<Chip variant="success-primary" size="s">Featured</Chip>
+// → use purple-primary/secondary instead for non-status categorical tags
+```
+
+**Rule of thumb:** if you can't name the specific state or outcome the chip represents, it's `primary`/`secondary`. If you need color coding for categories or brands (not status), use Purple or Light Blue — never a semantic color for that.
+
 ### Header sticky
 - Scroll == 0 → DEFAULT (full header)
 - Scroll > 16px → COMPRESSED (60px, title + status + CTA)
@@ -454,6 +489,49 @@ Rules:
 - KPI padding: `"4px 16px 16px"`. Table/feed padding: `"0 16px 16px"`.
 - HighlightIcon variants: `informative` (blue), `success` (green), `neutral` (grey), `alert` (yellow), `error` (red).
 - Reactive values (counts, live rows) in `content` update automatically — the slot array is rebuilt on each render.
+
+### Widget Content Adaptation — useWidgetSize()
+
+Every widget content component can (and should) adapt its layout to the current canvas column width. Use the `useWidgetSize()` hook exported from `widget-canvas-view.tsx`:
+
+```tsx
+import { useWidgetSize } from "@/components/layouts/widget-canvas-view"
+
+function MyWidgetContent() {
+  const { widthClass, isNarrow, isWide, isFull, availableHeight } = useWidgetSize()
+  // widthClass: "narrow" | "half" | "wide" | "xl" | "full"
+  // isNarrow:   widthClass === "narrow"  (4 cols, ~330px)
+  // isWide:     "wide" | "xl" | "full"  (8-12 cols)
+  // isFull:     widthClass === "full"   (12 cols, full width)
+  // availableHeight: number | undefined — set when user has explicitly resized the widget height
+  ...
+}
+```
+
+**Standard adaptation patterns:**
+
+| Scenario | Narrow | Half/Wide | XL/Full |
+|---|---|---|---|
+| List items shown | 2–3 | 4–5 | All |
+| Filter chips | Hidden | Visible | Visible + type row |
+| Metadata rows | On hover only | On hover | Always visible |
+| Action buttons | Primary only | Primary + secondary | All |
+| Detail columns | 1 col | 1 col | 2 col |
+
+**Height-responsive content** — when the user resizes a widget vertically, `availableHeight` is set. Use it to show more rows:
+
+```tsx
+const contentMaxH = availableHeight ? Math.max(100, availableHeight - 90) : isNarrow ? 260 : 380
+const maxItems    = availableHeight ? Math.floor((availableHeight - 90) / 48) : isNarrow ? 3 : 5
+```
+
+The `90px` offset accounts for WidgetFather chrome (padding + header + gap). `48px` is a typical list item height.
+
+**Rules:**
+- ALWAYS use `useWidgetSize()` for layout decisions — never hardcode thresholds based on screen px
+- NEVER duplicate ResizeObserver inside content components — the canvas already provides width via context
+- Content at narrow width must still be functional (search stays, action buttons stay, metadata can hide)
+- When `availableHeight` is set, the content must grow to fill it — no empty space below the list
 
 ### Logs / activity tabs — always Pagination
 Any tab that shows log or run history MUST include a Pagination component.

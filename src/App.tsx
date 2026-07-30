@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo, Fragment, useRef, useLayoutEffect, type CSSProperties, type ReactNode } from "react"
+import { useState, useEffect, useMemo, Fragment, useRef, type CSSProperties, type ReactNode } from "react"
 import { createPortal } from "react-dom"
+import { usePageTab, useScrollToHash } from "@/lib/use-page-tab"
 import * as LucideIcons from "lucide-react"
 import PMMichaelTestV1Screen      from "./screens/pm-michael-test-v1"
 import PMLexHTLWorkQueueScreen    from "./screens/pm-lex-htl-work-queue"
+import PMHomeCanvasScreen         from "./screens/pm-home-canvas"
 import PMMichaelAttentionRoomScreen from "./screens/pm-michael-attention-room"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -54,6 +56,7 @@ import { Spinner, type SpinnerStyle, type SpinnerSize } from "@/components/ui/sp
 import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { WidgetFather, type WidgetWidthClass } from "@/components/ui/widget-father"
+import { WidgetCanvasView as CanvasLayout, useWidgetSize } from "@/components/layouts/widget-canvas-view"
 import { Breadcrumb, type BreadcrumbItem } from "@/components/ui/breadcrumb"
 import { ProcessItem, ProcessList, type ProcessStatus } from "@/components/ui/process-item"
 import { Slider } from "@/components/ui/slider"
@@ -69,7 +72,7 @@ import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets"
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
 type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -145,7 +148,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "button",          label: "Button",            group: "Components",  description: "6 variants: Primary, Secondary, Tertiary, Warning, Positive, Main Action" },
   { id: "card-container",  label: "Card Container",    group: "Components",  description: "11 color styles · 3 sizes · selected & disabled states · semantic grouping container" },
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
-  { id: "chip",            label: "Chip",              group: "Components",  description: "Pill-shaped selection control · 5 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · used in filter rows and Slide Out headers" },
+  { id: "chip",            label: "Chip",              group: "Components",  description: "Pill-shaped selection control · 11 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · used in filter rows and Slide Out headers" },
   { id: "empty-state",     label: "Empty State",       group: "Components",  description: "Zero-content placeholder. Icon Highlight + title + description + 1–2 CTA buttons. Compact variant for Tables and Cards." },
   { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
   { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
@@ -200,6 +203,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "widget-father",          label: "Widget Father",         group: "Patterns", description: "Componente base de todos los widgets UCP · Header (título + descripción + máx 2 acciones) · Slot de contenido · Footer CTA opcional · Estados: Default, Drag, Error, Connection Error" },
   { id: "patterns-widget-canvas", label: "Widget Canvas Layout", group: "Patterns", description: "Sistema de grid de 12 columnas · 3 clases de ancho (1/3, 2/3, 3/3) · 3 clases de alto (Compact, Standard, Heavy) · snap-to-grid · compactación vertical · responsive a 1/2/3 cols" },
   { id: "widgets",               label: "Widgets",              group: "Patterns", description: "UCP widget gallery — KPI, Timeline, Calendar, Charts, Table, Activity, Notes, Folder Navigation · click any widget to view its anatomy, states, and usage rules" },
+  { id: "home-banner", label: "Home Banner", group: "Patterns", description: "Personalized greeting banner · time-of-day greeting · resolved/remaining counter · featured action carousel · quick nav links · Ask PA CTA · adapts to CardContainer primary variant" },
 ]
 
 // ── DS Spec data (sourced directly from Figma — source of truth) ──────────
@@ -1034,11 +1038,11 @@ const SELECT_SPEC = {
 
 const CHIP_SPEC = {
   name: "Chip",
-  figmaNodeId: "5051:62341",
-  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5051-62341",
-  description: "Pill-shaped selection control for filtering and categorization. 5 color variants × 2 sizes × 4 states. The secondary chip always uses a white background in both dark and light mode for contrast against dark panels.",
+  figmaNodeId: "5051:62271",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5051-62271",
+  description: "Pill-shaped selection control for filtering and categorization. 11 color variants × 2 sizes × 4 states. The secondary chip always uses a white background in both dark and light mode for contrast against dark panels. Error/Alert/Success added 2026-07-28 (synced from Figma, added there 2026-07-23/24) — see the Alert Primary / Success Primary variant notes below for dark-mode-specific token decisions.",
   properties: [
-    { name: "variant",    type: "ChipVariant", values: ["primary","secondary","purple-primary","purple-secondary","light-blue-primary"], default: "secondary", note: "Color variant. Primary = selected/active state." },
+    { name: "variant",    type: "ChipVariant", values: ["primary","secondary","purple-primary","purple-secondary","light-blue-primary","error-primary","error-secondary","alert-primary","alert-secondary","success-primary","success-secondary"], default: "secondary", note: "Color variant. Primary = selected/active state." },
     { name: "size",       type: "ChipSize",    values: ["m","s"],                                                                        default: "m",         note: "m = 28px height, s = 20px height. Both use px-12px horizontal." },
     { name: "personIcon", type: "boolean",     values: ["true","false"],                                                                  default: "false",     note: "Displays a User icon to the left of the label." },
     { name: "disabled",   type: "boolean",     values: ["true","false"],                                                                  default: "false",     note: "Disables interaction; muted background + text." },
@@ -1110,6 +1114,72 @@ const CHIP_SPEC = {
         { role: "BG hover",    variable: "--color-surface-light-blue-darker",    varId: "Surface/LightBlue/Darker",   light: "#02445a",          dark: "#02445a" },
         { role: "BG disabled", variable: "--color-surface-light-blue-lighter",   varId: "Surface/LightBlue/Lighter",  light: "#99e5f9",          dark: "#99e5f9" },
         { role: "Text",        variable: "--color-button-primary-text-default",  varId: "Button/Primary/Text/Default", light: "#ffffff",          dark: "#ffffff" },
+      ],
+    },
+    {
+      name: "Error Primary",
+      description: "Destructive / error-state variant. Same structure as Primary — red background, white text.",
+      cssPrefix: "--color-surface-error-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-error-default",      varId: "Surface/Error/Default",     light: "#992222", dark: "#e05252" },
+        { role: "BG hover",    variable: "--color-surface-error-darker",        varId: "Surface/Error/Darker",      light: "#5f2120", dark: "#ff6467" },
+        { role: "BG disabled", variable: "--color-surface-error-lighter",       varId: "Surface/Error/Lighter",     light: "#d32f2f", dark: "#fb2c36" },
+        { role: "Text",        variable: "--color-button-primary-text-default", varId: "Button/Primary/Text/Default", light: "#ffffff", dark: "#ffffff" },
+      ],
+    },
+    {
+      name: "Error Secondary",
+      description: "White chip with red border and red text.",
+      cssPrefix: "--color-border-error-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-neutral-white",   varId: "Surface/Neutral/White",  light: "#ffffff", dark: "#ffffff" },
+        { role: "BG hover",    variable: "--color-surface-error-more-subtle", varId: "Surface/Error/More Subtle", light: "#fdeded", dark: "#2d1515" },
+        { role: "Text",        variable: "--color-text-error",              varId: "Text/Error",             light: "#5f2120", dark: "#ff6467" },
+        { role: "Border",      variable: "--color-border-error-lighter",     varId: "Border/Error/Lighter",   light: "#d32f2f", dark: "#fb2c36" },
+      ],
+    },
+    {
+      name: "Alert Primary",
+      description: "Warning-state variant. Orange background, white text. Default/Hover use a Figma-side \"Chip-only\" AA-safe token (Surface/Alert/Default-AA, Darker-AA): identical light value to the original Surface/Alert/Default DS token, but a different dark value (Orange/700, Orange/600 instead of the original's washed-out Dark/Alert/100 yellow, ~1.4:1 contrast). This token exists only for Chip — it does not affect any other component using the original Surface/Alert/Default token.",
+      cssPrefix: "--color-surface-alert-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-alert-default",      varId: "Surface/Alert/Default-AA",  light: "#ed6c02", dark: "#8f4201" },
+        { role: "BG hover",    variable: "--color-surface-alert-darker",        varId: "Surface/Alert/Darker-AA",   light: "#663c00", dark: "#b25102" },
+        { role: "BG disabled", variable: "--color-surface-alert-lighter",       varId: "Surface/Alert/Lighter",     light: "#b25102", dark: "rgba(253,199,0,0.15)" },
+        { role: "Text",        variable: "--color-button-primary-text-default", varId: "Button/Primary/Text/Default", light: "#ffffff", dark: "#ffffff" },
+      ],
+    },
+    {
+      name: "Alert Secondary",
+      description: "White chip with orange border and orange text.",
+      cssPrefix: "--color-border-alert-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-neutral-white",    varId: "Surface/Neutral/White",   light: "#ffffff", dark: "#ffffff" },
+        { role: "BG hover",    variable: "--color-surface-alert-more-subtle", varId: "Surface/Alert/More Subtle", light: "#fff4e5", dark: "#281e00" },
+        { role: "Text",        variable: "--color-text-alert",               varId: "Text/Alert",              light: "#663c00", dark: "#fcd34d" },
+        { role: "Border",      variable: "--color-border-alert-lighter",      varId: "Border/Alert/Lighter",    light: "#b25102", dark: "#f59e0b" },
+      ],
+    },
+    {
+      name: "Success Primary",
+      description: "Success-state variant. Teal/green background, white text. Default/Hover use the Figma-side \"Chip-only\" AA-safe token (Surface/Success/Default-AA, Darker-AA) — same rationale as Alert Primary (Green/700, Green/600 instead of a washed-out dark-mode green). Disabled intentionally reuses the Default token rather than a \"Lighter\" tier: Success's dark ramp has no tier that's both darker (for contrast) and still visually reads as green — the only darker option is near-black. Documented limitation, not an oversight.",
+      cssPrefix: "--color-surface-success-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-success-default",    varId: "Surface/Success/Default-AA", light: "#00a07e", dark: "#00765f" },
+        { role: "BG hover",    variable: "--color-surface-success-darker",      varId: "Surface/Success/Darker-AA",  light: "#003328", dark: "#009978" },
+        { role: "BG disabled", variable: "--color-surface-success-default",    varId: "Surface/Success/Default-AA (reused)", light: "#00a07e", dark: "#00765f" },
+        { role: "Text",        variable: "--color-button-primary-text-default", varId: "Button/Primary/Text/Default", light: "#ffffff", dark: "#ffffff" },
+      ],
+    },
+    {
+      name: "Success Secondary",
+      description: "White chip with teal/green border and teal/green text.",
+      cssPrefix: "--color-border-success-*",
+      tokens: [
+        { role: "BG default",  variable: "--color-surface-neutral-white",      varId: "Surface/Neutral/White",     light: "#ffffff", dark: "#ffffff" },
+        { role: "BG hover",    variable: "--color-surface-success-more-subtle", varId: "Surface/Success/More Subtle", light: "#e5fdf8", dark: "#0a1f1a" },
+        { role: "Text",        variable: "--color-text-success",               varId: "Text/Success",              light: "#003328", dark: "#6ee7b7" },
+        { role: "Border",      variable: "--color-border-success-lighter",      varId: "Border/Success/Lighter",    light: "#009978", dark: "#34d399" },
       ],
     },
   ],
@@ -2604,6 +2674,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "icons")            return ICONS_SPEC            as AnySpec
   if (id === "elevation")        return ELEVATION_SPEC        as AnySpec
   if (id === "card-container")   return CARD_SPEC             as AnySpec
+  if (id === "home-banner") return HOME_BANNER_SPEC as unknown as AnySpec
   return CARD_SPEC as AnySpec
 }
 
@@ -8731,11 +8802,13 @@ function CheckboxPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 // ── ChipPage ─────────────────────────────────────────────────────────────────
 
 function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
-  const [tab,         setTab]         = useState<"overview" | "playground" | "reference">("overview")
+  const [tab,         setTab]         = usePageTab<"overview" | "playground" | "reference">("overview", ["overview", "playground", "reference"])
   const [pgVariant,   setPgVariant]   = useState<ChipVariant>("primary")
   const [pgSize,      setPgSize]      = useState<ChipSize>("m")
   const [pgPersonIcon,setPgPersonIcon]= useState(false)
   const [pgDisabled,  setPgDisabled]  = useState(false)
+  // Deep-link to a section within Reference (e.g. ?page=chip&tab=reference#tokens)
+  useScrollToHash(tab, "reference")
 
   const ALL_VARIANTS: { variant: ChipVariant; label: string }[] = [
     { variant: "primary",            label: "Primary" },
@@ -8743,6 +8816,12 @@ function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     { variant: "purple-primary",     label: "Purple Primary" },
     { variant: "purple-secondary",   label: "Purple Secondary" },
     { variant: "light-blue-primary", label: "Light Blue" },
+    { variant: "error-primary",      label: "Error Primary" },
+    { variant: "error-secondary",    label: "Error Secondary" },
+    { variant: "alert-primary",      label: "Alert Primary" },
+    { variant: "alert-secondary",    label: "Alert Secondary" },
+    { variant: "success-primary",    label: "Success Primary" },
+    { variant: "success-secondary",  label: "Success Secondary" },
   ]
 
   return (
@@ -8751,7 +8830,7 @@ function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Chip</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
-            Pill-shaped selection control for filtering and categorization. 5 color variants × 2 sizes × 4 states. Used in Slide Out filter rows and any category-selection surface.
+            Pill-shaped selection control for filtering and categorization. 11 color variants × 2 sizes × 4 states. Used in Slide Out filter rows and any category-selection surface.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("chip")} />
@@ -8772,6 +8851,41 @@ function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         {/* ── Overview ─────────────────────────────────────────────────── */}
         {tab === "overview" && (
           <div className="flex flex-col gap-[32px]">
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines — color is semantic, not decorative</h2>
+              <p className="text-[13px] text-[var(--field-supporting)] max-w-[720px]">
+                Chip's color variants exist to <strong>signal meaning</strong>, not to style a screen. Default to <code className="font-mono text-[12px]" style={{ color: "var(--color-text-subtitle)" }}>primary</code> / <code className="font-mono text-[12px]" style={{ color: "var(--color-text-subtitle)" }}>secondary</code> for the vast majority of chips — selected state, active filter, generic category toggle. Only reach for Error, Alert, or Success when the chip represents that actual outcome or state. If you can't point to a specific state the chip represents, it isn't a semantic-color chip.
+              </p>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Variant", "Use when", "Never use for"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { variant: "primary / secondary",           use: "Default choice for almost every chip — selected vs. unselected state, active filter, generic category toggle.", avoid: "—" },
+                      { variant: "purple-primary / -secondary",   use: "Categorical or brand tagging with no status meaning (e.g. \"Premium\", \"Internal\").",                      avoid: "Signaling an outcome, result, or state." },
+                      { variant: "light-blue-primary / -secondary", use: "Informational or system-level tagging — same non-status role as Purple.",                                    avoid: "Signaling an outcome, result, or state." },
+                      { variant: "error-primary / -secondary",    use: "The item genuinely failed, is blocked, or needs correction.",                                                  avoid: "Decorative red, or \"make this stand out.\"" },
+                      { variant: "alert-primary / -secondary",    use: "The item needs attention or is in a warning state.",                                                           avoid: "Decorative orange/yellow." },
+                      { variant: "success-primary / -secondary",  use: "The item completed, passed, or is in a confirmed positive state.",                                             avoid: "Decorative green, or as a generic \"active\" indicator — use primary for that." },
+                    ].map((row, i, arr) => (
+                      <tr key={row.variant} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none", background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{row.variant}</td>
+                        <td className="px-[12px] py-[8px]" style={{ color: "var(--foreground)" }}>{row.use}</td>
+                        <td className="px-[12px] py-[8px]" style={{ color: "var(--field-supporting)" }}>{row.avoid}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
             {/* Size M */}
             <div className="flex flex-col gap-[16px]">
@@ -8864,7 +8978,7 @@ function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <div className="flex flex-col gap-[32px]">
 
             {/* Tokens table */}
-            <div className="flex flex-col gap-[12px]">
+            <div id="tokens" className="flex flex-col gap-[12px] scroll-mt-[24px]">
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Design tokens</h2>
               <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
                 <table className="w-full text-[13px]">
@@ -8890,6 +9004,15 @@ function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                       { token: "--color-text-purple",                   role: "Purple secondary text",          dark: "#2c075c",                light: "#2c075c" },
                       { token: "--color-border-purple-default",         role: "Purple secondary border",        dark: "#7b27ed",                light: "#7b27ed" },
                       { token: "--color-surface-light-blue-default",    role: "Light blue BG",                  dark: "#00b5d9",                light: "#00b5d9" },
+                      { token: "--color-surface-error-default",         role: "Error primary BG",               dark: "#e05252",                light: "#992222" },
+                      { token: "--color-text-error",                    role: "Error secondary text",           dark: "#ff6467",                light: "#5f2120" },
+                      { token: "--color-border-error-lighter",          role: "Error secondary border",         dark: "#fb2c36",                light: "#d32f2f" },
+                      { token: "--color-surface-alert-default",         role: "Alert primary BG (Chip-only AA)", dark: "#8f4201",                light: "#ed6c02" },
+                      { token: "--color-text-alert",                    role: "Alert secondary text",           dark: "#fcd34d",                light: "#663c00" },
+                      { token: "--color-border-alert-lighter",          role: "Alert secondary border",         dark: "#f59e0b",                light: "#b25102" },
+                      { token: "--color-surface-success-default",       role: "Success primary BG (Chip-only AA)", dark: "#00765f",             light: "#00a07e" },
+                      { token: "--color-text-success",                  role: "Success secondary text",         dark: "#6ee7b7",                light: "#003328" },
+                      { token: "--color-border-success-lighter",        role: "Success secondary border",       dark: "#34d399",                light: "#009978" },
                     ].map((row, i, arr) => (
                       <tr key={row.token} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none", background: i % 2 === 0 ? "transparent" : "var(--row-alt-bg)" }}>
                         <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--color-text-subtitle)" }}>{row.token}</td>
@@ -8904,7 +9027,7 @@ function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </div>
 
             {/* Props table */}
-            <div className="flex flex-col gap-[12px]">
+            <div id="props" className="flex flex-col gap-[12px] scroll-mt-[24px]">
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
               <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
                 <table className="w-full text-[13px]">
@@ -8917,7 +9040,7 @@ function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   </thead>
                   <tbody>
                     {[
-                      { prop: "variant",    type: "ChipVariant",  def: '"secondary"', desc: "primary | secondary | purple-primary | purple-secondary | light-blue-primary" },
+                      { prop: "variant",    type: "ChipVariant",  def: '"secondary"', desc: "primary | secondary | purple-primary | purple-secondary | light-blue-primary | error-primary | error-secondary | alert-primary | alert-secondary | success-primary | success-secondary" },
                       { prop: "size",       type: "ChipSize",     def: '"m"',         desc: "m = 28px height · s = 20px height. Both use 12px horizontal padding." },
                       { prop: "personIcon", type: "boolean",      def: "false",       desc: "Renders a User icon to the left of the label." },
                       { prop: "disabled",   type: "boolean",      def: "false",       desc: "Muted appearance, click blocked, aria-disabled set." },
@@ -8937,7 +9060,7 @@ function ChipPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </div>
 
             {/* Code snippet */}
-            <div className="flex flex-col gap-[12px]">
+            <div id="usage" className="flex flex-col gap-[12px] scroll-mt-[24px]">
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
               <pre className="rounded-md p-[16px] text-[12px] leading-[20px] overflow-x-auto" style={{ background: "var(--code-bg)", color: "var(--foreground)" }}>{`import { Chip } from "@/components/ui/chip"
 
@@ -9602,15 +9725,16 @@ function ScrollAreaPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
 function PatternTabRow({ tab, setTab }: { tab: string; setTab: (t: string) => void }) {
   return (
-    <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
-      {(["when-to-use", "anatomy", "rules"] as const).map(t => (
-        <button key={t} onClick={() => setTab(t)}
-          className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
-          style={{ color: tab === t ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
-          {t === "when-to-use" ? "When to Use" : t === "anatomy" ? "Anatomy" : "Rules"}
-        </button>
-      ))}
-    </div>
+    <Tabs
+      className="mb-[32px]"
+      items={[
+        { id: "when-to-use", label: "When to Use" },
+        { id: "anatomy",     label: "Anatomy"     },
+        { id: "rules",       label: "Rules"       },
+      ]}
+      activeId={tab}
+      onChange={setTab}
+    />
   )
 }
 
@@ -13172,6 +13296,18 @@ function PatternWidgetCanvasPage() {
   const [wcScrolled, setWcScrolled] = useState(false)
   const wcContentRef = useRef<HTMLDivElement>(null)
 
+  const previewSlots = useMemo(() => [
+    { uid: "prev-kpi-0",    title: "Active Workers",     colSpan: 1 as const, rowSpan: 3, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={0} /> },
+    { uid: "prev-kpi-1",    title: "Conversions",        colSpan: 1 as const, rowSpan: 3, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={1} /> },
+    { uid: "prev-kpi-2",    title: "Goal Progress",      colSpan: 1 as const, rowSpan: 3, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={3} /> },
+    { uid: "prev-activity", title: "Last Activity",      colSpan: 2 as const, rowSpan: 6, showRefresh: true,  showMenu: true,  content: <ActivityWidgetContent /> },
+    { uid: "prev-notes",    title: "Team Notes",         colSpan: 1 as const, rowSpan: 6, showRefresh: false, showMenu: true,  content: <NotesWidgetContent /> },
+    { uid: "prev-mywork",   title: "My Work",            colSpan: 2 as const, rowSpan: 8, showRefresh: true,  showMenu: true,  content: <MyWorkWidgetContent /> },
+    { uid: "prev-myteam",   title: "My Team",            colSpan: 1 as const, rowSpan: 8, showRefresh: true,  showMenu: true,  content: <MyTeamWidgetContent /> },
+    { uid: "prev-timeline", title: "Activity Timeline",  colSpan: 3 as const, rowSpan: 3, showRefresh: true,  showMenu: true,  content: <TimelineWidgetContent /> },
+    { uid: "prev-charts",   title: "Performance Charts", colSpan: 3 as const, rowSpan: 5, showRefresh: true,  showMenu: true,  content: <ChartsWidgetContent /> },
+  ], [])
+
   useEffect(() => {
     if (!widgetPreviewOpen) { setWcScrolled(false); return }
     const el = wcContentRef.current
@@ -13294,156 +13430,22 @@ function PatternWidgetCanvasPage() {
             </div>
           </PatternCard>
 
-          {/* ── Grid Unit Canvas — Widget Class Construction ───────── */}
+          {/* ── Grid Unit Canvas — Interactive Preview ───────────── */}
           <PatternCard>
-            <SectionLabel>Grid Unit Canvas — Widget Class Construction</SectionLabel>
+            <SectionLabel>Grid Unit Canvas — Interactive Preview</SectionLabel>
             <p className="text-[13px] text-[var(--field-supporting)] mb-[20px]">
-              Three widget classes fill the 3-column canvas. Heights snap to Grid Units (1 GU = 24px). Each class defines a fixed height band — content never drives height.
+              Three widget classes fill the 3-column canvas. Drag to reorder, resize using left/right edge handles, and collapse by clicking the bottom edge. All interactions are live.
             </p>
-
-            {/* Legend */}
-            <div className="flex items-center gap-[20px] mb-[16px] flex-wrap">
-              {[
-                { label: "Class 1 — Compact", sub: "4–5 GU · 96–120px", bg: "var(--color-surface-primary-subtle)", border: "var(--color-border-primary-lighter)", text: "var(--primary)" },
-                { label: "Class 2 — Standard", sub: "7–9 GU · 168–216px", bg: "var(--color-surface-success-more-subtle)", border: "var(--color-border-success-lighter)", text: "var(--color-surface-success-default)" },
-                { label: "Class 3 — Heavy", sub: "9+ GU · 216px+", bg: "var(--card-orange-bg)", border: "var(--card-orange-border)", text: "var(--card-orange-hover-bd)" },
-              ].map(c => (
-                <div key={c.label} className="flex items-center gap-[8px]">
-                  <div style={{ width: 14, height: 14, borderRadius: 4, background: c.bg, border: `1.5px solid ${c.border}` }} />
-                  <div>
-                    <span className="text-[12px] font-semibold" style={{ color: "var(--color-text-title)" }}>{c.label}</span>
-                    <span className="text-[11px]" style={{ color: "var(--color-text-subtitle)" }}> — {c.sub}</span>
-                  </div>
-                </div>
-              ))}
-              <div className="ml-auto flex items-center gap-[6px]">
-                <span className="text-[10px] font-mono px-[6px] py-[2px] rounded-[4px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--color-border-primary-lighter)" }}>1 GU = 24px</span>
-                <span className="text-[10px] font-mono px-[6px] py-[2px] rounded-[4px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)", border: "0.5px solid var(--color-border-primary-lighter)" }}>gap = 16px</span>
-              </div>
-            </div>
-
-            {/* Canvas diagram */}
-            <div className="rounded-[12px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
-              {/* Column ruler */}
-              <div style={{ display: "grid", gridTemplateColumns: "48px 1fr", background: "var(--surface)" }}>
-                <div style={{ borderRight: "1px solid var(--field-border)", borderBottom: "1px solid var(--field-border)" }} />
-                <div className="flex items-center px-[16px] py-[8px]" style={{ borderBottom: "1px solid var(--field-border)", gap: 8 }}>
-                  {[
-                    { label: "1/3 width · 4 cols", span: 1 },
-                    { label: "2/3 width · 8 cols", span: 2 },
-                    { label: "3/3 width · 12 cols", span: 3 },
-                  ].map((c, i) => (
-                    <div key={i} className="flex items-center gap-[6px]" style={{ flex: c.span }}>
-                      <div style={{ height: 1, flex: 1, background: "var(--field-border)" }} />
-                      <span className="text-[10px] font-mono shrink-0" style={{ color: "var(--color-text-subtitle)" }}>{c.label}</span>
-                      <div style={{ height: 1, flex: 1, background: "var(--field-border)" }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Canvas body */}
-              <div style={{ display: "grid", gridTemplateColumns: "48px 1fr", background: "var(--canvas)" }}>
-                {/* GU ruler */}
-                <div style={{ borderRight: "1px solid var(--field-border)", display: "flex", flexDirection: "column" }}>
-                  {[
-                    { label: "4 GU", h: 96 + 16, color: "var(--primary)" },
-                    { label: "9 GU", h: 216 + 16, color: "var(--color-surface-success-default)" },
-                    { label: "9+ GU", h: 240 + 16, color: "var(--card-orange-hover-bd)" },
-                  ].map((row, i) => (
-                    <div key={i} className="flex flex-col items-center justify-center" style={{ height: row.h, borderBottom: i < 2 ? "1px dashed var(--field-border)" : "none" }}>
-                      <span className="text-[9px] font-mono font-semibold" style={{ color: row.color, writingMode: "vertical-lr", transform: "rotate(180deg)", letterSpacing: "0.06em" }}>{row.label}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Widget grid */}
-                <div className="p-[16px] flex flex-col gap-[16px]">
-                  {/* Row 1: Class 1 Compact — 3× narrow */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                    {["Active Workers", "Conversions", "Goal Progress"].map((title, i) => (
-                      <div key={i} className="flex flex-col gap-[6px] rounded-[10px] p-[12px]"
-                        style={{ height: 96, background: "var(--color-surface-primary-subtle)", border: "1px solid var(--color-border-primary-lighter)" }}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--primary)" }}>{title}</span>
-                          <span className="text-[8px] font-mono px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface)", color: "var(--primary)" }}>1/3</span>
-                        </div>
-                        <div className="flex items-end justify-between flex-1">
-                          <span className="text-[22px] font-bold" style={{ color: "var(--color-text-title)", lineHeight: 1 }}>
-                            {["2,401", "843", "67%"][i]}
-                          </span>
-                          <span className="text-[8px] font-mono" style={{ color: "var(--color-text-subtitle)" }}>4 GU · 96px</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Row 2: Class 2 Standard — wide + narrow */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                    {/* Wide 2/3 */}
-                    <div className="flex flex-col gap-[8px] rounded-[10px] p-[12px]"
-                      style={{ gridColumn: "span 2", height: 216, background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-lighter)" }}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-surface-success-default)" }}>Last Activity</span>
-                        <span className="text-[8px] font-mono px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface)", color: "var(--color-surface-success-default)" }}>2/3</span>
-                      </div>
-                      <div className="flex flex-col gap-[4px] flex-1">
-                        {["Inbound call — Sarah Johnson", "Email — David Kim", "Meeting — Quarterly Review", "SMS — Maria Torres"].map((item, i) => (
-                          <div key={i} className="flex items-center gap-[8px] rounded-[6px] px-[8px] py-[5px]" style={{ background: "var(--surface)", opacity: 1 - i * 0.08 }}>
-                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-surface-success-default)", flexShrink: 0 }} />
-                            <span className="text-[10px] truncate" style={{ color: "var(--color-text-title)" }}>{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <span className="text-[8px] font-mono self-end" style={{ color: "var(--color-surface-success-default)" }}>9 GU · 216px</span>
-                    </div>
-                    {/* Narrow 1/3 */}
-                    <div className="flex flex-col gap-[8px] rounded-[10px] p-[12px]"
-                      style={{ height: 216, background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-lighter)" }}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--color-surface-success-default)" }}>Team Notes</span>
-                        <span className="text-[8px] font-mono px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface)", color: "var(--color-surface-success-default)" }}>1/3</span>
-                      </div>
-                      <div className="flex flex-col gap-[4px] flex-1">
-                        {["Alice Johnson — Follow up", "Team Standup", "Maria Torres"].map((item, i) => (
-                          <div key={i} className="flex items-center gap-[6px] rounded-[6px] px-[8px] py-[5px]" style={{ background: "var(--surface)", opacity: 1 - i * 0.08 }}>
-                            <div style={{ width: 16, height: 16, borderRadius: "50%", background: "var(--color-surface-primary-subtle)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <span className="text-[8px] font-bold" style={{ color: "var(--primary)" }}>{item[0]}</span>
-                            </div>
-                            <span className="text-[9px] truncate" style={{ color: "var(--color-text-title)" }}>{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <span className="text-[8px] font-mono self-end" style={{ color: "var(--color-surface-success-default)" }}>9 GU · 216px</span>
-                    </div>
-                  </div>
-
-                  {/* Row 3: Class 3 Heavy — full */}
-                  <div className="flex flex-col gap-[8px] rounded-[10px] p-[12px]"
-                    style={{ height: 240, background: "var(--card-orange-bg)", border: "1px solid var(--card-orange-border)" }}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--card-orange-hover-bd)" }}>Recent Activity Timeline</span>
-                      <span className="text-[8px] font-mono px-[4px] py-[1px] rounded-[3px]" style={{ background: "var(--surface)", color: "var(--card-orange-hover-bd)" }}>3/3 · full</span>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, flex: 1 }}>
-                      {[
-                        { n: "127", label: "Contracts" },
-                        { n: "43", label: "Meetings" },
-                        { n: "12", label: "Calls" },
-                        { n: "28", label: "Proposals" },
-                        { n: "7", label: "Closed" },
-                      ].map((col, i) => (
-                        <div key={i} className="flex flex-col items-center justify-center gap-[4px] rounded-[8px] p-[8px]" style={{ background: "var(--surface)" }}>
-                          <span className="text-[18px] font-bold" style={{ color: "var(--card-orange-hover-bd)" }}>{col.n}</span>
-                          <span className="text-[9px]" style={{ color: "var(--color-text-subtitle)" }}>{col.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <span className="text-[8px] font-mono self-end" style={{ color: "var(--card-orange-hover-bd)" }}>9+ GU · 240px · Internal scroll</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <CanvasLayout
+              initialSlots={[
+                { uid: "anatomy-kpi1",     title: "Active Workers",  colSpan: 1, rowSpan: 3, content: <KpiWidgetContent variant={0} /> },
+                { uid: "anatomy-kpi2",     title: "Conversions",     colSpan: 1, rowSpan: 3, content: <KpiWidgetContent variant={1} /> },
+                { uid: "anatomy-kpi3",     title: "Goal Progress",   colSpan: 1, rowSpan: 3, content: <KpiWidgetContent variant={2} /> },
+                { uid: "anatomy-activity", title: "Last Activity",   colSpan: 2, rowSpan: 6, content: <ActivityWidgetContent /> },
+                { uid: "anatomy-notes",    title: "Team Notes",      colSpan: 1, rowSpan: 6, content: <NotesWidgetContent /> },
+                { uid: "anatomy-mywork",   title: "My Work",         colSpan: 3, rowSpan: 8, content: <MyWorkWidgetContent /> },
+              ]}
+            />
           </PatternCard>
 
           {/* Grid system */}
@@ -13800,42 +13802,22 @@ const CANVAS_COLS = (canvasWidth: number): number => {
               />
 
               {/* Tab strip */}
-              <div className="flex items-center shrink-0" style={{ padding: "0 32px", borderBottom: "1px solid var(--field-border)", gap: 0 }}>
+              <div className="flex items-center shrink-0" style={{ padding: "0 32px", gap: 0 }}>
                 {["Overview", "Workers", "Teams", "Logs"].map((t, i) => (
-                  <button key={t} className="flex items-center h-[40px] px-[16px] text-[13px] font-medium" style={{ border: "none", background: "none", cursor: "pointer", color: i === 0 ? "var(--primary)" : "var(--field-supporting)", borderBottom: i === 0 ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+                  <button key={t} className="flex items-center h-[40px] px-[16px] text-[13px] font-medium" style={{ border: "none", background: "none", cursor: "pointer", color: i === 0 ? "var(--primary)" : "var(--field-supporting)", borderBottom: i === 0 ? "2px solid var(--primary)" : "2px solid transparent" }}>
                     {t}
                   </button>
                 ))}
               </div>
 
-              {/* Canvas scroll area — real widgets from DS */}
+              {/* Canvas scroll area — live interactive CanvasLayout */}
               <div ref={wcContentRef} className="flex-1 overflow-y-auto" style={{ padding: "24px 32px" }}>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: 16,
-                }}>
-                  {CANVAS_LAYOUT.map(slot => (
-                    <div key={slot.uid} style={{ gridColumn: `span ${slot.colSpan}`, display: "flex", flexDirection: "column" }}>
-                      <WidgetFather
-                        className="flex-1"
-                        title={slot.title}
-                        fillWidth
-                        widthClass={slot.widthClass}
-                        showRefresh={slot.showRefresh}
-                        showMenu={slot.showMenu}
-                        showInfo={slot.showInfo}
-                      >
-                        <WidgetContent id={slot.id} kpiVariant={slot.kpiVariant ?? 2} />
-                      </WidgetFather>
-                    </div>
-                  ))}
-                </div>
+                <CanvasLayout initialSlots={previewSlots} />
 
                 <div className="mt-[16px] px-[12px] py-[10px] rounded-[6px] flex items-center gap-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-subtle)" }}>
                   <LucideIcons.Info size={13} style={{ color: "var(--primary)", flexShrink: 0 }} />
                   <span className="text-[12px]" style={{ color: "var(--foreground)" }}>
-                    Vista estática del canvas layout. Para la versión interactiva con drag &amp; drop y resize, usa el <strong>Live Canvas</strong> desde la página de Widgets.
+                    This preview uses the live WidgetCanvasView — drag to reorder, resize with edge handles, and collapse by clicking the bottom edge. The 12-column grid fills gaps automatically.
                   </span>
                 </div>
               </div>
@@ -20878,6 +20860,566 @@ function PatternSlideOutPage() {
   )
 }
 
+// ── Home Banner Spec ─────────────────────────────────────────────────────────
+const HOME_BANNER_SPEC = {
+  componentName: "Home Banner",
+  nodeId: "TBD — pending Figma design",
+  description: "Personalized greeting banner displayed at the top of the Home page. Combines a time-of-day greeting, daily progress counter, a featured action carousel (user's most urgent pending item), and quick navigation shortcuts. Uses CardContainer variant=\"primary\" to stand out from the default canvas surface without using raw gradients.",
+  variants: [
+    {
+      name: "With carousel",
+      description: "One or more featured action items displayed with carousel navigation (dots + prev/next arrows). Shows when featuredItems.length > 0.",
+      tokens: [
+        { role: "Banner surface",       variable: "--card-primary-bg",       varId: "", light: "#f6f9ff",              dark: "rgba(43,127,255,0.08)" },
+        { role: "Banner border",        variable: "--card-primary-hover-bd", varId: "", light: "#2173ff",              dark: "#2b7fff" },
+        { role: "Banner glow shadow",   variable: "--card-primary-hover-shadow", varId: "", light: "0 8px 24px rgba(33,115,255,0.20)", dark: "8px 8px 16px 0 rgba(0,0,0,0.08), 0 0 4px 1px rgba(33,115,255,0.4), 0 0 14px 0 rgba(33,115,255,0.15)" },
+        { role: "Inner card surface",   variable: "--card-purple-bg",        varId: "", light: "#f3e9fd",              dark: "#120520" },
+        { role: "Inner card border",    variable: "--card-purple-hover-bd",  varId: "", light: "#7b27ed",              dark: "#a855f7" },
+        { role: "Primary text",         variable: "--foreground",            varId: "", light: "#1a1a2e",              dark: "#f0f4ff" },
+        { role: "Secondary text",       variable: "--field-supporting",      varId: "", light: "#6b7280",              dark: "#8899aa" },
+      ],
+    },
+    {
+      name: "Empty",
+      description: "No featured items or quick links. Shows greeting + counter only. Useful for first-time users or when no pending actions exist.",
+      tokens: [
+        { role: "Banner surface",       variable: "--card-primary-bg",       varId: "", light: "#f6f9ff",              dark: "rgba(43,127,255,0.08)" },
+        { role: "Banner border",        variable: "--card-primary-hover-bd", varId: "", light: "#2173ff",              dark: "#2b7fff" },
+      ],
+    },
+  ],
+  states: [
+    { name: "Morning",   description: '"Good morning, Name." — shown 05:00–11:59. Greeting adapts to local time.' },
+    { name: "Afternoon", description: '"Good afternoon, Name." — shown 12:00–17:59.' },
+    { name: "Evening",   description: '"Good evening, Name." — shown 18:00–04:59.' },
+    { name: "1 item",    description: 'Single featured item — no carousel dots or prev/next arrows shown.' },
+    { name: "N items",   description: 'Multiple items — carousel with pagination dots, prev/next arrows, and "See all →" link.' },
+    { name: "Empty",     description: 'No items — featured action section hidden entirely. Quick links may still show.' },
+  ],
+  properties: [
+    { name: "userName",       value: "string — required. First name shown in greeting." },
+    { name: "timeOfDay",      value: '"morning" | "afternoon" | "evening" — controls greeting text.' },
+    { name: "resolvedToday",  value: "number — tasks completed today shown in counter." },
+    { name: "remaining",      value: "number — tasks still pending shown in counter." },
+    { name: "featuredItems",  value: "HomeBannerItem[] — items shown in carousel. Max recommended: 7." },
+    { name: "quickLinks",     value: "HomeBannerQuickLink[] — row of shortcut buttons. Max recommended: 5." },
+    { name: "onAskPA",        value: "() => void — callback when Ask your PA button is clicked." },
+  ],
+}
+
+// ── HomeBannerPage ────────────────────────────────────────────────────────────
+interface HomeBannerItem {
+  urgency: "act-now" | "critical" | "action"
+  title: string
+  subtitle: string
+  actions: { label: string; variant?: "primary" | "secondary" }[]
+}
+
+interface HomeBannerQuickLink {
+  icon: ReactNode
+  label: string
+}
+
+const URGENCY_CFG: Record<HomeBannerItem["urgency"], { tag: "error" | "alert" | "informative"; label: string; dot: string }> = {
+  "act-now":  { tag: "error",       label: "Due Now",  dot: "var(--color-surface-error-default)" },
+  "critical": { tag: "alert",       label: "Critical", dot: "var(--color-surface-alert-default)" },
+  "action":   { tag: "informative", label: "Action",   dot: "var(--primary)" },
+}
+
+function HomeBannerPreview({
+  userName = "Thomas",
+  timeOfDay = "afternoon",
+  resolvedToday = 5,
+  remaining = 7,
+  featuredItems = [] as HomeBannerItem[],
+  quickLinks = [] as HomeBannerQuickLink[],
+  showAskPA = true,
+}: {
+  userName?: string
+  timeOfDay?: "morning" | "afternoon" | "evening"
+  resolvedToday?: number
+  remaining?: number
+  featuredItems?: HomeBannerItem[]
+  quickLinks?: HomeBannerQuickLink[]
+  showAskPA?: boolean
+}) {
+  const [activeIdx, setActiveIdx] = useState(0)
+  const greetings = { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening" }
+  const currentItem = featuredItems[activeIdx]
+  const urgencyCfg = currentItem ? URGENCY_CFG[currentItem.urgency] : null
+
+  return (
+    <CardContainer
+      variant="primary"
+      size="lg"
+      className="!border !border-[var(--card-primary-hover-bd)] [box-shadow:var(--card-primary-hover-shadow)] relative"
+    >
+      {/* Ask PA button */}
+      {showAskPA && (
+        <div style={{ position: "absolute", top: 24, right: 24 }}>
+          <Button variant="secondary" size="sm">
+            <LucideIcons.Sparkles size={12} style={{ marginRight: 4 }} />
+            Ask your PA
+          </Button>
+        </div>
+      )}
+
+      {/* Greeting */}
+      <div style={{ paddingRight: showAskPA ? 160 : 0 }}>
+        <p style={{ margin: "0 0 6px", fontSize: 26, fontWeight: 400, lineHeight: 1.25, color: "var(--foreground)" }}>
+          {greetings[timeOfDay]},{" "}
+          <strong style={{ fontWeight: 700 }}>{userName}.</strong>
+        </p>
+
+        {/* Counter */}
+        {(resolvedToday !== undefined || remaining !== undefined) && (
+          <div className="flex items-center gap-[6px] mb-[16px]">
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--primary)", flexShrink: 0, display: "inline-block" }} />
+            <span style={{ fontSize: 13, color: "var(--field-supporting)" }}>
+              {resolvedToday} resolved today
+              {remaining !== undefined && remaining > 0 && <span> · <strong style={{ color: "var(--foreground)", fontWeight: 600 }}>{remaining} remaining</strong></span>}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Featured action carousel */}
+      {featuredItems.length > 0 && currentItem && urgencyCfg && (
+        <CardContainer
+          variant="purple"
+          size="sm"
+          className="!border !border-[var(--card-purple-hover-bd)] [box-shadow:var(--card-purple-hover-shadow)] mb-[14px] relative"
+        >
+          {/* Carousel nav */}
+          {featuredItems.length > 1 && (
+            <div className="flex items-center gap-[4px]" style={{ position: "absolute", top: 12, right: 12 }}>
+              <Button variant="tertiary" size="sm" icon={<LucideIcons.ChevronLeft size={13} />} iconPosition="alone" onClick={() => setActiveIdx(i => Math.max(0, i - 1))} />
+              {featuredItems.map((_, i) => (
+                <button key={i} onClick={() => setActiveIdx(i)}
+                  style={{
+                    width: i === activeIdx ? 16 : 6, height: 6, borderRadius: 3,
+                    background: i === activeIdx ? "var(--primary)" : "var(--field-border)",
+                    border: "none", padding: 0, cursor: "pointer",
+                    transition: "width 200ms, background 200ms",
+                  }} />
+              ))}
+              <Button variant="tertiary" size="sm" icon={<LucideIcons.ChevronRight size={13} />} iconPosition="alone" onClick={() => setActiveIdx(i => Math.min(featuredItems.length - 1, i + 1))} />
+            </div>
+          )}
+
+          {/* Urgency label */}
+          <div className="flex items-center gap-[5px] mb-[6px]">
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: urgencyCfg.dot, display: "inline-block", flexShrink: 0 }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: urgencyCfg.dot, textTransform: "uppercase", letterSpacing: "0.05em" }}>{urgencyCfg.label}</span>
+          </div>
+
+          {/* Title */}
+          <p style={{ margin: "0 0 3px", fontSize: 13, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.35, paddingRight: featuredItems.length > 1 ? 100 : 0 }}>
+            {currentItem.title}
+          </p>
+          {/* Subtitle */}
+          <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.4 }}>
+            {currentItem.subtitle}
+          </p>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-[6px]">
+              {currentItem.actions.map((a, i) => (
+                <Button key={i} variant={a.variant === "primary" ? "primary" : "secondary"} size="sm">{a.label}</Button>
+              ))}
+            </div>
+            {featuredItems.length > 1 && (
+              <Button variant="tertiary" size="sm">
+                See all <LucideIcons.ChevronRight size={11} />
+              </Button>
+            )}
+          </div>
+        </CardContainer>
+      )}
+
+      {/* Quick links */}
+      {quickLinks.length > 0 && (
+        <div className="flex items-center gap-[6px] flex-wrap">
+          {quickLinks.map((link, i) => (
+            <Button key={i} variant="secondary" size="sm">
+              {link.icon && <span style={{ display: "flex", marginRight: 4 }}>{link.icon}</span>}
+              {link.label}
+            </Button>
+          ))}
+        </div>
+      )}
+    </CardContainer>
+  )
+}
+
+const SAMPLE_ITEMS: HomeBannerItem[] = [
+  {
+    urgency: "act-now",
+    title: "Financial Policy PDF requires approval",
+    subtitle: "Blocking 14 workflows · 3 agents · 12m ago",
+    actions: [{ label: "Approve", variant: "primary" }, { label: "Escalate", variant: "secondary" }],
+  },
+  {
+    urgency: "critical",
+    title: "SalesForecastPA about to send external email",
+    subtitle: "Paused · awaiting review · 5m ago",
+    actions: [{ label: "Review", variant: "primary" }, { label: "Defer", variant: "secondary" }],
+  },
+  {
+    urgency: "action",
+    title: "Q3 Pipeline Forecast ready for advance",
+    subtitle: "Monthly Forecast Roll-up · 1h ago",
+    actions: [{ label: "Advance", variant: "primary" }, { label: "View", variant: "secondary" }],
+  },
+]
+
+const SAMPLE_LINKS: HomeBannerQuickLink[] = [
+  { icon: <LucideIcons.Zap size={12} />, label: "Trigger workflow" },
+  { icon: <LucideIcons.BarChart2 size={12} />, label: "View reports" },
+  { icon: <LucideIcons.ListChecks size={12} />, label: "Review HTL" },
+  { icon: <LucideIcons.Bot size={12} />, label: "Agents" },
+]
+
+function HomeBannerPage({ onNavigate }: { onNavigate: (id: string) => void }) {
+  const [tab, setTab] = useState<"overview" | "reference">("overview")
+
+  return (
+    <div>
+      {/* Page header */}
+      <div className="mb-[28px]">
+        <div className="flex items-start justify-between gap-[16px]">
+          <div>
+            <div className="flex items-center gap-[8px] mb-[6px]">
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--primary)" }}>PATTERN</span>
+              <Tag variant="informative" size="sm">New</Tag>
+              <Tag variant="neutral" size="sm">Pending Figma</Tag>
+            </div>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: "var(--foreground)", margin: "0 0 8px" }}>Home Banner</h1>
+            <p style={{ fontSize: 14, color: "var(--field-supporting)", margin: 0, maxWidth: 560, lineHeight: 1.55 }}>
+              Personalized greeting banner displayed at the top of the Home page. Combines a time-of-day greeting, daily progress counter, a featured action carousel, and quick navigation shortcuts — all using the DS <code style={{ fontSize: 12, background: "var(--color-surface-neutral-default)", padding: "1px 5px", borderRadius: 4 }}>CardContainer</code> primary and purple variants.
+            </p>
+          </div>
+          <Button variant="primary" size="sm" icon={<LucideIcons.ArrowUpRight size={13} />} iconPosition="right" onClick={() => onNavigate("proto-home-canvas")}>
+            Open example
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-[28px]">
+        <Tabs
+          size="m"
+          items={[{ id: "overview", label: "Overview" }, { id: "reference", label: "Reference" }]}
+          activeId={tab}
+          onChange={id => setTab(id as typeof tab)}
+        />
+      </div>
+
+      {/* ── OVERVIEW ── */}
+      {tab === "overview" && (
+        <div className="flex flex-col" style={{ gap: 32 }}>
+
+          {/* Anatomy */}
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 6px" }}>Anatomy</h2>
+            <p style={{ fontSize: 13, color: "var(--field-supporting)", margin: "0 0 20px", lineHeight: 1.5 }}>
+              The Home Banner is built from two nested <strong>CardContainer</strong> components — <code style={{ fontSize: 11, background: "var(--color-surface-neutral-default)", padding: "1px 4px", borderRadius: 3 }}>primary</code> for the outer shell and <code style={{ fontSize: 11, background: "var(--color-surface-neutral-default)", padding: "1px 4px", borderRadius: 3 }}>purple</code> for the inner featured action card. This creates visual hierarchy without custom colors or gradients.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+              {[
+                { n: "1", label: "Outer shell",        desc: "CardContainer variant=\"primary\" size=\"lg\" · forced active border + glow shadow" },
+                { n: "2", label: "Ask PA button",       desc: "Button variant=\"secondary\" · positioned top-right · opens PA chat overlay" },
+                { n: "3", label: "Greeting text",       desc: "Time-of-day prefix (thin) + user name (bold) · adapts automatically · 26px" },
+                { n: "4", label: "Progress counter",    desc: "Primary dot + \"N resolved today · N remaining\" · uses --primary + --field-supporting" },
+                { n: "5", label: "Inner action card",   desc: "CardContainer variant=\"purple\" size=\"sm\" · forced purple border + glow" },
+                { n: "6", label: "Urgency badge",       desc: "Tag variant error/alert/informative + colored dot · act-now / critical / action" },
+                { n: "7", label: "Action CTAs",         desc: "Button primary + Button secondary · specific to each item's required action" },
+                { n: "8", label: "Carousel pagination", desc: "Dot indicators + chevron buttons · hidden when only 1 item · See all → link" },
+                { n: "9", label: "Quick links row",     desc: "Button secondary size=\"sm\" · icon + label · max 5 recommended" },
+              ].map(item => (
+                <div key={item.n} className="flex items-start gap-[10px]"
+                  style={{ background: "var(--color-surface-neutral-default)", borderRadius: 8, padding: "10px 12px" }}>
+                  <span style={{
+                    width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+                    background: "var(--primary)", color: "var(--tag-primary-fg)",
+                    fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>{item.n}</span>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{item.label}</div>
+                    <div style={{ fontSize: 11, color: "var(--field-supporting)", lineHeight: 1.4 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Annotated preview */}
+            <HomeBannerPreview
+              featuredItems={SAMPLE_ITEMS}
+              quickLinks={SAMPLE_LINKS}
+              showAskPA
+            />
+          </div>
+
+          {/* Variants */}
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 6px" }}>Variants</h2>
+            <p style={{ fontSize: 13, color: "var(--field-supporting)", margin: "0 0 20px", lineHeight: 1.5 }}>Three primary content variants driven by <code style={{ fontSize: 11, background: "var(--color-surface-neutral-default)", padding: "1px 4px", borderRadius: 3 }}>featuredItems</code> length.</p>
+            <div className="flex flex-col" style={{ gap: 20 }}>
+              {/* Variant 1: Full */}
+              <div>
+                <div className="flex items-center gap-[8px] mb-[10px]">
+                  <Tag variant="primary" size="sm">With carousel</Tag>
+                  <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>featuredItems.length ≥ 2</span>
+                </div>
+                <HomeBannerPreview featuredItems={SAMPLE_ITEMS} quickLinks={SAMPLE_LINKS} showAskPA />
+              </div>
+              {/* Variant 2: Single item */}
+              <div>
+                <div className="flex items-center gap-[8px] mb-[10px]">
+                  <Tag variant="neutral" size="sm">Single item</Tag>
+                  <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>featuredItems.length === 1 · no carousel controls</span>
+                </div>
+                <HomeBannerPreview featuredItems={[SAMPLE_ITEMS[0]]} quickLinks={SAMPLE_LINKS} showAskPA />
+              </div>
+              {/* Variant 3: Empty */}
+              <div>
+                <div className="flex items-center gap-[8px] mb-[10px]">
+                  <Tag variant="neutral" size="sm">Empty</Tag>
+                  <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>featuredItems.length === 0 · only greeting + counter</span>
+                </div>
+                <HomeBannerPreview featuredItems={[]} quickLinks={[]} showAskPA resolvedToday={12} remaining={0} />
+              </div>
+            </div>
+          </div>
+
+          {/* Time-of-day states */}
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 6px" }}>Time-of-day states</h2>
+            <p style={{ fontSize: 13, color: "var(--field-supporting)", margin: "0 0 16px", lineHeight: 1.5 }}>The greeting adapts automatically to local time. Implement by passing the current hour from the consuming page.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+              {(["morning", "afternoon", "evening"] as const).map(t => (
+                <div key={t} style={{ background: "var(--color-surface-neutral-default)", borderRadius: 8, padding: "12px 14px" }}>
+                  <Tag variant="neutral" size="sm" className="mb-[8px]">{t}</Tag>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
+                    Good {t}, <strong>Name.</strong>
+                  </p>
+                  <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--field-supporting)" }}>
+                    {t === "morning" ? "05:00 – 11:59" : t === "afternoon" ? "12:00 – 17:59" : "18:00 – 04:59"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Do / Don't */}
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 16px" }}>Do / Don't</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {[
+                { type: "do", text: "Always show exactly 1 Home Banner per page — it is a unique contextual element, not a repeatable card." },
+                { type: "dont", text: "Don't use the Home Banner inside a WidgetFather — it is a page-level section, not a widget." },
+                { type: "do", text: "Keep featuredItems to the user's single most urgent pending item first in the carousel." },
+                { type: "dont", text: "Don't show more than 7 carousel items — the counter and quick links become the primary navigation after ~5." },
+                { type: "do", text: "Compute timeOfDay from local browser time — never hardcode a greeting phrase." },
+                { type: "dont", text: "Don't use a generic greeting like \"Hello\" — the three time-of-day variants must be used as defined." },
+                { type: "do", text: "Keep quick links to the 4–5 most common workspace shortcuts for this user's role." },
+                { type: "dont", text: "Don't place another CardContainer variant=\"primary\" immediately below the banner — visual hierarchy collapses." },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-[10px]"
+                  style={{
+                    borderRadius: 8, padding: "12px 14px",
+                    background: item.type === "do" ? "var(--color-surface-success-subtle)" : "var(--color-surface-error-subtle)",
+                    border: `0.5px solid ${item.type === "do" ? "var(--field-border-success)" : "var(--field-border-error)"}`,
+                  }}>
+                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{item.type === "do" ? "✓" : "✕"}</span>
+                  <span style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5 }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Edge cases */}
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 6px" }}>Edge cases</h2>
+            <p style={{ fontSize: 13, color: "var(--field-supporting)", margin: "0 0 16px", lineHeight: 1.5 }}>States the component must handle gracefully.</p>
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              {[
+                { case: "remaining === 0", behavior: 'Show "N resolved today" without the "· 0 remaining" suffix — all caught up state. Optionally replace the primary dot with a success checkmark.' },
+                { case: "Long user name (> 20 chars)", behavior: 'The greeting line wraps naturally. The Ask PA button is positioned absolute (top-right), so wrapping text does not push it down. Verify at narrow banner widths.' },
+                { case: "No featuredItems", behavior: "Hide the inner purple card entirely — do not show an empty card. The banner shows only greeting + counter + quick links." },
+                { case: "No quickLinks", behavior: "Hide the quick links row entirely. Do not render an empty row with placeholder buttons." },
+                { case: "1 featuredItem", behavior: "Show the featured action card without carousel controls (no dots, no prev/next, no See all). The inner card renders with only urgency + title + subtitle + CTAs." },
+                { case: "featuredItem with 3+ actions", behavior: "Only the first 2 actions are rendered in the banner. Additional actions are accessible via See all → or the full detail view." },
+                { case: "onAskPA not provided", behavior: "Hide the Ask your PA button entirely. The greeting section takes full width." },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-[12px]"
+                  style={{ background: "var(--color-surface-neutral-default)", borderRadius: 8, padding: "10px 14px" }}>
+                  <code style={{ fontSize: 11, background: "var(--canvas)", border: "0.5px solid var(--field-border)", borderRadius: 4, padding: "2px 6px", flexShrink: 0, color: "var(--primary)", whiteSpace: "nowrap", marginTop: 2 }}>
+                    {item.case}
+                  </code>
+                  <span style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5 }}>{item.behavior}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── REFERENCE ── */}
+      {tab === "reference" && (
+        <div className="flex flex-col" style={{ gap: 24 }}>
+
+          {/* Tokens */}
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 16px" }}>Design tokens</h2>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                    {["Role", "Token", "Dark mode value", "Light mode value"].map(h => (
+                      <th key={h} style={{ textAlign: "left", padding: "6px 12px", fontWeight: 700, color: "var(--field-supporting)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { role: "Outer banner surface", token: "--card-primary-bg",          dark: "rgba(43,127,255,0.08)", light: "#f6f9ff" },
+                    { role: "Outer banner border",  token: "--card-primary-hover-bd",    dark: "#2b7fff",              light: "#2173ff" },
+                    { role: "Outer banner glow",    token: "--card-primary-hover-shadow",dark: "blue 3-layer glow",    light: "blue soft shadow" },
+                    { role: "Inner card surface",   token: "--card-purple-bg",           dark: "#120520",              light: "#f3e9fd" },
+                    { role: "Inner card border",    token: "--card-purple-hover-bd",     dark: "#a855f7",              light: "#7b27ed" },
+                    { role: "Inner card glow",      token: "--card-purple-hover-shadow", dark: "purple 3-layer glow",  light: "purple soft shadow" },
+                    { role: "Primary text",         token: "--foreground",               dark: "#f0f4ff",              light: "#1a1a2e" },
+                    { role: "Secondary text",       token: "--field-supporting",         dark: "#8899aa",              light: "#6b7280" },
+                    { role: "Progress dot / links", token: "--primary",                  dark: "#2b7fff",              light: "#2173ff" },
+                    { role: "Act Now dot",          token: "--color-surface-error-default", dark: "error red",         light: "error red" },
+                    { role: "Critical dot",         token: "--color-surface-alert-default", dark: "alert amber",       light: "alert amber" },
+                  ].map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                      <td style={{ padding: "8px 12px", color: "var(--foreground)" }}>{row.role}</td>
+                      <td style={{ padding: "8px 12px" }}>
+                        <code style={{ fontSize: 11, background: "var(--color-surface-neutral-default)", padding: "1px 5px", borderRadius: 4, color: "var(--primary)" }}>{row.token}</code>
+                      </td>
+                      <td style={{ padding: "8px 12px", color: "var(--field-supporting)", fontFamily: "monospace", fontSize: 11 }}>{row.dark}</td>
+                      <td style={{ padding: "8px 12px", color: "var(--field-supporting)", fontFamily: "monospace", fontSize: 11 }}>{row.light}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Props */}
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 16px" }}>Props</h2>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                    {["Prop", "Type", "Required", "Description"].map(h => (
+                      <th key={h} style={{ textAlign: "left", padding: "6px 12px", fontWeight: 700, color: "var(--field-supporting)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { prop: "userName",      type: "string",                           req: "Yes", desc: "First name shown bold in the greeting line." },
+                    { prop: "timeOfDay",     type: '"morning" | "afternoon" | "evening"', req: "No", desc: 'Defaults to "afternoon". Compute from new Date().getHours() in the consuming page.' },
+                    { prop: "resolvedToday", type: "number",                           req: "No", desc: "Count of tasks completed today. Shown in the progress counter." },
+                    { prop: "remaining",     type: "number",                           req: "No", desc: "Count of tasks still pending. Hidden (or shown as 0) when all done." },
+                    { prop: "featuredItems", type: "HomeBannerItem[]",                 req: "No", desc: "Items shown in the carousel. Use [] or omit to hide the featured action card." },
+                    { prop: "quickLinks",    type: "HomeBannerQuickLink[]",            req: "No", desc: "Row of shortcut buttons. Use [] or omit to hide the quick links row." },
+                    { prop: "onAskPA",       type: "() => void",                       req: "No", desc: "Callback for Ask your PA button. If omitted, the button is not rendered." },
+                  ].map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
+                      <td style={{ padding: "8px 12px" }}><code style={{ fontSize: 11, background: "var(--color-surface-neutral-default)", padding: "1px 5px", borderRadius: 4, color: "var(--primary)" }}>{row.prop}</code></td>
+                      <td style={{ padding: "8px 12px", color: "var(--field-supporting)", fontFamily: "monospace", fontSize: 11 }}>{row.type}</td>
+                      <td style={{ padding: "8px 12px" }}><Tag variant={row.req === "Yes" ? "error" : "neutral"} size="sm">{row.req}</Tag></td>
+                      <td style={{ padding: "8px 12px", color: "var(--foreground)", lineHeight: 1.4 }}>{row.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Usage code */}
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 12px" }}>Usage</h2>
+            <pre style={{
+              background: "var(--canvas)", border: "0.5px solid var(--field-border)",
+              borderRadius: 8, padding: 16, fontSize: 12, lineHeight: 1.6,
+              color: "var(--foreground)", overflowX: "auto", margin: 0,
+            }}>{`import { HomeBanner } from "@/components/ui/home-banner"
+
+// Derive timeOfDay from local time:
+const hour = new Date().getHours()
+const timeOfDay =
+  hour >= 5 && hour < 12 ? "morning"
+  : hour >= 12 && hour < 18 ? "afternoon"
+  : "evening"
+
+<HomeBanner
+  userName="Thomas"
+  timeOfDay={timeOfDay}
+  resolvedToday={5}
+  remaining={7}
+  featuredItems={[
+    {
+      urgency: "act-now",
+      title: "Financial Policy PDF requires approval",
+      subtitle: "Blocking 14 workflows · 3 agents · 12m ago",
+      actions: [
+        { label: "Approve", variant: "primary" },
+        { label: "Escalate", variant: "secondary" },
+      ],
+    },
+  ]}
+  quickLinks={[
+    { icon: <Zap size={12} />, label: "Trigger workflow" },
+    { icon: <BarChart2 size={12} />, label: "View reports" },
+  ]}
+  onAskPA={() => setAskPAOpen(true)}
+/>`}</pre>
+          </div>
+
+          {/* Figma steps */}
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", margin: "0 0 6px" }}>Figma handoff steps</h2>
+            <p style={{ fontSize: 13, color: "var(--field-supporting)", margin: "0 0 16px", lineHeight: 1.5 }}>Steps to translate this component into a Figma component set after design validation.</p>
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              {[
+                'Create a Frame with Auto Layout (Vertical, 24px padding, 16px gap) — this will be the outer Card Container "primary" shell.',
+                'Apply "Card Container / Primary / Large" from the DS component set. Override border to "Border / Primary / Default" (var(--card-primary-hover-bd)) and add the 3-layer Primary glow effect from the DS effects panel.',
+                'Inside, create the Greeting text layer: Regular weight prefix + Bold weight name. Use Text Style "Heading / 3" or closest equivalent.',
+                'Add the Progress counter row: 8px circle with "Color / Surface / Primary / Default" fill + body text in "Text / Supporting".',
+                'Add the Inner Card using "Card Container / Purple / Small" with the same border override (Purple / Default) and purple glow effect.',
+                'Inside the inner card, add: urgency dot + Tag component (Error/Alert/Informative per urgency), Title text, Subtitle text, Button pair (Primary + Secondary Small), and carousel controls (dots + chevrons).',
+                'Add the Quick Links row: 4–5 Button / Secondary / Small instances with leading icons.',
+                'Add "Ask your PA" Button (Secondary / Small) positioned with Absolute in top-right, with a sparkle icon.',
+                'Create Component Properties: userName (text), timeOfDay (variant), resolvedToday (number text), remaining (number text), showQuickLinks (boolean), showAskPA (boolean).',
+                'Publish to DS library under "Patterns / Home Banner".',
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-[10px]"
+                  style={{ background: "var(--color-surface-neutral-default)", borderRadius: 8, padding: "10px 12px" }}>
+                  <span style={{
+                    width: 22, height: 22, borderRadius: "50%", background: "var(--color-surface-primary-default)",
+                    color: "var(--tag-primary-fg)", fontSize: 10, fontWeight: 700, flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    {i + 1}
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5 }}>{step}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── WidgetFatherPage ──────────────────────────────────────────────────────────
 
 function WidgetFatherPage() {
@@ -21277,11 +21819,13 @@ const TIMELINE_META = [
   { icon: "LayoutGrid", label: "Pipeline" },
 ]
 
+// Weekly breakdown data for Timeline bar chart (Contracts, Meetings, Calls, Proposals, Closed)
 function TimelineWidgetContent({ showMeta = true, count = 5 }: { showMeta?: boolean; count?: 2|3|4|5|6 }) {
   type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
+
   return (
-    <div className="flex flex-col gap-[8px] w-full">
-      {/* Cards row — horizontal scroll when narrow */}
+    <div className="flex flex-col w-full" style={{ alignSelf: "flex-start" }}>
+      {/* Cards row — natural height, horizontal scroll when narrow */}
       <div className="flex items-stretch w-full" style={{ overflowX: "auto", gap: 0 }}>
         {TIMELINE_CARDS.slice(0, count).map((card, i) => (
           <Fragment key={i}>
@@ -21322,7 +21866,7 @@ function TimelineWidgetContent({ showMeta = true, count = 5 }: { showMeta?: bool
 
       {/* MetaData row */}
       {showMeta && (
-        <div className="flex items-center gap-[12px]">
+        <div className="flex items-center gap-[12px]" style={{ marginTop: 8 }}>
           {TIMELINE_META.map((m, i) => {
             const Icon = (LucideIcons as unknown as Record<string, LIcon>)[m.icon]
             return (
@@ -21336,6 +21880,7 @@ function TimelineWidgetContent({ showMeta = true, count = 5 }: { showMeta?: bool
           })}
         </div>
       )}
+
     </div>
   )
 }
@@ -21364,7 +21909,7 @@ function smoothPath(pts: [number, number][]): string {
 function ChartsWidgetContent() {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
-  // Fixed viewBox: 400×150. Chart area: x 36–392, y 10–130
+  // Fixed viewBox: 400×140. Chart area: x 36–392, y 10–130
   const yScale = (v: number) => 130 - (v / 80) * 120
   const xAt    = (i: number) => 36 + i * (356 / 3)
   const yLabels = [0, 20, 40, 60, 80]
@@ -21388,9 +21933,9 @@ function ChartsWidgetContent() {
   const crosshairPct = hoveredIdx !== null ? (xAt(hoveredIdx) / 400) * 100 : 0
 
   return (
-    <div className="flex flex-col gap-[8px]">
+    <div className="flex flex-col gap-[8px]" style={{ flex: 1, minHeight: 0 }}>
       {/* Legend */}
-      <div className="flex gap-[10px] flex-wrap">
+      <div className="flex gap-[10px] flex-wrap" style={{ flexShrink: 0 }}>
         {PERF_SERIES.map(s => (
           <div key={s.label} className="flex items-center gap-[4px]">
             <div style={{ width: 12, height: 2, background: s.color, borderRadius: 1 }} />
@@ -21399,8 +21944,8 @@ function ChartsWidgetContent() {
         ))}
       </div>
 
-      {/* Chart wrapper — position:relative so tooltip can be absolute */}
-      <div style={{ position: "relative", paddingBottom: 20 }}>
+      {/* Chart wrapper — flex:1 to fill remaining height; minHeight:120 prevents SVG from collapsing */}
+      <div style={{ position: "relative", flex: 1, minHeight: 120, paddingBottom: 20 }}>
 
         {/* Floating insight card tooltip */}
         {hoveredIdx !== null && (
@@ -21438,12 +21983,11 @@ function ChartsWidgetContent() {
 
         <svg
           width="100%"
-          height="140"
           viewBox="0 0 400 140"
           preserveAspectRatio="none"
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoveredIdx(null)}
-          style={{ display: "block", cursor: "crosshair" }}
+          style={{ display: "block", cursor: "crosshair", position: "absolute", inset: 0, height: "100%" }}
         >
           {/* Horizontal grid lines */}
           {yLabels.map(yv => (
@@ -21729,7 +22273,8 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
           </SlideOut>
         )
       })()}
-      <div className="flex flex-col gap-[6px]" style={{ overflowY: "auto", maxHeight: 280 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+      <div className="flex flex-col gap-[6px]">
         {ACTIVITY_DATA.map((activity, i) => {
           const cfg = ACTIVITY_TYPE_CONFIG[activity.type] ?? ACTIVITY_TYPE_CONFIG["call"]
           const CfgIcon = (LucideIcons as unknown as Record<string, LIcon>)[cfg.icon]
@@ -21801,6 +22346,7 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
           )
         })}
       </div>
+      </div>
     </>
   )
 }
@@ -21815,6 +22361,15 @@ const NOTES_ITEMS_DATA = [
   { title: "Maria Torres — Proposal",   time: "3h ago",    initial: "M",
     color: "var(--color-border-success-default)", bg: "var(--color-surface-success-subtle)", accentBorder: "var(--color-border-success-default)",
     text: "Budget constraints flagged. Offer alternative pricing tier before Thursday meeting.", taskCount: 2, fileCount: 1 },
+  { title: "Carlos Mejía — Escalation", time: "1h ago",    initial: "C",
+    color: "var(--color-surface-error-default)", bg: "var(--color-surface-error-subtle)", accentBorder: "var(--color-surface-error-default)",
+    text: "Escalation from support queue re: integration failure. Needs urgent follow-up before EOD.", taskCount: 1, fileCount: 0 },
+  { title: "Q3 Pipeline Review",        time: "5h ago",    initial: "Q",
+    color: "var(--color-surface-yellow-default)", bg: "var(--color-surface-yellow-subtle)", accentBorder: "var(--color-surface-yellow-default)",
+    text: "Review Q3 forecast data. Several deals at risk — connect with regional managers by EOD.", taskCount: 4, fileCount: 3 },
+  { title: "Client Onboarding — Dec",   time: "4d ago",    initial: "D",
+    color: "var(--color-border-light-blue-default)", bg: "var(--color-surface-light-blue-subtle)", accentBorder: "var(--color-border-light-blue-default)",
+    text: "New enterprise client starting December. Coordinate legal, technical setup and training.", taskCount: 2, fileCount: 1 },
 ]
 
 function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
@@ -21930,7 +22485,8 @@ function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
         </SlideOut>
       )
     })()}
-    <div className="flex flex-col gap-[6px]" style={{ overflowY: "auto", maxHeight: 280 }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+    <div className="flex flex-col gap-[6px]">
       {NOTES_ITEMS_DATA.map((note, i) => {
         const isHov = hoveredIdx === i
         const isSelected = selectedNote === i
@@ -22004,6 +22560,7 @@ function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
         )
       })}
     </div>
+    </div>
     </>
   )
 }
@@ -22019,24 +22576,25 @@ function FolderNavWidgetContent() {
   const [folderTab, setFolderTab] = useState("packs")
   type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
   return (
-    <div className="flex flex-col gap-[8px]">
-      <Tabs
-        size="s"
-        className="border-b border-[var(--field-border)]"
-        items={[
-          { id: "packs",     label: "Packs"     },
-          { id: "drives",    label: "Drives"    },
-          { id: "knowledge", label: "Knowledge" },
-        ]}
-        activeId={folderTab}
-        onChange={setFolderTab}
-      />
+    <div className="flex flex-col gap-[8px]" style={{ flex: 1, minHeight: 0 }}>
+      <div style={{ flexShrink: 0 }}>
+        <Tabs
+          size="s"
+          items={[
+            { id: "packs",     label: "Packs"     },
+            { id: "drives",    label: "Drives"    },
+            { id: "knowledge", label: "Knowledge" },
+          ]}
+          activeId={folderTab}
+          onChange={setFolderTab}
+        />
+      </div>
       <div className="flex items-center gap-[6px] px-[8px] rounded-[6px]"
-        style={{ height: 28, background: "var(--color-surface-neutral-default)", border: "1px solid var(--field-border)" }}>
+        style={{ height: 28, flexShrink: 0, background: "var(--color-surface-neutral-default)", border: "1px solid var(--field-border)" }}>
         <LucideIcons.Search size={11} style={{ color: "var(--field-supporting)" }} />
         <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Search...</span>
       </div>
-      <div className="flex flex-col">
+      <div className="flex flex-col" style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
         {FOLDER_FILES_DATA.map((f, i) => {
           const FIcon = (LucideIcons as unknown as Record<string, LIcon>)[f.icon]
           return (
@@ -22082,6 +22640,512 @@ function StatusWarningWidgetContent() {
   )
 }
 
+// ── Act Now Summary ───────────────────────────────────────────────────────────
+
+
+const ACT_NOW_CARD_DATA: Record<string, { title: string; studio: string[]; status: string; remaining: number; borderColor: string; tagVariant: "error" | "alert" | "informative" }> = {
+  "Act Now":  { title: "Financial Policy PDF — DIAN approval required",    studio: ["GOV"],  status: "Blocking 14 workflows · 3 agents", remaining: 3,  borderColor: "var(--color-surface-error-default)",       tagVariant: "error"       },
+  "Critical": { title: "SalesForecastPA about to send external email",     studio: ["AGNT"], status: "Paused · awaiting review",        remaining: 6,  borderColor: "var(--color-surface-alert-default)",       tagVariant: "alert"       },
+  "Action":   { title: "Q3 Forecast Schema needs field remap",             studio: ["DATA"], status: "Action needed · this week",       remaining: 11, borderColor: "var(--primary)",                           tagVariant: "informative" },
+}
+
+function ActNowSummaryWidgetContent() {
+  const card = ACT_NOW_CARD_DATA["Act Now"]
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [isNarrow, setIsNarrow] = useState(false)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      setIsNarrow(entry.contentRect.width < 340)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const trunc = (s: string, n: number) => s.length > n ? s.slice(0, n) + "…" : s
+
+  const bannerTitle = isNarrow ? trunc(card.status, 18) : card.status
+
+  return (
+    <div ref={containerRef} className="flex flex-col gap-[8px]">
+      {/* Summary banner — fills full width */}
+      {isNarrow ? (
+        <Tooltip content={card.status} side="top">
+          <div className="w-full">
+            <InformativeCard state="error" size="sm" title={bannerTitle} className="w-full" />
+          </div>
+        </Tooltip>
+      ) : (
+        <InformativeCard state="error" size="sm" title={bannerTitle} className="w-full" />
+      )}
+
+      {/* Event card */}
+      <div style={{
+        background: "var(--color-surface-neutral-default)",
+        border: "0.5px solid var(--field-border)",
+        borderRadius: 8, padding: "10px 12px",
+        display: "flex", flexDirection: "column", gap: 8,
+      }}>
+        <div className="flex items-center gap-[4px] flex-wrap">
+          {card.studio.map(s => (
+            <div key={s} style={{ display: "inline-flex" }}>
+              <Tag variant="neutral" size="sm">{s}</Tag>
+            </div>
+          ))}
+          <div style={{ display: "inline-flex" }}>
+            <Tag variant={card.tagVariant} size="sm">Act Now</Tag>
+          </div>
+        </div>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.35 }}>
+          {isNarrow ? trunc(card.title, 28) : card.title}
+        </p>
+        {/* Actions — horizontal row, hug content, 8px gap */}
+        <div className="flex items-center flex-wrap gap-[8px]">
+          <Button variant="primary" size="sm">Take action</Button>
+          <Button variant="secondary" size="sm">Skip for now</Button>
+          <Button variant="tertiary" size="sm">{card.remaining} more in this tier →</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── My Work ───────────────────────────────────────────────────────────────────
+
+const MY_WORK_GROUPS_DATA = [
+  {
+    id: "act-now",  label: "ACT NOW", sublabel: "blocking",
+    headerBg: "var(--color-surface-error-subtle)", dot: "var(--color-surface-error-default)",
+    text: "var(--color-surface-error-default)", countBg: "var(--color-surface-error-default)",
+    items: [
+      { studio: "GOV",  type: "Approval", crit: true,  title: "Financial Policy PDF — DIAN approval required",  status: "Blocking · 14 workflows", time: "~10m" },
+      { studio: "AGNT", type: "Review",   crit: false, title: "SalesForecastPA about to send external email",   status: "Paused · awaiting review", time: "~5m" },
+    ],
+  },
+  {
+    id: "critical", label: "Critical", sublabel: "within 7 days",
+    headerBg: "var(--color-surface-alert-subtle)", dot: "var(--color-surface-alert-default)",
+    text: "var(--color-surface-alert-default)", countBg: "var(--color-surface-alert-default)",
+    items: [
+      { studio: "DATA", type: "Remap",  crit: false, title: "Q3 Forecast Schema needs field remap",    status: "Action needed · schema mismatch", time: "~15m" },
+    ],
+  },
+  {
+    id: "action",   label: "Action", sublabel: "this week",
+    headerBg: "var(--color-surface-primary-subtle)", dot: "var(--primary)",
+    text: "var(--primary)", countBg: "var(--primary)",
+    items: [
+      { studio: "TASK", type: "Respond",     crit: false, title: "Renewal contract draft v2 awaiting sign-off",    status: "Ready for review",        time: "~8m"  },
+      { studio: "GOV",  type: "Acknowledge", crit: false, title: "DIAN intake package #48 compliance check",       status: "Pending acknowledgement", time: "~5m"  },
+    ],
+  },
+]
+
+function MyWorkWidgetContent() {
+  const { isNarrow } = useWidgetSize()
+  const [studioFilter, setStudioFilter] = useState<string | null>(null)
+  const [typeFilter,   setTypeFilter]   = useState<string | null>(null)
+  const [hoveredKey,   setHoveredKey]   = useState<string | null>(null)
+  const [search,       setSearch]       = useState("")
+
+  const allTypes    = Array.from(new Set(MY_WORK_GROUPS_DATA.flatMap(g => g.items.map(i => i.type))))
+  const maxPerGroup = isNarrow ? 2 : undefined
+
+  return (
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Search bar */}
+      <div style={{ position: "relative" }}>
+        <LucideIcons.Search size={12} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)", pointerEvents: "none" }} />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search events..."
+          style={{ width: "100%", height: 28, paddingLeft: 26, paddingRight: 8, borderRadius: 6, border: "0.5px solid var(--field-border)", background: "var(--field-bg)", fontSize: 12, color: "var(--foreground)", outline: "none", boxSizing: "border-box" }}
+        />
+      </div>
+      {/* Filters — hidden on narrow to save space; search still available */}
+      {!isNarrow && (
+        <div className="[&::-webkit-scrollbar]:hidden" style={{ overflowX: "auto", scrollbarWidth: "none" as React.CSSProperties["scrollbarWidth"] }}>
+          <div className="flex items-center gap-[4px]" style={{ flexWrap: "nowrap", minWidth: "max-content" }}>
+            {["GOV","AGNT","DATA","TASK"].map(s => (
+              <Chip key={s} variant={studioFilter === s ? "primary" : "secondary"} size="s" onClick={() => setStudioFilter(p => p === s ? null : s)}>{s}</Chip>
+            ))}
+            <span style={{ width: 1, height: 14, background: "var(--field-border)", flexShrink: 0, margin: "0 2px" }} />
+            {allTypes.map(t => (
+              <Chip key={t} variant={typeFilter === t ? "primary" : "secondary"} size="s" onClick={() => setTypeFilter(p => p === t ? null : t)}>{t}</Chip>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Groups */}
+      {MY_WORK_GROUPS_DATA.map(group => {
+        const q = search.toLowerCase()
+        const visible = group.items.filter(it =>
+          (!studioFilter || it.studio === studioFilter) &&
+          (!typeFilter   || it.type   === typeFilter) &&
+          (!q || it.title.toLowerCase().includes(q) || it.type.toLowerCase().includes(q) || it.studio.toLowerCase().includes(q))
+        ).slice(0, maxPerGroup)
+        if (visible.length === 0) return null
+        return (
+          <div key={group.id}>
+            <div className="flex items-center justify-between" style={{ background: group.headerBg, borderRadius: 4, padding: "4px 8px", marginBottom: 4 }}>
+              <div className="flex items-center gap-[5px]">
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: group.dot, display: "inline-block", flexShrink: 0 }} />
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: group.text }}>{group.label}</span>
+                <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>· {group.sublabel}</span>
+              </div>
+              <span style={{ fontSize: 9, fontWeight: 700, minWidth: 16, height: 16, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: group.countBg, color: "var(--tag-primary-fg)", padding: "0 4px" }}>{visible.length}</span>
+            </div>
+            {visible.map((item, idx) => {
+              const key = `${group.id}-${idx}`
+              const hovered = hoveredKey === key
+              return (
+                <div key={key} onMouseEnter={() => setHoveredKey(key)} onMouseLeave={() => setHoveredKey(null)}
+                  style={{ padding: "7px 8px", borderRadius: 6, marginBottom: 2, cursor: "pointer", background: hovered ? "var(--color-surface-neutral-default)" : "none", transition: "background 120ms" }}>
+                  <div className="flex items-center justify-between mb-[3px]">
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--foreground)", lineHeight: 1.35, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>{item.title}</p>
+                    <span style={{ fontSize: 10, color: "var(--field-supporting)", whiteSpace: "nowrap", flexShrink: 0 }}>{item.time}</span>
+                  </div>
+                  <div className="flex items-center gap-[4px] flex-wrap mb-[2px]">
+                    <Tag variant="neutral" size="sm">{item.studio}</Tag>
+                    <Tag variant="neutral" size="sm">{item.type}</Tag>
+                    {item.crit && <Tag variant="error" size="sm">⚡ Critical</Tag>}
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{item.status}</span>
+                  {hovered && (
+                    <div className="flex items-center gap-[6px]" style={{ marginTop: 8 }}>
+                      <Button variant="primary" size="sm">Take</Button>
+                      <Button variant="secondary" size="sm">Escalate</Button>
+                      <Button variant="tertiary" size="sm">Defer</Button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+      <Button variant="tertiary" size="sm">See all in Attention Room →</Button>
+    </div>
+  )
+}
+
+// ── My Team ───────────────────────────────────────────────────────────────────
+
+const MY_TEAM_DATA = [
+  { initials: "AR", name: "Ana Restrepo", role: "Revenue Ops",  ooo: null,    dots: [{ count: 2 }, { count: 3 }, { count: 5 }, { count: 1 }] },
+  { initials: "CM", name: "Carlos Mejía", role: "Governance",   ooo: null,    dots: [{ count: 1 }, { count: 3 }, { count: 4 }, { count: 0 }] },
+  { initials: "DT", name: "Diana Torres", role: "Agent Ops",    ooo: "Aug 1", dots: [{ count: 1 }, { count: 2 }, { count: 1 }, { count: 2 }] },
+  { initials: "FK", name: "Felipe Kim",   role: "Data Studio",  ooo: null,    dots: [{ count: 0 }, { count: 1 }, { count: 3 }, { count: 0 }] },
+]
+const MY_TEAM_DOT_COLORS = [
+  "var(--color-surface-error-default)",
+  "var(--color-surface-alert-default)",
+  "var(--primary)",
+  "var(--color-icon-neutral-default)",
+]
+const MY_TEAM_DOT_TIPS = ["Act Now · blocking", "Critical · within 7 days", "Action · this week", "Heads-up"]
+
+function MyTeamWidgetContent() {
+  const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [hoveredMember,   setHoveredMember]   = useState<number | null>(null)
+  const teamContainerRef = useRef<HTMLDivElement>(null)
+  const [isNarrowTeam, setIsNarrowTeam] = useState(false)
+
+  useEffect(() => {
+    const el = teamContainerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      setIsNarrowTeam(entry.contentRect.width < 340)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const trunc = (s: string, n: number) => s.length > n ? s.slice(0, n) + "…" : s
+  const fullAlert  = "5 blocking events across your team require immediate attention."
+  const alertTitle = "5 blocking events need attention"
+
+  return (
+    <div ref={teamContainerRef} className="flex flex-col gap-[0px]" style={{ flex: 1, minHeight: 0 }}>
+      {!bannerDismissed && (
+        <div style={{ marginBottom: 8 }}>
+          {isNarrowTeam ? (
+            <Tooltip content={fullAlert} side="top">
+              <div>
+                <InformativeCard state="error" size="sm"
+                  title={trunc(alertTitle, 22)}
+                  cta={{ label: "Dismiss", onClick: () => setBannerDismissed(true) }}
+                />
+              </div>
+            </Tooltip>
+          ) : (
+            <InformativeCard state="error" size="sm"
+              title={alertTitle}
+              cta={{ label: "Dismiss", onClick: () => setBannerDismissed(true) }}
+            />
+          )}
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        {MY_TEAM_DATA.map((member, i) => (
+          <div key={i} onMouseEnter={() => setHoveredMember(i)} onMouseLeave={() => setHoveredMember(null)}
+            style={{ padding: "8px 4px", borderBottom: i < MY_TEAM_DATA.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+            <div className="flex items-start gap-[8px]">
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-surface-primary-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: "var(--tag-primary-fg)" }}>{member.initials}</span>
+              </div>
+              <div className="flex flex-col flex-1 min-w-0" style={{ gap: 1 }}>
+                <div className="flex items-center gap-[6px] w-full">
+                  <Tooltip content={member.name} side="top">
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{member.name}</span>
+                  </Tooltip>
+                  {member.ooo && <span style={{ flexShrink: 0 }}><Tag variant="alert" size="sm">{`OOO · returns ${member.ooo}`}</Tag></span>}
+                </div>
+                <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>{member.role}</span>
+                <div className="flex items-center gap-[8px]" style={{ marginTop: 4 }}>
+                  {member.dots.map((dot, j) => {
+                    if (dot.count === 0) return null
+                    return (
+                      <Tooltip key={j} content={MY_TEAM_DOT_TIPS[j] ?? "Status"} side="top">
+                        <div className="flex items-center gap-[4px]" style={{ cursor: "default" }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: MY_TEAM_DOT_COLORS[j], display: "inline-block", flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)" }}>{dot.count}</span>
+                        </div>
+                      </Tooltip>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+            {hoveredMember === i && (
+              <div className="flex items-center gap-[4px]" style={{ marginTop: 6, marginLeft: 36 }}>
+                <Button variant="secondary" size="sm">Take</Button>
+                <Button variant="secondary" size="sm">Nudge</Button>
+                <Button variant="secondary" size="sm">Reassign</Button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Workflows ─────────────────────────────────────────────────────────────────
+
+const WORKFLOWS_DATA: { name: string; status: "running"|"done"|"failed"|"paused"; trigger: string; timeAgo: string; runsToday: number; progress?: number }[] = [
+  { name: "Lead Enrichment — Inbound",   status: "running", trigger: "New form submission",         timeAgo: "4 min ago",   runsToday: 24, progress: 68 },
+  { name: "Deal Stage Notifications",    status: "running", trigger: "CRM stage change",            timeAgo: "Just now",    runsToday: 17, progress: 90 },
+  { name: "Nightly ETL — Salesforce",    status: "done",    trigger: "Scheduled · 02:00",           timeAgo: "6 hours ago", runsToday: 1                },
+  { name: "Churn Risk Scoring",          status: "failed",  trigger: "NPS field missing",           timeAgo: "1 hour ago",  runsToday: 0                },
+  { name: "CS Escalation Router",        status: "paused",  trigger: "HTL queue threshold reached", timeAgo: "2 days ago",  runsToday: 0                },
+]
+
+const WF_TAG_VARIANT: Record<string, "success"|"error"|"neutral"|"informative"> = {
+  running: "success", done: "informative", failed: "error", paused: "neutral",
+}
+const WF_TAG_LABEL: Record<string, string> = {
+  running: "Running", done: "Done", failed: "Failed", paused: "Paused",
+}
+
+function WorkflowsWidgetContent() {
+  const { isNarrow } = useWidgetSize()
+  return (
+    <div className="flex flex-col gap-[0px]" style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+      {WORKFLOWS_DATA.map((wf, i) => (
+        <div key={i} style={{ padding: "8px 4px", borderBottom: i < WORKFLOWS_DATA.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+          <div className="flex items-start gap-[8px]">
+            <div className="flex flex-col flex-1 min-w-0" style={{ gap: 3 }}>
+              <div className="flex items-center gap-[6px]">
+                {wf.status === "running" && (
+                  <span className="animate-pulse" style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: "var(--color-surface-success-default)", display: "inline-block" }} />
+                )}
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{wf.name}</span>
+                <span style={{ flexShrink: 0 }}><Tag variant={WF_TAG_VARIANT[wf.status]} size="sm">{WF_TAG_LABEL[wf.status]}</Tag></span>
+              </div>
+              {!isNarrow && <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{wf.trigger}</span>}
+              {!isNarrow && wf.status === "running" && wf.progress !== undefined && (
+                <div style={{ height: 4, background: "var(--color-surface-neutral-default)", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${wf.progress}%`, background: "var(--primary)", borderRadius: 2, transition: "width 500ms ease" }} />
+                </div>
+              )}
+              {!isNarrow && <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>{wf.timeAgo}{wf.runsToday > 0 ? ` · ${wf.runsToday} runs today` : ""}</span>}
+            </div>
+            {wf.status === "failed" && (
+              <div className="flex items-center gap-[4px]" style={{ flexShrink: 0 }}>
+                <Button variant="secondary" size="sm">Retry</Button>
+                {!isNarrow && <Button variant="tertiary" size="sm">Logs</Button>}
+              </div>
+            )}
+            {wf.status === "paused" && <Button variant="secondary" size="sm" style={{ flexShrink: 0 }}>Resume</Button>}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Pending Outputs ───────────────────────────────────────────────────────────
+
+const PENDING_OUTPUTS_DATA = [
+  { name: "Q3 Pipeline Forecast — July Revision",  source: "Monthly Forecast Roll-up", timeAgo: "12m ago",   tagVariant: "success"     as const, statusLabel: "Ready for review"   },
+  { name: "Acme Corp Renewal Contract Draft v2",   source: "Renewals Outreach",        timeAgo: "1h ago",    tagVariant: "alert"       as const, statusLabel: "Adjusted — pending" },
+  { name: "DIAN Intake Package #48",               source: "DIAN Compliance Intake",   timeAgo: "2h ago",    tagVariant: "error"       as const, statusLabel: "Requires approval"  },
+  { name: "Support Queue Summary — Jul 22",        source: "Support Summary PA",       timeAgo: "Yesterday", tagVariant: "informative" as const, statusLabel: "Advanced"          },
+]
+
+function PendingOutputsWidgetContent() {
+  const [selected, setSelected] = useState<typeof PENDING_OUTPUTS_DATA[0] | null>(null)
+
+  return (
+    <>
+      <div className="flex flex-col gap-[0px]" style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        {PENDING_OUTPUTS_DATA.map((item, i) => (
+          <div key={i} onClick={() => setSelected(item)}
+            style={{ padding: "8px 4px", borderBottom: i < PENDING_OUTPUTS_DATA.length - 1 ? "0.5px solid var(--field-border)" : "none", cursor: "pointer" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--color-surface-neutral-default)"; (e.currentTarget as HTMLElement).style.borderRadius = "6px" }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none"; (e.currentTarget as HTMLElement).style.borderRadius = "0" }}>
+            <div className="flex items-start gap-[8px]">
+              <div className="flex flex-col flex-1 min-w-0" style={{ gap: 2 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
+                <span style={{ fontSize: 11, color: "var(--field-supporting)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.source} · {item.timeAgo}</span>
+              </div>
+              <div style={{ flexShrink: 0 }}>
+                <Tag variant={item.tagVariant} size="sm">{item.statusLabel}</Tag>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {selected && (
+        <SlideOut open onClose={() => setSelected(null)} title={selected.name} subtitle={selected.source}
+          showTabs={false} showChips={false} showSearchBar={false}
+          showCta ctaPrimaryLabel="Advance" ctaSecondaryLabel="Close" onCtaSecondary={() => setSelected(null)}>
+          <div className="flex flex-col gap-[20px] pb-[12px]">
+
+            {/* Section: Status */}
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Status</span>
+              <div className="self-start">
+                <Tag variant={selected.tagVariant} size="sm">{selected.statusLabel}</Tag>
+              </div>
+              <p className="text-[12px] leading-[1.5]" style={{ margin: 0, color: "var(--foreground)" }}>
+                This output was generated by your PA and is ready for your review. Verify the authority data below before advancing.
+              </p>
+            </div>
+
+            {/* Section: Authority Data (detail table) */}
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Authority Data</span>
+              <div className="flex flex-col rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
+                {([
+                  ["Source",      selected.source            ],
+                  ["Generated",   selected.timeAgo           ],
+                  ["Status",      selected.statusLabel       ],
+                  ["Verified by", "AIMS Knowledge Graph · v2"],
+                ] as [string, string][]).map(([label, value], i, arr) => (
+                  <div key={label}>
+                    <div className="flex items-center gap-[19px] py-[8px] px-[12px]">
+                      <span className="w-[100px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{label}</span>
+                      <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{value}</span>
+                    </div>
+                    {i < arr.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </SlideOut>
+      )}
+    </>
+  )
+}
+
+// ── Agent Catalog ─────────────────────────────────────────────────────────────
+
+const AGENT_CATALOG_DATA = [
+  { name: "Revenue Insight PA",       desc: "Pipeline health, quota attainment, deal forecasting.",  available: true,  isWorkflow: false, prompts: ["Summarize Q3 pipeline", "Show quota gaps", "Flag at-risk deals"]                              },
+  { name: "People Ops PA",            desc: "HR policies, compliance, people communications.",        available: true,  isWorkflow: false, prompts: ["Summarize open headcount", "Draft PIP letter", "Check compliance status"]                    },
+  { name: "Support Summary PA",       desc: "Ticket queue summary, escalation risk, triage notes.",   available: true,  isWorkflow: false, prompts: ["Show open P1 tickets", "Summarize yesterday's queue", "Flag escalation risk"]                },
+  { name: "Lead Enrichment Workflow", desc: "Enriches inbound leads before routing to CRM.",          available: true,  isWorkflow: true,  prompts: ["Enrich new form submission", "Preview enrichment for Acme", "Show enrichment error log"]    },
+  { name: "Market Intel PA",          desc: "Competitive intelligence from public sources.",           available: false, isWorkflow: false, prompts: ["Benchmark vs competitor", "Summarize recent coverage", "Flag new product launches"]          },
+  { name: "Churn Risk Workflow",      desc: "Scores accounts for churn risk on a daily schedule.",     available: true,  isWorkflow: true,  prompts: ["Run churn score now", "Show accounts at risk", "Export risk report"]                        },
+  { name: "DIAN Compliance PA",       desc: "Regulatory filings, intake packages, compliance checks.", available: true,  isWorkflow: false, prompts: ["Check DIAN intake #48", "Summarize pending filings", "Draft compliance memo"]               },
+  { name: "CS Escalation Workflow",   desc: "Routes escalations from support queue to senior agents.", available: true,  isWorkflow: true,  prompts: ["Show escalation queue", "Route open P0 tickets", "View escalation log"]                    },
+]
+
+const AGENT_TYPE_FILTERS = [
+  { label: "All",      fn: (_: typeof AGENT_CATALOG_DATA[0]) => true             },
+  { label: "Single",   fn: (a: typeof AGENT_CATALOG_DATA[0]) => !a.isWorkflow    },
+  { label: "Workflow", fn: (a: typeof AGENT_CATALOG_DATA[0]) => a.isWorkflow     },
+]
+
+function AgentCatalogWidgetContent() {
+  const [typeIdx,       setTypeIdx]       = useState(0)
+  const [selectedAgent, setSelectedAgent] = useState<typeof AGENT_CATALOG_DATA[0] | null>(null)
+
+  const visible = AGENT_CATALOG_DATA.filter(AGENT_TYPE_FILTERS[typeIdx].fn)
+
+  return (
+    <>
+      <div className="flex flex-col gap-[0px]">
+        <div className="flex items-center gap-[4px] flex-wrap mb-[10px]">
+          {AGENT_TYPE_FILTERS.map((f, i) => (
+            <Chip key={f.label} variant={typeIdx === i ? "primary" : "secondary"} size="s" onClick={() => setTypeIdx(i)}>
+              {f.label} · {AGENT_CATALOG_DATA.filter(f.fn).length}
+            </Chip>
+          ))}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, overflowY: "auto", maxHeight: 260 }}>
+          {visible.map((agent, i) => (
+            <button key={i} onClick={() => setSelectedAgent(agent)}
+              style={{ display: "flex", flexDirection: "column", gap: 6, padding: "10px 12px", borderRadius: 8, textAlign: "left", border: "0.5px solid var(--field-border)", background: "var(--surface)", cursor: "pointer", opacity: agent.available ? 1 : 0.6, transition: "border-color 120ms, box-shadow 120ms" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border-hover)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border)" }}>
+              <div className="flex items-start justify-between gap-[6px]">
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.3 }}>{agent.name}</span>
+                {agent.isWorkflow && <span style={{ flexShrink: 0 }}><Tag variant="informative" size="sm">Workflow</Tag></span>}
+              </div>
+              <span style={{ fontSize: 11, color: "var(--field-supporting)", lineHeight: 1.4 }}>{agent.desc}</span>
+              <div style={{ display: "flex" }}>
+                <Tag variant={agent.available ? "success" : "neutral"} size="sm">{agent.available ? "Grounded" : "Unavailable"}</Tag>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+      {selectedAgent && (
+        <SlideOut open onClose={() => setSelectedAgent(null)} title={selectedAgent.name} subtitle={selectedAgent.isWorkflow ? "Workflow Agent" : "Single Agent"}
+          showTabs={false} showChips={false} showSearchBar={false}
+          showCta={selectedAgent.available} ctaPrimaryLabel="Run" ctaSecondaryLabel="Close" onCtaSecondary={() => setSelectedAgent(null)}>
+          <div className="flex flex-col gap-[16px]" style={{ padding: "4px 0" }}>
+            <div className="flex items-center gap-[6px]">
+              <Tag variant={selectedAgent.available ? "success" : "neutral"} size="sm">{selectedAgent.available ? "Grounded" : "Unavailable"}</Tag>
+              {selectedAgent.isWorkflow && <Tag variant="informative" size="sm">Workflow</Tag>}
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--foreground)", lineHeight: 1.6 }}>{selectedAgent.desc}</p>
+            <div>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)", display: "block", marginBottom: 8 }}>Example Prompts</span>
+              {selectedAgent.prompts.map((prompt, j) => (
+                <div key={j}
+                  style={{ padding: "8px 10px", borderRadius: 6, marginBottom: 6, background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)", fontSize: 12, color: "var(--foreground)", cursor: "pointer" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--primary)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border)" }}>
+                  "{prompt}"
+                </div>
+              ))}
+            </div>
+          </div>
+        </SlideOut>
+      )}
+    </>
+  )
+}
+
 function WidgetContent({ id, kpiVariant = 2 }: { id: string; kpiVariant?: 0|1|2|3 }) {
   switch (id) {
     case "kpi":        return <KpiWidgetContent variant={kpiVariant} />
@@ -22093,6 +23157,12 @@ function WidgetContent({ id, kpiVariant = 2 }: { id: string; kpiVariant?: 0|1|2|
     case "notes":      return <NotesWidgetContent />
     case "folder-nav":      return <FolderNavWidgetContent />
     case "status-warning":  return <StatusWarningWidgetContent />
+    case "act-now-summary": return <ActNowSummaryWidgetContent />
+    case "my-work":         return <MyWorkWidgetContent />
+    case "my-team":         return <MyTeamWidgetContent />
+    case "workflows":       return <WorkflowsWidgetContent />
+    case "pending-outputs": return <PendingOutputsWidgetContent />
+    case "agent-catalog":   return <AgentCatalogWidgetContent />
     default:
       return (
         <div className="flex items-center justify-center rounded-[6px] py-[16px]"
@@ -22105,7 +23175,7 @@ function WidgetContent({ id, kpiVariant = 2 }: { id: string; kpiVariant?: 0|1|2|
 
 // ── Widget definitions ────────────────────────────────────────────────────────
 
-type WidgetId = "kpi" | "timeline" | "charts" | "table" | "activity" | "notes" | "folder-nav" | "progress-comparison" | "status-warning"
+type WidgetId = "kpi" | "timeline" | "charts" | "table" | "activity" | "notes" | "folder-nav" | "status-warning" | "act-now-summary" | "my-work" | "my-team" | "workflows" | "pending-outputs" | "agent-catalog"
 
 interface WidgetDef {
   id: WidgetId
@@ -22317,17 +23387,136 @@ const WIDGET_DEFS: WidgetDef[] = [
     ],
   },
   {
-    id: "progress-comparison",
-    name: "Progress Comparison",
+    id: "act-now-summary",
+    name: "Act Now Summary",
     classNum: 2,
     classLabel: "Standard",
-    widthOptions: ["TBD"],
-    heightGU: "TBD",
-    defined: false,
-    description: "Not yet defined in the Design System. This widget will compare progress values across multiple items or dimensions. Specs will be added once the Figma design is complete.",
-    states: [],
-    useCases: [],
-    dontUse: [],
+    widthOptions: ["2/3 (8 cols)", "3/3 (12 cols)"],
+    heightGU: "6 GU",
+    defined: true,
+    description: "Urgency overview showing counts by tier (Act Now / Critical / Action) plus a breakdown by event type (Approve, Review, Respond…). Interactive: tap a tier or type to filter the downstream My Work widget.",
+    states: ["Default", "Urgency filter active", "Type filter active", "Combined filter", "Hover"],
+    contentVariants: ["Urgency counters + type chips"],
+    useCases: [
+      "Summarize the user's attention load at a glance on a home dashboard",
+      "Let users triage before opening My Work — jump to the most critical type",
+      "Show real-time counts from the HTL event queue",
+    ],
+    dontUse: [
+      "Don't use without My Work widget nearby — Act Now Summary is a navigation aid, not standalone",
+      "Don't use for non-urgency metrics — use KPI widget instead",
+      "Don't add more than 3 urgency tiers — the layout is fixed",
+    ],
+  },
+  {
+    id: "my-work",
+    name: "My Work",
+    classNum: 3,
+    classLabel: "Heavy",
+    widthOptions: ["2/3 (8 cols)", "3/3 (12 cols)"],
+    heightGU: "9+ GU",
+    defined: true,
+    description: "Personal attention queue grouped by urgency tier (ACT NOW / Critical / Action). Studio and Type chip filters narrow the list. Each item shows studio badge, type, urgency tags, estimated time, and hover-reveal action buttons (Take, Escalate, Defer).",
+    states: ["Default", "Studio filter active", "Type filter active", "Item hover (actions visible)", "Empty state"],
+    contentVariants: ["ACT NOW group", "Critical group", "Action group", "Filtered view"],
+    useCases: [
+      "Primary home-dashboard widget showing the user's full attention queue",
+      "Used alongside Act Now Summary to give context + actionable list",
+      "Multi-studio operators who need to triage across GOV, AGNT, DATA, TASK",
+    ],
+    dontUse: [
+      "Don't use on detail pages — belongs on home/overview",
+      "Don't remove the urgency grouping — ordering is critical for trust",
+      "Don't add more than 3 urgency tiers",
+    ],
+  },
+  {
+    id: "my-team",
+    name: "My Team",
+    classNum: 3,
+    classLabel: "Heavy",
+    widthOptions: ["1/3 (4 cols)", "2/3 (8 cols)"],
+    heightGU: "9 GU",
+    defined: true,
+    description: "Team roster with per-member urgency dot counts, OOO tags, and hover-reveal action buttons (Take, Nudge, Reassign). An InformativeCard error banner surfaces when blocking events exist across the team.",
+    states: ["Default", "Banner visible", "Banner dismissed", "Member hover (actions visible)", "OOO member"],
+    contentVariants: ["With error banner", "Without banner", "S variant (narrow)"],
+    useCases: [
+      "Manager view of team attention load on a home dashboard",
+      "Quick reassignment when a team member is OOO",
+      "Surface blocking escalations that require manager action",
+    ],
+    dontUse: [
+      "Don't show more than 6–8 members without pagination — widget becomes unscrollable",
+      "Don't use without the blocking event banner wired to real data",
+      "Don't replace the dots with text labels — the dot grammar is intentional",
+    ],
+  },
+  {
+    id: "workflows",
+    name: "Workflows",
+    classNum: 2,
+    classLabel: "Standard",
+    widthOptions: ["2/3 (8 cols)", "3/3 (12 cols)"],
+    heightGU: "9 GU",
+    defined: true,
+    description: "Live workflow status list with 4 states: Running (animated pulse dot + 4px progress bar), Done, Failed (Retry + Logs buttons), Paused (Resume button). Shows trigger, run count, and elapsed time per row.",
+    states: ["Running", "Done", "Failed", "Paused", "Mixed"],
+    contentVariants: ["Running with progress bar", "Failed with actions", "Paused with resume"],
+    useCases: [
+      "Monitor active automation runs from a home dashboard",
+      "Surface failed workflows that need operator attention",
+      "Show run frequency and trigger context for active automations",
+    ],
+    dontUse: [
+      "Don't show more than 7 rows without pagination",
+      "Don't remove the progress bar for Running state — it's the primary visual indicator",
+      "Don't add inline logs — use the Logs button to open a SlideOut",
+    ],
+  },
+  {
+    id: "pending-outputs",
+    name: "Pending Outputs",
+    classNum: 2,
+    classLabel: "Standard",
+    widthOptions: ["1/3 (4 cols)", "2/3 (8 cols)"],
+    heightGU: "9 GU",
+    defined: true,
+    description: "List of AI-generated outputs awaiting operator review. Each item shows name, source workflow, time, and status tag (Ready / Adjusted / Requires approval / Advanced). Clicking an item opens a SlideOut with AI summary and authority data table.",
+    states: ["Default", "Item hover", "SlideOut open"],
+    contentVariants: ["Ready for review", "Requires approval", "Adjusted — pending", "Advanced"],
+    useCases: [
+      "Review and advance AI-generated documents, forecasts, or contracts",
+      "Provide a single entry point to all PA outputs that need human sign-off",
+      "Surface time-sensitive outputs with a clear status tag",
+    ],
+    dontUse: [
+      "Don't use for tasks that don't require output review — use My Work instead",
+      "Don't remove the status tag — operators rely on it for triage",
+      "Don't open output content inline — always use the SlideOut pattern",
+    ],
+  },
+  {
+    id: "agent-catalog",
+    name: "Agent Catalog",
+    classNum: 3,
+    classLabel: "Heavy",
+    widthOptions: ["2/3 (8 cols)", "3/3 (12 cols)"],
+    heightGU: "9+ GU",
+    defined: true,
+    description: "Card grid of available PA agents and workflow agents. Type filter chips (All / Single / Workflow) narrow the grid. Clicking a card opens a SlideOut with the agent description, example prompts, and a Run CTA (if grounded).",
+    states: ["Default", "Type filter active", "Card hover", "SlideOut open", "Agent unavailable (dimmed)"],
+    contentVariants: ["All agents", "Single agents only", "Workflow agents only"],
+    useCases: [
+      "Give operators quick access to all available agents from the home dashboard",
+      "Surface example prompts to onboard new users to each PA",
+      "Distinguish Single agents from Workflow agents via the Workflow tag",
+    ],
+    dontUse: [
+      "Don't list more than 12 agents without search — the grid becomes overwhelming",
+      "Don't remove the Grounded / Unavailable status — users need to know if the agent is ready",
+      "Don't open agent settings inline — use the SlideOut",
+    ],
   },
 ]
 
@@ -22360,7 +23549,7 @@ function WidgetDetailView({ widget, onBack }: { widget: WidgetDef; onBack: () =>
   const [docTab,  setDocTab]  = useState<"tokens" | "states" | "variants" | "usage">("tokens")
   const cls = CLASS_COLORS[widget.classLabel]
 
-  const widthLabel: Record<WidgetWidthClass, string> = { narrow: "Narrow (1/3 · 4 cols)", wide: "Wide (2/3 · 8 cols)", full: "Full (3/3 · 12 cols)" }
+  const widthLabel: Record<WidgetWidthClass, string> = { narrow: "Narrow (1/3 · 4 cols)", half: "Half (1/2 · 6 cols)", wide: "Wide (2/3 · 8 cols)", xl: "XL (3/4 · 9 cols)", full: "Full (3/3 · 12 cols)" }
 
   return (
     <div className="flex flex-col gap-[0px]">
@@ -22751,763 +23940,54 @@ function WidgetDetailView({ widget, onBack }: { widget: WidgetDef; onBack: () =>
   )
 }
 
-// ── Widget canvas view (live interactive overview) ────────────────────────────
-
-// Each widget slot knows its position and size in the demo canvas
-interface CanvasSlot {
-  uid: string
-  id: WidgetId
-  kpiVariant?: 0 | 1 | 2 | 3
-  title: string
-  colSpan: 1 | 2 | 3       // 1=narrow, 2=wide, 3=full
-  widthClass: WidgetWidthClass
-  showRefresh?: boolean
-  showMenu?: boolean
-  showInfo?: boolean
-}
-
-// StackGroup: two narrow slots occupying a single grid column, stacked vertically
-interface StackGroup {
-  type: "stack"
-  uid: string
-  slots: CanvasSlot[]
-}
-type LayoutEntry = CanvasSlot | StackGroup
-function isStack(e: LayoutEntry): e is StackGroup { return (e as StackGroup).type === "stack" }
-function findSlotInLayout(entries: LayoutEntry[], uid: string): CanvasSlot | null {
-  for (const e of entries) {
-    if (isStack(e)) { const s = e.slots.find(s => s.uid === uid); if (s) return s }
-    else if (e.uid === uid) return e
-  }
-  return null
-}
-
-const HEIGHT_SNAPS = [96, 144, 192, 240, 288, 360, 480]
-
-const CANVAS_LAYOUT: CanvasSlot[] = [
-  { uid: "kpi-0",    id: "kpi",      kpiVariant: 0, title: "Active Workers",           colSpan: 1, widthClass: "narrow", showRefresh: true,  showMenu: true },
-  { uid: "kpi-1",    id: "kpi",      kpiVariant: 1, title: "Conversions",              colSpan: 1, widthClass: "narrow", showRefresh: true,  showMenu: true },
-  { uid: "kpi-2",    id: "kpi",      kpiVariant: 3, title: "Goal Progress",            colSpan: 1, widthClass: "narrow", showRefresh: true,  showMenu: true },
-  { uid: "activity", id: "activity", title: "Last Activity",                           colSpan: 2, widthClass: "wide",   showRefresh: true,  showMenu: true },
-  { uid: "notes",    id: "notes",    title: "Team Notes",                              colSpan: 1, widthClass: "narrow", showRefresh: false, showMenu: true },
-  { uid: "timeline", id: "timeline", title: "Recent Activity Timeline",                colSpan: 3, widthClass: "full",   showRefresh: true,  showMenu: true },
-  { uid: "charts",   id: "charts",   title: "Performance Charts",                      colSpan: 3, widthClass: "full",   showRefresh: true,  showMenu: true },
-]
+// ── Widget canvas view (live interactive — all widgets via shared CanvasLayout) ─
 
 function WidgetCanvasView({ onBack }: { onBack: () => void }) {
-  const [hoveredUid, setHoveredUid] = useState<string | null>(null)
-  const [hoveredEdge, setHoveredEdge] = useState<"left" | "right" | "bottom" | null>(null)
-  const [activeState, setActiveState] = useState<"default" | "error" | "connection">("default")
-  const [layout, setLayout] = useState<LayoutEntry[]>([...CANVAS_LAYOUT])
-  const [dragUid, setDragUid] = useState<string | null>(null)
-  const [dropUid, setDropUid] = useState<string | null>(null)
-  const [dropSide, setDropSide] = useState<"before" | "after" | "stack-above" | "stack-below" | null>(null)
-  const [pointerPos, setPointerPos] = useState<{x: number, y: number} | null>(null)
-  const [collapsedUids, setCollapsedUids] = useState<Set<string>>(new Set())
-  const [widthByUid, setWidthByUid] = useState<Record<string, WidgetWidthClass>>({})
-  const [resizing, setResizing] = useState<{
-    uid: string; edge: "left" | "right"
-    startX: number; startCols: number; startRect: { left: number; top: number; width: number; height: number }
-  } | null>(null)
-  const [resizePreviewPx, setResizePreviewPx] = useState<number | null>(null)
-  const resizePreviewRef = useRef<number | null>(null)
-  const isResizingRef = useRef(false)
-  const gridRef = useRef<HTMLDivElement>(null)
-  const [heightByUid, setHeightByUid] = useState<Record<string, number>>({})
-  const [vertPreviewH, setVertPreviewH] = useState<{uid: string, h: number} | null>(null)
-  const activeDragRef = useRef<string | null>(null)
-  const activeDropRef = useRef<string | null>(null)
-  const activeDropSideRef = useRef<"before" | "after" | "stack-above" | "stack-below" | null>(null)
-  const dragPotentialRef = useRef<{uid: string, x: number, y: number} | null>(null)
-  const dropRafRef = useRef<number | null>(null)
-  const vertResizeRef = useRef<{uid: string, startY: number, startH: number, moved: boolean} | null>(null)
-  const vertPreviewRef = useRef<number | null>(null)
-  const flipInnerRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const flipPrevRects = useRef<Record<string, DOMRect>>({})
+  const [canvasKey, setCanvasKey] = useState(0)
 
-  // Live layout: reorders during drag-over for real-time preview
-  const displayLayout = useMemo((): LayoutEntry[] => {
-    if (!dragUid || !dropUid || dragUid === dropUid) return layout
-
-    // Extract dragged slot from wherever it lives, producing a flat array without it
-    let dragSlot: CanvasSlot | null = null
-    const arr: LayoutEntry[] = []
-    for (const e of layout) {
-      if (isStack(e)) {
-        const slotI = e.slots.findIndex(s => s.uid === dragUid)
-        if (slotI !== -1) {
-          dragSlot = e.slots[slotI]
-          const rem = e.slots.filter(s => s.uid !== dragUid)
-          if (rem.length === 1) arr.push(rem[0])
-          else if (rem.length > 1) arr.push({ ...e, slots: rem })
-        } else arr.push(e)
-      } else {
-        if (e.uid === dragUid) dragSlot = e
-        else arr.push(e)
-      }
-    }
-    if (!dragSlot) return layout
-
-    // Stacking preview — narrow drag over narrow target's top/bottom zone
-    if ((dropSide === "stack-above" || dropSide === "stack-below") && dragSlot.widthClass === "narrow") {
-      const targetI = arr.findIndex(e => isStack(e) ? e.slots.some(s => s.uid === dropUid) : e.uid === dropUid)
-      if (targetI !== -1) {
-        const targetEntry = arr[targetI]
-        if (!isStack(targetEntry) && targetEntry.widthClass === "narrow") {
-          const preview: StackGroup = {
-            type: "stack", uid: "preview-stack",
-            slots: dropSide === "stack-above" ? [dragSlot, targetEntry] : [targetEntry, dragSlot],
-          }
-          arr.splice(targetI, 1, preview)
-          return arr
-        }
-      }
-    }
-
-    // Regular before/after reorder
-    const targetI = arr.findIndex(e => isStack(e)
-      ? (e.uid === dropUid || e.slots.some(s => s.uid === dropUid))
-      : e.uid === dropUid
-    )
-    if (targetI === -1) return layout
-    const insertAt = dropSide === "after" ? targetI + 1 : targetI
-    arr.splice(insertAt, 0, dragSlot)
-    return arr
-  }, [layout, dragUid, dropUid, dropSide])
-
-  const isDragging = dragUid !== null
-
-  function colSpanForWidth(w: WidgetWidthClass): 1 | 2 | 3 {
-    return w === "narrow" ? 1 : w === "wide" ? 2 : 3
-  }
-
-  function getColWidthPx(): number {
-    if (!gridRef.current) return 240
-    // Grid container has 24px padding each side, 2 gaps × 16px between 3 columns
-    return (gridRef.current.offsetWidth - 48 - 32) / 3
-  }
-
-
-
-  // Smooth resize: preview overlay grows continuously, grid snaps only on mouseup
-  useEffect(() => {
-    if (!resizing) return
-    function onMove(e: MouseEvent) {
-      const dx = e.clientX - resizing!.startX
-      const colW = getColWidthPx()
-      const mult = resizing!.edge === "left" ? -1 : 1
-      const newPx = Math.max(colW * 0.55, Math.min(colW * 3 + 32, resizing!.startRect.width + dx * mult))
-      resizePreviewRef.current = newPx
-      setResizePreviewPx(newPx)
-    }
-    function onUp() {
-      const px = resizePreviewRef.current
-      if (px !== null) {
-        const colW = getColWidthPx()
-        const cols = Math.max(1, Math.min(3, Math.round(px / colW))) as 1 | 2 | 3
-        const newW: WidgetWidthClass = cols === 1 ? "narrow" : cols === 2 ? "wide" : "full"
-        setWidthByUid(prev => ({ ...prev, [resizing!.uid]: newW }))
-      }
-      isResizingRef.current = false
-      setResizing(null)
-      setResizePreviewPx(null)
-      resizePreviewRef.current = null
-    }
-    function onEsc(e: KeyboardEvent) {
-      if (e.key !== 'Escape') return
-      isResizingRef.current = false
-      setResizing(null)
-      setResizePreviewPx(null)
-      resizePreviewRef.current = null
-    }
-    window.addEventListener("mousemove", onMove)
-    window.addEventListener("mouseup", onUp)
-    window.addEventListener("keydown", onEsc)
-    return () => {
-      window.removeEventListener("mousemove", onMove)
-      window.removeEventListener("mouseup", onUp)
-      window.removeEventListener("keydown", onEsc)
-    }
-  }, [resizing])
-
-  // Pointer-based drag — runs once, handles threshold + tracking + commit
-  useEffect(() => {
-    function onMove(e: MouseEvent) {
-      // Phase 1: threshold check for potential drag
-      if (dragPotentialRef.current) {
-        const { uid, x, y } = dragPotentialRef.current
-        if (Math.hypot(e.clientX - x, e.clientY - y) > 8) {
-          dragPotentialRef.current = null
-          activeDragRef.current = uid
-          setDragUid(uid)
-          setHoveredUid(null)
-          setPointerPos({ x: e.clientX, y: e.clientY })
-        }
-        return
-      }
-      // Phase 2: active drag tracking
-      if (!activeDragRef.current) return
-      setPointerPos({ x: e.clientX, y: e.clientY })
-      const el = document.elementFromPoint(e.clientX, e.clientY)
-      let foundSlotEl = (el as HTMLElement)?.closest?.('[data-slot-uid]') as HTMLElement | null
-
-      // Gap detection: cursor in grid but not over any slot — find nearest slot
-      if (!foundSlotEl && gridRef.current) {
-        const gr = gridRef.current.getBoundingClientRect()
-        if (e.clientX >= gr.left && e.clientX <= gr.right && e.clientY >= gr.top && e.clientY <= gr.bottom) {
-          const all = Array.from(gridRef.current.querySelectorAll('[data-slot-uid]')) as HTMLElement[]
-          let best: HTMLElement | null = null, minD = Infinity
-          for (const s of all) {
-            const r = s.getBoundingClientRect()
-            const dist = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2))
-            if (dist < minD) { minD = dist; best = s }
-          }
-          foundSlotEl = best
-        }
-      }
-
-      const uid = foundSlotEl?.dataset?.slotUid ?? null
-      const newDrop = uid && uid !== activeDragRef.current ? uid : null
-
-      // Determine drop side: for narrow-on-narrow use Y zones (top=stack-above, bottom=stack-below)
-      let newSide: "before" | "after" | "stack-above" | "stack-below" | null = null
-      if (newDrop && foundSlotEl) {
-        const r = foundSlotEl.getBoundingClientRect()
-        const dragEl = gridRef.current?.querySelector(`[data-slot-uid="${activeDragRef.current}"]`) as HTMLElement | null
-        const dragIsNarrow = dragEl?.dataset?.slotWidth === "narrow"
-        const targetIsNarrow = foundSlotEl?.dataset?.slotWidth === "narrow"
-        if (dragIsNarrow && targetIsNarrow) {
-          const yFrac = (e.clientY - r.top) / r.height
-          if (yFrac < 0.35) newSide = "stack-above"
-          else if (yFrac > 0.65) newSide = "stack-below"
-          else newSide = e.clientX < r.left + r.width / 2 ? "before" : "after"
-        } else {
-          newSide = e.clientX < r.left + r.width / 2 ? "before" : "after"
-        }
-      }
-
-      if (newDrop !== activeDropRef.current || newSide !== activeDropSideRef.current) {
-        activeDropRef.current = newDrop
-        activeDropSideRef.current = newSide
-        // Debounce via rAF — prevents layout flicker when crossing slot boundaries
-        if (dropRafRef.current !== null) cancelAnimationFrame(dropRafRef.current)
-        dropRafRef.current = requestAnimationFrame(() => {
-          setDropUid(activeDropRef.current)
-          setDropSide(activeDropSideRef.current)
-          dropRafRef.current = null
-        })
-      }
-    }
-    function onUp() {
-      if (dropRafRef.current !== null) { cancelAnimationFrame(dropRafRef.current); dropRafRef.current = null }
-      const dUid = activeDragRef.current
-      const tUid = activeDropRef.current
-      const side = activeDropSideRef.current
-      if (dUid && tUid) {
-        setLayout(prev => {
-          // Step 1: extract the dragged slot from its current position
-          let dragSlot: CanvasSlot | null = null
-          const next: LayoutEntry[] = []
-          for (const e of prev) {
-            if (isStack(e)) {
-              const slotI = e.slots.findIndex(s => s.uid === dUid)
-              if (slotI !== -1) {
-                dragSlot = e.slots[slotI]
-                const rem = e.slots.filter(s => s.uid !== dUid)
-                if (rem.length === 1) next.push(rem[0])        // dissolve group
-                else if (rem.length > 1) next.push({ ...e, slots: rem })
-              } else next.push(e)
-            } else {
-              if (e.uid === dUid) dragSlot = e
-              else next.push(e)
-            }
-          }
-          if (!dragSlot) return prev
-
-          // Step 2: stacking commit
-          if (side === "stack-above" || side === "stack-below") {
-            const tI = next.findIndex(e => isStack(e) ? e.slots.some(s => s.uid === tUid) : e.uid === tUid)
-            if (tI !== -1) {
-              const targetEntry = next[tI]
-              if (!isStack(targetEntry) && targetEntry.widthClass === "narrow" && dragSlot.widthClass === "narrow") {
-                const newStack: StackGroup = {
-                  type: "stack",
-                  uid: `stack-${dragSlot.uid}-${targetEntry.uid}`,
-                  slots: side === "stack-above" ? [dragSlot, targetEntry] : [targetEntry, dragSlot],
-                }
-                next.splice(tI, 1, newStack)
-                return next
-              }
-            }
-            // Fallback: can't stack → insert before target
-            const fbI = next.findIndex(e => isStack(e) ? e.slots.some(s => s.uid === tUid) : e.uid === tUid)
-            fbI !== -1 ? next.splice(fbI, 0, dragSlot) : next.push(dragSlot)
-            return next
-          }
-
-          // Step 3: regular before/after
-          const tI = next.findIndex(e => isStack(e)
-            ? (e.uid === tUid || e.slots.some(s => s.uid === tUid))
-            : e.uid === tUid
-          )
-          if (tI === -1) { next.push(dragSlot); return next }
-          next.splice(side === "after" ? tI + 1 : tI, 0, dragSlot)
-          return next
-        })
-      }
-      dragPotentialRef.current = null
-      activeDragRef.current = null
-      activeDropRef.current = null
-      activeDropSideRef.current = null
-      setDragUid(null)
-      setDropUid(null)
-      setDropSide(null)
-      setPointerPos(null)
-    }
-    function onEscDrag(e: KeyboardEvent) {
-      if (e.key !== 'Escape') return
-      if (dropRafRef.current !== null) { cancelAnimationFrame(dropRafRef.current); dropRafRef.current = null }
-      dragPotentialRef.current = null
-      activeDragRef.current = null
-      activeDropRef.current = null
-      activeDropSideRef.current = null
-      setDragUid(null)
-      setDropUid(null)
-      setDropSide(null)
-      setPointerPos(null)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    window.addEventListener('keydown', onEscDrag)
-    return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-      window.removeEventListener('keydown', onEscDrag)
-    }
-  }, [])
-
-  // Global grabbing cursor during drag — keeps cursor consistent over all elements
-  useEffect(() => {
-    document.body.style.cursor = isDragging ? 'grabbing' : ''
-    document.body.style.userSelect = isDragging ? 'none' : ''
-    return () => { document.body.style.cursor = ''; document.body.style.userSelect = '' }
-  }, [isDragging])
-
-  // Vertical height snap-resize via bottom edge drag; click = collapse toggle
-  useEffect(() => {
-    function onMove(e: MouseEvent) {
-      if (!vertResizeRef.current) return
-      const dy = e.clientY - vertResizeRef.current.startY
-      if (Math.abs(dy) > 3) vertResizeRef.current.moved = true
-      if (vertResizeRef.current.moved) {
-        const rawH = Math.max(72, vertResizeRef.current.startH + dy)
-        vertPreviewRef.current = rawH
-        setVertPreviewH({ uid: vertResizeRef.current.uid, h: rawH })
-      }
-    }
-    function onUp() {
-      if (!vertResizeRef.current) return
-      const { uid, moved } = vertResizeRef.current
-      if (moved && vertPreviewRef.current !== null) {
-        const rawH = vertPreviewRef.current
-        const snapped = HEIGHT_SNAPS.reduce((a, b) => Math.abs(a - rawH) < Math.abs(b - rawH) ? a : b)
-        setHeightByUid(prev => ({ ...prev, [uid]: snapped }))
-      } else if (!moved) {
-        setCollapsedUids(prev => {
-          const next = new Set(prev)
-          next.has(uid) ? next.delete(uid) : next.add(uid)
-          return next
-        })
-      }
-      vertResizeRef.current = null
-      vertPreviewRef.current = null
-      setVertPreviewH(null)
-    }
-    function onEscVert(e: KeyboardEvent) {
-      if (e.key !== 'Escape' || !vertResizeRef.current) return
-      vertResizeRef.current = null
-      vertPreviewRef.current = null
-      setVertPreviewH(null)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    window.addEventListener('keydown', onEscVert)
-    return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-      window.removeEventListener('keydown', onEscVert)
-    }
-  }, [])
-
-  // FLIP step 1 — capture current rects in cleanup, runs before the next render's effects
-  useLayoutEffect(() => {
-    return () => {
-      const rects: Record<string, DOMRect> = {}
-      Object.entries(flipInnerRefs.current).forEach(([uid, el]) => {
-        if (el) rects[uid] = el.getBoundingClientRect()
-      })
-      flipPrevRects.current = rects
-    }
-  })
-
-  // FLIP step 2 — after committed layout changes, invert→play with spring easing
-  useLayoutEffect(() => {
-    const prev = flipPrevRects.current
-    const timers: ReturnType<typeof setTimeout>[] = []
-    Object.entries(flipInnerRefs.current).forEach(([uid, el]) => {
-      if (!el || !prev[uid]) return
-      const curr = el.getBoundingClientRect()
-      const dx = prev[uid].left - curr.left
-      const dy = prev[uid].top - curr.top
-      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
-      // Invert: jump to old visual position before browser paints
-      el.style.transition = 'none'
-      el.style.transform = `translate(${dx}px, ${dy}px)`
-      void el.getBoundingClientRect() // force reflow so the jump is "locked in"
-      // Play: animate to natural position with spring feel
-      el.style.transition = 'transform 420ms cubic-bezier(0.34, 1.2, 0.64, 1)'
-      el.style.transform = ''
-      timers.push(setTimeout(() => {
-        el.style.transition = ''
-        el.style.transform = ''
-      }, 450))
-    })
-    return () => timers.forEach(clearTimeout)
-  }, [layout])
+  const allSlots = useMemo(() => [
+    { uid: "w-kpi-0",     title: "Active Workers",     colSpan: 1 as const, rowSpan: 3, minRowSpan: 3, autoExpand: false, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={0} /> },
+    { uid: "w-kpi-1",     title: "Conversions",        colSpan: 1 as const, rowSpan: 3, minRowSpan: 3, autoExpand: false, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={1} /> },
+    { uid: "w-kpi-2",     title: "Goal Progress",      colSpan: 1 as const, rowSpan: 3, minRowSpan: 3, autoExpand: false, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={3} /> },
+    { uid: "w-status",    title: "System Status",      colSpan: 2 as const, rowSpan: 4, minRowSpan: 3, showRefresh: false, showMenu: true,  content: <StatusWarningWidgetContent /> },
+    { uid: "w-folder",    title: "Folder Nav",         colSpan: 1 as const, rowSpan: 4, minRowSpan: 4, showRefresh: false, showMenu: true,  content: <FolderNavWidgetContent /> },
+    { uid: "w-actnow",    title: "Act Now Summary",    colSpan: 1 as const, rowSpan: 6, minRowSpan: 4, showRefresh: false, showMenu: true,  content: <ActNowSummaryWidgetContent /> },
+    { uid: "w-activity",  title: "Last Activity",      colSpan: 2 as const, rowSpan: 6, minRowSpan: 4, showRefresh: true,  showMenu: true,  content: <ActivityWidgetContent /> },
+    { uid: "w-notes",     title: "Team Notes",         colSpan: 1 as const, rowSpan: 6, minRowSpan: 4, showRefresh: false, showMenu: true,  content: <NotesWidgetContent /> },
+    { uid: "w-mywork",    title: "My Work",            colSpan: 2 as const, rowSpan: 6, minRowSpan: 3, showRefresh: true,  showMenu: true,  content: <MyWorkWidgetContent /> },
+    { uid: "w-myteam",    title: "My Team",            colSpan: 1 as const, rowSpan: 8, minRowSpan: 5, showRefresh: true,  showMenu: true,  content: <MyTeamWidgetContent /> },
+    { uid: "w-workflows", title: "Workflows",          colSpan: 2 as const, rowSpan: 8, minRowSpan: 5, showRefresh: true,  showMenu: true,  content: <WorkflowsWidgetContent /> },
+    { uid: "w-pending",   title: "Pending Outputs",    colSpan: 1 as const, rowSpan: 6, minRowSpan: 4, showRefresh: false, showMenu: true,  content: <PendingOutputsWidgetContent /> },
+    { uid: "w-timeline",  title: "Activity Timeline",  colSpan: 3 as const, rowSpan: 3, minRowSpan: 3, showRefresh: true,  showMenu: true,  content: <TimelineWidgetContent /> },
+    { uid: "w-charts",    title: "Performance Charts", colSpan: 3 as const, rowSpan: 5, minRowSpan: 4, showRefresh: true,  showMenu: true,  content: <ChartsWidgetContent /> },
+  ], [])
 
   return (
-    <div className="flex flex-col gap-[20px]">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-[12px]">
-        <div className="flex flex-col gap-[4px]">
-          <button onClick={onBack} className="flex items-center gap-[6px] self-start mb-[4px]"
-            style={{ border: "none", background: "none", cursor: "pointer", padding: 0 }}>
-            <LucideIcons.ChevronLeft size={14} style={{ color: "var(--primary)" }} />
-            <span style={{ fontSize: 12, color: "var(--primary)", fontWeight: 500 }}>Widgets</span>
-          </button>
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", margin: 0 }}>Live Canvas</h2>
-          <p style={{ fontSize: 13, color: "var(--color-text-subtitle)", margin: 0 }}>
-            Vista de overview interactiva. Hover sobre cualquier widget para ver el estado de drag. Los widgets se comportan como en el UCP real.
+      <div className="flex items-center justify-between px-[32px]" style={{ height: 56, borderBottom: "1px solid var(--field-border)", flexShrink: 0, background: "var(--surface)" }}>
+        <button onClick={onBack} className="flex items-center gap-[6px] text-[13px] font-medium" style={{ border: "none", background: "none", cursor: "pointer", color: "var(--primary)", padding: 0 }}>
+          <LucideIcons.ArrowLeft size={14} />
+          Widgets Gallery
+        </button>
+        <h2 className="text-[14px] font-semibold" style={{ color: "var(--foreground)", margin: 0 }}>Live Widget Canvas</h2>
+        <Button variant="secondary" size="sm" icon={<LucideIcons.RefreshCw size={13} />} iconPosition="left" onClick={() => setCanvasKey(k => k + 1)}>
+          Reset Layout
+        </Button>
+      </div>
+
+      {/* Canvas */}
+      <div className="flex-1 overflow-y-auto" style={{ padding: "24px 32px" }}>
+        <CanvasLayout key={canvasKey} initialSlots={allSlots} />
+
+        {/* Footer note */}
+        <div className="flex items-start gap-[8px] mt-[16px] p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-subtle)" }}>
+          <LucideIcons.Info size={13} style={{ color: "var(--primary)", flexShrink: 0, marginTop: 1 }} />
+          <p style={{ fontSize: 12, margin: 0, color: "var(--color-text-title)" }}>
+            This canvas shows all {allSlots.length} DS widgets live. Drag to reorder, resize with the left/right edge handles, and collapse by clicking the bottom edge. The 12-column grid preserves layout order — widgets stay exactly where you place them.
           </p>
         </div>
-        {/* Canvas state selector + reset */}
-        <div className="flex items-center gap-[8px] flex-wrap">
-          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)", fontWeight: 500 }}>Canvas state:</span>
-          {(["default", "error", "connection"] as const).map(s => (
-            <button key={s} onClick={() => setActiveState(s)}
-              style={{
-                border: "none", cursor: "pointer", padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, textTransform: "capitalize",
-                background: activeState === s ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-default)",
-                color: activeState === s ? "var(--primary)" : "var(--color-text-subtitle)",
-              }}>
-              {s}
-            </button>
-          ))}
-          <button
-            onClick={() => { setLayout([...CANVAS_LAYOUT]); setCollapsedUids(new Set()); setWidthByUid({}); setHeightByUid({}) }}
-            style={{
-              border: "1px solid var(--field-border)", cursor: "pointer", padding: "4px 10px", borderRadius: 6,
-              fontSize: 11, fontWeight: 500, background: "transparent", color: "var(--color-text-subtitle)",
-              marginLeft: 4,
-            }}
-          >
-            Reset layout
-          </button>
-        </div>
       </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-[16px] flex-wrap">
-        <div className="flex items-center gap-[6px]">
-          <LucideIcons.MousePointer size={12} style={{ color: "var(--color-text-subtitle)" }} />
-          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>Hover → drag handle aparece</span>
-        </div>
-        <div className="flex items-center gap-[6px]">
-          <LucideIcons.GripVertical size={12} style={{ color: "var(--primary)" }} />
-          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>Drag handle = widget movible</span>
-        </div>
-        <div className="flex items-center gap-[6px]">
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--field-border-hover)" }} />
-          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>Border activo en hover</span>
-        </div>
-        <div className="flex items-center gap-[6px]">
-          <LucideIcons.ArrowLeftRight size={12} style={{ color: "var(--color-text-subtitle)" }} />
-          <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>Drag &amp; drop para reordenar</span>
-        </div>
-      </div>
-
-      {/* Smooth resize overlay — fixed-position, grows with mouse, no layout effect */}
-      {resizing && resizePreviewPx !== null && (
-        <div style={{
-          position: "fixed",
-          top: resizing.startRect.top,
-          height: resizing.startRect.height,
-          ...(resizing.edge === "left"
-            ? { right: window.innerWidth - (resizing.startRect.left + resizing.startRect.width), width: resizePreviewPx }
-            : { left: resizing.startRect.left, width: resizePreviewPx }
-          ),
-          background: "rgba(33,115,255,0.07)",
-          border: "1.5px solid var(--color-border-primary-default)",
-          borderRadius: 16,
-          pointerEvents: "none",
-          zIndex: 9999,
-          userSelect: "none",
-        }} />
-      )}
-
-      {/* Canvas grid */}
-      <div
-        ref={gridRef}
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          gap: 16,
-          background: "var(--surface)",
-          padding: 24,
-          borderRadius: 12,
-          border: "1px solid var(--widget-border)",
-        }}
-      >
-        {displayLayout.map(entry => {
-          // ── StackGroup: two narrow slots in one column cell ─────────────
-          if (isStack(entry)) {
-            return (
-              <div
-                key={entry.uid}
-                data-slot-uid={entry.uid}
-                style={{
-                  gridColumn: "span 1",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                  userSelect: "none",
-                  position: "relative",
-                }}
-              >
-                {entry.slots.map(slot => {
-                  const isThisDragging = dragUid === slot.uid
-                  const isHovering = hoveredUid === slot.uid && !isDragging
-                  const isGhost = isThisDragging && !dropUid
-                  const isLanding = isThisDragging && !!dropUid
-                  return (
-                    <div
-                      key={slot.uid}
-                      data-slot-uid={slot.uid}
-                      data-slot-width="narrow"
-                      onMouseEnter={() => { if (!isDragging) setHoveredUid(slot.uid) }}
-                      onMouseLeave={() => { setHoveredUid(null) }}
-                      style={{
-                        position: "relative",
-                        borderRadius: 16,
-                        opacity: isGhost ? 0.25 : 1,
-                        transition: "opacity 150ms ease, transform 220ms ease",
-                        transform: isThisDragging ? "scale(0.97)" : "scale(1)",
-                        display: "flex",
-                        flexDirection: "column",
-                        userSelect: "none",
-                      }}
-                    >
-                      <div
-                        ref={el => { flipInnerRefs.current[slot.uid] = el }}
-                        style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", willChange: "transform" }}
-                      >
-                        {isLanding && (
-                          <div style={{ position: "absolute", inset: 0, background: "var(--color-surface-primary-subtle)", border: "2px solid var(--color-border-primary-lighter)", borderRadius: 16, zIndex: 15, pointerEvents: "none" }} />
-                        )}
-                        <WidgetFather
-                          className="flex-1"
-                          title={slot.title}
-                          fillWidth
-                          widthClass="narrow"
-                          showRefresh={slot.showRefresh}
-                          showMenu={slot.showMenu}
-                          showInfo={slot.showInfo}
-                          isHovered={isHovering && activeState === "default"}
-                          isDragging={isThisDragging}
-                          hasError={activeState === "error"}
-                          hasConnectionError={activeState === "connection"}
-                          isCollapsed={collapsedUids.has(slot.uid)}
-                          onGripMouseDown={e => {
-                            if (isResizingRef.current || vertResizeRef.current) return
-                            dragPotentialRef.current = { uid: slot.uid, x: e.clientX, y: e.clientY }
-                          }}
-                        >
-                          {activeState === "default"
-                            ? <WidgetContent id={slot.id} kpiVariant={slot.kpiVariant ?? 2} />
-                            : undefined
-                          }
-                        </WidgetFather>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          }
-
-          // ── Single slot ─────────────────────────────────────────────────
-          const slot = entry
-          const currentWidth = widthByUid[slot.uid] ?? slot.widthClass
-          const isThisDragging = dragUid === slot.uid
-          const isThisResizing = resizing?.uid === slot.uid
-          const isVertResizing = vertResizeRef.current?.uid === slot.uid
-          const isHovering = hoveredUid === slot.uid && !isDragging && !isThisResizing
-          const edge = isHovering ? hoveredEdge : null
-          const edgeShadow = edge === "left"
-            ? "-2px 0 0 0 var(--color-border-primary-default)"
-            : edge === "right"
-              ? "2px 0 0 0 var(--color-border-primary-default)"
-              : edge === "bottom"
-                ? "0 2px 0 0 var(--color-border-primary-default)"
-                : "none"
-          const isGhost = isThisDragging && !dropUid
-          const isLanding = isThisDragging && !!dropUid
-          const explicitH = vertPreviewH?.uid === slot.uid
-            ? vertPreviewH.h
-            : heightByUid[slot.uid]
-          return (
-            <div
-              key={slot.uid}
-              data-slot-uid={slot.uid}
-              data-slot-width={slot.widthClass}
-              onMouseEnter={() => { if (!isDragging) setHoveredUid(slot.uid) }}
-              onMouseLeave={() => { setHoveredUid(null); setHoveredEdge(null) }}
-              style={{
-                position: "relative",
-                gridColumn: `span ${colSpanForWidth(currentWidth)}`,
-                cursor: isDragging ? "grabbing" : isHovering ? "default" : "default",
-                opacity: isGhost ? 0.25 : (isThisResizing || isVertResizing) ? 0.7 : 1,
-                borderRadius: 16,
-                boxShadow: edgeShadow,
-                transition: isDragging && !isThisDragging ? "none" : "opacity 150ms ease, transform 220ms ease, box-shadow 100ms",
-                transform: isThisDragging ? "scale(0.97)" : "scale(1)",
-                display: "flex",
-                flexDirection: "column",
-                height: explicitH,
-                userSelect: "none",
-              }}
-            >
-              {/* Left edge resize handle */}
-              <div
-                onMouseDown={e => {
-                  e.stopPropagation(); e.preventDefault()
-                  const rect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
-                  isResizingRef.current = true
-                  setResizing({ uid: slot.uid, edge: "left", startX: e.clientX, startCols: colSpanForWidth(currentWidth), startRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } })
-                  setResizePreviewPx(rect.width); resizePreviewRef.current = rect.width
-                }}
-                onMouseEnter={() => setHoveredEdge("left")}
-                onMouseLeave={() => setHoveredEdge(null)}
-                style={{ position: "absolute", left: 0, top: 8, bottom: 8, width: 12, cursor: "col-resize", zIndex: 20 }}
-              />
-              {/* Right edge resize handle */}
-              <div
-                onMouseDown={e => {
-                  e.stopPropagation(); e.preventDefault()
-                  const rect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
-                  isResizingRef.current = true
-                  setResizing({ uid: slot.uid, edge: "right", startX: e.clientX, startCols: colSpanForWidth(currentWidth), startRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } })
-                  setResizePreviewPx(rect.width); resizePreviewRef.current = rect.width
-                }}
-                onMouseEnter={() => setHoveredEdge("right")}
-                onMouseLeave={() => setHoveredEdge(null)}
-                style={{ position: "absolute", right: 0, top: 8, bottom: 8, width: 12, cursor: "col-resize", zIndex: 20 }}
-              />
-              {/* Bottom edge — drag to resize height, click to collapse */}
-              <div
-                onMouseDown={e => {
-                  if (isDragging || isResizingRef.current) return
-                  e.stopPropagation()
-                  const slotEl = e.currentTarget.parentElement as HTMLElement
-                  const startH = slotEl.getBoundingClientRect().height
-                  vertResizeRef.current = { uid: slot.uid, startY: e.clientY, startH, moved: false }
-                }}
-                onMouseEnter={() => setHoveredEdge("bottom")}
-                onMouseLeave={() => setHoveredEdge(null)}
-                style={{ position: "absolute", left: 8, right: 8, bottom: 0, height: 14, cursor: "row-resize", zIndex: 20 }}
-              />
-              {/* FLIP animation target — inner wrapper keeps its transform independent from drag scale */}
-              <div
-                ref={el => { flipInnerRefs.current[slot.uid] = el }}
-                style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", willChange: "transform" }}
-              >
-                {/* Landing indicator: blue overlay at target position */}
-                {isLanding && (
-                  <div style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: "var(--color-surface-primary-subtle)",
-                    border: "2px solid var(--color-border-primary-lighter)",
-                    borderRadius: 16,
-                    zIndex: 15,
-                    pointerEvents: "none",
-                    transition: "opacity 100ms",
-                  }} />
-                )}
-                <WidgetFather
-                  className="flex-1"
-                  title={slot.title}
-                  fillWidth
-                  widthClass={currentWidth}
-                  showRefresh={slot.showRefresh}
-                  showMenu={slot.showMenu}
-                  showInfo={slot.showInfo}
-                  isHovered={hoveredUid === slot.uid && activeState === "default" && !isDragging && !isThisResizing}
-                  isDragging={isThisDragging}
-                  hasError={activeState === "error"}
-                  hasConnectionError={activeState === "connection"}
-                  isCollapsed={collapsedUids.has(slot.uid)}
-                  onGripMouseDown={e => {
-                    if (isResizingRef.current || vertResizeRef.current) return
-                    dragPotentialRef.current = { uid: slot.uid, x: e.clientX, y: e.clientY }
-                  }}
-                >
-                  {activeState === "default"
-                    ? <WidgetContent id={slot.id} kpiVariant={slot.kpiVariant ?? 2} />
-                    : undefined
-                  }
-                </WidgetFather>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Footer note */}
-      <div className="flex items-start gap-[8px] p-[12px] rounded-[8px]"
-        style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-subtle)" }}>
-        <LucideIcons.Info size={13} style={{ color: "var(--primary)", flexShrink: 0, marginTop: 1 }} />
-        <p style={{ fontSize: 12, margin: 0, color: "var(--color-text-title)" }}>
-          Este canvas replica el comportamiento del UCP real. Cada widget está montado sobre el componente <strong>Widget Father</strong> con su contenido conectado. El estado "Canvas state" aplica globalmente — en el producto real cada widget tiene su estado independiente.
-        </p>
-      </div>
-
-      {/* Floating drag preview — follows cursor during drag */}
-      {isDragging && pointerPos && (
-        <div style={{
-          position: "fixed",
-          left: pointerPos.x + 14,
-          top: pointerPos.y - 16,
-          pointerEvents: "none",
-          zIndex: 9999,
-          background: "var(--widget-bg)",
-          border: "1.5px solid var(--color-border-primary-default)",
-          borderRadius: 8,
-          padding: "8px 12px",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.22)",
-          minWidth: 120,
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          userSelect: "none",
-        }}>
-          <LucideIcons.GripVertical size={12} style={{ color: "var(--primary)", flexShrink: 0 }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-title)",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {findSlotInLayout(layout, dragUid ?? "")?.title ?? ""}
-          </span>
-        </div>
-      )}
     </div>
   )
 }
@@ -36596,16 +37076,23 @@ export default function App() {
 
   // Sync URL on every active change — enables shareable links for every page
   useEffect(() => {
+    // Preserve #hash (section anchor, e.g. ?page=chip&tab=reference#tokens) —
+    // this effect fires twice on a fresh deep-link load (once with the stale
+    // pre-navigation `active`, once with the resolved one) and replaceState
+    // drops any part of the URL it isn't explicitly given, so the hash must
+    // be re-appended every time or it's lost before the target page can read it.
+    const hash = window.location.hash
     const isProto = PROTOTYPE_PAGES.some(p => p.id === active)
     if (isProto) {
-      window.history.replaceState(null, "", `?proto=${active}`)
-    } else if (active === "home") {
-      // Preserve ?tab= set by HomePage so the deep-link survives sidebar navigation
+      window.history.replaceState(null, "", `?proto=${active}${hash}`)
+    } else {
+      // Preserve ?tab= (owned by the active page's own tab state, e.g. via
+      // usePageTab in src/lib/use-page-tab.ts, or HomePage's hand-rolled
+      // equivalent) so a page's Overview/Playground/Reference deep-link
+      // survives sidebar navigation instead of always resetting to Overview.
       const currentTab = new URLSearchParams(window.location.search).get("tab")
       const tabSuffix  = currentTab ? `&tab=${currentTab}` : ""
-      window.history.replaceState(null, "", `?page=home${tabSuffix}`)
-    } else {
-      window.history.replaceState(null, "", `?page=${active}`)
+      window.history.replaceState(null, "", `?page=${active}${tabSuffix}${hash}`)
     }
   }, [active])
 
@@ -36678,6 +37165,7 @@ export default function App() {
           {active === "patterns-slideout"     && <PatternSlideOutPage />}
           {active === "widget-father"         && <WidgetFatherPage />}
           {active === "widgets"               && <WidgetsPage />}
+          {active === "home-banner"           && <HomeBannerPage onNavigate={setActive} />}
           {active === "switch-tab"      && <SwitchTabPage     openSpec={setSpecModal} />}
           {active === "tabs"            && <TabsPage          openSpec={setSpecModal} />}
           {active === "toggle"          && <TogglePage        openSpec={setSpecModal} />}
@@ -36727,6 +37215,25 @@ export default function App() {
             }}
           >
             ← Prototypes
+          </button>
+        </div>
+      )}
+
+      {active === "proto-home-canvas" && (
+        <div className={`${theme} fixed inset-0`} style={{ zIndex: 40, background: canvasBg }}>
+          <PMHomeCanvasScreen />
+          <button
+            onClick={() => setActive("home-banner")}
+            className="fixed top-[16px] left-[16px] flex items-center gap-[8px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-medium transition-opacity hover:opacity-70"
+            style={{
+              zIndex: 45,
+              background: "var(--surface)",
+              border: "1px solid var(--field-border)",
+              color: "var(--foreground)",
+              boxShadow: "var(--shadow-elevation-2)",
+            }}
+          >
+            ← Home Banner
           </button>
         </div>
       )}

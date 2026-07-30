@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 
 export type WidgetCTADisposition = "horizontal" | "vertical"
 export type WidgetCTAType        = "hug" | "full"
-export type WidgetWidthClass     = "narrow" | "wide" | "full"
+export type WidgetWidthClass     = "narrow" | "half" | "wide" | "xl" | "full"
 
 export interface WidgetCTAProps {
   /** Number of CTA buttons (1 or 2). Default: 0 (none). */
@@ -64,7 +64,9 @@ export interface WidgetFatherProps {
 
 const WIDTH_CLASS_PX: Record<WidgetWidthClass, number> = {
   narrow: 330,
+  half:   505,
   wide:   680,
+  xl:     760,
   full:   1020,
 }
 
@@ -217,6 +219,8 @@ export function WidgetFather({
         borderRadius: 16,
         boxShadow: isHovered ? "0 4px 20px rgba(0,0,0,0.18)" : "none",
         transition: "border-color 150ms, box-shadow 150ms",
+        overflow: "hidden",
+        minHeight: 0,
       }}
     >
       {/* ── Drag handle chip (absolutely positioned, floats left of card) ── */}
@@ -251,8 +255,17 @@ export function WidgetFather({
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-[8px]" style={{ minHeight: 28 }}>
-        {/* Left: title + description */}
-        <div className="flex items-start gap-[4px] flex-1 min-w-0">
+        {/* Left: title + description — also the drag trigger when in canvas */}
+        <div
+          className="flex items-start gap-[4px] flex-1 min-w-0"
+          onMouseDown={e => {
+            if (!onGripMouseDown) return
+            e.preventDefault()
+            e.stopPropagation()
+            onGripMouseDown(e)
+          }}
+          style={{ cursor: onGripMouseDown ? (isDragging ? "grabbing" : "grab") : "default" }}
+        >
           <div className="flex flex-col gap-[2px] min-w-0">
             <span
               className="font-semibold uppercase tracking-[0.04em] truncate"
@@ -297,10 +310,11 @@ export function WidgetFather({
           display: "flex",
           flexDirection: "column",
           gap: 8,
+          minHeight: 0,
         }}
       >
         {/* ── Body ──────────────────────────────────────────────────────── */}
-        <div className="w-full">
+        <div className="w-full" style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
           {hasConnectionError ? (
             <div
               className="flex flex-col items-center justify-center rounded-[12px]"

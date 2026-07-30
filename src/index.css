@@ -641,6 +641,31 @@
     --chip-secondary-text-disabled:       rgba(255,255,255,0.30);   /* Text/Disabled dark             */
     --chip-secondary-bg-hover:            rgba(255,255,255,0.15);   /* Surface/Neutral/Lighter dark   */
     --chip-secondary-bg-disabled:         rgba(255,255,255,0.05);   /* Surface/Neutral/Subtle dark    */
+    /* ── Chip — Error/Alert/Success (synced from Figma 2026-07-28, added there 2026-07-23/24) ── */
+    --color-surface-error-default:        #e05252;   /* Surface/Error/Default dark          */
+    --color-surface-error-darker:         #ff6467;   /* Surface/Error/Darker dark            */
+    --color-surface-error-lighter:        #fb2c36;   /* Surface/Error/Lighter dark           */
+    --color-surface-error-more-subtle:    #2d1515;   /* Surface/Error/More Subtle dark       */
+    --color-text-error:                   #ff6467;   /* Text/Error dark                      */
+    --color-border-error-lighter:         #fb2c36;   /* Border/Error/Lighter dark            */
+    /* Alert Default/Darker use the Figma "Chip-only" -AA tokens: same light value as the
+       original DS token, but a better-contrast dark value (Orange/700, Orange/600) —
+       the original Surface/Alert/Default dark value read as washed-out yellow at 1.4:1. */
+    --color-surface-alert-default:        #8f4201;   /* Surface/Alert/Default-AA dark = Orange/700 */
+    --color-surface-alert-darker:         #b25102;   /* Surface/Alert/Darker-AA dark  = Orange/600 */
+    --color-surface-alert-lighter:        rgba(253,199,0,0.15);  /* Surface/Alert/Lighter dark — known low
+       contrast on Disabled text (~1.4:1); inherited from Figma, not yet resolved there either */
+    --color-surface-alert-more-subtle:    #281e00;   /* Surface/Alert/More Subtle dark       */
+    --color-text-alert:                   #fcd34d;   /* Text/Alert dark                      */
+    --color-border-alert-lighter:         #f59e0b;   /* Border/Alert/Lighter dark            */
+    /* Success Default/Darker likewise use the Figma -AA tokens (Green/700, Green/600).
+       Success Disabled reuses Default (see chip.tsx comment) — no darker Success tier
+       still reads as green. */
+    --color-surface-success-default:      #00765f;   /* Surface/Success/Default-AA dark = Green/700 */
+    --color-surface-success-darker:       #009978;   /* Surface/Success/Darker-AA dark  = Green/600 */
+    --color-surface-success-more-subtle:  #0a1f1a;   /* Surface/Success/More Subtle dark     */
+    --color-text-success:                 #6ee7b7;   /* Text/Success dark                    */
+    --color-border-success-lighter:       #34d399;   /* Border/Success/Lighter dark          */
     /* ── Switch Tab — canonical tokens (DS node 4591:349) ──────────────────── */
     --color-surface-primary-more-subtle:  rgba(43,127,255,0.08);     /* Surface/Primary/More Subtle dk */
     --st-bg:            var(--surface-raised);                        /* Dark elevated surface #131C2E  */
@@ -1283,6 +1308,26 @@
     --chip-secondary-text-disabled:       #bababa;
     --chip-secondary-bg-hover:            #f2f2f2;
     --chip-secondary-bg-disabled:         #fafafa;
+    /* ── Chip — Error/Alert/Success (synced from Figma 2026-07-28, added there 2026-07-23/24) ── */
+    --color-surface-error-default:        #992222;   /* Surface/Error/Default light          */
+    --color-surface-error-darker:         #5f2120;   /* Surface/Error/Darker light            */
+    --color-surface-error-lighter:        #d32f2f;   /* Surface/Error/Lighter light           */
+    --color-surface-error-more-subtle:    #fdeded;   /* Surface/Error/More Subtle light       */
+    --color-text-error:                   #5f2120;   /* Text/Error light                      */
+    --color-border-error-lighter:         #d32f2f;   /* Border/Error/Lighter light            */
+    /* Alert/Success Default+Darker: light value is identical to the original (non-AA) DS
+       token — the AA fix only changes dark mode. See dark block above for why. */
+    --color-surface-alert-default:        #ed6c02;   /* Surface/Alert/Default-AA light = Orange/500 */
+    --color-surface-alert-darker:         #663c00;   /* Surface/Alert/Darker-AA light  = Orange/900 */
+    --color-surface-alert-lighter:        #b25102;   /* Surface/Alert/Lighter light           */
+    --color-surface-alert-more-subtle:    #fff4e5;   /* Surface/Alert/More Subtle light       */
+    --color-text-alert:                   #663c00;   /* Text/Alert light                      */
+    --color-border-alert-lighter:         #b25102;   /* Border/Alert/Lighter light            */
+    --color-surface-success-default:      #00a07e;   /* Surface/Success/Default-AA light = Green/500 */
+    --color-surface-success-darker:       #003328;   /* Surface/Success/Darker-AA light  = Green/900 */
+    --color-surface-success-more-subtle:  #e5fdf8;   /* Surface/Success/More Subtle light     */
+    --color-text-success:                 #003328;   /* Text/Success light                    */
+    --color-border-success-lighter:       #009978;   /* Border/Success/Lighter light          */
     /* ── Switch Tab — canonical tokens (DS node 4591:349) ──────────────────── */
     --color-surface-primary-more-subtle:  #f6f9ff;                  /* Surface/Primary/More Subtle    */
     --st-bg:            var(--color-surface-neutral-white);          /* Container BG — white on light  */
