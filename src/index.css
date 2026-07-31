@@ -81,6 +81,7 @@
     --row-alt-bg:            rgba(255,255,255,0.02);  /* Table/list alternating row  — dark      */
     --code-bg:               rgba(255,255,255,0.12);  /* Inline code + icon preview boxes — dark */
     --field-border-hover:    rgba(255,255,255,0.2);   /* Border/Neutral/Darker dark  = White/20  */
+    --color-border-neutral-black: rgba(255,255,255,0.3); /* Border/Neutral/Black dark — Input/Select hover only, distinct from --field-border-hover (Darker) used by Textarea */
     --field-border-focus:    #2b7fff;                 /* Border/Primary/Default dark             */
     --field-text:            rgba(255,255,255,0.6);   /* Text/Subtitle dark          = White/60  */
     --field-placeholder:     rgba(255,255,255,0.3);   /* Text/Disabled dark          = White/30  */
@@ -435,7 +436,7 @@
 
     --ab-success-bg:    #0a1f1a;                  /* Surface/Success/More Subtle dark  */
     --ab-success-bd:    transparent;
-    --ab-success-icon:  #6ee7b7;                  /* Text/Success dark = tag-success-fg */
+    --ab-success-icon:  #6ee7b7;                  /* Icon/Success/Default dark — confirmed correct as-is (cross-checked against a separate reference table in App.tsx); only the light value was wrong */
     --ab-success-text:  #6ee7b7;
 
     --ab-alert-bg:      #2d1a08;                  /* Surface/Alert/Subtle dark         */
@@ -764,6 +765,7 @@
     --row-alt-bg:            rgba(0,0,0,0.03);         /* Table/list alternating row  — light     */
     --code-bg:               rgba(0,0,0,0.08);        /* Inline code + icon preview boxes — light */
     --field-border-hover:    #2a2a2a;                 /* Border/Neutral/Darker light  */
+    --color-border-neutral-black: #000000;            /* Border/Neutral/Black light — confirmed live via Figma — Input/Select hover only */
     --field-border-focus:    #2173ff;                 /* Border/Primary/Default light */
     --field-text:            #2a2a2a;                 /* Text/Subtitle light          */
     --field-placeholder:     #bababa;                 /* Text/Disabled light          */
@@ -927,7 +929,7 @@
 
     --tag-purple-bg:      #f3e9fd;                 /* Purple/100          */
     --tag-purple-bd:      #7b27ed;                 /* Purple/500          */
-    --tag-purple-fg:      #4a1282;                 /* Text/Purple light   */
+    --tag-purple-fg:      #2c075c;                 /* Text/Purple light — was #4a1282, confirmed live via Figma (node 11838:24922, "IA Insight - List Entity") */
 
     --tag-lightblue-bg:   #e5f8ff;                 /* Light Blue/100      */
     --tag-lightblue-bd:   #00b5d9;                 /* Light Blue/500      */
@@ -1115,7 +1117,7 @@
 
     --ab-success-bg:    #e5fdf8;                  /* Surface/Success/More Subtle light = tag-success-bg */
     --ab-success-bd:    rgba(0,153,120,0.25);     /* Border/Success tint                             */
-    --ab-success-icon:  #009978;                  /* Icon/Success/Default light = tag-success-bd     */
+    --ab-success-icon:  #00a07e;                  /* Icon/Success/Default light — was #009978 (that's actually Border/Success/Lighter), confirmed live via Figma */
     --ab-success-text:  #003328;                  /* Text/Success light = tag-success-fg             */
 
     --ab-alert-bg:      #ffeedb;                  /* Surface/Alert/More Subtle light = tag-alert-bg  */
@@ -1174,8 +1176,8 @@
     --fi-chip-hover-bg:      #f2f2f2;                   /* Surface/Neutral/Default light                  */
     --fi-chip-active-bg:     rgba(33,115,255,0.06);     /* Surface/Primary/Subtle light                   */
     --fi-chip-active-border: #2173ff;                   /* Border/Primary/Default light                   */
-    --fi-chip-active-text:   #2173ff;                   /* Text/Info light                                */
-    --fi-chip-active-icon:   #2173ff;                   /* Icon/Primary light                             */
+    --fi-chip-active-text:   #001740;                   /* Text/Info light — was #2173ff (generic primary blue, wrong token), confirmed via canonical --color-text-info */
+    --fi-chip-active-icon:   #001740;                   /* Icon/Primary/Darker light — was #2173ff, confirmed via canonical --color-icon-primary-darker */
     --fi-clear-text:         rgba(0,0,0,0.45);          /* Text/Caption light                             */
     --fi-clear-hover:        rgba(0,0,0,0.80);          /* Text/Subtitle light on hover                   */
     --fi-badge-bg:           #2173ff;

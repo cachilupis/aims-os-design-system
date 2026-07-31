@@ -68,7 +68,7 @@ const triggerCva = cva(
   {
     variants: {
       visualState: {
-        default:  "border-[0.5px] border-[var(--field-border)] hover:border-[var(--field-border-hover)]",
+        default:  "border-[0.5px] border-[var(--field-border)] hover:border-[var(--color-border-neutral-black)]",
         active:   "border border-[var(--field-border-focus)]",
         error:    "border-[0.5px] border-[var(--field-border-error)]",
         disabled: "border border-[var(--field-border)] opacity-40 pointer-events-none",
