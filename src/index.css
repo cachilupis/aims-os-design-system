@@ -449,7 +449,7 @@
     /* Source: Figma v6rmYKA2zmyXWOahlxLOeI · Sidebar page · variable bindings resolved */
     --sb-bg:               var(--color-surface-neutral-black);  /* Surface/Neutral/Black dark = #0F172B       */
     --sb-icon-default:     rgba(128,175,255,0.90);              /* Icon/Primary/Lighter dark  = #80AFFF 90%   */
-    --sb-icon-active:      var(--color-icon-neutral-dark);      /* Icon/Neutral/Dark dark     = White/70      */
+    --sb-icon-active:      var(--color-icon-neutral-dark);      /* Icon/Neutral/Dark dark     = White/50      */
     --sb-text:             var(--color-text-negative);          /* Text/Negative              = #ffffff       */
     --sb-row-hover:        rgba(255,255,255,0.20);              /* Surface/Neutral/Darker dark = White/20     */
     --sb-icon-hover-bg:    var(--color-surface-neutral-black);  /* Surface/Neutral/Black dark = #0F172B       */
@@ -618,7 +618,7 @@
     --color-button-primary-text-default:  #ffffff;                   /* Button/Primary/Text/Default    */
     --color-button-primary-text-disabled: rgba(255,255,255,0.30);   /* Button/Primary/Text/Disabled   */
     --color-icon-neutral-light:           #ffffff;                   /* Icon/Neutral/Light             */
-    --color-icon-neutral-dark:            rgba(255,255,255,0.70);    /* Icon/Neutral/Dark dark         */
+    --color-icon-neutral-dark:            rgba(255,255,255,0.50);    /* Icon/Neutral/Dark dark — was 0.70, confirmed via Figma to match COLORS_SPEC's documented value */
     --color-icon-neutral-black:           #2a2a2a;                   /* Icon/Neutral/Black             */
     /* ── Header component tokens ──────────────────────────────────── */
     --header-title:      var(--color-text-title);                    /* Page title                     */

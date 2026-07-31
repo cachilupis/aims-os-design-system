@@ -6,11 +6,11 @@
  *
  * States:
  *   Active   → 2px indicator span (absolute) · --primary color · NO container border
- *   Default  → no bg · no line · --field-supporting color
+ *   Default  → no bg · no line · --color-text-subtitle color (Text/Subtitle — same token Chip uses for its inactive label, confirmed in Figma)
  *   Hover    → --tabs-hover-bg (Surface/Neutral/Subtle) · rounded-[8px] · --foreground text · no line
  *   Disabled → opacity-40 · no interaction
  *
- * Tokens: --primary · --field-supporting · --foreground · --tabs-hover-bg
+ * Tokens: --primary · --color-text-subtitle · --foreground · --tabs-hover-bg
  */
 
 import { cn } from "@/lib/utils"
@@ -66,7 +66,7 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
                 : "gap-[6px] px-[16px] py-[8px] text-[14px]",
               isActive
                 ? "text-[var(--primary)]"
-                : "text-[var(--field-supporting)]",
+                : "text-[var(--color-text-subtitle)]",
               !isActive && !isDisabled && "hover:bg-[var(--tabs-hover-bg)] hover:text-[var(--foreground)] cursor-pointer",
               isDisabled && "opacity-40 cursor-not-allowed",
             )}

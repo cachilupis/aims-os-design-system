@@ -1240,7 +1240,7 @@ const TOPBAR_SPEC = {
       borderWidth: "0",
       tokens: [
         { role: "Background",  variable: "—",                        varId: "", light: "transparent",         dark: "transparent" },
-        { role: "Icon color",  variable: "Icon/Neutral/Dark",         varId: "", light: "rgba(92,92,92)",      dark: "rgba(255,255,255,0.70)" },
+        { role: "Icon color",  variable: "Icon/Neutral/Dark",         varId: "", light: "rgba(92,92,92)",      dark: "rgba(255,255,255,0.50)" },
       ],
     },
     {
@@ -1382,7 +1382,7 @@ const INFORMATIVE_CARD_SPEC = {
     ]},
     { name: "Neutral", borderWidth: "0", tokens: [
       { role: "Background", variable: "Surface/Neutral/Default", varId: "", light: "#F2F2F2",              dark: "rgba(255,255,255,0.08)" },
-      { role: "Icon",       variable: "Icon/Neutral/Dark",       varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.70)" },
+      { role: "Icon",       variable: "Icon/Neutral/Dark",       varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.50)" },
       { role: "Text",       variable: "Text/Primary",            varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.70)" },
     ]},
   ],
@@ -1419,7 +1419,7 @@ const PAGINATION_SPEC = {
       tokens: [
         { role: "Range text + row count",      variable: "--color-text-label",               varId: "Text/Label",               light: "#2a2a2a",              dark: "rgba(255,255,255,0.80)" },
         { role: '"Rows per page:" caption',    variable: "--color-text-subtitle",            varId: "Text/Subtitle",            light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
-        { role: "Nav icons + chevron",         variable: "--color-icon-neutral-dark",        varId: "Icon/Neutral/Dark",        light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.70)" },
+        { role: "Nav icons + chevron",         variable: "--color-icon-neutral-dark",        varId: "Icon/Neutral/Dark",        light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.50)" },
         { role: "Nav button hover bg",         variable: "--color-surface-neutral-default",  varId: "Surface/Neutral/Default",  light: "#f2f2f2",              dark: "rgba(255,255,255,0.06)" },
         { role: "Inner container bg",          variable: "--surface-floating-default",       varId: "Surface/Floating/Default", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
         { role: "Inner container border",      variable: "--color-border-neutral-default",   varId: "Border/Neutral/Default",   light: "#5c5c5c",              dark: "rgba(255,255,255,0.10)" },
@@ -1471,7 +1471,7 @@ const HEADER_SPEC = {
       tokens: [
         { role: "Title text",       variable: "--header-title",     varId: "Text/Title",        light: "#1A1A1A",          dark: "rgba(255,255,255,0.80)" },
         { role: "Description text", variable: "--header-desc",      varId: "Text/Body",         light: "#5C5C5C",          dark: "#94A3B8"                },
-        { role: "Back button icon", variable: "--header-back-icon", varId: "Icon/Neutral/Dark", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.70)" },
+        { role: "Back button icon", variable: "--header-back-icon", varId: "Icon/Neutral/Dark", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.50)" },
       ],
     },
     {
@@ -2254,8 +2254,8 @@ const TABS_SPEC = {
     { element: "Indicator", padding: "—",       gap: "—",   radius: "0",   note: "2px · active tab only · bottom-[0] · abs positioned" },
   ],
   typography: [
-    { element: "Label M", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
-    { element: "Label S", family: "Inter", size: "12px", weight: "Medium (500)", lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
+    { element: "Label M", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.4", variable: "--color-text-subtitle / --primary", note: "Inactive / active" },
+    { element: "Label S", family: "Inter", size: "12px", weight: "Medium (500)", lineHeight: "1.4", variable: "--color-text-subtitle / --primary", note: "Inactive / active" },
   ],
   states: [
     { name: "Active",   borderWidth: "indicator 2px", tokens: [
@@ -2541,7 +2541,7 @@ const SLIDE_OUT_SPEC = {
       tokens: [
         { role: "Title",                           variable: "--color-text-title",                varId: "Text/Title",                      light: "#000000",                dark: "rgba(255,255,255,0.80)"       },
         { role: "Body / subtitle",                 variable: "--slide-out-body",                  varId: "Text/Body",                       light: "#5c5c5c",                dark: "#94A3B8"                      },
-        { role: "Tab/chip label (inactive)",       variable: "--color-text-label",                varId: "Text/Label",                      light: "#2a2a2a",                dark: "rgba(255,255,255,0.80)"       },
+        { role: "Tab/chip label (inactive)",       variable: "--color-text-subtitle",             varId: "Text/Subtitle",                   light: "#2a2a2a",                dark: "rgba(255,255,255,0.60)"       },
         { role: "Active tab / link",               variable: "--primary",                         varId: "Text/Link",                       light: "#2173ff",                dark: "#2b7fff"                      },
         { role: "Status tag text",                 variable: "--color-text-success",              varId: "Text/Success",                    light: "#003328",                dark: "#6ee7b7"                      },
         { role: "Search placeholder",              variable: "--color-text-disabled",             varId: "Text/Disabled",                   light: "#bababa",                dark: "rgba(255,255,255,0.30)"       },
@@ -27218,7 +27218,7 @@ function TopbarPage({ openSpec, onAppThemeChange }: { openSpec: (s: SpecModal) =
   const tokenRows = [
     { cssVar: "--topbar-text",             dsToken: "Text/Subtitle",           role: "Workspace name",           light: "rgba(42,42,42,1)",    dark: "rgba(255,255,255,0.60)" },
     { cssVar: "--topbar-text-secondary",   dsToken: "Text/Body",               role: "Company name, placeholder", light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.50)" },
-    { cssVar: "--topbar-icon",             dsToken: "Icon/Neutral/Dark",        role: "Icons, chevron",           light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.70)" },
+    { cssVar: "--topbar-icon",             dsToken: "Icon/Neutral/Dark",        role: "Icons, chevron",           light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.50)" },
     { cssVar: "--topbar-workspace-border", dsToken: "Border/Primary/Subtle",    role: "Left zone + company frame", light: "rgba(233,241,255,1)", dark: "rgba(43,127,255,0.20)"  },
     { cssVar: "--topbar-divider",          dsToken: "Border/Neutral/Subtle",    role: "Vertical + bottom divider", light: "rgba(242,242,242,1)", dark: "rgba(255,255,255,0.08)" },
     { cssVar: "--topbar-btn-hover-bg",     dsToken: "Surface/Neutral/Hover",    role: "Button hover bg",          light: "rgba(250,250,250,1)", dark: "rgba(255,255,255,0.08)" },
@@ -31568,7 +31568,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   {[
                     { token: "--header-title",    figma: "Text/Title",        role: "Page title",       light: "#1A1A1A",          dark: "rgba(255,255,255,0.80)" },
                     { token: "--header-desc",      figma: "Text/Body",         role: "Description text", light: "#5C5C5C",          dark: "#94A3B8"                },
-                    { token: "--header-back-icon", figma: "Icon/Neutral/Dark", role: "Back button icon", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.70)" },
+                    { token: "--header-back-icon", figma: "Icon/Neutral/Dark", role: "Back button icon", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.50)" },
                   ].map(row => (
                     <tr key={row.token} className="border-b border-[var(--field-border)] last:border-0">
                       <td className="py-[10px] pr-[16px] font-mono text-[12px] text-[var(--primary)]">{row.token}</td>
@@ -32113,7 +32113,7 @@ function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   {[
                     { token: "--color-text-label",              figma: "Text/Label",               role: "Range text + row count",       light: "#2a2a2a",               dark: "rgba(255,255,255,0.80)" },
                     { token: "--color-text-subtitle",           figma: "Text/Subtitle",            role: '"Rows per page:" caption',     light: "#2a2a2a",               dark: "rgba(255,255,255,0.60)" },
-                    { token: "--color-icon-neutral-dark",       figma: "Icon/Neutral/Dark",        role: "Nav icons + chevron",          light: "rgba(92,92,92,1)",      dark: "rgba(255,255,255,0.70)" },
+                    { token: "--color-icon-neutral-dark",       figma: "Icon/Neutral/Dark",        role: "Nav icons + chevron",          light: "rgba(92,92,92,1)",      dark: "rgba(255,255,255,0.50)" },
                     { token: "--color-surface-neutral-default", figma: "Surface/Neutral/Default",  role: "Nav button hover bg",          light: "#f2f2f2",               dark: "rgba(255,255,255,0.06)" },
                     { token: "--surface-floating-default",      figma: "Surface/Floating/Default", role: "Inner container bg",           light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
                     { token: "--color-border-neutral-default",  figma: "Border/Neutral/Default",   role: "Inner container border",       light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)" },
