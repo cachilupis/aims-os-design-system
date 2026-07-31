@@ -19,6 +19,10 @@ export interface WidgetCTAProps {
 }
 
 export interface WidgetFatherProps {
+  // ── Layout mode ────────────────────────────────────────────────────────────
+  /** When true, strips the card shell (border/bg/padding/radius/shadow). Use
+   *  when an outer CardContainer already provides the card shell (e.g. canvas). */
+  noCard?: boolean
   // ── Header ─────────────────────────────────────────────────────────────────
   title: string
   /** Optional description line below title. Hidden when undefined. */
@@ -175,6 +179,7 @@ function WidgetCTAFooter({ cta }: { cta: WidgetCTAProps }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function WidgetFather({
+  noCard       = false,
   title,
   description,
   showInfo     = false,
@@ -209,7 +214,12 @@ export function WidgetFather({
   return (
     <div
       className={cn("flex flex-col gap-[12px]", className)}
-      style={{
+      style={noCard ? {
+        position: "relative",
+        width: "100%",
+        maxWidth: "none",
+        minHeight: 0,
+      } : {
         position: "relative",
         width: "100%",
         maxWidth,
@@ -233,8 +243,8 @@ export function WidgetFather({
         }}
         style={{
           position: "absolute",
-          left: -2,
-          top: 22,
+          left: noCard ? -26 : -2,
+          top: noCard ? 3 : 22,
           zIndex: 30,
           background: "var(--widget-bg)",
           border: "1px solid var(--widget-border)",
@@ -303,7 +313,7 @@ export function WidgetFather({
       {/* ── Collapsible wrapper: Body + Footer CTA ────────────────────── */}
       <div
         style={{
-          flex: isCollapsed ? "0 0 0px" : "1 1 auto",
+          flex: isCollapsed ? "0 0 0px" : "1 1 0",
           maxHeight: isCollapsed ? 0 : 9999,
           overflow: "hidden",
           transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1)",
@@ -314,7 +324,7 @@ export function WidgetFather({
         }}
       >
         {/* ── Body ──────────────────────────────────────────────────────── */}
-        <div className="w-full" style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        <div className="w-full" style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           {hasConnectionError ? (
             <div
               className="flex flex-col items-center justify-center rounded-[12px]"

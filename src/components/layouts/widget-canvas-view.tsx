@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { GripVertical } from "lucide-react"
 import { WidgetFather } from "@/components/ui/widget-father"
 import type { WidgetWidthClass } from "@/components/ui/widget-father"
+import { CardContainer } from "@/components/ui/card-container"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 //
@@ -290,7 +291,23 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
   widthByUidRef.current = widthByUid
   const layoutRef         = useRef<LayoutItem[]>(layout)
   layoutRef.current = layout
+  const rowSpanByUidRef   = useRef<Record<string, number>>({})
+  rowSpanByUidRef.current = rowSpanByUid
   initialSlotsRef.current = initialSlots
+
+  // ── Undo history ──────────────────────────────────────────────────────────
+  const historyRef = useRef<Array<{
+    layout: LayoutItem[]
+    widthByUid: Record<string, WidgetWidthClass>
+    rowSpanByUid: Record<string, number>
+  }>>([])
+
+  function pushHistory() {
+    historyRef.current = [
+      ...historyRef.current.slice(-19),
+      { layout: layoutRef.current, widthByUid: { ...widthByUidRef.current }, rowSpanByUid: { ...rowSpanByUidRef.current } },
+    ]
+  }
 
   const isDragging = dragUid !== null
 
@@ -418,63 +435,99 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
       if (px !== null) {
         const colW = getColWidthPx()
         // Normalize by (colW + GU_GAP) so that each column boundary falls exactly
-        // on an integer: narrow=4, half=6, wide=8, xl=9, full=12. Without the gap
-        // correction a widget at "wide" (8 cols) has rawCols≈9.31, snapping to xl.
+        // on an integer: narrow=4, half=6, wide=8, xl=9, full=12.
         const rawCols = (px + GU_GAP) / (colW + GU_GAP)
         const SNAP_COLS = [4, 6, 8, 9, 12] as const
         const W_MAP: Record<number, WidgetWidthClass> = { 4: "narrow", 6: "half", 8: "wide", 9: "xl", 12: "full" }
         const snapNearest = (n: number) => SNAP_COLS.reduce((a, b) => Math.abs(a - n) <= Math.abs(b - n) ? a : b)
-        const newCols = snapNearest(rawCols)
+
+        // Anchor: right handle → left edge (colStart) stays fixed; left handle → right edge (colEnd) stays fixed
+        const pinnedColStart = gridPositions[resizing!.uid]?.colStart ?? 1
+        const prevCols       = resizing!.startCols
+        const pinnedColEnd   = pinnedColStart + prevCols - 1
+        const maxCols = resizing!.edge === "right"
+          ? 12 - (pinnedColStart - 1)
+          : pinnedColEnd
+        const newCols = snapNearest(Math.min(rawCols, maxCols))
         const newW = W_MAP[newCols]
+
+        // ── Pre-compute row structure once (shared between both setters) ──────
+        // Using closure `widthByUid` (pre-resize) and `layout` (pre-resize).
+        const rows: LayoutEntry[][] = []
+        let col = 0, currentRow: LayoutEntry[] = []
+        for (const item of layout) {
+          if (isStack(item)) {
+            if (col + 4 > 12) { if (currentRow.length) rows.push([...currentRow]); currentRow = []; col = 4 }
+            else col += 4
+            continue
+          }
+          const e = item as LayoutEntry
+          const span = colSpanForWidth(widthByUid[e.uid] ?? e.widthClass)
+          if (col + span > 12) { if (currentRow.length) rows.push([...currentRow]); currentRow = [e]; col = span }
+          else { col += span; currentRow.push(e) }
+        }
+        if (currentRow.length) rows.push([...currentRow])
+
+        const foundRow = rows.find(r => r.some(e => e.uid === resizing!.uid)) ?? null
+        const leftSibs  = foundRow ? foundRow.filter(e => e.uid !== resizing!.uid && (gridPositions[e.uid]?.colStart ?? 0) < pinnedColStart) : []
+        const rightSibs = foundRow ? foundRow.filter(e => e.uid !== resizing!.uid && (gridPositions[e.uid]?.colStart ?? 0) > pinnedColStart) : []
+
+        const newColStartAfterResize = resizing!.edge === "right"
+          ? pinnedColStart
+          : Math.max(1, pinnedColEnd - newCols + 1)
+
+        // ── Determine which siblings go BEFORE vs AFTER the resized widget ───
+        // Right-handle: left edge pinned → all left siblings go before (their spans
+        //   are unchanged and sum exactly to pinnedColStart − 1).
+        // Left-handle: right edge pinned, widget shifts left → ONLY the adjacent
+        //   (rightmost) left sibling fits before. If multiple left siblings were placed
+        //   before, their combined span would exceed newColStart − 1 and the resized
+        //   widget would wrap to the next row. Others go after (wrap via bin-packing).
+        const beforeResizedUids = new Set<string>()
+        if (resizing!.edge === "right") {
+          leftSibs.forEach(s => beforeResizedUids.add(s.uid))
+        } else {
+          const available = newColStartAfterResize - 1
+          if (available >= 4 && leftSibs.length > 0) {
+            const rightmostLeft = leftSibs.reduce((best, sib) =>
+              (gridPositions[sib.uid]?.colStart ?? 0) > (gridPositions[best.uid]?.colStart ?? 0) ? sib : best
+            )
+            beforeResizedUids.add(rightmostLeft.uid)
+          }
+        }
+
+        pushHistory()
 
         setWidthByUid(prev => {
           const next = { ...prev, [resizing!.uid]: newW }
 
-          // Build all rows from the current layout, then find the full row containing
-          // the resized widget. We must NOT break early — the resized widget may be
-          // first in its row, so siblings (coming after it) would be missed.
-          const rows: LayoutEntry[][] = []
-          let col = 0
-          let currentRow: LayoutEntry[] = []
-          for (const item of layout) {
-            if (isStack(item)) {
-              // stacks occupy 4 cols but aren't resizeable siblings
-              if (col + 4 > 12) { if (currentRow.length) rows.push([...currentRow]); currentRow = []; col = 4 }
-              else col += 4
-              continue
-            }
-            const e = item as LayoutEntry
-            const span = colSpanForWidth(prev[e.uid] ?? e.widthClass)
-            if (col + span > 12) {
-              if (currentRow.length) rows.push([...currentRow])
-              currentRow = [e]; col = span
-            } else {
-              col += span; currentRow.push(e)
-            }
-          }
-          if (currentRow.length) rows.push([...currentRow])
-
-          const foundRow = rows.find(r => r.some(e => e.uid === resizing!.uid))
           if (foundRow && foundRow.length >= 2) {
-            const siblings = foundRow.filter(e => e.uid !== resizing!.uid)
-            const available = 12 - newCols
-            if (siblings.length === 1 && available >= 4) {
-              next[siblings[0].uid] = W_MAP[snapNearest(available)]
-            } else if (siblings.length >= 2) {
-              // Distribute remaining cols evenly; if not enough for all, give the
-              // first sibling what fits and let the rest wrap to the next row.
-              let remaining = available
-              for (const sib of siblings) {
-                if (remaining < 4) break
-                const give = snapNearest(Math.min(remaining, Math.floor(remaining / (siblings.length - siblings.indexOf(sib)))))
-                next[sib.uid] = W_MAP[Math.max(4, give) as 4|6|8|9|12] ?? "narrow"
-                remaining -= give
+            if (resizing!.edge === "right") {
+              // Left siblings untouched → total span = pinnedColStart − 1 preserved.
+              const available = 12 - (pinnedColStart - 1) - newCols
+              if (rightSibs.length === 1 && available >= 4) {
+                next[rightSibs[0].uid] = W_MAP[snapNearest(available)]
+              } else if (rightSibs.length >= 2) {
+                // Give all available to the adjacent (leftmost) right sibling.
+                const leftmostRight = rightSibs.reduce((best, sib) =>
+                  (gridPositions[sib.uid]?.colStart ?? 0) < (gridPositions[best.uid]?.colStart ?? 0) ? sib : best
+                )
+                if (available >= 4) next[leftmostRight.uid] = W_MAP[snapNearest(available)]
+              }
+            } else {
+              // Left-handle: right siblings untouched. Only the adjacent (rightmost)
+              // left sibling absorbs the change so its span = newColStart − 1 exactly.
+              const available = newColStartAfterResize - 1
+              if (leftSibs.length > 0 && available >= 4) {
+                const rightmostLeft = leftSibs.reduce((best, sib) =>
+                  (gridPositions[sib.uid]?.colStart ?? 0) > (gridPositions[best.uid]?.colStart ?? 0) ? sib : best
+                )
+                next[rightmostLeft.uid] = W_MAP[snapNearest(available)]
               }
             }
           }
 
-          // Second pass: expand widgets displaced from the resized widget's ORIGINAL row.
-          // Limiting to origRow prevents dramatic auto-expansions in unrelated rows.
+          // Second pass: expand widgets displaced from the resized widget's original row.
           {
             const origRow = rows.find(r => r.some(e => e.uid === resizing!.uid)) ?? []
             const origRowUids = new Set(origRow.map(e => e.uid))
@@ -502,6 +555,35 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
           }
 
           return next
+        })
+
+        // Reorder the layout array so bin-packing places the resized widget at its
+        // correct post-resize colStart. Uses pre-computed beforeResizedUids to ensure
+        // the two setters always agree on which siblings go before vs after.
+        setLayout(prev => {
+          const foundRow2 = rows.find(r => r.some(e => e.uid === resizing!.uid))
+          if (!foundRow2 || foundRow2.length < 2) return prev
+
+          const rowUids = new Set(foundRow2.map(e => e.uid))
+          const beforeResized = foundRow2
+            .filter(e => e.uid !== resizing!.uid && beforeResizedUids.has(e.uid))
+            .sort((a, b) => (gridPositions[a.uid]?.colStart ?? 0) - (gridPositions[b.uid]?.colStart ?? 0))
+          const afterResized  = foundRow2
+            .filter(e => e.uid !== resizing!.uid && !beforeResizedUids.has(e.uid))
+            .sort((a, b) => (gridPositions[a.uid]?.colStart ?? 0) - (gridPositions[b.uid]?.colStart ?? 0))
+          const resizedItem = foundRow2.find(e => e.uid === resizing!.uid)!
+          const orderedRow  = [...beforeResized, resizedItem, ...afterResized]
+
+          const result: LayoutItem[] = []
+          let rowInserted = false
+          for (const item of prev) {
+            if (!isStack(item) && rowUids.has((item as LayoutEntry).uid)) {
+              if (!rowInserted) { orderedRow.forEach(e => result.push(e)); rowInserted = true }
+            } else {
+              result.push(item)
+            }
+          }
+          return result
         })
       }
       // Do NOT set dragJustEndedRef here — the auto-expand would see a lone widget
@@ -687,6 +769,8 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
           }
         }
 
+        pushHistory()
+
         setLayout(prev => {
           let dragSlot: LayoutEntry | null = null
           const next: LayoutItem[] = []
@@ -795,6 +879,24 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
+  // ── Undo (Cmd+Z / Ctrl+Z) ─────────────────────────────────────────────────
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        const h = historyRef.current
+        if (!h.length) return
+        e.preventDefault()
+        const snap = h[h.length - 1]
+        historyRef.current = h.slice(0, -1)
+        setLayout(snap.layout)
+        setWidthByUid(snap.widthByUid)
+        setRowSpanByUid(snap.rowSpanByUid)
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
+
   // ── Vertical resize + collapse (GU-snapping) ─────────────────────────────
   useEffect(() => {
     function onMove(e: MouseEvent) {
@@ -814,6 +916,7 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
       const { uid, moved } = vertResizeRef.current
       if (moved && vertPreviewRef.current !== null) {
         const min = slotMap.get(uid)?.minRowSpan ?? 3
+        pushHistory()
         setRowSpanByUid(prev => ({ ...prev, [uid]: Math.max(min, vertPreviewRef.current as number) }))
       }
       // Collapse is now intentional — triggered only via the chevron button in the header.
@@ -1129,7 +1232,7 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
                       )}
                       <div
                         ref={el => { flipInnerRefs.current[slot.uid] = el }}
-                        style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden", borderRadius: 16 }}
+                        style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", borderRadius: 16 }}
                       >
                         {isDropTarget && (dropSide === "before" || dropSide === "after") && (
                           <div style={{
@@ -1150,23 +1253,26 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
                           }} />
                         )}
                         <WidgetSizeContext.Provider value={{ widthClass: "narrow", isNarrow: true, isWide: false, isFull: false, availableHeight: guToPixels(slotRowSpan), contentHeight: Math.max(0, guToPixels(slotRowSpan) - WIDGET_CHROME_HEIGHT) }}>
-                          <WidgetFather
-                            className="flex-1"
-                            title={slotDef.title}
-                            fillWidth
-                            widthClass="narrow"
-                            showRefresh={slotDef.showRefresh ?? true}
-                            showMenu={slotDef.showMenu ?? true}
-                            showInfo={slotDef.showInfo ?? false}
-                            isHovered={isHovering}
-                            isDragging={isThisDragging}
-                            onGripMouseDown={e => {
-                              if (isResizingRef.current || vertResizeRef.current) return
-                              dragPotentialRef.current = { uid: slot.uid, x: e.clientX, y: e.clientY }
-                            }}
-                          >
-                            {slotDef.content}
-                          </WidgetFather>
+                          <CardContainer size="lg" className="flex flex-col flex-1">
+                            <WidgetFather
+                              noCard
+                              className="flex-1 min-h-0"
+                              title={slotDef.title}
+                              fillWidth
+                              widthClass="narrow"
+                              showRefresh={slotDef.showRefresh ?? true}
+                              showMenu={slotDef.showMenu ?? true}
+                              showInfo={slotDef.showInfo ?? false}
+                              isHovered={isHovering}
+                              isDragging={isThisDragging}
+                              onGripMouseDown={e => {
+                                if (isResizingRef.current || vertResizeRef.current) return
+                                dragPotentialRef.current = { uid: slot.uid, x: e.clientX, y: e.clientY }
+                              }}
+                            >
+                              {slotDef.content}
+                            </WidgetFather>
+                          </CardContainer>
                         </WidgetSizeContext.Provider>
                       </div>
                     </div>
@@ -1285,7 +1391,7 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
               {/* FLIP animation target */}
               <div
                 ref={el => { flipInnerRefs.current[entry.uid] = el }}
-                style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden", minHeight: 0, borderRadius: 16 }}
+                style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", minHeight: 0, borderRadius: 16 }}
               >
                 {/* Directional insertion indicator — shows before/after relative to target widget */}
                 {isDropTarget && (dropSide === "before" || dropSide === "after") && (
@@ -1314,23 +1420,26 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
                   availableHeight: guToPixels(effectiveRowSpan),
                   contentHeight: Math.max(0, guToPixels(effectiveRowSpan) - WIDGET_CHROME_HEIGHT),
                 }}>
-                  <WidgetFather
-                    className="flex-1"
-                    title={slotDef.title}
-                    fillWidth
-                    widthClass={currentWidth}
-                    showRefresh={slotDef.showRefresh ?? true}
-                    showMenu={slotDef.showMenu ?? true}
-                    showInfo={slotDef.showInfo ?? false}
-                    isHovered={isHovering}
-                    isDragging={isThisDragging}
-                    onGripMouseDown={e => {
-                      if (isResizingRef.current || vertResizeRef.current) return
-                      dragPotentialRef.current = { uid: entry.uid, x: e.clientX, y: e.clientY }
-                    }}
-                  >
-                    {slotDef.content}
-                  </WidgetFather>
+                  <CardContainer size="lg" className="flex flex-col flex-1">
+                    <WidgetFather
+                      noCard
+                      className="flex-1 min-h-0"
+                      title={slotDef.title}
+                      fillWidth
+                      widthClass={currentWidth}
+                      showRefresh={slotDef.showRefresh ?? true}
+                      showMenu={slotDef.showMenu ?? true}
+                      showInfo={slotDef.showInfo ?? false}
+                      isHovered={isHovering}
+                      isDragging={isThisDragging}
+                      onGripMouseDown={e => {
+                        if (isResizingRef.current || vertResizeRef.current) return
+                        dragPotentialRef.current = { uid: entry.uid, x: e.clientX, y: e.clientY }
+                      }}
+                    >
+                      {slotDef.content}
+                    </WidgetFather>
+                  </CardContainer>
                 </WidgetSizeContext.Provider>
               </div>
             </div>

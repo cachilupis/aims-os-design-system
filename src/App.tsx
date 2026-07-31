@@ -13728,7 +13728,7 @@ const CANVAS_COLS = (canvasWidth: number): number => {
             <p className="text-[13px] text-[var(--field-supporting)] mb-[12px]">Widgets never grow to fit content. Use one of these strategies when content exceeds the widget height class.</p>
             <div className="flex flex-col gap-[8px]">
               {[
-                { strategy: "Internal scroll",  when: "Heavy class — table, feed, timeline", tag: "Preferred" },
+                { strategy: "Internal scroll",  when: "Heavy class — use ScrollArea with flex:1 minHeight:0 paddingBottom:12 inside WidgetFather noCard", tag: "Preferred" },
                 { strategy: "Pagination",        when: "Standard class — list of items within widget", tag: "Alternative" },
                 { strategy: "Drill-down action", when: "Any class — 'View all' link opens EntityList in main tab", tag: "Alternative" },
               ].map(s => (
@@ -13736,6 +13736,64 @@ const CANVAS_COLS = (canvasWidth: number): number => {
                   <span className="text-[12px] font-semibold text-[var(--foreground)]" style={{ width: 160 }}>{s.strategy}</span>
                   <span className="text-[12px] text-[var(--field-supporting)] flex-1">{s.when}</span>
                   <span className="text-[10px] font-semibold px-[6px] py-[2px] rounded-[3px]" style={{ background: s.tag === "Preferred" ? "var(--color-surface-success-subtle)" : "var(--color-surface-neutral-darker)", color: s.tag === "Preferred" ? "var(--color-surface-success-default)" : "var(--field-supporting)" }}>{s.tag}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Widget Row Interaction Patterns</SectionLabel>
+            <p className="text-[13px] mb-[12px]" style={{ color: "var(--field-supporting)" }}>
+              All widget list rows share the same hover anatomy — a subtle fill + animated metadata row + portaled tooltips on each metadata icon.
+            </p>
+            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.8] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`// Row hover pattern — consistent across all list widgets
+const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+const [tooltip, setTooltip] = useState<{text:string; x:number; y:number} | null>(null)
+
+function showTip(e: React.MouseEvent, text: string) {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  setTooltip({ text, x: r.left + r.width / 2, y: r.top })
+}
+
+// Tooltip must be portaled — canvas applies transform:scale(1)
+// which breaks position:fixed without a portal
+{tooltip && createPortal(
+  <div style={{ position:"fixed", left:tooltip.x, top:tooltip.y-4,
+    transform:"translateX(-50%) translateY(-100%)",
+    background:"var(--color-surface-neutral-darker)", color:"#fff",
+    borderRadius:4, padding:"3px 7px", fontSize:10,
+    pointerEvents:"none", zIndex:99999, whiteSpace:"nowrap" }}>
+    {tooltip.text}
+  </div>, document.body
+)}
+
+// Row div
+<div
+  onMouseEnter={() => setHoveredIdx(i)}
+  onMouseLeave={() => setHoveredIdx(null)}
+  className="rounded-[8px] px-[12px] py-[8px] mb-[4px] transition-colors hover:bg-[var(--color-surface-neutral-subtle)]"
+  style={{ border:"0.5px solid var(--field-border)" }}
+>
+  {/* main row content */}
+  {/* metadata row — reveals on hover OR selection */}
+  <div style={{ maxHeight: hoveredIdx===i || selected ? 36 : 0,
+    opacity: hoveredIdx===i || selected ? 1 : 0,
+    overflow:"hidden", transition:"max-height 200ms ease, opacity 180ms ease" }}>
+    <span onMouseEnter={e => showTip(e,"Label")} onMouseLeave={() => setTooltip(null)}>
+      <Icon size={10} />
+    </span>
+  </div>
+</div>`}</pre>
+            <div className="mt-[12px] flex flex-col gap-[6px]">
+              {[
+                { rule: "Hover fill token",       detail: "Always --color-surface-neutral-subtle. Never hardcode rgba or use primary-blue fill for hover." },
+                { rule: "Row border",              detail: "0.5px solid var(--field-border). Selected state upgrades to var(--card-default-selected-bd) via !border." },
+                { rule: "Metadata reveal trigger", detail: "Meta row shows on hoveredIdx === i OR selectedIdx === i — never only on click." },
+                { rule: "Group headers (MyWork)",  detail: "Badge component + 12px/400 caption text + Tag component for count. No colored background, no custom dot." },
+              ].map(r => (
+                <div key={r.rule} className="flex items-start gap-[10px] px-[12px] py-[10px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--color-border-neutral-default)" }}>
+                  <code className="text-[11px] shrink-0 mt-[1px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{r.rule}</code>
+                  <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{r.detail}</span>
                 </div>
               ))}
             </div>
@@ -21679,6 +21737,7 @@ function WidgetFatherPage() {
                 </tr></thead>
                 <tbody>
                   {[
+                    { prop: "noCard",             type: "boolean",                   def: "false",        desc: "Strips the card shell (border, bg, padding, radius, shadow). Use when an outer CardContainer already provides the card shell — e.g. in the canvas." },
                     { prop: "title",             type: "string",                    def: "required",     desc: "Widget header title. Displayed uppercase, semibold, 12px." },
                     { prop: "description",        type: "string?",                   def: "undefined",    desc: "Optional subtitle below the title. Shown when provided." },
                     { prop: "showRefresh",        type: "boolean",                   def: "true",         desc: "Show the ↺ refresh icon action button." },
@@ -21702,6 +21761,39 @@ function WidgetFatherPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Canvas Integration Pattern</SectionLabel>
+            <p className="text-[13px] mb-[12px]" style={{ color: "var(--field-supporting)" }}>
+              In the widget canvas each WidgetFather is wrapped by a <code className="text-[11px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>CardContainer size="lg"</code>. Pass <code className="text-[11px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>noCard</code> to WidgetFather so it doesn't double-render a card shell.
+            </p>
+            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.8] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`// ✅ Correct canvas pattern
+<CardContainer size="lg" className="flex flex-col flex-1">
+  <WidgetFather noCard className="flex-1 min-h-0" title="My Widget" fillWidth>
+    {/* widget body — use ScrollArea for scrollable content */}
+    <ScrollArea style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
+      {items.map(...)}
+    </ScrollArea>
+  </WidgetFather>
+</CardContainer>
+
+// ❌ Wrong — double card shell
+<WidgetFather title="My Widget">   {/* renders its own card + padding */}
+  <ScrollArea>...</ScrollArea>
+</WidgetFather>`}</pre>
+            <div className="mt-[12px] flex flex-col gap-[6px]">
+              {[
+                { rule: "CardContainer hover shadow", detail: "Do not add overflow:hidden to the container wrapping CardContainer — it clips the DS glow shadow on hover." },
+                { rule: "ScrollArea paddingBottom", detail: "Always set paddingBottom: 12 on the ScrollArea so the last item has breathing room when scrolled to the bottom." },
+                { rule: "Tooltip portaling", detail: "Render tooltips via createPortal(el, document.body). The canvas applies transform:scale(1) which offsets position:fixed descendants if not portaled out." },
+              ].map(r => (
+                <div key={r.rule} className="flex items-start gap-[10px] px-[12px] py-[10px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--color-border-neutral-default)" }}>
+                  <code className="text-[11px] shrink-0 mt-[1px] px-[4px] py-[0.5px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{r.rule}</code>
+                  <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{r.detail}</span>
+                </div>
+              ))}
             </div>
           </PatternCard>
         </div>
@@ -22125,8 +22217,8 @@ const ACTIVITY_TYPE_CONFIG: Record<string, { icon: string; color: string; bg: st
 
 function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
   type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
+  const [hoveredIdx,  setHoveredIdx]  = useState<number | null>(null)
   const [slideoutOpen, setSlideoutOpen] = useState(false)
   const [slideoutTab, setSlideoutTab] = useState(0)
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
@@ -22156,8 +22248,8 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
 
   return (
     <>
-      {/* Fixed-position tooltip rendered outside overflow:hidden */}
-      {tooltip && (
+      {/* Tooltip — portaled to body so transform:scale on canvas doesn't offset position:fixed */}
+      {tooltip && typeof document !== "undefined" && createPortal(
         <div style={{
           position: "fixed",
           left: tooltip.x,
@@ -22173,7 +22265,8 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
           whiteSpace: "nowrap",
         }}>
           {tooltip.text}
-        </div>
+        </div>,
+        document.body
       )}
       {/* SlideOut — opens when an activity item is clicked */}
       {slideoutOpen && selectedIdx !== null && (() => {
@@ -22267,38 +22360,19 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
           </SlideOut>
         )
       })()}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-      <div className="flex flex-col gap-[6px]">
+      <ScrollArea style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
         {ACTIVITY_DATA.map((activity, i) => {
           const cfg = ACTIVITY_TYPE_CONFIG[activity.type] ?? ACTIVITY_TYPE_CONFIG["call"]
           const CfgIcon = (LucideIcons as unknown as Record<string, LIcon>)[cfg.icon]
-          const isHovered = hoveredIdx === i
-          const isSelected = selectedIdx === i
-          const showMetaRow = showMeta || isHovered || isSelected
-          const borderColor = isSelected || isHovered
-            ? "var(--color-border-primary-default)"
-            : "var(--hi-informative-bg)"
-          const bgColor = isSelected
-            ? "var(--color-surface-primary-subtle)"
-            : isHovered
-              ? "var(--color-surface-primary-subtle)"
-              : "var(--widget-bg)"
+          const showMetaRow = showMeta || (selectedIdx === i) || (hoveredIdx === i)
 
           return (
-            <div
-              key={i}
+            <div key={i}
+              onClick={() => { setSelectedIdx(i); setSlideoutOpen(true); setSlideoutTab(0) }}
               onMouseEnter={() => setHoveredIdx(i)}
               onMouseLeave={() => setHoveredIdx(null)}
-              onClick={() => { setSelectedIdx(i); setSlideoutOpen(true); setSlideoutTab(0) }}
-              style={{
-                display: "flex", flexDirection: "column", gap: 4,
-                padding: "8px 10px", borderRadius: 8,
-                border: `1px solid ${borderColor}`,
-                background: bgColor,
-                cursor: "pointer",
-                transition: "background 150ms, border-color 150ms",
-                flexShrink: 0,
-              }}
+              className={`group cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] flex-shrink-0 hover:bg-[var(--color-surface-neutral-subtle)]${selectedIdx === i ? " bg-[var(--color-surface-neutral-subtle)] !border-[var(--card-default-selected-bd)]" : ""}`}
+              style={{ border: "0.5px solid var(--field-border)" }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ width: 26, height: 26, borderRadius: 6, flexShrink: 0,
@@ -22324,7 +22398,7 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
                   margin: 0, paddingLeft: 34, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {activity.desc}
               </p>
-              {/* Metadata row — smooth reveal on hover or select */}
+              {/* Metadata row — smooth reveal on select */}
               <div style={{
                 paddingLeft: 34,
                 maxHeight: showMetaRow ? 36 : 0,
@@ -22339,8 +22413,7 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
             </div>
           )
         })}
-      </div>
-      </div>
+      </ScrollArea>
     </>
   )
 }
@@ -22367,13 +22440,40 @@ const NOTES_ITEMS_DATA = [
 ]
 
 function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
   const [selectedNote, setSelectedNote] = useState<number | null>(null)
-  const [slideoutTab, setSlideoutTab] = useState(0)
+  const [hoveredIdx,   setHoveredIdx]   = useState<number | null>(null)
+  const [slideoutTab,  setSlideoutTab]  = useState(0)
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
   const iconSt: React.CSSProperties = { color: "var(--color-text-subtitle)" }
   const dot = (key: string) => <span key={key} style={{ fontSize: 10, color: "var(--field-supporting)" }}>·</span>
+
+  function showTip(e: React.MouseEvent, text: string) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setTooltip({ text, x: r.left + r.width / 2, y: r.top })
+  }
+
   return (
     <>
+    {/* Tooltip — portaled to body so transform:scale on canvas doesn't offset position:fixed */}
+    {tooltip && typeof document !== "undefined" && createPortal(
+      <div style={{
+        position: "fixed",
+        left: tooltip.x,
+        top: tooltip.y - 4,
+        transform: "translateX(-50%) translateY(-100%)",
+        background: "var(--color-surface-neutral-darker)",
+        color: "#ffffff",
+        borderRadius: 4,
+        padding: "3px 7px",
+        fontSize: 10,
+        pointerEvents: "none",
+        zIndex: 99999,
+        whiteSpace: "nowrap",
+      }}>
+        {tooltip.text}
+      </div>,
+      document.body
+    )}
     {/* SlideOut — opens when a note item is clicked */}
     {selectedNote !== null && (() => {
       const note = NOTES_ITEMS_DATA[selectedNote]
@@ -22479,25 +22579,17 @@ function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
         </SlideOut>
       )
     })()}
-    <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-    <div className="flex flex-col gap-[6px]">
+    <ScrollArea style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
       {NOTES_ITEMS_DATA.map((note, i) => {
-        const isHov = hoveredIdx === i
-        const isSelected = selectedNote === i
-        const showExpanded = showMeta || isHov
+        const showExpanded = showMeta || selectedNote === i || hoveredIdx === i
         return (
           <div
             key={i}
+            onClick={() => { setSelectedNote(i); setSlideoutTab(0) }}
             onMouseEnter={() => setHoveredIdx(i)}
             onMouseLeave={() => setHoveredIdx(null)}
-            onClick={() => { setSelectedNote(i); setSlideoutTab(0) }}
-            style={{
-              display: "flex", flexDirection: "column", gap: 4,
-              padding: "8px 10px", borderRadius: 8,
-              border: `1px solid ${isSelected || isHov ? "var(--color-border-primary-default)" : "var(--hi-informative-bg)"}`,
-              background: isSelected || isHov ? "var(--color-surface-primary-subtle)" : "var(--widget-bg)",
-              cursor: "pointer", transition: "background 150ms, border-color 150ms", flexShrink: 0,
-            }}
+            className={`group cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] flex-shrink-0 hover:bg-[var(--color-surface-neutral-subtle)]${selectedNote === i ? " bg-[var(--color-surface-neutral-subtle)] !border-[var(--card-default-selected-bd)]" : ""}`}
+            style={{ border: "0.5px solid var(--field-border)" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 26, height: 26, borderRadius: 6, flexShrink: 0,
@@ -22513,11 +22605,11 @@ function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
                 <LucideIcons.ChevronRight size={11} style={{ color: "var(--color-text-subtitle)" }} />
               </div>
             </div>
-            <p title={note.text} style={{ fontSize: 12, color: "var(--color-text-body)", lineHeight: "1.4",
+            <p style={{ fontSize: 12, color: "var(--color-text-body)", lineHeight: "1.4",
                 margin: 0, paddingLeft: 34, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {note.text}
             </p>
-            {/* Metadata row — smooth reveal on hover */}
+            {/* Metadata row — reveals on hover or selection */}
             <div style={{
               overflow: "hidden", paddingLeft: 34,
               maxHeight: showExpanded ? 36 : 0,
@@ -22525,26 +22617,44 @@ function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
               transition: "max-height 200ms ease, opacity 180ms ease",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-                <span title="User ID" style={{ fontSize: 10, color: "var(--color-text-subtitle)", fontFamily: "monospace",
-                    background: "var(--color-surface-neutral-default)", borderRadius: 3, padding: "1px 4px" }}>{`{User-ID}`}</span>
+                <span style={{ fontSize: 10, color: "var(--color-text-subtitle)", fontFamily: "monospace",
+                    background: "var(--color-surface-neutral-default)", borderRadius: 3, padding: "1px 4px",
+                    cursor: "default" }}
+                  onMouseEnter={e => showTip(e, "User ID")}
+                  onMouseLeave={() => setTooltip(null)}
+                >{`{User-ID}`}</span>
                 {note.taskCount > 0 && <>
                   {dot("dt")}
-                  <span title="Tasks" style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }}
+                    onMouseEnter={e => showTip(e, "Tasks")}
+                    onMouseLeave={() => setTooltip(null)}
+                  >
                     <LucideIcons.CheckSquare size={10} style={iconSt} />
                     <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{note.taskCount}</span>
                   </span>
                 </>}
                 {note.fileCount > 0 && <>
                   {dot("df")}
-                  <span title="Attachments" style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }}
+                    onMouseEnter={e => showTip(e, "Attachments")}
+                    onMouseLeave={() => setTooltip(null)}
+                  >
                     <LucideIcons.Paperclip size={10} style={iconSt} />
                     <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{note.fileCount}</span>
                   </span>
                 </>}
                 {dot("dl")}
-                <span title="Linked items"><LucideIcons.Link size={10} style={iconSt} /></span>
+                <span style={{ cursor: "default" }}
+                  onMouseEnter={e => showTip(e, "Linked items")}
+                  onMouseLeave={() => setTooltip(null)}
+                >
+                  <LucideIcons.Link size={10} style={iconSt} />
+                </span>
                 {dot("dc")}
-                <span title="Date" style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }}
+                  onMouseEnter={e => showTip(e, "Date")}
+                  onMouseLeave={() => setTooltip(null)}
+                >
                   <LucideIcons.Calendar size={10} style={iconSt} />
                   <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{note.time}</span>
                 </span>
@@ -22553,8 +22663,7 @@ function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
           </div>
         )
       })}
-    </div>
-    </div>
+    </ScrollArea>
     </>
   )
 }
@@ -22588,18 +22697,17 @@ function FolderNavWidgetContent() {
         <LucideIcons.Search size={11} style={{ color: "var(--field-supporting)" }} />
         <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Search...</span>
       </div>
-      <div className="flex flex-col" style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+      <ScrollArea className="flex flex-col" style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
         {FOLDER_FILES_DATA.map((f, i) => {
           const FIcon = (LucideIcons as unknown as Record<string, LIcon>)[f.icon]
           return (
-            <div key={i} className="flex items-center gap-[8px] py-[6px] px-[4px] rounded-[4px]"
-              style={{ borderBottom: i < FOLDER_FILES_DATA.length - 1 ? "0.5px solid var(--field-border)" : "none", cursor: "pointer" }}>
+            <div key={i} className="cursor-pointer flex items-center gap-[8px] rounded-[8px] px-[10px] py-[6px] transition-colors duration-150 mb-[2px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }}>
               {FIcon && <FIcon size={13} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />}
               <span style={{ fontSize: 12, color: "var(--foreground)", flex: 1 }}>{f.name}</span>
             </div>
           )
         })}
-      </div>
+      </ScrollArea>
     </div>
   )
 }
@@ -22710,29 +22818,31 @@ function ActNowSummaryWidgetContent() {
 
 const MY_WORK_GROUPS_DATA = [
   {
-    id: "act-now",  label: "ACT NOW", sublabel: "blocking",
-    headerBg: "var(--color-surface-error-subtle)", dot: "var(--color-surface-error-default)",
-    text: "var(--color-surface-error-default)", countBg: "var(--color-surface-error-default)",
+    id: "act-now",  label: "Act Now",  sublabel: "blocking",
+    badgeVariant: "error"      as BadgeVariant,
+    tagVariant:   "error"      as const,
     items: [
       { studio: "GOV",  type: "Approval", crit: true,  title: "Financial Policy PDF — DIAN approval required",  status: "Blocking · 14 workflows", time: "~10m" },
-      { studio: "AGNT", type: "Review",   crit: false, title: "SalesForecastPA about to send external email",   status: "Paused · awaiting review", time: "~5m" },
+      { studio: "AGNT", type: "Review",   crit: false, title: "SalesForecastPA about to send external email",   status: "Paused · awaiting review", time: "~5m"  },
     ],
   },
   {
     id: "critical", label: "Critical", sublabel: "within 7 days",
-    headerBg: "var(--color-surface-alert-subtle)", dot: "var(--color-surface-alert-default)",
-    text: "var(--color-surface-alert-default)", countBg: "var(--color-surface-alert-default)",
+    badgeVariant: "alert"      as BadgeVariant,
+    tagVariant:   "alert"      as const,
     items: [
-      { studio: "DATA", type: "Remap",  crit: false, title: "Q3 Forecast Schema needs field remap",    status: "Action needed · schema mismatch", time: "~15m" },
+      { studio: "DATA", type: "Remap",   crit: false, title: "Q3 Forecast Schema needs field remap",         status: "Action needed · schema mismatch", time: "~15m" },
+      { studio: "GOV",  type: "Approve", crit: false, title: "Vendor NDA batch — legal sign-off pending",    status: "Waiting on legal",               time: "~8m"  },
     ],
   },
   {
-    id: "action",   label: "Action", sublabel: "this week",
-    headerBg: "var(--color-surface-primary-subtle)", dot: "var(--primary)",
-    text: "var(--primary)", countBg: "var(--primary)",
+    id: "action",   label: "Action",   sublabel: "this week",
+    badgeVariant: "inProgress" as BadgeVariant,
+    tagVariant:   "informative" as const,
     items: [
       { studio: "TASK", type: "Respond",     crit: false, title: "Renewal contract draft v2 awaiting sign-off",    status: "Ready for review",        time: "~8m"  },
       { studio: "GOV",  type: "Acknowledge", crit: false, title: "DIAN intake package #48 compliance check",       status: "Pending acknowledgement", time: "~5m"  },
+      { studio: "AGNT", type: "Review",      crit: false, title: "Agent output flagged for hallucination check",   status: "Queued · low priority",   time: "~6m"  },
     ],
   },
 ]
@@ -22741,14 +22851,13 @@ function MyWorkWidgetContent() {
   const { isNarrow } = useWidgetSize()
   const [studioFilter, setStudioFilter] = useState<string | null>(null)
   const [typeFilter,   setTypeFilter]   = useState<string | null>(null)
-  const [hoveredKey,   setHoveredKey]   = useState<string | null>(null)
   const [search,       setSearch]       = useState("")
 
   const allTypes    = Array.from(new Set(MY_WORK_GROUPS_DATA.flatMap(g => g.items.map(i => i.type))))
   const maxPerGroup = isNarrow ? 2 : undefined
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+    <ScrollArea style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 8, paddingBottom: 12 }}>
       {/* Search bar */}
       <div style={{ position: "relative" }}>
         <LucideIcons.Search size={12} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)", pointerEvents: "none" }} />
@@ -22784,20 +22893,18 @@ function MyWorkWidgetContent() {
         if (visible.length === 0) return null
         return (
           <div key={group.id}>
-            <div className="flex items-center justify-between" style={{ background: group.headerBg, borderRadius: 4, padding: "4px 8px", marginBottom: 4 }}>
-              <div className="flex items-center gap-[5px]">
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: group.dot, display: "inline-block", flexShrink: 0 }} />
-                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: group.text }}>{group.label}</span>
-                <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>· {group.sublabel}</span>
+            <div className="flex items-center justify-between" style={{ padding: "4px 0", marginBottom: 4 }}>
+              <div className="flex items-center gap-[6px]">
+                <Badge variant={group.badgeVariant} />
+                <span style={{ fontSize: 12, fontWeight: 400, color: "var(--color-text-subtitle)" }}>{group.label}</span>
+                <span style={{ fontSize: 12, color: "var(--color-text-placeholder)" }}>· {group.sublabel}</span>
               </div>
-              <span style={{ fontSize: 9, fontWeight: 700, minWidth: 16, height: 16, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: group.countBg, color: "var(--tag-primary-fg)", padding: "0 4px" }}>{visible.length}</span>
+              <Tag variant={group.tagVariant} size="sm">{visible.length}</Tag>
             </div>
             {visible.map((item, idx) => {
               const key = `${group.id}-${idx}`
-              const hovered = hoveredKey === key
               return (
-                <div key={key} onMouseEnter={() => setHoveredKey(key)} onMouseLeave={() => setHoveredKey(null)}
-                  style={{ padding: "7px 8px", borderRadius: 6, marginBottom: 2, cursor: "pointer", background: hovered ? "var(--color-surface-neutral-default)" : "none", transition: "background 120ms" }}>
+                <div key={key} className="group cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[2px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }}>
                   <div className="flex items-center justify-between mb-[3px]">
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--foreground)", lineHeight: 1.35, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>{item.title}</p>
                     <span style={{ fontSize: 10, color: "var(--field-supporting)", whiteSpace: "nowrap", flexShrink: 0 }}>{item.time}</span>
@@ -22808,13 +22915,7 @@ function MyWorkWidgetContent() {
                     {item.crit && <Tag variant="error" size="sm">⚡ Critical</Tag>}
                   </div>
                   <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{item.status}</span>
-                  {hovered && (
-                    <div className="flex items-center gap-[6px]" style={{ marginTop: 8 }}>
-                      <Button variant="primary" size="sm">Take</Button>
-                      <Button variant="secondary" size="sm">Escalate</Button>
-                      <Button variant="tertiary" size="sm">Defer</Button>
-                    </div>
-                  )}
+                  <div className="hidden group-hover:flex items-center gap-[6px] mt-[8px]"><Button variant="primary" size="sm">Take</Button><Button variant="secondary" size="sm">Escalate</Button><Button variant="tertiary" size="sm">Defer</Button></div>
                 </div>
               )
             })}
@@ -22822,7 +22923,7 @@ function MyWorkWidgetContent() {
         )
       })}
       <Button variant="tertiary" size="sm">See all in Attention Room →</Button>
-    </div>
+    </ScrollArea>
   )
 }
 
@@ -22844,7 +22945,6 @@ const MY_TEAM_DOT_TIPS = ["Act Now · blocking", "Critical · within 7 days", "A
 
 function MyTeamWidgetContent() {
   const [bannerDismissed, setBannerDismissed] = useState(false)
-  const [hoveredMember,   setHoveredMember]   = useState<number | null>(null)
   const teamContainerRef = useRef<HTMLDivElement>(null)
   const [isNarrowTeam, setIsNarrowTeam] = useState(false)
 
@@ -22883,10 +22983,9 @@ function MyTeamWidgetContent() {
           )}
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+      <ScrollArea style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
         {MY_TEAM_DATA.map((member, i) => (
-          <div key={i} onMouseEnter={() => setHoveredMember(i)} onMouseLeave={() => setHoveredMember(null)}
-            style={{ padding: "8px 4px", borderBottom: i < MY_TEAM_DATA.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+          <div key={i} className="group cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }}>
             <div className="flex items-start gap-[8px]">
               <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-surface-primary-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <span style={{ fontSize: 9, fontWeight: 700, color: "var(--tag-primary-fg)" }}>{member.initials}</span>
@@ -22914,16 +23013,14 @@ function MyTeamWidgetContent() {
                 </div>
               </div>
             </div>
-            {hoveredMember === i && (
-              <div className="flex items-center gap-[4px]" style={{ marginTop: 6, marginLeft: 36 }}>
-                <Button variant="secondary" size="sm">Take</Button>
-                <Button variant="secondary" size="sm">Nudge</Button>
-                <Button variant="secondary" size="sm">Reassign</Button>
-              </div>
-            )}
+            <div className="hidden group-hover:flex items-center gap-[4px] mt-[6px] ml-[36px]">
+              <Button variant="secondary" size="sm">Take</Button>
+              <Button variant="secondary" size="sm">Nudge</Button>
+              <Button variant="secondary" size="sm">Reassign</Button>
+            </div>
           </div>
         ))}
-      </div>
+      </ScrollArea>
     </div>
   )
 }
@@ -22948,9 +23045,9 @@ const WF_TAG_LABEL: Record<string, string> = {
 function WorkflowsWidgetContent() {
   const { isNarrow } = useWidgetSize()
   return (
-    <div className="flex flex-col gap-[0px]" style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+    <ScrollArea className="flex flex-col gap-[0px]" style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
       {WORKFLOWS_DATA.map((wf, i) => (
-        <div key={i} style={{ padding: "8px 4px", borderBottom: i < WORKFLOWS_DATA.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
+        <div key={i} className="cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }}>
           <div className="flex items-start gap-[8px]">
             <div className="flex flex-col flex-1 min-w-0" style={{ gap: 3 }}>
               <div className="flex items-center gap-[6px]">
@@ -22978,7 +23075,7 @@ function WorkflowsWidgetContent() {
           </div>
         </div>
       ))}
-    </div>
+    </ScrollArea>
   )
 }
 
@@ -22996,12 +23093,9 @@ function PendingOutputsWidgetContent() {
 
   return (
     <>
-      <div className="flex flex-col gap-[0px]" style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+      <ScrollArea className="flex flex-col gap-[6px]" style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
         {PENDING_OUTPUTS_DATA.map((item, i) => (
-          <div key={i} onClick={() => setSelected(item)}
-            style={{ padding: "8px 4px", borderBottom: i < PENDING_OUTPUTS_DATA.length - 1 ? "0.5px solid var(--field-border)" : "none", cursor: "pointer" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--color-surface-neutral-default)"; (e.currentTarget as HTMLElement).style.borderRadius = "6px" }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none"; (e.currentTarget as HTMLElement).style.borderRadius = "0" }}>
+          <div key={i} className="cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }} onClick={() => setSelected(item)}>
             <div className="flex items-start gap-[8px]">
               <div className="flex flex-col flex-1 min-w-0" style={{ gap: 2 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
@@ -23013,7 +23107,7 @@ function PendingOutputsWidgetContent() {
             </div>
           </div>
         ))}
-      </div>
+      </ScrollArea>
       {selected && (
         <SlideOut open onClose={() => setSelected(null)} title={selected.name} subtitle={selected.source}
           showTabs={false} showChips={false} showSearchBar={false}
@@ -23094,12 +23188,9 @@ function AgentCatalogWidgetContent() {
             </Chip>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, overflowY: "auto", maxHeight: 260 }}>
+        <ScrollArea style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, maxHeight: 260, paddingBottom: 12 }}>
           {visible.map((agent, i) => (
-            <button key={i} onClick={() => setSelectedAgent(agent)}
-              style={{ display: "flex", flexDirection: "column", gap: 6, padding: "10px 12px", borderRadius: 8, textAlign: "left", border: "0.5px solid var(--field-border)", background: "var(--surface)", cursor: "pointer", opacity: agent.available ? 1 : 0.6, transition: "border-color 120ms, box-shadow 120ms" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border-hover)" }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border)" }}>
+            <div key={i} className={`cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] hover:bg-[var(--color-surface-neutral-subtle)]${!agent.available ? " opacity-60" : ""}`} style={{ border: "0.5px solid var(--field-border)" }} onClick={() => setSelectedAgent(agent)}>
               <div className="flex items-start justify-between gap-[6px]">
                 <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.3 }}>{agent.name}</span>
                 {agent.isWorkflow && <span style={{ flexShrink: 0 }}><Tag variant="informative" size="sm">Workflow</Tag></span>}
@@ -23108,9 +23199,9 @@ function AgentCatalogWidgetContent() {
               <div style={{ display: "flex" }}>
                 <Tag variant={agent.available ? "success" : "neutral"} size="sm">{agent.available ? "Grounded" : "Unavailable"}</Tag>
               </div>
-            </button>
+            </div>
           ))}
-        </div>
+        </ScrollArea>
       </div>
       {selectedAgent && (
         <SlideOut open onClose={() => setSelectedAgent(null)} title={selectedAgent.name} subtitle={selectedAgent.isWorkflow ? "Workflow Agent" : "Single Agent"}
@@ -23125,12 +23216,7 @@ function AgentCatalogWidgetContent() {
             <div>
               <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)", display: "block", marginBottom: 8 }}>Example Prompts</span>
               {selectedAgent.prompts.map((prompt, j) => (
-                <div key={j}
-                  style={{ padding: "8px 10px", borderRadius: 6, marginBottom: 6, background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)", fontSize: 12, color: "var(--foreground)", cursor: "pointer" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--primary)" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border)" }}>
-                  "{prompt}"
-                </div>
+                <div key={j} className="cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[6px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)", fontSize: 12, color: "var(--foreground)" }}>"{prompt}"</div>
               ))}
             </div>
           </div>
