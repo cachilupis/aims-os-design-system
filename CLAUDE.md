@@ -13,6 +13,21 @@ Stack: React + Tailwind + shadcn/ui. TypeScript.
 - Font is Inter. Use the typographic scale in `tailwind.config`, not arbitrary sizes.
 - All colors via `var(--token-name)`. No exceptions in `.tsx` files.
 
+## Before creating ANY new component file
+
+This applies everywhere a new file gets created — not just `src/screens/` (see that section below, this is the general version of the same rule). It exists because 5 components (`GreetingHero`, `DailyMessageCard`, `StartHereCard`, `DailyBriefSection`, `WidgetCanvasSection`) were built directly in `src/components/ui/` and `src/components/layouts/` in 2026-07, bypassing the `experimental/` pipeline entirely: none were ever imported by a real screen, none got a catalog entry, and `GreetingHero` duplicated a pattern that already existed and was already catalogued (`Home Banner`). All 5 were deleted as dead code in the 2026-07-31 audit — read the full incident in the audit conversation if you need the details.
+
+**Before writing a single line of a new component:**
+1. **Search first.** Check the DS catalog (`NAV_SECTIONS` in `App.tsx`) AND the Figma file for anything that already covers this. A near-duplicate of an existing pattern is the #1 cause of orphaned code — it's cheaper to reuse or extend than to rebuild.
+2. **Can it be composed** from existing `src/components/ui/` components inside the screen file itself? If yes, compose there — don't create a new component file at all.
+3. **If it's a genuine gap:** it goes in `src/components/experimental/` with a `// DS-GAP:` comment (see "Experimental components" below) — **never directly in `ui/` or `layouts/`.** Only Michael promotes a component out of `experimental/`.
+
+**A new component file is not "done" until both of these are true:**
+- It is imported and rendered by at least one real screen — not just written and left sitting.
+- It has a catalog entry (`NAV_SECTIONS` + `getSpec` in `App.tsx`) — unless it's intentionally experimental/unpromoted, in which case it belongs in `experimental/`, not `ui/`/`layouts/`.
+
+If you ever find a component in `ui/` or `layouts/` with zero imports anywhere in the repo, that's a bug from a prior session — flag it for removal, don't leave it sitting.
+
 ## Syncing a DS component with Figma (new component, new variant, new tokens)
 
 **Any time you're asked to add a component, add/update a variant, or bring a component's colors in line with the Figma DS file (`v6rmYKA2zmyXWOahlxLOeI`) — use the `/aims-ds-component [component] [Figma node ID]` skill (`.claude/commands/aims-ds-component.md`).** This applies even when the user doesn't type the slash command literally — phrases like "update the Chip with the new colors from Figma," "add the Error/Alert/Success variants," or "sync this component" all mean: follow that skill's 6-phase workflow (extract real token values from Figma via the plugin API → map to CSS variable names → write both the `:root/.dark` and `.light` blocks in `src/index.css` → implement the component with `cva` → update the `[COMPONENT]_SPEC` in `App.tsx` → visually verify against a Figma screenshot).
@@ -756,6 +771,8 @@ Never in `ui/`. File must:
 
 ## DS consistency health check
 
+**Status: not yet built.** `/ds-health` does not exist as a runnable command today (confirmed 2026-07-31 — no `.claude/commands/ds-health.md`). Don't tell a PM to run it; it will fail. Until it exists, token/hardcode audits happen manually (see the audit conversation history) — this section documents the intended scope so whoever builds it doesn't have to guess:
+
 Run `/ds-health` before any PM prototype session to audit the repo for violations. It checks:
 1. Token compliance (no hardcoded hex/rgba in `.tsx` files)
 2. Raw HTML elements inside pattern previews
@@ -763,5 +780,6 @@ Run `/ds-health` before any PM prototype session to audit the repo for violation
 4. PM screens registered in `PROTOTYPE_PAGES`
 5. TypeScript — zero errors
 6. Pattern page previews using real DS components
+7. **Zero-import check** — any file in `src/components/ui/` or `src/components/layouts/` that nothing imports is dead code, same failure mode as the 2026-07 orphan incident above.
 
-Run it also after adding any new component, pattern page, or screen.
+Run it also after adding any new component, pattern page, or screen — once it exists.

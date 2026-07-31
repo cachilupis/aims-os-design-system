@@ -721,7 +721,7 @@ export function FiltersSlideout({
     <div
       className="fixed inset-0 z-50 flex justify-end"
       style={{
-        background:           show ? "var(--modal-scrim)" : "rgba(0,0,0,0)",
+        background:           show ? "var(--modal-scrim)" : "transparent",
         backdropFilter:       show ? "blur(2px)" : "none",
         WebkitBackdropFilter: show ? "blur(2px)" : "none",
         transition:           "background 200ms ease, backdrop-filter 200ms ease",
