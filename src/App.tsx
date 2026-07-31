@@ -1612,8 +1612,8 @@ const FILTERS_SPEC = {
     { name: "Active chip (selected value)", borderWidth: "1px", tokens: [
       { role: "Background", variable: "Surface/Primary/Subtle",  varId: "", light: "rgba(33,115,255,0.06)",   dark: "rgba(43,127,255,0.08)" },
       { role: "Border",     variable: "Border/Primary/Default",  varId: "", light: "#2173ff",                 dark: "#2b7fff" },
-      { role: "Text",       variable: "Text/Info",               varId: "", light: "#2173ff",                 dark: "#A8C8FF" },
-      { role: "Icon (×)",   variable: "Icon/Primary/Darker",     varId: "", light: "#2173ff",                 dark: "rgba(168,200,255,0.80)" },
+      { role: "Text",       variable: "Text/Info",               varId: "", light: "#001740",                 dark: "#A8C8FF" },
+      { role: "Icon (×)",   variable: "Icon/Primary/Darker",     varId: "", light: "#001740",                 dark: "rgba(168,200,255,0.80)" },
     ]},
   ],
 }
@@ -1707,7 +1707,7 @@ const ENTITY_LIST_SPEC = {
   name: "Entity List",
   figmaNodeId: "—",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS",
-  description: "High-density list row for entities — conversations, tickets, tasks. Composes icon highlight or avatar, primary meta, AI insight, description, secondary meta, tags, actions, and state tag.",
+  description: "High-density list row for entities — conversations, tickets, tasks. Composes icon highlight or avatar, primary meta, AI insight, description, secondary meta, tags, actions, and state tag. Row background/border/hover are NOT its own — in Figma this component is always embedded as a slot inside Card Container, which provides the row's background/border and already signals interactivity via its own hover state (confirmed: every real usage in this repo wraps <EntityList> in <CardContainer>; design decision, Michael, confirmed no per-row hover treatment needed on top of the Card's). AI callout tokens confirmed live against Figma node 11838:24922 (\"IA Insight - List Entity\") — it reuses the standard Tag purple tokens, not a dedicated AI color.",
   properties: [
     { name: "items",           type: "Array",   values: ["EntityListItemData[]"],         default: "required" },
     { name: "title",           type: "string",  values: ["any string"],                   default: "required",  note: "Primary label — 16px semibold" },
@@ -1737,16 +1737,10 @@ const ENTITY_LIST_SPEC = {
     { element: "AI insight",  family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1.4" },
   ],
   states: [
-    { name: "Default",  borderWidth: "1px", tokens: [
-      { role: "Background", variable: "Surface/Neutral/White",   varId: "", light: "#ffffff",              dark: "rgba(255,255,255,0.04)" },
-      { role: "Border",     variable: "Border/Neutral/Lighter",  varId: "", light: "rgba(186,186,186,1)",  dark: "rgba(255,255,255,0.08)" },
-    ]},
-    { name: "Hover", borderWidth: "1px", tokens: [
-      { role: "Background", variable: "Surface/Neutral/Default", varId: "", light: "#F8F8F8",              dark: "rgba(255,255,255,0.07)" },
-    ]},
     { name: "AI callout", borderWidth: "1px", tokens: [
-      { role: "Background", variable: "Surface/AI/Subtle",       varId: "", light: "rgba(103,76,186,0.06)",dark: "rgba(103,76,186,0.12)" },
-      { role: "Icon",       variable: "Icon/AI/Default",         varId: "", light: "#674CBC",              dark: "#A78BFA" },
+      { role: "Background", variable: "--tag-purple-bg (Surface/Purple/More Subtle)", varId: "", light: "#f3e9fd",  dark: "#120520" },
+      { role: "Icon",       variable: "--tag-purple-bd (Icon/Purple/Default)",        varId: "", light: "#7b27ed",  dark: "#a855f7" },
+      { role: "Text",       variable: "--tag-purple-fg (Text/Purple)",                varId: "", light: "#2c075c",  dark: "#d8b4fe" },
     ]},
   ],
 }
@@ -1793,7 +1787,7 @@ const ALERT_BANNER_SPEC = {
       cssPrefix: "--ab-success-*",
       tokens: [
         { role: "Background", variable: "--ab-success-bg",   light: "#e5fdf8",             dark: "#0a1f1a"               },
-        { role: "Icon",       variable: "--ab-success-icon",  light: "#009978",             dark: "#6ee7b7"               },
+        { role: "Icon",       variable: "--ab-success-icon",  light: "#00a07e",             dark: "#6ee7b7"               },
         { role: "Text",       variable: "--ab-success-text",  light: "#003328",             dark: "#6ee7b7"               },
       ],
     },
@@ -7379,7 +7373,7 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["",        "--ab-error-text",  "#ff6467",                "#5f2120"],
                 ["success", "--ab-success-bg",  "#0a1f1a",                "#e5fdf8"],
                 ["",        "--ab-success-bd",  "transparent",            "rgba(0,153,120,0.25)"],
-                ["",        "--ab-success-icon","#6ee7b7",                "#009978"],
+                ["",        "--ab-success-icon","#6ee7b7",                "#00a07e"],
                 ["",        "--ab-success-text","#6ee7b7",                "#003328"],
                 ["alert",   "--ab-alert-bg",    "#2d1a08",                "#ffeedb"],
                 ["",        "--ab-alert-bd",    "transparent",            "rgba(180,83,9,0.25)"],
@@ -33174,8 +33168,8 @@ function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                       { token: "--fi-chip-icon",          ds: "Icon/Neutral",            light: "rgba(0,0,0,0.40)",        dark: "rgba(255,255,255,0.40)" },
                       { token: "--fi-chip-active-bg",     ds: "Surface/Primary/Subtle",  light: "rgba(33,115,255,0.06)",   dark: "rgba(43,127,255,0.08)"  },
                       { token: "--fi-chip-active-border", ds: "Border/Primary/Default",  light: "#2173ff",                 dark: "#2b7fff"                },
-                      { token: "--fi-chip-active-text",   ds: "Text/Info",               light: "#2173ff",                 dark: "#A8C8FF"                },
-                      { token: "--fi-chip-active-icon",   ds: "Icon/Primary/Darker",     light: "#2173ff",                 dark: "rgba(168,200,255,0.80)" },
+                      { token: "--fi-chip-active-text",   ds: "Text/Info",               light: "#001740",                 dark: "#A8C8FF"                },
+                      { token: "--fi-chip-active-icon",   ds: "Icon/Primary/Darker",     light: "#001740",                 dark: "rgba(168,200,255,0.80)" },
                       { token: "--fi-badge-bg",           ds: "Border/Primary/Default",  light: "#2173ff",                 dark: "#2b7fff"                },
                       { token: "--fi-view-active-bg",     ds: "Border/Primary/Default",  light: "#2173ff",                 dark: "#2b7fff"                },
                       { token: "--fi-sort-text",          ds: "Text/Subtitle",           light: "rgba(0,0,0,0.65)",        dark: "rgba(255,255,255,0.65)" },

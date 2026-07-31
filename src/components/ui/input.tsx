@@ -55,7 +55,7 @@ const wrapperCva = cva(
       state: {
         default: [
           "border-[var(--field-border)]",
-          "hover:border-[var(--field-border-hover)]",
+          "hover:border-[var(--color-border-neutral-black)]",
           "focus-within:border focus-within:border-[var(--field-border-focus)]",
         ],
         error:    "border-[var(--field-border-error)]",
