@@ -1310,7 +1310,7 @@ const TOPBAR_SPEC = {
       borderWidth: "0",
       tokens: [
         { role: "Background",  variable: "—",                        varId: "", light: "transparent",         dark: "transparent" },
-        { role: "Icon color",  variable: "Icon/Neutral/Dark",         varId: "", light: "rgba(92,92,92)",      dark: "rgba(255,255,255,0.70)" },
+        { role: "Icon color",  variable: "Icon/Neutral/Dark",         varId: "", light: "rgba(92,92,92)",      dark: "rgba(255,255,255,0.50)" },
       ],
     },
     {
@@ -1386,17 +1386,17 @@ const HIGHLIGHT_CARD_SPEC = {
         { role: "Default border",        variable: "--color-border-neutral-lighter",              varId: "", light: "#E8E8E8",  dark: "rgba(255,255,255,0.08)" },
         { role: "Primary BG",            variable: "--color-surface-primary-subtle",              varId: "", light: "#E9F1FF",  dark: "rgba(33,115,255,0.15)" },
         { role: "Primary border",        variable: "--color-border-primary-default",              varId: "", light: "#2173FF",  dark: "#2B7FFF" },
-        { role: "Green BG",              variable: "--color-surface-success-subtle",              varId: "", light: "#E5FDF8",  dark: "rgba(0,169,127,0.15)" },
+        { role: "Green BG",              variable: "--color-surface-success-subtle",              varId: "", light: "#CBFFF4",  dark: "rgba(0,169,127,0.15)" },
         { role: "Green border",          variable: "--color-border-success-default",              varId: "", light: "#00A07E",  dark: "#00A07E" },
-        { role: "Orange BG",             variable: "--color-surface-alert-subtle",                varId: "", light: "#FFF4E5",  dark: "rgba(217,119,6,0.15)" },
+        { role: "Orange BG",             variable: "--color-surface-alert-subtle",                varId: "", light: "#FFEEDB",  dark: "rgba(217,119,6,0.15)" },
         { role: "Orange border",         variable: "--color-border-alert-default",                varId: "", light: "#ED6C02",  dark: "#ED6C02" },
         { role: "Yellow BG",             variable: "--color-surface-yellow-subtle",               varId: "", light: "#FFFAF0",  dark: "rgba(202,138,4,0.14)" },
         { role: "Yellow border",         variable: "--color-border-yellow-default",               varId: "", light: "#ED6C02",  dark: "#ED6C02" },
-        { role: "Purple BG",             variable: "--color-surface-purple-subtle",               varId: "", light: "#F3E9FD",  dark: "rgba(124,58,237,0.14)" },
+        { role: "Purple BG",             variable: "--color-surface-purple-subtle",               varId: "", light: "#E4CEFC",  dark: "rgba(124,58,237,0.14)" },
         { role: "Purple border",         variable: "--color-border-purple-default",               varId: "", light: "#7B27ED",  dark: "#7B27ED" },
-        { role: "Light Blue BG",         variable: "--color-surface-light-blue-subtle",           varId: "", light: "#E5F8FF",  dark: "rgba(2,132,199,0.14)" },
+        { role: "Light Blue BG",         variable: "--color-surface-light-blue-subtle",           varId: "", light: "#CCF1FF",  dark: "rgba(2,132,199,0.14)" },
         { role: "Light Blue border",     variable: "--color-border-light-blue-default",           varId: "", light: "#00B5D9",  dark: "#00B5D9" },
-        { role: "Lime BG",               variable: "--color-surface-lime-subtle",                 varId: "", light: "#F9FEE5",  dark: "rgba(101,163,13,0.14)" },
+        { role: "Lime BG",               variable: "--color-surface-lime-subtle",                 varId: "", light: "#E7F9B5",  dark: "rgba(101,163,13,0.14)" },
         { role: "Lime border",           variable: "--color-border-lime-green-default",           varId: "", light: "#A0DA1D",  dark: "#A0DA1D" },
         { role: "Red BG",                variable: "--color-surface-error-subtle",                varId: "", light: "#FDEDED",  dark: "rgba(220,38,38,0.14)" },
         { role: "Red border",            variable: "--color-border-error-default",                varId: "", light: "#992222",  dark: "#992222" },
@@ -1452,7 +1452,7 @@ const INFORMATIVE_CARD_SPEC = {
     ]},
     { name: "Neutral", borderWidth: "0", tokens: [
       { role: "Background", variable: "Surface/Neutral/Default", varId: "", light: "#F2F2F2",              dark: "rgba(255,255,255,0.08)" },
-      { role: "Icon",       variable: "Icon/Neutral/Dark",       varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.70)" },
+      { role: "Icon",       variable: "Icon/Neutral/Dark",       varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.50)" },
       { role: "Text",       variable: "Text/Primary",            varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.70)" },
     ]},
   ],
@@ -1489,7 +1489,7 @@ const PAGINATION_SPEC = {
       tokens: [
         { role: "Range text + row count",      variable: "--color-text-label",               varId: "Text/Label",               light: "#2a2a2a",              dark: "rgba(255,255,255,0.80)" },
         { role: '"Rows per page:" caption',    variable: "--color-text-subtitle",            varId: "Text/Subtitle",            light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
-        { role: "Nav icons + chevron",         variable: "--color-icon-neutral-dark",        varId: "Icon/Neutral/Dark",        light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.70)" },
+        { role: "Nav icons + chevron",         variable: "--color-icon-neutral-dark",        varId: "Icon/Neutral/Dark",        light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.50)" },
         { role: "Nav button hover bg",         variable: "--color-surface-neutral-default",  varId: "Surface/Neutral/Default",  light: "#f2f2f2",              dark: "rgba(255,255,255,0.06)" },
         { role: "Inner container bg",          variable: "--surface-floating-default",       varId: "Surface/Floating/Default", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
         { role: "Inner container border",      variable: "--color-border-neutral-default",   varId: "Border/Neutral/Default",   light: "#5c5c5c",              dark: "rgba(255,255,255,0.10)" },
@@ -1541,7 +1541,7 @@ const HEADER_SPEC = {
       tokens: [
         { role: "Title text",       variable: "--header-title",     varId: "Text/Title",        light: "#1A1A1A",          dark: "rgba(255,255,255,0.80)" },
         { role: "Description text", variable: "--header-desc",      varId: "Text/Body",         light: "#5C5C5C",          dark: "#94A3B8"                },
-        { role: "Back button icon", variable: "--header-back-icon", varId: "Icon/Neutral/Dark", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.70)" },
+        { role: "Back button icon", variable: "--header-back-icon", varId: "Icon/Neutral/Dark", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.50)" },
       ],
     },
     {
@@ -2137,11 +2137,11 @@ const CORNER_RADIUS_SPEC = {
   sizes: [
     { token: "--radius-none", tailwind: "rounded-none", px: "0px",    usage: "Tables, flush containers" },
     { token: "--radius-xs",   tailwind: "rounded-xs",   px: "2px",    usage: "Small tags, chips" },
-    { token: "--radius-sm",   tailwind: "rounded-sm",   px: "4px",    usage: "Inputs, small buttons" },
-    { token: "--radius-md",   tailwind: "rounded-md",   px: "6px",    usage: "Buttons, cards (default)" },
-    { token: "--radius-lg",   tailwind: "rounded-lg",   px: "8px",    usage: "Panels, modals" },
-    { token: "--radius-xl",   tailwind: "rounded-xl",   px: "12px",   usage: "Large cards, drawers" },
-    { token: "--radius-2xl",  tailwind: "rounded-2xl",  px: "16px",   usage: "Hero sections" },
+    { token: "--radius-s",    tailwind: "rounded-sm",   px: "4px",    usage: "Inputs, small buttons" },
+    { token: "--radius-m",    tailwind: "rounded-md",   px: "8px",    usage: "Buttons, cards (default)" },
+    { token: "--radius-l",    tailwind: "rounded-lg",   px: "16px",   usage: "Panels, modals" },
+    { token: "--radius-xl",   tailwind: "rounded-xl",   px: "24px",   usage: "Large cards, drawers" },
+    { token: "--radius-xxl",  tailwind: "rounded-2xl",  px: "32px",   usage: "Hero sections" },
     { token: "--radius-full", tailwind: "rounded-full", px: "9999px", usage: "Avatars, pills, toggles" },
   ],
   typography: [],
@@ -2152,11 +2152,11 @@ const CORNER_RADIUS_SPEC = {
       tokens: [
         { role: "None",  variable: "--radius-none", light: "0px",    dark: "0px" },
         { role: "XS",    variable: "--radius-xs",   light: "2px",    dark: "2px" },
-        { role: "SM",    variable: "--radius-sm",   light: "4px",    dark: "4px" },
-        { role: "MD",    variable: "--radius-md",   light: "6px",    dark: "6px" },
-        { role: "LG",    variable: "--radius-lg",   light: "8px",    dark: "8px" },
-        { role: "XL",    variable: "--radius-xl",   light: "12px",   dark: "12px" },
-        { role: "2XL",   variable: "--radius-2xl",  light: "16px",   dark: "16px" },
+        { role: "S",     variable: "--radius-s",    light: "4px",    dark: "4px" },
+        { role: "M",     variable: "--radius-m",    light: "8px",    dark: "8px" },
+        { role: "L",     variable: "--radius-l",    light: "16px",   dark: "16px" },
+        { role: "XL",    variable: "--radius-xl",   light: "24px",   dark: "24px" },
+        { role: "XXL",   variable: "--radius-xxl",  light: "32px",   dark: "32px" },
         { role: "Full",  variable: "--radius-full", light: "9999px", dark: "9999px" },
       ],
     },
@@ -2324,8 +2324,8 @@ const TABS_SPEC = {
     { element: "Indicator", padding: "—",       gap: "—",   radius: "0",   note: "2px · active tab only · bottom-[0] · abs positioned" },
   ],
   typography: [
-    { element: "Label M", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
-    { element: "Label S", family: "Inter", size: "12px", weight: "Medium (500)", lineHeight: "1.4", variable: "--field-supporting / --primary", note: "Inactive / active" },
+    { element: "Label M", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.4", variable: "--color-text-subtitle / --primary", note: "Inactive / active" },
+    { element: "Label S", family: "Inter", size: "12px", weight: "Medium (500)", lineHeight: "1.4", variable: "--color-text-subtitle / --primary", note: "Inactive / active" },
   ],
   states: [
     { name: "Active",   borderWidth: "indicator 2px", tokens: [
@@ -2414,11 +2414,11 @@ const PROGRESS_BAR_SPEC = {
       { role: "Fill",  variable: "--color-surface-yellow-default",      varId: "Surface/Yellow/Default",      light: "#f59e0b",           dark: "#f59e0b"                },
     ]},
     { name: "Light Blue", description: "Teal — informative / neutral progress",      cssPrefix: "pb-lightblue",  tokens: [
-      { role: "Track", variable: "--color-surface-light-blue-subtle",   varId: "Surface/Light Blue/Subtle",   light: "#E5F8FF",           dark: "rgba(2,132,199,0.14)"   },
+      { role: "Track", variable: "--color-surface-light-blue-subtle",   varId: "Surface/Light Blue/Subtle",   light: "#CCF1FF",           dark: "rgba(2,132,199,0.14)"   },
       { role: "Fill",  variable: "--color-surface-light-blue-default",  varId: "Surface/Light Blue/Default",  light: "#00b5d9",           dark: "#00b5d9"                },
     ]},
     { name: "Purple",     description: "Violet — creative / AI contexts",            cssPrefix: "pb-purple",     tokens: [
-      { role: "Track", variable: "--color-surface-purple-subtle",       varId: "Surface/Purple/Subtle",       light: "#F3E9FD",           dark: "rgba(124,58,237,0.14)"  },
+      { role: "Track", variable: "--color-surface-purple-subtle",       varId: "Surface/Purple/Subtle",       light: "#E4CEFC",           dark: "rgba(124,58,237,0.14)"  },
       { role: "Fill",  variable: "--color-surface-purple-default",      varId: "Surface/Purple/Default",      light: "#7b27ed",           dark: "#7b27ed"                },
     ]},
     { name: "Layout",     description: "Track and fill share 2px border-radius",     cssPrefix: "pb-layout",     tokens: [
@@ -2611,7 +2611,7 @@ const SLIDE_OUT_SPEC = {
       tokens: [
         { role: "Title",                           variable: "--color-text-title",                varId: "Text/Title",                      light: "#000000",                dark: "rgba(255,255,255,0.80)"       },
         { role: "Body / subtitle",                 variable: "--slide-out-body",                  varId: "Text/Body",                       light: "#5c5c5c",                dark: "#94A3B8"                      },
-        { role: "Tab/chip label (inactive)",       variable: "--color-text-label",                varId: "Text/Label",                      light: "#2a2a2a",                dark: "rgba(255,255,255,0.80)"       },
+        { role: "Tab/chip label (inactive)",       variable: "--color-text-subtitle",             varId: "Text/Subtitle",                   light: "#2a2a2a",                dark: "rgba(255,255,255,0.60)"       },
         { role: "Active tab / link",               variable: "--primary",                         varId: "Text/Link",                       light: "#2173ff",                dark: "#2b7fff"                      },
         { role: "Status tag text",                 variable: "--color-text-success",              varId: "Text/Success",                    light: "#003328",                dark: "#6ee7b7"                      },
         { role: "Search placeholder",              variable: "--color-text-disabled",             varId: "Text/Disabled",                   light: "#bababa",                dark: "rgba(255,255,255,0.30)"       },
@@ -27698,7 +27698,7 @@ function TopbarPage({ openSpec, onAppThemeChange }: { openSpec: (s: SpecModal) =
   const tokenRows = [
     { cssVar: "--topbar-text",             dsToken: "Text/Subtitle",           role: "Workspace name",           light: "rgba(42,42,42,1)",    dark: "rgba(255,255,255,0.60)" },
     { cssVar: "--topbar-text-secondary",   dsToken: "Text/Body",               role: "Company name, placeholder", light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.50)" },
-    { cssVar: "--topbar-icon",             dsToken: "Icon/Neutral/Dark",        role: "Icons, chevron",           light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.70)" },
+    { cssVar: "--topbar-icon",             dsToken: "Icon/Neutral/Dark",        role: "Icons, chevron",           light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.50)" },
     { cssVar: "--topbar-workspace-border", dsToken: "Border/Primary/Subtle",    role: "Left zone + company frame", light: "rgba(233,241,255,1)", dark: "rgba(43,127,255,0.20)"  },
     { cssVar: "--topbar-divider",          dsToken: "Border/Neutral/Subtle",    role: "Vertical + bottom divider", light: "rgba(242,242,242,1)", dark: "rgba(255,255,255,0.08)" },
     { cssVar: "--topbar-btn-hover-bg",     dsToken: "Surface/Neutral/Hover",    role: "Button hover bg",          light: "rgba(250,250,250,1)", dark: "rgba(255,255,255,0.08)" },
@@ -32048,7 +32048,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   {[
                     { token: "--header-title",    figma: "Text/Title",        role: "Page title",       light: "#1A1A1A",          dark: "rgba(255,255,255,0.80)" },
                     { token: "--header-desc",      figma: "Text/Body",         role: "Description text", light: "#5C5C5C",          dark: "#94A3B8"                },
-                    { token: "--header-back-icon", figma: "Icon/Neutral/Dark", role: "Back button icon", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.70)" },
+                    { token: "--header-back-icon", figma: "Icon/Neutral/Dark", role: "Back button icon", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.50)" },
                   ].map(row => (
                     <tr key={row.token} className="border-b border-[var(--field-border)] last:border-0">
                       <td className="py-[10px] pr-[16px] font-mono text-[12px] text-[var(--primary)]">{row.token}</td>
@@ -32593,7 +32593,7 @@ function PaginationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   {[
                     { token: "--color-text-label",              figma: "Text/Label",               role: "Range text + row count",       light: "#2a2a2a",               dark: "rgba(255,255,255,0.80)" },
                     { token: "--color-text-subtitle",           figma: "Text/Subtitle",            role: '"Rows per page:" caption',     light: "#2a2a2a",               dark: "rgba(255,255,255,0.60)" },
-                    { token: "--color-icon-neutral-dark",       figma: "Icon/Neutral/Dark",        role: "Nav icons + chevron",          light: "rgba(92,92,92,1)",      dark: "rgba(255,255,255,0.70)" },
+                    { token: "--color-icon-neutral-dark",       figma: "Icon/Neutral/Dark",        role: "Nav icons + chevron",          light: "rgba(92,92,92,1)",      dark: "rgba(255,255,255,0.50)" },
                     { token: "--color-surface-neutral-default", figma: "Surface/Neutral/Default",  role: "Nav button hover bg",          light: "#f2f2f2",               dark: "rgba(255,255,255,0.06)" },
                     { token: "--surface-floating-default",      figma: "Surface/Floating/Default", role: "Inner container bg",           light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
                     { token: "--color-border-neutral-default",  figma: "Border/Neutral/Default",   role: "Inner container border",       light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)" },
