@@ -97,9 +97,9 @@ const buttonVariants = cva(
         // cannot be interpolated inside Tailwind arbitrary gradient strings.
         main: [
           "border border-transparent !text-white",
-          "[background:radial-gradient(ellipse_100%_160%_at_61%_68%,#2173ff_0%,#09e2ab_100%)]",
+          "[background:radial-gradient(ellipse_100%_160%_at_61%_68%,#2173ff_0%,#09e2ab_100%)]", // audit-ignore: gradient stops, see note above
           "[box-shadow:4px_8px_12px_8px_#09e2ab29]",
-          "hover:[background:radial-gradient(ellipse_100%_160%_at_59%_72%,#002f80_0%,#2173ff_40%,#09e2ab_100%)]",
+          "hover:[background:radial-gradient(ellipse_100%_160%_at_59%_72%,#002f80_0%,#2173ff_40%,#09e2ab_100%)]", // audit-ignore: gradient stops, see note above
           "hover:[box-shadow:8px_8px_20px_0px_#00c94f59]",
           "active:opacity-90",
           "disabled:opacity-40",

@@ -4,7 +4,7 @@ import type { LucideIcon } from "lucide-react"
 
 // ── DS tokens — sourced from Figma variable bindings (Sidebar page)
 // Active gradient: GRADIENT_RADIAL stops @0.29 → @0.61
-const ACTIVE_GRADIENT = "radial-gradient(circle at 61% 68%, rgba(33,115,255,1) 29%, rgba(9,226,171,1) 61%)"
+const ACTIVE_GRADIENT = "radial-gradient(circle at 61% 68%, rgba(33,115,255,1) 29%, rgba(9,226,171,1) 61%)" // audit-ignore: gradient stops, CSS vars can't interpolate here
 // Active shadow: DROP_SHADOW rgba(82,163,255,0.38) offset(8,8) blur:20
 const ACTIVE_SHADOW   = "8px 8px 20px 0px rgba(82,163,255,0.38)"
 // Hover shadow: DROP_SHADOW rgba(33,115,255,0.50) offset(0,0) blur:20

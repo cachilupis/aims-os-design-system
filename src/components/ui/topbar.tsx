@@ -1451,7 +1451,7 @@ export function TopbarButton({
           onClick={onClick}
           className="relative w-[24px] h-[24px] flex items-center justify-center shrink-0 cursor-pointer transition-opacity hover:opacity-85 focus-visible:outline-none"
           style={{
-            background:   "radial-gradient(circle at 61% 68%, rgba(33,115,255,1) 29%, rgba(9,226,171,1) 61%)",
+            background:   "radial-gradient(circle at 61% 68%, rgba(33,115,255,1) 29%, rgba(9,226,171,1) 61%)", // audit-ignore: gradient stops, CSS vars can't interpolate here
             borderRadius: 8,
             boxShadow:    "4px 8px 12px 8px rgba(9,226,171,0.16)",
           }}

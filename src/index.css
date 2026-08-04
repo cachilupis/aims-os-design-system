@@ -1423,7 +1423,7 @@
  * (Tailwind !important modifier). This rule is a belt-and-suspenders backup.
  */
 .\!text-white[data-slot="button"] {
-  color: #ffffff !important;
+  color: #ffffff !important; /* audit-ignore: documented belt-and-suspenders override, see note above */
 }
 
 /*
