@@ -84,7 +84,7 @@ export function Header({
                 background: "none", border: "none", cursor: "pointer", padding: 0,
               }}
             >
-              <ArrowLeft size={16} strokeWidth={2} />
+              <ArrowLeft size={16} strokeWidth={1.75} />
             </button>
           )}
           {!isCompress && Icon && (

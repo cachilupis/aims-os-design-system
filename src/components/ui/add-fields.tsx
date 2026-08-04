@@ -140,7 +140,7 @@ export function AddFields({
           }}
           aria-label="Add field"
         >
-          <Plus size={16} strokeWidth={2} />
+          <Plus size={16} strokeWidth={1.75} />
         </button>
       )}
     </div>
@@ -204,7 +204,7 @@ function FieldRow({
             }}
             aria-label="Remove field"
           >
-            <X size={12} strokeWidth={2} />
+            <X size={12} strokeWidth={1.75} />
           </button>
         ) : null}
       />

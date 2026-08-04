@@ -87,9 +87,9 @@ export function ProcessItem({
     <Spinner style="primary" size="s" />
   ) : (
     <span className={cn("flex items-center justify-center w-[16px] h-[16px] shrink-0", STATUS_ICON_CLASS[status])}>
-      {status === "done"    && <CheckCircle2  size={16} strokeWidth={2} />}
-      {status === "error"   && <XCircle       size={16} strokeWidth={2} />}
-      {status === "warning" && <AlertTriangle size={16} strokeWidth={2} />}
+      {status === "done"    && <CheckCircle2  size={16} strokeWidth={1.75} />}
+      {status === "error"   && <XCircle       size={16} strokeWidth={1.75} />}
+      {status === "warning" && <AlertTriangle size={16} strokeWidth={1.75} />}
       {status === "pending" && <Circle        size={16} strokeWidth={1.5} />}
     </span>
   )

@@ -234,7 +234,7 @@ export function TopbarLeftMenu({
           className="flex items-center gap-[6px] text-xs font-medium transition-opacity hover:opacity-70 cursor-pointer"
           style={{ color: "var(--primary)" }}
         >
-          <Plus size={12} strokeWidth={2.5} />
+          <Plus size={12} strokeWidth={1.75} />
           New workspace
         </button>
       </div>
@@ -836,7 +836,7 @@ function FilterTag({ label, section, onRemove }: { label: string; section: strin
           className="flex items-center justify-center rounded-full transition-opacity hover:opacity-60"
           style={{ width: 12, height: 12, color: "currentColor" }}
         >
-          <X size={9} strokeWidth={2.5} />
+          <X size={9} strokeWidth={1.75} />
         </button>
       }
     >
@@ -1610,7 +1610,7 @@ export function Topbar({
                 {workspaceName}
               </span>
               <ChevronDown
-                size={12} strokeWidth={2}
+                size={12} strokeWidth={1.75}
                 className={cn("shrink-0 transition-transform duration-150", leftMenuOpen && "rotate-180")}
                 style={{ color: "var(--topbar-icon)" }}
               />
