@@ -1061,7 +1061,7 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
                 fontSize: 10,
                 fontWeight: 700,
                 color: "var(--primary)",
-                background: "rgba(33,115,255,0.1)",
+                background: "rgba(33,115,255,0.1)", // audit-ignore: dev-only debug overlay (Ctrl+Shift+D), not shipped DS surface
                 borderRadius: 4,
                 padding: "2px 0",
               }}>
@@ -1075,8 +1075,8 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
             bottom: 16,
             right: 16,
             zIndex: 9999,
-            background: "rgba(2,6,24,0.92)",
-            color: "#e5eef8",
+            background: "rgba(2,6,24,0.92)", // audit-ignore: dev-only debug overlay (Ctrl+Shift+D), not shipped DS surface
+            color: "#e5eef8", // audit-ignore: dev-only debug overlay (Ctrl+Shift+D), not shipped DS surface
             fontFamily: "monospace",
             fontSize: 11,
             padding: "12px 16px",
@@ -1084,11 +1084,11 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
             maxWidth: 360,
             pointerEvents: "none",
             lineHeight: 1.7,
-            border: "1px solid rgba(33,115,255,0.4)",
+            border: "1px solid rgba(33,115,255,0.4)", // audit-ignore: dev-only debug overlay (Ctrl+Shift+D), not shipped DS surface
           }}>
-            <div style={{ color: "#09E2AB", fontWeight: 700, marginBottom: 4 }}>CANVAS DEBUG  Ctrl+Shift+D</div>
-            <div>drag: <span style={{ color: "#2173FF" }}>{dragUid ?? "–"}</span></div>
-            <div>drop: <span style={{ color: "#2173FF" }}>{dropUid ?? "–"}</span>  side: {dropSide ?? "–"}</div>
+            <div style={{ color: "#09E2AB", fontWeight: 700, marginBottom: 4 }}>CANVAS DEBUG  Ctrl+Shift+D</div> {/* audit-ignore: dev-only debug overlay, not shipped DS surface */}
+            <div>drag: <span style={{ color: "#2173FF" }}>{dragUid ?? "–"}</span></div> {/* audit-ignore: dev-only debug overlay, not shipped DS surface */}
+            <div>drop: <span style={{ color: "#2173FF" }}>{dropUid ?? "–"}</span>  side: {dropSide ?? "–"}</div> {/* audit-ignore: dev-only debug overlay, not shipped DS surface */}
             <div>ghost: {ghostInfo ? `col${ghostInfo.colStart}/span${ghostInfo.colSpan} row${ghostInfo.rowStart}/span${ghostInfo.rowSpan}` : "–"}</div>
             <div>resize: {resizing ? `${resizing.uid} (${resizing.edge})` : "–"}</div>
             <div>order: [{layout.map(e => isStack(e) ? `[${e.slots.map(s => s.uid.replace("w-", "")).join("+")}]` : (e as LayoutEntry).uid.replace("w-", "")).join(" ")}]</div>
@@ -1150,7 +1150,7 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
           border: "1.5px solid var(--color-border-primary-default)",
           borderRadius: 8,
           padding: "5px 12px",
-          boxShadow: "0 6px 24px rgba(0,0,0,0.22)",
+          boxShadow: "0 6px 24px rgba(0,0,0,0.22)", // audit-ignore: Cursor chip shadow, pending Figma effect-name mapping (2026-08 audit)
         }}
       >
         <GripVertical size={12} style={{ color: "var(--primary)", flexShrink: 0 }} />
@@ -1383,9 +1383,10 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
               {/* Debug: visualize resize hit zones */}
               {debugMode && (
                 <>
-                  <div style={{ position: "absolute", left: 0, top: 8, bottom: 8, width: 20, background: "rgba(255,80,80,0.45)", borderRadius: "4px 0 0 4px", zIndex: 50, pointerEvents: "none" }} />
-                  <div style={{ position: "absolute", right: 0, top: 8, bottom: 8, width: 20, background: "rgba(40,200,80,0.45)", borderRadius: "0 4px 4px 0", zIndex: 50, pointerEvents: "none" }} />
-                  <div style={{ position: "absolute", left: 8, right: 8, bottom: 0, height: 18, background: "rgba(80,100,255,0.45)", borderRadius: "0 0 4px 4px", zIndex: 50, pointerEvents: "none" }} />
+                  {/* audit-ignore: dev-only debug overlay (Ctrl+Shift+D), not shipped DS surface — applies to the 3 divs below */}
+                  <div style={{ position: "absolute", left: 0, top: 8, bottom: 8, width: 20, background: "rgba(255,80,80,0.45)", borderRadius: "4px 0 0 4px", zIndex: 50, pointerEvents: "none" }} /> {/* audit-ignore: dev-only debug overlay */}
+                  <div style={{ position: "absolute", right: 0, top: 8, bottom: 8, width: 20, background: "rgba(40,200,80,0.45)", borderRadius: "0 4px 4px 0", zIndex: 50, pointerEvents: "none" }} /> {/* audit-ignore: dev-only debug overlay */}
+                  <div style={{ position: "absolute", left: 8, right: 8, bottom: 0, height: 18, background: "rgba(80,100,255,0.45)", borderRadius: "0 0 4px 4px", zIndex: 50, pointerEvents: "none" }} /> {/* audit-ignore: dev-only debug overlay */}
                 </>
               )}
               {/* FLIP animation target */}

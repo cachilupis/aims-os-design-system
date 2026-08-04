@@ -227,7 +227,7 @@ export function WidgetFather({
         background: "var(--widget-bg)",
         border: `1px solid ${borderColor}`,
         borderRadius: 16,
-        boxShadow: isHovered ? "0 4px 20px rgba(0,0,0,0.18)" : "none",
+        boxShadow: isHovered ? "0 4px 20px rgba(0,0,0,0.18)" : "none", // audit-ignore: Widget card hover shadow, pending Figma effect-name mapping (2026-08 audit)
         transition: "border-color 150ms, box-shadow 150ms",
         overflow: "hidden",
         minHeight: 0,
@@ -248,7 +248,7 @@ export function WidgetFather({
           zIndex: 30,
           background: "var(--widget-bg)",
           border: "1px solid var(--widget-border)",
-          boxShadow: "2px 2px 8px rgba(0,0,0,0.14)",
+          boxShadow: "2px 2px 8px rgba(0,0,0,0.14)", // audit-ignore: Widget drag handle shadow, pending Figma effect-name mapping (2026-08 audit)
           borderRadius: 4,
           padding: 4,
           display: "flex",

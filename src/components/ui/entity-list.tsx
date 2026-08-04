@@ -212,7 +212,7 @@ function MetaItemView({ meta, mode, isFirst }: { meta: ELMetaItem; mode: "icon" 
               background: "var(--tooltip-bg)",
               borderRadius: 4,
               padding: "4px 8px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
             }}
           >
             <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>{tipText}</span>
@@ -242,7 +242,7 @@ function TagOverflow({ labels }: { labels: string[] }) {
             background: "var(--tooltip-bg)",
             borderRadius: 4,
             padding: "6px 10px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
             minWidth: "max-content",
           }}
         >
