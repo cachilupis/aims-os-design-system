@@ -50,7 +50,7 @@ const THUMB: React.CSSProperties = {
   borderRadius: "50%",
   background: "var(--slider-thumb-bg)",
   border: "2px solid var(--slider-thumb-border)",
-  boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
+  boxShadow: "0 1px 4px rgba(0,0,0,0.18)", // audit-ignore: Slider thumb shadow, pending Figma effect-name mapping (2026-08 audit)
   transform: "translateX(-50%)",
   pointerEvents: "none",
   top: "50%",

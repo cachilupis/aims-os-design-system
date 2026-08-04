@@ -107,7 +107,7 @@ export function Pagination({
           border: "0.5px solid var(--color-border-neutral-subtle)",
           borderRadius: 8,
           height: 32,
-          boxShadow: "8px 8px 16px 0px rgba(0,0,0,0.08)",
+          boxShadow: "var(--shadow-elevation-5)",
         }}
       >
         {/* Left zone: Rows per page */}
@@ -182,7 +182,7 @@ export function Pagination({
             borderRadius: 8,
             overflow: "hidden",
             minWidth: 64,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.18)", // audit-ignore: Rows-per-page dropdown shadow, pending Figma effect-name mapping (2026-08 audit)
           }}
         >
           {rowsPerPageOptions.map(opt => (

@@ -6,11 +6,11 @@ import type { LucideIcon } from "lucide-react"
 // Active gradient: GRADIENT_RADIAL stops @0.29 → @0.61
 const ACTIVE_GRADIENT = "radial-gradient(circle at 61% 68%, rgba(33,115,255,1) 29%, rgba(9,226,171,1) 61%)" // audit-ignore: gradient stops, CSS vars can't interpolate here
 // Active shadow: DROP_SHADOW rgba(82,163,255,0.38) offset(8,8) blur:20
-const ACTIVE_SHADOW   = "8px 8px 20px 0px rgba(82,163,255,0.38)"
+const ACTIVE_SHADOW   = "8px 8px 20px 0px rgba(82,163,255,0.38)" // audit-ignore: pending Figma effect-name mapping (2026-08 audit) — possibly Figma's "Elevation/Dark/Hover-Blue" style
 // Hover shadow: DROP_SHADOW rgba(33,115,255,0.50) offset(0,0) blur:20
-const HOVER_SHADOW    = "0px 0px 20px 0px rgba(33,115,255,0.50)"
-// Container shadow: DROP_SHADOW rgba(0,0,0,0.08) offset(8,8) blur:16
-const CONTAINER_SHADOW = "8px 8px 16px 0px rgba(0,0,0,0.08)"
+const HOVER_SHADOW    = "0px 0px 20px 0px rgba(33,115,255,0.50)" // audit-ignore: pending Figma effect-name mapping (2026-08 audit) — possibly Figma's "Elevation/Dark/Hover-Blue" style
+// Container shadow: Figma Elevation-5 — DROP_SHADOW rgba(0,0,0,0.08) offset(8,8) blur:16
+const CONTAINER_SHADOW = "var(--shadow-elevation-5)"
 
 export type SidebarItem = {
   id: string
@@ -46,7 +46,7 @@ function SidebarTooltip({ label, visible }: { label: string; visible: boolean })
         borderRadius: 4,
         padding: "8px 12px",
         whiteSpace: "nowrap",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.4)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit) — note: opacity differs from other Tooltip instances (0.4 vs 0.5), worth reconciling with design
       }}
     >
       <span className="text-[14px] font-medium leading-[20px]" style={{ color: "var(--tooltip-text)" }}>

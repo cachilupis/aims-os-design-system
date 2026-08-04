@@ -156,7 +156,7 @@ export function TopbarLeftMenu({
         WebkitBackdropFilter: "saturate(180%) blur(16px)",
         border:             "1px solid var(--menu-divider)",
         borderRadius:       8,
-        boxShadow:          "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)",
+        boxShadow:          "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)", // audit-ignore: Workspace menu panel shadow, pending Figma effect-name mapping (2026-08 audit)
         overflow:           "hidden",
       }}
     >
@@ -333,7 +333,7 @@ export function TopbarRightMenu({
         WebkitBackdropFilter: "saturate(180%) blur(16px)",
         border:               "1px solid var(--menu-divider)",
         borderRadius:         8,
-        boxShadow:            "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)",
+        boxShadow:            "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)", // audit-ignore: Workspace menu panel shadow, pending Figma effect-name mapping (2026-08 audit)
         overflow:             "hidden",
       }}
     >
@@ -436,7 +436,7 @@ export function TopbarRightMenu({
               margin:       "0 8px",
               borderRadius: 8,
               overflow:     "hidden",
-              boxShadow:    "8px 8px 8px rgba(0,0,0,0.08)",
+              boxShadow:    "8px 8px 8px rgba(0,0,0,0.08)", // audit-ignore: Tenant sub-card shadow, pending Figma effect-name mapping (2026-08 audit)
               border:       "1px solid var(--menu-divider)",
             }}
           >
@@ -582,7 +582,7 @@ export function TopbarRightMenu({
                   whiteSpace: "nowrap", zIndex: 10,
                   background: "var(--tooltip-bg)",
                   borderRadius: 4, padding: "3px 8px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
                 }}
               >
                 <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>Automatic</span>
@@ -615,7 +615,7 @@ export function TopbarRightMenu({
                   whiteSpace: "nowrap", zIndex: 10,
                   background: "var(--tooltip-bg)",
                   borderRadius: 4, padding: "3px 8px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
                 }}
               >
                 <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>Light</span>
@@ -648,7 +648,7 @@ export function TopbarRightMenu({
                   whiteSpace: "nowrap", zIndex: 10,
                   background: "var(--tooltip-bg)",
                   borderRadius: 4, padding: "3px 8px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
                 }}
               >
                 <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>Dark</span>
@@ -887,7 +887,7 @@ function FiltersCard({
         display:              "flex",
         flexDirection:        "column",
         gap:                  12,
-        boxShadow:            "0 8px 32px rgba(0,0,0,0.18)",
+        boxShadow:            "0 8px 32px rgba(0,0,0,0.18)", // audit-ignore: Filter panel shadow, pending Figma effect-name mapping (2026-08 audit)
       }}
     >
       {/* Filter sections — no dividers, just gap from parent */}
@@ -1132,7 +1132,7 @@ export function GlobalSearch({
       <div
         ref={panelRef}
         className="relative flex flex-col overflow-hidden"
-        style={{ ...PANEL_STYLE, width: 700, height: 600, boxShadow: "0 20px 60px rgba(0,0,0,0.36)" }}
+        style={{ ...PANEL_STYLE, width: 700, height: 600, boxShadow: "0 20px 60px rgba(0,0,0,0.36)" }} // audit-ignore: Global search modal shadow, pending Figma effect-name mapping (2026-08 audit)
       >
         {/* ── Search input row ─────────────────────────────────────
             When filters are applied, tags appear inline before the cursor.
@@ -1404,8 +1404,8 @@ function TopbarTooltip({
         border: "1px solid var(--gs-input-border)",
         borderRadius: 6,
         padding: subtitle ? "5px 10px" : "3px 8px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-      }}
+        boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
+  }}
     >
       <span className="text-[11px] font-medium block" style={{ color: "var(--gs-text)" }}>
         {title}
@@ -1453,7 +1453,7 @@ export function TopbarButton({
           style={{
             background:   "radial-gradient(circle at 61% 68%, rgba(33,115,255,1) 29%, rgba(9,226,171,1) 61%)", // audit-ignore: gradient stops, CSS vars can't interpolate here
             borderRadius: 8,
-            boxShadow:    "4px 8px 12px 8px rgba(9,226,171,0.16)",
+            boxShadow:    "var(--shadow-glow-ai)",
           }}
         >
           <span style={{ color: "var(--color-icon-neutral-light)", display: "flex", alignItems: "center", justifyContent: "center" }}>

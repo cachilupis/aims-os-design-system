@@ -712,12 +712,17 @@
     --slider-label-color:     var(--field-label);                     /* field label                             */
     --slider-value-color:     var(--foreground);                      /* current value text                      */
     --slider-end-label-color: var(--field-supporting);                /* track end labels (min / max)            */
-    /* ── Elevation / Shadow scale (dark mode — stronger for depth on dark bg) */
-    --shadow-elevation-1: 0 1px 4px rgba(0,0,0,0.16);
-    --shadow-elevation-2: 0 2px 8px rgba(0,0,0,0.24);
-    --shadow-elevation-3: 0 4px 24px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.16);
-    --shadow-elevation-4: 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.24);
-    --shadow-elevation-5: 8px 8px 24px rgba(0,0,0,0.32);
+    /* ── Elevation / Shadow scale — values match Figma's Elevation-1..5 effect
+       styles exactly (verified live 2026-08-04). Figma defines these as a single
+       mode-agnostic scale, so dark and light share the same values here. */
+    --shadow-elevation-1: 2px 2px 8px 1px rgba(0,0,0,0.06);
+    --shadow-elevation-2: 4px 4px 12px 2px rgba(0,0,0,0.08);
+    --shadow-elevation-3: 4px 4px 12px 2px rgba(0,0,0,0.12);
+    --shadow-elevation-4: 8px 8px 16px 8px rgba(0,0,0,0.08);
+    --shadow-elevation-5: 8px 8px 16px 0px rgba(0,0,0,0.08);
+    /* ── Named effect from Figma's "Color Shadow - Green" style — the AI/teal
+       emphasis glow, distinct from the neutral Elevation-1..5 scale above. */
+    --shadow-glow-ai: 4px 8px 12px 8px rgba(9,226,171,0.16);
   }
 
   /* ── Light mode ──────────────────────────────────────────────────────── */
@@ -1360,13 +1365,17 @@
     --stepper-connector:         #bababa;                                  /* Icon/Neutral/Disabled light    */
     --step-nav-footer-bg:        var(--color-surface-neutral-white);       /* #FFFFFF light — white wizard footer */
     --step-nav-footer-separator: var(--color-border-neutral-lighter);      /* #BABABA light                       */
-    /* ── Elevation / Shadow scale ──────────────────────────────────────── */
-    /* Each level maps to a specific UI role — never skip levels */
-    --shadow-elevation-1: 0 1px 4px rgba(0,0,0,0.06);                                              /* Micro — toggles, focused chips        */
-    --shadow-elevation-2: 0 2px 8px rgba(0,0,0,0.10);                                              /* Low — card rest, subtle panels        */
-    --shadow-elevation-3: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);                /* Mid — dropdowns, menus, select        */
-    --shadow-elevation-4: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);                /* High — modals, large panels, topbar   */
-    --shadow-elevation-5: 8px 8px 16px rgba(0,0,0,0.08);                                           /* Float — diagonal (SwitchTab)          */
+    /* ── Elevation / Shadow scale — values match Figma's Elevation-1..5 effect
+       styles exactly (verified live 2026-08-04). Figma defines these as a single
+       mode-agnostic scale, so dark and light share the same values here. */
+    --shadow-elevation-1: 2px 2px 8px 1px rgba(0,0,0,0.06);   /* Micro — toggles, focused chips        */
+    --shadow-elevation-2: 4px 4px 12px 2px rgba(0,0,0,0.08);  /* Low — card rest, subtle panels        */
+    --shadow-elevation-3: 4px 4px 12px 2px rgba(0,0,0,0.12);  /* Mid — dropdowns, menus, select        */
+    --shadow-elevation-4: 8px 8px 16px 8px rgba(0,0,0,0.08);  /* High — modals, large panels, topbar   */
+    --shadow-elevation-5: 8px 8px 16px 0px rgba(0,0,0,0.08);  /* Float — diagonal (SwitchTab)          */
+    /* ── Named effect from Figma's "Color Shadow - Green" style — the AI/teal
+       emphasis glow, distinct from the neutral Elevation-1..5 scale above. */
+    --shadow-glow-ai: 4px 8px 12px 8px rgba(9,226,171,0.16);
   }
 
   @keyframes skeleton-shimmer {
