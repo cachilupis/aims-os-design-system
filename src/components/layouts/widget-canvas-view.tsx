@@ -1107,7 +1107,7 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
             ? { right: window.innerWidth - (resizing.startRect.left + resizing.startRect.width), width: resizePreviewPx }
             : { left: resizing.startRect.left, width: resizePreviewPx }
           ),
-          background: "rgba(33,115,255,0.07)",
+          background: "rgba(33,115,255,0.07)", // audit-ignore: resize-preview overlay, pending Figma effect-name mapping (2026-08 audit)
           border: "1.5px solid var(--color-border-primary-default)",
           borderRadius: 16,
           pointerEvents: "none",
@@ -1127,7 +1127,7 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
             top: rect.top,
             width: rect.width,
             height: vertPreviewH.h,
-            background: "rgba(33,115,255,0.07)",
+            background: "rgba(33,115,255,0.07)", // audit-ignore: resize-preview overlay, pending Figma effect-name mapping (2026-08 audit)
             border: "1.5px solid var(--color-border-primary-default)",
             borderRadius: 16,
             pointerEvents: "none",

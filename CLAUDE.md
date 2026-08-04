@@ -771,15 +771,14 @@ Never in `ui/`. File must:
 
 ## DS consistency health check
 
-**Status: not yet built.** `/ds-health` does not exist as a runnable command today (confirmed 2026-07-31 — no `.claude/commands/ds-health.md`). Don't tell a PM to run it; it will fail. Until it exists, token/hardcode audits happen manually (see the audit conversation history) — this section documents the intended scope so whoever builds it doesn't have to guess:
+**Status: partially built and running automatically.** `scripts/audit-tokens.cjs` (`npm run audit:tokens`) covers items 1, 5, and 7 below and runs on every PR and push to `main` via `.github/workflows/design-system-checks.yml` (added 2026-08-04) — a PR with a hardcoded hex/rgba, an orphaned component, or a build/type error fails CI automatically. `/ds-health` as a slash command still does not exist — items 2, 3, 4, and 6 need semantic checks the script doesn't do (parsing JSX for raw elements, cross-referencing DS-GAP comments, registry lookups) and haven't been built. This section documents the full intended scope so whoever builds the rest doesn't have to guess:
 
-Run `/ds-health` before any PM prototype session to audit the repo for violations. It checks:
-1. Token compliance (no hardcoded hex/rgba in `.tsx` files)
-2. Raw HTML elements inside pattern previews
-3. Experimental component integrity (DS-GAP comment present)
-4. PM screens registered in `PROTOTYPE_PAGES`
-5. TypeScript — zero errors
-6. Pattern page previews using real DS components
-7. **Zero-import check** — any file in `src/components/ui/` or `src/components/layouts/` that nothing imports is dead code, same failure mode as the 2026-07 orphan incident above.
+1. **Token compliance** (no hardcoded hex/rgba in `.tsx`/`.css` files) — ✅ automated, `audit-tokens.cjs`
+2. Raw HTML elements inside pattern previews — not automated
+3. Experimental component integrity (DS-GAP comment present) — not automated
+4. PM screens registered in `PROTOTYPE_PAGES` — not automated
+5. **TypeScript — zero errors** — ✅ automated, CI runs `npm run build`
+6. Pattern page previews using real DS components — not automated
+7. **Zero-import check** — ✅ automated, `audit-tokens.cjs` (same failure mode as the 2026-07 orphan incident above)
 
-Run it also after adding any new component, pattern page, or screen — once it exists.
+For anything not yet automated (2, 3, 4, 6), do a manual pass after adding any new component, pattern page, or screen.
