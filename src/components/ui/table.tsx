@@ -86,11 +86,11 @@ function Table<T extends object,>({
   const thClass = cn(
     "text-left font-medium leading-[20px] text-[var(--table-header-text)]",
     "border-b border-[var(--table-border)]",
-    isSm ? "py-[10px] px-[8px] text-[12px]" : "py-[20px] px-[8px] text-[14px]",
+    isSm ? "py-[10px] px-[8px] text-xs" : "py-[20px] px-[8px] text-sm",
   )
   const tdClass = cn(
     "font-medium leading-[20px] text-[var(--table-cell-text)]",
-    isSm ? "py-[10px] px-[8px] text-[12px]" : "py-[20px] px-[8px] text-[14px]",
+    isSm ? "py-[10px] px-[8px] text-xs" : "py-[20px] px-[8px] text-sm",
   )
 
   return (

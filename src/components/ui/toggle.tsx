@@ -135,14 +135,14 @@ function Toggle({
       <span className="flex flex-col pt-[2px]">
         {label && (
           <span className={cn(
-            "text-[14px] font-medium leading-[1.4]",
+            "text-sm font-medium leading-[1.4]",
             disabled ? "text-[var(--field-placeholder)]" : "text-[var(--field-text)]"
           )}>
             {label}
           </span>
         )}
         {description && (
-          <span className="text-[12px] font-normal leading-[1.5] text-[var(--field-supporting)] mt-[2px]">
+          <span className="text-xs font-normal leading-[1.5] text-[var(--field-supporting)] mt-[2px]">
             {description}
           </span>
         )}

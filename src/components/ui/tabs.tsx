@@ -62,8 +62,8 @@ export function Tabs({ items, activeId, onChange, size = "m", className }: TabsP
               "transition-colors duration-200 ease-in-out",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-1",
               sm
-                ? "gap-[4px] px-[12px] py-[8px] text-[12px]"
-                : "gap-[6px] px-[16px] py-[8px] text-[14px]",
+                ? "gap-[4px] px-[12px] py-[8px] text-xs"
+                : "gap-[6px] px-[16px] py-[8px] text-sm",
               isActive
                 ? "text-[var(--primary)]"
                 : "text-[var(--color-text-subtitle)]",

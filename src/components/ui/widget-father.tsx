@@ -285,7 +285,7 @@ export function WidgetFather({
             </span>
             {description && (
               <span
-                className="text-[12px] leading-[1.4]"
+                className="text-xs leading-[1.4]"
                 style={{ color: "var(--widget-subtitle)" }}
               >
                 {description}

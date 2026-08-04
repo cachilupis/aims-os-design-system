@@ -37,7 +37,7 @@ export function Stepper({ steps, onStepClick, className }: StepperProps) {
             ? <Lock size={14} strokeWidth={2} />
             : StepIcon
               ? <StepIcon size={14} strokeWidth={1.75} />
-              : <span className="text-[12px] font-semibold leading-none select-none">{i + 1}</span>
+              : <span className="text-xs font-semibold leading-none select-none">{i + 1}</span>
 
         const labelColor  = isActive ? "var(--stepper-label-active)"  : "var(--stepper-label-default)"
         const labelWeight = isActive ? "600" : "500"
@@ -54,7 +54,7 @@ export function Stepper({ steps, onStepClick, className }: StepperProps) {
               icon={dotIcon}
             />
             <span
-              className="text-[14px] whitespace-nowrap"
+              className="text-sm whitespace-nowrap"
               style={{ color: labelColor, fontWeight: labelWeight, lineHeight: labelLine }}
             >
               {step.label}

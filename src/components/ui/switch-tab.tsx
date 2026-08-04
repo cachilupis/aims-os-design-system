@@ -127,7 +127,7 @@ export function SwitchTab({
             )}
             <span
               className={cn(
-                isM ? "text-[16px] leading-[24px]" : "text-[14px] leading-[20px]",
+                isM ? "text-base leading-[24px]" : "text-sm leading-[20px]",
                 isActive ? "font-semibold" : "font-medium",
               )}
               style={{ color: isActive ? "var(--st-active-text)" : "var(--st-text)" }}

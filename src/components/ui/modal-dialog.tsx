@@ -139,12 +139,12 @@ export function ModalDialog({
             <HighlightIcon size="lg" variant={resolvedIconVariant} iconName={iconName || "Info"} />
           )}
           {title && (
-            <h2 className="text-[20px] font-semibold leading-snug" style={{ color: "var(--foreground)" }}>
+            <h2 className="text-xl font-semibold leading-snug" style={{ color: "var(--foreground)" }}>
               {title}
             </h2>
           )}
           {description && (
-            <p className="text-[14px] leading-relaxed" style={{ color: "var(--field-supporting)" }}>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--field-supporting)" }}>
               {description}
             </p>
           )}
@@ -159,7 +159,7 @@ export function ModalDialog({
           )}
           <div className="flex-1 min-w-0">
             {title && (
-              <h2 className="text-[20px] font-semibold leading-snug" style={{ color: "var(--foreground)" }}>
+              <h2 className="text-xl font-semibold leading-snug" style={{ color: "var(--foreground)" }}>
                 {title}
               </h2>
             )}

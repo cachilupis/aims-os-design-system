@@ -83,14 +83,14 @@ function InformativeCard({
       {/* Text block — vertical, gap 8px, fills remaining width */}
       <div className="flex-1 flex flex-col gap-[8px] min-w-0">
         <p
-          className="text-[14px] font-semibold leading-[1.2]"
+          className="text-sm font-semibold leading-[1.2]"
           style={{ color: `var(--ic-${state}-text)` }}
         >
           {title}
         </p>
         {description && (
           <p
-            className="text-[14px] font-medium leading-[1.4]"
+            className="text-sm font-medium leading-[1.4]"
             style={{ color: `var(--ic-${state}-text)` }}
           >
             {description}

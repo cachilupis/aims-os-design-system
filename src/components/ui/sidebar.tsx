@@ -48,7 +48,7 @@ function SidebarTooltip({ label, visible }: { label: string; visible: boolean })
         whiteSpace: "nowrap",
       }}
     >
-      <span className="text-[14px] font-medium leading-[20px]" style={{ color: "var(--tooltip-text)" }}>
+      <span className="text-sm font-medium leading-[20px]" style={{ color: "var(--tooltip-text)" }}>
         {label}
       </span>
     </div>
@@ -113,7 +113,7 @@ function SidebarNavItem({
 
         {/* Label — fades in after expand, fades out before collapse */}
         <span
-          className="text-[12px] font-semibold leading-none whitespace-nowrap"
+          className="text-xs font-semibold leading-none whitespace-nowrap"
           style={{
             color: "var(--sb-text)",
             overflow: "hidden",

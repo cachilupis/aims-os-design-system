@@ -1989,41 +1989,46 @@ const COLORS_SPEC = {
 
 const TYPOGRAPHY_SPEC = {
   name: "Typography",
-  figmaNodeId: "—",
-  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS",
-  description: "Inter-based type scale. All styles defined as Tailwind classes (text-type-*) in tailwind.config.js. Never use arbitrary font sizes — pick the nearest scale step.",
+  figmaNodeId: "4471:6680",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4471-6680",
+  description: "Inter-based type scale, verified live against Figma's \"DESIGN TOKENS — NEW TYPE SYSTEM\" table (2026-08-04). Uses Tailwind's native text-* classes directly — no custom text-type-* scale. Figma's own guideline: only use weights 500 (Medium), 600 (SemiBold), and 900 (Black); minimum text size is 12px (text-xs).",
   properties: [
     { name: "family",   type: "String",  values: ["Inter"],                                   default: "Inter",  note: "Loaded via Google Fonts. No substitutes." },
-    { name: "category", type: "Variant", values: ["Display","Heading","Body","Caption","Label","Code"], default: "Body" },
-    { name: "weight",   type: "Variant", values: ["400 Regular","500 Medium","600 SemiBold","700 Bold","800 ExtraBold"], default: "500 Medium" },
+    { name: "category", type: "Variant", values: ["Display","Title","Subtitle","Body","Label","Caption","Link"], default: "Body" },
+    { name: "weight",   type: "Variant", values: ["500 Medium","600 SemiBold","900 Black"], default: "500 Medium", note: "Figma explicitly disallows 700/800 — do not use font-bold or font-extrabold" },
   ],
   sizes: [
-    { style: "Display XL", size: "48px", weight: "800", lineHeight: "1.1",  tailwind: "text-type-display-xl" },
-    { style: "Display LG", size: "36px", weight: "800", lineHeight: "1.1",  tailwind: "text-type-display-lg" },
-    { style: "Display MD", size: "30px", weight: "700", lineHeight: "1.2",  tailwind: "text-type-display-md" },
-    { style: "Heading LG", size: "24px", weight: "600", lineHeight: "1.3",  tailwind: "text-type-heading-lg" },
-    { style: "Heading MD", size: "20px", weight: "600", lineHeight: "1.35", tailwind: "text-type-heading-md" },
-    { style: "Heading SM", size: "16px", weight: "600", lineHeight: "1.4",  tailwind: "text-type-heading-sm" },
-    { style: "Body LG",    size: "16px", weight: "400", lineHeight: "1.5",  tailwind: "text-type-body-lg" },
-    { style: "Body MD",    size: "14px", weight: "400", lineHeight: "1.5",  tailwind: "text-type-body-md" },
-    { style: "Body SM",    size: "13px", weight: "400", lineHeight: "1.5",  tailwind: "text-type-body-sm" },
-    { style: "Caption",    size: "12px", weight: "400", lineHeight: "1.5",  tailwind: "text-type-caption" },
-    { style: "Label",      size: "11px", weight: "500", lineHeight: "1.4",  tailwind: "text-type-label" },
-    { style: "Code",       size: "12px", weight: "400", lineHeight: "1.6",  tailwind: "font-mono" },
+    { style: "Display XL",  size: "48px", weight: "900", lineHeight: "100%", tailwind: "text-5xl font-black" },
+    { style: "Display L",   size: "40px", weight: "900", lineHeight: "100%", tailwind: "text-4xl font-black", note: "Figma=40px, Tailwind text-4xl=36px — 1 usage, 4px diff accepted" },
+    { style: "Display M",   size: "32px", weight: "900", lineHeight: "100%", tailwind: "text-3xl font-black", note: "Figma=32px, Tailwind text-3xl=30px — 1 usage, 2px diff accepted" },
+    { style: "Title L",     size: "24px", weight: "600", lineHeight: "100%", tailwind: "text-2xl font-semibold" },
+    { style: "Title M",     size: "20px", weight: "600", lineHeight: "100%", tailwind: "text-xl font-semibold" },
+    { style: "Title S",     size: "18px", weight: "600", lineHeight: "100%", tailwind: "text-lg font-semibold" },
+    { style: "Subtitle M",  size: "16px", weight: "600", lineHeight: "100%", tailwind: "text-base font-semibold" },
+    { style: "Subtitle S",  size: "14px", weight: "600", lineHeight: "100%", tailwind: "text-sm font-semibold" },
+    { style: "Body L",      size: "16px", weight: "500", lineHeight: "24px", tailwind: "text-base font-medium leading-6" },
+    { style: "Body M",      size: "14px", weight: "500", lineHeight: "20px", tailwind: "text-sm font-medium leading-5" },
+    { style: "Body S",      size: "12px", weight: "500", lineHeight: "20px", tailwind: "text-xs font-medium leading-5" },
+    { style: "Label M",     size: "14px", weight: "600", lineHeight: "100%", tailwind: "text-sm font-semibold" },
+    { style: "Caption S Bold",    size: "12px", weight: "600", lineHeight: "100%", tailwind: "text-xs font-semibold tracking-wide", note: "+4 letter-spacing — all-caps labels only, never sentence-case body text" },
+    { style: "Caption S Regular", size: "12px", weight: "500", lineHeight: "100%", tailwind: "text-xs font-medium" },
+    { style: "Code",        size: "12px", weight: "500", lineHeight: "1.6",  tailwind: "font-mono text-xs" },
   ],
   typography: [
-    { element: "Display XL", family: "Inter", size: "48px", weight: "800 / ExtraBold", lineHeight: "1.1" },
-    { element: "Display LG", family: "Inter", size: "36px", weight: "800 / ExtraBold", lineHeight: "1.1" },
-    { element: "Display MD", family: "Inter", size: "30px", weight: "700 / Bold",      lineHeight: "1.2" },
-    { element: "Heading LG", family: "Inter", size: "24px", weight: "600 / SemiBold",  lineHeight: "1.3" },
-    { element: "Heading MD", family: "Inter", size: "20px", weight: "600 / SemiBold",  lineHeight: "1.35" },
-    { element: "Heading SM", family: "Inter", size: "16px", weight: "600 / SemiBold",  lineHeight: "1.4" },
-    { element: "Body LG",    family: "Inter", size: "16px", weight: "400 / Regular",   lineHeight: "1.5" },
-    { element: "Body MD",    family: "Inter", size: "14px", weight: "400 / Regular",   lineHeight: "1.5" },
-    { element: "Body SM",    family: "Inter", size: "13px", weight: "400 / Regular",   lineHeight: "1.5" },
-    { element: "Caption",    family: "Inter", size: "12px", weight: "400 / Regular",   lineHeight: "1.5" },
-    { element: "Label",      family: "Inter", size: "11px", weight: "500 / Medium",    lineHeight: "1.4" },
-    { element: "Code",       family: "monospace", size: "12px", weight: "400 / Regular", lineHeight: "1.6" },
+    { element: "Display XL", family: "Inter", size: "48px", weight: "900 / Black",    lineHeight: "100%" },
+    { element: "Display L",  family: "Inter", size: "40px", weight: "900 / Black",    lineHeight: "100%" },
+    { element: "Display M",  family: "Inter", size: "32px", weight: "900 / Black",    lineHeight: "100%" },
+    { element: "Title L",    family: "Inter", size: "24px", weight: "600 / SemiBold", lineHeight: "100%" },
+    { element: "Title M",    family: "Inter", size: "20px", weight: "600 / SemiBold", lineHeight: "100%" },
+    { element: "Title S",    family: "Inter", size: "18px", weight: "600 / SemiBold", lineHeight: "100%" },
+    { element: "Subtitle M", family: "Inter", size: "16px", weight: "600 / SemiBold", lineHeight: "100%" },
+    { element: "Subtitle S", family: "Inter", size: "14px", weight: "600 / SemiBold", lineHeight: "100%" },
+    { element: "Body L",     family: "Inter", size: "16px", weight: "500 / Medium",   lineHeight: "24px" },
+    { element: "Body M",     family: "Inter", size: "14px", weight: "500 / Medium",   lineHeight: "20px" },
+    { element: "Body S",     family: "Inter", size: "12px", weight: "500 / Medium",   lineHeight: "20px" },
+    { element: "Label M",    family: "Inter", size: "14px", weight: "600 / SemiBold", lineHeight: "100%" },
+    { element: "Caption",    family: "Inter", size: "12px", weight: "500-600 / Medium-SemiBold", lineHeight: "100%" },
+    { element: "Code",       family: "monospace", size: "12px", weight: "500 / Medium", lineHeight: "1.6" },
   ],
   variants: [
     {
@@ -5342,8 +5347,9 @@ const TAG_VARIANTS: { variant: TagVariant; label: string }[] = [
 ]
 
 // ── Typography data ───────────────────────────────────────────────────────
-// DS source: Figma text styles (v6rmYKA2zmyXWOahlxLOeI)
-// Mapped to Tailwind custom scale defined in tailwind.config.js
+// DS source: Figma text styles (v6rmYKA2zmyXWOahlxLOeI), verified live 2026-08-04
+// against the "DESIGN TOKENS — NEW TYPE SYSTEM" table (node 4471:6680).
+// Mapped to Tailwind's native text-* / font-* classes — no custom scale.
 
 type TypeStyleDef = {
   dsName:        string
@@ -5354,41 +5360,47 @@ type TypeStyleDef = {
   letterSpacing?: string
   tailwind:      string
   isLink?:       boolean
+  note?:         string
 }
 
+// Verified live against Figma's "DESIGN TOKENS — NEW TYPE SYSTEM" table (node 4471:6680,
+// 2026-08-04). Uses Tailwind's native text-* classes — no custom text-type-* scale.
+// Figma's Display/L and /M rows list weight 900 (style "Black") in their numeric Weight
+// column despite the token name suffix saying ExtraBold/Bold — the 900 column wins here,
+// consistent with every other Display row and with Figma's own "only 500/600/900" rule.
 const TYPOGRAPHY_STYLES: TypeStyleDef[] = [
   // Display
-  { dsName:"Display NEW/XL/Black",    category:"Display",  size:"48px", lineHeight:"auto", weight:"Black (900)",      tailwind:"text-type-5xl font-black"                    },
-  { dsName:"Display NEW/L/ExtraBold", category:"Display",  size:"40px", lineHeight:"auto", weight:"Extra Bold (800)", tailwind:"text-type-4xl font-extrabold"                },
-  { dsName:"Display NEW/M/Bold",      category:"Display",  size:"32px", lineHeight:"auto", weight:"Bold (700)",       tailwind:"text-type-3xl font-bold"                     },
+  { dsName:"Display NEW/XL/Black", category:"Display",  size:"48px", lineHeight:"auto", weight:"Black (900)", tailwind:"text-5xl font-black" },
+  { dsName:"Display NEW/L/Black",  category:"Display",  size:"40px", lineHeight:"auto", weight:"Black (900)", tailwind:"text-4xl font-black", note:"Figma=40px, Tailwind text-4xl=36px — accepted 4px diff" },
+  { dsName:"Display NEW/M/Black",  category:"Display",  size:"32px", lineHeight:"auto", weight:"Black (900)", tailwind:"text-3xl font-black", note:"Figma=32px, Tailwind text-3xl=30px — accepted 2px diff" },
   // Title
-  { dsName:"Title NEW/L", category:"Title", size:"24px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-2xl font-semibold" },
-  { dsName:"Title NEW/M", category:"Title", size:"20px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-xl font-semibold"  },
-  { dsName:"Title NEW/S", category:"Title", size:"18px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-lg font-semibold"  },
+  { dsName:"Title NEW/L", category:"Title", size:"24px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-2xl font-semibold" },
+  { dsName:"Title NEW/M", category:"Title", size:"20px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-xl font-semibold"  },
+  { dsName:"Title NEW/S", category:"Title", size:"18px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-lg font-semibold"  },
   // Subtitle
-  { dsName:"Subtitle NEW/L", category:"Subtitle", size:"18px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-lg font-semibold"   },
-  { dsName:"Subtitle NEW/M", category:"Subtitle", size:"16px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-md font-semibold"   },
-  { dsName:"Subtitle NEW/S", category:"Subtitle", size:"14px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-base font-semibold" },
+  { dsName:"Subtitle NEW/L", category:"Subtitle", size:"18px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-lg font-semibold"   },
+  { dsName:"Subtitle NEW/M", category:"Subtitle", size:"16px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-base font-semibold" },
+  { dsName:"Subtitle NEW/S", category:"Subtitle", size:"14px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-sm font-semibold"   },
   // Body
-  { dsName:"Body NEW/L", category:"Body", size:"16px", lineHeight:"24px", weight:"Medium (500)", tailwind:"text-type-md font-regular leading-[24px]"   },
-  { dsName:"Body NEW/M", category:"Body", size:"14px", lineHeight:"20px", weight:"Medium (500)", tailwind:"text-type-base font-regular leading-[20px]" },
-  { dsName:"Body NEW/S", category:"Body", size:"12px", lineHeight:"20px", weight:"Medium (500)", tailwind:"text-type-sm font-regular leading-[20px]"   },
+  { dsName:"Body NEW/L", category:"Body", size:"16px", lineHeight:"24px", weight:"Medium (500)", tailwind:"text-base font-medium leading-6" },
+  { dsName:"Body NEW/M", category:"Body", size:"14px", lineHeight:"20px", weight:"Medium (500)", tailwind:"text-sm font-medium leading-5"   },
+  { dsName:"Body NEW/S", category:"Body", size:"12px", lineHeight:"20px", weight:"Medium (500)", tailwind:"text-xs font-medium leading-5"   },
   // Label
-  { dsName:"Label NEW/L", category:"Label", size:"16px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-md font-semibold"   },
-  { dsName:"Label NEW/M", category:"Label", size:"14px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-base font-semibold" },
-  { dsName:"Label NEW/S", category:"Label", size:"12px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-sm font-semibold"   },
+  { dsName:"Label NEW/L", category:"Label", size:"16px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-base font-semibold" },
+  { dsName:"Label NEW/M", category:"Label", size:"14px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-sm font-semibold"   },
+  { dsName:"Label NEW/S", category:"Label", size:"12px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-xs font-semibold"   },
   // Caption
-  { dsName:"Caption NEW/M/Bold",     category:"Caption", size:"14px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-base font-semibold"                          },
-  { dsName:"Caption NEW/S/Bold",     category:"Caption", size:"12px", lineHeight:"auto", weight:"Semi Bold (600)", letterSpacing:"0.04em", tailwind:"text-type-sm font-semibold tracking-[0.04em]"  },
-  { dsName:"Caption NEW/S/Regular",  category:"Caption", size:"12px", lineHeight:"auto", weight:"Medium (500)",    letterSpacing:"0.04em", tailwind:"text-type-sm font-regular tracking-[0.04em]"   },
-  { dsName:"Caption NEW/XS/Bold",    category:"Caption", size:"10px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-xs font-semibold"                          },
-  { dsName:"Caption NEW/XS/Regular", category:"Caption", size:"10px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-type-xs font-regular"                           },
+  { dsName:"Caption NEW/M/Bold",     category:"Caption", size:"14px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-sm font-semibold"                          },
+  { dsName:"Caption NEW/S/Bold",     category:"Caption", size:"12px", lineHeight:"auto", weight:"Semi Bold (600)", letterSpacing:"0.04em", tailwind:"text-xs font-semibold tracking-[0.04em]"  },
+  { dsName:"Caption NEW/S/Regular",  category:"Caption", size:"12px", lineHeight:"auto", weight:"Medium (500)",    letterSpacing:"0.04em", tailwind:"text-xs font-medium tracking-[0.04em]"   },
+  { dsName:"Caption NEW/XS/Bold",    category:"Caption", size:"10px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-[10px] font-semibold", note:"Below Figma's own 12px accessibility minimum — exists as a token but flagged do-not-use in the Foundations page" },
+  { dsName:"Caption NEW/XS/Regular", category:"Caption", size:"10px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-[10px] font-medium", note:"Below Figma's own 12px accessibility minimum — exists as a token but flagged do-not-use in the Foundations page" },
   // Link
-  { dsName:"Link NEW/L/Regular", category:"Link", size:"16px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-type-md font-regular underline",   isLink:true },
-  { dsName:"Link NEW/L/Bold",    category:"Link", size:"16px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-md font-semibold underline",  isLink:true },
-  { dsName:"Link NEW/M/Regular", category:"Link", size:"14px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-type-base font-regular underline", isLink:true },
-  { dsName:"Link NEW/M/Bold",    category:"Link", size:"14px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-type-base font-semibold underline",isLink:true },
-  { dsName:"Link NEW/S/Regular", category:"Link", size:"12px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-type-sm font-regular underline",   isLink:true },
+  { dsName:"Link NEW/L/Regular", category:"Link", size:"16px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-base font-medium underline",    isLink:true },
+  { dsName:"Link NEW/L/Bold",    category:"Link", size:"16px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-base font-semibold underline",  isLink:true },
+  { dsName:"Link NEW/M/Regular", category:"Link", size:"14px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-sm font-medium underline",      isLink:true },
+  { dsName:"Link NEW/M/Bold",    category:"Link", size:"14px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-sm font-semibold underline",    isLink:true },
+  { dsName:"Link NEW/S/Regular", category:"Link", size:"12px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-xs font-medium underline",      isLink:true },
 ]
 
 // ── Color data ────────────────────────────────────────────────────────────
@@ -33514,10 +33526,10 @@ function TypographyPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Typography</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px]">
-            DS typographic scale mapped to Tailwind classes. Font:{" "}
+            DS typographic scale mapped to Tailwind's native classes. Font:{" "}
             <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">Inter</code>.
-            All sizes defined in <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">tailwind.config.js</code> as{" "}
-            <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">text-type-*</code>.
+            Sizes use Tailwind's built-in <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">text-*</code> scale directly —
+            no custom scale in <code className="text-[12px] font-mono bg-[var(--code-bg)] px-[5px] py-[1px] rounded-[4px]">tailwind.config.js</code>.
           </p>
         </div>
         <div className="flex items-center gap-[8px] shrink-0">
@@ -33589,14 +33601,12 @@ function TypographyPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </h2>
           <div className="grid grid-cols-2 gap-[8px] md:grid-cols-3 lg:grid-cols-5">
             {[
-              {label:"Regular",   cls:"font-regular",   value:"500", desc:"Body, Caption, Link"},
+              {label:"Medium",    cls:"font-medium",    value:"500", desc:"Body, Caption, Link"},
               {label:"Semi Bold", cls:"font-semibold",  value:"600", desc:"Title, Label, Subtitle"},
-              {label:"Bold",      cls:"font-bold",      value:"700", desc:"Display/Bold"},
-              {label:"Extra Bold",cls:"font-extrabold", value:"800", desc:"Display/ExtraBold"},
-              {label:"Black",     cls:"font-black",     value:"900", desc:"Display/Black"},
+              {label:"Black",     cls:"font-black",     value:"900", desc:"Display"},
             ].map(w => (
               <div key={w.label} className="flex flex-col gap-[8px] p-[14px] rounded-[8px] border border-[var(--field-border)]">
-                <span className={`text-type-xl ${w.cls} text-[var(--foreground)]`}>Ag</span>
+                <span className={`text-xl ${w.cls} text-[var(--foreground)]`}>Ag</span>
                 <div>
                   <p className="text-[12px] font-semibold text-[var(--foreground)]">{w.label}</p>
                   <p className="text-[11px] font-mono text-[var(--field-supporting)]">{w.cls} · {w.value}</p>

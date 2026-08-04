@@ -151,12 +151,12 @@ function Checkbox({
       {control}
       <span className="flex flex-col pt-[4px]">
         {label && (
-          <span className="text-[14px] font-medium leading-[1.4] text-[var(--field-text)]">
+          <span className="text-sm font-medium leading-[1.4] text-[var(--field-text)]">
             {label}
           </span>
         )}
         {description && (
-          <span className="text-[12px] font-normal leading-[1.5] text-[var(--field-supporting)] mt-[2px]">
+          <span className="text-xs font-normal leading-[1.5] text-[var(--field-supporting)] mt-[2px]">
             {description}
           </span>
         )}

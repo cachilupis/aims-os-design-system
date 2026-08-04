@@ -59,7 +59,7 @@ const CHIP_BASE =
 function AllFiltersButton({ onClick }: { onClick?: () => void }) {
   return (
     <button
-      className="inline-flex items-center gap-[6px] h-[40px] px-[16px] rounded-full border text-[14px] font-medium transition-colors shrink-0"
+      className="inline-flex items-center gap-[6px] h-[40px] px-[16px] rounded-full border text-sm font-medium transition-colors shrink-0"
       style={{
         background:  "var(--field-bg)",
         borderColor: "var(--field-border)",
@@ -265,7 +265,7 @@ export function Filters({
               <ArrowDown className="w-[16px] h-[16px]" />
             </button>
             <button
-              className="inline-flex items-center gap-[8px] text-[14px] font-medium transition-opacity hover:opacity-80 shrink-0"
+              className="inline-flex items-center gap-[8px] text-sm font-medium transition-opacity hover:opacity-80 shrink-0"
               style={{ color: "var(--fi-sort-text)" }}
               onClick={onSortClick}
             >

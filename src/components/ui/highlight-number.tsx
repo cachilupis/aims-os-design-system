@@ -44,7 +44,7 @@ export function HighlightNumber({
       style={{ background: BG[variant] }}
     >
       <span
-        className="text-[12px] font-semibold leading-none tracking-[0.48px] uppercase"
+        className="text-xs font-semibold leading-none tracking-[0.48px] uppercase"
         style={{ color: FG[variant] }}
       >
         {value}

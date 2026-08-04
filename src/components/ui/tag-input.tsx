@@ -128,7 +128,7 @@ export function TagInput({
             onBlur={() => setFocused(false)}
             disabled={isInputDisabled}
             placeholder={placeholder}
-            className="w-full bg-transparent text-[14px] font-medium outline-none border-none"
+            className="w-full bg-transparent text-sm font-medium outline-none border-none"
             style={{
               color: "var(--foreground)",
               caretColor: "var(--field-border-focus)",
@@ -140,7 +140,7 @@ export function TagInput({
         <button
           onClick={commit}
           disabled={isInputDisabled}
-          className="shrink-0 flex items-center justify-center rounded-[8px] px-[16px] text-[14px] font-medium whitespace-nowrap"
+          className="shrink-0 flex items-center justify-center rounded-[8px] px-[16px] text-sm font-medium whitespace-nowrap"
           style={{
             height: 40,
             background: isInputDisabled ? "var(--color-surface-neutral-subtle)" : "var(--surface)",
@@ -157,12 +157,12 @@ export function TagInput({
 
       {/* ── Error / max-reached message ────────────────────────────────── */}
       {error && (
-        <p className="text-[12px] font-medium pl-[2px]" style={{ color: "var(--color-text-error)" }}>
+        <p className="text-xs font-medium pl-[2px]" style={{ color: "var(--color-text-error)" }}>
           {error}
         </p>
       )}
       {maxReached && !error && (
-        <p className="text-[12px] font-medium pl-[2px]" style={{ color: "var(--field-placeholder)" }}>
+        <p className="text-xs font-medium pl-[2px]" style={{ color: "var(--field-placeholder)" }}>
           Maximum tags reached
         </p>
       )}
@@ -181,7 +181,7 @@ export function TagInput({
                   style={{ height: 24, background: palette.bg, border: palette.border }}
                 >
                   <span
-                    className="text-[14px] font-medium leading-none whitespace-nowrap"
+                    className="text-sm font-medium leading-none whitespace-nowrap"
                     style={{ color: palette.text }}
                   >
                     {tag}
@@ -209,7 +209,7 @@ export function TagInput({
             {hasOverflow && !expanded && (
               <button
                 onClick={() => setExpanded(true)}
-                className="flex gap-[4px] items-center rounded-[4px] px-[6px] text-[12px] font-medium"
+                className="flex gap-[4px] items-center rounded-[4px] px-[6px] text-xs font-medium"
                 style={{ height: 28, color: "var(--foreground)", background: "transparent", border: "none", cursor: "pointer" }}
               >
                 View more: +{hiddenCount} <ChevronDown size={14} />
@@ -221,7 +221,7 @@ export function TagInput({
           {hasOverflow && expanded && (
             <button
               onClick={() => setExpanded(false)}
-              className="flex gap-[4px] items-center rounded-[4px] px-[6px] text-[12px] font-medium self-start"
+              className="flex gap-[4px] items-center rounded-[4px] px-[6px] text-xs font-medium self-start"
               style={{ height: 28, color: "var(--foreground)", background: "transparent", border: "none", cursor: "pointer" }}
             >
               View less <ChevronUp size={14} />

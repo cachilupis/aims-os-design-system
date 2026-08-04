@@ -71,7 +71,7 @@ const wrapperCva = cva(
 
 // ── Supporting text ───────────────────────────────────────────────────────
 
-const supportingCva = cva("text-[12px] font-medium leading-[1.5]", {
+const supportingCva = cva("text-xs font-medium leading-[1.5]", {
   variants: {
     state: {
       default:  "text-[var(--field-supporting)]",
@@ -209,7 +209,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
           className={cn(
             "absolute top-[-6px] left-[16px] z-[1]",
             "inline-flex items-center px-[4px] rounded-sm",
-            "text-[12px] font-semibold leading-normal select-none whitespace-nowrap",
+            "text-xs font-semibold leading-normal select-none whitespace-nowrap",
             "text-[var(--field-label)]"
           )}
           style={{
@@ -233,7 +233,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
           style={textareaStyle}
           className={cn(
             "w-full bg-transparent outline-none px-[16px] py-[12px] resize-none",
-            "text-[14px] font-medium leading-[1.5]",
+            "text-sm font-medium leading-[1.5]",
             "text-[var(--field-text)] placeholder:text-[var(--field-placeholder)]",
             "disabled:cursor-not-allowed",
           )}
@@ -267,7 +267,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
           {showCount && (
             <span
               className={cn(
-                "text-[12px] font-medium tabular-nums select-none shrink-0",
+                "text-xs font-medium tabular-nums select-none shrink-0",
                 countColorClass[resolvedState]
               )}
             >
