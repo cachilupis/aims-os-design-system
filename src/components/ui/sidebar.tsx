@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import * as LucideIcons from "lucide-react"
 import type { LucideIcon } from "lucide-react"
+import { Tooltip } from "@/components/ui/tooltip"
 
 // ── DS tokens — sourced from Figma variable bindings (Sidebar page)
 // Active gradient: GRADIENT_RADIAL stops @0.29 → @0.61
@@ -32,27 +33,6 @@ function NavIcon({ name, size = 16, color }: { name: string; size?: number; colo
   const Icon = (LucideIcons as unknown as Record<string, LucideIcon>)[name]
   if (!Icon) return null
   return <Icon size={size} strokeWidth={1.75} color={color} />
-}
-
-// ── Tooltip — shown to the right of icon buttons in collapsed mode
-function SidebarTooltip({ label, visible }: { label: string; visible: boolean }) {
-  if (!visible) return null
-  return (
-    <div
-      role="tooltip"
-      className="absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 z-50 pointer-events-none"
-      style={{
-        background: "var(--tooltip-bg)",
-        borderRadius: 4,
-        padding: "8px 12px",
-        whiteSpace: "nowrap",
-      }}
-    >
-      <span className="text-sm font-medium leading-[20px]" style={{ color: "var(--tooltip-text)" }}>
-        {label}
-      </span>
-    </div>
-  )
 }
 
 export const DEFAULT_SIDEBAR_ITEMS: SidebarItem[] = [
@@ -101,15 +81,23 @@ function SidebarNavItem({
       {/* Left: icon button + label */}
       <div className="flex items-center" style={{ gap: collapsed ? 0 : 8 }}>
         {/* Icon button */}
-        <div className="relative shrink-0" style={{ width: 24, height: 24 }}>
+        {collapsed ? (
+          <Tooltip content={item.label} side="right" triggerClassName="shrink-0">
+            <div
+              className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] transition-all duration-150"
+              style={{ background: iconBg, boxShadow: iconShadow, padding: 4 }}
+            >
+              <NavIcon name={item.icon} size={16} color={iconColor} />
+            </div>
+          </Tooltip>
+        ) : (
           <div
-            className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] transition-all duration-150"
+            className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] transition-all duration-150 shrink-0"
             style={{ background: iconBg, boxShadow: iconShadow, padding: 4 }}
           >
             <NavIcon name={item.icon} size={16} color={iconColor} />
           </div>
-          {collapsed && <SidebarTooltip label={item.label} visible={hovered} />}
-        </div>
+        )}
 
         {/* Label — fades in after expand, fades out before collapse */}
         <span
@@ -171,23 +159,31 @@ function SidebarToggleRow({
         width: "100%",
       }}
     >
-      <div className="relative" style={{ width: 24, height: 24 }}>
+      {collapsed ? (
+        <Tooltip content="Expand sidebar" side="right" triggerClassName="shrink-0">
+          <button
+            onClick={onToggle}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            aria-label="Expand sidebar"
+            className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] transition-all duration-150 focus-visible:outline-none"
+            style={{ background: iconBg, boxShadow: iconShadow, padding: 4 }}
+          >
+            <NavIcon name="PanelLeftOpen" size={16} color={iconColor} />
+          </button>
+        </Tooltip>
+      ) : (
         <button
           onClick={onToggle}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label="Collapse sidebar"
           className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] transition-all duration-150 focus-visible:outline-none"
           style={{ background: iconBg, boxShadow: iconShadow, padding: 4 }}
         >
-          <NavIcon
-            name={collapsed ? "PanelLeftOpen" : "PanelLeftClose"}
-            size={16}
-            color={iconColor}
-          />
+          <NavIcon name="PanelLeftClose" size={16} color={iconColor} />
         </button>
-        {collapsed && <SidebarTooltip label="Expand sidebar" visible={hovered} />}
-      </div>
+      )}
     </div>
   )
 }

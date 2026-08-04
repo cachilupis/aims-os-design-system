@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 export interface PaginationProps {
   currentPage: number
@@ -64,28 +65,21 @@ export function Pagination({
     onItemsPerPageChange?.(val)
   }
 
-  // Nav buttons — Secondary DS style (bordered, 24×24)
-  const navBtn = (disabled: boolean, onClick: () => void, label: string, Icon: React.FC<{ size?: number; strokeWidth?: number }>) => (
-    <button
-      type="button"
+  // Nav buttons — the real Button atom (variant="secondary", icon-alone, size="sm"
+  // is exactly 24×24 in Button's own spec). Icon color kept as the pre-existing
+  // --color-icon-neutral-dark via explicit style so swapping to the atom doesn't
+  // shift it to Button's own --btn-secondary-fg (a different, slightly darker token).
+  const navBtn = (disabled: boolean, onClick: () => void, label: string, Icon: React.FC<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>) => (
+    <Button
+      variant="secondary"
+      size="sm"
+      iconPosition="alone"
       disabled={disabled}
       onClick={onClick}
       aria-label={label}
-      className="flex items-center justify-center rounded-[8px] transition-colors"
-      style={{
-        width: 24, height: 24,
-        border: `1px solid ${disabled ? "var(--btn-secondary-disabled-bd)" : "var(--btn-secondary-border)"}`,
-        background: disabled ? "var(--btn-secondary-disabled-bg)" : "var(--btn-secondary-bg)",
-        cursor: disabled ? "not-allowed" : "pointer",
-        color: "var(--color-icon-neutral-dark)",
-        padding: 0,
-        flexShrink: 0,
-      }}
-      onMouseEnter={e => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "var(--btn-secondary-hover-bg)" }}
-      onMouseLeave={e => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "var(--btn-secondary-bg)" }}
-    >
-      <Icon size={14} strokeWidth={1.75} />
-    </button>
+      icon={<Icon size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />}
+      style={{ flexShrink: 0 }}
+    />
   )
 
   return (
