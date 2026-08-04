@@ -180,8 +180,8 @@ export function Chip({
         "inline-flex items-center justify-center rounded-full font-medium whitespace-nowrap select-none",
         "transition-all duration-150",
         isM
-          ? "h-[28px] px-[12px] py-[4px] gap-[4px] text-[14px] leading-[20px]"
-          : "h-[20px] px-[12px] py-[0px] gap-[4px] text-[12px] leading-[20px]",
+          ? "h-[28px] px-[12px] py-[4px] gap-[4px] text-sm leading-[20px]"
+          : "h-[20px] px-[12px] py-[0px] gap-[4px] text-xs leading-[20px]",
         disabled ? "cursor-not-allowed" : "cursor-pointer active:scale-95",
         className,
       )}

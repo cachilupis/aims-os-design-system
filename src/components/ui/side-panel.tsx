@@ -349,7 +349,7 @@ export function SidePanel({
                         }}
                       >
                         <span
-                          className="text-[12px] font-medium leading-[20px] whitespace-nowrap"
+                          className="text-xs font-medium leading-[20px] whitespace-nowrap"
                           style={{ color: TAG_VARIANT[titleTagVariant].fg }}
                         >
                           {titleTag}
@@ -361,7 +361,7 @@ export function SidePanel({
                   {description && (
                     <Tooltip content={description} side="cursor" triggerClassName="block min-w-0">
                       <p
-                        className="text-[14px] font-medium"
+                        className="text-sm font-medium"
                         style={{
                           color: "var(--field-supporting)",
                           lineHeight: "20px",

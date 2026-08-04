@@ -126,7 +126,7 @@ function MenuItem({
         <span
           className={cn(
             "truncate font-medium leading-[20px]",
-            isSmall ? "text-[12px]" : "text-[14px]",
+            isSmall ? "text-xs" : "text-sm",
             isDisabled
               ? "text-[var(--menu-item-disabled)]"
               : isSmall
@@ -139,7 +139,7 @@ function MenuItem({
         {subtext && (
           <span
             className={cn(
-              "truncate text-[14px] leading-[20px]",
+              "truncate text-sm leading-[20px]",
               isDisabled ? "text-[var(--menu-item-disabled)]" : "text-[var(--menu-item-subtext)]"
             )}
           >

@@ -78,7 +78,7 @@ const POSITION: Record<FixedSide, string> = {
 const POPUP_BASE = cn(
   "pointer-events-none z-50 w-max max-w-[300px]",
   "rounded-[4px] px-[12px] py-[8px]",
-  "text-[14px] leading-[20px] font-medium",
+  "text-sm leading-[20px] font-medium",
   "bg-[var(--tooltip-bg)] text-[var(--tooltip-text)]",
 )
 

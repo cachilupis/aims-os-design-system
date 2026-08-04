@@ -115,7 +115,7 @@ export function AddFields({
       {/* + Add field trigger / max-reached message */}
       {maxReached ? (
         <div
-          className="flex items-center justify-center w-full rounded-[8px] text-[12px] font-medium"
+          className="flex items-center justify-center w-full rounded-[8px] text-xs font-medium"
           style={{
             height: 32,
             border: "0.5px solid var(--color-border-neutral-lighter)",

@@ -86,14 +86,14 @@ export function AlertBanner({
       {/* Body: title + optional description — both use full-opacity state color */}
       <div className="flex-1 flex flex-col gap-[4px] min-w-0 py-[1px]">
         <p
-          className="text-[14px] font-semibold leading-[1.43]"
+          className="text-sm font-semibold leading-[1.43]"
           style={{ color: cfg.text }}
         >
           {title}
         </p>
         {description && (
           <p
-            className="text-[14px] font-medium leading-[1.43]"
+            className="text-sm font-medium leading-[1.43]"
             style={{ color: cfg.text }}
           >
             {description}
@@ -107,7 +107,7 @@ export function AlertBanner({
           {cta && (
             <button
               onClick={onCta}
-              className="text-[12px] font-medium leading-[20px] px-[12px] py-[4px] rounded-[4px] transition-opacity hover:opacity-70 focus-visible:outline-none"
+              className="text-xs font-medium leading-[20px] px-[12px] py-[4px] rounded-[4px] transition-opacity hover:opacity-70 focus-visible:outline-none"
               style={{ color: "var(--ab-cta-text)" }}
             >
               {cta}

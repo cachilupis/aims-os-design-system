@@ -195,7 +195,7 @@ function MetaItemView({ meta, mode, isFirst }: { meta: ELMetaItem; mode: "icon" 
       >
         {Icon && <Icon size={16} strokeWidth={1.75} style={{ color: "var(--muted-foreground)" }} />}
         {mode === "icon-text" && meta.label && (
-          <span className="text-[12px] font-medium leading-none whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
+          <span className="text-xs font-medium leading-none whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
             {meta.label}
           </span>
         )}
@@ -303,7 +303,7 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
             <ELIconHighlight variant={item.iconVariant} iconName={item.iconName} />
           )}
           {item.avatarName && <ELAvatar name={item.avatarName} src={item.avatarSrc} />}
-          <span className="text-[16px] font-semibold leading-none whitespace-nowrap overflow-hidden text-ellipsis min-w-0" style={{ color: "var(--foreground)" }}>
+          <span className="text-base font-semibold leading-none whitespace-nowrap overflow-hidden text-ellipsis min-w-0" style={{ color: "var(--foreground)" }}>
             {item.title}
           </span>
           {/* Primary meta always shows icon + text */}
@@ -324,7 +324,7 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
               <button
                 key={i}
                 onClick={e => { e.stopPropagation(); action.onClick?.() }}
-                className="h-[27px] rounded-[8px] text-[12px] font-medium leading-none transition-opacity hover:opacity-80 flex items-center justify-center"
+                className="h-[27px] rounded-[8px] text-xs font-medium leading-none transition-opacity hover:opacity-80 flex items-center justify-center"
                 style={
                   action.variant === "primary"
                     ? { background: "var(--primary)", color: "var(--primary-foreground)", border: "none", padding: "0 12px" }
@@ -348,7 +348,7 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
             </Tag>
           )}
           {item.timestamp && (
-            <span className="text-[12px] font-medium leading-none whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
+            <span className="text-xs font-medium leading-none whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
               {item.timestamp}
             </span>
           )}
@@ -374,7 +374,7 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
         >
           <div className="flex-1 min-w-0 overflow-hidden" style={{ maxHeight: needsExpander && !descExpanded ? "20px" : "none" }}>
             <p
-              className="text-[14px] font-medium leading-[20px]"
+              className="text-sm font-medium leading-[20px]"
               style={{
                 color:        "var(--muted-foreground)",
                 overflow:     needsExpander && !descExpanded ? "hidden" : "visible",
@@ -431,7 +431,7 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
               {/* Inline detail: always shown when short; truncated when long+collapsed */}
               {(!isLong || !aiExpanded) && (
                 <span
-                  className={cn("text-[12px] font-medium", isLong ? "flex-1 min-w-0" : "shrink-0")}
+                  className={cn("text-xs font-medium", isLong ? "flex-1 min-w-0" : "shrink-0")}
                   style={{
                     color:        "var(--muted-foreground)",
                     overflow:     isLong && !aiExpanded ? "hidden"    : undefined,
@@ -448,7 +448,7 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
                 <div className="flex items-center gap-[6px] shrink-0">
                   {aiExpanded && ai.viewMore && (
                     <button
-                      className="text-[12px] font-medium px-[10px] h-[24px] rounded-[4px] transition-opacity hover:opacity-70"
+                      className="text-xs font-medium px-[10px] h-[24px] rounded-[4px] transition-opacity hover:opacity-70"
                       style={{ color: "var(--foreground)" }}
                       onClick={e => { e.stopPropagation(); ai.onViewMore?.() }}
                     >
@@ -475,9 +475,9 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
                 {lines.map((line, i) => (
                   <div key={i} className="flex items-start gap-[6px]">
                     {isArr && (
-                      <span className="text-[12px] leading-[18px] shrink-0" style={{ color: "var(--tag-purple-fg)" }}>•</span>
+                      <span className="text-xs leading-[18px] shrink-0" style={{ color: "var(--tag-purple-fg)" }}>•</span>
                     )}
-                    <span className="text-[12px] font-medium leading-[18px]" style={{ color: "var(--muted-foreground)" }}>
+                    <span className="text-xs font-medium leading-[18px]" style={{ color: "var(--muted-foreground)" }}>
                       {line}
                     </span>
                   </div>

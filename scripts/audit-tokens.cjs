@@ -160,7 +160,11 @@ componentFiles.forEach((file) => {
 })
 
 // ── Check 5: off-scale spacing (informational) ──────────────────────────
-const SCALE = new Set([0, 1, 2, 3, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 100, 9999])
+// Verified live against Figma's Spacing/0x..20x scale (2026-08-04) — each Nx
+// step is N×4px, with a single 0.5x=2px exception. Figma has no 7x/9x/11x
+// etc. steps; 100 (radius-full) and 9999 (z-index/legacy radius references)
+// are kept as accepted non-spacing outliers this same regex also matches.
+const SCALE = new Set([0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 100, 9999])
 const PX_RE = /(?:padding|margin|gap|width|height|top|left|right|bottom|inset|radius)[a-zA-Z]*\s*:\s*["']?(\d+)px/gi
 const ARBITRARY_PX_RE = /\b(?:p|m|gap|w|h|top|left|right|bottom|inset)-\[(\d+)px\]/g
 

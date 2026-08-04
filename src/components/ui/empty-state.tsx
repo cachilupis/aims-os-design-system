@@ -72,14 +72,14 @@ export function EmptyState({
         )}
         <div className="flex flex-col items-center gap-[4px]">
           <p
-            className="text-[16px] font-semibold leading-[1.4]"
+            className="text-base font-semibold leading-[1.4]"
             style={{ color: "var(--foreground)" }}
           >
             {title}
           </p>
           {description && (
             <p
-              className="text-[14px] font-medium leading-[20px] max-w-[440px]"
+              className="text-sm font-medium leading-[20px] max-w-[440px]"
               style={{ color: "var(--field-supporting)" }}
             >
               {description}

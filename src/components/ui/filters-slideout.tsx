@@ -81,7 +81,7 @@ function SectionShell({
         aria-expanded={expanded}
       >
         <span className="flex items-center gap-[8px]">
-          <span className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>
+          <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
             {title}
           </span>
           {activeCount !== undefined && activeCount > 0 ? (
@@ -531,7 +531,7 @@ function AssignmentSectionContent() {
         {MOCK_ASSIGNEES.map(u => (
           <button
             key={u.id}
-            className="flex items-center justify-center w-[36px] h-[36px] rounded-full text-[12px] font-bold text-white transition-all"
+            className="flex items-center justify-center w-[36px] h-[36px] rounded-full text-xs font-semibold text-white transition-all"
             style={{
               background: u.color,
               outline: selected.has(u.id) ? `2px solid var(--primary)` : "2px solid transparent",
@@ -545,7 +545,7 @@ function AssignmentSectionContent() {
         ))}
         {overflow > 0 && (
           <span
-            className="flex items-center justify-center w-[36px] h-[36px] rounded-full text-[12px] font-semibold"
+            className="flex items-center justify-center w-[36px] h-[36px] rounded-full text-xs font-semibold"
             style={{ background: "var(--ctrl-inactive-bg)", color: "var(--foreground)" }}
           >
             +{overflow}
@@ -746,7 +746,7 @@ export function FiltersSlideout({
           className="flex items-center justify-between px-[16px] h-[56px] shrink-0"
           style={{ borderBottom: "1px solid var(--table-border)" }}
         >
-          <span className="text-[16px] font-semibold" style={{ color: "var(--foreground)" }}>
+          <span className="text-base font-semibold" style={{ color: "var(--foreground)" }}>
             Filters
           </span>
           <div className="flex items-center gap-[12px]">
@@ -779,7 +779,7 @@ export function FiltersSlideout({
                   Applied filters
                 </span>
                 <button
-                  className="text-[12px] font-medium transition-opacity hover:opacity-70"
+                  className="text-xs font-medium transition-opacity hover:opacity-70"
                   style={{ color: "var(--fi-clear-text)" }}
                   onClick={onClearAll}
                 >

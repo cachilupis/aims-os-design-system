@@ -52,7 +52,7 @@ export function Breadcrumb({ depth, items, onNavigate, className }: BreadcrumbPr
             {i > 0 && <BreadcrumbSeparator />}
             {isLast || isEllipsis ? (
               <span
-                className="text-[14px] font-medium leading-[20px] select-none"
+                className="text-sm font-medium leading-[20px] select-none"
                 style={{ color: isLast ? "var(--color-text-subtitle)" : "var(--color-text-body)" }}
               >
                 {item.label}
@@ -60,7 +60,7 @@ export function Breadcrumb({ depth, items, onNavigate, className }: BreadcrumbPr
             ) : (
               <button
                 type="button"
-                className="text-[14px] font-medium leading-[20px] cursor-pointer transition-colors"
+                className="text-sm font-medium leading-[20px] cursor-pointer transition-colors"
                 style={{ color: "var(--color-text-body)", background: "none", border: "none", padding: 0 }}
                 onMouseEnter={e => { e.currentTarget.style.color = "var(--color-text-subtitle)" }}
                 onMouseLeave={e => { e.currentTarget.style.color = "var(--color-text-body)" }}

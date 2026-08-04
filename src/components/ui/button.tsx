@@ -107,9 +107,9 @@ const buttonVariants = cva(
       },
 
       size: {
-        sm:      "h-[27px] px-[12px] gap-[4px]  text-type-sm   rounded-md",
-        default: "h-[40px] px-[16px] gap-[8px]  text-type-base rounded-md",
-        lg:      "h-[52px] px-[20px] gap-[12px] text-type-md   rounded-lg",
+        sm:      "h-[27px] px-[12px] gap-[4px]  text-xs   rounded-md",
+        default: "h-[40px] px-[16px] gap-[8px]  text-sm rounded-md",
+        lg:      "h-[52px] px-[20px] gap-[12px] text-base   rounded-lg",
       },
 
       pill: {

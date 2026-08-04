@@ -200,14 +200,14 @@ export function TopbarLeftMenu({
             {/* Text stack: name 14px w:500 + description 12px w:500 */}
             <div className="flex-1 flex flex-col gap-[2px] min-w-0">
               <span
-                className="text-[14px] font-medium leading-[1.3] truncate"
+                className="text-sm font-medium leading-[1.3] truncate"
                 style={{ color: isSelected ? "var(--topbar-menu-text)" : "var(--topbar-menu-text)" }}
               >
                 {ws.name}
               </span>
               {ws.description && (
                 <span
-                  className="text-[12px] font-medium leading-[1.3] truncate"
+                  className="text-xs font-medium leading-[1.3] truncate"
                   style={{ color: "var(--topbar-menu-text-dim)" }}
                 >
                   {ws.description}
@@ -231,7 +231,7 @@ export function TopbarLeftMenu({
         style={{ height: 40, borderTop: "1px solid var(--menu-divider)" }}
       >
         <button
-          className="flex items-center gap-[6px] text-[12px] font-medium transition-opacity hover:opacity-70 cursor-pointer"
+          className="flex items-center gap-[6px] text-xs font-medium transition-opacity hover:opacity-70 cursor-pointer"
           style={{ color: "var(--primary)" }}
         >
           <Plus size={12} strokeWidth={2.5} />
@@ -309,7 +309,7 @@ export function TopbarRightMenu({
       <span className="shrink-0" style={{ color: "var(--topbar-menu-text-dim)", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
         {icon}
       </span>
-      <span className="flex-1 text-[14px] font-medium" style={{ color: "var(--topbar-menu-text)" }}>
+      <span className="flex-1 text-sm font-medium" style={{ color: "var(--topbar-menu-text)" }}>
         {label}
       </span>
       {right}
@@ -345,7 +345,7 @@ export function TopbarRightMenu({
         <TopbarAvatar name={userName || ""} src={userAvatarSrc} size={24} />
         <div className="flex-1 flex flex-col min-w-0">
           <span
-            className="text-[14px] font-medium leading-[1.3] truncate"
+            className="text-sm font-medium leading-[1.3] truncate"
             style={{ color: "var(--topbar-menu-text)" }}
           >
             {userName || "User"}
@@ -393,7 +393,7 @@ export function TopbarRightMenu({
             <TopbarAvatar name={companyName || ""} src={companyAvatarSrc} size={24} />
             <div className="flex-1 flex flex-col min-w-0">
               <span
-                className="text-[14px] font-medium leading-[1.3] truncate"
+                className="text-sm font-medium leading-[1.3] truncate"
                 style={{ color: "var(--topbar-menu-text)" }}
               >
                 {companyName || "Company"}
@@ -466,7 +466,7 @@ export function TopbarRightMenu({
                   onChange={e => setTenantSearch(e.target.value)}
                   placeholder="Search"
                   autoFocus
-                  className="flex-1 bg-transparent border-0 outline-none text-[14px] font-medium placeholder:font-medium"
+                  className="flex-1 bg-transparent border-0 outline-none text-sm font-medium placeholder:font-medium"
                   style={{
                     color: "var(--topbar-menu-text)",
                     fontFamily: "inherit",
@@ -504,7 +504,7 @@ export function TopbarRightMenu({
                   >
                     <TopbarAvatar name={t.name} src={t.avatarSrc} size={24} />
                     <span
-                      className="flex-1 min-w-0 text-[14px] font-medium truncate"
+                      className="flex-1 min-w-0 text-sm font-medium truncate"
                       style={{ color: "var(--topbar-menu-text)" }}
                     >
                       {t.name}
@@ -543,7 +543,7 @@ export function TopbarRightMenu({
         <span className="shrink-0" style={{ color: "var(--topbar-menu-text-dim)", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Moon size={14} strokeWidth={1.75} />
         </span>
-        <span className="flex-1 text-[14px] font-medium" style={{ color: "var(--topbar-menu-text)" }}>
+        <span className="flex-1 text-sm font-medium" style={{ color: "var(--topbar-menu-text)" }}>
           Theme
         </span>
 
@@ -564,7 +564,7 @@ export function TopbarRightMenu({
               onClick={() => onThemeChange?.("auto")}
               onMouseEnter={() => setThemeHover("auto")}
               onMouseLeave={() => setThemeHover(null)}
-              className="flex items-center justify-center rounded-[6px] transition-colors cursor-pointer text-[12px] font-medium"
+              className="flex items-center justify-center rounded-[6px] transition-colors cursor-pointer text-xs font-medium"
               style={{
                 height:     24, padding: "0 10px",
                 background: activeTheme === "auto" ? "var(--topbar-menu-item-sel)" : "transparent",
@@ -669,7 +669,7 @@ export function TopbarRightMenu({
         <span className="shrink-0" style={{ color: "var(--signout-icon)", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <LogOut size={14} strokeWidth={1.75} />
         </span>
-        <span className="text-[14px] font-medium" style={{ color: "var(--signout-text)" }}>
+        <span className="text-sm font-medium" style={{ color: "var(--signout-text)" }}>
           Sign out
         </span>
       </button>
@@ -903,7 +903,7 @@ function FiltersCard({
                 <button
                   key={opt}
                   onClick={() => toggle(sec.label, opt)}
-                  className="text-[12px] font-medium rounded-full leading-5 cursor-pointer transition-colors"
+                  className="text-xs font-medium rounded-full leading-5 cursor-pointer transition-colors"
                   style={{
                     padding:    "0 8px",
                     background: active ? "var(--primary)" : "var(--fc-chip-bg)",
@@ -923,7 +923,7 @@ function FiltersCard({
       <div className="flex items-center justify-end" style={{ gap: 8 }}>
         <button
           onClick={() => setSelected({})}
-          className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-70"
+          className="text-xs font-medium cursor-pointer transition-opacity hover:opacity-70"
           style={{
             height:     28,
             padding:    "4px 12px",
@@ -935,7 +935,7 @@ function FiltersCard({
         </button>
         <button
           onClick={() => { onApply?.(selected) }}
-          className="text-[12px] font-medium cursor-pointer transition-opacity hover:opacity-90"
+          className="text-xs font-medium cursor-pointer transition-opacity hover:opacity-90"
           style={{
             height:     28,
             padding:    "4px 12px",
@@ -1209,7 +1209,7 @@ export function GlobalSearch({
               <button
                 key={f.id}
                 onClick={() => setActiveFilter(f.id)}
-                className="shrink-0 flex items-center gap-[4px] px-[10px] rounded-full text-[12px] font-medium transition-all"
+                className="shrink-0 flex items-center gap-[4px] px-[10px] rounded-full text-xs font-medium transition-all"
                 style={{
                   height:     22,
                   background: isActive ? "var(--primary)" : "var(--gs-chip-inactive-bg)",

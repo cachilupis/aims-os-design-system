@@ -120,7 +120,7 @@ export function ProcessItem({
       <div className="flex flex-1 flex-col gap-[2px] items-start min-w-0">
         {/* Title + tag */}
         <div className="flex items-start justify-between w-full gap-[8px]">
-          <p className="text-[14px] font-semibold leading-[20px] text-[var(--color-text-title)] min-w-0">
+          <p className="text-sm font-semibold leading-[20px] text-[var(--color-text-title)] min-w-0">
             {title}
           </p>
           {tag && (
@@ -138,7 +138,7 @@ export function ProcessItem({
           {(description || timestamp) && (
             <div className="flex flex-col gap-[2px] flex-1 min-w-0">
               {description && (
-                <p className="text-[14px] font-medium leading-[20px] text-[var(--color-text-body)]">
+                <p className="text-sm font-medium leading-[20px] text-[var(--color-text-body)]">
                   {description}
                 </p>
               )}
@@ -234,7 +234,7 @@ export function ProcessList({
           </div>
           <div className="flex flex-col gap-[4px] items-center text-center">
             <p className="text-[13px] font-semibold text-[var(--color-text-title)]">{emptyTitle}</p>
-            <p className="text-[12px] text-[var(--color-text-body)]">{emptyDescription}</p>
+            <p className="text-xs text-[var(--color-text-body)]">{emptyDescription}</p>
           </div>
         </div>
       )}

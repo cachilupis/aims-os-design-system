@@ -49,8 +49,8 @@ const tagVariants = cva(
         neutral:    "bg-[var(--tag-neutral-bg)]     border-[var(--tag-neutral-bd)]     text-[var(--tag-neutral-fg)]",
       },
       size: {
-        sm:      "h-[20px] px-[8px] py-[4px] text-[12px]",
-        default: "h-[24px] px-[8px] py-[4px] text-[14px]",
+        sm:      "h-[20px] px-[8px] py-[4px] text-xs",
+        default: "h-[24px] px-[8px] py-[4px] text-sm",
       },
     },
     defaultVariants: {

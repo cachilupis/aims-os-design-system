@@ -107,7 +107,7 @@ export function Header({
               {!isCompress && tag}
             </div>
             {!isCompress && description && (
-              <p className="text-[14px] leading-[20px] m-0" style={{ color: "var(--header-desc)" }}>
+              <p className="text-sm leading-[20px] m-0" style={{ color: "var(--header-desc)" }}>
                 {description}
               </p>
             )}

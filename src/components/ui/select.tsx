@@ -82,7 +82,7 @@ const triggerCva = cva(
   }
 )
 
-const supportingCva = cva("text-[12px] font-medium leading-[1.5]", {
+const supportingCva = cva("text-xs font-medium leading-[1.5]", {
   variants: {
     state: {
       default:  "text-[var(--field-supporting)]",
@@ -149,7 +149,7 @@ function Select({
           className={cn(
             "absolute top-[-6px] left-[16px] z-[1]",
             "inline-flex items-center px-[4px] rounded-sm",
-            "text-[12px] font-semibold leading-normal whitespace-nowrap select-none",
+            "text-xs font-semibold leading-normal whitespace-nowrap select-none",
             isDisabled
               ? "text-[var(--field-placeholder)]"
               : "text-[var(--field-label)]"
@@ -189,7 +189,7 @@ function Select({
         {/* Value / placeholder text */}
         <span
           className={cn(
-            "flex-1 min-w-0 truncate text-[14px] font-medium leading-[1.5]",
+            "flex-1 min-w-0 truncate text-sm font-medium leading-[1.5]",
             hasValue
               ? "text-[var(--field-text)]"
               : "text-[var(--field-placeholder)]"

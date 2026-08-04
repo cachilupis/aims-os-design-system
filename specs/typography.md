@@ -1,50 +1,55 @@
 # Typography
 
-**Figma:** [Design System file](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS)
+**Figma node:** [`4471:6680`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4471-6680)
 
-Inter-based type scale. All styles defined as Tailwind classes (text-type-*) in tailwind.config.js. Never use arbitrary font sizes — pick the nearest scale step.
+Inter-based type scale, verified live against Figma's "DESIGN TOKENS — NEW TYPE SYSTEM" table (2026-08-04). Uses Tailwind's native text-* classes directly — no custom text-type-* scale. Figma's own guideline: only use weights 500 (Medium), 600 (SemiBold), and 900 (Black); minimum text size is 12px (text-xs).
 
 ## Properties
 
 | Name | Type | Values | Default | Note |
 | --- | --- | --- | --- | --- |
 | family | String | Inter | Inter | Loaded via Google Fonts. No substitutes. |
-| category | Variant | Display,Heading,Body,Caption,Label,Code | Body | — |
-| weight | Variant | 400 Regular,500 Medium,600 SemiBold,700 Bold,800 ExtraBold | 500 Medium | — |
+| category | Variant | Display,Title,Subtitle,Body,Label,Caption,Link | Body | — |
+| weight | Variant | 500 Medium,600 SemiBold,900 Black | 500 Medium | Figma explicitly disallows 700/800 — do not use font-bold or font-extrabold |
 
 ## Sizes / scale
 
 | Style | Size | Weight | LineHeight | Tailwind |
 | --- | --- | --- | --- | --- |
-| Display XL | 48px | 800 | 1.1 | text-type-display-xl |
-| Display LG | 36px | 800 | 1.1 | text-type-display-lg |
-| Display MD | 30px | 700 | 1.2 | text-type-display-md |
-| Heading LG | 24px | 600 | 1.3 | text-type-heading-lg |
-| Heading MD | 20px | 600 | 1.35 | text-type-heading-md |
-| Heading SM | 16px | 600 | 1.4 | text-type-heading-sm |
-| Body LG | 16px | 400 | 1.5 | text-type-body-lg |
-| Body MD | 14px | 400 | 1.5 | text-type-body-md |
-| Body SM | 13px | 400 | 1.5 | text-type-body-sm |
-| Caption | 12px | 400 | 1.5 | text-type-caption |
-| Label | 11px | 500 | 1.4 | text-type-label |
-| Code | 12px | 400 | 1.6 | font-mono |
+| Display XL | 48px | 900 | 100% | text-5xl font-black |
+| Display L | 40px | 900 | 100% | text-4xl font-black |
+| Display M | 32px | 900 | 100% | text-3xl font-black |
+| Title L | 24px | 600 | 100% | text-2xl font-semibold |
+| Title M | 20px | 600 | 100% | text-xl font-semibold |
+| Title S | 18px | 600 | 100% | text-lg font-semibold |
+| Subtitle M | 16px | 600 | 100% | text-base font-semibold |
+| Subtitle S | 14px | 600 | 100% | text-sm font-semibold |
+| Body L | 16px | 500 | 24px | text-base font-medium leading-6 |
+| Body M | 14px | 500 | 20px | text-sm font-medium leading-5 |
+| Body S | 12px | 500 | 20px | text-xs font-medium leading-5 |
+| Label M | 14px | 600 | 100% | text-sm font-semibold |
+| Caption S Bold | 12px | 600 | 100% | text-xs font-semibold tracking-wide |
+| Caption S Regular | 12px | 500 | 100% | text-xs font-medium |
+| Code | 12px | 500 | 1.6 | font-mono text-xs |
 
 ## Typography
 
 | Element | Family | Size | Weight | Line height |
 | --- | --- | --- | --- | --- |
-| Display XL | Inter | 48px | 800 / ExtraBold | 1.1 |
-| Display LG | Inter | 36px | 800 / ExtraBold | 1.1 |
-| Display MD | Inter | 30px | 700 / Bold | 1.2 |
-| Heading LG | Inter | 24px | 600 / SemiBold | 1.3 |
-| Heading MD | Inter | 20px | 600 / SemiBold | 1.35 |
-| Heading SM | Inter | 16px | 600 / SemiBold | 1.4 |
-| Body LG | Inter | 16px | 400 / Regular | 1.5 |
-| Body MD | Inter | 14px | 400 / Regular | 1.5 |
-| Body SM | Inter | 13px | 400 / Regular | 1.5 |
-| Caption | Inter | 12px | 400 / Regular | 1.5 |
-| Label | Inter | 11px | 500 / Medium | 1.4 |
-| Code | monospace | 12px | 400 / Regular | 1.6 |
+| Display XL | Inter | 48px | 900 / Black | 100% |
+| Display L | Inter | 40px | 900 / Black | 100% |
+| Display M | Inter | 32px | 900 / Black | 100% |
+| Title L | Inter | 24px | 600 / SemiBold | 100% |
+| Title M | Inter | 20px | 600 / SemiBold | 100% |
+| Title S | Inter | 18px | 600 / SemiBold | 100% |
+| Subtitle M | Inter | 16px | 600 / SemiBold | 100% |
+| Subtitle S | Inter | 14px | 600 / SemiBold | 100% |
+| Body L | Inter | 16px | 500 / Medium | 24px |
+| Body M | Inter | 14px | 500 / Medium | 20px |
+| Body S | Inter | 12px | 500 / Medium | 20px |
+| Label M | Inter | 14px | 600 / SemiBold | 100% |
+| Caption | Inter | 12px | 500-600 / Medium-SemiBold | 100% |
+| Code | monospace | 12px | 500 / Medium | 1.6 |
 
 ## Variants / token groups
 
