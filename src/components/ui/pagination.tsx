@@ -84,7 +84,7 @@ export function Pagination({
       onMouseEnter={e => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "var(--btn-secondary-hover-bg)" }}
       onMouseLeave={e => { if (!disabled) (e.currentTarget as HTMLElement).style.background = "var(--btn-secondary-bg)" }}
     >
-      <Icon size={14} strokeWidth={2} />
+      <Icon size={14} strokeWidth={1.75} />
     </button>
   )
 
@@ -143,7 +143,7 @@ export function Pagination({
             >
               <ChevronDown
                 size={14}
-                strokeWidth={2}
+                strokeWidth={1.75}
                 style={{
                   transform: dropOpen ? "rotate(180deg)" : "rotate(0deg)",
                   transition: "transform 150ms",

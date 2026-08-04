@@ -198,7 +198,7 @@ export function TagInput({
                       }}
                       aria-label={`Remove tag ${tag}`}
                     >
-                      <X size={10} strokeWidth={2.5} />
+                      <X size={10} strokeWidth={1.75} />
                     </button>
                   )}
                 </div>

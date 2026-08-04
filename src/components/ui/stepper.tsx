@@ -32,9 +32,9 @@ export function Stepper({ steps, onStepClick, className }: StepperProps) {
 
         const StepIcon = step.icon
         const dotIcon: React.ReactNode = isCompleted
-          ? <Check size={14} strokeWidth={2.5} />
+          ? <Check size={14} strokeWidth={1.75} />
           : isLocked
-            ? <Lock size={14} strokeWidth={2} />
+            ? <Lock size={14} strokeWidth={1.75} />
             : StepIcon
               ? <StepIcon size={14} strokeWidth={1.75} />
               : <span className="text-xs font-semibold leading-none select-none">{i + 1}</span>

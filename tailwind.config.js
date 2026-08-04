@@ -20,11 +20,26 @@
  * directly (arbitrary-value classes or inline style) from src/index.css,
  * which is the single canonical, actively-synced color token layer.
  * Do not re-add a `colors` block — reference index.css vars instead.
+ *
+ * `screens` (below, replaces Tailwind's defaults rather than extending them)
+ * matches Figma's real "Breakpoint Tokens" table (node 6729:35011, verified
+ * live 2026-08-04): S=600px / M=1280px / L=1440px / XL=1920px. Tailwind's
+ * own defaults (640/768/1024/1280/1536) don't match Figma at all, and
+ * BREAKPOINTS_SPEC in App.tsx previously documented a third, also-wrong
+ * scale (640/768/1024/1440) that didn't match either. No real component
+ * used any responsive prefix at the time this was fixed (only the docs
+ * site's own layout grids did) — fixed before that changed.
  */
 module.exports = {
   darkMode: "class",
   content: ["./src/**/*.{ts,tsx,html}"],
   theme: {
+    screens: {
+      sm: "600px",
+      md: "1280px",
+      lg: "1440px",
+      xl: "1920px",
+    },
     extend: {
       // ─── Border Radius — Space and Radios Tokens ─────────────────────────────
       borderRadius: {

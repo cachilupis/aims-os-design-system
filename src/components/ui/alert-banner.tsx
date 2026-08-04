@@ -120,7 +120,7 @@ export function AlertBanner({
               className="w-[28px] h-[28px] flex items-center justify-center rounded-[4px] transition-opacity hover:opacity-70 focus-visible:outline-none"
               style={{ color: "var(--ab-cta-text)" }}
             >
-              <X size={16} strokeWidth={2} />
+              <X size={16} strokeWidth={1.75} />
             </button>
           )}
         </div>
