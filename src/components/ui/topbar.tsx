@@ -23,7 +23,9 @@ import { cn } from "@/lib/utils"
  *                        Sub-B frame: same Border/Primary/Subtle border as LEFT
  *
  * Action buttons (Sub-A, left to right — DS COMPONENT_SET 8603:52851):
- *   1. IA-icon     → Sparkles  · Type=Main Action · radial gradient bg (rgba(33,115,255) → rgba(9,226,171))
+ *   1. IA-icon     → Sparkle  · Type=Main Action · radial gradient bg (rgba(33,115,255) → rgba(9,226,171))
+ *      (verified live against Figma 2026-08-04: the real glyph is a single 4-point sparkle,
+ *      not the 3-star "Sparkles" — this comment previously named the wrong one)
  *   2. Notifications-icon → Bell    · Type=Tertiary · transparent bg
  *   3. Settings-icon      → Settings · Type=Tertiary · transparent bg
  *
