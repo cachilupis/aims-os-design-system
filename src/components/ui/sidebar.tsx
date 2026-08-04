@@ -46,7 +46,6 @@ function SidebarTooltip({ label, visible }: { label: string; visible: boolean })
         borderRadius: 4,
         padding: "8px 12px",
         whiteSpace: "nowrap",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.4)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit) — note: opacity differs from other Tooltip instances (0.4 vs 0.5), worth reconciling with design
       }}
     >
       <span className="text-[14px] font-medium leading-[20px]" style={{ color: "var(--tooltip-text)" }}>
