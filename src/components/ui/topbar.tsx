@@ -582,7 +582,6 @@ export function TopbarRightMenu({
                   whiteSpace: "nowrap", zIndex: 10,
                   background: "var(--tooltip-bg)",
                   borderRadius: 4, padding: "3px 8px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
                 }}
               >
                 <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>Automatic</span>
@@ -615,7 +614,6 @@ export function TopbarRightMenu({
                   whiteSpace: "nowrap", zIndex: 10,
                   background: "var(--tooltip-bg)",
                   borderRadius: 4, padding: "3px 8px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
                 }}
               >
                 <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>Light</span>
@@ -648,7 +646,6 @@ export function TopbarRightMenu({
                   whiteSpace: "nowrap", zIndex: 10,
                   background: "var(--tooltip-bg)",
                   borderRadius: 4, padding: "3px 8px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
                 }}
               >
                 <span className="text-[11px] font-medium" style={{ color: "var(--tooltip-text)" }}>Dark</span>
@@ -1404,7 +1401,6 @@ function TopbarTooltip({
         border: "1px solid var(--gs-input-border)",
         borderRadius: 6,
         padding: subtitle ? "5px 10px" : "3px 8px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.5)", // audit-ignore: Tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
   }}
     >
       <span className="text-[11px] font-medium block" style={{ color: "var(--gs-text)" }}>
