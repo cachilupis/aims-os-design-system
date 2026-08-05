@@ -24135,9 +24135,13 @@ function WidgetsGallery({ onSelectWidget, onShowCanvas }: { onSelectWidget: (id:
               style={{ background: "var(--surface)", border: "1px solid var(--field-border)", cursor: "pointer", padding: 0 }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border-hover)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px var(--color-surface-neutral-default)" }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}>
-              {/* Preview */}
-              <div style={{ padding: "16px 16px 12px", overflowY: "hidden", maxHeight: 240 }}>
-                <WidgetFather title={w.name} fillWidth showRefresh showMenu>
+              {/* Preview — height must be definite (not just maxHeight), and WidgetFather
+                  itself must stretch into it (flex-1 min-h-0), since its body uses
+                  flex:1/min-height:0 to fill whatever height ITS parent provides. Without
+                  both, that flex chain collapses to 0 and the widget's content (KPI number,
+                  chart, etc.) renders in the DOM but is invisible. */}
+              <div style={{ padding: "16px 16px 12px", height: 240, overflowY: "hidden", display: "flex", flexDirection: "column" }}>
+                <WidgetFather title={w.name} fillWidth showRefresh showMenu className="flex-1 min-h-0">
                   {w.defined ? <WidgetContent id={w.id} kpiVariant={2} /> : undefined}
                 </WidgetFather>
               </div>
