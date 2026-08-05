@@ -33,6 +33,13 @@ export interface CanvasSlot {
   rowSpan?: number
   /** Minimum row span — vertical resize cannot go below this. Default: 3 */
   minRowSpan?: number
+  /**
+   * Maximum row span — vertical resize cannot go above this. Set equal to
+   * minRowSpan (or omit rowSpan resize entirely) for Compact-class widgets:
+   * their content never grows past its natural size, so letting the slot
+   * grow taller just wastes space and reads as a broken layout.
+   */
+  maxRowSpan?: number
   showRefresh?: boolean
   showMenu?: boolean
   showInfo?: boolean
@@ -905,8 +912,11 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
       if (Math.abs(dy) > 3) vertResizeRef.current.moved = true
       if (vertResizeRef.current.moved) {
         const rawPx    = Math.max(guToPixels(3), vertResizeRef.current.startH + dy)
-        const min = slotMap.get(vertResizeRef.current.uid)?.minRowSpan ?? 3
-        const snappedGu = Math.max(min, pixelsToGu(rawPx))
+        const slotDef = slotMap.get(vertResizeRef.current.uid)
+        const min = slotDef?.minRowSpan ?? 3
+        const max = slotDef?.maxRowSpan
+        let snappedGu = Math.max(min, pixelsToGu(rawPx))
+        if (max !== undefined) snappedGu = Math.min(max, snappedGu)
         vertPreviewRef.current = snappedGu
         setVertPreviewH({ uid: vertResizeRef.current.uid, h: guToPixels(snappedGu) })
       }
@@ -915,9 +925,15 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
       if (!vertResizeRef.current) return
       const { uid, moved } = vertResizeRef.current
       if (moved && vertPreviewRef.current !== null) {
-        const min = slotMap.get(uid)?.minRowSpan ?? 3
+        const slotDef = slotMap.get(uid)
+        const min = slotDef?.minRowSpan ?? 3
+        const max = slotDef?.maxRowSpan
         pushHistory()
-        setRowSpanByUid(prev => ({ ...prev, [uid]: Math.max(min, vertPreviewRef.current as number) }))
+        setRowSpanByUid(prev => {
+          let next = Math.max(min, vertPreviewRef.current as number)
+          if (max !== undefined) next = Math.min(max, next)
+          return { ...prev, [uid]: next }
+        })
       }
       // Collapse is now intentional — triggered only via the chevron button in the header.
       // The bottom edge is drag-to-resize only; a click without drag does nothing.
@@ -1366,20 +1382,26 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
                 onMouseLeave={() => setHoveredEdge(null)}
                 style={{ position: "absolute", right: 0, top: 8, bottom: 8, width: 20, cursor: "col-resize", zIndex: 20 }}
               />
-              {/* Bottom edge — drag to resize height */}
-              <div
-                onMouseDown={e => {
-                  if (isDragging || isResizingRef.current) return
-                  e.stopPropagation()
-                  e.preventDefault()
-                  const slotEl = e.currentTarget.parentElement as HTMLElement
-                  const rect = slotEl.getBoundingClientRect()
-                  vertResizeRef.current = { uid: entry.uid, startY: e.clientY, startH: guToPixels(currentRowSpan), moved: false, startRect: { left: rect.left, top: rect.top, width: rect.width } }
-                }}
-                onMouseEnter={() => setHoveredEdge("bottom")}
-                onMouseLeave={() => setHoveredEdge(null)}
-                style={{ position: "absolute", left: 8, right: 8, bottom: 0, height: 18, cursor: "row-resize", zIndex: 20 }}
-              />
+              {/* Bottom edge — drag to resize height. Omitted entirely when
+                  maxRowSpan is locked to minRowSpan (Compact-class widgets):
+                  their content never grows past its natural size, so a
+                  resize handle that can't actually do anything is just a
+                  confusing affordance. */}
+              {slotDef.maxRowSpan === undefined || slotDef.maxRowSpan > (slotDef.minRowSpan ?? 3) ? (
+                <div
+                  onMouseDown={e => {
+                    if (isDragging || isResizingRef.current) return
+                    e.stopPropagation()
+                    e.preventDefault()
+                    const slotEl = e.currentTarget.parentElement as HTMLElement
+                    const rect = slotEl.getBoundingClientRect()
+                    vertResizeRef.current = { uid: entry.uid, startY: e.clientY, startH: guToPixels(currentRowSpan), moved: false, startRect: { left: rect.left, top: rect.top, width: rect.width } }
+                  }}
+                  onMouseEnter={() => setHoveredEdge("bottom")}
+                  onMouseLeave={() => setHoveredEdge(null)}
+                  style={{ position: "absolute", left: 8, right: 8, bottom: 0, height: 18, cursor: "row-resize", zIndex: 20 }}
+                />
+              ) : null}
               {/* Debug: visualize resize hit zones */}
               {debugMode && (
                 <>

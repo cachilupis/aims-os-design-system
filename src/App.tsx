@@ -24032,10 +24032,10 @@ function WidgetCanvasView({ onBack }: { onBack: () => void }) {
   const [canvasKey, setCanvasKey] = useState(0)
 
   const allSlots = useMemo(() => [
-    { uid: "w-kpi-0",     title: "Active Workers",     colSpan: 1 as const, rowSpan: 3, minRowSpan: 3, autoExpand: false, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={0} /> },
-    { uid: "w-kpi-1",     title: "Conversions",        colSpan: 1 as const, rowSpan: 3, minRowSpan: 3, autoExpand: false, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={1} /> },
-    { uid: "w-kpi-2",     title: "Goal Progress",      colSpan: 1 as const, rowSpan: 3, minRowSpan: 3, autoExpand: false, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={3} /> },
-    { uid: "w-status",    title: "System Status",      colSpan: 2 as const, rowSpan: 4, minRowSpan: 3, showRefresh: false, showMenu: true,  content: <StatusWarningWidgetContent /> },
+    { uid: "w-kpi-0",     title: "Active Workers",     colSpan: 1 as const, rowSpan: 3, minRowSpan: 3, maxRowSpan: 3, autoExpand: false, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={0} /> },
+    { uid: "w-kpi-1",     title: "Conversions",        colSpan: 1 as const, rowSpan: 3, minRowSpan: 3, maxRowSpan: 3, autoExpand: false, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={1} /> },
+    { uid: "w-kpi-2",     title: "Goal Progress",      colSpan: 1 as const, rowSpan: 3, minRowSpan: 3, maxRowSpan: 3, autoExpand: false, showRefresh: true,  showMenu: true,  content: <KpiWidgetContent variant={3} /> },
+    { uid: "w-status",    title: "System Status",      colSpan: 2 as const, rowSpan: 3, minRowSpan: 3, maxRowSpan: 3, showRefresh: false, showMenu: true,  content: <StatusWarningWidgetContent /> },
     { uid: "w-folder",    title: "Folder Nav",         colSpan: 1 as const, rowSpan: 4, minRowSpan: 4, showRefresh: false, showMenu: true,  content: <FolderNavWidgetContent /> },
     { uid: "w-actnow",    title: "Act Now Summary",    colSpan: 1 as const, rowSpan: 6, minRowSpan: 4, showRefresh: false, showMenu: true,  content: <ActNowSummaryWidgetContent /> },
     { uid: "w-activity",  title: "Last Activity",      colSpan: 2 as const, rowSpan: 6, minRowSpan: 4, showRefresh: true,  showMenu: true,  content: <ActivityWidgetContent /> },
@@ -24044,7 +24044,7 @@ function WidgetCanvasView({ onBack }: { onBack: () => void }) {
     { uid: "w-myteam",    title: "My Team",            colSpan: 1 as const, rowSpan: 8, minRowSpan: 5, showRefresh: true,  showMenu: true,  content: <MyTeamWidgetContent /> },
     { uid: "w-workflows", title: "Workflows",          colSpan: 2 as const, rowSpan: 8, minRowSpan: 5, showRefresh: true,  showMenu: true,  content: <WorkflowsWidgetContent /> },
     { uid: "w-pending",   title: "Pending Outputs",    colSpan: 1 as const, rowSpan: 6, minRowSpan: 4, showRefresh: false, showMenu: true,  content: <PendingOutputsWidgetContent /> },
-    { uid: "w-timeline",  title: "Activity Timeline",  colSpan: 3 as const, rowSpan: 3, minRowSpan: 3, showRefresh: true,  showMenu: true,  content: <TimelineWidgetContent /> },
+    { uid: "w-timeline",  title: "Activity Timeline",  colSpan: 3 as const, rowSpan: 3, minRowSpan: 3, maxRowSpan: 3, showRefresh: true,  showMenu: true,  content: <TimelineWidgetContent /> },
     { uid: "w-charts",    title: "Performance Charts", colSpan: 3 as const, rowSpan: 5, minRowSpan: 4, showRefresh: true,  showMenu: true,  content: <ChartsWidgetContent /> },
   ], [])
 
