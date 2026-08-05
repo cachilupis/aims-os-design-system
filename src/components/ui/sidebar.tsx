@@ -82,7 +82,7 @@ function SidebarNavItem({
       <div className="flex items-center" style={{ gap: collapsed ? 0 : 8 }}>
         {/* Icon button */}
         {collapsed ? (
-          <Tooltip content={item.label} side="right" triggerClassName="shrink-0">
+          <Tooltip content={item.label} side="cursor" triggerClassName="shrink-0">
             <div
               className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px] transition-all duration-150"
               style={{ background: iconBg, boxShadow: iconShadow, padding: 4 }}
@@ -160,7 +160,7 @@ function SidebarToggleRow({
       }}
     >
       {collapsed ? (
-        <Tooltip content="Expand sidebar" side="right" triggerClassName="shrink-0">
+        <Tooltip content="Expand sidebar" side="cursor" triggerClassName="shrink-0">
           <button
             onClick={onToggle}
             onMouseEnter={() => setHovered(true)}
