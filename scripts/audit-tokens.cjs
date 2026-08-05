@@ -165,7 +165,12 @@ componentFiles.forEach((file) => {
 // etc. steps; 100 (radius-full) and 9999 (z-index/legacy radius references)
 // are kept as accepted non-spacing outliers this same regex also matches.
 const SCALE = new Set([0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 100, 9999])
-const PX_RE = /(?:padding|margin|gap|width|height|top|left|right|bottom|inset|radius)[a-zA-Z]*\s*:\s*["']?(\d+)px/gi
+// \b anchors the keyword to the START of the property name — without it,
+// "borderBottom"/"borderLeft"/"borderTopWidth" etc. false-matched on the
+// "bottom"/"left"/"width" substring, flagging border *stroke* thickness
+// (correctly 0.5-2px) as if it were layout spacing. Border-side properties
+// aren't spacing and were never meant to be checked against this scale.
+const PX_RE = /\b(?:padding|margin|gap|width|height|top|left|right|bottom|inset|radius)[a-zA-Z]*\s*:\s*["']?(\d+)px/gi
 const ARBITRARY_PX_RE = /\b(?:p|m|gap|w|h|top|left|right|bottom|inset)-\[(\d+)px\]/g
 
 componentFiles.forEach((file) => {
