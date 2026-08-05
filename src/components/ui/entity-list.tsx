@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tag } from "@/components/ui/tag"
 import type { TagVariant } from "@/components/ui/tag"
+import { Checkbox } from "@/components/ui/checkbox"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -290,14 +291,13 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
         {/* Left */}
         <div className="flex items-center gap-[8px] flex-1 min-w-0 flex-wrap">
           {item.showCheckbox && (
-            <input
-              type="checkbox"
-              checked={item.checked ?? false}
-              onChange={e => item.onCheckChange?.(e.target.checked)}
-              onClick={e => e.stopPropagation()}
-              className="w-[16px] h-[16px] shrink-0 rounded-[3px] accent-[var(--primary)] cursor-pointer"
-              style={{ border: "1px solid var(--border)" }}
-            />
+            <div className="shrink-0" onClick={e => e.stopPropagation()}>
+              <Checkbox
+                size="sm"
+                checked={item.checked ?? false}
+                onChange={c => item.onCheckChange?.(c)}
+              />
+            </div>
           )}
           {item.iconVariant && item.iconName && (
             <ELIconHighlight variant={item.iconVariant} iconName={item.iconName} />
