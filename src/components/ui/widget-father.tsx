@@ -310,10 +310,17 @@ export function WidgetFather({
         </div>
       </div>
 
-      {/* ── Collapsible wrapper: Body + Footer CTA ────────────────────── */}
+      {/* ── Collapsible wrapper: Body + Footer CTA ──────────────────────
+          flex-basis "auto" (not "0") so this hugs its content's natural
+          height when the ancestor chain doesn't force a definite height
+          (e.g. the Widgets Gallery preview cards) — flex-basis:0 made an
+          auto-sized WidgetFather's content collapse to 0px there, since
+          nothing was left to distribute via flex-grow. Still shrinks to
+          fit (flex-shrink:1 + min-height:0) inside a fixed-height ancestor
+          like the Live Canvas grid, so internal scroll still works. */}
       <div
         style={{
-          flex: isCollapsed ? "0 0 0px" : "1 1 0",
+          flex: isCollapsed ? "0 0 0px" : "1 1 auto",
           maxHeight: isCollapsed ? 0 : 9999,
           overflow: "hidden",
           transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1)",
@@ -324,7 +331,7 @@ export function WidgetFather({
         }}
       >
         {/* ── Body ──────────────────────────────────────────────────────── */}
-        <div className="w-full" style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div className="w-full" style={{ flex: "1 1 auto", minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           {hasConnectionError ? (
             <div
               className="flex flex-col items-center justify-center rounded-[12px]"

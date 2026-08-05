@@ -22058,7 +22058,7 @@ function ChartsWidgetContent() {
               border: "1px solid var(--field-border)",
               borderRadius: 8,
               padding: "10px 12px",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.18)", // audit-ignore: Charts widget crosshair tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
               pointerEvents: "none",
               zIndex: 10,
               minWidth: 140,
@@ -22268,7 +22268,7 @@ function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
           top: tooltip.y - 4,
           transform: "translateX(-50%) translateY(-100%)",
           background: "var(--color-surface-neutral-darker)",
-          color: "#ffffff",
+          color: "var(--color-text-negative)",
           borderRadius: 4,
           padding: "3px 7px",
           fontSize: 10,
@@ -22474,7 +22474,7 @@ function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
         top: tooltip.y - 4,
         transform: "translateX(-50%) translateY(-100%)",
         background: "var(--color-surface-neutral-darker)",
-        color: "#ffffff",
+        color: "var(--color-text-negative)",
         borderRadius: 4,
         padding: "3px 7px",
         fontSize: 10,
@@ -22704,10 +22704,8 @@ function FolderNavWidgetContent() {
           onChange={setFolderTab}
         />
       </div>
-      <div className="flex items-center gap-[6px] px-[8px] rounded-[6px]"
-        style={{ height: 28, flexShrink: 0, background: "var(--color-surface-neutral-default)", border: "1px solid var(--field-border)" }}>
-        <LucideIcons.Search size={11} style={{ color: "var(--field-supporting)" }} />
-        <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Search...</span>
+      <div style={{ flexShrink: 0 }}>
+        <Input size="sm" placeholder="Search..." leftIcon={<LucideIcons.Search size={11} />} readOnly />
       </div>
       <ScrollArea className="flex flex-col" style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
         {FOLDER_FILES_DATA.map((f, i) => {
@@ -22870,16 +22868,14 @@ function MyWorkWidgetContent() {
 
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 8, paddingBottom: 12 }}>
-      {/* Search bar */}
-      <div style={{ position: "relative" }}>
-        <LucideIcons.Search size={12} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)", pointerEvents: "none" }} />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search events..."
-          style={{ width: "100%", height: 28, paddingLeft: 26, paddingRight: 8, borderRadius: 6, border: "0.5px solid var(--field-border)", background: "var(--field-bg)", fontSize: 12, color: "var(--foreground)", outline: "none", boxSizing: "border-box" }}
-        />
-      </div>
+      {/* Search bar — DS Input atom, not a hand-rolled <input> */}
+      <Input
+        size="sm"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search events..."
+        leftIcon={<LucideIcons.Search size={12} />}
+      />
       {/* Filters — hidden on narrow to save space; search still available */}
       {!isNarrow && (
         <div className="[&::-webkit-scrollbar]:hidden" style={{ overflowX: "auto", scrollbarWidth: "none" as React.CSSProperties["scrollbarWidth"] }}>
@@ -22999,9 +22995,7 @@ function MyTeamWidgetContent() {
         {MY_TEAM_DATA.map((member, i) => (
           <div key={i} className="group cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }}>
             <div className="flex items-start gap-[8px]">
-              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-surface-primary-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, color: "var(--tag-primary-fg)" }}>{member.initials}</span>
-              </div>
+              <AvatarCircle name={member.name} sizeKey="md" />
               <div className="flex flex-col flex-1 min-w-0" style={{ gap: 1 }}>
                 <div className="flex items-center gap-[6px] w-full">
                   <Tooltip content={member.name} side="top">
@@ -24135,15 +24129,22 @@ function WidgetsGallery({ onSelectWidget, onShowCanvas }: { onSelectWidget: (id:
               style={{ background: "var(--surface)", border: "1px solid var(--field-border)", cursor: "pointer", padding: 0 }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border-hover)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px var(--color-surface-neutral-default)" }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--field-border)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}>
-              {/* Preview — height must be definite (not just maxHeight), and WidgetFather
-                  itself must stretch into it (flex-1 min-h-0), since its body uses
-                  flex:1/min-height:0 to fill whatever height ITS parent provides. Without
-                  both, that flex chain collapses to 0 and the widget's content (KPI number,
-                  chart, etc.) renders in the DOM but is invisible. */}
-              <div style={{ padding: "16px 16px 12px", height: 240, overflowY: "hidden", display: "flex", flexDirection: "column" }}>
-                <WidgetFather title={w.name} fillWidth showRefresh showMenu className="flex-1 min-h-0">
-                  {w.defined ? <WidgetContent id={w.id} kpiVariant={2} /> : undefined}
-                </WidgetFather>
+              {/* Preview — same CardContainer + WidgetFather(noCard) composition the Live
+                  Canvas uses, for visual consistency. Compact widgets get no forced height:
+                  their content never grows past its natural size, so the card should hug it
+                  exactly (no wasted blank space). Standard/Heavy widgets (which hold a list
+                  that can genuinely be taller than a thumbnail should be) get a capped height
+                  with overflow hidden, showing a cropped preview — same "scrolls" behavior
+                  they have for real, just not interactive here. */}
+              <div style={{
+                padding: "16px 16px 12px",
+                ...(w.classNum === 1 ? {} : { height: 240, overflow: "hidden" }),
+              }}>
+                <CardContainer size="lg" className="flex flex-col h-full">
+                  <WidgetFather noCard title={w.name} fillWidth showRefresh showMenu className="flex-1 min-h-0">
+                    {w.defined ? <WidgetContent id={w.id} kpiVariant={2} /> : undefined}
+                  </WidgetFather>
+                </CardContainer>
               </div>
               {/* Card footer */}
               <div className="flex items-center justify-between gap-[8px] px-[16px] py-[10px]"

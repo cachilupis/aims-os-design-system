@@ -1253,7 +1253,7 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
                           }} />
                         )}
                         <WidgetSizeContext.Provider value={{ widthClass: "narrow", isNarrow: true, isWide: false, isFull: false, availableHeight: guToPixels(slotRowSpan), contentHeight: Math.max(0, guToPixels(slotRowSpan) - WIDGET_CHROME_HEIGHT) }}>
-                          <CardContainer size="lg" className="flex flex-col flex-1">
+                          <CardContainer size="lg" className="flex flex-col flex-1 min-h-0 overflow-hidden">
                             <WidgetFather
                               noCard
                               className="flex-1 min-h-0"
@@ -1421,7 +1421,7 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
                   availableHeight: guToPixels(effectiveRowSpan),
                   contentHeight: Math.max(0, guToPixels(effectiveRowSpan) - WIDGET_CHROME_HEIGHT),
                 }}>
-                  <CardContainer size="lg" className="flex flex-col flex-1">
+                  <CardContainer size="lg" className="flex flex-col flex-1 min-h-0 overflow-hidden">
                     <WidgetFather
                       noCard
                       className="flex-1 min-h-0"
