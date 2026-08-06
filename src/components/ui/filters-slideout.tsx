@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { X, ChevronDown, ChevronUp, Search, Calendar, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
+import { AvatarCircle, type AvatarColorKey } from "@/components/ui/avatar"
 import { Toggle } from "@/components/ui/toggle"
 import { Button } from "@/components/ui/button"
 import { Tag, type TagVariant } from "@/components/ui/tag"
@@ -500,15 +501,15 @@ function ChipSelectSectionContent({ options = DEFAULT_CHIP_OPTIONS }: { options?
 // ─── 10. Assignment ──────────────────────────────────────────────────────────
 // node 14091:418 — avatar circles + "+ Add", "Clear" text, "+N" overflow
 
-const MOCK_ASSIGNEES = [
-  { id: "ME", color: "var(--av-col-blue-bg)" },
-  { id: "JS", color: "var(--av-col-orange-bg)" },
-  { id: "AL", color: "var(--av-col-purple-bg)" },
-  { id: "RK", color: "var(--av-col-green-bg)" },
-  { id: "TM", color: "var(--av-col-pink-bg)" },
-  { id: "CA", color: "var(--av-col-amber-bg)" },
-  { id: "BP", color: "var(--av-col-lightblue-bg)" },
-  { id: "LV", color: "var(--av-col-teal-bg)" },
+const MOCK_ASSIGNEES: { id: string; colorKey: AvatarColorKey }[] = [
+  { id: "ME", colorKey: "blue" },
+  { id: "JS", colorKey: "orange" },
+  { id: "AL", colorKey: "purple" },
+  { id: "RK", colorKey: "green" },
+  { id: "TM", colorKey: "pink" },
+  { id: "CA", colorKey: "amber" },
+  { id: "BP", colorKey: "lightblue" },
+  { id: "LV", colorKey: "teal" },
 ]
 const AVATAR_VISIBLE = 5
 
@@ -531,21 +532,16 @@ function AssignmentSectionContent() {
         {MOCK_ASSIGNEES.map(u => (
           <button
             key={u.id}
-            className="flex items-center justify-center w-[36px] h-[36px] rounded-full text-xs font-semibold text-white transition-all"
-            style={{
-              background: u.color,
-              outline: selected.has(u.id) ? `2px solid var(--primary)` : "2px solid transparent",
-              outlineOffset: "2px",
-            }}
+            className="rounded-full transition-all"
             onClick={() => toggle(u.id)}
             title={u.id}
           >
-            {u.id}
+            <AvatarCircle name={u.id} initials={u.id} sizeKey="lg" colorKey={u.colorKey} selected={selected.has(u.id)} />
           </button>
         ))}
         {overflow > 0 && (
           <span
-            className="flex items-center justify-center w-[36px] h-[36px] rounded-full text-xs font-semibold"
+            className="flex items-center justify-center w-[32px] h-[32px] rounded-full text-xs font-semibold"
             style={{ background: "var(--ctrl-inactive-bg)", color: "var(--foreground)" }}
           >
             +{overflow}
