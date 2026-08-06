@@ -804,7 +804,7 @@ function SkeletonRow({ titleW = "55%", subtitleW = "38%" }: { titleW?: string; s
         className="shrink-0 rounded-[8px] animate-pulse"
         style={{ width: 32, height: 32, background: "var(--gs-chip-inactive-bg)" }}
       />
-      <div className="flex-1 flex flex-col gap-[7px]">
+      <div className="flex-1 flex flex-col gap-[8px]">
         <div
           className="rounded-full animate-pulse"
           style={{ height: 11, width: titleW, background: "var(--gs-chip-inactive-bg)" }}
