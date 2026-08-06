@@ -19,20 +19,36 @@
  * the same line rather than special-casing a file path in here.
  *
  * Checks:
- *   1. Hardcoded hex/rgba in src/components/ui/**, src/components/layouts/**  → ERROR
+ *   1. Hardcoded hex/rgba in src/components/ui/**, src/components/layouts/**,
+ *      src/screens/**, and App.tsx's widget content functions               → ERROR
  *   2. Stray hex/rgba in src/index.css outside a `--token: value;` definition → ERROR
  *   3. Any hex/rgba surviving in tailwind.config.js                            → ERROR
  *   4. Components in ui/layouts with zero imports anywhere in src/            → WARNING
  *   5. Spacing/size values in px that aren't a multiple of 4                   → WARNING
- *      (no accepted micro-scale is declared yet — see the 2026-07-31 audit —
- *      so this is informational only, not a failing check)
+ *      (see SCALE below for the accepted non-grid exceptions — this is
+ *      informational, not a failing check)
+ *
+ * App.tsx coverage (2026-08 audit): only the widget content functions are
+ * scanned, sliced out by marker rather than the whole 30K-line file. The
+ * rest of App.tsx is documentation (Colors/Typography/Spacing spec tables,
+ * the DS Strategy page) that legitimately displays hex codes as reference
+ * text — scanning it produced ~875 hits, ~99% of them exactly that. The
+ * widgets are real, reusable UI PM screens are built from; that's where 5
+ * real hardcoded-color/composition bugs shipped undetected before this
+ * check existed. See scanHardcodedColors' lineRange option below.
  */
 
 const fs = require("fs")
 const path = require("path")
 
 const ROOT = path.resolve(__dirname, "..")
-const HEX_RE = /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{1,5})?\b/
+// Exact CSS hex-color lengths only (#RGB #RGBA #RRGGBB #RRGGBBAA = 3/4/6/8
+// digits) — an earlier, looser version (`{3}(?:...{1,5})?`) matched any
+// "#" followed by 3-8 hex-valid characters, which false-matched things
+// like a ticket reference "#12045" (5 digits, not a valid color length,
+// but every digit happens to be hex-valid 0-9). \b after each alternative
+// still correctly rejects it as a substring of a longer digit run.
+const HEX_RE = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/
 const RGBA_RE = /rgba?\(\s*\d/
 const IGNORE_MARKER = /audit-ignore/
 const TOKEN_DEF_RE = /^\s*--[\w-]+\s*:/
@@ -90,10 +106,19 @@ function stripComments(text) {
   })
 }
 
-function scanHardcodedColors(file, { skipTokenDefLines } = {}) {
+/**
+ * `lineRange: [startLine, endLine]` (1-indexed, inclusive) restricts the
+ * scan to a slice of the file — used for App.tsx, where the widget content
+ * functions are real, reusable UI (should be checked) surrounded by
+ * thousands of lines of documentation/spec-table content that legitimately
+ * displays hex codes as reference text (should not be).
+ */
+function scanHardcodedColors(file, { skipTokenDefLines, lineRange } = {}) {
   const text = fs.readFileSync(file, "utf8")
   const lines = stripComments(text)
   lines.forEach(({ raw, code }, idx) => {
+    const lineNum = idx + 1
+    if (lineRange && (lineNum < lineRange[0] || lineNum > lineRange[1])) return
     if (!code.trim()) return
     if (skipTokenDefLines && TOKEN_DEF_RE.test(code)) return
     const hasHex = HEX_RE.test(code)
@@ -102,10 +127,17 @@ function scanHardcodedColors(file, { skipTokenDefLines } = {}) {
     if (IGNORE_MARKER.test(raw)) return
     errors.push({
       file: rel(file),
-      line: idx + 1,
+      line: lineNum,
       snippet: code.trim().slice(0, 100),
     })
   })
+}
+
+/** 1-indexed line number of the first line containing `marker`, or null. */
+function findMarkerLine(text, marker) {
+  const idx = text.indexOf(marker)
+  if (idx === -1) return null
+  return text.slice(0, idx).split("\n").length
 }
 
 // ── Check 1: components ─────────────────────────────────────────────────
@@ -114,6 +146,46 @@ const componentFiles = [
   ...listFiles(path.join(ROOT, "src/components/layouts"), [".tsx", ".ts"]),
 ]
 componentFiles.forEach((f) => scanHardcodedColors(f))
+
+// src/screens/** are real, shipped PM screens — exactly the artifacts this
+// whole token method exists to keep consistent. Unlike App.tsx (below),
+// they're small and don't mix in a design-token reference library, so the
+// full file is scanned (2026-08 audit: found and fixed a false positive
+// here too — the same over-loose HEX_RE matched a ticket number "#12045").
+const screenFiles = listFiles(path.join(ROOT, "src/screens"), [".tsx", ".ts"])
+screenFiles.forEach((f) => scanHardcodedColors(f))
+
+// App.tsx mixes two very different things: (1) the 13 widget content
+// functions — real, reusable UI that PM screens are built from, and (2)
+// thousands of lines of documentation (Colors/Typography/Spacing spec
+// tables, the DS Strategy pitch page) that legitimately display hex codes
+// as reference text, e.g. `{ role: "...", light: "#2173ff", dark: "..." }`.
+// Scanning all of App.tsx produced ~875 hits, ~99% of them exactly that —
+// real signal would drown in that noise. Widget content is scanned by
+// slicing between two stable markers rather than hardcoded line numbers,
+// so it keeps working as the file grows. This is the same gap that let 5
+// real hardcoded-color/composition bugs ship undetected in the widgets
+// during the 2026-08 audit — everything else in App.tsx is a known,
+// deliberate exclusion, not an oversight (see the audit's follow-up note:
+// moving widget content out of App.tsx into its own directory would let
+// this scan the normal way instead of by marker-slice).
+const appTsxPath = path.join(ROOT, "src/App.tsx")
+if (fs.existsSync(appTsxPath)) {
+  const appText = fs.readFileSync(appTsxPath, "utf8")
+  const widgetStart = findMarkerLine(appText, "function KpiWidgetContent(")
+  const widgetEnd = findMarkerLine(appText, "// ── Widget definitions")
+  if (widgetStart && widgetEnd) {
+    scanHardcodedColors(appTsxPath, { lineRange: [widgetStart, widgetEnd - 1] })
+  } else {
+    // Markers moved or got renamed — fail loudly rather than silently
+    // scanning 0 lines and looking clean by accident.
+    errors.push({
+      file: rel(appTsxPath),
+      line: 1,
+      snippet: "audit-tokens.cjs: widget content markers not found in App.tsx — update findMarkerLine() calls, this check is currently scanning nothing",
+    })
+  }
+}
 
 // ── Check 2: index.css ──────────────────────────────────────────────────
 const indexCss = path.join(ROOT, "src/index.css")
@@ -177,7 +249,18 @@ componentFiles.forEach((file) => {
 //   10 — label-row gaps (filters-slideout) and modal-dialog's section gap
 //   15 — exact icon position from a specific Figma node (textarea.tsx,
 //        node 6326:21225), not a spacing value at all
-const SCALE = new Set([0, 2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24, 32, 40, 48, 64, 80, 100, 9999])
+// 1/7/14/19 accepted for the same reason, found once App.tsx/screens
+// coverage was added (2026-08 audit part 2):
+//   7  — "7px 8px" compact table/list-row padding, identical across 4
+//        independent files (pm-home-canvas, pm-lex-htl-work-queue,
+//        TableWidgetContent) — an asymmetric typo wouldn't repeat exactly
+//   14 — card/panel body padding, identical across 3 independent files
+//        (pm-lex-htl-work-queue, slideout-detail-example, NotesWidgetContent)
+//   19 — "gap-[19px] py-[8px] px-[12px]" detail-row layout, byte-identical
+//        in slideout-detail-example.tsx and PendingOutputsWidgetContent
+//   1  — "padding: 1px 4px" tight monospace ID-badge, identical in both
+//        places it appears (Activity/NotesWidgetContent)
+const SCALE = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 16, 19, 20, 24, 32, 40, 48, 64, 80, 100, 9999])
 // \b anchors the keyword to the START of the property name — without it,
 // "borderBottom"/"borderLeft"/"borderTopWidth" etc. false-matched on the
 // "bottom"/"left"/"width" substring, flagging border *stroke* thickness
@@ -195,33 +278,50 @@ const SCALE = new Set([0, 2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24, 32, 40, 48, 
 const PX_RE = /\b(?:padding|margin|gap|top|left|right|bottom|inset)[a-zA-Z]*\s*:\s*["']?(\d+)px/gi
 const ARBITRARY_PX_RE = /\b(?:p|m|gap|top|left|right|bottom|inset)-\[(\d+)px\]/g
 
-componentFiles.forEach((file) => {
+/**
+ * `lineRange: [startLine, endLine]` (1-indexed, inclusive), same purpose
+ * and reasoning as scanHardcodedColors' — restricts the scan to a slice of
+ * a mixed file like App.tsx.
+ */
+function scanSpacing(file, { lineRange } = {}) {
   const raw = fs.readFileSync(file, "utf8")
   // Comment-stripped, same as Check 1 — a JSDoc measurement note like
   // "Height: 72px (fixed)" isn't code and shouldn't be flagged as a
   // spacing violation just because the number happens to appear there.
-  const text = stripComments(raw).map((l) => l.code).join("\n")
+  const strippedLines = stripComments(raw)
+  const text = strippedLines.map((l) => l.code).join("\n")
   let match
   const seen = new Set()
-  while ((match = PX_RE.exec(text))) {
-    const val = Number(match[1])
-    const lineNum = text.slice(0, match.index).split("\n").length
+  function record(val, lineNum) {
+    if (lineRange && (lineNum < lineRange[0] || lineNum > lineRange[1])) return
     const key = `${lineNum}:${val}`
     if (!SCALE.has(val) && !seen.has(key)) {
       seen.add(key)
       warnings.push({ type: "spacing", file: rel(file), line: lineNum, message: `${val}px is not on the 4px scale` })
     }
+  }
+  while ((match = PX_RE.exec(text))) {
+    record(Number(match[1]), text.slice(0, match.index).split("\n").length)
   }
   while ((match = ARBITRARY_PX_RE.exec(text))) {
-    const val = Number(match[1])
-    const lineNum = text.slice(0, match.index).split("\n").length
-    const key = `${lineNum}:${val}`
-    if (!SCALE.has(val) && !seen.has(key)) {
-      seen.add(key)
-      warnings.push({ type: "spacing", file: rel(file), line: lineNum, message: `${val}px is not on the 4px scale` })
-    }
+    record(Number(match[1]), text.slice(0, match.index).split("\n").length)
   }
-})
+}
+
+componentFiles.forEach((file) => scanSpacing(file))
+// Same rationale as Check 1 above: real spacing in real screens/widgets,
+// not the reference tables and pitch content elsewhere in App.tsx.
+screenFiles.forEach((file) => scanSpacing(file))
+if (fs.existsSync(appTsxPath)) {
+  const appText = fs.readFileSync(appTsxPath, "utf8")
+  const widgetStart = findMarkerLine(appText, "function KpiWidgetContent(")
+  const widgetEnd = findMarkerLine(appText, "// ── Widget definitions")
+  if (widgetStart && widgetEnd) {
+    scanSpacing(appTsxPath, { lineRange: [widgetStart, widgetEnd - 1] })
+  }
+  // (Check 1's marker-not-found branch above already surfaces a loud error
+  // if these markers ever go missing — no need to duplicate that here.)
+}
 
 // ── Report ───────────────────────────────────────────────────────────────
 function printSection(title, items, formatter) {

@@ -74,7 +74,7 @@ function SelectDropdown({
         backdropFilter:    "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
         borderRadius:      "var(--radius-m)",
-        boxShadow:         "0 4px 24px rgba(0,0,0,0.18)",
+        boxShadow:         "0 4px 24px rgba(0,0,0,0.18)", // audit-ignore: dropdown menu shadow, pending Figma effect-name mapping (2026-08 audit)
         overflow:          "hidden",
         padding:           "4px 0",
       }}
