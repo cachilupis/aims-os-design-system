@@ -164,17 +164,43 @@ componentFiles.forEach((file) => {
 // step is N×4px, with a single 0.5x=2px exception. Figma has no 7x/9x/11x
 // etc. steps; 100 (radius-full) and 9999 (z-index/legacy radius references)
 // are kept as accepted non-spacing outliers this same regex also matches.
-const SCALE = new Set([0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 100, 9999])
+// 3/5/6/10/15 are also accepted, each a deliberate micro-value confirmed
+// used consistently for one specific purpose rather than drifting randomly
+// (2026-08 audit, after the width/height exclusion below left only true
+// gap/padding/positioning warnings to triage):
+//   6  — icon-to-label gap, ~20 components (chips, tabs, filters, topbar);
+//        confirmed against Figma's Space and Radios Tokens collection to
+//        have no corresponding variable, i.e. it's hand-set in Figma too
+//   3  — tooltip padding ("3px 8px", topbar) and tight grip-dot/label-stack
+//        gaps (entity-list, side-panel, slide-out)
+//   5  — same class of micro-gap (topbar) and grip-dot offset (slide-out)
+//   10 — label-row gaps (filters-slideout) and modal-dialog's section gap
+//   15 — exact icon position from a specific Figma node (textarea.tsx,
+//        node 6326:21225), not a spacing value at all
+const SCALE = new Set([0, 2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 20, 24, 32, 40, 48, 64, 80, 100, 9999])
 // \b anchors the keyword to the START of the property name — without it,
 // "borderBottom"/"borderLeft"/"borderTopWidth" etc. false-matched on the
 // "bottom"/"left"/"width" substring, flagging border *stroke* thickness
 // (correctly 0.5-2px) as if it were layout spacing. Border-side properties
 // aren't spacing and were never meant to be checked against this scale.
-const PX_RE = /\b(?:padding|margin|gap|width|height|top|left|right|bottom|inset|radius)[a-zA-Z]*\s*:\s*["']?(\d+)px/gi
-const ARBITRARY_PX_RE = /\b(?:p|m|gap|w|h|top|left|right|bottom|inset)-\[(\d+)px\]/g
+//
+// Deliberately excludes width/height/radius: a 2026-08 audit of every
+// warning they produced found real Figma-exact component/icon dimensions
+// (Button's 27/40/52/56px heights, Toggle's 26/39/52px track widths, Chip's
+// 28px height, icon sizes like 9/13/14/18px, modal/panel/tooltip/menu
+// max-widths) — none of which were ever meant to sit on a 4px spacing
+// grid. Corner radius has its own separately-audited scale. gap/padding/
+// margin/top/left/right/bottom/inset are real layout spacing and stay
+// checked against SCALE.
+const PX_RE = /\b(?:padding|margin|gap|top|left|right|bottom|inset)[a-zA-Z]*\s*:\s*["']?(\d+)px/gi
+const ARBITRARY_PX_RE = /\b(?:p|m|gap|top|left|right|bottom|inset)-\[(\d+)px\]/g
 
 componentFiles.forEach((file) => {
-  const text = fs.readFileSync(file, "utf8")
+  const raw = fs.readFileSync(file, "utf8")
+  // Comment-stripped, same as Check 1 — a JSDoc measurement note like
+  // "Height: 72px (fixed)" isn't code and shouldn't be flagged as a
+  // spacing violation just because the number happens to appear there.
+  const text = stripComments(raw).map((l) => l.code).join("\n")
   let match
   const seen = new Set()
   while ((match = PX_RE.exec(text))) {
