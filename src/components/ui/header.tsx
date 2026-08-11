@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highlight-icon"
 
 export type HeaderSize = "size-l" | "size-m" | "compress"
@@ -74,18 +75,14 @@ export function Header({
         {/* Left zone: back button + icon + title + tag + description */}
         <div className="flex items-start gap-[8px] min-w-0 flex-1">
           {!isCompress && backButton && (
-            <button
-              type="button"
+            <Button
+              variant="tertiary"
+              size="sm"
+              iconPosition="alone"
               aria-label="Back"
-              className="shrink-0 flex items-center justify-center rounded-[6px] hover:bg-[var(--field-bg)] transition-colors mt-[3px]"
-              style={{
-                width: 24, height: 24,
-                color: "var(--header-back-icon)",
-                background: "none", border: "none", cursor: "pointer", padding: 0,
-              }}
-            >
-              <ArrowLeft size={16} strokeWidth={1.75} />
-            </button>
+              className="mt-[3px]"
+              icon={<ArrowLeft size={16} strokeWidth={1.75} style={{ color: "var(--header-back-icon)" }} />}
+            />
           )}
           {!isCompress && Icon && (
             <HighlightIcon

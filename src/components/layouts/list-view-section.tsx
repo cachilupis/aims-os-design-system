@@ -29,6 +29,7 @@ import { SlideOut } from "@/components/ui/slide-out"
 import { EntityList } from "@/components/ui/entity-list"
 import { CardContainer } from "@/components/ui/card-container"
 import { Chip } from "@/components/ui/chip"
+import { Menu, MenuItem, MenuSection, MenuDivider } from "@/components/ui/menu-item"
 import type { EntityListItemData } from "@/components/ui/entity-list"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -170,46 +171,30 @@ export function ListViewSection({
               onClick={() => setSlot(null)}
             />
             <div
-              className="flex flex-col overflow-hidden"
               style={{
-                position:     "fixed",
-                left:         dropdownAnchor.left,
-                top:          dropdownAnchor.top + 4,
-                transform:    "translateX(-50%)",
-                zIndex:       10001,
-                background:   "var(--surface)",
-                border:       "0.5px solid var(--field-border)",
-                borderRadius: 8,
-                minWidth:     200,
-                boxShadow:    "var(--shadow-elevation-3)",
+                position:  "fixed",
+                left:      dropdownAnchor.left,
+                top:       dropdownAnchor.top + 4,
+                transform: "translateX(-50%)",
+                zIndex:    10001,
               }}
             >
-              <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
-                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>
-                  {openSlot}
-                </span>
-              </div>
-              {opts.map(opt => {
-                const isSel = curVal === opt
-                return (
-                  <button
-                    key={opt}
-                    className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full transition-colors"
-                    style={{
-                      background: isSel ? "var(--color-surface-primary-subtle)" : "transparent",
-                      color:      isSel ? "var(--primary)" : "var(--foreground)",
-                      fontWeight: isSel ? 600 : 400,
-                      fontSize:   13,
-                    }}
-                    onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "var(--color-surface-neutral-default)" }}
-                    onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent" }}
-                    onClick={() => { onFilterSelect?.(openSlot, opt); setSlot(null) }}
-                  >
-                    <span className="flex-1">{opt}</span>
-                    {isSel && <LucideIcons.Check size={13} style={{ flexShrink: 0 }} />}
-                  </button>
-                )
-              })}
+              <Menu className="w-auto min-w-[200px]">
+                <MenuSection label={openSlot} />
+                <MenuDivider />
+                {opts.map(opt => {
+                  const isSel = curVal === opt
+                  return (
+                    <MenuItem
+                      key={opt}
+                      label={opt}
+                      state={isSel ? "focus" : "default"}
+                      trailingElement={isSel ? <LucideIcons.Check size={13} style={{ flexShrink: 0, color: "var(--primary)" }} /> : undefined}
+                      onClick={() => { onFilterSelect?.(openSlot, opt); setSlot(null) }}
+                    />
+                  )
+                })}
+              </Menu>
             </div>
           </>
         )

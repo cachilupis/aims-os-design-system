@@ -22,6 +22,8 @@ import { Search, MoreVertical, PanelRight, PanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tooltip } from "@/components/ui/tooltip"
+import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highlight-icon"
+import { Tag, type TagVariant } from "@/components/ui/tag"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,32 +49,22 @@ export interface CollapsedIcon {
   onClick?: () => void
 }
 
-// ── Token maps ─────────────────────────────────────────────────────────────────
+// ── Variant-name maps ────────────────────────────────────────────────────────
+// TitleIconVariant/TitleTagVariant predate the shared HighlightIcon/Tag atoms
+// and used slightly different casing for two colors — kept as-is here (it's
+// public API other code may already call) and mapped to the atoms' own
+// variant names instead of re-deriving --hi-*/--tag-* colors by hand.
 
-const ICON_VARIANT: Record<TitleIconVariant, { bg: string; color: string }> = {
-  informative: { bg: "var(--hi-informative-bg)", color: "var(--hi-informative-icon)" },
-  success:     { bg: "var(--hi-success-bg)",     color: "var(--hi-success-icon)" },
-  alert:       { bg: "var(--hi-alert-bg)",        color: "var(--hi-alert-icon)" },
-  error:       { bg: "var(--hi-error-bg)",        color: "var(--hi-error-icon)" },
-  neutral:     { bg: "var(--hi-neutral-bg)",      color: "var(--hi-neutral-icon)" },
-  yellow:      { bg: "var(--hi-yellow-bg)",       color: "var(--hi-yellow-icon)" },
-  lime:        { bg: "var(--hi-lime-bg)",         color: "var(--hi-lime-icon)" },
-  purple:      { bg: "var(--hi-purple-bg)",       color: "var(--hi-purple-icon)" },
-  lightblue:   { bg: "var(--hi-lightblue-bg)",   color: "var(--hi-lightblue-icon)" },
+const HI_VARIANT_MAP: Record<TitleIconVariant, HighlightIconVariant> = {
+  informative: "informative", success: "success", alert: "alert", error: "error",
+  neutral: "neutral", yellow: "yellow", lime: "lime", purple: "purple",
+  lightblue: "light-blue",
 }
 
-const TAG_VARIANT: Record<TitleTagVariant, { bg: string; border: string; fg: string }> = {
-  informative: { bg: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)", fg: "var(--tag-informative-fg)" },
-  success:     { bg: "var(--tag-success-bg)",     border: "1px solid var(--tag-success-bd)",     fg: "var(--tag-success-fg)" },
-  alert:       { bg: "var(--tag-alert-bg)",        border: "1px solid var(--tag-alert-bd)",        fg: "var(--tag-alert-fg)" },
-  error:       { bg: "var(--tag-error-bg)",        border: "1px solid var(--tag-error-bd)",        fg: "var(--tag-error-fg)" },
-  primary:     { bg: "var(--tag-primary-bg)",     border: "none",                                  fg: "var(--tag-primary-fg)" },
-  secondary:   { bg: "var(--tag-secondary-bg)",   border: "1px solid var(--tag-secondary-bd)",    fg: "var(--tag-secondary-fg)" },
-  neutral:     { bg: "var(--tag-neutral-bg)",     border: "1px solid var(--tag-neutral-bd)",      fg: "var(--tag-neutral-fg)" },
-  limegreen:   { bg: "var(--tag-limegreen-bg)",   border: "1px solid var(--tag-limegreen-bd)",    fg: "var(--tag-limegreen-fg)" },
-  yellow:      { bg: "var(--tag-yellow-bg)",      border: "1px solid var(--tag-yellow-bd)",       fg: "var(--tag-yellow-fg)" },
-  purple:      { bg: "var(--tag-purple-bg)",      border: "1px solid var(--tag-purple-bd)",       fg: "var(--tag-purple-fg)" },
-  lightblue:   { bg: "var(--tag-lightblue-bg)",   border: "1px solid var(--tag-lightblue-bd)",    fg: "var(--tag-lightblue-fg)" },
+const TAG_VARIANT_MAP: Record<TitleTagVariant, TagVariant> = {
+  informative: "informative", success: "success", alert: "alert", error: "error",
+  primary: "primary", secondary: "secondary", neutral: "neutral",
+  limegreen: "limeGreen", yellow: "yellow", purple: "purple", lightblue: "lightBlue",
 }
 
 export interface SidePanelProps {
@@ -314,16 +306,7 @@ export function SidePanel({
               <div className="flex flex-1 items-start gap-[8px] min-w-0">
                 {/* Icon highlight box — color controlled by titleIconVariant */}
                 {titleIcon && (
-                  <div
-                    className="flex items-center justify-center shrink-0 rounded-[4px]"
-                    style={{
-                      width: 24, height: 24,
-                      background: ICON_VARIANT[titleIconVariant].bg,
-                      color: ICON_VARIANT[titleIconVariant].color,
-                    }}
-                  >
-                    {titleIcon}
-                  </div>
+                  <HighlightIcon size="sm" variant={HI_VARIANT_MAP[titleIconVariant]} icon={titleIcon} />
                 )}
                 {/* Title + tag row + description */}
                 <div className="flex flex-1 flex-col gap-[8px] min-w-0">
@@ -340,21 +323,9 @@ export function SidePanel({
                       </Tooltip>
                     )}
                     {titleTag && (
-                      <div
-                        className="flex items-center shrink-0 rounded-[8px] px-[8px]"
-                        style={{
-                          height: 20,
-                          background: TAG_VARIANT[titleTagVariant].bg,
-                          border: TAG_VARIANT[titleTagVariant].border,
-                        }}
-                      >
-                        <span
-                          className="text-xs font-medium leading-[20px] whitespace-nowrap"
-                          style={{ color: TAG_VARIANT[titleTagVariant].fg }}
-                        >
-                          {titleTag}
-                        </span>
-                      </div>
+                      <Tag size="sm" variant={TAG_VARIANT_MAP[titleTagVariant]} className="shrink-0 whitespace-nowrap">
+                        {titleTag}
+                      </Tag>
                     )}
                   </div>
                   {/* Description: clamps to 2 lines, tooltip shows full text on overflow */}
