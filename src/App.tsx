@@ -3680,9 +3680,19 @@ function HomePage() {
   })
 
   // Keep URL in sync — `?page=home&tab={tab}` — so every tab is shareable.
-  // Guard: don't overwrite a ?proto= deep-link before App's mount effect can read it.
+  // Guard: don't overwrite a ?proto= OR a ?page=<other> deep-link before App's
+  // mount effect (src/App.tsx, "Deep-link: read ?proto= or ?page= on mount")
+  // gets a chance to read it. HomePage is always the first thing rendered
+  // (App's `active` state defaults to "home" before that effect resolves a
+  // real deep-link target), and child effects fire before parent effects —
+  // so without this guard, ANY `?page=X` deep link is clobbered back to
+  // `?page=home` by this effect before App ever sees the original X. This
+  // was a real bug: shared links to a specific page always opened Home.
   useEffect(() => {
-    if (!new URLSearchParams(window.location.search).get("proto")) {
+    const params = new URLSearchParams(window.location.search)
+    const hasProtoDeepLink = !!params.get("proto")
+    const hasOtherPageDeepLink = params.get("page") !== null && params.get("page") !== "home"
+    if (!hasProtoDeepLink && !hasOtherPageDeepLink) {
       window.history.replaceState(null, "", `?page=home&tab=${tab}`)
     }
   }, [tab])
