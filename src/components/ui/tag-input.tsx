@@ -7,6 +7,7 @@
 import { useState, useRef, useCallback, useEffect } from "react"
 import { X, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Tag, type TagVariant } from "@/components/ui/tag"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -25,17 +26,11 @@ export interface TagInputProps {
   className?: string
 }
 
-// ── Tag chip color palettes (cycle by insertion index) ───────────────────────
-// Matches DS Tag Secondary S chips: Blue → Neutral → Lime → Light Blue → Yellow → Purple
+// ── Tag chip color cycle (by insertion index) ────────────────────────────────
+// Cycles through the Tag atom's own variants: Informative → Neutral → LimeGreen
+// → LightBlue → Yellow → Purple.
 
-const TAG_PALETTES = [
-  { bg: "var(--color-surface-primary-subtle)",      border: "1px solid var(--color-border-primary-default)",    text: "var(--color-text-info)"        },
-  { bg: "var(--color-surface-neutral-default)",     border: "1px solid var(--color-border-neutral-default)",    text: "var(--color-text-subtitle)"    },
-  { bg: "var(--color-surface-lime-subtle)",         border: "1px solid var(--color-border-lime-green-default)", text: "var(--color-text-lime-green)"  },
-  { bg: "var(--color-surface-light-blue-subtle)",   border: "1px solid var(--color-border-light-blue-default)", text: "var(--color-text-light-blue)"  },
-  { bg: "var(--color-surface-yellow-more-subtle)",  border: "1px solid var(--color-border-yellow-default)",     text: "var(--color-text-yellow)"      },
-  { bg: "var(--color-surface-purple-more-subtle)",  border: "1px solid var(--color-border-purple-default)",     text: "var(--color-text-purple)"      },
-] as const
+const TAG_VARIANT_CYCLE: TagVariant[] = ["informative", "neutral", "limeGreen", "lightBlue", "yellow", "purple"]
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -173,35 +168,25 @@ export function TagInput({
           {/* Chip wrap row */}
           <div className="flex flex-wrap gap-[8px] items-center">
             {visibleTags.map((tag) => {
-              const palette = TAG_PALETTES[tags.indexOf(tag) % TAG_PALETTES.length]
+              const variant = TAG_VARIANT_CYCLE[tags.indexOf(tag) % TAG_VARIANT_CYCLE.length]
               return (
-                <div
+                <Tag
                   key={tag}
-                  className="flex gap-[4px] items-center rounded-[8px] px-[8px] shrink-0"
-                  style={{ height: 24, background: palette.bg, border: palette.border }}
-                >
-                  <span
-                    className="text-sm font-medium leading-none whitespace-nowrap"
-                    style={{ color: palette.text }}
-                  >
-                    {tag}
-                  </span>
-                  {!disabled && (
+                  variant={variant}
+                  size="default"
+                  trailingIcon={!disabled ? (
                     <button
                       onClick={() => onRemoveTag(tag)}
-                      className="flex items-center justify-center shrink-0 rounded-[2px]"
-                      style={{
-                        width: 16, height: 16,
-                        color: "var(--field-supporting)",
-                        background: "transparent", border: "none",
-                        cursor: "pointer", padding: 0,
-                      }}
+                      className="flex items-center justify-center shrink-0 rounded-[2px] hover:opacity-70 transition-opacity"
+                      style={{ width: 16, height: 16, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
                       aria-label={`Remove tag ${tag}`}
                     >
                       <X size={10} strokeWidth={1.75} />
                     </button>
-                  )}
-                </div>
+                  ) : undefined}
+                >
+                  {tag}
+                </Tag>
               )
             })}
 

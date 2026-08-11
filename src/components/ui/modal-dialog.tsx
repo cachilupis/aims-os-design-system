@@ -118,15 +118,21 @@ export function ModalDialog({
       }}
       onClick={e => e.stopPropagation()}
     >
-      {/* Close button */}
+      {/* Close button — not a Button atom: 28×28 has no matching Button icon-alone
+          size (24/40/56 only), and 28px is itself an established DS dimension
+          (Chip's own "M" height, used consistently across 8+ components — see
+          the 2026-08 spacing audit), not a one-off. Still fixed the JS-driven
+          hover (was swapping style.color imperatively) to a plain CSS hover
+          class, same two tokens as before. */}
       {showClose && (
         <button
           onClick={embedded ? undefined : onClose}
           aria-label="Close modal"
-          className="absolute top-[16px] right-[16px] w-[28px] h-[28px] flex items-center justify-center rounded-[8px] transition-colors"
+          className={[
+            "absolute top-[16px] right-[16px] w-[28px] h-[28px] flex items-center justify-center rounded-[8px] transition-colors",
+            !embedded && "hover:[color:var(--modal-close-hover)]",
+          ].filter(Boolean).join(" ")}
           style={{ color: "var(--modal-close-icon)" }}
-          onMouseEnter={e => !embedded && (e.currentTarget.style.color = "var(--modal-close-hover)")}
-          onMouseLeave={e => !embedded && (e.currentTarget.style.color = "var(--modal-close-icon)")}
         >
           <X className="w-[20px] h-[20px]" />
         </button>
