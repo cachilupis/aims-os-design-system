@@ -74,7 +74,7 @@ import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
 // ── Types ─────────────────────────────────────────────────────────────────
 
 type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -164,7 +164,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
-  { id: "side-panel",      label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 450px default · 300px min · header + scrollable body + optional footer" },
+  { id: "side-panel",      label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 350px default, 450px + dynamic half-screen snap points · header + scrollable body + optional footer" },
   { id: "sidebar",         label: "Sidebar",           group: "Components",  description: "Vertical navigation rail · 2 states (Expanded 250px / Collapsed 56px) · icon-only or icon+label · active gradient" },
   { id: "skeleton",        label: "Skeleton",          group: "Components",  description: "Loading placeholder · 3 shapes (Rectangle 12px / Circle / Text 4px) · linear shimmer 1.2s left→right loop · matches content layout · prefers-reduced-motion safe · --skeleton-* tokens" },
   { id: "slide-out",       label: "Slide Out",         group: "Components",  description: "Overlay panel from the right · 2 sizes M (635px) / S (420px) · header with title + subtitle + close · divider · scrollable body · optional footer · Escape key + backdrop dismiss" },
@@ -189,20 +189,20 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "spacing",     label: "Spacing",     group: "Foundations", description: "4px grid · 11 tokens (0–64px) · governs padding, gap, and margin across all views" },
   { id: "typography",  label: "Typography",  group: "Foundations", description: "Type scale DS → Tailwind · Display, Title, Subtitle, Body, Label, Caption, Link" },
   // Patterns — behavioral guides for PMs and engineers
-  { id: "patterns-guardrails",  label: "Guardrails",         group: "Patterns", description: "Reglas consolidadas para vistas generadas por IA · Tokens · Headers · Botones · 3-dot menu · Sidebar sub-nav · SlideOut composition" },
-  { id: "patterns-forms",       label: "Forms",              group: "Patterns", description: "Composición de formularios: cuándo usar wizard vs modal vs slideout · field spacing 16px / section gap 24px · validación en blur · Next disabled en campos requeridos vacíos" },
-  { id: "patterns-slideout",    label: "SlideOut / SidePanel",   group: "Patterns", description: "SlideOut vs SidePanel: cuándo usar cada uno · Shell anatomy · 4 header variants · ejemplos reales de detail view, form y node config · content types · tabs · footer · guardrails" },
+  { id: "patterns-guardrails",  label: "Guardrails",         group: "Patterns", description: "Consolidated rules for AI-generated views · Tokens · Headers · Buttons · 3-dot menu · Sidebar sub-nav · SlideOut composition" },
+  { id: "patterns-forms",       label: "Forms",              group: "Patterns", description: "Form composition: when to use wizard vs modal vs slideout · field spacing 16px / section gap 24px · validate on blur · Next disabled while required fields are empty" },
+  { id: "patterns-slideout",    label: "SlideOut / SidePanel",   group: "Patterns", description: "SlideOut vs SidePanel: when to use each · Shell anatomy · 4 header variants · real examples for detail view, form, and node config · content types · tabs · footer · guardrails" },
   { id: "patterns-panel-content", label: "SlideOut/SidePanel — Content", group: "Patterns", description: "Content vocabulary for panels — AI Summary (8 variants) · Insights (HighlightCard grid) · List Sections · Form fields: Input, Textarea, Select, Toggle · Section Headers" },
-  { id: "patterns-list-view",  label: "List View Layout",  group: "Patterns", description: "Stack obligatorio: Topbar + Sidebar + EntityList + Pagination · AppBackground siempre · Side Panel para detalles · Filters como única fuente de verdad del dataset" },
-  { id: "patterns-filter",     label: "Filter System",     group: "Patterns", description: "3 capas: Visible Filters → All Filters button → Slideout (completo) → Chips (opcional) · estado draft/applied · Apply resets pagination" },
-  { id: "patterns-overlay",    label: "Overlay Decision",  group: "Patterns", description: "Modal cuando el usuario debe detenerse y decidir · Slide-out cuando puede seguir explorando · solo 1 de cada tipo activo a la vez" },
-  { id: "patterns-header",     label: "Header Sticky",     group: "Patterns", description: "Scroll > 16px → COMPRESSED (60px) · hover 0–24px idle 3s → filtros visibles (130px) · transición 200ms ease-in-out" },
-  { id: "patterns-nav-depth",  label: "Navigation Depth",  group: "Patterns", description: "Máx 2 capas: Tabs (¿dónde?) + SwitchTab (¿cómo?) + Filters (¿qué?) · no añadir más capas de nav · usar solo cuando cada capa aporta diferenciación real" },
-  { id: "patterns-loading",    label: "Loading States",    group: "Patterns", description: "Spinner → duración desconocida · Progress Bar → progreso conocido (%) · Skeleton → layout conocido · <300ms no mostrar nada · solo 1 indicador por vista" },
-  { id: "patterns-feedback",   label: "Feedback & Alerts", group: "Patterns", description: "Modal → error que bloquea flujo · Alert Banner → estado persistente en contexto · Inline → validación de campo · no usar overlays para info no crítica" },
-  { id: "patterns-logs",       label: "Logs Table",        group: "Patterns", description: "Lista de eventos del sistema con DS Table · Level Tag (error/warning/info) · Filters (Date · Level · Worker · Status) · Pagination · SlideOut para detalle de log" },
-  { id: "widget-father",          label: "Widget Father",         group: "Patterns", description: "Componente base de todos los widgets UCP · Header (título + descripción + máx 2 acciones) · Slot de contenido · Footer CTA opcional · Estados: Default, Drag, Error, Connection Error" },
-  { id: "patterns-widget-canvas", label: "Widget Canvas Layout", group: "Patterns", description: "Sistema de grid de 12 columnas · 3 clases de ancho (1/3, 2/3, 3/3) · 3 clases de alto (Compact, Standard, Heavy) · snap-to-grid · compactación vertical · responsive a 1/2/3 cols" },
+  { id: "patterns-list-view",  label: "List View Layout",  group: "Patterns", description: "Mandatory stack: Topbar + Sidebar + EntityList + Pagination · AppBackground always · Side Panel for details · Filters as the single source of truth for the dataset" },
+  { id: "patterns-filter",     label: "Filter System",     group: "Patterns", description: "3 layers: Visible Filters → All Filters button → Slideout (full) → Chips (optional) · draft/applied state · Apply resets pagination" },
+  { id: "patterns-overlay",    label: "Overlay Decision",  group: "Patterns", description: "Modal when the user must stop and decide · Slide-out when they can keep exploring · only 1 of each type active at a time" },
+  { id: "patterns-header",     label: "Header Sticky",     group: "Patterns", description: "Scroll > 16px → COMPRESSED (60px) · hover 0–24px idle 800ms → filters visible (130px) · 200ms ease-in-out transition" },
+  { id: "patterns-nav-depth",  label: "Navigation Depth",  group: "Patterns", description: "Up to 4 layers: Tabs (where?) + SwitchTab (how?) + Filters (what?) + Chips (which quick filter?) · in the max-depth edge case, SwitchTab sits left of Filters (12px gap) to save vertical space · use only when each layer adds real differentiation" },
+  { id: "patterns-loading",    label: "Loading States",    group: "Patterns", description: "Spinner → unknown duration · Progress Bar → known progress (%) · Skeleton → known layout · <300ms show nothing · only 1 indicator per view" },
+  { id: "patterns-feedback",   label: "Feedback & Alerts", group: "Patterns", description: "Modal → error that blocks the flow · Alert Banner → persistent in-context state · Inline → field validation · don't use overlays for non-critical info" },
+  { id: "patterns-logs",       label: "Logs Table",        group: "Patterns", description: "System event list with DS Table · Status Tag · Filters (Search · Status) · Pagination · SlideOut for run detail" },
+  { id: "widget-father",          label: "Widget Father",         group: "Patterns", description: "Base component for all UCP widgets · Header (title + description + up to 2 actions) · Content slot · Optional footer CTA · States: Default, Drag, Error, Connection Error" },
+  { id: "patterns-widget-canvas", label: "Widget Canvas Layout", group: "Patterns", description: "12-column grid system · 3 width classes (1/3, 2/3, 3/3) · 3 height classes (Compact, Standard, Heavy) · snap-to-grid · vertical compaction · responsive to 1/2/3 cols" },
   { id: "widgets",               label: "Widgets",              group: "Patterns", description: "UCP widget gallery — KPI, Timeline, Calendar, Charts, Table, Activity, Notes, Folder Navigation · click any widget to view its anatomy, states, and usage rules" },
   { id: "home-banner", label: "Home Banner", group: "Patterns", description: "Personalized greeting banner · time-of-day greeting · resolved/remaining counter · featured action carousel · quick nav links · Ask PA CTA · adapts to CardContainer primary variant" },
 ]
@@ -237,11 +237,11 @@ const BUTTON_SPEC = {
       description: "Highest-weight CTA. Max 1–2 per view.",
       cssPrefix: "--btn-primary",
       tokens: [
-        { role: "Background",       variable: "Border/Primary/Default", light: "#2173ff",              dark: "#2b7fff" },
-        { role: "Text",             variable: "Text/White",             light: "#ffffff",              dark: "#ffffff" },
-        { role: "Background hover", variable: "—",                     light: "#002f80",              dark: "#002f80" },
-        { role: "Background active",variable: "—",                     light: "#001a5c",              dark: "#001a5c" },
-        { role: "Focus ring",       variable: "Border/Primary/Default", light: "#2173ff",              dark: "#2b7fff" },
+        { role: "Background",        variable: "--btn-primary-bg",        light: "#2173ff", dark: "#2b7fff" },
+        { role: "Text",               variable: "—",                       light: "#ffffff", dark: "#ffffff", note: "hardcoded !text-white, not a CSS var" },
+        { role: "Background hover",  variable: "--btn-primary-hover-bg",  light: "#002f80", dark: "#002f80" },
+        { role: "Background active", variable: "--btn-primary-active-bg", light: "#001a5c", dark: "#001a5c" },
+        { role: "Focus ring",        variable: "--btn-primary-ring",      light: "#2173ff", dark: "#2b7fff" },
       ],
     },
     {
@@ -249,14 +249,17 @@ const BUTTON_SPEC = {
       description: "Alternative action, same section as Primary. Always pill shape.",
       cssPrefix: "--btn-secondary",
       tokens: [
-        { role: "Background",          variable: "Surface/Neutral/White",    light: "#ffffff",              dark: "rgba(255,255,255,0.1)" },
-        { role: "Border",              variable: "Border/Neutral/Default",   light: "#5c5c5c",              dark: "rgba(255,255,255,0.1)" },
-        { role: "Text",                variable: "Text/Label",               light: "#2a2a2a",              dark: "rgba(255,255,255,0.6)" },
-        { role: "Background hover",    variable: "Surface/Neutral/Default",  light: "#f2f2f2",              dark: "rgba(255,255,255,0.08)" },
-        { role: "Border hover",        variable: "Surface/Neutral/Emphasis", light: "#d9d9d9",              dark: "rgba(255,255,255,0.2)" },
-        { role: "Border focus",        variable: "Border/Neutral/Lighter",   light: "#bababa",              dark: "rgba(255,255,255,0.15)" },
-        { role: "Background disabled", variable: "Surface/Neutral/Subtle",   light: "#fafafa",              dark: "rgba(255,255,255,0.05)" },
-        { role: "Text disabled",       variable: "Text/Disabled",            light: "#bababa",              dark: "rgba(255,255,255,0.3)" },
+        { role: "Background",          variable: "--btn-secondary-bg",          light: "#ffffff", dark: "rgba(255,255,255,0.1)"  },
+        { role: "Border",              variable: "--btn-secondary-border",      light: "#5c5c5c", dark: "rgba(255,255,255,0.1)"  },
+        { role: "Text",                variable: "--btn-secondary-fg",          light: "#2a2a2a", dark: "rgba(255,255,255,0.8)"  },
+        { role: "Background hover",    variable: "--btn-secondary-hover-bg",    light: "#f2f2f2", dark: "rgba(255,255,255,0.08)" },
+        { role: "Border hover",        variable: "--btn-secondary-hover-bd",    light: "#d9d9d9", dark: "rgba(255,255,255,0.2)"  },
+        { role: "Border focus",        variable: "--btn-secondary-focus-bd",    light: "#bababa", dark: "rgba(255,255,255,0.15)" },
+        { role: "Background active",   variable: "--btn-secondary-active-bg",   light: "rgba(0,0,0,0.078)", dark: "rgba(255,255,255,0.2)" },
+        { role: "Focus ring",          variable: "--btn-secondary-ring",        light: "rgba(0,0,0,0.15)",  dark: "rgba(255,255,255,0.25)" },
+        { role: "Background disabled", variable: "--btn-secondary-disabled-bg", light: "#fafafa", dark: "rgba(255,255,255,0.05)" },
+        { role: "Border disabled",     variable: "--btn-secondary-disabled-bd", light: "#bababa", dark: "rgba(255,255,255,0.15)" },
+        { role: "Text disabled",       variable: "--btn-secondary-disabled-fg", light: "#bababa", dark: "rgba(255,255,255,0.3)"  },
       ],
     },
     {
@@ -264,10 +267,12 @@ const BUTTON_SPEC = {
       description: "Cancel, go back, low-weight inline action. No background.",
       cssPrefix: "--btn-tertiary",
       tokens: [
-        { role: "Background",          variable: "—",                        light: "transparent",          dark: "transparent" },
-        { role: "Text",                variable: "Text/Label",               light: "#2a2a2a",              dark: "rgba(255,255,255,0.6)" },
-        { role: "Background hover",    variable: "Surface/Neutral/Subtle",   light: "#fafafa",              dark: "rgba(255,255,255,0.05)" },
-        { role: "Background focus",    variable: "Surface/Neutral/Default",  light: "#f2f2f2",              dark: "rgba(255,255,255,0.08)" },
+        { role: "Background",       variable: "—",                     light: "transparent", dark: "transparent" },
+        { role: "Text",              variable: "--btn-tertiary-fg",      light: "#2a2a2a", dark: "rgba(255,255,255,0.8)"  },
+        { role: "Background hover", variable: "--btn-tertiary-hover-bg", light: "#fafafa", dark: "rgba(255,255,255,0.05)" },
+        { role: "Background focus", variable: "--btn-tertiary-focus-bg", light: "#f2f2f2", dark: "rgba(255,255,255,0.08)" },
+        { role: "Background active",variable: "--btn-tertiary-active-bg",light: "#ebebeb", dark: "rgba(255,255,255,0.149)" },
+        { role: "Focus ring (reused from Secondary)", variable: "--btn-secondary-ring", light: "rgba(0,0,0,0.15)", dark: "rgba(255,255,255,0.25)" },
       ],
     },
     {
@@ -275,11 +280,11 @@ const BUTTON_SPEC = {
       description: "Destructive / irreversible actions only. Delete, revoke, purge.",
       cssPrefix: "--btn-warning",
       tokens: [
-        { role: "Background",       variable: "Color/Destructive",      light: "#d32f2f",             dark: "#e05252" },
-        { role: "Text",             variable: "Text/White",             light: "#ffffff",             dark: "#ffffff" },
-        { role: "Background hover", variable: "—",                      light: "#b91c1c",             dark: "#ff6467" },
-        { role: "Background active",variable: "—",                      light: "#991b1b",             dark: "#c03030" },
-        { role: "Focus ring",       variable: "Color/Destructive",      light: "#d32f2f",             dark: "#e05252" },
+        { role: "Background",        variable: "--btn-warning-bg",        light: "#d32f2f", dark: "#e05252" },
+        { role: "Text",               variable: "—",                       light: "#ffffff", dark: "#ffffff", note: "hardcoded !text-white, not a CSS var" },
+        { role: "Background hover",  variable: "--btn-warning-hover-bg",  light: "#b91c1c", dark: "#ff6467" },
+        { role: "Background active", variable: "--btn-warning-active-bg", light: "#991b1b", dark: "#c03030" },
+        { role: "Focus ring",        variable: "--btn-warning-ring",      light: "#d32f2f", dark: "#e05252" },
       ],
     },
     {
@@ -287,24 +292,24 @@ const BUTTON_SPEC = {
       description: "Save, approve, confirm, complete. Confirmative end of a flow.",
       cssPrefix: "--btn-positive",
       tokens: [
-        { role: "Background",       variable: "Border/Success/Default", light: "#00a07e",             dark: "#00a07e" },
-        { role: "Text",             variable: "Text/White",             light: "#ffffff",             dark: "#ffffff" },
-        { role: "Background hover", variable: "—",                      light: "#003328",             dark: "#003328" },
-        { role: "Background active",variable: "—",                      light: "#001f18",             dark: "#001f18" },
-        { role: "Focus ring",       variable: "Border/Success/Default", light: "#00a07e",             dark: "#00a07e" },
+        { role: "Background",        variable: "--btn-positive-bg",        light: "#00a07e", dark: "#00a07e" },
+        { role: "Text",               variable: "—",                        light: "#ffffff", dark: "#ffffff", note: "hardcoded !text-white, not a CSS var" },
+        { role: "Background hover",  variable: "--btn-positive-hover-bg",  light: "#003328", dark: "#003328" },
+        { role: "Background active", variable: "--btn-positive-active-bg", light: "#001f18", dark: "#001f18" },
+        { role: "Focus ring",        variable: "--btn-positive-ring",      light: "#00a07e", dark: "#00a07e" },
       ],
     },
     {
       name: "Main Action",
-      description: "High-conversion hero CTA. Used once per screen at the point of maximum attention.",
+      description: "High-conversion hero CTA. Used once per screen at the point of maximum attention. Gradient stops and hover shadow are intentionally hardcoded in the component — CSS vars can't be interpolated inside Tailwind arbitrary gradient strings — only the resting shadow and focus ring are real tokens.",
       cssPrefix: "gradient (hardcoded)",
       tokens: [
-        { role: "Gradient start",   variable: "—",                      light: "#2173ff",             dark: "#2173ff" },
-        { role: "Gradient end",     variable: "—",                      light: "#09e2ab",             dark: "#09e2ab" },
-        { role: "Shadow default",   variable: "—",                      light: "#09e2ab29",           dark: "#09e2ab29" },
-        { role: "Shadow hover",     variable: "—",                      light: "#00c94f59",           dark: "#00c94f59" },
-        { role: "Focus ring",       variable: "—",                      light: "#cbfff4",             dark: "#cbfff4" },
-        { role: "Hover grad start", variable: "—",                      light: "#002f80",             dark: "#002f80" },
+        { role: "Gradient start",   variable: "—",                 light: "#2173ff",             dark: "#2173ff", note: "hardcoded" },
+        { role: "Gradient end",     variable: "—",                 light: "#09e2ab",             dark: "#09e2ab", note: "hardcoded" },
+        { role: "Shadow default",   variable: "--shadow-glow-ai",  light: "4px 8px 12px 8px rgba(9,226,171,0.16)", dark: "4px 8px 12px 8px rgba(9,226,171,0.16)" },
+        { role: "Shadow hover",     variable: "—",                 light: "8px 8px 20px 0px #00c94f59",  dark: "8px 8px 20px 0px #00c94f59", note: "hardcoded" },
+        { role: "Focus ring",       variable: "--btn-main-ring",   light: "#cbfff4",             dark: "#09e2ab" },
+        { role: "Hover grad start", variable: "—",                 light: "#002f80",             dark: "#002f80", note: "hardcoded" },
       ],
     },
   ],
@@ -331,88 +336,89 @@ const INPUT_SPEC = {
     { size: "M", height: "40px", inputFontSize: "14px", cornerRadius: "8px", paddingX: "12px", iconGap: "10px" },
   ],
   typography: [
-    { element: "Label",          family: "Inter", size: "12px", weight: "Semi Bold (600)", lineHeight: "1.5", variable: "Label/Bold/S" },
-    { element: "Input text",     family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.5", variable: "Body/Regular/M" },
-    { element: "Placeholder",    family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.5", variable: "Body/Regular/M" },
-    { element: "Supporting text",family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1.5", variable: "Body/Regular/S" },
+    { element: "Label",          family: "Inter", size: "12px", weight: "Semi Bold (600)", lineHeight: "1.5", variable: "--field-label" },
+    { element: "Input text",     family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.5", variable: "--field-text" },
+    { element: "Placeholder",    family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.5", variable: "--field-placeholder" },
+    { element: "Supporting text",family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1.5", variable: "--field-supporting" },
   ],
   states: [
     {
       name: "Default",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Neutral/Default",    varId: "4465:4448", light: "#5c5c5c",   dark: "#ffffff1a" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Input text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Placeholder",      variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
-        { role: "Supporting text",  variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
+        { role: "Background",       variable: "--field-bg",     varId: "", light: "#ffffff",   dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",           variable: "--field-border", varId: "", light: "#5c5c5c",   dark: "rgba(255,255,255,0.10)" },
+        { role: "Label text",       variable: "--field-label",  varId: "", light: "#2a2a2a",   dark: "rgba(255,255,255,0.60)" },
+        { role: "Input text",       variable: "--field-text",   varId: "", light: "#2a2a2a",   dark: "rgba(255,255,255,0.60)" },
+        { role: "Icon",             variable: "--field-icon",   varId: "", light: "#bababa",   dark: "rgba(255,255,255,0.30)" },
+        { role: "Placeholder",      variable: "--field-placeholder", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Supporting text",  variable: "--field-supporting",  varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.60)" },
       ],
     },
     {
       name: "Hover",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Neutral/Black",      varId: "4465:4583", light: "#000000",   dark: "#ffffff4d" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Placeholder",      variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
-        { role: "Supporting text",  variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--color-border-neutral-black", varId: "", light: "#000000", dark: "rgba(255,255,255,0.30)" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Placeholder (reused)", variable: "--field-placeholder", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Supporting text (reused)", variable: "--field-supporting", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.60)" },
       ],
     },
     {
       name: "Focus",
       borderWidth: "1px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Primary/Default",    varId: "4465:4452", light: "#2173ff",   dark: "#2b7fff" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Input text",       variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
-        { role: "Supporting text",  variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--field-border-focus", varId: "", light: "#2173ff", dark: "#2b7fff" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Input text (reused)", variable: "--field-text", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Supporting text (reused)", variable: "--field-supporting", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.60)" },
       ],
     },
     {
       name: "Error",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Error/Lighter",      varId: "4465:4457", light: "#d32f2f",   dark: "#fb2c36" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Placeholder",      variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
-        { role: "Supporting text",  variable: "Text/Error",                varId: "4465:4473", light: "#5f2120",   dark: "#ff6467" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--field-border-error", varId: "", light: "#d32f2f", dark: "#fb2c36" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Icon",                variable: "--field-text-error", varId: "", light: "#5f2120", dark: "#ff6467" },
+        { role: "Supporting text",     variable: "--field-text-error", varId: "", light: "#5f2120", dark: "#ff6467" },
       ],
     },
     {
       name: "Success",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Success/Default",    varId: "4465:4464", light: "#00a07e",   dark: "#00c9504d" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Placeholder",      variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
-        { role: "Supporting text",  variable: "Text/Success",              varId: "4465:4505", light: "#003328",   dark: "#6ee7b7" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--field-border-success", varId: "", light: "#00a07e", dark: "rgba(0,201,80,0.3)" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Icon",                variable: "--field-text-success", varId: "", light: "#003328", dark: "#6ee7b7" },
+        { role: "Supporting text",     variable: "--field-text-success", varId: "", light: "#003328", dark: "#6ee7b7" },
       ],
     },
     {
       name: "Alert",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Alert/Default",      varId: "4465:4460", light: "#ed6c02",   dark: "#fbbf24" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Placeholder",      variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
-        { role: "Supporting text",  variable: "Text/Alert",                varId: "4465:4504", light: "#663c00",   dark: "#fcd34d" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--field-border-alert", varId: "", light: "#ed6c02", dark: "#fbbf24" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Icon",                variable: "--field-text-alert", varId: "", light: "#663c00", dark: "#fcd34d" },
+        { role: "Supporting text",     variable: "--field-text-alert", varId: "", light: "#663c00", dark: "#fcd34d" },
       ],
     },
     {
       name: "Disabled",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Neutral/Lighter",    varId: "4465:4449", light: "#bababa",   dark: "#ffffff26" },
-        { role: "Label text",       variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
-        { role: "Input text",       variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
-        { role: "Supporting text",  variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border (reused)",     variable: "--field-border",     varId: "", light: "#5c5c5c",   dark: "rgba(255,255,255,0.10)" },
+        { role: "Label text (reused)", variable: "--field-label",      varId: "", light: "#2a2a2a",   dark: "rgba(255,255,255,0.60)" },
+        { role: "Supporting text (reused)", variable: "--field-supporting", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.60)" },
+        { role: "Opacity", variable: "—", varId: "", light: "40%", dark: "40%", note: "wrapper + text dimmed uniformly — no dedicated disabled color tokens, unlike Select" },
       ],
     },
   ],
@@ -436,89 +442,91 @@ const TEXTAREA_SPEC = {
     { size: "Default", height: "148px (textarea area)", inputFontSize: "14px", cornerRadius: "8px", paddingX: "16px", paddingY: "12px", gap: "10px (inner)", outerGap: "4px (between label/field/feedback)" },
   ],
   typography: [
-    { element: "Label",            family: "Inter", size: "12px", weight: "Semi Bold (600)", lineHeight: "1.5", variable: "Label/Bold/S" },
-    { element: "Input text",       family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.5", variable: "Body/Regular/M" },
-    { element: "Placeholder",      family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.5", note: "Shown as 'Placeholder...'" },
-    { element: "Char count",       family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1.5", note: "Format: '0/000'" },
-    { element: "Supporting text",  family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1.5" },
+    { element: "Label",            family: "Inter", size: "12px", weight: "Semi Bold (600)", lineHeight: "1.5", variable: "--field-label" },
+    { element: "Input text",       family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.5", variable: "--field-text" },
+    { element: "Placeholder",      family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.5", variable: "--field-placeholder", note: "Shown as 'Placeholder...'" },
+    { element: "Char count",       family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1.5", variable: "--field-supporting", note: "Format: '0/000'" },
+    { element: "Supporting text",  family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1.5", variable: "--field-supporting" },
   ],
   states: [
     {
       name: "Default",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Neutral/Default",    varId: "4465:4448", light: "#5c5c5c",   dark: "#ffffff1a" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Placeholder",      variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
-        { role: "Char count",       variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
-        { role: "Supporting text",  variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
+        { role: "Background",       variable: "--field-bg",     varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",           variable: "--field-border", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+        { role: "Label text",       variable: "--field-label",  varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Placeholder",      variable: "--field-placeholder", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Trailing icon",    variable: "--field-icon",   varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Expand-content icon", variable: "--field-supporting", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.60)" },
+        { role: "Char count",       variable: "--field-supporting", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.60)" },
+        { role: "Supporting text",  variable: "--field-supporting", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.60)" },
       ],
     },
     {
       name: "Hover",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Neutral/Darker",     varId: "4465:4450", light: "#2a2a2a",   dark: "#ffffff33" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Placeholder",      variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--field-border-hover", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.20)" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Placeholder (reused)", variable: "--field-placeholder", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
       ],
     },
     {
       name: "Focus",
       borderWidth: "1px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Primary/Default",    varId: "4465:4452", light: "#2173ff",   dark: "#2b7fff" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Char count",       variable: "Text/Body",                 varId: "4465:4469", light: "#5c5c5c",   dark: "#ffffff99" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--field-border-focus", varId: "", light: "#2173ff", dark: "#2b7fff" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Char count (reused)", variable: "--field-supporting", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.60)" },
       ],
     },
     {
       name: "Error",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Error/Lighter",      varId: "4465:4457", light: "#d32f2f",   dark: "#fb2c36" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Placeholder",      variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
-        { role: "Supporting text",  variable: "Text/Error",                varId: "4465:4473", light: "#5f2120",   dark: "#ff6467" },
-        { role: "Char count",       variable: "Text/Error",                varId: "4465:4473", light: "#5f2120",   dark: "#ff6467" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--field-border-error", varId: "", light: "#d32f2f", dark: "#fb2c36" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Placeholder (reused)", variable: "--field-placeholder", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Supporting text",     variable: "--field-text-error", varId: "", light: "#5f2120", dark: "#ff6467" },
+        { role: "Char count",          variable: "--field-text-error", varId: "", light: "#5f2120", dark: "#ff6467" },
       ],
     },
     {
       name: "Success",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Success/Default",    varId: "4465:4464", light: "#00a07e",   dark: "#00c9504d" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Supporting text",  variable: "Text/Success",              varId: "4465:4505", light: "#003328",   dark: "#6ee7b7" },
-        { role: "Char count",       variable: "Text/Success",              varId: "4465:4505", light: "#003328",   dark: "#6ee7b7" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--field-border-success", varId: "", light: "#00a07e", dark: "rgba(0,201,80,0.3)" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Supporting text",     variable: "--field-text-success", varId: "", light: "#003328", dark: "#6ee7b7" },
+        { role: "Char count",          variable: "--field-text-success", varId: "", light: "#003328", dark: "#6ee7b7" },
       ],
     },
     {
       name: "Alert",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Alert/Default",      varId: "4465:4460", light: "#ed6c02",   dark: "#fbbf24" },
-        { role: "Label text",       variable: "Text/Subtitle",             varId: "4465:4468", light: "#2a2a2a",   dark: "#ffffff99" },
-        { role: "Supporting text",  variable: "Text/Alert",                varId: "4465:4504", light: "#663c00",   dark: "#fcd34d" },
-        { role: "Char count",       variable: "Text/Alert",                varId: "4465:4504", light: "#663c00",   dark: "#fcd34d" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",              variable: "--field-border-alert", varId: "", light: "#ed6c02", dark: "#fbbf24" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Supporting text",     variable: "--field-text-alert", varId: "", light: "#663c00", dark: "#fcd34d" },
+        { role: "Char count",          variable: "--field-text-alert", varId: "", light: "#663c00", dark: "#fcd34d" },
       ],
     },
     {
       name: "Disabled",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",       variable: "Surface/Neutral/White",     varId: "4465:4591", light: "#ffffff",   dark: "#ffffff1a" },
-        { role: "Border",           variable: "Border/Neutral/Lighter",    varId: "4465:4449", light: "#bababa",   dark: "#ffffff26" },
-        { role: "Label text",       variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
-        { role: "Placeholder",      variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
-        { role: "Char count",       variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
-        { role: "Supporting text",  variable: "Text/Disabled",             varId: "4465:4472", light: "#bababa",   dark: "#ffffff4d" },
+        { role: "Background (reused)", variable: "--field-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border (reused)",     variable: "--field-border", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+        { role: "Label text (reused)", variable: "--field-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Placeholder (reused)", variable: "--field-placeholder", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Char count (reused)", variable: "--field-supporting", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.60)" },
+        { role: "Opacity", variable: "—", varId: "", light: "40%", dark: "40%" },
       ],
     },
   ],
@@ -546,90 +554,110 @@ const CARD_SPEC = {
       name: "Default",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",      variable: "Surface/Neutral/White",       varId: "4465:4591", light: "#ffffff",              dark: "rgba(255,255,255,0.1)"  },
-        { role: "Border",          variable: "Border/Neutral/Lighter",      varId: "4465:4449", light: "#bababa",              dark: "rgba(255,255,255,0.15)" },
-        { role: "Border hover",    variable: "Border/Neutral/Default",      varId: "4465:4448", light: "#5c5c5c",              dark: "rgba(255,255,255,0.1)"  },
-        { role: "Border selected", variable: "Border/Primary/Default",      varId: "4465:4452", light: "#2173ff",              dark: "#2b7fff"                },
+        { role: "Background",      variable: "--card-default-bg",           varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.1)"  },
+        { role: "Border",          variable: "--card-default-border",       varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)" },
+        { role: "Border hover",    variable: "--card-default-hover-bd",     varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.1)"  },
+        { role: "Border selected", variable: "--card-default-selected-bd",  varId: "", light: "#2173ff", dark: "#2b7fff"                },
+        { role: "Hover shadow",    variable: "--card-default-hover-shadow", varId: "",          light: "0 8px 24px rgba(33,115,255,0.12), 0 2px 6px rgba(0,0,0,0.06)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(255,255,255,0.4), 0 0 14px 0px rgba(255,255,255,0.15)" },
+      ],
+    },
+    {
+      name: "White Opacity",
+      borderWidth: "0.5px",
+      tokens: [
+        { role: "Background (reused)",      variable: "--card-default-bg",             varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.1)" },
+        { role: "Border (reused)",           variable: "--card-default-border",         varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)" },
+        { role: "Border hover (reused)",     variable: "--card-default-hover-bd",       varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.1)" },
+        { role: "Border selected (reused)",  variable: "--card-default-selected-bd",    varId: "", light: "#2173ff", dark: "#2b7fff" },
+        { role: "Hover shadow (own token)",  variable: "--card-whiteopacity-hover-shadow", varId: "", light: "0 8px 24px rgba(33,115,255,0.12), 0 2px 6px rgba(0,0,0,0.06)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(255,255,255,0.4), 0 0 14px 0px rgba(255,255,255,0.15)" },
       ],
     },
     {
       name: "Primary",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",      variable: "Surface/Primary/More Subtle", varId: "4465:4597", light: "#f6f9ff",              dark: "rgba(43,127,255,0.08)"  },
-        { role: "Border",          variable: "Border/Primary/Lighter",      varId: "4465:4453", light: "#80afff",              dark: "rgba(43,127,255,0.1)"   },
-        { role: "Border hover",    variable: "Border/Primary/Default",      varId: "4465:4452", light: "#2173ff",              dark: "#2b7fff"                },
-        { role: "Border selected", variable: "Border/Primary/Default",      varId: "4465:4452", light: "#2173ff",              dark: "#2b7fff"                },
+        { role: "Background",      variable: "--card-primary-bg",           varId: "", light: "#f6f9ff", dark: "rgba(43,127,255,0.08)"  },
+        { role: "Border",          variable: "--card-primary-border",       varId: "", light: "#80afff", dark: "rgba(43,127,255,0.1)"   },
+        { role: "Border hover",    variable: "--card-primary-hover-bd",     varId: "", light: "#2173ff", dark: "#2b7fff"                },
+        { role: "Border selected", variable: "--card-primary-selected-bd",  varId: "", light: "#2173ff", dark: "#2b7fff"                },
+        { role: "Hover shadow",    variable: "--card-primary-hover-shadow", varId: "",          light: "0 8px 24px rgba(33,115,255,0.20), 0 0 12px rgba(33,115,255,0.12)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(33,115,255,0.4), 0 0 14px 0px rgba(33,115,255,0.15)" },
       ],
     },
     {
       name: "Green",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",      variable: "Surface/Success/More Subtle", varId: "4465:4598", light: "#e5fdf8",              dark: "#0a1f1a"                },
-        { role: "Border",          variable: "Border/Success/Default",      varId: "4465:4464", light: "#00a07e",              dark: "rgba(0,201,80,0.3)"     },
-        { role: "Border hover",    variable: "Border/Success/Lighter",      varId: "4465:4465", light: "#009978",              dark: "#34d399"                },
-        { role: "Border selected", variable: "Border/Success/Default",      varId: "4465:4464", light: "#00a07e",              dark: "rgba(0,201,80,0.3)"     },
+        { role: "Background",      variable: "--card-green-bg",           varId: "", light: "#e5fdf8", dark: "#0a1f1a"                },
+        { role: "Border",          variable: "--card-green-border",       varId: "", light: "#00a07e", dark: "rgba(0,201,80,0.3)"     },
+        { role: "Border hover",    variable: "--card-green-hover-bd",     varId: "", light: "#009978", dark: "#34d399"                },
+        { role: "Border selected", variable: "--card-green-selected-bd",  varId: "", light: "#009978", dark: "#34d399", note: "was documented as reusing Border default (#00a07e/rgba(0,201,80,0.3)) — real token matches hover-bd, not the default border" },
+        { role: "Hover shadow",    variable: "--card-green-hover-shadow",   varId: "",          light: "0 8px 24px rgba(0,160,126,0.16), 0 2px 6px rgba(0,0,0,0.05)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(0,201,79,0.4), 0 0 14px 0px rgba(0,201,79,0.15)" },
       ],
     },
     {
       name: "Reed",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",      variable: "Surface/Card/Reed BG/Stop0",  varId: "",          light: "#fdeded",              dark: "rgba(251,44,54,0.1)"    },
-        { role: "Border",          variable: "Border/Error/Lighter",        varId: "4465:4457", light: "#d32f2f",              dark: "#fb2c36"                },
-        { role: "Border hover",    variable: "Border/Error/Lighter",        varId: "4465:4457", light: "#d32f2f",              dark: "#fb2c36"                },
-        { role: "Border selected", variable: "Border/Error/Lighter",        varId: "4465:4457", light: "#d32f2f",              dark: "#fb2c36"                },
+        { role: "Background",      variable: "--card-reed-bg",           varId: "", light: "#fdeded", dark: "rgba(251,44,54,0.1)"    },
+        { role: "Border",          variable: "--card-reed-border",       varId: "", light: "#d32f2f", dark: "#fb2c36"                },
+        { role: "Border hover",    variable: "--card-reed-hover-bd",     varId: "", light: "#d32f2f", dark: "#fb2c36"                },
+        { role: "Border selected", variable: "--card-reed-selected-bd",  varId: "", light: "#d32f2f", dark: "#fb2c36", note: "same as default/hover, 1px width — intentional DS decision" },
+        { role: "Hover shadow",    variable: "--card-reed-hover-shadow",    varId: "",          light: "0 8px 24px rgba(211,47,47,0.16), 0 2px 6px rgba(0,0,0,0.05)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(250,43,54,0.4), 0 0 14px 0px rgba(250,43,54,0.15)" },
       ],
     },
     {
       name: "Orange",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",      variable: "Surface/Alert/More Subtle",   varId: "4465:4599", light: "#fff4e5",              dark: "#281e00"                },
-        { role: "Border",          variable: "Border/Alert/Subtle",         varId: "4465:4461", light: "#edc6a6",              dark: "#2d1a08"                },
-        { role: "Border hover",    variable: "Border/Alert/Lighter",        varId: "4465:4462", light: "#b25102",              dark: "#f59e0b"                },
-        { role: "Border selected", variable: "Border/Alert/Default",        varId: "4465:4460", light: "#ed6c02",              dark: "#fbbf24"                },
+        { role: "Background",      variable: "--card-orange-bg",           varId: "", light: "#fff4e5", dark: "#281e00"                },
+        { role: "Border",          variable: "--card-orange-border",       varId: "", light: "#edc6a6", dark: "#2d1a08"                },
+        { role: "Border hover",    variable: "--card-orange-hover-bd",     varId: "", light: "#b25102", dark: "#f59e0b"                },
+        { role: "Border selected", variable: "--card-orange-selected-bd",  varId: "", light: "#ed6c02", dark: "#fbbf24"                },
+        { role: "Hover shadow",    variable: "--card-orange-hover-shadow",  varId: "",          light: "0 8px 24px rgba(237,108,2,0.16), 0 2px 6px rgba(0,0,0,0.05)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(237,107,3,0.4), 0 0 14px 0px rgba(237,107,3,0.15)" },
       ],
     },
     {
       name: "Yellow",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",      variable: "Surface/Yellow/More Subtle",  varId: "",          light: "#fffaf0",              dark: "#281e00"                },
-        { role: "Border",          variable: "Border/Yellow/Lighter",       varId: "",          light: "#edc6a6",              dark: "#f59e0b"                },
-        { role: "Border hover",    variable: "Border/Yellow/Default",       varId: "",          light: "#ed6c02",              dark: "#fbbf24"                },
-        { role: "Border selected", variable: "Border/Yellow/Darker",        varId: "",          light: "#663c00",              dark: "#fcd34d"                },
+        { role: "Background",      variable: "--card-yellow-bg",           varId: "", light: "#fffaf0", dark: "#281e00"                },
+        { role: "Border",          variable: "--card-yellow-border",       varId: "", light: "#edc6a6", dark: "#f59e0b"                },
+        { role: "Border hover",    variable: "--card-yellow-hover-bd",     varId: "", light: "#ed6c02", dark: "#fbbf24"                },
+        { role: "Border selected", variable: "--card-yellow-selected-bd",  varId: "", light: "#663c00", dark: "#fcd34d"                },
+        { role: "Hover shadow",    variable: "--card-yellow-hover-shadow",  varId: "",          light: "0 8px 24px rgba(237,108,2,0.12), 0 2px 6px rgba(0,0,0,0.04)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(252,199,0,0.4), 0 0 14px 0px rgba(252,199,0,0.15)" },
       ],
     },
     {
       name: "Purple",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",      variable: "Surface/Purple/More Subtle",  varId: "",          light: "#f3e9fd",              dark: "#120520"                },
-        { role: "Border",          variable: "Border/Purple/Lighter",       varId: "",          light: "#cfa7f9",              dark: "rgba(173,70,255,0.2)"   },
-        { role: "Border hover",    variable: "Border/Purple/Default",       varId: "",          light: "#7b27ed",              dark: "#a855f7"                },
-        { role: "Border selected", variable: "Border/Purple/Darker",        varId: "",          light: "#2c075c",              dark: "#d8b4fe"                },
+        { role: "Background",      variable: "--card-purple-bg",           varId: "", light: "#f3e9fd", dark: "#120520"                },
+        { role: "Border",          variable: "--card-purple-border",       varId: "", light: "#cfa7f9", dark: "rgba(173,70,255,0.2)"   },
+        { role: "Border hover",    variable: "--card-purple-hover-bd",     varId: "", light: "#7b27ed", dark: "#a855f7"                },
+        { role: "Border selected", variable: "--card-purple-selected-bd",  varId: "", light: "#2c075c", dark: "#d8b4fe"                },
+        { role: "Hover shadow",    variable: "--card-purple-hover-shadow",  varId: "",          light: "0 8px 24px rgba(123,39,237,0.16), 0 2px 6px rgba(0,0,0,0.05)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(173,69,255,0.4), 0 0 14px 0px rgba(173,69,255,0.15)" },
       ],
     },
     {
       name: "Light Blue",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",      variable: "Surface/Light Blue/More Subtle", varId: "",       light: "#e5f8ff",              dark: "#071828"                },
-        { role: "Border",          variable: "Border/Light Blue/Lighter",    varId: "",         light: "#99e5f9",              dark: "rgba(81,162,255,0.2)"   },
-        { role: "Border hover",    variable: "Border/Light Blue/Default",    varId: "",         light: "#00b5d9",              dark: "#38bdf8"                },
-        { role: "Border selected", variable: "Border/Light Blue/Darker",     varId: "",         light: "#02445a",              dark: "#7dd3fc"                },
+        { role: "Background",      variable: "--card-lightblue-bg",           varId: "", light: "#e5f8ff", dark: "#071828"                },
+        { role: "Border",          variable: "--card-lightblue-border",       varId: "", light: "#99e5f9", dark: "rgba(81,162,255,0.2)"   },
+        { role: "Border hover",    variable: "--card-lightblue-hover-bd",     varId: "", light: "#00b5d9", dark: "#38bdf8"                },
+        { role: "Border selected", variable: "--card-lightblue-selected-bd",  varId: "", light: "#02445a", dark: "#7dd3fc"                },
+        { role: "Hover shadow",    variable: "--card-lightblue-hover-shadow", varId: "",        light: "0 8px 24px rgba(0,181,217,0.16), 0 2px 6px rgba(0,0,0,0.05)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(82,163,255,0.4), 0 0 14px 0px rgba(82,163,255,0.15)" },
       ],
     },
     {
       name: "Lime Green",
       borderWidth: "0.5px",
       tokens: [
-        { role: "Background",      variable: "Surface/Lime Green/More Subtle", varId: "",       light: "#f9fee5",              dark: "#111a04"                },
-        { role: "Border",          variable: "Border/LimeGreen/Lighter",     varId: "",         light: "#d4f381",              dark: "rgba(189,238,73,0.2)"   },
-        { role: "Border hover",    variable: "Border/LimeGreen/Default",     varId: "",         light: "#a0da1d",              dark: "#84cc16"                },
-        { role: "Border selected", variable: "Border/LimeGreen/Darker",      varId: "",         light: "#3e5c0a",              dark: "#bdee49"                },
+        { role: "Background",      variable: "--card-limegreen-bg",           varId: "", light: "#f9fee5", dark: "#111a04"                },
+        { role: "Border",          variable: "--card-limegreen-border",       varId: "", light: "#d4f381", dark: "rgba(189,238,73,0.2)"   },
+        { role: "Border hover",    variable: "--card-limegreen-hover-bd",     varId: "", light: "#a0da1d", dark: "#84cc16"                },
+        { role: "Border selected", variable: "--card-limegreen-selected-bd",  varId: "", light: "#3e5c0a", dark: "#bdee49"                },
+        { role: "Hover shadow",    variable: "--card-limegreen-hover-shadow", varId: "",        light: "0 8px 24px rgba(160,218,29,0.14), 0 2px 6px rgba(0,0,0,0.04)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(189,237,74,0.4), 0 0 14px 0px rgba(189,237,74,0.15)" },
       ],
     },
     {
@@ -637,9 +665,10 @@ const CARD_SPEC = {
       borderWidth: "0.5px dashed",
       tokens: [
         { role: "Background",      variable: "—",                            varId: "",         light: "transparent",          dark: "transparent"            },
-        { role: "Border",          variable: "Border/Neutral/Lighter",       varId: "4465:4449",light: "#bababa",              dark: "rgba(255,255,255,0.15)" },
-        { role: "Border hover",    variable: "Border/Neutral/Default",       varId: "4465:4448",light: "#5c5c5c",              dark: "rgba(255,255,255,0.1)"  },
-        { role: "Border selected", variable: "Border/Primary/Default",       varId: "4465:4452",light: "#2173ff",              dark: "#2b7fff"                },
+        { role: "Border (reused from Default)",          variable: "--card-default-border",      varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)", note: "drawn via the .card-dashed-border gradient class, not a border-color — no dedicated --card-dashed-border token" },
+        { role: "Border hover (reused from Default)",    variable: "--card-default-hover-bd",    varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.1)"  },
+        { role: "Border selected (reused from Default)", variable: "--card-default-selected-bd", varId: "", light: "#2173ff", dark: "#2b7fff"                },
+        { role: "Hover shadow",    variable: "--card-dashed-hover-shadow",  varId: "",          light: "0 8px 24px rgba(33,115,255,0.10), 0 2px 6px rgba(0,0,0,0.04)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(33,115,255,0.4), 0 0 14px 0px rgba(33,115,255,0.15)" },
       ],
     },
   ],
@@ -813,15 +842,15 @@ const BADGE_SPEC = {
   ],
   typography: [],
   variants: [
-    { name: "error",      description: "Error / Notification — alerts needing immediate attention", cssPrefix: "badge-error",       tokens: [{ role: "Fill", variable: "Badge/Error",       varId: "—", light: "#d32f2f", dark: "#ff6467" }] },
-    { name: "alert",      description: "Alert — pending, needs attention",                          cssPrefix: "badge-alert",       tokens: [{ role: "Fill", variable: "Badge/Alert",       varId: "—", light: "#ed6c02", dark: "#fdc700" }] },
-    { name: "inProgress", description: "In Progress — async/loading row-level indicators",           cssPrefix: "badge-in-progress", tokens: [{ role: "Fill", variable: "Badge/In Progress", varId: "—", light: "#2173ff", dark: "#2b7fff" }] },
-    { name: "success",    description: "Success — completed, verified, healthy",                     cssPrefix: "badge-success",     tokens: [{ role: "Fill", variable: "Badge/Success",     varId: "—", light: "#00765f", dark: "#05df72" }] },
-    { name: "neutral",    description: "Neutral — inactive or unknown status",                       cssPrefix: "badge-neutral",     tokens: [{ role: "Fill", variable: "Badge/Neutral",     varId: "—", light: "#bababa", dark: "rgba(255,255,255,0.50)" }] },
-    { name: "lightBlue",  description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-light-blue",  tokens: [{ role: "Fill", variable: "Badge/Light Blue",  varId: "—", light: "#00b5d9", dark: "#51a2ff" }] },
-    { name: "limeGreen",  description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-lime-green",  tokens: [{ role: "Fill", variable: "Badge/Lime Green",  varId: "—", light: "#a0da1d", dark: "#bdee49" }] },
-    { name: "yellow",     description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-yellow",      tokens: [{ role: "Fill", variable: "Badge/Yellow",      varId: "—", light: "#ff9900", dark: "#fdc700" }] },
-    { name: "purple",     description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-purple",      tokens: [{ role: "Fill", variable: "Badge/Purple",      varId: "—", light: "#7b27ed", dark: "#ad46ff" }] },
+    { name: "error",      description: "Error / Notification — alerts needing immediate attention", cssPrefix: "badge-error",       tokens: [{ role: "Fill", variable: "--badge-error",       varId: "—", light: "#d32f2f", dark: "#ff6467" }] },
+    { name: "alert",      description: "Alert — pending, needs attention",                          cssPrefix: "badge-alert",       tokens: [{ role: "Fill", variable: "--badge-alert",       varId: "—", light: "#ed6c02", dark: "#fdc700" }] },
+    { name: "inProgress", description: "In Progress — async/loading row-level indicators",           cssPrefix: "badge-in-progress", tokens: [{ role: "Fill", variable: "--badge-in-progress", varId: "—", light: "#2173ff", dark: "#2b7fff" }] },
+    { name: "success",    description: "Success — completed, verified, healthy",                     cssPrefix: "badge-success",     tokens: [{ role: "Fill", variable: "--badge-success",     varId: "—", light: "#00765f", dark: "#05df72" }] },
+    { name: "neutral",    description: "Neutral — inactive or unknown status",                       cssPrefix: "badge-neutral",     tokens: [{ role: "Fill", variable: "--badge-neutral",     varId: "—", light: "#bababa", dark: "rgba(255,255,255,0.50)" }] },
+    { name: "lightBlue",  description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-light-blue",  tokens: [{ role: "Fill", variable: "--badge-light-blue",  varId: "—", light: "#00b5d9", dark: "#51a2ff" }] },
+    { name: "limeGreen",  description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-lime-green",  tokens: [{ role: "Fill", variable: "--badge-lime-green",  varId: "—", light: "#a0da1d", dark: "#bdee49" }] },
+    { name: "yellow",     description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-yellow",      tokens: [{ role: "Fill", variable: "--badge-yellow",      varId: "—", light: "#ff9900", dark: "#fdc700" }] },
+    { name: "purple",     description: "Extended palette — taxonomy / category classification",      cssPrefix: "badge-purple",      tokens: [{ role: "Fill", variable: "--badge-purple",      varId: "—", light: "#7b27ed", dark: "#ad46ff" }] },
   ],
 }
 
@@ -849,9 +878,9 @@ const TAG_SPEC = {
       description: "Completed, verified, healthy",
       cssPrefix: "tag-success",
       tokens: [
-        { role: "Background", variable: "Surface/Success/More Subtle", varId: "4465:2672", light: "#e5fdf8", dark: "#0a1f1a"  },
-        { role: "Border",     variable: "Border/Success/Lighter",      varId: "4465:4465", light: "#009978", dark: "#34d399"  },
-        { role: "Text",       variable: "Text/Success",                varId: "4465:4505", light: "#003328", dark: "#6ee7b7"  },
+        { role: "Background", variable: "--tag-success-bg", varId: "", light: "#e5fdf8", dark: "#0a1f1a"  },
+        { role: "Border",     variable: "--tag-success-bd", varId: "", light: "#009978", dark: "#34d399"  },
+        { role: "Text",       variable: "--tag-success-fg", varId: "", light: "#003328", dark: "#6ee7b7"  },
       ],
     },
     {
@@ -859,9 +888,9 @@ const TAG_SPEC = {
       description: "Failed, blocked, critical",
       cssPrefix: "tag-error",
       tokens: [
-        { role: "Background", variable: "Surface/Error/More Subtle",   varId: "4465:2662", light: "#fdeded", dark: "#2d1515"  },
-        { role: "Border",     variable: "Border/Error/Default",        varId: "4465:4456", light: "#992222", dark: "#e05252"  },
-        { role: "Text",       variable: "Text/Error",                  varId: "4465:4473", light: "#5f2120", dark: "#ff6467"  },
+        { role: "Background", variable: "--tag-error-bg", varId: "", light: "#fdeded", dark: "#2d1515"  },
+        { role: "Border",     variable: "--tag-error-bd", varId: "", light: "#992222", dark: "#e05252"  },
+        { role: "Text",       variable: "--tag-error-fg", varId: "", light: "#5f2120", dark: "#ff6467"  },
       ],
     },
     {
@@ -869,9 +898,9 @@ const TAG_SPEC = {
       description: "Pending, needs attention, expiring",
       cssPrefix: "tag-alert",
       tokens: [
-        { role: "Background", variable: "Surface/Alert/More Subtle",   varId: "4465:2666", light: "#ffeedb", dark: "#281e00"  },
-        { role: "Border",     variable: "Border/Alert/Lighter",        varId: "4465:4461", light: "#b25102", dark: "#f59e0b"  },
-        { role: "Text",       variable: "Text/Alert",                  varId: "4465:4504", light: "#663c00", dark: "#fcd34d"  },
+        { role: "Background", variable: "--tag-alert-bg", varId: "", light: "#ffeedb", dark: "#281e00"  },
+        { role: "Border",     variable: "--tag-alert-bd", varId: "", light: "#b25102", dark: "#f59e0b"  },
+        { role: "Text",       variable: "--tag-alert-fg", varId: "", light: "#663c00", dark: "#fcd34d"  },
       ],
     },
     {
@@ -879,9 +908,9 @@ const TAG_SPEC = {
       description: "Category, type, feature flags",
       cssPrefix: "tag-informative",
       tokens: [
-        { role: "Background", variable: "Surface/Primary/Subtle",      varId: "4461:2592", light: "#e9f1ff", dark: "rgba(21,93,252,0.15)" },
-        { role: "Border",     variable: "Border/Primary/Default",      varId: "4465:4452", light: "#2173ff", dark: "#2b7fff"  },
-        { role: "Text",       variable: "Text/Info",                   varId: "4465:4506", light: "#001740", dark: "rgba(255,255,255,0.8)" },
+        { role: "Background", variable: "--tag-informative-bg", varId: "", light: "#e9f1ff", dark: "rgba(21,93,252,0.15)" },
+        { role: "Border",     variable: "--tag-informative-bd", varId: "", light: "#2173ff", dark: "#2b7fff"  },
+        { role: "Text",       variable: "--tag-informative-fg", varId: "", light: "#001740", dark: "rgba(255,255,255,0.8)" },
       ],
     },
     {
@@ -889,9 +918,9 @@ const TAG_SPEC = {
       description: "Selected, active, high-emphasis",
       cssPrefix: "tag-primary",
       tokens: [
-        { role: "Background", variable: "Primary/500",                 varId: "4461:2591", light: "#2173ff", dark: "#155dfc"  },
-        { role: "Border",     variable: "transparent",                 varId: "",          light: "none",    dark: "none"     },
-        { role: "Text",       variable: "Text/Negative",               varId: "4465:4471", light: "#ffffff", dark: "#ffffff"  },
+        { role: "Background", variable: "--tag-primary-bg", varId: "", light: "#2173ff", dark: "#155dfc"  },
+        { role: "Border",     variable: "—",                varId: "", light: "none",    dark: "none"     },
+        { role: "Text",       variable: "--tag-primary-fg", varId: "", light: "#ffffff", dark: "#ffffff"  },
       ],
     },
     {
@@ -899,9 +928,49 @@ const TAG_SPEC = {
       description: "Default neutral label",
       cssPrefix: "tag-secondary",
       tokens: [
-        { role: "Background", variable: "Gray/100 / White/10",         varId: "4465:4591", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
-        { role: "Border",     variable: "Gray/600 / White/10",         varId: "4465:4448", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
-        { role: "Text",       variable: "Text/Subtitle",               varId: "4465:4468", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Background", variable: "--tag-secondary-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",     variable: "--tag-secondary-bd", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+        { role: "Text",       variable: "--tag-secondary-fg", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+      ],
+    },
+    {
+      name: "limeGreen",
+      description: "Categorical — extended palette",
+      cssPrefix: "tag-limegreen",
+      tokens: [
+        { role: "Background", variable: "--tag-limegreen-bg", varId: "", light: "#f9fee5", dark: "#111a04"  },
+        { role: "Border",     variable: "--tag-limegreen-bd", varId: "", light: "#a0da1d", dark: "#84cc16"  },
+        { role: "Text",       variable: "--tag-limegreen-fg", varId: "", light: "#3e5c0a", dark: "#bdef49"  },
+      ],
+    },
+    {
+      name: "yellow",
+      description: "Categorical — extended palette",
+      cssPrefix: "tag-yellow",
+      tokens: [
+        { role: "Background", variable: "--tag-yellow-bg", varId: "", light: "#fffaf0", dark: "#281e00"  },
+        { role: "Border",     variable: "--tag-yellow-bd", varId: "", light: "#ed6c02", dark: "#fbbf24"  },
+        { role: "Text",       variable: "--tag-yellow-fg", varId: "", light: "#663c00", dark: "#fcd34d"  },
+      ],
+    },
+    {
+      name: "purple",
+      description: "Categorical — extended palette / AI contexts",
+      cssPrefix: "tag-purple",
+      tokens: [
+        { role: "Background", variable: "--tag-purple-bg", varId: "", light: "#f3e9fd", dark: "#120520"  },
+        { role: "Border",     variable: "--tag-purple-bd", varId: "", light: "#7b27ed", dark: "#a855f7"  },
+        { role: "Text",       variable: "--tag-purple-fg", varId: "", light: "#2c075c", dark: "#d8b4fe"  },
+      ],
+    },
+    {
+      name: "lightBlue",
+      description: "Categorical — extended palette",
+      cssPrefix: "tag-lightblue",
+      tokens: [
+        { role: "Background", variable: "--tag-lightblue-bg", varId: "", light: "#e5f8ff", dark: "#071828"  },
+        { role: "Border",     variable: "--tag-lightblue-bd", varId: "", light: "#00b5d9", dark: "#38bdf8"  },
+        { role: "Text",       variable: "--tag-lightblue-fg", varId: "", light: "#0c4a6e", dark: "#7dd3fc"  },
       ],
     },
     {
@@ -909,9 +978,9 @@ const TAG_SPEC = {
       description: "Low-emphasis label on tinted surfaces",
       cssPrefix: "tag-neutral",
       tokens: [
-        { role: "Background", variable: "Gray/300 / White/8",          varId: "4465:2687", light: "#f2f2f2", dark: "rgba(255,255,255,0.08)" },
-        { role: "Border",     variable: "Gray/600 / White/10",         varId: "4465:4448", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
-        { role: "Text",       variable: "Text/Subtitle",               varId: "4465:4468", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Background", variable: "--tag-neutral-bg", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.08)" },
+        { role: "Border",     variable: "--tag-neutral-bd", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+        { role: "Text",       variable: "--tag-neutral-fg", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
       ],
     },
   ],
@@ -943,13 +1012,16 @@ const MENU_SPEC = {
   variants: [
     {
       name: "default",
-      description: "Unselected row. Hover applies Surface/Floating/Hover automatically via CSS.",
+      description: "Unselected row. Hover applies --menu-item-hover automatically via CSS.",
       cssPrefix: "menu-item",
       tokens: [
-        { role: "Background",       variable: "Surface/Floating/Default", varId: "13469:2", light: "rgba(255,255,255,0.92)", dark: "rgba(20,27,42,0.85)"    },
-        { role: "Hover background", variable: "Surface/Floating/Hover",   varId: "13469:3", light: "rgba(242,242,242,0.95)", dark: "rgba(32,42,62,0.90)"    },
-        { role: "Label text",       variable: "Text/Subtitle",            varId: "4465:4468",light: "#2A2A2A",               dark: "rgba(255,255,255,0.60)" },
-        { role: "Icon",             variable: "Icon/Neutral/Dark",        varId: "4465:4510",light: "#5C5C5C",               dark: "rgba(255,255,255,0.50)" },
+        { role: "Background",       variable: "--menu-bg",           varId: "", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)"    },
+        { role: "Hover background", variable: "--menu-item-hover",   varId: "", light: "rgba(242,242,242,0.95)", dark: "rgba(32,42,62,0.90)"    },
+        { role: "Label text",       variable: "--menu-item-text",    varId: "", light: "#2A2A2A",                dark: "rgba(255,255,255,0.60)" },
+        { role: "Subtext",          variable: "--menu-item-subtext", varId: "", light: "#5C5C5C",                dark: "rgba(255,255,255,0.60)" },
+        { role: "Icon",             variable: "--menu-item-icon",    varId: "", light: "#5C5C5C",                dark: "rgba(255,255,255,0.50)" },
+        { role: "Divider",          variable: "--menu-divider",      varId: "", light: "#f2f2f2",                dark: "rgba(255,255,255,0.08)" },
+        { role: "Section label",    variable: "--menu-section-text", varId: "", light: "#9ca3af",                dark: "rgba(255,255,255,0.40)" },
       ],
     },
     {
@@ -957,17 +1029,17 @@ const MENU_SPEC = {
       description: "Keyboard-focused or hover-locked row. Same bg as Hover — no color inversion.",
       cssPrefix: "menu-item-focus",
       tokens: [
-        { role: "Background",       variable: "Surface/Floating/Hover",   varId: "13469:3", light: "rgba(242,242,242,0.95)", dark: "rgba(32,42,62,0.90)"    },
-        { role: "Label text",       variable: "Text/Subtitle (unchanged)", varId: "4465:4468",light: "#2A2A2A",               dark: "rgba(255,255,255,0.60)" },
+        { role: "Background (reused)",  variable: "--menu-item-hover", varId: "", light: "rgba(242,242,242,0.95)", dark: "rgba(32,42,62,0.90)"    },
+        { role: "Label text (reused)",   variable: "--menu-item-text",  varId: "", light: "#2A2A2A",                dark: "rgba(255,255,255,0.60)" },
       ],
     },
     {
       name: "disabled",
-      description: "Unavailable row. Background stays the same — only text/icon color changes to Text/Disabled.",
+      description: "Unavailable row. Background stays the same — only text/icon color changes.",
       cssPrefix: "menu-item-disabled",
       tokens: [
-        { role: "Background",       variable: "Surface/Floating/Default (unchanged)", varId: "13469:2", light: "rgba(255,255,255,0.92)", dark: "rgba(20,27,42,0.85)" },
-        { role: "Label + icon",     variable: "Text/Disabled",            varId: "4465:4472",light: "#BABABA",                dark: "rgba(255,255,255,0.30)" },
+        { role: "Background (reused)", variable: "--menu-bg",           varId: "", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
+        { role: "Label + icon",        variable: "--menu-item-disabled", varId: "", light: "#BABABA",                dark: "rgba(255,255,255,0.30)" },
       ],
     },
   ],
@@ -990,15 +1062,51 @@ const HIGHLIGHT_ICON_SPEC = {
   ],
   typography: [],
   variants: [
-    { name: "informative", description: "Primary blue — default for general highlights",     cssPrefix: "hi-informative", tokens: [{ role: "Background", variable: "Primary/100",  varId: "4461:2592",   light: "#E9F1FF", dark: "rgba(33,115,255,0.14)" }, { role: "Icon (dark)", variable: "Icon/Informative/Dark", varId: "4465:4514", light: "#001740", dark: "#A8C8FF" }] },
-    { name: "success",     description: "Success / green states",                            cssPrefix: "hi-success",     tokens: [{ role: "Background", variable: "Success/50",   varId: "8541:11928",  light: "#CBFFF4", dark: "rgba(0,169,127,0.14)" }, { role: "Icon (dark)", variable: "Icon/Success/Dark",      varId: "4567:4619", light: "#003328", dark: "#70EDD8" }] },
-    { name: "alert",       description: "Alert / warning states",                            cssPrefix: "hi-alert",       tokens: [{ role: "Background", variable: "Alert/50",    varId: "4465:2666",   light: "#FFEEDB", dark: "rgba(217,119,6,0.14)" },   { role: "Icon (dark)", variable: "Icon/Alert/Dark",        varId: "4567:4618", light: "#663C00", dark: "#FFC070" }] },
-    { name: "error",       description: "Error / destructive states",                        cssPrefix: "hi-error",       tokens: [{ role: "Background", variable: "Error/50",    varId: "4465:2662",   light: "#FDEDED", dark: "rgba(220,38,38,0.14)" },   { role: "Icon (dark)", variable: "Icon/Error/Dark",        varId: "4567:4620", light: "#5F2120", dark: "#FF9898" }] },
-    { name: "neutral",     description: "Neutral / gray for no-color contexts",              cssPrefix: "hi-neutral",     tokens: [{ role: "Background", variable: "Gray/100",     varId: "4465:4589",   light: "#F2F2F2", dark: "rgba(255,255,255,0.08)" }, { role: "Icon (dark)", variable: "Text/Primary/Dark",      varId: "4465:4589", light: "#2A2A2A", dark: "rgba(255,255,255,0.70)" }] },
-    { name: "yellow",      description: "Yellow / golden highlights",                        cssPrefix: "hi-yellow",      tokens: [{ role: "Background", variable: "Yellow/50",   varId: "8539:40814",  light: "#FFEEDB", dark: "rgba(202,138,4,0.14)" },   { role: "Icon (dark)", variable: "Icon/Yellow/Dark",       varId: "8539:40814",light: "#5C3500", dark: "#FFE070" }] },
-    { name: "lime",        description: "Lime green — growth, eco, positive activity",       cssPrefix: "hi-lime",        tokens: [{ role: "Background", variable: "Lime/50",     varId: "8539:40885",  light: "#E7F9B5", dark: "rgba(101,163,13,0.14)" },  { role: "Icon (dark)", variable: "Icon/Lime/Dark",         varId: "8539:40885",light: "#3E5C0A", dark: "#C4F060" }] },
-    { name: "purple",      description: "Purple / creative / AI contexts",                   cssPrefix: "hi-purple",      tokens: [{ role: "Background", variable: "Purple/100",  varId: "8539:40955",  light: "#E4CEFC", dark: "rgba(124,58,237,0.14)" },  { role: "Icon (dark)", variable: "Icon/Purple/Dark",       varId: "8539:40955",light: "#2C075C", dark: "#D4A0FF" }] },
-    { name: "light-blue",  description: "Light blue / sky — integrations, cloud, data",     cssPrefix: "hi-lightblue",   tokens: [{ role: "Background", variable: "LightBlue/100",varId: "8540:41021",  light: "#CCF1FF", dark: "rgba(2,132,199,0.14)" },   { role: "Icon (dark)", variable: "Icon/LightBlue/Dark",    varId: "8540:41021",light: "#02445A", dark: "#80DCFF" }] },
+    { name: "informative", description: "Primary blue — default for general highlights",     cssPrefix: "hi-informative", tokens: [
+      { role: "Background",     variable: "--hi-informative-bg",        varId: "4461:2592",  light: "#E9F1FF", dark: "rgba(33,115,255,0.14)" },
+      { role: "Icon (dark)",    variable: "--hi-informative-icon",      varId: "4465:4514",  light: "#001740", dark: "#A8C8FF" },
+      { role: "Icon (default)", variable: "--hi-informative-icon-soft", varId: "",           light: "#2173FF", dark: "rgba(168,200,255,0.60)" },
+    ]},
+    { name: "success",     description: "Success / green states",                            cssPrefix: "hi-success",     tokens: [
+      { role: "Background",     variable: "--hi-success-bg",        varId: "8541:11928",  light: "#CBFFF4", dark: "rgba(0,169,127,0.14)" },
+      { role: "Icon (dark)",    variable: "--hi-success-icon",      varId: "4567:4619",   light: "#003328", dark: "#70EDD8" },
+      { role: "Icon (default)", variable: "--hi-success-icon-soft", varId: "",             light: "#059669", dark: "rgba(112,237,216,0.60)" },
+    ]},
+    { name: "alert",       description: "Alert / warning states",                            cssPrefix: "hi-alert",       tokens: [
+      { role: "Background",     variable: "--hi-alert-bg",        varId: "4465:2666",  light: "#FFEEDB", dark: "rgba(217,119,6,0.14)" },
+      { role: "Icon (dark)",    variable: "--hi-alert-icon",      varId: "4567:4618",  light: "#663C00", dark: "#FFC070" },
+      { role: "Icon (default)", variable: "--hi-alert-icon-soft", varId: "",           light: "#D97706", dark: "rgba(255,192,112,0.60)" },
+    ]},
+    { name: "error",       description: "Error / destructive states",                        cssPrefix: "hi-error",       tokens: [
+      { role: "Background",     variable: "--hi-error-bg",        varId: "4465:2662",  light: "#FDEDED", dark: "rgba(220,38,38,0.14)" },
+      { role: "Icon (dark)",    variable: "--hi-error-icon",      varId: "4567:4620",  light: "#5F2120", dark: "#FF9898" },
+      { role: "Icon (default)", variable: "--hi-error-icon-soft", varId: "",           light: "#DC2626", dark: "rgba(255,152,152,0.60)" },
+    ]},
+    { name: "neutral",     description: "Neutral / gray for no-color contexts",              cssPrefix: "hi-neutral",     tokens: [
+      { role: "Background",     variable: "--hi-neutral-bg",        varId: "4465:4589",  light: "#F2F2F2", dark: "rgba(255,255,255,0.08)" },
+      { role: "Icon (dark)",    variable: "--hi-neutral-icon",      varId: "4465:4589",  light: "#2A2A2A", dark: "rgba(255,255,255,0.70)" },
+      { role: "Icon (default)", variable: "--hi-neutral-icon-soft", varId: "",           light: "#6B7280", dark: "rgba(255,255,255,0.40)" },
+    ]},
+    { name: "yellow",      description: "Yellow / golden highlights",                        cssPrefix: "hi-yellow",      tokens: [
+      { role: "Background",     variable: "--hi-yellow-bg",        varId: "8539:40814",  light: "#FFEEDB", dark: "rgba(202,138,4,0.14)" },
+      { role: "Icon (dark)",    variable: "--hi-yellow-icon",      varId: "8539:40814",  light: "#5C3500", dark: "#FFE070" },
+      { role: "Icon (default)", variable: "--hi-yellow-icon-soft", varId: "",            light: "#CA8A04", dark: "rgba(255,224,112,0.60)" },
+    ]},
+    { name: "lime",        description: "Lime green — growth, eco, positive activity",       cssPrefix: "hi-lime",        tokens: [
+      { role: "Background",     variable: "--hi-lime-bg",        varId: "8539:40885",  light: "#E7F9B5", dark: "rgba(101,163,13,0.14)" },
+      { role: "Icon (dark)",    variable: "--hi-lime-icon",      varId: "8539:40885",  light: "#3E5C0A", dark: "#C4F060" },
+      { role: "Icon (default)", variable: "--hi-lime-icon-soft", varId: "",             light: "#65A30D", dark: "rgba(196,240,96,0.60)" },
+    ]},
+    { name: "purple",      description: "Purple / creative / AI contexts",                   cssPrefix: "hi-purple",      tokens: [
+      { role: "Background",     variable: "--hi-purple-bg",        varId: "8539:40955",  light: "#E4CEFC", dark: "rgba(124,58,237,0.14)" },
+      { role: "Icon (dark)",    variable: "--hi-purple-icon",      varId: "8539:40955",  light: "#2C075C", dark: "#D4A0FF" },
+      { role: "Icon (default)", variable: "--hi-purple-icon-soft", varId: "",             light: "#7C3AED", dark: "rgba(212,160,255,0.60)" },
+    ]},
+    { name: "light-blue",  description: "Light blue / sky — integrations, cloud, data",     cssPrefix: "hi-lightblue",   tokens: [
+      { role: "Background",     variable: "--hi-lightblue-bg",        varId: "8540:41021",  light: "#CCF1FF", dark: "rgba(2,132,199,0.14)" },
+      { role: "Icon (dark)",    variable: "--hi-lightblue-icon",      varId: "8540:41021",  light: "#02445A", dark: "#80DCFF" },
+      { role: "Icon (default)", variable: "--hi-lightblue-icon-soft", varId: "",             light: "#0284C7", dark: "rgba(128,220,255,0.60)" },
+    ]},
   ],
 }
 
@@ -1029,11 +1137,35 @@ const SELECT_SPEC = {
     { element: "Supporting text", family: "Inter", size: "12px", weight: "Medium (500)",   lineHeight: "1.5", variable: "--field-supporting / --field-text-error" },
   ],
   states: [
-    { name: "default",  borderWidth: "0.5px", tokens: [{ role: "Border", variable: "Border/Neutral/Default", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" }, { role: "Background", variable: "Surface/Neutral/White", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" }, { role: "Right icon", variable: "ChevronDown", varId: "", light: "–", dark: "–" }] },
-    { name: "selected", borderWidth: "1px",   tokens: [{ role: "Border", variable: "Border/Primary/Default", varId: "", light: "#2173ff", dark: "#2b7fff" }, { role: "Right icon", variable: "X (clear)", varId: "", light: "–", dark: "–" }] },
-    { name: "open",     borderWidth: "1px",   tokens: [{ role: "Border", variable: "Border/Primary/Default", varId: "", light: "#2173ff", dark: "#2b7fff" }, { role: "Right icon", variable: "ChevronUp", varId: "", light: "–", dark: "–" }] },
-    { name: "error",    borderWidth: "0.5px", tokens: [{ role: "Border", variable: "Border/Error/Default",   varId: "", light: "#d32f2f", dark: "#fb2c36" }, { role: "Right icon", variable: "CircleAlert", varId: "", light: "–", dark: "–" }, { role: "Supporting", variable: "Text/Error", varId: "", light: "#5f2120", dark: "#ff6467" }] },
-    { name: "disabled", borderWidth: "1px",   tokens: [{ role: "All text + icons", variable: "Text/Disabled",  varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" }, { role: "Opacity", variable: "–", varId: "", light: "40%", dark: "40%" }] },
+    { name: "Base (all states)", borderWidth: "0", tokens: [
+      { role: "Background",   variable: "--field-bg",    varId: "", light: "#ffffff",              dark: "rgba(255,255,255,0.10)" },
+      { role: "Label",        variable: "--field-label", varId: "", light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
+      { role: "Leading icon", variable: "--field-icon",  varId: "", light: "#bababa",              dark: "rgba(255,255,255,0.30)" },
+    ] },
+    { name: "default",  borderWidth: "0.5px", tokens: [
+      { role: "Border",           variable: "--field-border",         varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+      { role: "Border hover",     variable: "--color-border-neutral-black", varId: "", light: "#000000", dark: "rgba(255,255,255,0.30)" },
+      { role: "Right icon (reused)", variable: "--field-icon",        varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+      { role: "Placeholder text", variable: "--field-placeholder",    varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+    ] },
+    { name: "selected", borderWidth: "1px",   tokens: [
+      { role: "Border",     variable: "--field-border-focus", varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "Right icon (reused)", variable: "--field-border-focus", varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "Value text", variable: "--field-text",         varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+    ] },
+    { name: "open",     borderWidth: "1px",   tokens: [
+      { role: "Border (reused)",     variable: "--field-border-focus", varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "Right icon (reused)", variable: "--field-border-focus", varId: "", light: "#2173ff", dark: "#2b7fff" },
+    ] },
+    { name: "error",    borderWidth: "0.5px", tokens: [
+      { role: "Border",              variable: "--field-border-error", varId: "", light: "#d32f2f", dark: "#fb2c36" },
+      { role: "Right icon (reused)", variable: "--field-text-error",   varId: "", light: "#5f2120", dark: "#ff6467" },
+      { role: "Supporting text",     variable: "--field-text-error",   varId: "", light: "#5f2120", dark: "#ff6467" },
+    ] },
+    { name: "disabled", borderWidth: "1px",   tokens: [
+      { role: "Label (reused)", variable: "--field-placeholder", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+      { role: "Opacity",        variable: "—",                   varId: "", light: "40%",      dark: "40%" },
+    ] },
   ],
 }
 
@@ -1050,8 +1182,8 @@ const CHIP_SPEC = {
     { name: "onClick",    type: "() => void",  values: ["—"],                                                                            default: "—",         note: "Click handler. Ignored when disabled." },
   ],
   sizes: [
-    { size: "M", height: "28px", paddingH: "12px", paddingV: "4px", fontSize: "14px", lineHeight: "20px", gap: "4px", radius: "Radius-Full (999px)" },
-    { size: "S", height: "20px", paddingH: "12px", paddingV: "0px", fontSize: "12px", lineHeight: "20px", gap: "4px", radius: "Radius-Full (999px)" },
+    { size: "M", height: "28px", paddingH: "12px", paddingV: "4px", fontSize: "14px", lineHeight: "20px", gap: "4px", radius: "Radius-Full (100px)" },
+    { size: "S", height: "20px", paddingH: "12px", paddingV: "0px", fontSize: "12px", lineHeight: "20px", gap: "4px", radius: "Radius-Full (100px)" },
   ],
   typography: [
     { element: "Chip label M", family: "Inter", size: "14px", weight: "500 (Medium)", lineHeight: "20px" },
@@ -1063,24 +1195,25 @@ const CHIP_SPEC = {
       description: "Active / selected state. Brand blue background with white text.",
       cssPrefix: "--color-surface-primary-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-primary-default",      varId: "Surface/Primary/Default",  light: "#2173ff",               dark: "#2b7fff" },
-        { role: "BG hover",    variable: "--color-surface-primary-darker",        varId: "Surface/Primary/Darker",   light: "#001740",               dark: "#001740" },
-        { role: "BG disabled", variable: "--color-surface-primary-lighter",       varId: "Surface/Primary/Lighter",  light: "#80afff",               dark: "#80afff" },
-        { role: "Text",        variable: "--color-button-primary-text-default",   varId: "Button/Primary/Text/Default",  light: "#ffffff",           dark: "#ffffff" },
-        { role: "Text disabled",variable: "--color-button-primary-text-disabled", varId: "Button/Primary/Text/Disabled", light: "#f2f2f2",           dark: "rgba(255,255,255,0.30)" },
+        { role: "BG default",  variable: "--color-surface-primary-default",      varId: "", light: "#2173ff",  dark: "#2b7fff" },
+        { role: "BG hover",    variable: "--color-surface-primary-darker",       varId: "", light: "#001740",  dark: "#002f80" },
+        { role: "BG disabled", variable: "--color-surface-primary-lighter",      varId: "", light: "#80afff",  dark: "rgba(43,127,255,0.40)" },
+        { role: "Text",        variable: "--color-button-primary-text-default",   varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "Text disabled",variable: "--color-button-primary-text-disabled", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.30)" },
       ],
     },
     {
       name: "Secondary",
-      description: "Unselected state. Always-white background with border and muted text.",
-      cssPrefix: "--color-surface-neutral-*",
+      description: "Unselected state. Always-white-ish background (dedicated --chip-secondary-* tokens, not shared with generic Surface/Neutral/White) with border and muted text.",
+      cssPrefix: "--chip-secondary-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-neutral-white",  varId: "Surface/Neutral/White",   light: "#ffffff",               dark: "#ffffff" },
-        { role: "BG hover",    variable: "--chip-secondary-bg-hover",       varId: "—",                       light: "#f2f2f2",               dark: "#f2f2f2" },
-        { role: "BG disabled", variable: "--chip-secondary-bg-disabled",    varId: "Surface/Neutral/Subtle",  light: "#fafafa",               dark: "#fafafa" },
-        { role: "Text",        variable: "--chip-secondary-text",            varId: "Text/Subtitle (on white)", light: "#8c8c8c",              dark: "#5c5c5c" },
-        { role: "Text disabled",variable: "--color-text-disabled",           varId: "Text/Disabled",           light: "#bababa",               dark: "rgba(255,255,255,0.30)" },
-        { role: "Border",      variable: "--color-border-neutral-default",   varId: "Border/Neutral/Default",  light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)" },
+        { role: "BG default",  variable: "--chip-secondary-bg",           varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "BG hover",    variable: "--chip-secondary-bg-hover",     varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.15)" },
+        { role: "BG disabled", variable: "--chip-secondary-bg-disabled",  varId: "", light: "#fafafa", dark: "rgba(255,255,255,0.05)" },
+        { role: "Text",        variable: "--chip-secondary-text",         varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Text disabled",variable: "--chip-secondary-text-disabled",varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Border",      variable: "--color-border-neutral-default", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border disabled", variable: "--color-border-neutral-lighter", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)" },
       ],
     },
     {
@@ -1088,22 +1221,25 @@ const CHIP_SPEC = {
       description: "Purple brand variant for categorical tagging. Same structure as Primary.",
       cssPrefix: "--color-surface-purple-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-purple-default",  varId: "Surface/Purple/Default",  light: "#7b27ed",               dark: "#7b27ed" },
-        { role: "BG hover",    variable: "--color-surface-purple-darker",    varId: "Surface/Purple/Darker",   light: "#2c075c",               dark: "#2c075c" },
-        { role: "BG disabled", variable: "--color-surface-purple-lighter",   varId: "Surface/Purple/Lighter",  light: "#cfa7f9",               dark: "#cfa7f9" },
-        { role: "Text",        variable: "--color-button-primary-text-default", varId: "Button/Primary/Text/Default", light: "#ffffff",         dark: "#ffffff" },
+        { role: "BG default",  variable: "--color-surface-purple-default",       varId: "", light: "#7b27ed", dark: "#7b27ed" },
+        { role: "BG hover",    variable: "--color-surface-purple-darker",        varId: "", light: "#2c075c", dark: "#2c075c" },
+        { role: "BG disabled", variable: "--color-surface-purple-lighter",       varId: "", light: "#cfa7f9", dark: "rgba(123,39,237,0.40)" },
+        { role: "Text",        variable: "--color-button-primary-text-default",   varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "Text disabled",variable: "--color-button-primary-text-disabled", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.30)" },
       ],
     },
     {
       name: "Purple Secondary",
-      description: "White chip with purple border and purple text. Used for purple categorical labels.",
+      description: "White-ish chip (dedicated --chip-secondary-bg, reused) with purple border and purple text.",
       cssPrefix: "--color-border-purple-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-neutral-white",    varId: "Surface/Neutral/White",   light: "#ffffff",               dark: "#ffffff" },
-        { role: "BG hover",    variable: "--color-surface-purple-more-subtle",varId: "Surface/Purple/More Subtle", light: "#f3e9fd",            dark: "rgba(139,92,246,0.12)" },
-        { role: "Text",        variable: "--color-text-purple",               varId: "Text/Purple",             light: "#2c075c",               dark: "#2c075c" },
-        { role: "Border",      variable: "--color-border-purple-default",     varId: "Border/Purple/Default",   light: "#7b27ed",               dark: "#7b27ed" },
-        { role: "Border focus",variable: "--color-border-purple-lighter",     varId: "Border/Purple/Lighter",   light: "#cfa7f9",               dark: "#cfa7f9" },
+        { role: "BG default (reused)",  variable: "--chip-secondary-bg",              varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "BG hover",             variable: "--color-surface-purple-more-subtle",varId: "", light: "#f3e9fd", dark: "rgba(139,92,246,0.12)" },
+        { role: "BG disabled (reused)", variable: "--chip-secondary-bg-disabled",     varId: "", light: "#fafafa", dark: "rgba(255,255,255,0.05)" },
+        { role: "Text",                 variable: "--color-text-purple",              varId: "", light: "#2c075c", dark: "#d8b4fe" },
+        { role: "Text disabled (reused)", variable: "--chip-secondary-text-disabled", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Border",               variable: "--color-border-purple-default",    varId: "", light: "#7b27ed", dark: "#7b27ed" },
+        { role: "Border disabled",      variable: "--color-border-purple-lighter",    varId: "", light: "#cfa7f9", dark: "rgba(123,39,237,0.30)" },
       ],
     },
     {
@@ -1111,10 +1247,11 @@ const CHIP_SPEC = {
       description: "Teal/cyan variant for informational or system-level filters.",
       cssPrefix: "--color-surface-light-blue-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-light-blue-default",  varId: "Surface/LightBlue/Default",  light: "#00b5d9",          dark: "#00b5d9" },
-        { role: "BG hover",    variable: "--color-surface-light-blue-darker",    varId: "Surface/LightBlue/Darker",   light: "#02445a",          dark: "#02445a" },
-        { role: "BG disabled", variable: "--color-surface-light-blue-lighter",   varId: "Surface/LightBlue/Lighter",  light: "#99e5f9",          dark: "#99e5f9" },
-        { role: "Text",        variable: "--color-button-primary-text-default",  varId: "Button/Primary/Text/Default", light: "#ffffff",          dark: "#ffffff" },
+        { role: "BG default",  variable: "--color-surface-light-blue-default",   varId: "", light: "#00b5d9", dark: "#00b5d9" },
+        { role: "BG hover",    variable: "--color-surface-light-blue-darker",    varId: "", light: "#02445a", dark: "#02445a" },
+        { role: "BG disabled", variable: "--color-surface-light-blue-lighter",   varId: "", light: "#99e5f9", dark: "rgba(0,181,217,0.40)" },
+        { role: "Text",        variable: "--color-button-primary-text-default",   varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "Text disabled",variable: "--color-button-primary-text-disabled", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.30)" },
       ],
     },
     {
@@ -1122,21 +1259,25 @@ const CHIP_SPEC = {
       description: "Destructive / error-state variant. Same structure as Primary — red background, white text.",
       cssPrefix: "--color-surface-error-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-error-default",      varId: "Surface/Error/Default",     light: "#992222", dark: "#e05252" },
-        { role: "BG hover",    variable: "--color-surface-error-darker",        varId: "Surface/Error/Darker",      light: "#5f2120", dark: "#ff6467" },
-        { role: "BG disabled", variable: "--color-surface-error-lighter",       varId: "Surface/Error/Lighter",     light: "#d32f2f", dark: "#fb2c36" },
-        { role: "Text",        variable: "--color-button-primary-text-default", varId: "Button/Primary/Text/Default", light: "#ffffff", dark: "#ffffff" },
+        { role: "BG default",  variable: "--color-surface-error-default",        varId: "", light: "#992222", dark: "#e05252" },
+        { role: "BG hover",    variable: "--color-surface-error-darker",         varId: "", light: "#5f2120", dark: "#ff6467" },
+        { role: "BG disabled", variable: "--color-surface-error-lighter",        varId: "", light: "#d32f2f", dark: "#fb2c36" },
+        { role: "Text",        variable: "--color-button-primary-text-default",   varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "Text disabled",variable: "--color-button-primary-text-disabled", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.30)" },
       ],
     },
     {
       name: "Error Secondary",
-      description: "White chip with red border and red text.",
+      description: "White-ish chip (dedicated --chip-secondary-bg, reused) with red border and red text.",
       cssPrefix: "--color-border-error-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-neutral-white",   varId: "Surface/Neutral/White",  light: "#ffffff", dark: "#ffffff" },
-        { role: "BG hover",    variable: "--color-surface-error-more-subtle", varId: "Surface/Error/More Subtle", light: "#fdeded", dark: "#2d1515" },
-        { role: "Text",        variable: "--color-text-error",              varId: "Text/Error",             light: "#5f2120", dark: "#ff6467" },
-        { role: "Border",      variable: "--color-border-error-lighter",     varId: "Border/Error/Lighter",   light: "#d32f2f", dark: "#fb2c36" },
+        { role: "BG default (reused)",  variable: "--chip-secondary-bg",         varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "BG hover",             variable: "--color-surface-error-more-subtle", varId: "", light: "#fdeded", dark: "#2d1515" },
+        { role: "BG disabled (reused)", variable: "--chip-secondary-bg-disabled", varId: "", light: "#fafafa", dark: "rgba(255,255,255,0.05)" },
+        { role: "Text",                 variable: "--color-text-error",          varId: "", light: "#5f2120", dark: "#ff6467" },
+        { role: "Text disabled (reused)", variable: "--chip-secondary-text-disabled", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Border",               variable: "--color-border-error-lighter", varId: "", light: "#d32f2f", dark: "#fb2c36" },
+        { role: "Border disabled (reused)", variable: "--color-border-neutral-lighter", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)" },
       ],
     },
     {
@@ -1144,21 +1285,25 @@ const CHIP_SPEC = {
       description: "Warning-state variant. Orange background, white text. Default/Hover use a Figma-side \"Chip-only\" AA-safe token (Surface/Alert/Default-AA, Darker-AA): identical light value to the original Surface/Alert/Default DS token, but a different dark value (Orange/700, Orange/600 instead of the original's washed-out Dark/Alert/100 yellow, ~1.4:1 contrast). This token exists only for Chip — it does not affect any other component using the original Surface/Alert/Default token.",
       cssPrefix: "--color-surface-alert-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-alert-default",      varId: "Surface/Alert/Default-AA",  light: "#ed6c02", dark: "#8f4201" },
-        { role: "BG hover",    variable: "--color-surface-alert-darker",        varId: "Surface/Alert/Darker-AA",   light: "#663c00", dark: "#b25102" },
-        { role: "BG disabled", variable: "--color-surface-alert-lighter",       varId: "Surface/Alert/Lighter",     light: "#b25102", dark: "rgba(253,199,0,0.15)" },
-        { role: "Text",        variable: "--color-button-primary-text-default", varId: "Button/Primary/Text/Default", light: "#ffffff", dark: "#ffffff" },
+        { role: "BG default",  variable: "--color-surface-alert-default",        varId: "", light: "#ed6c02", dark: "#8f4201" },
+        { role: "BG hover",    variable: "--color-surface-alert-darker",         varId: "", light: "#663c00", dark: "#b25102" },
+        { role: "BG disabled", variable: "--color-surface-alert-lighter",        varId: "", light: "#b25102", dark: "rgba(253,199,0,0.15)" },
+        { role: "Text",        variable: "--color-button-primary-text-default",   varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "Text disabled",variable: "--color-button-primary-text-disabled", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.30)" },
       ],
     },
     {
       name: "Alert Secondary",
-      description: "White chip with orange border and orange text.",
+      description: "White-ish chip (dedicated --chip-secondary-bg, reused) with orange border and orange text.",
       cssPrefix: "--color-border-alert-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-neutral-white",    varId: "Surface/Neutral/White",   light: "#ffffff", dark: "#ffffff" },
-        { role: "BG hover",    variable: "--color-surface-alert-more-subtle", varId: "Surface/Alert/More Subtle", light: "#fff4e5", dark: "#281e00" },
-        { role: "Text",        variable: "--color-text-alert",               varId: "Text/Alert",              light: "#663c00", dark: "#fcd34d" },
-        { role: "Border",      variable: "--color-border-alert-lighter",      varId: "Border/Alert/Lighter",    light: "#b25102", dark: "#f59e0b" },
+        { role: "BG default (reused)",  variable: "--chip-secondary-bg",         varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "BG hover",             variable: "--color-surface-alert-more-subtle", varId: "", light: "#fff4e5", dark: "#281e00" },
+        { role: "BG disabled (reused)", variable: "--chip-secondary-bg-disabled", varId: "", light: "#fafafa", dark: "rgba(255,255,255,0.05)" },
+        { role: "Text",                 variable: "--color-text-alert",          varId: "", light: "#663c00", dark: "#fcd34d" },
+        { role: "Text disabled (reused)", variable: "--chip-secondary-text-disabled", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Border",               variable: "--color-border-alert-lighter", varId: "", light: "#b25102", dark: "#f59e0b" },
+        { role: "Border disabled (reused)", variable: "--color-border-neutral-lighter", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)" },
       ],
     },
     {
@@ -1166,21 +1311,25 @@ const CHIP_SPEC = {
       description: "Success-state variant. Teal/green background, white text. Default/Hover use the Figma-side \"Chip-only\" AA-safe token (Surface/Success/Default-AA, Darker-AA) — same rationale as Alert Primary (Green/700, Green/600 instead of a washed-out dark-mode green). Disabled intentionally reuses the Default token rather than a \"Lighter\" tier: Success's dark ramp has no tier that's both darker (for contrast) and still visually reads as green — the only darker option is near-black. Documented limitation, not an oversight.",
       cssPrefix: "--color-surface-success-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-success-default",    varId: "Surface/Success/Default-AA", light: "#00a07e", dark: "#00765f" },
-        { role: "BG hover",    variable: "--color-surface-success-darker",      varId: "Surface/Success/Darker-AA",  light: "#003328", dark: "#009978" },
-        { role: "BG disabled", variable: "--color-surface-success-default",    varId: "Surface/Success/Default-AA (reused)", light: "#00a07e", dark: "#00765f" },
-        { role: "Text",        variable: "--color-button-primary-text-default", varId: "Button/Primary/Text/Default", light: "#ffffff", dark: "#ffffff" },
+        { role: "BG default",  variable: "--color-surface-success-default",      varId: "", light: "#00a07e", dark: "#00765f" },
+        { role: "BG hover",    variable: "--color-surface-success-darker",       varId: "", light: "#003328", dark: "#009978" },
+        { role: "BG disabled", variable: "--color-surface-success-default",      varId: "", light: "#00a07e", dark: "#00765f", note: "reused from BG default" },
+        { role: "Text",        variable: "--color-button-primary-text-default",   varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "Text disabled",variable: "--color-button-primary-text-disabled", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.30)" },
       ],
     },
     {
       name: "Success Secondary",
-      description: "White chip with teal/green border and teal/green text.",
+      description: "White-ish chip (dedicated --chip-secondary-bg, reused) with teal/green border and teal/green text.",
       cssPrefix: "--color-border-success-*",
       tokens: [
-        { role: "BG default",  variable: "--color-surface-neutral-white",      varId: "Surface/Neutral/White",     light: "#ffffff", dark: "#ffffff" },
-        { role: "BG hover",    variable: "--color-surface-success-more-subtle", varId: "Surface/Success/More Subtle", light: "#e5fdf8", dark: "#0a1f1a" },
-        { role: "Text",        variable: "--color-text-success",               varId: "Text/Success",              light: "#003328", dark: "#6ee7b7" },
-        { role: "Border",      variable: "--color-border-success-lighter",      varId: "Border/Success/Lighter",    light: "#009978", dark: "#34d399" },
+        { role: "BG default (reused)",  variable: "--chip-secondary-bg",         varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.10)" },
+        { role: "BG hover",             variable: "--color-surface-success-more-subtle", varId: "", light: "#e5fdf8", dark: "#0a1f1a" },
+        { role: "BG disabled (reused)", variable: "--chip-secondary-bg-disabled", varId: "", light: "#fafafa", dark: "rgba(255,255,255,0.05)" },
+        { role: "Text",                 variable: "--color-text-success",        varId: "", light: "#003328", dark: "#6ee7b7" },
+        { role: "Text disabled (reused)", variable: "--chip-secondary-text-disabled", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Border",               variable: "--color-border-success-lighter", varId: "", light: "#009978", dark: "#34d399" },
+        { role: "Border disabled (reused)", variable: "--color-border-neutral-lighter", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)" },
       ],
     },
   ],
@@ -1208,11 +1357,24 @@ const CHECKBOX_SPEC = {
     { element: "Description", family: "Inter", size: "12px", weight: "Regular (400)", lineHeight: "1.5", variable: "--field-supporting" },
   ],
   states: [
-    { name: "unchecked default",  borderWidth: "1.5px", tokens: [{ role: "Icon color",  variable: "Border/Neutral/Default", varId: "", light: "#5c5c5c",  dark: "rgba(255,255,255,0.10)" }] },
-    { name: "unchecked hover",    borderWidth: "1.5px", tokens: [{ role: "Ripple bg",   variable: "Surface/Neutral/Default", varId: "", light: "rgba(242,242,242,0.8)", dark: "rgba(255,255,255,0.06)" }, { role: "Icon color", variable: "Border/Neutral/Darker", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.20)" }] },
-    { name: "checked default",    borderWidth: "–",     tokens: [{ role: "Fill color",  variable: "Border/Primary/Default", varId: "", light: "#2173ff",  dark: "#2b7fff" }, { role: "Check stroke", variable: "Text/White", varId: "", light: "#ffffff", dark: "#ffffff" }] },
-    { name: "checked hover",      borderWidth: "–",     tokens: [{ role: "Ripple bg",   variable: "Primary/50",            varId: "", light: "#e9f1ff",  dark: "rgba(43,127,255,0.14)" }] },
-    { name: "disabled",           borderWidth: "1.5px", tokens: [{ role: "Unchecked color", variable: "Text/Disabled",     varId: "", light: "#bababa",  dark: "rgba(255,255,255,0.20)" }, { role: "Checked fill", variable: "Primary/200", varId: "", light: "#80afff", dark: "rgba(43,127,255,0.50)" }] },
+    { name: "unchecked default",  borderWidth: "1.5px", tokens: [
+      { role: "Icon color", variable: "--field-border", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+    ] },
+    { name: "unchecked hover",    borderWidth: "1.5px", tokens: [
+      { role: "Ripple bg",   variable: "--checkbox-ripple",     varId: "", light: "rgba(242,242,242,0.80)", dark: "rgba(255,255,255,0.06)" },
+      { role: "Icon color",  variable: "--field-border-hover",  varId: "", light: "#2a2a2a",                dark: "rgba(255,255,255,0.20)" },
+    ] },
+    { name: "checked default",    borderWidth: "–",     tokens: [
+      { role: "Fill color",   variable: "--field-border-focus", varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "Check stroke", variable: "—",                    varId: "", light: "#ffffff", dark: "#ffffff", note: "hardcoded white in the checkmark SVG, not a CSS var" },
+    ] },
+    { name: "checked hover",      borderWidth: "–",     tokens: [
+      { role: "Ripple bg", variable: "--checkbox-ripple-checked", varId: "", light: "rgba(233,241,255,1)", dark: "rgba(43,127,255,0.14)" },
+    ] },
+    { name: "disabled",           borderWidth: "1.5px", tokens: [
+      { role: "Unchecked color", variable: "--field-placeholder",   varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+      { role: "Checked fill",    variable: "--checkbox-checked-dim", varId: "", light: "#80afff", dark: "rgba(43,127,255,0.50)" },
+    ] },
   ],
 }
 
@@ -1235,14 +1397,30 @@ const TOGGLE_SPEC = {
     { size: "S (sm)",      track: "26×16px", thumb: "8×8px",   travel: "10px", border: "2px (off only)" },
   ],
   typography: [
-    { element: "Label",       family: "Inter", size: "14px", weight: "Medium (500)",  lineHeight: "1.4", variable: "--field-text" },
-    { element: "Description", family: "Inter", size: "12px", weight: "Regular (400)", lineHeight: "1.5", variable: "--field-supporting" },
+    { element: "Label",            family: "Inter", size: "14px", weight: "Medium (500)",  lineHeight: "1.4", variable: "--field-text" },
+    { element: "Label (disabled)", family: "Inter", size: "14px", weight: "Medium (500)",  lineHeight: "1.4", variable: "--field-placeholder" },
+    { element: "Description",      family: "Inter", size: "12px", weight: "Regular (400)", lineHeight: "1.5", variable: "--field-supporting" },
   ],
   states: [
-    { name: "Off · Enabled",   borderWidth: "2px", tokens: [{ role: "Track bg",   variable: "Surface/Neutral/Subtle",   varId: "", light: "rgba(242,242,242,1)", dark: "rgba(255,255,255,0.08)" }, { role: "Track border", variable: "Border/Neutral/Default", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.30)" }, { role: "Thumb", variable: "Text/Subtitle", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" }] },
-    { name: "On  · Enabled",   borderWidth: "0",   tokens: [{ role: "Track bg",   variable: "Border/Primary/Default",  varId: "", light: "#2173ff", dark: "#2b7fff" }, { role: "Thumb", variable: "Text/White", varId: "", light: "#ffffff", dark: "#ffffff" }] },
-    { name: "Off · Disabled",  borderWidth: "2px", tokens: [{ role: "Track border", variable: "Border/Neutral/Lighter", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)" }, { role: "Thumb", variable: "Text/Disabled", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.20)" }] },
-    { name: "On  · Disabled",  borderWidth: "0",   tokens: [{ role: "Track bg",   variable: "Primary/200",             varId: "", light: "#80afff", dark: "rgba(43,127,255,0.40)" }, { role: "Thumb", variable: "Text/White", varId: "", light: "#ffffff", dark: "#ffffff" }] },
+    { name: "Off · Enabled",   borderWidth: "2px", tokens: [
+      { role: "Track bg",          variable: "--toggle-track-off",   varId: "", light: "rgba(242,242,242,1)", dark: "rgba(255,255,255,0.08)" },
+      { role: "Track border",      variable: "--toggle-border-off",  varId: "", light: "#5c5c5c",             dark: "rgba(255,255,255,0.30)" },
+      { role: "Track border hover", variable: "--field-border-hover", varId: "", light: "#2a2a2a",            dark: "rgba(255,255,255,0.2)" },
+      { role: "Thumb",             variable: "--toggle-thumb-off",   varId: "", light: "#2a2a2a",             dark: "rgba(255,255,255,0.60)" },
+    ] },
+    { name: "On  · Enabled",   borderWidth: "0",   tokens: [
+      { role: "Track bg", variable: "--toggle-track-on",  varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "Thumb",    variable: "--toggle-thumb-on",  varId: "", light: "#ffffff", dark: "#ffffff" },
+    ] },
+    { name: "Off · Disabled",  borderWidth: "2px", tokens: [
+      { role: "Track bg",     variable: "--toggle-track-off-disabled",  varId: "", light: "rgba(242,242,242,1)", dark: "rgba(255,255,255,0.05)" },
+      { role: "Track border", variable: "--toggle-border-off-disabled", varId: "", light: "#bababa",             dark: "rgba(255,255,255,0.15)" },
+      { role: "Thumb",        variable: "--toggle-thumb-disabled",      varId: "", light: "#bababa",             dark: "rgba(255,255,255,0.20)" },
+    ] },
+    { name: "On  · Disabled",  borderWidth: "0",   tokens: [
+      { role: "Track bg",        variable: "--toggle-track-on-disabled", varId: "", light: "#80afff", dark: "rgba(43,127,255,0.40)" },
+      { role: "Thumb (reused)",  variable: "--toggle-thumb-on",          varId: "", light: "#ffffff", dark: "#ffffff" },
+    ] },
   ],
 }
 
@@ -1269,10 +1447,27 @@ const TABLE_SPEC = {
     { element: "Cell text",   family: "Inter", size: "14px (M) / 12px (S)", weight: "Medium (500)",    lineHeight: "1.4", variable: "--table-cell-text" },
   ],
   states: [
-    { name: "Row default",   borderWidth: "1px", tokens: [{ role: "Row bg",    variable: "Surface/Neutral/White",        varId: "", light: "#ffffff",              dark: "rgba(255,255,255,0.10)" }] },
-    { name: "Row hover",     borderWidth: "1px", tokens: [{ role: "Row bg",    variable: "Surface/Neutral/Default",     varId: "", light: "#f2f2f2",              dark: "rgba(255,255,255,0.08)" }] },
-    { name: "Row selected",  borderWidth: "1px", tokens: [{ role: "Row bg",    variable: "Surface/Primary/More Subtle", varId: "", light: "rgba(246,249,255,1)",   dark: "rgba(43,127,255,0.08)"  }] },
-    { name: "Header",        borderWidth: "1px", tokens: [{ role: "Header bg", variable: "Surface/Neutral/White",       varId: "", light: "#ffffff",              dark: "rgba(255,255,255,0.10)" }, { role: "Text", variable: "Text/Subtitle", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.6)" }] },
+    { name: "Row default",   borderWidth: "1px", tokens: [
+      { role: "Row bg",    variable: "--table-bg",     varId: "", light: "transparent",            dark: "transparent"            },
+      { role: "Row border", variable: "--table-border", varId: "", light: "rgba(33,115,255,0.10)", dark: "rgba(255,255,255,0.15)" },
+    ] },
+    { name: "Row hover",     borderWidth: "1px", tokens: [{ role: "Row bg",    variable: "--table-row-hover-bg",     varId: "", light: "#f2f2f2",   dark: "rgba(255,255,255,0.08)" }] },
+    { name: "Row selected",  borderWidth: "1px", tokens: [{ role: "Row bg",    variable: "--table-row-selected-bg",  varId: "", light: "#f6f9ff",   dark: "rgba(43,127,255,0.08)"  }] },
+    { name: "Header",        borderWidth: "1px", tokens: [
+      { role: "Header bg", variable: "--table-header-bg",   varId: "", light: "#eef5ff", dark: "rgba(255,255,255,0.06)" },
+      { role: "Text",      variable: "--table-header-text", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.6)" },
+    ] },
+    { name: "Cell helpers — TableCellAvatar / Link / AISuggest / Menu", borderWidth: "0", tokens: [
+      { role: "Avatar bg (reused, 7 of 10 colors)", variable: "--av-col-{color}-bg",     varId: "", light: "see Avatar spec", dark: "see Avatar spec" },
+      { role: "Avatar text",                         variable: "--primary-foreground",    varId: "", light: "#ffffff", dark: "#ffffff" },
+      { role: "Avatar ring",                         variable: "--topbar-avatar-ring",    varId: "", light: "rgba(128,175,255,1)", dark: "rgba(43,127,255,0.30)" },
+      { role: "Avatar-group ring offset",            variable: "--background",            varId: "", light: "#e4ecf7", dark: "#0a0e1a" },
+      { role: "Avatar-group +N bg",                  variable: "--tag-neutral-bg",        varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.08)" },
+      { role: "Avatar-group +N text",                variable: "--tag-neutral-fg",        varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+      { role: "Link text",                           variable: "--primary",               varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "AI suggest bg",                       variable: "--color-surface-primary-default", varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "AI suggest icon",                     variable: "--color-text-negative",   varId: "", light: "#ffffff", dark: "#ffffff" },
+    ] },
   ],
 }
 
@@ -1310,34 +1505,117 @@ const TOPBAR_SPEC = {
       name: "TopbarButton — Default",
       borderWidth: "0",
       tokens: [
-        { role: "Background",  variable: "—",                        varId: "", light: "transparent",         dark: "transparent" },
-        { role: "Icon color",  variable: "Icon/Neutral/Dark",         varId: "", light: "rgba(92,92,92)",      dark: "rgba(255,255,255,0.50)" },
+        { role: "Icon color", variable: "--topbar-icon", varId: "", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.70)" },
+        { role: "Text (workspace name)", variable: "--topbar-text", varId: "", light: "rgba(42,42,42,1)", dark: "rgba(255,255,255,0.60)" },
+        { role: "Text secondary (company/search)", variable: "--topbar-text-secondary", varId: "", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.50)" },
       ],
     },
     {
-      name: "TopbarButton — Hover",
+      name: "TopbarButton — Hover / Focus",
       borderWidth: "0",
       tokens: [
-        { role: "Background", variable: "Surface/Neutral/Hover",     varId: "", light: "#fafafa",             dark: "rgba(255,255,255,0.08)" },
-        { role: "Badge bg",   variable: "Error/Notification",         varId: "", light: "rgba(211,47,47)",     dark: "rgba(255,100,103)" },
+        { role: "Background hover", variable: "--topbar-btn-hover-bg", varId: "", light: "rgba(250,250,250,1)", dark: "rgba(255,255,255,0.08)" },
+        { role: "Background focus", variable: "--topbar-btn-focus-bg", varId: "", light: "rgba(242,242,242,1)", dark: "rgba(255,255,255,0.12)" },
+        { role: "Notification badge bg", variable: "--topbar-badge-bg", varId: "", light: "rgba(211,47,47,1)", dark: "rgba(255,100,103,1)" },
+        { role: "Avatar ring", variable: "--topbar-avatar-ring", varId: "", light: "rgba(128,175,255,1)", dark: "rgba(43,127,255,0.30)" },
       ],
     },
     {
       name: "Zone borders",
       borderWidth: "1px",
       tokens: [
-        { role: "Workspace / Company border", variable: "Border/Primary/Subtle", varId: "", light: "rgba(233,241,255)", dark: "rgba(43,127,255,0.20)" },
-        { role: "Vertical divider",           variable: "Border/Neutral/Subtle", varId: "", light: "rgba(242,242,242)", dark: "rgba(255,255,255,0.08)" },
-        { role: "Bottom divider",             variable: "Border/Neutral/Subtle", varId: "", light: "rgba(242,242,242)", dark: "rgba(255,255,255,0.08)" },
+        { role: "Workspace / Company border", variable: "--topbar-workspace-border", varId: "", light: "rgba(233,241,255,1)", dark: "rgba(43,127,255,0.20)" },
+        { role: "Vertical / bottom divider",   variable: "--topbar-divider",          varId: "", light: "rgba(242,242,242,1)", dark: "rgba(255,255,255,0.08)" },
+        { role: "Zone hover border",           variable: "--topbar-zone-hover-bd",    varId: "", light: "rgba(43,127,255,0.45)", dark: "rgba(43,127,255,0.45)" },
+        { role: "Zone hover background",       variable: "--topbar-zone-hover-bg",    varId: "", light: "rgba(0,0,0,0.03)",   dark: "rgba(255,255,255,0.04)" },
       ],
     },
     {
       name: "Search field",
       borderWidth: "1px",
       tokens: [
-        { role: "Background", variable: "Surface/Neutral/White",      varId: "", light: "#ffffff",             dark: "rgba(255,255,255,0.10)" },
-        { role: "Border",     variable: "Border/Neutral/Lighter",      varId: "", light: "rgba(186,186,186)",   dark: "rgba(255,255,255,0.10)" },
-        { role: "Placeholder",variable: "Text/Body",                   varId: "", light: "rgba(92,92,92)",      dark: "rgba(255,255,255,0.50)" },
+        { role: "Background", variable: "--topbar-search-bg",     varId: "", light: "rgba(255,255,255,1)", dark: "rgba(255,255,255,0.10)" },
+        { role: "Border",     variable: "--topbar-search-border", varId: "", light: "rgba(186,186,186,1)", dark: "rgba(255,255,255,0.10)" },
+      ],
+    },
+    {
+      name: "Dropdown menu — workspace / company / profile",
+      borderWidth: "0.5px",
+      tokens: [
+        { role: "Background",      variable: "--topbar-menu-bg",       varId: "", light: "rgba(255,255,255,1)", dark: "rgba(22,22,22,1)" },
+        { role: "Item selected",   variable: "--topbar-menu-item-sel", varId: "", light: "rgba(233,241,255,1)", dark: "rgba(33,115,255,0.15)" },
+        { role: "Item label",      variable: "--topbar-menu-text",     varId: "", light: "rgba(42,42,42,1)",   dark: "rgba(255,255,255,0.80)" },
+        { role: "Secondary text",  variable: "--topbar-menu-text-dim", varId: "", light: "rgba(92,92,92,1)",   dark: "rgba(255,255,255,0.45)" },
+      ],
+    },
+    {
+      name: "Shared Menu / Dropdown (reused inside Topbar)",
+      borderWidth: "0.5px",
+      tokens: [
+        { role: "Background",  variable: "--menu-bg",         varId: "", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
+        { role: "Divider",     variable: "--menu-divider",    varId: "", light: "#f2f2f2",                 dark: "rgba(255,255,255,0.08)" },
+        { role: "Item hover",  variable: "--menu-item-hover", varId: "", light: "rgba(242,242,242,0.95)",  dark: "rgba(32,42,62,0.90)" },
+      ],
+    },
+    {
+      name: "Sign out row",
+      borderWidth: "0",
+      tokens: [
+        { role: "Hover background", variable: "--signout-hover-bg", varId: "", light: "rgba(239,68,68,0.07)", dark: "rgba(239,68,68,0.07)" },
+        { role: "Icon",             variable: "--signout-icon",     varId: "", light: "rgba(210,47,47,0.65)", dark: "rgba(239,68,68,0.65)" },
+        { role: "Text",             variable: "--signout-text",     varId: "", light: "rgba(210,47,47,0.85)", dark: "rgba(239,68,68,0.85)" },
+      ],
+    },
+    {
+      name: "Tooltip (hover labels)",
+      borderWidth: "0",
+      tokens: [
+        { role: "Background", variable: "--tooltip-bg (Surface/Neutral/Darker)", varId: "", light: "#111827", dark: "#111827" },
+        { role: "Text",       variable: "--tooltip-text (Text/Negative)",        varId: "", light: "#ffffff", dark: "#ffffff" },
+      ],
+    },
+    {
+      name: "FocusChip — active filter row",
+      borderWidth: "0.5px",
+      tokens: [
+        { role: "Panel background",     variable: "--fc-bg",               varId: "", light: "rgba(255,255,255,0.97)", dark: "rgba(20,26,46,0.98)" },
+        { role: "Panel border",         variable: "--fc-border",           varId: "", light: "rgba(0,0,0,0.10)",       dark: "rgba(255,255,255,0.10)" },
+        { role: "Section label",        variable: "--fc-label",            varId: "", light: "rgba(92,92,92,1)",       dark: "rgba(255,255,255,0.45)" },
+        { role: "Chip background",      variable: "--fc-chip-bg",          varId: "", light: "transparent",            dark: "transparent" },
+        { role: "Chip border",          variable: "--fc-chip-bd",          varId: "", light: "rgba(0,0,0,0.18)",       dark: "rgba(255,255,255,0.18)" },
+        { role: "Chip text",            variable: "--fc-chip-fg",          varId: "", light: "rgba(42,42,42,1)",       dark: "rgba(255,255,255,0.75)" },
+        { role: "\"Clear all\" text",   variable: "--fc-cta-clear",        varId: "", light: "rgba(92,92,92,1)",       dark: "rgba(255,255,255,0.50)" },
+        { role: "Trigger active bg",    variable: "--fc-trigger-active-bg",varId: "", light: "rgba(33,115,255,0.08)",  dark: "rgba(33,115,255,0.10)" },
+      ],
+    },
+    {
+      name: "GlobalSearch overlay",
+      borderWidth: "0.5px",
+      tokens: [
+        { role: "Panel background",   variable: "--gs-bg",               varId: "", light: "rgba(255,255,255,0.97)", dark: "rgba(16,22,40,0.94)" },
+        { role: "Panel border",       variable: "--gs-border",           varId: "", light: "rgba(0,0,0,0.10)",       dark: "rgba(255,255,255,0.08)" },
+        { role: "Backdrop scrim",     variable: "--gs-scrim",            varId: "", light: "rgba(0,0,0,0.25)",       dark: "rgba(0,0,0,0.45)" },
+        { role: "Divider",            variable: "--gs-divider",          varId: "", light: "rgba(0,0,0,0.07)",       dark: "rgba(255,255,255,0.06)" },
+        { role: "Input border",       variable: "--gs-input-border",     varId: "", light: "rgba(186,186,186,1)",    dark: "rgba(255,255,255,0.12)" },
+        { role: "Row hover",          variable: "--gs-row-hover",        varId: "", light: "rgba(0,0,0,0.04)",       dark: "rgba(255,255,255,0.05)" },
+        { role: "Section label",      variable: "--gs-section-label",    varId: "", light: "rgba(92,92,92,1)",       dark: "rgba(255,255,255,0.40)" },
+        { role: "Primary text",       variable: "--gs-text",             varId: "", light: "rgba(42,42,42,1)",       dark: "rgba(255,255,255,0.90)" },
+        { role: "Secondary text",     variable: "--gs-text-dim",         varId: "", light: "rgba(92,92,92,1)",       dark: "rgba(255,255,255,0.55)" },
+        { role: "Meta text",          variable: "--gs-text-meta",        varId: "", light: "rgba(140,140,140,1)",    dark: "rgba(255,255,255,0.35)" },
+        { role: "Chip inactive bg",   variable: "--gs-chip-inactive-bg", varId: "", light: "rgba(242,242,242,1)",    dark: "rgba(255,255,255,0.08)" },
+        { role: "Chip inactive text", variable: "--gs-chip-inactive-fg", varId: "", light: "rgba(42,42,42,1)",       dark: "rgba(255,255,255,0.70)" },
+        { role: "Kbd shortcut bg",    variable: "--gs-kbd-bg",           varId: "", light: "rgba(242,242,242,1)",    dark: "rgba(255,255,255,0.08)" },
+        { role: "Kbd shortcut text",  variable: "--gs-kbd-fg",           varId: "", light: "rgba(92,92,92,1)",       dark: "rgba(255,255,255,0.40)" },
+      ],
+    },
+    {
+      name: "Misc / AI",
+      borderWidth: "—",
+      tokens: [
+        { role: "Primary button text",          variable: "--color-button-primary-text-default",  varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "Primary button text disabled", variable: "--color-button-primary-text-disabled", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.30)" },
+        { role: "Icon on colored bg",           variable: "--color-icon-neutral-light",            varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "AI action glow shadow",        variable: "--shadow-glow-ai",                      varId: "", light: "4px 8px 12px 8px rgba(9,226,171,0.16)", dark: "4px 8px 12px 8px rgba(9,226,171,0.16)" },
       ],
     },
   ],
@@ -1368,23 +1646,24 @@ const HIGHLIGHT_CARD_SPEC = {
       description: "All component-level tokens alias canonical DS semantic tokens. Used in highlight-card.tsx — zero hardcoded hex.",
       cssPrefix: "hc",
       tokens: [
-        { role: "Card bg (default)",   variable: "--hc-bg → Surface/Neutral/White",           varId: "", light: "#FFFFFF",    dark: "#131C2E (surface-raised)" },
-        { role: "Label text",          variable: "--hc-text-label → Text/Subtitle",            varId: "", light: "#8C8C8C",    dark: "rgba(255,255,255,0.40)" },
-        { role: "Value text",          variable: "--hc-text-value → Text/Body",                varId: "", light: "#1A1A1A",    dark: "rgba(255,255,255,0.80)" },
-        { role: "Feedback + Unit",     variable: "--hc-text-feedback → Text/Placeholder",      varId: "", light: "#8C8C8C",    dark: "rgba(255,255,255,0.40)" },
-        { role: "Icon fill",           variable: "--hc-icon-fill → Icon/Primary/Dark",         varId: "", light: "#001740",    dark: "#2B7FFF" },
-        { role: "Icon circle bg",      variable: "--hc-icon-bg → Surface/Primary/Lighter",     varId: "", light: "#E9F1FF",    dark: "rgba(33,115,255,0.15)" },
-        { role: "Card border",         variable: "--color-border-neutral-lighter",             varId: "", light: "#E8E8E8",    dark: "rgba(255,255,255,0.08)" },
-        { role: "Positive feedback",   variable: "--color-text-success → Text/Success",        varId: "", light: "#003328",    dark: "#6ee7b7" },
-        { role: "Negative feedback",   variable: "--color-text-error → Text/Error",            varId: "", light: "#5f2120",    dark: "#ff6467" },
+        { role: "Card bg (default)",   variable: "--hc-bg",           varId: "", light: "#FFFFFF", dark: "#131C2E" },
+        { role: "Label text",          variable: "--hc-text-label",   varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Value text",          variable: "--hc-text-value",   varId: "", light: "#000000", dark: "rgba(255,255,255,0.80)" },
+        { role: "Unit text",           variable: "--hc-text-unit",    varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)", note: "distinct token from --hc-text-feedback, though both currently alias --color-text-subtitle and render identically" },
+        { role: "Feedback text",       variable: "--hc-text-feedback", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Icon fill",           variable: "--hc-icon-fill",    varId: "", light: "#001740", dark: "#2B7FFF" },
+        { role: "Icon circle bg",      variable: "--hc-icon-bg",      varId: "", light: "#E9F1FF", dark: "rgba(33,115,255,0.15)" },
+        { role: "Card border",         variable: "--color-border-neutral-lighter", varId: "", light: "#BABABA", dark: "rgba(255,255,255,0.08)" },
+        { role: "Positive feedback (defined, not wired up)", variable: "--color-text-success", varId: "", light: "#003328", dark: "#6ee7b7", note: "CODE BUG: FEEDBACK_COLOR in highlight-card.tsx maps positive/negative/neutral all to --hc-text-feedback — this token exists but is never applied. See flagged follow-up." },
+        { role: "Negative feedback (defined, not wired up)", variable: "--color-text-error",   varId: "", light: "#5f2120", dark: "#ff6467", note: "Same bug as above — never applied for feedbackType=\"negative\"." },
       ],
     },
     {
       name: "Style Variant BG + Border",
       description: "9 background styles. Each colored variant has a semantic border token. Default uses neutral border; Primary uses primary border.",
       tokens: [
-        { role: "Default BG",           variable: "--hc-bg → Surface/Neutral/White",             varId: "", light: "#FFFFFF",  dark: "#131C2E" },
-        { role: "Default border",        variable: "--color-border-neutral-lighter",              varId: "", light: "#E8E8E8",  dark: "rgba(255,255,255,0.08)" },
+        { role: "Default BG",           variable: "--hc-bg",                          varId: "", light: "#FFFFFF",  dark: "#131C2E" },
+        { role: "Default border",        variable: "--color-border-neutral-lighter",  varId: "", light: "#BABABA",  dark: "rgba(255,255,255,0.08)" },
         { role: "Primary BG",            variable: "--color-surface-primary-subtle",              varId: "", light: "#E9F1FF",  dark: "rgba(33,115,255,0.15)" },
         { role: "Primary border",        variable: "--color-border-primary-default",              varId: "", light: "#2173FF",  dark: "#2B7FFF" },
         { role: "Green BG",              variable: "--color-surface-success-subtle",              varId: "", light: "#CBFFF4",  dark: "rgba(0,169,127,0.15)" },
@@ -1399,7 +1678,7 @@ const HIGHLIGHT_CARD_SPEC = {
         { role: "Light Blue border",     variable: "--color-border-light-blue-default",           varId: "", light: "#00B5D9",  dark: "#00B5D9" },
         { role: "Lime BG",               variable: "--color-surface-lime-subtle",                 varId: "", light: "#E7F9B5",  dark: "rgba(101,163,13,0.14)" },
         { role: "Lime border",           variable: "--color-border-lime-green-default",           varId: "", light: "#A0DA1D",  dark: "#A0DA1D" },
-        { role: "Red BG",                variable: "--color-surface-error-subtle",                varId: "", light: "#FDEDED",  dark: "rgba(220,38,38,0.14)" },
+        { role: "Red BG",                variable: "--color-surface-error-subtle",                varId: "", light: "#FDECED",  dark: "rgba(220,38,38,0.14)" },
         { role: "Red border",            variable: "--color-border-error-default",                varId: "", light: "#992222",  dark: "#992222" },
       ],
     },
@@ -1432,29 +1711,29 @@ const INFORMATIVE_CARD_SPEC = {
   ],
   states: [
     { name: "Informative", borderWidth: "0", tokens: [
-      { role: "Background", variable: "Surface/Primary/Subtle",  varId: "", light: "#E9F1FF",              dark: "rgba(33,115,255,0.12)"  },
-      { role: "Icon",       variable: "Icon/Primary/Default",    varId: "", light: "#2173FF",              dark: "#A8C8FF"                },
-      { role: "Text",       variable: "Text/Info",               varId: "", light: "#001740",              dark: "#A8C8FF"                },
+      { role: "Background", variable: "--ic-informative-bg",   varId: "", light: "#E9F1FF",              dark: "rgba(33,115,255,0.12)"  },
+      { role: "Icon",       variable: "--ic-informative-icon", varId: "", light: "#2173FF",              dark: "#A8C8FF"                },
+      { role: "Text",       variable: "--ic-informative-text", varId: "", light: "#001740",              dark: "#A8C8FF"                },
     ]},
     { name: "Alert", borderWidth: "0", tokens: [
-      { role: "Background", variable: "Surface/Warning/Subtle",  varId: "", light: "#FFF4E5",              dark: "rgba(237,108,2,0.12)"   },
-      { role: "Icon",       variable: "Icon/Alert/Default",      varId: "", light: "#ED6C02",              dark: "#FFC070"                },
-      { role: "Text",       variable: "Text/Alert",              varId: "", light: "#663C00",              dark: "#fcd34d"                },
+      { role: "Background", variable: "--ic-alert-bg",   varId: "", light: "#FFF4E5",              dark: "rgba(237,108,2,0.12)"   },
+      { role: "Icon",       variable: "--ic-alert-icon", varId: "", light: "#ED6C02",              dark: "#FFC070"                },
+      { role: "Text",       variable: "--ic-alert-text", varId: "", light: "#663C00",              dark: "#fcd34d"                },
     ]},
     { name: "Error", borderWidth: "0", tokens: [
-      { role: "Background", variable: "Surface/Error/Subtle",    varId: "", light: "#FDEDED",              dark: "rgba(220,38,38,0.12)"   },
-      { role: "Icon",       variable: "Icon/Error/Default",      varId: "", light: "#992222",              dark: "#FF9898"                },
-      { role: "Text",       variable: "Text/Error",              varId: "", light: "#5F2120",              dark: "#ff6467"                },
+      { role: "Background", variable: "--ic-error-bg",   varId: "", light: "#FDEDED",              dark: "rgba(220,38,38,0.12)"   },
+      { role: "Icon",       variable: "--ic-error-icon", varId: "", light: "#992222",              dark: "#FF9898"                },
+      { role: "Text",       variable: "--ic-error-text", varId: "", light: "#5F2120",              dark: "#ff6467"                },
     ]},
     { name: "Success", borderWidth: "0", tokens: [
-      { role: "Background", variable: "Surface/Success/Subtle",  varId: "", light: "#E5FDF8",              dark: "rgba(0,169,127,0.12)"   },
-      { role: "Icon",       variable: "Icon/Success/Default",    varId: "", light: "#00A07E",              dark: "#70EDD8"                },
-      { role: "Text",       variable: "Text/Success",            varId: "", light: "#003328",              dark: "#70EDD8"                },
+      { role: "Background", variable: "--ic-success-bg",   varId: "", light: "#E5FDF8",              dark: "rgba(0,169,127,0.12)"   },
+      { role: "Icon",       variable: "--ic-success-icon", varId: "", light: "#00A07E",              dark: "#70EDD8"                },
+      { role: "Text",       variable: "--ic-success-text", varId: "", light: "#003328",              dark: "#70EDD8"                },
     ]},
     { name: "Neutral", borderWidth: "0", tokens: [
-      { role: "Background", variable: "Surface/Neutral/Default", varId: "", light: "#F2F2F2",              dark: "rgba(255,255,255,0.08)" },
-      { role: "Icon",       variable: "Icon/Neutral/Dark",       varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.50)" },
-      { role: "Text",       variable: "Text/Primary",            varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.70)" },
+      { role: "Background", variable: "--ic-neutral-bg",   varId: "", light: "#F2F2F2",              dark: "rgba(255,255,255,0.08)" },
+      { role: "Icon",       variable: "--ic-neutral-icon", varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.70)" },
+      { role: "Text",       variable: "--ic-neutral-text", varId: "", light: "#2A2A2A",              dark: "rgba(255,255,255,0.70)" },
     ]},
   ],
 }
@@ -1488,21 +1767,26 @@ const PAGINATION_SPEC = {
       description: "Single-page or first page. Previous button disabled. All tokens shared across both Default and Multipage states.",
       cssPrefix: "pagination",
       tokens: [
-        { role: "Range text + row count",      variable: "--color-text-label",               varId: "Text/Label",               light: "#2a2a2a",              dark: "rgba(255,255,255,0.80)" },
-        { role: '"Rows per page:" caption',    variable: "--color-text-subtitle",            varId: "Text/Subtitle",            light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
-        { role: "Nav icons + chevron",         variable: "--color-icon-neutral-dark",        varId: "Icon/Neutral/Dark",        light: "rgba(92,92,92,1)",    dark: "rgba(255,255,255,0.50)" },
-        { role: "Nav button hover bg",         variable: "--color-surface-neutral-default",  varId: "Surface/Neutral/Default",  light: "#f2f2f2",              dark: "rgba(255,255,255,0.06)" },
-        { role: "Inner container bg",          variable: "--surface-floating-default",       varId: "Surface/Floating/Default", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
-        { role: "Inner container border",      variable: "--color-border-neutral-default",   varId: "Border/Neutral/Default",   light: "#5c5c5c",              dark: "rgba(255,255,255,0.10)" },
+        { role: "Range text + row count",      variable: "--color-text-label",            varId: "", light: "#2a2a2a",                dark: "rgba(255,255,255,0.80)" },
+        { role: '"Rows per page:" caption',    variable: "--color-text-subtitle",          varId: "", light: "#2a2a2a",                dark: "rgba(255,255,255,0.60)" },
+        { role: "Nav icons + selector chevron", variable: "--color-icon-neutral-dark",     varId: "", light: "rgba(92,92,92,1)",       dark: "rgba(255,255,255,0.50)" },
+        { role: "Inner container bg",          variable: "--surface-floating-default",     varId: "", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
+        { role: "Inner container border",      variable: "--color-border-neutral-subtle",  varId: "", light: "#e4e4e7",                dark: "rgba(255,255,255,0.10)" },
+        { role: "Container shadow (reused)",   variable: "--shadow-elevation-5",            varId: "", light: "see Elevation spec",     dark: "see Elevation spec" },
+        { role: "Selector button bg",          variable: "--btn-secondary-bg",              varId: "", light: "#ffffff",                dark: "rgba(255,255,255,0.10)" },
+        { role: "Selector button border",      variable: "--btn-secondary-border",          varId: "", light: "#5c5c5c",                dark: "rgba(255,255,255,0.10)" },
+        { role: "Selector button hover bg",    variable: "--btn-secondary-hover-bg",        varId: "", light: "#f2f2f2",                dark: "rgba(255,255,255,0.08)" },
+        { role: "Dropdown selected text",       variable: "--primary",                      varId: "", light: "#2173ff",                dark: "#2b7fff" },
+        { role: "Dropdown option hover/selected bg", variable: "--color-surface-neutral-default", varId: "", light: "#f2f2f2",          dark: "rgba(255,255,255,0.06)" },
+        { role: "Nav buttons (bg/border/hover)", variable: "—", varId: "", light: "see Button spec — variant: secondary, size: sm", dark: "see Button spec — variant: secondary, size: sm" },
       ],
     },
     {
       name: "Multipage",
-      description: "Middle or last page. Previous and/or next buttons change opacity when disabled (0.35). No new tokens — inherits all tokens from Default.",
+      description: "Middle or last page. Previous and/or next buttons (Button atom, variant=secondary) change to their own disabled state when at a boundary. No new tokens — inherits all tokens from Default.",
       cssPrefix: "pagination",
       tokens: [
-        { role: "Disabled nav button opacity", variable: "opacity: 0.35",                   varId: "—",                        light: "0.35",                 dark: "0.35" },
-        { role: "Range text + row count",      variable: "--color-text-label",               varId: "Text/Label",               light: "#2a2a2a",              dark: "rgba(255,255,255,0.80)" },
+        { role: "Range text + row count (reused)", variable: "--color-text-label", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.80)" },
       ],
     },
   ],
@@ -1578,7 +1862,7 @@ const FILTERS_SPEC = {
   name: "Filters",
   figmaNodeId: "7996:4655",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7996-4655",
-  description: "Horizontal 40px filter bar for narrowing large datasets. 8 state variants, up to 5 filter chips, sorting control, grid/list view toggle. Chip label truncated at 14 characters with tooltip on hover. Token family --fi-*.",
+  description: "Horizontal 40px filter bar for narrowing large datasets. 8 state variants, up to 5 filter chips, sorting control, grid/list view toggle. Chip label truncated at 14 characters with tooltip on hover. Search/All-Filters button/chip base use the shared --field-* tokens; chip and control accents use --fi-*. The All-Filters button opens FiltersSlideout (a separate component, tokens documented in its own group below).",
   properties: [
     { name: "compact",          type: "Boolean",  values: ["true","false"],                              default: "false",      note: "S Variant — shows only Search + All Filters button" },
     { name: "compactCount",     type: "number",   values: ["0","1","2+"],                                default: "0",          note: "> 0 → S Variant Filters Apply: shows Filters badge with count" },
@@ -1599,22 +1883,52 @@ const FILTERS_SPEC = {
     { size: "Fixed", height: "40px", layout: "flex row, full-width", notes: "Height is always 40px; width fills the container" },
   ],
   typography: [
-    { element: "Chip label",    family: "Inter", size: "13px", weight: "Medium (500)",    lineHeight: "1", variable: "--fi-chip-text / --fi-chip-active-text" },
-    { element: "Clear Filters", family: "Inter", size: "13px", weight: "Medium (500)",    lineHeight: "1", variable: "--fi-clear-text" },
-    { element: "Sort label",    family: "Inter", size: "13px", weight: "Medium (500)",    lineHeight: "1", variable: "--fi-sort-text" },
+    { element: "Chip label (inactive)", family: "Inter", size: "13px", weight: "Medium (500)", lineHeight: "1", variable: "--field-text" },
+    { element: "Chip label (active)",   family: "Inter", size: "13px", weight: "Medium (500)", lineHeight: "1", variable: "rendered via <Tag variant=\"informative\"> — not a direct --fi-* var" },
+    { element: "Clear Filters",         family: "Inter", size: "13px", weight: "Medium (500)", lineHeight: "1", variable: "--fi-clear-text" },
+    { element: "Sort label",            family: "Inter", size: "13px", weight: "Medium (500)", lineHeight: "1", variable: "--fi-sort-text" },
   ],
   states: [
-    { name: "Default chip (inactive)", borderWidth: "1px", tokens: [
-      { role: "Background", variable: "Surface/Neutral/Subtle",  varId: "", light: "rgba(250,250,250,1)",     dark: "rgba(255,255,255,0.05)" },
-      { role: "Border",     variable: "Border/Neutral/Lighter",  varId: "", light: "rgba(186,186,186,1)",     dark: "rgba(255,255,255,0.15)" },
-      { role: "Text",       variable: "Text/Subtitle",           varId: "", light: "#2a2a2a",                 dark: "rgba(255,255,255,0.70)" },
-      { role: "Icon",       variable: "Icon/Neutral",            varId: "", light: "rgba(0,0,0,0.40)",        dark: "rgba(255,255,255,0.40)" },
+    { name: "Default chip (inactive) / search / All Filters button", borderWidth: "1px", tokens: [
+      { role: "Background",   variable: "--field-bg",           varId: "", light: "#ffffff",              dark: "rgba(255,255,255,0.10)" },
+      { role: "Border",       variable: "--field-border",       varId: "", light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)" },
+      { role: "Border hover", variable: "--field-border-hover", varId: "", light: "#2a2a2a",               dark: "rgba(255,255,255,0.20)" },
+      { role: "Text",         variable: "--field-text",         varId: "", light: "#2a2a2a",               dark: "rgba(255,255,255,0.60)" },
+      { role: "Icon",         variable: "--field-icon",         varId: "", light: "#bababa",               dark: "rgba(255,255,255,0.30)" },
     ]},
-    { name: "Active chip (selected value)", borderWidth: "1px", tokens: [
-      { role: "Background", variable: "Surface/Primary/Subtle",  varId: "", light: "rgba(33,115,255,0.06)",   dark: "rgba(43,127,255,0.08)" },
-      { role: "Border",     variable: "Border/Primary/Default",  varId: "", light: "#2173ff",                 dark: "#2b7fff" },
-      { role: "Text",       variable: "Text/Info",               varId: "", light: "#001740",                 dark: "#A8C8FF" },
-      { role: "Icon (×)",   variable: "Icon/Primary/Darker",     varId: "", light: "#001740",                 dark: "rgba(168,200,255,0.80)" },
+    { name: "Chip — inactive / active states", borderWidth: "1px", tokens: [
+      { role: "Inactive chip bg",     variable: "--fi-chip-bg",            varId: "", light: "rgba(250,250,250,1)",    dark: "rgba(255,255,255,0.05)" },
+      { role: "Inactive chip icon",   variable: "--fi-chip-icon",          varId: "", light: "rgba(0,0,0,0.40)",       dark: "rgba(255,255,255,0.40)" },
+      { role: "Active chip bg",       variable: "--fi-chip-active-bg",     varId: "", light: "rgba(33,115,255,0.06)", dark: "rgba(43,127,255,0.08)" },
+      { role: "Active chip border",   variable: "--fi-chip-active-border",varId: "", light: "#2173ff",               dark: "#2b7fff" },
+      { role: "Active chip icon (×)", variable: "--fi-chip-active-icon",  varId: "", light: "#001740",               dark: "rgba(168,200,255,0.80)" },
+    ]},
+    { name: "Compact badge / Clear Filters / Sort / View toggle", borderWidth: "—", tokens: [
+      { role: "Compact badge bg",     variable: "--fi-badge-bg",         varId: "", light: "#2173ff",              dark: "#2b7fff" },
+      { role: "Compact badge text",   variable: "--fi-badge-text",       varId: "", light: "#ffffff",              dark: "#ffffff" },
+      { role: "Clear Filters text",   variable: "--fi-clear-text",       varId: "", light: "rgba(0,0,0,0.45)",     dark: "rgba(255,255,255,0.45)" },
+      { role: "Clear Filters hover",  variable: "--fi-clear-hover",      varId: "", light: "rgba(0,0,0,0.80)",     dark: "rgba(255,255,255,0.80)" },
+      { role: "Sort label",           variable: "--fi-sort-text",        varId: "", light: "rgba(0,0,0,0.65)",     dark: "rgba(255,255,255,0.65)" },
+      { role: "Sort icon",            variable: "--fi-sort-icon",        varId: "", light: "rgba(0,0,0,0.40)",     dark: "rgba(255,255,255,0.40)" },
+      { role: "View toggle — active bg",   variable: "--fi-view-active-bg",   varId: "", light: "#2173ff",         dark: "#2b7fff" },
+      { role: "View toggle — active icon", variable: "--fi-view-active-icon", varId: "", light: "#ffffff",         dark: "#ffffff" },
+      { role: "View toggle — inactive icon", variable: "--fi-view-icon",      varId: "", light: "rgba(0,0,0,0.40)", dark: "rgba(255,255,255,0.40)" },
+    ]},
+    { name: "FiltersSlideout — \"All Filters\" panel (separate component, no own spec)", borderWidth: "—", tokens: [
+      { role: "Backdrop scrim",       variable: "--modal-scrim",          varId: "", light: "rgba(0,0,0,0.50)",       dark: "rgba(0,0,0,0.65)" },
+      { role: "Panel surface",        variable: "--surface",              varId: "", light: "#F2F7FF",                dark: "#0D1120" },
+      { role: "Panel divider/border", variable: "--table-border",         varId: "", light: "rgba(33,115,255,0.10)",  dark: "rgba(255,255,255,0.15)" },
+      { role: "Title / body text",    variable: "--foreground",           varId: "", light: "#1a1a1a",                dark: "#ffffffcc" },
+      { role: "CtrlGroup pill (inactive)", variable: "--ctrl-inactive-bg", varId: "", light: "rgba(0,0,0,0.07)",      dark: "rgba(255,255,255,0.10)" },
+      { role: "Accent (applied count, links)", variable: "--primary",     varId: "", light: "#2173ff",                dark: "#2b7fff" },
+      { role: "Priority dot — critical", variable: "--priority-critical", varId: "", light: "#ef4444",                dark: "#f87171" },
+      { role: "Priority dot — high",     variable: "--priority-high",     varId: "", light: "#f97316",                dark: "#fb923c" },
+      { role: "Priority dot — medium",   variable: "--priority-medium",   varId: "", light: "#f59e0b",                dark: "#fbbf24" },
+      { role: "Priority dot — low",      variable: "--priority-low",      varId: "", light: "#22c55e",                dark: "#4ade80" },
+      { role: "Informative Tag bg",   variable: "--tag-informative-bg",   varId: "", light: "#e9f1ff",                dark: "rgba(21,93,252,0.15)" },
+      { role: "Informative Tag border", variable: "--tag-informative-bd", varId: "", light: "#2173ff",                dark: "#2b7fff" },
+      { role: "Informative Tag text", variable: "--tag-informative-fg",   varId: "", light: "#001740",                dark: "rgba(255,255,255,0.80)" },
+      { role: "Field bg / border / icon / text / placeholder / supporting", variable: "--field-* (same tokens as the Filters bar above)", varId: "", light: "—", dark: "—" },
     ]},
   ],
 }
@@ -1649,16 +1963,23 @@ const MODAL_DIALOG_SPEC = {
     { element: "Description", family: "Inter", size: "14px", weight: "Regular (400)",   lineHeight: "1.6", variable: "--field-supporting" },
   ],
   variants: [
-    { name: "Confirmation", description: "max-w-[900px] · p-[24px] · centered column layout", cssPrefix: "--modal", tokens: [
-      { role: "Surface",     variable: "Surface/Modal",         varId: "", light: "rgba(255,255,255,0.96)", dark: "rgba(18,20,30,0.96)" },
-      { role: "Border",      variable: "Border/Modal",          varId: "", light: "#BABABA",                dark: "rgba(255,255,255,0.15)" },
-      { role: "Scrim",       variable: "Overlay/Scrim",         varId: "", light: "rgba(0,0,0,0.40)",       dark: "rgba(0,0,0,0.60)" },
-      { role: "Slot bg",     variable: "Surface/Modal/Slot",    varId: "", light: "#F5F6FA",                dark: "rgba(255,255,255,0.05)" },
-      { role: "Close icon",  variable: "Icon/Neutral/Default",  varId: "", light: "#5C5C5C",                dark: "rgba(255,255,255,0.50)" },
+    { name: "Confirmation", description: "max-w-[900px] · p-[24px] · centered column layout. All tokens below are shared with Content — only the layout differs.", cssPrefix: "--modal", tokens: [
+      { role: "Surface",       variable: "--modal-surface",      varId: "", light: "#FFFFFF",         dark: "rgba(12,14,34,0.82)"   },
+      { role: "Surface blur",  variable: "--modal-surface-blur", varId: "", light: "none",             dark: "blur(10px)"             },
+      { role: "Border",        variable: "--modal-border",       varId: "", light: "#BABABA",          dark: "rgba(255,255,255,0.15)" },
+      { role: "Scrim",         variable: "--modal-scrim",        varId: "", light: "rgba(0,0,0,0.50)", dark: "rgba(0,0,0,0.65)"       },
+      { role: "Slot bg",       variable: "--modal-slot-bg",      varId: "", light: "#F5F6FA",          dark: "rgba(255,255,255,0.04)" },
+      { role: "Close icon",    variable: "--modal-close-icon",   varId: "", light: "rgba(0,0,0,0.35)", dark: "rgba(255,255,255,0.35)" },
+      { role: "Close icon hover", variable: "--modal-close-hover", varId: "", light: "rgba(0,0,0,0.80)", dark: "rgba(255,255,255,0.80)" },
     ]},
-    { name: "Content", description: "max-w-[900px] · p-[32px] · left-aligned row layout", cssPrefix: "--modal", tokens: [
-      { role: "Surface",     variable: "Surface/Modal",         varId: "", light: "rgba(255,255,255,0.96)", dark: "rgba(18,20,30,0.96)" },
-      { role: "Border",      variable: "Border/Modal",          varId: "", light: "#BABABA",                dark: "rgba(255,255,255,0.15)" },
+    { name: "Content", description: "max-w-[900px] · p-[32px] · left-aligned row layout (icon + title inline). Same 7 tokens as Confirmation (reused) — layout is the only difference.", cssPrefix: "--modal", tokens: [
+      { role: "Surface (reused)",       variable: "--modal-surface",      varId: "", light: "#FFFFFF",         dark: "rgba(12,14,34,0.82)"   },
+      { role: "Surface blur (reused)",  variable: "--modal-surface-blur", varId: "", light: "none",             dark: "blur(10px)"             },
+      { role: "Border (reused)",        variable: "--modal-border",       varId: "", light: "#BABABA",          dark: "rgba(255,255,255,0.15)" },
+      { role: "Scrim (reused)",         variable: "--modal-scrim",        varId: "", light: "rgba(0,0,0,0.50)", dark: "rgba(0,0,0,0.65)"       },
+      { role: "Slot bg (reused)",       variable: "--modal-slot-bg",      varId: "", light: "#F5F6FA",          dark: "rgba(255,255,255,0.04)" },
+      { role: "Close icon (reused)",    variable: "--modal-close-icon",   varId: "", light: "rgba(0,0,0,0.35)", dark: "rgba(255,255,255,0.35)" },
+      { role: "Close icon hover (reused)", variable: "--modal-close-hover", varId: "", light: "rgba(0,0,0,0.80)", dark: "rgba(255,255,255,0.80)" },
     ]},
   ],
 }
@@ -1681,33 +2002,33 @@ const SIDEBAR_SPEC = {
     { state: "Collapsed", width: "56px",  iconSize: "24×24px", labelSize: "—",    gap: "—",    notes: "Icon only, tooltip on hover" },
   ],
   typography: [
-    { element: "Nav label",    family: "Inter", size: "13px", weight: "Medium (500)",    lineHeight: "1",   variable: "--sb-text" },
-    { element: "Section label",family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1",   variable: "--sb-section-text" },
-    { element: "Badge count",  family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1",   variable: "white" },
+    { element: "Nav label",    family: "Inter", size: "12px", weight: "Semi Bold (600)", lineHeight: "1",   variable: "--sb-text" },
   ],
   states: [
     { name: "Default", borderWidth: "0", tokens: [
-      { role: "Background",  variable: "Surface/Neutral/Black", varId: "", light: "#1A1A1A",              dark: "#1A1A1A" },
-      { role: "Icon",        variable: "Icon/Primary/Lighter",  varId: "", light: "rgba(128,175,255,1)",  dark: "rgba(128,175,255,1)" },
-      { role: "Label",       variable: "Text/Primary",          varId: "", light: "rgba(255,255,255,0.70)",dark: "rgba(255,255,255,0.70)" },
+      { role: "Container bg", variable: "--sb-bg",            varId: "", light: "#000000",              dark: "#0f172b"                },
+      { role: "Icon",         variable: "--sb-icon-default",  varId: "", light: "rgba(128,175,255,1)",  dark: "rgba(128,175,255,0.90)" },
+      { role: "Label",        variable: "--sb-text",          varId: "", light: "#ffffff",              dark: "#ffffff"                },
     ]},
     { name: "Hover", borderWidth: "0", tokens: [
-      { role: "Icon bg",     variable: "Surface/Neutral/Black", varId: "", light: "var(--sb-bg)",         dark: "var(--sb-bg)" },
-      { role: "Icon",        variable: "Icon/Neutral/Light",    varId: "", light: "rgba(255,255,255,0.70)",dark: "rgba(255,255,255,0.70)" },
-      { role: "Glow shadow", variable: "—",                     varId: "", light: "rgba(33,115,255,0.50) blur:20", dark: "rgba(33,115,255,0.50) blur:20" },
+      { role: "Row bg (expanded only)", variable: "--sb-row-hover",     varId: "", light: "#2a2a2a",              dark: "rgba(255,255,255,0.20)" },
+      { role: "Icon square bg",         variable: "--sb-icon-hover-bg", varId: "", light: "#000000",              dark: "#0f172b"                },
+      { role: "Icon",                   variable: "--sb-icon-active",   varId: "", light: "#ffffff",              dark: "#ffffff"                },
+      { role: "Glow shadow",            variable: "—",                  varId: "", light: "rgba(33,115,255,0.50) blur:20", dark: "rgba(33,115,255,0.50) blur:20" },
     ]},
     { name: "Active", borderWidth: "0", tokens: [
-      { role: "Icon bg",     variable: "Gradient/Main Action",  varId: "", light: "radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%)", dark: "radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%)" },
-      { role: "Icon",        variable: "Text/White",            varId: "", light: "#ffffff",              dark: "#ffffff" },
-      { role: "Teal shadow", variable: "—",                     varId: "", light: "rgba(82,163,255,0.38) offset(8,8) blur:20", dark: "rgba(82,163,255,0.38) offset(8,8) blur:20" },
+      { role: "Icon bg",       variable: "—", varId: "", light: "radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%)", dark: "radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%)" },
+      { role: "Icon (reused)", variable: "--sb-icon-active",     varId: "", light: "#ffffff", dark: "#ffffff" },
+      { role: "Chevron",       variable: "--sb-chevron-active",  varId: "", light: "rgba(233,241,255,1)", dark: "rgba(233,241,255,1)" },
+      { role: "Teal shadow",   variable: "—", varId: "", light: "rgba(82,163,255,0.38) offset(8,8) blur:20", dark: "rgba(82,163,255,0.38) offset(8,8) blur:20" },
     ]},
   ],
 }
 
 const ENTITY_LIST_SPEC = {
   name: "Entity List",
-  figmaNodeId: "—",
-  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS",
+  figmaNodeId: "4770:5089",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4770-5089",
   description: "High-density list row for entities — conversations, tickets, tasks. Composes icon highlight or avatar, primary meta, AI insight, description, secondary meta, tags, actions, and state tag. Row background/border/hover are NOT its own — in Figma this component is always embedded as a slot inside Card Container, which provides the row's background/border and already signals interactivity via its own hover state (confirmed: every real usage in this repo wraps <EntityList> in <CardContainer>; design decision, Michael, confirmed no per-row hover treatment needed on top of the Card's). AI callout tokens confirmed live against Figma node 11838:24922 (\"IA Insight - List Entity\") — it reuses the standard Tag purple tokens, not a dedicated AI color.",
   properties: [
     { name: "items",           type: "Array",   values: ["EntityListItemData[]"],         default: "required" },
@@ -1742,6 +2063,38 @@ const ENTITY_LIST_SPEC = {
       { role: "Background", variable: "--tag-purple-bg (Surface/Purple/More Subtle)", varId: "", light: "#f3e9fd",  dark: "#120520" },
       { role: "Icon",       variable: "--tag-purple-bd (Icon/Purple/Default)",        varId: "", light: "#7b27ed",  dark: "#a855f7" },
       { role: "Text",       variable: "--tag-purple-fg (Text/Purple)",                varId: "", light: "#2c075c",  dark: "#d8b4fe" },
+    ]},
+    { name: "Icon Highlight — 7 variants", borderWidth: "—", tokens: [
+      { role: "Yellow bg",         variable: "--hi-yellow-bg",       varId: "", light: "#FFEEDB", dark: "rgba(202,138,4,0.14)" },
+      { role: "Yellow icon",       variable: "--hi-yellow-icon",     varId: "", light: "#5C3500", dark: "#FFE070" },
+      { role: "Success bg",        variable: "--hi-success-bg",      varId: "", light: "#CBFFF4", dark: "rgba(0,169,127,0.14)" },
+      { role: "Success icon",      variable: "--hi-success-icon",    varId: "", light: "#003328", dark: "#70EDD8" },
+      { role: "Error bg",          variable: "--hi-error-bg",        varId: "", light: "#FDEDED", dark: "rgba(220,38,38,0.14)" },
+      { role: "Error icon",        variable: "--hi-error-icon",      varId: "", light: "#5F2120", dark: "#FF9898" },
+      { role: "Informative bg",    variable: "--hi-informative-bg",  varId: "", light: "#E9F1FF", dark: "rgba(33,115,255,0.14)" },
+      { role: "Informative icon",  variable: "--hi-informative-icon",varId: "", light: "#001740", dark: "#A8C8FF" },
+      { role: "Neutral bg",        variable: "--hi-neutral-bg",      varId: "", light: "#F2F2F2", dark: "rgba(255,255,255,0.08)" },
+      { role: "Neutral icon",      variable: "--hi-neutral-icon",    varId: "", light: "#2A2A2A", dark: "rgba(255,255,255,0.70)" },
+      { role: "Purple bg",         variable: "--hi-purple-bg",       varId: "", light: "#E4CEFC", dark: "rgba(124,58,237,0.14)" },
+      { role: "Purple icon",       variable: "--hi-purple-icon",     varId: "", light: "#2C075C", dark: "#D4A0FF" },
+      { role: "Light Blue bg",     variable: "--hi-lightblue-bg",    varId: "", light: "#CCF1FF", dark: "rgba(2,132,199,0.14)" },
+      { role: "Light Blue icon",   variable: "--hi-lightblue-icon",  varId: "", light: "#02445A", dark: "#80DCFF" },
+    ]},
+    { name: "Avatar & Separators", borderWidth: "—", tokens: [
+      { role: "Avatar ring (initials fallback)", variable: "--el-avatar-ring", varId: "", light: "rgba(128,175,255,0.80)", dark: "rgba(128,175,255,0.50)" },
+      { role: "Meta bullet separator (•)",       variable: "--el-bullet",      varId: "", light: "#d9d9d9",              dark: "rgba(255,255,255,0.18)" },
+    ]},
+    { name: "Text & Actions", borderWidth: "—", tokens: [
+      { role: "Title / description text",              variable: "--foreground",         varId: "", light: "#1a1a1a",  dark: "#ffffffcc" },
+      { role: "Meta labels, timestamp, icons",          variable: "--muted-foreground",   varId: "", light: "#5c5c5c",  dark: "#ffffff99" },
+      { role: "Secondary action bg (hover)",            variable: "--muted",              varId: "", light: "#0000000a", dark: "#ffffff0d" },
+      { role: "Divider / secondary action border",      variable: "--border",             varId: "", light: "rgba(33,115,255,0.13)", dark: "#ffffff1a" },
+      { role: "Primary action bg",                      variable: "--primary",            varId: "", light: "#2173ff",  dark: "#2b7fff" },
+      { role: "Primary action text",                    variable: "--primary-foreground", varId: "", light: "#ffffff",  dark: "#ffffff" },
+    ]},
+    { name: "Metadata Tooltip", borderWidth: "—", tokens: [
+      { role: "Tooltip background", variable: "--tooltip-bg (Surface/Neutral/Darker)", varId: "", light: "#111827", dark: "#111827" },
+      { role: "Tooltip text",       variable: "--tooltip-text (Text/Negative)",        varId: "", light: "#ffffff", dark: "#ffffff" },
     ]},
   ],
 }
@@ -1778,6 +2131,7 @@ const ALERT_BANNER_SPEC = {
       cssPrefix: "--ab-error-*",
       tokens: [
         { role: "Background", variable: "--ab-error-bg",   light: "#fdeded",              dark: "#2d1515"               },
+        { role: "Border",     variable: "--ab-error-bd",   light: "rgba(153,34,34,0.25)", dark: "transparent"           },
         { role: "Icon",       variable: "--ab-error-icon",  light: "#992222",              dark: "#ff6467"               },
         { role: "Text",       variable: "--ab-error-text",  light: "#5f2120",              dark: "#ff6467"               },
       ],
@@ -1788,6 +2142,7 @@ const ALERT_BANNER_SPEC = {
       cssPrefix: "--ab-success-*",
       tokens: [
         { role: "Background", variable: "--ab-success-bg",   light: "#e5fdf8",             dark: "#0a1f1a"               },
+        { role: "Border",     variable: "--ab-success-bd",   light: "rgba(0,153,120,0.25)", dark: "transparent"          },
         { role: "Icon",       variable: "--ab-success-icon",  light: "#00a07e",             dark: "#6ee7b7"               },
         { role: "Text",       variable: "--ab-success-text",  light: "#003328",             dark: "#6ee7b7"               },
       ],
@@ -1798,6 +2153,7 @@ const ALERT_BANNER_SPEC = {
       cssPrefix: "--ab-alert-*",
       tokens: [
         { role: "Background", variable: "--ab-alert-bg",   light: "#ffeedb",               dark: "#2d1a08"               },
+        { role: "Border",     variable: "--ab-alert-bd",   light: "rgba(180,83,9,0.25)",   dark: "transparent"           },
         { role: "Icon",       variable: "--ab-alert-icon",  light: "#b45309",               dark: "#fcd34d"               },
         { role: "Text",       variable: "--ab-alert-text",  light: "#663c00",               dark: "#fcd34d"               },
       ],
@@ -1881,11 +2237,11 @@ const AVATAR_SPEC = {
   name: "Avatar",
   figmaNodeId: "4753:19229",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4753-19229",
-  description: "Circular user/workspace badge. Auto-assigns color from name hash. 3 styles × 7 colors × 5 sizes + selected ring state.",
+  description: "Circular user/workspace badge. Auto-assigns color from name hash. 3 styles × 10 colors × 5 sizes + selected ring state.",
   properties: [
     { name: "style",    type: "Variant", values: ["text","photo","empty"],                    default: "text" },
     { name: "size",     type: "Variant", values: ["xs","sm","md","lg","xl"],                  default: "md" },
-    { name: "color",    type: "Variant", values: ["blue","green","orange","purple","cyan","lime","red","auto"], default: "auto", note: "auto = deterministic from name hash" },
+    { name: "color",    type: "Variant", values: ["blue","green","red","orange","purple","limegreen","lightblue","pink","teal","amber","auto"], default: "auto", note: "auto = deterministic from name hash" },
     { name: "selected", type: "Boolean", values: ["true","false"],                            default: "false" },
     { name: "name",     type: "String",  values: ["any string"],                              default: "—", note: "Initials extracted: first letter of each word, max 2" },
     { name: "src",      type: "String",  values: ["image URL"],                              default: "—", note: "Only used when style=photo" },
@@ -1906,20 +2262,37 @@ const AVATAR_SPEC = {
   ],
   variants: [
     {
-      name: "Text / Blue", description: "Default color — #2173FF brand blue",
-      cssPrefix: "--avatar-blue-*",
+      name: "Text style — 10 colors", description: "Background per color key — text is always white regardless of color",
+      cssPrefix: "--av-col-*-bg",
       tokens: [
-        { role: "Background", variable: "--avatar-blue-bg",   light: "#2173ff26", dark: "#2173ff33" },
-        { role: "Text",       variable: "--avatar-blue-text", light: "#2173ff",   dark: "#6fa8ff" },
+        { role: "Blue",       variable: "--av-col-blue-bg",       light: "#1a5fd4", dark: "#2173ff" },
+        { role: "Green",      variable: "--av-col-green-bg",      light: "#047857", dark: "#059669" },
+        { role: "Red",        variable: "--av-col-red-bg",        light: "#b91c1c", dark: "#dc2626" },
+        { role: "Orange",     variable: "--av-col-orange-bg",     light: "#9a3412", dark: "#c2410c" },
+        { role: "Purple",     variable: "--av-col-purple-bg",     light: "#6d28d9", dark: "#7c3aed" },
+        { role: "Lime Green", variable: "--av-col-limegreen-bg",  light: "#3f6212", dark: "#4d7c0f" },
+        { role: "Light Blue", variable: "--av-col-lightblue-bg",  light: "#0369a1", dark: "#0284c7" },
+        { role: "Pink",       variable: "--av-col-pink-bg",       light: "#9d174d", dark: "#be185d" },
+        { role: "Teal",       variable: "--av-col-teal-bg",       light: "#0f766e", dark: "#0d9488" },
+        { role: "Amber",      variable: "--av-col-amber-bg",      light: "#92400e", dark: "#d97706" },
       ],
     },
     {
-      name: "Selected ring", description: "2px ring shown when selected=true",
-      cssPrefix: "--foreground",
+      name: "Text / Ring colors — shared across all colors", description: "Initials text and the two ring states are the same regardless of avatarStyle/color",
+      cssPrefix: "—",
       tokens: [
-        { role: "Ring color", variable: "--foreground",        light: "#1a1a1a",   dark: "#f0f4ff" },
-        { role: "Ring width", variable: "—",                   light: "2px",       dark: "2px" },
-        { role: "Ring gap",   variable: "—",                   light: "2px",       dark: "2px" },
+        { role: "Initials text (all colors)",    variable: "--color-text-negative", light: "#ffffff", dark: "#ffffff" },
+        { role: "Empty style background",        variable: "--tag-neutral-bg",      light: "#f2f2f2", dark: "rgba(255,255,255,0.08)" },
+        { role: "Ring — default (not selected)", variable: "--topbar-avatar-ring",  light: "rgba(128,175,255,1)", dark: "rgba(43,127,255,0.30)" },
+        { role: "Ring — selected",               variable: "--color-text-negative", light: "#ffffff", dark: "#ffffff" },
+      ],
+    },
+    {
+      name: "Selected ring — dimensions", description: "1px default ring, 1.5px + glow shadow when selected=true (boxShadow is a hardcoded literal, not a token)",
+      cssPrefix: "—",
+      tokens: [
+        { role: "Default ring width",  variable: "—", light: "1px",   dark: "1px" },
+        { role: "Selected ring width", variable: "—", light: "1.5px", dark: "1.5px" },
       ],
     },
   ],
@@ -2142,7 +2515,7 @@ const CORNER_RADIUS_SPEC = {
     { token: "--radius-l",    tailwind: "rounded-lg",   px: "16px",   usage: "Panels, modals" },
     { token: "--radius-xl",   tailwind: "rounded-xl",   px: "24px",   usage: "Large cards, drawers" },
     { token: "--radius-xxl",  tailwind: "rounded-2xl",  px: "32px",   usage: "Hero sections" },
-    { token: "--radius-full", tailwind: "rounded-full", px: "9999px", usage: "Avatars, pills, toggles" },
+    { token: "--radius-full", tailwind: "rounded-full", px: "100px", usage: "Avatars, pills, toggles" },
   ],
   typography: [],
   variants: [
@@ -2157,10 +2530,34 @@ const CORNER_RADIUS_SPEC = {
         { role: "L",     variable: "--radius-l",    light: "16px",   dark: "16px" },
         { role: "XL",    variable: "--radius-xl",   light: "24px",   dark: "24px" },
         { role: "XXL",   variable: "--radius-xxl",  light: "32px",   dark: "32px" },
-        { role: "Full",  variable: "--radius-full", light: "9999px", dark: "9999px" },
+        { role: "Full",  variable: "--radius-full", light: "100px", dark: "100px" },
       ],
     },
   ],
+}
+
+const SPACING_SPEC = {
+  name: "Spacing Scale",
+  figmaNodeId: "4492:12478",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4492-12478",
+  description: "4px base grid, 11 steps (0–64px). Unlike other foundation tokens, spacing has no --spacing-* CSS variable — apply it directly via Tailwind arbitrary-value classes (e.g. gap-[24px], p-[16px]) matching the step below.",
+  properties: [
+    { name: "step",  type: "Token", values: ["0x","1x","2x","3x","4x","5x","6x","8x","10x","12x","16x"], default: "4x", note: "Pick the step that matches the relationship being spaced, not an arbitrary pixel value" },
+  ],
+  sizes: [
+    { token: "spacing.0",  px: "0px",  usage: "Reset — remove spacing between elements" },
+    { token: "spacing.1",  px: "4px",  usage: "Micro — icon to text, tight inline spacing" },
+    { token: "spacing.2",  px: "8px",  usage: "Small — gaps inside buttons, inputs, chips" },
+    { token: "spacing.3",  px: "12px", usage: "Compact — grouping inside dense components" },
+    { token: "spacing.4",  px: "16px", usage: "Standard — card padding, container insets" },
+    { token: "spacing.5",  px: "20px", usage: "Medium — stacked elements, list item padding" },
+    { token: "spacing.6",  px: "24px", usage: "Section — gap between modules and nav layers" },
+    { token: "spacing.8",  px: "32px", usage: "Layout — horizontal page padding, modal insets" },
+    { token: "spacing.10", px: "40px", usage: "Loose — large layout separation, form groups" },
+    { token: "spacing.12", px: "48px", usage: "Page — section padding, panel top insets" },
+    { token: "spacing.16", px: "64px", usage: "Hero — full-page section spacing, scroll guard" },
+  ],
+  typography: [],
 }
 
 const ICONS_SPEC = {
@@ -2203,7 +2600,7 @@ const ELEVATION_SPEC = {
   name: "Elevation",
   figmaNodeId: "—",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS",
-  description: "5-level shadow scale for communicating depth and layer hierarchy. Use only `var(--shadow-elevation-N)` — never hardcode rgba() in box-shadow. Dark mode shadows are proportionally stronger to compensate for the dark canvas.",
+  description: "5-level shadow scale for communicating depth and layer hierarchy. Use only `var(--shadow-elevation-N)` — never hardcode rgba() in box-shadow. Figma defines these as a single mode-agnostic scale — light and dark share the same values (2026-08 audit: this page previously showed fabricated, different light/dark numbers that didn't match the real tokens).",
   properties: [
     { name: "level",   type: "Variant", values: ["1","2","3","4","5"],             default: "2",  note: "Use the lowest level that separates the surface from its background" },
     { name: "mode",    type: "Variant", values: ["dark (default)","light"],        default: "dark" },
@@ -2222,11 +2619,11 @@ const ELEVATION_SPEC = {
       description: "Shadows are perceptually stronger on dark backgrounds to maintain visible depth separation",
       cssPrefix: "--shadow-elevation-*",
       tokens: [
-        { role: "Elevation-1 Micro",  variable: "--shadow-elevation-1", varId: "Elevation-1", light: "0 1px 4px rgba(0,0,0,0.06)",                                          dark: "0 1px 4px rgba(0,0,0,0.16)"                                          },
-        { role: "Elevation-2 Low",    variable: "--shadow-elevation-2", varId: "Elevation-2", light: "0 2px 8px rgba(0,0,0,0.10)",                                          dark: "0 2px 8px rgba(0,0,0,0.24)"                                          },
-        { role: "Elevation-3 Mid",    variable: "--shadow-elevation-3", varId: "Elevation-3", light: "0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)",            dark: "0 4px 24px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.16)"            },
-        { role: "Elevation-4 High",   variable: "--shadow-elevation-4", varId: "Elevation-4", light: "0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)",            dark: "0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.24)"            },
-        { role: "Elevation-5 Float",  variable: "--shadow-elevation-5", varId: "Elevation-5", light: "8px 8px 16px rgba(0,0,0,0.08)",                                       dark: "8px 8px 24px rgba(0,0,0,0.32)"                                       },
+        { role: "Elevation-1 Micro",  variable: "--shadow-elevation-1", varId: "Elevation-1", light: "2px 2px 8px 1px rgba(0,0,0,0.06)",  dark: "2px 2px 8px 1px rgba(0,0,0,0.06)"  },
+        { role: "Elevation-2 Low",    variable: "--shadow-elevation-2", varId: "Elevation-2", light: "4px 4px 12px 2px rgba(0,0,0,0.08)", dark: "4px 4px 12px 2px rgba(0,0,0,0.08)" },
+        { role: "Elevation-3 Mid",    variable: "--shadow-elevation-3", varId: "Elevation-3", light: "4px 4px 12px 2px rgba(0,0,0,0.12)", dark: "4px 4px 12px 2px rgba(0,0,0,0.12)" },
+        { role: "Elevation-4 High",   variable: "--shadow-elevation-4", varId: "Elevation-4", light: "8px 8px 16px 8px rgba(0,0,0,0.08)", dark: "8px 8px 16px 8px rgba(0,0,0,0.08)" },
+        { role: "Elevation-5 Float",  variable: "--shadow-elevation-5", varId: "Elevation-5", light: "8px 8px 16px 0px rgba(0,0,0,0.08)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08)" },
       ],
     },
     {
@@ -2329,18 +2726,18 @@ const TABS_SPEC = {
   ],
   states: [
     { name: "Active",   borderWidth: "indicator 2px", tokens: [
-      { role: "Label",     variable: "Border/Primary/Default",  varId: "", light: "#2173ff",              dark: "#2b7fff"               },
-      { role: "Indicator", variable: "Border/Primary/Default",  varId: "", light: "#2173ff",              dark: "#2b7fff"               },
+      { role: "Label",     variable: "--primary",  varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "Indicator", variable: "--primary",  varId: "", light: "#2173ff", dark: "#2b7fff" },
     ]},
     { name: "Default",  borderWidth: "—", tokens: [
-      { role: "Label",     variable: "Text/Body",               varId: "", light: "#5c5c5c",              dark: "rgba(255,255,255,0.60)" },
+      { role: "Label",     variable: "--color-text-subtitle", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
     ]},
     { name: "Hover",    borderWidth: "—", tokens: [
-      { role: "Background",variable: "Surface/Neutral/Subtle",  varId: "", light: "#fafafa",              dark: "rgba(255,255,255,0.06)" },
-      { role: "Label",     variable: "Text/Title",              varId: "", light: "#1a1a1a",              dark: "rgba(255,255,255,0.80)" },
+      { role: "Background",variable: "--tabs-hover-bg", varId: "", light: "#fafafa", dark: "rgba(255,255,255,0.06)" },
+      { role: "Label",     variable: "--foreground",    varId: "", light: "#1a1a1a", dark: "#ffffffcc" },
     ]},
     { name: "Disabled", borderWidth: "opacity 40%", tokens: [
-      { role: "Label ×0.4",variable: "Text/Body",               varId: "", light: "#5c5c5c",              dark: "rgba(255,255,255,0.60)" },
+      { role: "Label ×0.4 (reused)", variable: "--color-text-subtitle", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
     ]},
   ],
 }
@@ -2366,10 +2763,10 @@ const SCROLL_AREA_SPEC = {
       { role: "Thumb", variable: "transparent",              varId: "", light: "transparent",            dark: "transparent"           },
     ]},
     { name: "Thumb · Container hover",  borderWidth: "4px", tokens: [
-      { role: "Thumb", variable: "Surface/Neutral/Emphasis", varId: "", light: "#d9d9d9",               dark: "rgba(255,255,255,0.20)" },
+      { role: "Thumb", variable: "--field-scrollbar-thumb", varId: "", light: "#d9d9d9", dark: "rgba(255,255,255,0.20)" },
     ]},
     { name: "Thumb · Thumb hover",      borderWidth: "4px", tokens: [
-      { role: "Thumb", variable: "Surface/Neutral/Focus",   varId: "", light: "#bababa",               dark: "rgba(255,255,255,0.32)" },
+      { role: "Thumb", variable: "--scrollbar-thumb-hover", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.32)" },
     ]},
   ],
 }
@@ -2465,6 +2862,9 @@ const SWITCH_TAB_SPEC = {
     { name: "Inactive tab",description: "Non-selected tabs — transparent + Medium label",  cssPrefix: "st-inactive",  tokens: [
       { role: "Text",      variable: "--st-text",         varId: "Text/Info",                    light: "#1a1a1a",                           dark: "rgba(255,255,255,.80)"             },
     ]},
+    { name: "Focus",       description: "Keyboard focus ring on the active tab button (reused from Tabs/Buttons)", cssPrefix: "—", tokens: [
+      { role: "Focus ring", variable: "--primary", varId: "", light: "#2173ff", dark: "#2b7fff" },
+    ]},
   ],
 }
 
@@ -2490,15 +2890,15 @@ const TOOLTIP_SPEC = {
   typography: [],
   states: [
     { name: "Container", borderWidth: "0px", tokens: [
-      { role: "Background",    variable: "--color-surface-neutral-darker", varId: "Surface/Neutral/Darker", light: "#111827", dark: "#111827" },
-      { role: "Text color",    variable: "--color-text-negative",          varId: "Text/Negative",          light: "#ffffff",  dark: "#ffffff" },
-      { role: "Arrow fill",    variable: "--color-surface-neutral-darker", varId: "Surface/Neutral/Darker", light: "#111827", dark: "#111827" },
+      { role: "Background",    variable: "--tooltip-bg",   varId: "", light: "#111827", dark: "#111827", note: "alias for --color-surface-neutral-darker" },
+      { role: "Text color",    variable: "--tooltip-text", varId: "", light: "#ffffff", dark: "#ffffff", note: "alias for --color-text-negative" },
+      { role: "Arrow fill (reused)", variable: "--tooltip-bg", varId: "", light: "#111827", dark: "#111827" },
     ]},
     { name: "Typography", borderWidth: "—", tokens: [
-      { role: "Font size",     variable: "text-sm",                        varId: "—", light: "14px",   dark: "14px" },
-      { role: "Font weight",   variable: "font-medium",                    varId: "—", light: "500",    dark: "500" },
-      { role: "Line height",   variable: "leading-5",                      varId: "—", light: "20px",   dark: "20px" },
-      { role: "Text color",    variable: "--tooltip-text (Text/Negative)", varId: "—", light: "#ffffff", dark: "#ffffff" },
+      { role: "Font size",     variable: "text-sm",                  varId: "—", light: "14px",   dark: "14px" },
+      { role: "Font weight",   variable: "font-medium",              varId: "—", light: "500",    dark: "500" },
+      { role: "Line height",   variable: "leading-5",                varId: "—", light: "20px",   dark: "20px" },
+      { role: "Text color (reused)", variable: "--tooltip-text",     varId: "—", light: "#ffffff", dark: "#ffffff" },
     ]},
   ],
 }
@@ -2511,10 +2911,10 @@ const SIDE_PANEL_SPEC = {
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=14423-32215",
   description: "Inline layout panel for persistent contextual content alongside the main view. Not an overlay — it reduces main content width when open. Supports header, scrollable body slot, and optional footer CTAs.",
   sizes: [
-    { name: "Default (1/3)",      value: "450px" },
-    { name: "Expanded (1/3)",     value: "480px" },
-    { name: "Expanded (1/2)",     value: "704px" },
-    { name: "Min (small screen)", value: "300px" },
+    { name: "S (default)",  value: "350px" },
+    { name: "M",             value: "450px" },
+    { name: "Half-screen",   value: "50vw (dynamic — always half the live window width)" },
+    { name: "Collapsed",     value: "48px (shown when closed, unless showCollapsedStrip={false})" },
   ],
   typography: [
     { element: "Title",               family: "Inter", size: "18px", weight: "600", lineHeight: "100%" },
@@ -2522,34 +2922,40 @@ const SIDE_PANEL_SPEC = {
     { element: "Search placeholder",  family: "Inter", size: "14px", weight: "500", lineHeight: "20px" },
   ],
   properties: [
-    { name: "open",              type: "boolean",             default: "false",      note: "Controls visibility. Width animates from 450px to 0 on close." },
+    { name: "open",              type: "boolean",             default: "false",      note: "Controls visibility. Width animates from defaultWidth to the collapsed strip (48px) on close." },
     { name: "side",              type: '"left" | "right"',    default: '"right"',    note: "Which edge the panel attaches to." },
     { name: "title",             type: "string",              default: "—",          note: "Panel heading. 18px SemiBold, letter-spacing 0.25px." },
     { name: "description",       type: "string",              default: "—",          note: "Subtitle below title. 14px Medium." },
     { name: "showSearch",        type: "boolean",             default: "false",      note: "Renders a search input below the title row." },
     { name: "showMenu",          type: "boolean",             default: "false",      note: "Renders a menu icon button beside the close button." },
     { name: "footer",            type: "ReactNode",           default: "—",          note: "Sticky footer. Typically primary + secondary action buttons." },
-    { name: "width",             type: "number",              default: "450",        note: "Panel open width in px. Use 300 on small screens." },
+    { name: "defaultWidth",      type: "number",              default: "350",        note: "Starting width in px. Use 350 (S) on small screens or multi-panel layouts." },
+    { name: "widthPresets",      type: "number[]",            default: "[350, 450]", note: "Drag-to-resize snap points (S, M) — a dynamic half-screen snap is always added as the third point." },
+    { name: "onWidthChange",     type: "(width: number) => void", default: "—",      note: "Called when width snaps to a new preset via drag." },
+    { name: "showCollapsedStrip",type: "boolean",             default: "true",       note: "Show a 48px strip with nav icons when closed. Set false to fully collapse to 0." },
     { name: "searchPlaceholder", type: "string",              default: '"Search…"',  note: "Search input placeholder text." },
     { name: "onClose",           type: "() => void",          default: "—",          note: "Called on close/collapse button click." },
     { name: "children",          type: "ReactNode",           default: "—",          note: "Dynamic content slot. Scrollable. Supports any content." },
   ],
   variants: [
     { name: "Panel surface", description: "Frosted-glass BG and border",                      cssPrefix: "side-panel-surface", tokens: [
-      { role: "Background", variable: "--side-panel-bg",              varId: "Surface/Floating/Default",  light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)"    },
-      { role: "Border",     variable: "--side-panel-border",          varId: "Border/Neutral/Subtle",     light: "#E4E4E7",               dark: "rgba(255,255,255,0.10)" },
+      { role: "Background", variable: "--side-panel-bg",              varId: "", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)"    },
+      { role: "Border",     variable: "--side-panel-border",          varId: "", light: "#E4E4E7",               dark: "rgba(255,255,255,0.10)" },
     ]},
-    { name: "Text",          description: "Title and body copy inside the panel",             cssPrefix: "side-panel-text",    tokens: [
-      { role: "Title",       variable: "--side-panel-title",          varId: "Text/Label",                light: "#2a2a2a",               dark: "rgba(255,255,255,0.80)" },
-      { role: "Description", variable: "--side-panel-description",    varId: "Text/Body",                 light: "#5C5C5C",               dark: "#94A3B8"               },
+    { name: "Text",          description: "Title and body copy inside the panel. Uses the same generic tokens as other surfaces, not dedicated side-panel-* text vars.", cssPrefix: "—", tokens: [
+      { role: "Title",       variable: "--foreground",       varId: "", light: "#1a1a1a", dark: "#ffffffcc" },
+      { role: "Description", variable: "--field-supporting", varId: "", light: "#5C5C5C", dark: "rgba(255,255,255,0.60)" },
     ]},
-    { name: "Icons",         description: "Action icons and close button",                    cssPrefix: "side-panel-icons",   tokens: [
-      { role: "Icon fill",     variable: "--side-panel-icon",          varId: "Icon/Neutral/Default",      light: "#52525B",               dark: "#D1D5DB"               },
-      { role: "Icon hover BG", variable: "--side-panel-icon-hover-bg", varId: "Surface/Neutral/Default",   light: "rgba(0,0,0,0.05)",      dark: "rgba(255,255,255,0.08)"},
+    { name: "Collapsed strip", description: "Vertical divider line + stacked dots shown when the panel is collapsed to its 48px strip.", cssPrefix: "—", tokens: [
+      { role: "Divider / dots", variable: "--primary", varId: "", light: "#2173ff", dark: "#2b7fff" },
     ]},
-    { name: "Search field",  description: "Optional search input below the header",           cssPrefix: "side-panel-search",  tokens: [
-      { role: "Background", variable: "--side-panel-search-bg",        varId: "Surface/Neutral/White",     light: "#FFFFFF",               dark: "rgba(255,255,255,0.10)"},
-      { role: "Border",     variable: "--side-panel-search-bd",        varId: "Border/Neutral/Default",    light: "#5c5c5c",               dark: "rgba(255,255,255,0.10)"},
+    { name: "Stale / unused tokens", description: "Defined in index.css but not referenced anywhere in side-panel.tsx — the menu/collapse icon buttons delegate to the Button atom (variant=tertiary, see Button spec) and the search input delegates entirely to the Input atom (see Text field spec). Kept here as a documented gap, not deleted from CSS, in case a future redesign wires them up.", cssPrefix: "side-panel-*", tokens: [
+      { role: "Title (unused)",        variable: "--side-panel-title",          varId: "", light: "#2a2a2a",          dark: "rgba(255,255,255,0.80)" },
+      { role: "Description (unused)",  variable: "--side-panel-description",    varId: "", light: "#5C5C5C",          dark: "#94A3B8"               },
+      { role: "Icon fill (unused)",    variable: "--side-panel-icon",           varId: "", light: "#52525B",          dark: "#D1D5DB"               },
+      { role: "Icon hover BG (unused)",variable: "--side-panel-icon-hover-bg",  varId: "", light: "rgba(0,0,0,0.05)", dark: "rgba(255,255,255,0.08)"},
+      { role: "Search BG (unused)",    variable: "--side-panel-search-bg",      varId: "", light: "#FFFFFF",          dark: "rgba(255,255,255,0.10)"},
+      { role: "Search border (unused)",variable: "--side-panel-search-bd",      varId: "", light: "#5c5c5c",          dark: "rgba(255,255,255,0.10)"},
     ]},
   ],
 }
@@ -2593,34 +2999,41 @@ const SLIDE_OUT_SPEC = {
   variants: [
     {
       name: "Surface tokens",
-      description: "Panel frosted glass surface, icon highlight, status tag, and chip backgrounds.",
-      cssPrefix: "--surface",
+      description: "Panel frosted glass surface, icon highlight, and status tag backgrounds — tokens actually read directly by slide-out.tsx.",
+      cssPrefix: "--slide-out-*",
       tokens: [
-        { role: "Panel BG (Floating/Default)",     variable: "--slide-out-bg",                    varId: "Surface/Floating/Default",       light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)"          },
-        { role: "Icon highlight (Purple)",         variable: "--color-surface-purple-more-subtle", varId: "Surface/Purple/More Subtle",      light: "#f3e9fd",                dark: "rgba(139,92,246,0.12)"        },
-        { role: "Status tag BG (Success)",         variable: "--color-surface-success-more-subtle",varId: "Surface/Success/More Subtle",     light: "#e5fdf8",                dark: "rgba(110,231,183,0.10)"       },
-        { role: "Active chip BG / Primary",        variable: "--primary",                         varId: "Surface/Primary/Default",         light: "#2173ff",                dark: "#2b7fff"                      },
-        { role: "Inactive chip / search BG",       variable: "--color-surface-neutral-white",     varId: "Surface/Neutral/White",           light: "#ffffff",                dark: "#ffffff"                      },
-        { role: "Secondary CTA bg",                variable: "--slide-out-btn-secondary-bg",      varId: "—",                               light: "#ffffff",                dark: "rgba(255,255,255,0.08)"       },
+        { role: "Panel BG",     variable: "--slide-out-bg",     varId: "", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
+        { role: "Panel shadow", variable: "--slide-out-shadow", varId: "", light: "-24px -24px 60px 0px rgba(0,0,0,0.08)", dark: "-24px -24px 60px 0px rgba(0,0,0,0.08)" },
+        { role: "Icon highlight (Purple)", variable: "--color-surface-purple-more-subtle",  varId: "", light: "#f3e9fd", dark: "rgba(139,92,246,0.12)" },
+        { role: "Status tag BG (Success)", variable: "--color-surface-success-more-subtle", varId: "", light: "#e5fdf8", dark: "rgba(110,231,183,0.10)" },
+        { role: "Resize handle / active tab (reused)", variable: "--primary", varId: "", light: "#2173ff", dark: "#2b7fff" },
       ],
     },
     {
       name: "Text & border tokens",
-      description: "Title, body, label, link, success, disabled, and border tokens.",
-      cssPrefix: "--color",
+      description: "Title, body, success, and border tokens actually read directly by slide-out.tsx.",
+      cssPrefix: "--slide-out-* / --color-*",
       tokens: [
-        { role: "Title",                           variable: "--color-text-title",                varId: "Text/Title",                      light: "#000000",                dark: "rgba(255,255,255,0.80)"       },
-        { role: "Body / subtitle",                 variable: "--slide-out-body",                  varId: "Text/Body",                       light: "#5c5c5c",                dark: "#94A3B8"                      },
-        { role: "Tab/chip label (inactive)",       variable: "--color-text-subtitle",             varId: "Text/Subtitle",                   light: "#2a2a2a",                dark: "rgba(255,255,255,0.60)"       },
-        { role: "Active tab / link",               variable: "--primary",                         varId: "Text/Link",                       light: "#2173ff",                dark: "#2b7fff"                      },
-        { role: "Status tag text",                 variable: "--color-text-success",              varId: "Text/Success",                    light: "#003328",                dark: "#6ee7b7"                      },
-        { role: "Search placeholder",              variable: "--color-text-disabled",             varId: "Text/Disabled",                   light: "#bababa",                dark: "rgba(255,255,255,0.30)"       },
-        { role: "Primary btn text",                variable: "--color-text-negative",             varId: "Text/Negative",                   light: "#ffffff",                dark: "#ffffff"                      },
-        { role: "Secondary CTA text",              variable: "--slide-out-btn-secondary-text",   varId: "—",                               light: "#2a2a2a",                dark: "rgba(255,255,255,0.80)"       },
-        { role: "Dashed slot border",              variable: "--color-border-primary-lighter",   varId: "Border/Primary/Lighter",           light: "#80afff",                dark: "#80afff"                      },
-        { role: "Status tag border",               variable: "--color-border-success-lighter",   varId: "Border/Success/Lighter",           light: "#009978",                dark: "#009978"                      },
-        { role: "Search/chip border",              variable: "--color-border-neutral-default",   varId: "Border/Neutral/Default",           light: "#5c5c5c",                dark: "rgba(255,255,255,0.10)"       },
-        { role: "Backdrop / overlay",              variable: "--slide-out-overlay",               varId: "Overlay/Scrim/Default",            light: "rgba(0,0,0,0.30)",       dark: "rgba(0,0,0,0.30)"            },
+        { role: "Title",       variable: "--color-text-title", varId: "", light: "#000000", dark: "rgba(255,255,255,0.80)" },
+        { role: "Body / subtitle", variable: "--slide-out-body", varId: "", light: "#5c5c5c", dark: "#94A3B8" },
+        { role: "Status tag text",   variable: "--color-text-success", varId: "", light: "#003328", dark: "#6ee7b7" },
+        { role: "Dashed slot border", variable: "--color-border-primary-lighter", varId: "", light: "#80afff", dark: "#80afff" },
+        { role: "Status tag border", variable: "--color-border-success-lighter", varId: "", light: "#009978", dark: "#009978" },
+        { role: "Backdrop / overlay", variable: "--slide-out-overlay", varId: "", light: "rgba(0,0,0,0.30)", dark: "rgba(0,0,0,0.30)" },
+      ],
+    },
+    {
+      name: "Delegated to nested atoms (not read directly)",
+      description: "slide-out.tsx composes the real Tabs, Input, Button, and Chip atoms for its tab row, search bar, and CTA buttons instead of styling them inline — so these Figma-catalog tokens are never actually referenced in slide-out.tsx itself. The real colors come from each atom's own spec (Tabs, Input, Button, Chip).",
+      cssPrefix: "—",
+      tokens: [
+        { role: "Inactive chip / search BG (→ Input/Chip spec)", variable: "--color-surface-neutral-white",  varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "Secondary CTA bg (→ Button spec)",              variable: "--slide-out-btn-secondary-bg",   varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.08)" },
+        { role: "Tab/chip label inactive (→ Tabs/Chip spec)",    variable: "--color-text-subtitle",          varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+        { role: "Search placeholder (→ Input spec)",             variable: "--color-text-disabled",          varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+        { role: "Primary btn text (→ Button spec)",              variable: "--color-text-negative",          varId: "", light: "#ffffff", dark: "#ffffff" },
+        { role: "Secondary CTA text (→ Button spec)",            variable: "--slide-out-btn-secondary-text", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.80)" },
+        { role: "Search/chip border (→ Input/Chip spec)",        variable: "--color-border-neutral-default", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
       ],
     },
   ],
@@ -2671,6 +3084,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "typography")       return TYPOGRAPHY_SPEC       as AnySpec
   if (id === "breakpoints")      return BREAKPOINTS_SPEC      as AnySpec
   if (id === "corner-radius")    return CORNER_RADIUS_SPEC    as AnySpec
+  if (id === "spacing")          return SPACING_SPEC          as AnySpec
   if (id === "icons")            return ICONS_SPEC            as AnySpec
   if (id === "elevation")        return ELEVATION_SPEC        as AnySpec
   if (id === "card-container")   return CARD_SPEC             as AnySpec
@@ -3839,13 +4253,14 @@ function HomePage() {
                   {/* Solution */}
                   <DocSection title="The solution: the repository as a knowledge base">
                     <Prose>
-                      The repository converts "descriptions that get reinterpreted" into "pieces that get reused." It is built on three layers, where each one only uses the one below:
+                      The repository converts "descriptions that get reinterpreted" into "pieces that get reused." It is built on four layers, where each one only uses the one below:
                     </Prose>
                     <div className="rounded-md border border-[var(--field-border)] overflow-hidden">
                       {[
                         { layer: "Tokens", color: "#2173ff", desc: "The meaningful values of the Design System — a color, a spacing, a radius. The single source of truth for every visual decision." },
                         { layer: "Components", color: "#00a07e", desc: "Buttons, inputs, cards, etc., built in code using those tokens. The reusable pieces the AI picks from." },
-                        { layer: "Views", color: "#9333ea", desc: "Screens assembled by combining those components. What PMs generate — no rebuilding from scratch." },
+                        { layer: "Patterns", color: "#f59e0b", desc: "Documented compositions of components that recur across screens — List View Layout, Overlay Decision, Navigation Depth. Encode the rules for how components combine, not just what they look like." },
+                        { layer: "Views", color: "#9333ea", desc: "Screens assembled by combining those patterns and components. What PMs generate — no rebuilding from scratch." },
                       ].map((item, i) => (
                         <div key={i} className={`flex items-start gap-[14px] px-[16px] py-[14px] border-b border-[var(--field-border)] last:border-b-0 ${i % 2 === 1 ? "bg-[var(--field-bg)]" : ""}`}>
                           <div className="shrink-0 w-[8px] h-[8px] rounded-full mt-[6px]" style={{ background: item.color }} />
@@ -5025,7 +5440,7 @@ function InputPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 // ── Text Description page ──────────────────────────────────────────────────
 
 function TextareaPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
-  const [tab,          setTab]          = useState<"playground" | "reference">("playground")
+  const [tab,          setTab]          = useState<"overview" | "playground" | "reference">("overview")
   const [taState,      setTaState]      = useState<InpState>("default")
   const [showLabel,    setShowLabel]    = useState(false)
   const [showSupport,  setShowSupport]  = useState(true)
@@ -5049,6 +5464,7 @@ function TextareaPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
       <TabBar
         tabs={[
+          { id: "overview",   label: "Overview"   },
           { id: "playground", label: "Playground" },
           { id: "reference",  label: "Reference"  },
         ]}
@@ -5057,6 +5473,65 @@ function TextareaPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
       />
 
       <div className="flex flex-col gap-[40px] pt-[32px]">
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[24px]">
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Growth modes</h2>
+              <p className="text-[13px] text-[var(--field-supporting)]">
+                Two mutually exclusive modes control how the field handles overflow — enabling one turns the other off.
+              </p>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div className="rounded-[8px] border border-[var(--field-border)] p-[16px]">
+                  <p className="text-[12px] font-semibold text-[var(--foreground)] mb-[4px]">Expand Content</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">The field auto-grows with content — no fixed height, no scroll. Use for prompts, notes, and freeform writing where seeing the full text matters.</p>
+                </div>
+                <div className="rounded-[8px] border border-[var(--field-border)] p-[16px]">
+                  <p className="text-[12px] font-semibold text-[var(--foreground)] mb-[4px]">ScrollBar</p>
+                  <p className="text-[12px] text-[var(--field-supporting)]">Fixed height; overflow scrolls internally. Use inside forms and cards with a constrained layout, where growing the field would push other content around.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Use Textarea for any free text longer than one sentence — descriptions, notes, prompts.",
+                    "Enable showCount + maxLength whenever there's a real length limit downstream (API, DB column, model context).",
+                    "Use ScrollBar in constrained layouts (cards, side panels) and Expand Content in open, freeform layouts.",
+                    "Reuse the same 5 validation states as Input so error/success feedback stays consistent across the form.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Don't use Textarea for single-line values like names or emails — use Input instead.",
+                    "Don't enable both Expand Content and Scrollable at once — they're mutually exclusive growth strategies.",
+                    "Don't set showCount without a real maxLength — an uncapped counter provides no useful feedback.",
+                    "Don't use Expand Content inside a fixed-height card — the growing field will overflow the container.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {tab === "playground" && (
           <div className="flex flex-col gap-[20px]">
             <div className="rounded-md border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
@@ -5372,6 +5847,7 @@ type TypeStyleDef = {
   tailwind:      string
   isLink?:       boolean
   note?:         string
+  doNotUse?:     boolean
 }
 
 // Verified live against Figma's "DESIGN TOKENS — NEW TYPE SYSTEM" table (node 4471:6680,
@@ -5404,8 +5880,8 @@ const TYPOGRAPHY_STYLES: TypeStyleDef[] = [
   { dsName:"Caption NEW/M/Bold",     category:"Caption", size:"14px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-sm font-semibold"                          },
   { dsName:"Caption NEW/S/Bold",     category:"Caption", size:"12px", lineHeight:"auto", weight:"Semi Bold (600)", letterSpacing:"0.04em", tailwind:"text-xs font-semibold tracking-[0.04em]"  },
   { dsName:"Caption NEW/S/Regular",  category:"Caption", size:"12px", lineHeight:"auto", weight:"Medium (500)",    letterSpacing:"0.04em", tailwind:"text-xs font-medium tracking-[0.04em]"   },
-  { dsName:"Caption NEW/XS/Bold",    category:"Caption", size:"10px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-[10px] font-semibold", note:"Below Figma's own 12px accessibility minimum — exists as a token but flagged do-not-use in the Foundations page" },
-  { dsName:"Caption NEW/XS/Regular", category:"Caption", size:"10px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-[10px] font-medium", note:"Below Figma's own 12px accessibility minimum — exists as a token but flagged do-not-use in the Foundations page" },
+  { dsName:"Caption NEW/XS/Bold",    category:"Caption", size:"10px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-[10px] font-semibold", note:"Below Figma's own 12px accessibility minimum for general body text — reserve for specific dense contexts (e.g. future mobile compact views), not general use" },
+  { dsName:"Caption NEW/XS/Regular", category:"Caption", size:"10px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-[10px] font-medium", note:"Below Figma's own 12px accessibility minimum for general body text — reserve for specific dense contexts (e.g. future mobile compact views), not general use" },
   // Link
   { dsName:"Link NEW/L/Regular", category:"Link", size:"16px", lineHeight:"auto", weight:"Medium (500)",    tailwind:"text-base font-medium underline",    isLink:true },
   { dsName:"Link NEW/L/Bold",    category:"Link", size:"16px", lineHeight:"auto", weight:"Semi Bold (600)", tailwind:"text-base font-semibold underline",  isLink:true },
@@ -5453,83 +5929,83 @@ const SEMANTIC_GROUPS: SemanticGroup[] = [
   { label:"Text", tokens:[
     {name:"Text/Title",              light:"#000000",   dark:"#ffffffcc"},
     {name:"Text/Subtitle",           light:"#2a2a2a",   dark:"#ffffff99"},
-    {name:"Text/Body",               light:"#5c5c5c",   dark:"#ffffff99"},
+    {name:"Text/Body", light:"#5c5c5c", dark:"#94a3b8"},
     {name:"Text/Caption",            light:"#5c5c5c",   dark:"#ffffff80"},
-    {name:"Text/Label",              light:"#2a2a2a",   dark:"#ffffff99"},
+    {name:"Text/Label", light:"#2a2a2a", dark:"#ffffffcc"},
     {name:"Text/Negative",           light:"#ffffff",   dark:"#ffffff"},
     {name:"Text/Disabled",           light:"#bababa",   dark:"#ffffff4d"},
     {name:"Text/Link",               light:"#2173ff",   dark:"#2b7fff"},
-    {name:"Text/Info",               light:"#001740",   dark:"#ffffffcc"},
+    {name:"Text/Info", light:"#001740", dark:"#a8c8ff"},
     {name:"Text/Error",              light:"#5f2120",   dark:"#ff6467"},
     {name:"Text/Alert",              light:"#663c00",   dark:"#fcd34d"},
     {name:"Text/Success",            light:"#003328",   dark:"#6ee7b7"},
     {name:"Text/Yellow",             light:"#5c3500",   dark:"#fcd34d"},
-    {name:"Text/LimeGreen",          light:"#3e5c0a",   dark:"#bdee49"},
+    {name:"Text/LimeGreen", light:"#3e5c0a", dark:"#bef264"},
     {name:"Text/Purple",             light:"#2c075c",   dark:"#d8b4fe"},
-    {name:"Text/Light Blue",         light:"#02445a",   dark:"#7dd3fc"},
+    {name:"Text/Light Blue", light:"#02445a", dark:"#67e8f9"},
   ]},
   { label:"Surface — Neutral", tokens:[
-    {name:"Surface/Neutral/White",   light:"#ffffff",   dark:"#ffffff1a"},
+    {name:"Surface/Neutral/White", light:"#ffffff", dark:"#ffffff"},
     {name:"Surface/Neutral/Subtle",  light:"#fafafa",   dark:"#ffffff0d"},
-    {name:"Surface/Neutral/Default", light:"#f2f2f2",   dark:"#ffffff14"},
-    {name:"Surface/Neutral/Emphasis",light:"#d9d9d9",   dark:"#ffffff33"},
+    {name:"Surface/Neutral/Default", light:"#f2f2f2", dark:"#ffffff0f"},
+    {name:"Surface/Neutral/Emphasis", light:"#d9d9d9", dark:"#ffffff1f"},
     {name:"Surface/Neutral/Focus",   light:"#bababa",   dark:"#ffffff26"},
-    {name:"Surface/Neutral/Darker",  light:"#2a2a2a",   dark:"#ffffff33"},
+    {name:"Surface/Neutral/Darker", light:"#111827", dark:"#111827"},
     {name:"Surface/Neutral/Black",   light:"#000000",   dark:"#0f172b"},
     {name:"Surface/Neutral/Inverse", light:"#ffffff",   dark:"#ffffff"},
-    {name:"Surface/Floating/Default",light:"#ffffffeb", dark:"#141b2ad9"},
+    {name:"Surface/Floating/Default", light:"#ffffffeb", dark:"#101628eb"},
     {name:"Surface/Modal/Default",   light:"#ffffff",   dark:"#0c0e22d1"},
   ]},
   { label:"Surface — Primary", tokens:[
     {name:"Surface/Primary/More Subtle",light:"#f6f9ff",  dark:"#2b7fff14"},
-    {name:"Surface/Primary/Subtle",     light:"#e9f1ff",  dark:"#155dfc26"},
-    {name:"Surface/Primary/Lighter",    light:"#80afff",  dark:"#1d2f4f"},
-    {name:"Surface/Primary/Default",    light:"#2173ff",  dark:"#155dfc"},
+    {name:"Surface/Primary/Subtle", light:"#e9f1ff", dark:"#2173ff26"},
+    {name:"Surface/Primary/Lighter", light:"#80afff", dark:"#2b7fff66"},
+    {name:"Surface/Primary/Default", light:"#2173ff", dark:"#2b7fff"},
     {name:"Surface/Primary/Emphasis",   light:"#002f80",  dark:"#2b7fff"},
-    {name:"Surface/Primary/Darker",     light:"#001740",  dark:"#1032a0"},
+    {name:"Surface/Primary/Darker", light:"#001740", dark:"#002f80"},
   ]},
   { label:"Surface — Semantic", tokens:[
     {name:"Surface/Error/More Subtle",  light:"#fdeded",  dark:"#2d1515"},
     {name:"Surface/Error/Default",      light:"#992222",  dark:"#e05252"},
     {name:"Surface/Alert/More Subtle",  light:"#fff4e5",  dark:"#281e00"},
-    {name:"Surface/Alert/Default",      light:"#ed6c02",  dark:"#fcd34d"},
+    {name:"Surface/Alert/Default", light:"#ed6c02", dark:"#8f4201"},
     {name:"Surface/Success/More Subtle",light:"#e5fdf8",  dark:"#0a1f1a"},
-    {name:"Surface/Success/Default",    light:"#00a07e",  dark:"#34d399"},
-    {name:"Surface/Yellow/More Subtle", light:"#fffaf0",  dark:"#281e00"},
-    {name:"Surface/Yellow/Default",     light:"#ff9900",  dark:"#f59e0b"},
+    {name:"Surface/Success/Default", light:"#00a07e", dark:"#00765f"},
+    {name:"Surface/Yellow/More Subtle", light:"#fffaf0", dark:"#ca8a0414"},
+    {name:"Surface/Yellow/Default", light:"#f59e0b", dark:"#f59e0b"},
     {name:"Surface/Lime Green/More Subtle",light:"#f9fee5",dark:"#111a04"},
     {name:"Surface/Lime Green/Default", light:"#a0da1d",  dark:"#bdee4933"},
-    {name:"Surface/Purple/More Subtle", light:"#f3e9fd",  dark:"#120520"},
-    {name:"Surface/Purple/Default",     light:"#7b27ed",  dark:"#ad46ff33"},
+    {name:"Surface/Purple/More Subtle", light:"#f3e9fd", dark:"#8b5cf61f"},
+    {name:"Surface/Purple/Default", light:"#7b27ed", dark:"#7b27ed"},
     {name:"Surface/Light Blue/More Subtle",light:"#e5f8ff",dark:"#071828"},
-    {name:"Surface/Light Blue/Default", light:"#00b5d9",  dark:"#51a2ff33"},
+    {name:"Surface/Light Blue/Default", light:"#00b5d9", dark:"#00b5d9"},
   ]},
   { label:"Border — Neutral", tokens:[
     {name:"Border/Neutral/Lighter",    light:"#bababa",   dark:"#ffffff26"},
-    {name:"Border/Neutral/Subtle",     light:"#f2f2f2",   dark:"#ffffff1a"},
+    {name:"Border/Neutral/Subtle", light:"#e4e4e7", dark:"#ffffff1a"},
     {name:"Border/Neutral/Default",    light:"#5c5c5c",   dark:"#ffffff1a"},
     {name:"Border/Neutral/Darker",     light:"#2a2a2a",   dark:"#ffffff33"},
     {name:"Border/Neutral/Black",      light:"#000000",   dark:"#ffffff4d"},
   ]},
   { label:"Border — Semantic", tokens:[
     {name:"Border/Primary/Default",    light:"#2173ff",   dark:"#2b7fff"},
-    {name:"Border/Primary/Subtle",     light:null,        dark:"#1d2f4f"},
-    {name:"Border/Error/Default",      light:"#992222",   dark:"#e05252"},
+    {name:"Border/Primary/Subtle", light:"#e9f1ff", dark:"#2b7fff33"},
+    {name:"Border/Error/Default", light:"#992222", dark:"#992222"},
     {name:"Border/Error/Lighter",      light:"#d32f2f",   dark:"#fb2c36"},
-    {name:"Border/Alert/Default",      light:"#ed6c02",   dark:"#fbbf24"},
-    {name:"Border/Success/Default",    light:"#00a07e",   dark:"#00c9504d"},
+    {name:"Border/Alert/Default", light:"#ed6c02", dark:"#ed6c02"},
+    {name:"Border/Success/Default", light:"#00a07e", dark:"#00a07e"},
     {name:"Border/Success/Lighter",    light:"#009978",   dark:"#34d399"},
-    {name:"Border/Yellow/Default",     light:"#ed6c02",   dark:"#fbbf24"},
-    {name:"Border/LimeGreen/Default",  light:"#a0da1d",   dark:"#84cc16"},
-    {name:"Border/Purple/Default",     light:"#7b27ed",   dark:"#a855f7"},
-    {name:"Border/Light Blue/Default", light:"#00b5d9",   dark:"#38bdf8"},
+    {name:"Border/Yellow/Default", light:"#ed6c02", dark:"#ed6c02"},
+    {name:"Border/LimeGreen/Default", light:"#a0da1d", dark:"#a0da1d"},
+    {name:"Border/Purple/Default", light:"#7b27ed", dark:"#7b27ed"},
+    {name:"Border/Light Blue/Default", light:"#00b5d9", dark:"#00b5d9"},
   ]},
   { label:"Icon", tokens:[
-    {name:"Icon/Neutral/Light",        light:"#ffffff",   dark:"#ffffffb2"},
+    {name:"Icon/Neutral/Light", light:"#ffffff", dark:"#ffffff"},
     {name:"Icon/Neutral/Dark",         light:"#5c5c5c",   dark:"#ffffff80"},
-    {name:"Icon/Neutral/Black",        light:"#2a2a2a",   dark:"#ffffffb2"},
+    {name:"Icon/Neutral/Black", light:"#2a2a2a", dark:"#2a2a2a"},
     {name:"Icon/Neutral/Disable-Dark", light:"#bababa",   dark:"#ffffff40"},
-    {name:"Icon/Primary/Default",      light:"#2173ff",   dark:"#2b7fff"},
+    {name:"Icon/Primary/Default", light:"#001740", dark:"#2b7fff"},
     {name:"Icon/Primary/Lighter",      light:"#80afff",   dark:"#80afffe5"},
     {name:"Icon/Error/Default",        light:"#992222",   dark:"#ff6467"},
     {name:"Icon/Alert/Default",        light:"#ed6c02",   dark:"#fcd34d"},
@@ -5541,14 +6017,14 @@ const SEMANTIC_GROUPS: SemanticGroup[] = [
   ]},
   { label:"Badge", tokens:[
     {name:"Badge/Error",      light:"#d32f2f",  dark:"#ff6467"},
-    {name:"Badge/Alert",      light:"#ed6c02",  dark:"#fcd34d"},
+    {name:"Badge/Alert", light:"#ed6c02", dark:"#fdc700"},
     {name:"Badge/In Progress",light:"#2173ff",  dark:"#2b7fff"},
-    {name:"Badge/Success",    light:"#00765f",  dark:"#6ee7b7"},
+    {name:"Badge/Success", light:"#00765f", dark:"#05df72"},
     {name:"Badge/Neutral",    light:"#bababa",  dark:"#ffffff80"},
-    {name:"Badge/Light Blue", light:"#00b5d9",  dark:"#7dd3fc"},
+    {name:"Badge/Light Blue", light:"#00b5d9", dark:"#51a2ff"},
     {name:"Badge/Lime Green", light:"#a0da1d",  dark:"#bdee49"},
-    {name:"Badge/Yellow",     light:"#ff9900",  dark:"#fcd34d"},
-    {name:"Badge/Purple",     light:"#7b27ed",  dark:"#d8b4fe"},
+    {name:"Badge/Yellow", light:"#ff9900", dark:"#fdc700"},
+    {name:"Badge/Purple", light:"#7b27ed", dark:"#ad46ff"},
   ]},
 ]
 
@@ -6940,7 +7416,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             </Row>
 
-            <Row label="8 · Avatar leading slot — initials circle (24×24 M · 16×16 S)">
+            <Row label="9 · Avatar leading slot — initials circle (24×24 M · 16×16 S)">
               <div className="flex gap-[24px] flex-wrap">
                 <div className="flex flex-col gap-[4px] items-start">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)] mb-[4px]">Size M</p>
@@ -7026,7 +7502,7 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </Menu>
             </Row>
 
-            <Row label="11 · All states side by side — Size M">
+            <Row label="12 · All states side by side — Size M">
               {(["default", "focus", "disabled"] as const).map(s => (
                 <div key={s} className="flex flex-col gap-[4px] items-start">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)] mb-[4px]">{s}</p>
@@ -7383,7 +7859,7 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 const DEMO_NAMES = ["Sarah Chen", "Marco Rivera", "Aisha Johnson", "Chris Park", "Luna Kim", "Rafael Torres"]
 
 function AvatarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
-  const [tab, setTab] = useState<"overview" | "playground" | "reference" | "specs">("overview")
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [pgSize, setPgSize] = useState<AvatarSizeKey>("md")
   const [pgAvatarStyle, setPgAvatarStyle] = useState<"text" | "empty">("text")
   const [pgColor, setPgColor] = useState<AvatarColorKey | "auto">("auto")
@@ -7410,7 +7886,6 @@ function AvatarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           { id: "overview",   label: "Overview"   },
           { id: "playground", label: "Playground" },
           { id: "reference",  label: "Reference"  },
-          { id: "specs",      label: "Specs"      },
         ]}
         active={tab}
         onChange={id => setTab(id as typeof tab)}
@@ -7602,6 +8077,47 @@ function AvatarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </div>
               </div>
             </div>
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Use Text style as the default; switch to Photo only when a real user image is available, and Empty only when none exists.",
+                    "Let color auto-assign from the name hash so the same person always renders the same color across the app.",
+                    "Enable `selected` only in interactive pickers — user picker, team selector, contact list.",
+                    "Use the Stacked group pattern for collaborator lists in table cells, with a +N overflow past 4 visible avatars.",
+                    "Match size to density: XS/S in table cells, M/L in cards and pickers, XXL in profile headers.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Don't enable `selected` in read-only contexts — table cells, topbar, entity headers are display-only.",
+                    "Don't override the Text style's white label color — it's tuned to pass contrast against all 7 color variants in both modes.",
+                    "Don't stack more than 4 avatars visibly — collapse the rest into the +N overflow counter instead.",
+                    "Don't mix Photo and Empty style inconsistently for the same entity type on one screen.",
+                    "Don't use Avatar for non-person entities like workspaces or teams — use HighlightIcon for abstract entities instead.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -7716,12 +8232,6 @@ function AvatarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </div>
               </div>
             </Row>
-          </div>
-        )}
-
-        {/* ── Specs ──────────────────────────────────────────────────── */}
-        {tab === "specs" && (
-          <div className="flex flex-col gap-[32px]">
 
             {/* Size table */}
             <section className="flex flex-col gap-[12px]">
@@ -7908,7 +8418,7 @@ const PG_ICONS: { label: string; key: string }[] = [
 ]
 
 function EmptyStatePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
-  const [tab, setTab] = useState<"overview" | "playground" | "usage" | "reference">("overview")
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
 
   // Playground state
   const [pgShowIcon,    setPgShowIcon]    = useState(true)
@@ -7941,7 +8451,6 @@ function EmptyStatePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         tabs={[
           { id: "overview",   label: "Overview"   },
           { id: "playground", label: "Playground" },
-          { id: "usage",      label: "Usage"      },
           { id: "reference",  label: "Reference"  },
         ]}
         active={tab}
@@ -8178,12 +8687,6 @@ function EmptyStatePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             </div>
 
-          </div>
-        )}
-
-        {/* ── Usage ─────────────────────────────────────────────────────── */}
-        {tab === "usage" && (
-          <div className="flex flex-col gap-[24px]">
             <div
               className="rounded-[10px] p-[20px] flex flex-col gap-[16px]"
               style={{ border: "1px solid var(--field-border)", background: "var(--field-bg)" }}
@@ -8235,6 +8738,7 @@ function EmptyStatePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <p key={t} className="text-[13px] text-[var(--field-supporting)]">• {t}</p>
               ))}
             </div>
+
           </div>
         )}
 
@@ -8402,6 +8906,45 @@ function SelectPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Use Select for a closed, non-editable set of options — model pickers, status pickers, single-value config fields.",
+                    "Pair it with Menu/Dropdown for the options panel — Select is only the trigger field, never the list itself.",
+                    "Set state=\"error\" and pass supportingText to explain what's required, matching the Input component's pattern.",
+                    "Let the right icon stay dynamic (Chevron/X) — it communicates open/has-value state without extra copy.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Don't use Select for free-text entry — use Input instead; Select is non-editable by design.",
+                    "Don't use Select when more than one option can be chosen at once — use Checkbox or TagInput.",
+                    "Don't override the right-icon logic manually — it's derived from open/value/state, not a configurable prop.",
+                    "Don't use Select for binary on/off choices — use Toggle instead.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -8648,6 +9191,45 @@ function CheckboxPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <Checkbox label="Send weekly digest" description="Receive a summary of activity every Monday morning" />
                 <Checkbox label="Allow data sharing" description="Share anonymized usage data to help improve the product" checked />
                 <Checkbox label="This option is unavailable" description="Contact your admin to enable this feature" disabled />
+              </div>
+            </div>
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Use Checkbox for independent binary choices, including multi-select lists where more than one item can be checked at once.",
+                    "Pass `description` whenever the label alone doesn't fully explain the consequence of checking it.",
+                    "Use size S (24px) in dense table rows and lists; size M (32px) in forms and settings panels.",
+                    "Rely on the built-in ripple zone for hover/focus feedback — don't wrap it in extra interactive containers.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Don't use Checkbox for mutually exclusive choices where only one option can be selected — that's a radio pattern, not this component.",
+                    "Don't use Checkbox for a single on/off setting toggled immediately — use Toggle instead.",
+                    "Don't set `disabled` without a description explaining why — disabled controls with no context confuse users.",
+                    "Don't rely on the label click target alone in dense layouts — the whole row should still be clickable via the ripple zone.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -9949,7 +10531,7 @@ function PatternListViewPage() {
                 { type: "do",   text: "Always include AppBackground — it ensures gradient consistency across light/dark modes." },
                 { type: "dont", text: "Don't open entity details in a Slide-out or navigate to a new page — use Side Panel to keep list context." },
                 { type: "do",   text: "Keep Filters as the single source of truth for the dataset. Pagination always follows applied filters." },
-                { type: "dont", text: "Don't add a 3rd navigation layer beyond Tabs + SwitchTab — use the Navigation Depth edge-case pattern instead." },
+                { type: "dont", text: "Don't invent an ad-hoc nav layer beyond Tabs → SwitchTab → Filters → Chips — use the Navigation Depth pattern's defined structure instead." },
                 { type: "do",   text: "Reset pagination to page 1 whenever filters, sort, or rows-per-page change." },
                 { type: "dont", text: "Don't place Modals as the primary way to show entity details — they block the main workflow." },
               ].map((item, i) => (
@@ -9979,20 +10561,45 @@ function PatternListViewPage() {
           </PatternCard>
 
           <PatternCard>
+            <SectionLabel>Build It With Real Components</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
+              Don't hand-assemble this stack in every screen. Two shared components in <code className="text-[11px] font-mono bg-[var(--code-bg)] px-[4px] py-[1px] rounded-[3px]">src/components/layouts/</code> already implement it — compose them instead:
+            </p>
+            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.7] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`<ScreenLayout                        // Topbar + Sidebar + Header zone + scroll + floating Pagination
+  workspaceName="Acme Corp" userName="Juan" userEmail="juan@acme.com"
+  sidebarItems={MY_ITEMS} activeSidebarId="ai-workers"
+  header={(isScrolled) => (
+    <Header size={isScrolled ? "compress" : "size-l"} title="AI Workers" ... />
+  )}
+  pagination={filtered.length > pageSize ? <Pagination ... /> : undefined}
+>
+  <ListViewSection                    // Filters (+ optional nav chips) + EntityList, one CardContainer per row
+    items={pagedItems}
+    filterSlots={[{ placeholder: "Status", value: status, onOpen: ..., onRemove: ... }]}
+    filterOptions={{ Status: ["Active", "Draft"] }}
+    onFilterSelect={(slot, value) => ...}
+  />
+</ScreenLayout>`}</pre>
+            <p className="text-[11px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>
+              The full preview below inlines the same Topbar/Sidebar/Header/Filters/EntityList/Pagination pieces directly — it's a self-contained demo, not a from-scratch example to copy. In real screens, use <code className="text-[11px] font-mono bg-[var(--code-bg)] px-[4px] py-[1px] rounded-[3px]">ScreenLayout</code> + <code className="text-[11px] font-mono bg-[var(--code-bg)] px-[4px] py-[1px] rounded-[3px]">ListViewSection</code> above.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
             <SectionLabel>Component Hierarchy — Required Order</SectionLabel>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
               Every list view in AIMS OS follows this exact stacking order. No exceptions.
             </p>
             <div className="flex flex-col">
               {([
-                { n: 1, comp: "Topbar",       badge: "Required",               desc: "Global navigation. Workspace switcher, search, user profile. Always at the very top." },
-                { n: 2, comp: "Sidebar",      badge: "Required",               desc: "Left navigation rail. Collapsed by default (80 px). Active section highlighted." },
-                { n: 3, comp: "Page Header",  badge: "Required",               desc: "Page title + description + primary CTA. First element inside the content area." },
-                { n: 4, comp: "Tabs",         badge: "Conditional",            desc: "Top-level context switch (All / Active / Archived). Only when the page has distinct content groups." },
+                { n: 1, comp: "Topbar",       badge: "Required",               desc: "Global navigation. Workspace switcher, search, user profile. Always at the very top. Owned by ScreenLayout." },
+                { n: 2, comp: "Sidebar",      badge: "Required",               desc: "Left navigation rail. Collapsed by default (80 px). Active section highlighted. Owned by ScreenLayout." },
+                { n: 3, comp: "Page Header",  badge: "Required",               desc: "Page title + description + primary CTA. First element inside the content area. Passed to ScreenLayout's header render prop." },
+                { n: 4, comp: "Tabs",         badge: "Conditional",            desc: "Top-level context switch (All / Active / Archived). Only when the page has distinct content groups. Rendered as a ScreenLayout child, above ListViewSection." },
                 { n: 5, comp: "SwitchTab",    badge: "Rare",                   desc: "View mode switcher (List / Grid / Kanban). Only when the same data needs multiple representations." },
-                { n: 6, comp: "Filters",      badge: "Required if filterable", desc: "Search + filter slots + All Filters button. Single source of truth for the dataset." },
-                { n: 7, comp: "EntityList",   badge: "Required",               desc: "Data rows. Each entity in its own CardContainer size='sm'. Never group multiple entities in a shared card." },
-                { n: 8, comp: "Pagination",   badge: "Conditional",            desc: "Bottom strip. Only visible when total > rows-per-page. Resets to page 1 on any filter change." },
+                { n: 6, comp: "Filters",      badge: "Required if filterable", desc: "Search + filter slots + All Filters button. Single source of truth for the dataset. Owned by ListViewSection." },
+                { n: 7, comp: "EntityList",   badge: "Required",               desc: "Data rows. Each entity in its own CardContainer size='sm'. Never group multiple entities in a shared card. Owned by ListViewSection." },
+                { n: 8, comp: "Pagination",   badge: "Conditional",            desc: "Bottom strip. Only visible when total > rows-per-page. Resets to page 1 on any filter change. Passed to ScreenLayout's pagination prop." },
               ] as { n: number; comp: string; badge: string; desc: string }[]).map((item, i, arr) => (
                 <div key={item.n} className="flex">
                   <div className="flex flex-col items-center" style={{ width: 28 }}>
@@ -10364,12 +10971,19 @@ COMPONENT_STACK (mandatory order)
   2. Topbar          — fixed top
   3. Sidebar         — fixed left
   4. Content Area:
-     a. Tabs (optional)
-     b. Header: title + description + CTA
+     a. Header: title + description + CTA
+     b. Tabs (optional)
      c. Filters: Visible Filters + All Filters button
      d. Entity List
      e. Side Panel (conditional — entity selected)
      f. Pagination
+
+REAL_COMPONENTS (src/components/layouts/)
+  ScreenLayout    → owns AppBackground + Topbar + Sidebar + the header render-prop
+                    zone + scroll container + floating Pagination
+  ListViewSection → owns Filters + optional nav chips + EntityList, nested as
+                    ScreenLayout's children
+  Compose these two — do not hand-assemble steps 1–4 from scratch per screen.
 
 BACKGROUND_RULES
   ALWAYS use AppBackground for color consistency
@@ -11066,6 +11680,25 @@ function PatternOverlayPage() {
               </div>
             </div>
           </PatternCard>
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Escalate to a confirmation Modal when the user tries to close a Slide-out that has unsaved changes." },
+                { type: "dont", text: "Don't open a Slide-out on top of an active Modal — Modal always wins the stacking order, never the reverse." },
+                { type: "do",   text: "Let a Modal open on top of an active Slide-out when a blocking decision interrupts the flow mid-task." },
+                { type: "dont", text: "Don't let a Slide-out close silently when it holds unsaved changes — always confirm first via Modal." },
+                { type: "do",   text: "Keep exactly one Modal and one Slide-out open at a time — never stack two of the same overlay type." },
+                { type: "dont", text: "Don't use Modal for progressive or exploratory content the user can safely ignore — that's what Slide-out is for." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
         </div>
       )}
 
@@ -11274,7 +11907,7 @@ function PatternHeaderPage() {
               {[
                 { state: "DEFAULT", trigger: "scroll_position == 0", height: "auto", visible: "Title + Description + Filters + Nav + CTA" },
                 { state: "COMPRESSED", trigger: "scroll_position > 16px", height: "60px", visible: "Title + Status + CTA only" },
-                { state: "COMPRESSED_WITH_FILTERS", trigger: "Hover 0–24px from top AND idle ≥ 3s", height: "130px", visible: "Title + Status + CTA + Filters" },
+                { state: "COMPRESSED_WITH_FILTERS", trigger: "Hover 0–24px from top AND idle ≥ 800ms", height: "130px", visible: "Title + Status + CTA + Filters" },
               ].map(item => (
                 <div key={item.state} className="grid grid-cols-4 gap-[8px] p-[12px] rounded-[6px] items-start" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
                   <code className="text-[11px] font-mono font-bold" style={{ color: "var(--primary)" }}>{item.state}</code>
@@ -11290,7 +11923,7 @@ function PatternHeaderPage() {
             <div className="grid grid-cols-2 gap-[12px]">
               {[
                 { type: "do",   text: "Apply the Header Sticky pattern to all list views with scrollable content." },
-                { type: "dont", text: "Don't show filters in COMPRESSED state — only via the 3s hover trigger." },
+                { type: "dont", text: "Don't show filters in COMPRESSED state — only via the 800ms hover trigger." },
                 { type: "do",   text: "Maintain the gradient background in both states for visual continuity." },
                 { type: "dont", text: "If the Filters Slideout is open, lock the header — disable compression interaction." },
               ].map((item, i) => (
@@ -11628,7 +12261,7 @@ function PatternHeaderPage() {
               <div className="flex flex-col gap-[8px]">
                 <div className="flex items-center gap-[6px]">
                   <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-label)" }}>+ FILTERS</span>
-                  <span style={{ fontSize: 9, color: "var(--field-supporting)" }}>hover 3s</span>
+                  <span style={{ fontSize: 9, color: "var(--field-supporting)" }}>hover 800ms</span>
                 </div>
                 <div className="rounded-[8px] overflow-hidden flex flex-col" style={{ border: "0.5px solid var(--field-border)" }}>
                   <div style={{ background: "var(--surface)", borderBottom: "0.5px solid var(--field-border)" }}>
@@ -11662,7 +12295,7 @@ function PatternHeaderPage() {
                     ))}
                   </div>
                 </div>
-                <div style={{ fontSize: 10, color: "var(--field-supporting)", lineHeight: 1.4 }}>130px. Filters revealed on cursor hover within 24px of top for ≥ 3s. Triggered by proximity, not scroll.</div>
+                <div style={{ fontSize: 10, color: "var(--field-supporting)", lineHeight: 1.4 }}>130px. Filters revealed on cursor hover within 24px of top for ≥ 800ms. Triggered by proximity, not scroll.</div>
               </div>
             </div>
           </PatternCard>
@@ -11700,7 +12333,7 @@ HEIGHTS
 
 FILTER_VISIBILITY (compressed mode only)
   IF cursor_position <= 24px from top
-     AND cursor_idle_time >= 3s
+     AND cursor_idle_time >= 800ms
   → filters = visible → state = COMPRESSED_WITH_FILTERS
   IF cursor leaves hover area → filters = hidden → back to COMPRESSED
 
@@ -11786,7 +12419,7 @@ function PatternNavDepthPage() {
         <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern · Edge Case</span>
         <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Navigation Depth</h1>
         <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
-          When a page needs multiple navigation layers. Maximum 2 nav layers: Tabs + SwitchTab. Additional complexity goes into Filters.
+          When a page needs multiple navigation layers. Up to 4 layers deep: Tabs → SwitchTab → Filters → Chips, each answering a different question about what's visible.
         </p>
       </div>
 
@@ -11801,6 +12434,7 @@ function PatternNavDepthPage() {
                 { layer: "Tabs", question: "Where am I?", purpose: "Primary context switch. Separates distinct sections of the page.", component: "Tabs" },
                 { layer: "SwitchTab", question: "How am I viewing this?", purpose: "Mutually exclusive sub-views within the current Tab section.", component: "SwitchTab" },
                 { layer: "Filters", question: "What subset am I seeing?", purpose: "Refines the visible dataset without changing page structure.", component: "Filters" },
+                { layer: "Chips", question: "Which quick filter is active?", purpose: "High-frequency quick-filter shortcuts or active-filter display, nested deepest — 24px below Filters.", component: "Chip" },
               ].map(item => (
                 <div key={item.layer} className="flex gap-[12px] items-start p-[14px] rounded-[6px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
                   <div className="w-[28px] h-[28px] rounded-[6px] flex items-center justify-center shrink-0 text-[11px] font-bold" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{item.layer[0]}</div>
@@ -11838,9 +12472,9 @@ function PatternNavDepthPage() {
         <div className="flex flex-col gap-[24px]">
 
           <PatternCard>
-            <SectionLabel>Full Preview — All 3 Navigation Layers</SectionLabel>
+            <SectionLabel>Full Preview — All 4 Navigation Layers</SectionLabel>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
-              Open a full-viewport view showing all 3 layers in context: Tabs (Layer 1) · SwitchTab under Overview (Layer 2) · real Filters (Layer 3). Switch tabs and views to see how layers interact.
+              Open a full-viewport view showing all 4 layers in context: Tabs (Layer 1) · SwitchTab under Overview (Layer 2) · real Filters (Layer 3) · Chips (Layer 4). Switch tabs and views to see how layers interact.
             </p>
             <Button onClick={() => setNavPreviewOpen(true)}>
               <LucideIcons.Expand size={14} />
@@ -11938,14 +12572,11 @@ function PatternNavDepthPage() {
                   </div>
                   )}
 
-                  {/* Layer 2 — SwitchTab (only on All Workers tab, hidden when compressed) */}
-                  {stTab === "all" && !ndScrolled && (
-                    <div className="shrink-0 flex items-center gap-[12px]" style={{ padding: "24px 32px 0" }}>
-                      <SwitchTab items={subItems} value={swTab} onChange={setSwTab} size="s" />
-                    </div>
-                  )}
-
-                  {/* Layer 3 — Filters animate in/out */}
+                  {/* Layer 2 + 3 — SwitchTab left of Filters (12px gap), deep-nav edge case: with
+                      4 layers active (Tabs+SwitchTab+Filters+Chips) stacking SwitchTab in its own
+                      row above Filters burns too much vertical space — placing it to the left instead
+                      keeps the whole nav stack shorter. SwitchTab still hides entirely when compressed;
+                      only Filters (+ Chips) come back via the hover-reveal. */}
                   <div style={{
                     maxHeight: (!ndScrolled || ndHFiltersVisible || ndOpenSlot !== null) ? 64 : 0,
                     opacity:   (!ndScrolled || ndHFiltersVisible || ndOpenSlot !== null) ? 1 : 0,
@@ -11953,16 +12584,19 @@ function PatternNavDepthPage() {
                     transition: "max-height 220ms ease-in-out, opacity 180ms ease-in-out",
                     borderBottom: ndHFiltersVisible ? "0.5px solid var(--field-border)" : "none",
                   }}>
-                  <div
-                    className="shrink-0"
-                    style={{ padding: "24px 32px 0" }}
-                    onClickCapture={(e: React.MouseEvent) => {
-                      const btn = (e.target as HTMLElement).closest('button')
-                      const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                      const left = btn ? btn.getBoundingClientRect().left : e.clientX
-                      setNdDropdownAnchor({ left, top: containerRect.bottom })
-                    }}
-                  >
+                  <div className="shrink-0 flex items-center" style={{ padding: "24px 32px 0", gap: 12 }}>
+                    {stTab === "all" && !ndScrolled && (
+                      <SwitchTab items={subItems} value={swTab} onChange={setSwTab} size="s" />
+                    )}
+                    <div
+                      className="flex-1"
+                      onClickCapture={(e: React.MouseEvent) => {
+                        const btn = (e.target as HTMLElement).closest('button')
+                        const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                        const left = btn ? btn.getBoundingClientRect().left : e.clientX
+                        setNdDropdownAnchor({ left, top: containerRect.bottom })
+                      }}
+                    >
                     <Filters
                       showSearch
                       searchPlaceholder={stTab === "all" ? "Search workers..." : "Search teams..."}
@@ -11983,6 +12617,7 @@ function PatternNavDepthPage() {
                       showAllFilters
                       showViewToggle
                     />
+                  </div>
                   </div>
                   </div>
                   </div>
@@ -12166,12 +12801,19 @@ BEHAVIOR_GUIDELINES
   Tabs        → define the main context of the page
   Switch Tabs → define mutually exclusive sub-views within that context
   Filters     → refine the visible dataset (do not change structure)
+  Chips       → active-filter display or high-frequency quick actions, nested deepest
 
 RESTRICTIONS
-  max navigation layers = 2 (Tabs + SwitchTab)
-  additional complexity → handled through Filters
-  Chips: only for active filter display or high-frequency quick actions
+  max navigation layers = 4 (Tabs + SwitchTab + Filters + Chips)
   DO NOT add navigation patterns beyond this structure
+
+DEEP_NAV_LAYOUT (edge case — all 4 layers active)
+  IF SwitchTab AND Filters are both visible in the same view
+  → place SwitchTab to the LEFT of Filters, 12px gap, same row
+  → do NOT stack SwitchTab in its own row above Filters
+  reason: 4 stacked rows (Tabs/SwitchTab/Filters/Chips) burns too much
+          vertical space — combining SwitchTab+Filters into one row
+          keeps the whole nav stack shorter
 
 WHEN_TO_AVOID
   IF dataset understandable without segmentation → use Filters only
@@ -12183,6 +12825,7 @@ KEY_PRINCIPLE
   Tabs      → Where am I?
   SwitchTab → How am I viewing this?
   Filters   → What subset am I seeing?
+  Chips     → Which quick filter is active?
   Each layer answers a DIFFERENT question`} />
           </PatternCard>
         </div>
@@ -12810,7 +13453,7 @@ function PatternLogsPage() {
         </span>
         <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Logs Table</h1>
         <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
-          The canonical pattern for displaying system logs, events, and audit trails. Applies the List View shell to tabular data: DS Table with Level and Status tags, Filters, Pagination, and a SlideOut for log detail.
+          The canonical pattern for displaying system logs, events, and audit trails. Applies the List View shell to tabular data: DS Table with Status tags, Filters, Pagination, and a SlideOut for run detail.
         </p>
       </div>
 
@@ -12825,7 +13468,7 @@ function PatternLogsPage() {
             <div className="grid grid-cols-2 gap-[12px] mt-[4px]">
               {([
                 { ok: true,  label: "Structured event logs",             desc: "Any stream of timestamped events with type, source, and outcome — API calls, worker runs, integration syncs, auth events." },
-                { ok: true,  label: "Filterable by multiple dimensions", desc: "When users need to cross-filter by level, source (worker), status, and time range simultaneously." },
+                { ok: true,  label: "Filterable by multiple dimensions", desc: "When users need to cross-filter by status, search text, and (via All Filters) other advanced criteria simultaneously." },
                 { ok: true,  label: "High-volume, scannable data",       desc: "50–10,000+ records per day. Users skim quickly then drill into a specific row for details." },
                 { ok: true,  label: "Compact, uniform row structure",    desc: "Each event has the same 5–6 fields. Variable-length content goes in the SlideOut, not the table." },
               ] as { ok: boolean; label: string; desc: string }[]).map(item => (
@@ -12852,9 +13495,9 @@ function PatternLogsPage() {
                 ["Row density",   "5–6 compact fields per row",               "Complex cards with avatars, actions, descriptions"],
                 ["Content type",  "Events, logs, audit trails",               "Entities: workers, users, workflows, teams"],
                 ["Primary action","Eye → SlideOut for detail",                "Multiple actions: edit, activate, preview, delete"],
-                ["Sorting",       "Sort by timestamp / level / status",       "No sort needed — order by creation or priority"],
+                ["Sorting",       "Sort by started time / status",            "No sort needed — order by creation or priority"],
                 ["Volume",        "50–10,000+ rows with pagination",          "10–100 items, rarely need pagination"],
-                ["Filter axes",   "Level + Status + Worker + Date",           "Category + Status + Type"],
+                ["Filter axes",   "Search + Status + Modified (All Filters → FiltersSlideout)", "Category + Status + Type"],
               ].map(([sig, tbl, ent], i) => (
                 <div key={i} className="grid grid-cols-3" style={{ borderTop: "0.5px solid var(--table-border)" }}>
                   <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--field-supporting)", borderRight: "0.5px solid var(--table-border)", background: "var(--table-bg)" }}>{sig}</div>
@@ -12869,9 +13512,9 @@ function PatternLogsPage() {
             <SectionLabel>Do / Don't</SectionLabel>
             <div className="grid grid-cols-2 gap-[16px]">
               {[
-                { ok: true,  label: "Use Level Tag for visual triage",            desc: "Error → red, Warning → amber, Info → teal. Consistent color semantics let users spot problems before reading text." },
-                { ok: false, label: "Don't put stack traces in the table cell",    desc: "Stack traces belong in the SlideOut. Table cells should never overflow or wrap to multiple lines." },
-                { ok: true,  label: "Reset pagination on filter change",           desc: "Any change to Level, Status, Worker, or Date filter resets to page 1. Users expect to see filtered results from the start." },
+                { ok: true,  label: "Use Status Tag for visual triage",            desc: "Success → green, Failed/Auth error → red, Partial/Timeout → amber, Retrying → blue, Waiting → yellow. Consistent color semantics let users spot problems before reading text." },
+                { ok: false, label: "Don't put long-form detail in the table cell", desc: "Full step lists and AI summaries belong in the SlideOut. Table cells should never overflow or wrap to multiple lines." },
+                { ok: true,  label: "Reset pagination on filter change",           desc: "Any change to the Status filter or search query resets to page 1. Users expect to see filtered results from the start." },
                 { ok: false, label: "Don't show a table for 5 or fewer rows",      desc: "Use an entity list or simple markup instead. Tables add column overhead that isn't worth it at very low volume." },
                 { ok: true,  label: "Timestamp in monospace, readable format",     desc: "\"Jul 13, 14:32:01\" in a monospace font makes alignment and scanning fast. Avoid relative times (\"5 min ago\") — they shift on re-render." },
                 { ok: false, label: "Don't open a Modal for log detail",           desc: "Log detail is read-only context — use SlideOut. Modal requires acknowledgment and blocks the rest of the view unnecessarily." },
@@ -12899,7 +13542,7 @@ function PatternLogsPage() {
           <PatternCard>
             <SectionLabel>Full Preview — Real DS Components</SectionLabel>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px]">
-              Full-viewport preview using real Topbar, Sidebar, Header, Tabs, Filters, DS Table, Pagination, and SlideOut. Filter by Level or Status, click the eye icon to open log detail.
+              Full-viewport preview using real Topbar, Sidebar, Header, Tabs, Filters, DS Table, Pagination, and SlideOut. Filter by Status or search, click the eye icon to open run detail.
             </p>
             <Button onClick={() => setPreviewOpen(true)}>
               <LucideIcons.Expand size={14} />
@@ -12918,10 +13561,10 @@ function PatternLogsPage() {
                 { n: 2, comp: "Sidebar",    badge: "Required",    desc: "Left rail navigation. Logs is a secondary tab within the active workspace section." },
                 { n: 3, comp: "Header",     badge: "Required",    desc: "Title \"Logs\" + record count tag + Export CTA. Compresses to 60px on scroll > 16px." },
                 { n: 4, comp: "Tabs",       badge: "Required",    desc: "Overview / Workers / Teams / Logs. Logs is the active tab. This is the contextual location in the page hierarchy." },
-                { n: 5, comp: "Filters",    badge: "Required",    desc: "Date · Level · Worker · Status. All Filters → FiltersSlideout for advanced filtering." },
-                { n: 6, comp: "Table (DS)", badge: "Required",    desc: "6 columns: Timestamp, Level (Tag), Worker (Avatar+name), Action, Status (Tag), Eye action. Table — not EntityList — because content is uniform, compact, and high-volume." },
-                { n: 7, comp: "Pagination", badge: "Conditional", desc: "Shown only when total_results > rows_per_page (default 25). Resets to page 1 on any filter change." },
-                { n: 8, comp: "SlideOut",   badge: "Conditional", desc: "Opens on Eye click. Shows: header (level + status + timestamp), message (Textarea readOnly), stack trace (errors only), metadata key-value grid." },
+                { n: 5, comp: "Filters",    badge: "Required",    desc: "Search · Status. All Filters → FiltersSlideout for advanced filtering." },
+                { n: 6, comp: "Table (DS)", badge: "Required",    desc: "7 columns: Run (trigger icon + run ID + trigger name), Status (Tag), Started, Duration, Steps (progress + current step), AI Summary, Eye action. Table — not EntityList — because content is uniform, compact, and high-volume." },
+                { n: 7, comp: "Pagination", badge: "Conditional", desc: "Shown only when total_results > rows_per_page (default 5, up to 50). Resets to page 1 on any filter change." },
+                { n: 8, comp: "SlideOut",   badge: "Conditional", desc: "Opens on Eye click. Shows: status + duration + timestamp row, Steps (progress bar + current step), AI Summary (icon + text), Run details grid (Run ID, Trigger, Started, Duration)." },
               ] as { n: number; comp: string; badge: string; desc: string }[]).map((item, i, arr) => (
                 <div key={item.n} className="flex">
                   <div className="flex flex-col items-center" style={{ width: 28 }}>
@@ -13072,6 +13715,8 @@ function PatternLogsPage() {
                       emptyIcon={LucideIcons.FileWarning}
                       emptyTitle="No runs match your filters"
                       emptyDescription="Try removing some filters to see more results."
+                      emptyCtaLabel={(statusFilter || searchQuery) ? "Clear filters" : undefined}
+                      onEmptyCta={() => { setStatusFilter(null); setSearchQuery(""); setStatusDropOpen(false) }}
                     />
                   </div>
                   {/* DS Pagination — footer strip, renders only when totalPages > 1 */}
@@ -13183,50 +13828,49 @@ function PatternLogsPage() {
 
   SHELL: identical to List View (Topbar + Sidebar + Header + Tabs)
   MAIN_COMPONENT: Table (not EntityList)
-  REASON: uniform 5–6 col rows · high volume · no per-row actions beyond Eye
+  REASON: uniform 7-col rows · high volume · no per-row actions beyond Eye
 
   COLUMNS: [
-    timestamp  → monospace text "Mon DD, HH:MM:SS"
-    level      → Tag sm { error→"error" | warning→"alert" | info→"informative" }
-    worker     → TableCellAvatarLink (avatar + name)
-    action     → monospace text (HTTP method + endpoint, or system operation)
-    status     → Tag sm { Completed→"success" | Failed→"error" | Running→"informative" }
+    run        → trigger icon (clock/zap/play) + run ID (monospace) + trigger name
+    status     → Tag sm, mapped via RUN_STATUS_TAG { Success→"success" | Partial/Timeout→"alert" | Failed/Auth error→"error" | Retrying→"informative" | Waiting→"yellow" }
+    started    → plain text, e.g. "Mar 25 · 2:15 PM"
+    duration   → colored by status via DURATION_COLOR
+    steps      → step icon + "N of M steps" + current-step label below
+    aiSummary  → AI icon (check/warning/error/retry/clock) + summary text
     actions    → Eye icon button → SlideOut (sole action per row — no kebab)
   ]
 
   FILTERS: [
-    Date     → date range picker (placeholder for v1, wired in v2)
-    Level    → single-select { error | warning | info }
-    Worker   → single-select from active workers in workspace
-    Status   → single-select { Completed | Failed | Running }
-    AllFilters → FiltersSlideout (all 4 filters + advanced options)
+    Search     → free text, matches run ID, trigger name, or current step
+    Status     → single-select { Success | Partial | Failed | Auth error | Timeout | Retrying | Waiting }
+    Modified   → placeholder slot (not wired in this demo)
+    AllFilters → FiltersSlideout (advanced options)
   ]
 
-  FILTER_CHANGE: reset pagination to page 1
+  FILTER_CHANGE: reset pagination to page 1 (on Status or Search change)
 
   PAGINATION:
-    default_rows_per_page: 25
-    options: [10, 25, 50]
+    default_rows_per_page: 5
+    options: [5, 10, 25, 50]
     show_only_when: total_items > rows_per_page
     position: absolute bottom-0 left-0 right-0 (floats over table, content scrolls behind)
 
   EMPTY_STATE:
-    component: Table emptyTitle / emptyDescription / emptyIcon (renders via EmptyState internally)
-    title:     "No logs match your filters"
-    cta:       "Clear filters" → clears all active filters
+    component: Table emptyTitle / emptyDescription / emptyIcon / emptyCtaLabel / onEmptyCta (renders via EmptyState internally)
+    title:     "No runs match your filters"
+    cta:       "Clear filters" → shown only when a filter or search is active; clears Status + Search
 
-  LOG_DETAIL_SLIDEOUT:
+  RUN_DETAIL_SLIDEOUT:
     trigger: Eye icon on row
     size: "m"
     showTabs: false
     showIcon: false
     showStatus: false
     sections:
-      - header:      level Tag + status Tag + timestamp (monospace)
-      - worker:      TableCellAvatarLink
-      - message:     Textarea readOnly scrollable rows=4
-      - stackTrace:  Textarea readOnly state="error" rows=5 — ONLY for level="error"
-      - metadata:    grid of key-value pairs in var(--canvas) chips, 2 cols
+      - header:   status Tag + duration + started timestamp
+      - steps:    progress bar (stepsCompleted / stepsTotal) + current-step label
+      - aiSummary: icon + summary text, in a var(--canvas) block
+      - runInfo:  2-col grid — Run ID (monospace), Trigger, Started, Duration
 
   HEADER_STICKY:
     compressed: scrollTop > 16px → size="compress" (60px, hides description + tag)
@@ -13279,8 +13923,8 @@ function PatternWidgetCanvasPage() {
 
   const heightClasses = [
     { id: "compact",  label: "Class 1 — Compact",  gu: "4–5 GU",  px: "96–120px",  scroll: false, use: "KPI, summary, status. Content never drives height.", icon: <LucideIcons.Minimize2 size={14} /> },
-    { id: "standard", label: "Class 2 — Standard", gu: "7–9 GU",  px: "168–216px", scroll: false, use: "Lists, simple charts. Optional internal scroll.", icon: <LucideIcons.Square size={14} /> },
-    { id: "heavy",    label: "Class 3 — Heavy",    gu: "7–9 GU",  px: "168–216px", scroll: true,  use: "Tables, timelines, feeds. Always has internal scroll.", icon: <LucideIcons.AlignJustify size={14} /> },
+    { id: "standard", label: "Class 2 — Standard", gu: "6–9 GU",  px: "144–216px", scroll: false, use: "Lists, simple charts. Optional internal scroll.", icon: <LucideIcons.Square size={14} /> },
+    { id: "heavy",    label: "Class 3 — Heavy",    gu: "9+ GU",   px: "216px+",    scroll: true,  use: "Tables, timelines, feeds. Always has internal scroll.", icon: <LucideIcons.AlignJustify size={14} /> },
   ]
 
   const responsiveCols = [
@@ -13638,7 +14282,7 @@ function PatternWidgetCanvasPage() {
           <PatternCard>
             <SectionLabel>Width Snap Rules</SectionLabel>
             <p className="text-[13px] text-[var(--field-supporting)] mb-[12px]">Horizontal drag always resolves to the nearest valid column class. Intermediate widths are never persisted.</p>
-            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.8] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`// Valid widget column spans
+            <PatternRules code={`// Valid widget column spans
 const VALID_WIDTHS = {
   narrow: 4,   // 1/3 of 12 columns
   wide:   8,   // 2/3 of 12 columns
@@ -13651,27 +14295,27 @@ function snapToWidth(dragged: number): number {
   return breakpoints.reduce((prev, curr) =>
     Math.abs(curr - dragged) < Math.abs(prev - dragged) ? curr : prev
   )
-}`}</pre>
+}`} />
           </PatternCard>
 
           <PatternCard>
             <SectionLabel>Height Classes — Min / Max Grid Units</SectionLabel>
             <p className="text-[13px] text-[var(--field-supporting)] mb-[12px]">Height resize snaps to whole GUs. Each class has a min and max — exceeding the max forces the next height class.</p>
-            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.8] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`// Widget height classes (in Grid Units — 1 GU = 24px row)
+            <PatternRules code={`// Widget height classes (in Grid Units — 1 GU = 24px row)
 const HEIGHT_CLASSES = {
-  compact:  { minGU: 4, maxGU: 5,  scroll: false },
-  standard: { minGU: 7, maxGU: 9,  scroll: false }, // optional scroll
-  heavy:    { minGU: 7, maxGU: 9,  scroll: true  }, // always scrolls
+  compact:  { minGU: 4, maxGU: 5,    scroll: false },
+  standard: { minGU: 6, maxGU: 9,    scroll: false }, // optional scroll
+  heavy:    { minGU: 9, maxGU: null, scroll: true  }, // always scrolls — no max, content-heavy widgets grow past 9 GU
 }
 
 // Height class is declared per widget type — not user-selectable.
-// Users can resize within min/max of the assigned class only.`}</pre>
+// Users can resize within min/max of the assigned class only.`} />
           </PatternCard>
 
           <PatternCard>
             <SectionLabel>Responsive Column Reduction</SectionLabel>
             <p className="text-[13px] text-[var(--field-supporting)] mb-[12px]">The canvas reads the available width and switches the column count. Widgets adapt; they never overflow.</p>
-            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.8] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`// Canvas column breakpoints (based on UCP content area width)
+            <PatternRules code={`// Canvas column breakpoints (based on UCP content area width)
 const CANVAS_COLS = (canvasWidth: number): number => {
   if (canvasWidth >= 1000) return 3  // ~1299px canvas
   if (canvasWidth >= 750)  return 2  // ~796px canvas (chat at 50%)
@@ -13679,7 +14323,7 @@ const CANVAS_COLS = (canvasWidth: number): number => {
 }
 
 // React-grid-layout: update 'cols' prop on resize
-// Widgets reflow automatically — no manual layout recalculation needed`}</pre>
+// Widgets reflow automatically — no manual layout recalculation needed`} />
           </PatternCard>
 
           <PatternCard>
@@ -13705,7 +14349,7 @@ const CANVAS_COLS = (canvasWidth: number): number => {
             <p className="text-[13px] mb-[12px]" style={{ color: "var(--field-supporting)" }}>
               All widget list rows share the same hover anatomy — a subtle fill + animated metadata row + portaled tooltips on each metadata icon.
             </p>
-            <pre className="rounded-[8px] border p-[14px] text-[12px] font-mono leading-[1.8] overflow-x-auto" style={{ background: "var(--canvas)", color: "var(--foreground)", borderColor: "var(--table-border)" }}>{`// Row hover pattern — consistent across all list widgets
+            <PatternRules code={`// Row hover pattern — consistent across all list widgets
 const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 const [tooltip, setTooltip] = useState<{text:string; x:number; y:number} | null>(null)
 
@@ -13742,7 +14386,7 @@ function showTip(e: React.MouseEvent, text: string) {
       <Icon size={10} />
     </span>
   </div>
-</div>`}</pre>
+</div>`} />
             <div className="mt-[12px] flex flex-col gap-[6px]">
               {[
                 { rule: "Hover fill token",       detail: "Always --color-surface-neutral-subtle. Never hardcode rgba or use primary-blue fill for hover." },
@@ -13955,7 +14599,7 @@ function showTip(e: React.MouseEvent, text: string) {
                     <tbody>
                       {[
                         ["Class 1 — Compact", "KPI, status badge, counter", "1/3 (4 cols)", "4–5 GU", "96–120px", "No"],
-                        ["Class 2 — Standard", "List, simple chart, form", "1/3 (4 cols)", "7–9 GU", "168–216px", "Optional"],
+                        ["Class 2 — Standard", "List, simple chart, form", "1/3 (4 cols)", "6–9 GU", "144–216px", "Optional"],
                         ["Class 3 — Heavy", "Table, timeline, feed", "2/3 (8 cols)", "9+ GU", "216px+", "Yes"],
                       ].map(([cls, use, width, gu, px, scroll]) => (
                         <tr key={cls} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
@@ -14096,16 +14740,16 @@ function PatternGuardrailsPage() {
         {/* SlideOut Content Composition */}
         <PatternCard>
           <SectionLabel>SlideOut Content Composition</SectionLabel>
-          <div className="p-[14px] rounded-[6px]" style={{ background: "var(--color-status-warning-subtle)", border: "0.5px solid var(--color-status-warning-default)" }}>
-            <p className="text-[13px] font-semibold" style={{ color: "var(--color-status-warning-default)" }}>Composition guide pending</p>
+          <div className="p-[14px] rounded-[6px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--color-border-primary-default)" }}>
+            <p className="text-[13px] font-semibold" style={{ color: "var(--primary)" }}>See the dedicated composition guide</p>
             <p className="text-[12px] mt-[4px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
-              A dedicated page documenting what content to show inside a SlideOut depending on context (entity type, panel purpose, available data) is in progress. Patterns will be extracted from the Agentic Workflow Builder Nodes Configuration section.
+              What content to show inside a SlideOut, and in what order, is documented on the "SlideOut/SidePanel — Content" page (Content Types tab) — that page is the source of truth for content ordering, not this checklist.
             </p>
           </div>
           <div className="flex flex-col gap-[8px]">
             <GuardrailRuleItem type="never" rule="Use a custom overlay div instead of SlideOut" detail="Always use the SlideOut component from src/components/ui/ as the container. Never a custom fixed-position panel." />
-            <GuardrailRuleItem type="default" rule="Entity detail content order (interim)" detail="Entity name + status tag → primary action buttons → metadata fields → related items list. Use this order until the full composition guide ships." />
-            <GuardrailRuleItem type="always" rule="Flag edge cases with a DS-GAP comment" detail="// DS-GAP: SlideOut content pattern — pending composition guide" />
+            <GuardrailRuleItem type="default" rule="Entity detail content order" detail="AI Summary → List → Insights → Detail (tabs) — see the SlideOut/SidePanel Content page for the full per-zone rules." />
+            <GuardrailRuleItem type="always" rule="Flag edge cases with a DS-GAP comment" detail="// DS-GAP: <describe the specific gap> — not a general SlideOut-content-pattern gap anymore, that page now exists" />
           </div>
         </PatternCard>
 
@@ -16911,8 +17555,8 @@ function PatternPanelContentPage() {
             <div className="flex items-center gap-[8px] mb-[20px] flex-wrap">
               {[
                 { num: "1", label: "AI Summary",    sub: "Context & risk" },
-                { num: "2", label: "Insights",       sub: "KPI cards" },
-                { num: "3", label: "List",           sub: "Related records" },
+                { num: "2", label: "List",           sub: "Related records" },
+                { num: "3", label: "Insights",       sub: "KPI cards" },
                 { num: "4", label: "Detail (tabs)",  sub: "Tables / timelines" },
               ].map((zone, i) => (
                 <div key={zone.num} className="flex items-center gap-[8px]">
@@ -16936,8 +17580,8 @@ function PatternPanelContentPage() {
               <tbody>
                 {[
                   { zone: "AI Summary",      when: "Entity has AI-generated context",     skip: "Entity type has no AI model" },
-                  { zone: "Insights",        when: "Entity has quantitative KPIs",         skip: "No numeric data to surface" },
                   { zone: "List",            when: "Entity has related sub-records",       skip: "No relationships to show" },
+                  { zone: "Insights",        when: "Entity has quantitative KPIs",         skip: "No numeric data to surface" },
                   { zone: "Detail (tabs)",   when: "Deep data: tables, timelines, layers", skip: "Simple entities with no history" },
                 ].map(row => (
                   <tr key={row.zone} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
@@ -19980,9 +20624,8 @@ function PatternSlideOutPage() {
         ))}
       </div>
 
-      {/* ── Examples tab removed — see SlideOut/SidePanel Content page for full examples ── */}
-
-      {/* placeholder so JSX below stays valid */ false && (
+      {/* ── When to Use ──────────────────────────────────────────────────── */}
+      {tab === "when-to-use" && (
         <div className="flex flex-col gap-[24px]">
 
           {/* ── Component selection guide for PMs / agents ── */}
@@ -20886,8 +21529,14 @@ const HOME_BANNER_SPEC = {
         { role: "Banner glow shadow",   variable: "--card-primary-hover-shadow", varId: "", light: "0 8px 24px rgba(33,115,255,0.20)", dark: "8px 8px 16px 0 rgba(0,0,0,0.08), 0 0 4px 1px rgba(33,115,255,0.4), 0 0 14px 0 rgba(33,115,255,0.15)" },
         { role: "Inner card surface",   variable: "--card-purple-bg",        varId: "", light: "#f3e9fd",              dark: "#120520" },
         { role: "Inner card border",    variable: "--card-purple-hover-bd",  varId: "", light: "#7b27ed",              dark: "#a855f7" },
+        { role: "Inner card glow shadow", variable: "--card-purple-hover-shadow", varId: "", light: "0 8px 24px rgba(123,39,237,0.16), 0 2px 6px rgba(0,0,0,0.05)", dark: "8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(173,69,255,0.4), 0 0 14px 0px rgba(173,69,255,0.15)" },
         { role: "Primary text",         variable: "--foreground",            varId: "", light: "#1a1a2e",              dark: "#f0f4ff" },
         { role: "Secondary text",       variable: "--field-supporting",      varId: "", light: "#6b7280",              dark: "#8899aa" },
+        { role: "Pagination dot (active)",   variable: "--primary",     varId: "", light: "#2173ff", dark: "#2b7fff" },
+        { role: "Pagination dot (inactive)", variable: "--field-border", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+        { role: "Urgency dot — Due Now",  variable: "--color-surface-error-default", varId: "", light: "#992222", dark: "#e05252" },
+        { role: "Urgency dot — Critical", variable: "--color-surface-alert-default", varId: "", light: "#ed6c02", dark: "#8f4201" },
+        { role: "Urgency dot — Action (reused)", variable: "--primary", varId: "", light: "#2173ff", dark: "#2b7fff" },
       ],
     },
     {
@@ -24066,7 +24715,7 @@ function WidgetsGallery({ onSelectWidget, onShowCanvas }: { onSelectWidget: (id:
               <span style={{ fontSize: 11, fontWeight: 700, color: col.text }}>Class {i + 1}</span>
               <span style={{ fontSize: 11, color: col.text }}>{c}</span>
               <span style={{ fontSize: 10, color: col.text, opacity: 0.7 }}>
-                {c === "Compact" ? "4–5 GU" : c === "Standard" ? "7–9 GU" : "7–9 GU · scrolls"}
+                {c === "Compact" ? "4–5 GU" : c === "Standard" ? "6–9 GU" : "9+ GU · scrolls"}
               </span>
             </div>
           )
@@ -24832,21 +25481,29 @@ const STEPPER_SPEC = {
     { element: "Step number",   family: "Inter", size: "12px", weight: "600 (SemiBold)", lineHeight: "1" },
   ],
   variants: [
-    { name: "Active & Completed", description: "Primary-tinted dot · SemiBold 600 label · aria-current=step", cssPrefix: "stepper-active", tokens: [
-      { role: "Dot fill",    variable: "--stepper-dot-active-bg",  varId: "Surface/Primary/Subtle",  light: "#E9F1FF",               dark: "rgba(33,115,255,0.15)" },
-      { role: "Icon color",  variable: "--stepper-icon-active",    varId: "Icon/Primary/Darker",     light: "#001740",               dark: "#155dfc" },
-      { role: "Label color", variable: "--stepper-label-active",   varId: "Text/Subtitle",           light: "#2a2a2a",               dark: "rgba(255,255,255,0.60)" },
+    { name: "Active & Completed", description: "The dot is rendered by the HighlightIcon atom (variant=informative, iconColor=dark) — NOT by dedicated --stepper-dot-*/--stepper-icon-* tokens (those exist in index.css but are never read by stepper.tsx). Real colors come from HighlightIcon's own informative variant.", cssPrefix: "—", tokens: [
+      { role: "Dot fill (→ HighlightIcon informative)", variable: "--hi-informative-bg",   varId: "", light: "#E9F1FF", dark: "rgba(33,115,255,0.14)" },
+      { role: "Icon color (→ HighlightIcon informative, dark)", variable: "--hi-informative-icon", varId: "", light: "#001740", dark: "#A8C8FF" },
+      { role: "Label color", variable: "--stepper-label-active", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
     ]},
-    { name: "Default & View-only", description: "Neutral dot · Medium 500 label · upcoming or read-only steps", cssPrefix: "stepper-default", tokens: [
-      { role: "Dot fill",    variable: "--stepper-dot-default-bg", varId: "Surface/Neutral/Default", light: "#f2f2f2",               dark: "rgba(255,255,255,0.06)" },
-      { role: "Icon color",  variable: "--stepper-icon-default",   varId: "Icon/Neutral/Dark",       light: "#3F3F46",               dark: "rgba(255,255,255,0.50)" },
-      { role: "Label color", variable: "--stepper-label-default",  varId: "Text/Body",               light: "#5C5C5C",               dark: "#94A3B8" },
+    { name: "Default & View-only", description: "Dot rendered by HighlightIcon (variant=neutral, iconColor=dark).", cssPrefix: "—", tokens: [
+      { role: "Dot fill (→ HighlightIcon neutral)", variable: "--hi-neutral-bg",   varId: "", light: "#F2F2F2", dark: "rgba(255,255,255,0.08)" },
+      { role: "Icon color (→ HighlightIcon neutral, dark)", variable: "--hi-neutral-icon", varId: "", light: "#2A2A2A", dark: "rgba(255,255,255,0.70)" },
+      { role: "Label color", variable: "--stepper-label-default", varId: "", light: "—", dark: "#94A3B8", note: "BUG: --stepper-label-default is only declared in the dark-mode block of index.css — undefined in light mode, falls back to inherited text color instead of Text/Body gray. Not fixed here; flagged for a code change." },
     ]},
-    { name: "Locked", description: "Neutral dot · Lock icon · non-interactive, aria-disabled=true", cssPrefix: "stepper-locked", tokens: [
-      { role: "Lock icon",     variable: "--stepper-icon-locked",  varId: "Icon/Neutral/Disabled",   light: "#bababa",               dark: "rgba(255,255,255,0.30)" },
+    { name: "Locked", description: "Dot rendered by HighlightIcon (variant=neutral, iconColor=default → the softer 'icon-soft' tone, not the 'dark' tone used by Default/Active).", cssPrefix: "—", tokens: [
+      { role: "Dot fill (reused, → HighlightIcon neutral)", variable: "--hi-neutral-bg", varId: "", light: "#F2F2F2", dark: "rgba(255,255,255,0.08)" },
+      { role: "Lock icon (→ HighlightIcon neutral, default)", variable: "--hi-neutral-icon-soft", varId: "", light: "#6B7280", dark: "rgba(255,255,255,0.40)" },
     ]},
     { name: "Connector", description: "ChevronRight 16×16px between steps · 16px margin each side", cssPrefix: "stepper-connector", tokens: [
-      { role: "Chevron color", variable: "--stepper-connector",    varId: "Icon/Neutral/Disabled",   light: "#bababa",               dark: "rgba(255,255,255,0.30)" },
+      { role: "Chevron color", variable: "--stepper-connector", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+    ]},
+    { name: "Unused tokens (defined in index.css, never read by stepper.tsx)", description: "The component delegates dot fill/icon color to the HighlightIcon atom — these dedicated stepper tokens are orphaned.", cssPrefix: "—", tokens: [
+      { role: "Dot fill active (unused)",  variable: "--stepper-dot-active-bg",  varId: "", light: "#E9F1FF", dark: "rgba(33,115,255,0.15)" },
+      { role: "Icon color active (unused)", variable: "--stepper-icon-active",   varId: "", light: "#001740", dark: "#155dfc" },
+      { role: "Dot fill default (unused)", variable: "--stepper-dot-default-bg", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.06)" },
+      { role: "Icon color default (unused)", variable: "--stepper-icon-default", varId: "", light: "#3F3F46", dark: "rgba(255,255,255,0.50)" },
+      { role: "Lock icon (unused)",        variable: "--stepper-icon-locked",    varId: "", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
     ]},
   ],
 }
@@ -24880,12 +25537,14 @@ const STEPPER_NAV_FOOTER_SPEC = {
   ],
   variants: [
     { name: "Cancel / Next", description: "First step — left button has no icon, dismisses the wizard", cssPrefix: "snf-cancel", tokens: [
-      { role: "Footer background", variable: "--step-nav-footer-bg",        varId: "Surface (adaptive)", light: "#FFFFFF",              dark: "#0D1120" },
-      { role: "Top separator",     variable: "--step-nav-footer-separator",  varId: "Border/Neutral/Lighter", light: "#E8E8E8",          dark: "rgba(255,255,255,0.08)" },
+      { role: "Footer background", variable: "--step-nav-footer-bg",        varId: "", light: "#FFFFFF",  dark: "#0D1120" },
+      { role: "Top separator",     variable: "--step-nav-footer-separator", varId: "", light: "#BABABA",  dark: "rgba(255,255,255,0.08)" },
+      { role: "Corner radius",     variable: "--radius-m",                  varId: "", light: "8px",      dark: "8px" },
     ]},
     { name: "Back / Next",   description: "Subsequent steps — Back button has ArrowLeft icon, navigates to previous step", cssPrefix: "snf-back", tokens: [
-      { role: "Footer background", variable: "--step-nav-footer-bg",        varId: "Surface (adaptive)", light: "#FFFFFF",              dark: "#0D1120" },
-      { role: "Top separator",     variable: "--step-nav-footer-separator",  varId: "Border/Neutral/Lighter", light: "#E8E8E8",          dark: "rgba(255,255,255,0.08)" },
+      { role: "Footer background (reused)", variable: "--step-nav-footer-bg",        varId: "", light: "#FFFFFF", dark: "#0D1120" },
+      { role: "Top separator (reused)",     variable: "--step-nav-footer-separator", varId: "", light: "#BABABA", dark: "rgba(255,255,255,0.08)" },
+      { role: "Corner radius (reused)",     variable: "--radius-m",                  varId: "", light: "8px",     dark: "8px" },
     ]},
   ],
 }
@@ -26760,6 +27419,45 @@ function TogglePage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <Toggle label="Beta features" description="Access experimental features before public release" disabled />
               </div>
             </div>
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Use Toggle for a single setting that takes effect immediately — no \"Save\" step, no form submission.",
+                    "Pass `description` when the setting's effect isn't obvious from the label alone.",
+                    "Use size S in dense settings rows, default/M in standard forms, L when the toggle is the primary focal control on the screen.",
+                    "Pair with an optimistic UI update — reflect the new state immediately, then reconcile with the backend.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Don't use Toggle inside a form that requires an explicit \"Save\" or \"Submit\" step — use Checkbox instead.",
+                    "Don't use Toggle for multi-select lists — it represents exactly one binary setting, not a list item selection.",
+                    "Don't require a confirmation dialog on every toggle flip — reserve Modal confirmation for genuinely destructive settings.",
+                    "Don't set `disabled` without a description explaining why the setting is locked.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -27521,6 +28219,45 @@ function HighlightIconPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     </div>
                   )
                 })}
+              </div>
+            </div>
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Use as the leading visual slot in Menu/Dropdown items and list rows to signal category or status at a glance.",
+                    "Match variant to the semantic meaning of the content — success/error/alert/informative — don't pick colors arbitrarily.",
+                    "Use size L (40px) for standalone context indicators or empty-state icons, M (32px) for list rows, S (24px) for dense menu items.",
+                    "Keep iconColor=\"dark\" (the default) for standard contrast; only switch to \"default\" when the tint itself needs to read as the dominant color.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Don't use it for plain decorative icons with no semantic meaning — use a bare Lucide icon instead.",
+                    "Don't mix multiple variants inconsistently for the same category across one screen.",
+                    "Don't nest interactive elements (buttons, links) inside it — it's a static visual indicator, not a control.",
+                    "Don't use it in place of Avatar for a person — HighlightIcon is for abstract categories/status, Avatar is for people.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -28376,6 +29113,7 @@ const actions: TopbarAction[] = [
 // ── SidebarPage ────────────────────────────────────────────────────────────
 
 function SidebarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [activeId, setActiveId] = useState("agents")
   const [collapsed, setCollapsed] = useState(false)
 
@@ -28401,180 +29139,199 @@ function SidebarPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <SpecButton onClick={() => openSpec("sidebar")} />
       </div>
 
-      {/* ── Live demo ── */}
-      <section className="flex flex-col gap-[16px]">
-        <div className="flex items-center justify-between">
-          <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Live demo</h2>
-          <button
-            onClick={() => setCollapsed(c => !c)}
-            className="text-[12px] font-medium px-[12px] py-[6px] rounded-[6px] transition-colors"
-            style={{ background: "var(--btn-secondary-bg)", border: "1px solid var(--btn-secondary-border)", color: "var(--foreground)" }}
-          >
-            {collapsed ? "→ Expand" : "← Collapse"}
-          </button>
-        </div>
+      <TabBar
+        tabs={[
+          { id: "overview",   label: "Overview"   },
+          { id: "playground", label: "Playground" },
+          { id: "reference",  label: "Reference"  },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
 
-        <div className="flex overflow-hidden rounded-[12px]" style={{ height: 400, border: "1px solid var(--table-border)" }}>
-          <Sidebar
-            items={DEFAULT_SIDEBAR_ITEMS}
-            activeId={activeId}
-            onItemClick={setActiveId}
-            defaultCollapsed={collapsed}
-            onCollapseChange={setCollapsed}
-          />
-          <div className="flex flex-1 items-center justify-center flex-col gap-[6px]" style={{ background: "var(--canvas)" }}>
-            <p className="text-[13px] font-semibold text-[var(--foreground)]">
-              {DEFAULT_SIDEBAR_ITEMS.find(i => i.id === activeId)?.label} page
-            </p>
-            <p className="text-[12px] text-[var(--field-supporting)]">
-              {collapsed ? "Hover icons to see tooltips" : "Click any nav item to switch section"}
-            </p>
-          </div>
-        </div>
-      </section>
+      {tab === "overview" && (
+        <>
+          {/* ── Both variants side by side ── */}
+          <section className="flex flex-col gap-[16px]">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Variants</h2>
+            <div className="flex gap-[32px] items-start">
+              <div className="flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[var(--field-supporting)] uppercase tracking-[0.06em]">Expanded — 250px</p>
+                <div style={{ height: 220 }}><Sidebar activeId="agents" defaultCollapsed={false} /></div>
+              </div>
+              <div className="flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[var(--field-supporting)] uppercase tracking-[0.06em]">Collapsed — 56px · hover for tooltip</p>
+                <div style={{ height: 220 }}><Sidebar activeId="agents" defaultCollapsed={true} /></div>
+              </div>
+            </div>
+          </section>
 
-      {/* ── Both variants side by side ── */}
-      <section className="flex flex-col gap-[16px]">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Variants</h2>
-        <div className="flex gap-[32px] items-start">
-          <div className="flex flex-col gap-[8px]">
-            <p className="text-[11px] font-semibold text-[var(--field-supporting)] uppercase tracking-[0.06em]">Expanded — 250px</p>
-            <div style={{ height: 220 }}><Sidebar activeId="agents" defaultCollapsed={false} /></div>
-          </div>
-          <div className="flex flex-col gap-[8px]">
-            <p className="text-[11px] font-semibold text-[var(--field-supporting)] uppercase tracking-[0.06em]">Collapsed — 56px · hover for tooltip</p>
-            <div style={{ height: 220 }}><Sidebar activeId="agents" defaultCollapsed={true} /></div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Button states ── */}
-      <section className="flex flex-col gap-[16px]">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Button states (Sidebar Buttons DS)</h2>
-        <div className="grid grid-cols-3 gap-[12px]">
-          {STATES.map(s => (
-            <div key={s.label} className="flex flex-col gap-[12px] p-[16px] rounded-[10px]"
-              style={{ background: "var(--table-bg)", border: "1px solid var(--table-border)" }}>
-              {/* Preview on dark bg — sidebar is always dark */}
-              <div className="flex items-center justify-center rounded-[8px] py-[20px]" style={{ background: "#000" }}>
-                <div
-                  className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px]"
-                  style={{ background: s.bg, boxShadow: s.shadow, padding: 4 }}
-                >
-                  {(() => {
-                    const Icon = (LucideIcons as unknown as Record<string, LucideIcon>)[s.icon]
-                    return Icon ? <Icon size={16} strokeWidth={1.75} color={s.iconColor} /> : null
-                  })()}
+          {/* ── Button states ── */}
+          <section className="flex flex-col gap-[16px]">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Button states (Sidebar Buttons DS)</h2>
+            <div className="grid grid-cols-3 gap-[12px]">
+              {STATES.map(s => (
+                <div key={s.label} className="flex flex-col gap-[12px] p-[16px] rounded-[10px]"
+                  style={{ background: "var(--table-bg)", border: "1px solid var(--table-border)" }}>
+                  {/* Preview on dark bg — sidebar is always dark */}
+                  <div className="flex items-center justify-center rounded-[8px] py-[20px]" style={{ background: "#000" }}>
+                    <div
+                      className="w-[24px] h-[24px] flex items-center justify-center rounded-[8px]"
+                      style={{ background: s.bg, boxShadow: s.shadow, padding: 4 }}
+                    >
+                      {(() => {
+                        const Icon = (LucideIcons as unknown as Record<string, LucideIcon>)[s.icon]
+                        return Icon ? <Icon size={16} strokeWidth={1.75} color={s.iconColor} /> : null
+                      })()}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-[4px]">
+                    <p className="text-[12px] font-semibold text-[var(--foreground)]">{s.label}</p>
+                    <p className="text-[11px] text-[var(--field-supporting)] leading-[1.5]">{s.desc}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col gap-[4px]">
-                <p className="text-[12px] font-semibold text-[var(--foreground)]">{s.label}</p>
-                <p className="text-[11px] text-[var(--field-supporting)] leading-[1.5]">{s.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── When to use ── */}
-      <section className="flex flex-col gap-[16px]">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">When to use each state</h2>
-        <div className="flex flex-col gap-[8px]">
-          {[
-            { variant: "Expanded", when: "Default app state — enough horizontal space, first visit, or when labels aid orientation.", avoid: "Don't keep expanded when screen width is below 1280px. Don't put more than 7 items." },
-            { variant: "Collapsed", when: "Maximum content area needed. User is familiar with the icons. Narrow viewports (1024–1280px).", avoid: "Always show tooltips on hover — never show icon-only without a tooltip fallback." },
-            { variant: "Active state", when: "The section the user is currently viewing. Only one item active at a time.", avoid: "Don't use active on parent items when a sub-item is active — highlight the most specific level." },
-          ].map(r => (
-            <div key={r.variant} className="flex gap-[12px] p-[14px] rounded-[8px]"
-              style={{ background: "var(--table-bg)", border: "1px solid var(--table-border)" }}>
-              <div className="shrink-0 w-[80px]">
-                <span className="text-[11px] font-semibold text-[var(--foreground)]">{r.variant}</span>
-              </div>
-              <div className="flex flex-col gap-[4px]">
-                <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">
-                  <span className="text-[var(--tag-success-fg)] font-medium">Use: </span>{r.when}
-                </p>
-                <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">
-                  <span className="text-[var(--tag-error-fg)] font-medium">Avoid: </span>{r.avoid}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Specs table ── */}
-      <section className="flex flex-col gap-[12px]">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Specs</h2>
-        <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
-          <table className="w-full text-[12px]">
-            <thead>
-              <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
-                {["Property", "Expanded", "Collapsed"].map(h => (
-                  <th key={h} className="text-left px-[14px] py-[10px] font-semibold text-[var(--field-supporting)]">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ["Width",               "250px",                        "56px"                  ],
-                ["Container bg dark",   "rgba(15,23,43,1) #0F172B",     "rgba(15,23,43,1)"      ],
-                ["Container bg light",  "rgba(0,0,0,1) #000000",        "rgba(0,0,0,1)"         ],
-                ["Container radius",    "16px",                         "8px"                   ],
-                ["Padding",             "8px",                          "8px"                   ],
-                ["Nav items gap",       "16px",                         "16px"                  ],
-                ["Icon button size",    "24×24px · padding 4px",        "24×24px · padding 4px" ],
-                ["Icon button radius",  "8px",                          "8px"                   ],
-                ["Icon default",        "Icon/Primary/Lighter #80AFFF", "#80AFFF"               ],
-                ["Icon hover/active",   "Icon/Neutral/Light white",     "white"                 ],
-                ["Row hover bg dark",   "Surface/Neutral/Darker White/20","—"                   ],
-                ["Row hover bg light",  "Surface/Neutral/Darker #2A2A2A","—"                   ],
-                ["Active gradient",     "Radial: blue→teal @29%→61%",   "Same"                  ],
-                ["Active shadow",       "rgba(82,163,255,0.38) 8,8 blur:20","Same"              ],
-                ["Hover shadow",        "rgba(33,115,255,0.50) 0,0 blur:20","Same"              ],
-                ["Tooltip (collapsed)", "—",                            "Dark pill on hover"    ],
-                ["Text",                "12px Semi Bold white",         "—"                     ],
-              ].map(([prop, exp, col], i, arr) => (
-                <tr key={prop} style={{ borderBottom: i < arr.length-1 ? "1px solid var(--table-border)" : "none" }}>
-                  <td className="px-[14px] py-[9px] font-medium text-[var(--foreground)]">{prop}</td>
-                  <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{exp}</td>
-                  <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{col}</td>
-                </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            </div>
+          </section>
 
-      {/* ── Usage code ── */}
-      <section className="flex flex-col gap-[12px]">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Usage</h2>
-        <div className="rounded-[8px] p-[16px] font-mono text-[12px] leading-[1.8]"
-          style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)", color: "var(--field-supporting)" }}>
-          <span style={{ color: "#c792ea" }}>import</span>{" "}
-          {"{ Sidebar, DEFAULT_SIDEBAR_ITEMS, type SidebarItem } "}<span style={{ color: "#c792ea" }}>from</span>{" "}
-          <span style={{ color: "#c3e88d" }}>"@/components/ui/sidebar"</span><br /><br />
+          {/* ── When to use ── */}
+          <section className="flex flex-col gap-[16px]">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">When to use each state</h2>
+            <div className="flex flex-col gap-[8px]">
+              {[
+                { variant: "Expanded", when: "Default app state — enough horizontal space, first visit, or when labels aid orientation.", avoid: "Don't keep expanded when screen width is below 1280px. Don't put more than 7 items." },
+                { variant: "Collapsed", when: "Maximum content area needed. User is familiar with the icons. Narrow viewports (1024–1280px).", avoid: "Always show tooltips on hover — never show icon-only without a tooltip fallback." },
+                { variant: "Active state", when: "The section the user is currently viewing. Only one item active at a time.", avoid: "Don't use active on parent items when a sub-item is active — highlight the most specific level." },
+              ].map(r => (
+                <div key={r.variant} className="flex gap-[12px] p-[14px] rounded-[8px]"
+                  style={{ background: "var(--table-bg)", border: "1px solid var(--table-border)" }}>
+                  <div className="shrink-0 w-[80px]">
+                    <span className="text-[11px] font-semibold text-[var(--foreground)]">{r.variant}</span>
+                  </div>
+                  <div className="flex flex-col gap-[4px]">
+                    <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">
+                      <span className="text-[var(--tag-success-fg)] font-medium">Use: </span>{r.when}
+                    </p>
+                    <p className="text-[12px] text-[var(--field-supporting)] leading-[1.5]">
+                      <span className="text-[var(--tag-error-fg)] font-medium">Avoid: </span>{r.avoid}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
 
-          <span style={{ color: "#697098" }}>{"// 1. Basic — uses default AIMS OS nav items"}</span><br />
-          {"<"}<span style={{ color: "#82aaff" }}>Sidebar</span>
-          {" activeId="}<span style={{ color: "#c3e88d" }}>"agents"</span>{" onItemClick="}{"{setActiveId}"}{" />"}<br /><br />
+      {tab === "playground" && (
+        <section className="flex flex-col gap-[16px]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Live demo</h2>
+            <button
+              onClick={() => setCollapsed(c => !c)}
+              className="text-[12px] font-medium px-[12px] py-[6px] rounded-[6px] transition-colors"
+              style={{ background: "var(--btn-secondary-bg)", border: "1px solid var(--btn-secondary-border)", color: "var(--foreground)" }}
+            >
+              {collapsed ? "→ Expand" : "← Collapse"}
+            </button>
+          </div>
 
-          <span style={{ color: "#697098" }}>{"// 2. Custom items"}</span><br />
-          {"const items: SidebarItem[] = ["}<br />
-          {"  { id: "}<span style={{ color: "#c3e88d" }}>"dashboard"</span>{", label: "}<span style={{ color: "#c3e88d" }}>"Dashboard"</span>{", icon: "}<span style={{ color: "#c3e88d" }}>"LayoutDashboard"</span>{" },"}<br />
-          {"  { id: "}<span style={{ color: "#c3e88d" }}>"reports"</span>{", label: "}<span style={{ color: "#c3e88d" }}>"Reports"</span>{", icon: "}<span style={{ color: "#c3e88d" }}>"BarChart2"</span>{", hasChildren: true },"}<br />
-          {"]"}<br /><br />
+          <div className="flex overflow-hidden rounded-[12px]" style={{ height: 400, border: "1px solid var(--table-border)" }}>
+            <Sidebar
+              items={DEFAULT_SIDEBAR_ITEMS}
+              activeId={activeId}
+              onItemClick={setActiveId}
+              defaultCollapsed={collapsed}
+              onCollapseChange={setCollapsed}
+            />
+            <div className="flex flex-1 items-center justify-center flex-col gap-[6px]" style={{ background: "var(--canvas)" }}>
+              <p className="text-[13px] font-semibold text-[var(--foreground)]">
+                {DEFAULT_SIDEBAR_ITEMS.find(i => i.id === activeId)?.label} page
+              </p>
+              <p className="text-[12px] text-[var(--field-supporting)]">
+                {collapsed ? "Hover icons to see tooltips" : "Click any nav item to switch section"}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
-          <span style={{ color: "#697098" }}>{"// 3. Controlled collapse state"}</span><br />
-          {"<"}<span style={{ color: "#82aaff" }}>Sidebar</span><br />
-          {"  items="}{"{items}"}<br />
-          {"  activeId="}{"{activeId}"}<br />
-          {"  onItemClick="}{"{setActiveId}"}<br />
-          {"  defaultCollapsed="}{"{isNarrow}"}<br />
-          {"  onCollapseChange="}{"{setCollapsed}"}<br />
-          {"/>"}
-        </div>
-      </section>
+      {tab === "reference" && (
+        <>
+          {/* ── Specs table ── */}
+          <section className="flex flex-col gap-[12px]">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Specs</h2>
+            <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--table-border)" }}>
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--table-border)" }}>
+                    {["Property", "Expanded", "Collapsed"].map(h => (
+                      <th key={h} className="text-left px-[14px] py-[10px] font-semibold text-[var(--field-supporting)]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Width",               "250px",                        "56px"                  ],
+                    ["Container bg dark",   "rgba(15,23,43,1) #0F172B",     "rgba(15,23,43,1)"      ],
+                    ["Container bg light",  "rgba(0,0,0,1) #000000",        "rgba(0,0,0,1)"         ],
+                    ["Container radius",    "16px",                         "8px"                   ],
+                    ["Padding",             "8px",                          "8px"                   ],
+                    ["Nav items gap",       "16px",                         "16px"                  ],
+                    ["Icon button size",    "24×24px · padding 4px",        "24×24px · padding 4px" ],
+                    ["Icon button radius",  "8px",                          "8px"                   ],
+                    ["Icon default",        "Icon/Primary/Lighter #80AFFF", "#80AFFF"               ],
+                    ["Icon hover/active",   "Icon/Neutral/Light white",     "white"                 ],
+                    ["Row hover bg dark",   "Surface/Neutral/Darker White/20","—"                   ],
+                    ["Row hover bg light",  "Surface/Neutral/Darker #2A2A2A","—"                   ],
+                    ["Active gradient",     "Radial: blue→teal @29%→61%",   "Same"                  ],
+                    ["Active shadow",       "rgba(82,163,255,0.38) 8,8 blur:20","Same"              ],
+                    ["Hover shadow",        "rgba(33,115,255,0.50) 0,0 blur:20","Same"              ],
+                    ["Tooltip (collapsed)", "—",                            "Dark pill on hover"    ],
+                    ["Text",                "12px Semi Bold white",         "—"                     ],
+                  ].map(([prop, exp, col], i, arr) => (
+                    <tr key={prop} style={{ borderBottom: i < arr.length-1 ? "1px solid var(--table-border)" : "none" }}>
+                      <td className="px-[14px] py-[9px] font-medium text-[var(--foreground)]">{prop}</td>
+                      <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{exp}</td>
+                      <td className="px-[14px] py-[9px] font-mono text-[var(--field-supporting)]">{col}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* ── Usage code ── */}
+          <section className="flex flex-col gap-[12px]">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--field-supporting)]">Usage</h2>
+            <div className="rounded-[8px] p-[16px] font-mono text-[12px] leading-[1.8]"
+              style={{ background: "var(--surface-raised)", border: "1px solid var(--table-border)", color: "var(--field-supporting)" }}>
+              <span style={{ color: "#c792ea" }}>import</span>{" "}
+              {"{ Sidebar, DEFAULT_SIDEBAR_ITEMS, type SidebarItem } "}<span style={{ color: "#c792ea" }}>from</span>{" "}
+              <span style={{ color: "#c3e88d" }}>"@/components/ui/sidebar"</span><br /><br />
+
+              <span style={{ color: "#697098" }}>{"// 1. Basic — uses default AIMS OS nav items"}</span><br />
+              {"<"}<span style={{ color: "#82aaff" }}>Sidebar</span>
+              {" activeId="}<span style={{ color: "#c3e88d" }}>"agents"</span>{" onItemClick="}{"{setActiveId}"}{" />"}<br /><br />
+
+              <span style={{ color: "#697098" }}>{"// 2. Custom items"}</span><br />
+              {"const items: SidebarItem[] = ["}<br />
+              {"  { id: "}<span style={{ color: "#c3e88d" }}>"dashboard"</span>{", label: "}<span style={{ color: "#c3e88d" }}>"Dashboard"</span>{", icon: "}<span style={{ color: "#c3e88d" }}>"LayoutDashboard"</span>{" },"}<br />
+              {"  { id: "}<span style={{ color: "#c3e88d" }}>"reports"</span>{", label: "}<span style={{ color: "#c3e88d" }}>"Reports"</span>{", icon: "}<span style={{ color: "#c3e88d" }}>"BarChart2"</span>{", hasChildren: true },"}<br />
+              {"]"}<br /><br />
+
+              <span style={{ color: "#697098" }}>{"// 3. Controlled collapse state"}</span><br />
+              {"<"}<span style={{ color: "#82aaff" }}>Sidebar</span><br />
+              {"  items="}{"{items}"}<br />
+              {"  activeId="}{"{activeId}"}<br />
+              {"  onItemClick="}{"{setActiveId}"}<br />
+              {"  defaultCollapsed="}{"{isNarrow}"}<br />
+              {"  onCollapseChange="}{"{setCollapsed}"}<br />
+              {"/>"}
+            </div>
+          </section>
+        </>
+      )}
 
     </div>
   )
@@ -30686,7 +31443,7 @@ function InformativeCardPage({ openSpec }: { openSpec: (s: SpecModal) => void })
 
             {/* Sizes */}
             <div className="flex flex-col gap-[12px]">
-              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">3 sizes — Estado Informative</h2>
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">3 sizes — Informative state</h2>
               <div className="flex flex-col gap-[8px]">
                 {IC_SIZES.map(sz => (
                   <div key={sz} className="flex items-center gap-[12px]">
@@ -31463,22 +32220,22 @@ const BREADCRUMB_SPEC = {
       name: "Default item",
       description: "Ancestor links — clickable. Hover changes text to Text/Subtitle.",
       tokens: [
-        { role: "Text (rest)",  variable: "Text/Body",    varId: "4465:4469", light: "#5C5C5C",              dark: "#94A3B8" },
-        { role: "Text (hover)", variable: "Text/Subtitle", varId: "4465:4468", light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
+        { role: "Text (rest)",  variable: "--color-text-body",     varId: "", light: "#5C5C5C", dark: "#94A3B8" },
+        { role: "Text (hover)", variable: "--color-text-subtitle", varId: "", light: "#2a2a2a",  dark: "rgba(255,255,255,0.60)" },
       ],
     },
     {
       name: "Selected item",
       description: "Current page — last item, non-interactive.",
       tokens: [
-        { role: "Text",         variable: "Text/Subtitle", varId: "4465:4468", light: "#2a2a2a",              dark: "rgba(255,255,255,0.60)" },
+        { role: "Text",         variable: "--color-text-subtitle", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
       ],
     },
     {
       name: "Separator",
       description: "ChevronRight icon between items.",
       tokens: [
-        { role: "Icon",         variable: "Icon/Neutral/Light", varId: "4465:4467", light: "#ffffff",         dark: "#ffffff" },
+        { role: "Icon",         variable: "--color-icon-neutral-light", varId: "", light: "#ffffff", dark: "#ffffff" },
       ],
     },
   ],
@@ -33008,12 +33765,12 @@ function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <tbody>
                     {[
                       { type: "Sort",          node: "11971:775", indicator: "None",      pattern: "Always has a value — no clear needed" },
-                      { type: "Toggle List",   node: "13848:405", indicator: "{x} badge", pattern: "Shows count of toggled-on items. 'Show N more ▼' expander." },
-                      { type: "Multi Select",  node: "13848:477", indicator: "{x} badge", pattern: "Shows count of checked items. 'Show N more ▼' expander." },
-                      { type: "Priority",      node: "13851:366", indicator: "{x} badge", pattern: "Shows count of checked priorities (Critical · High · Medium · Low)." },
-                      { type: "Date Presets",  node: "13851:482", indicator: "{x} badge", pattern: "Shows 1 when any preset is selected. Radio — single selection only." },
+                      { type: "Toggle List",   node: "13848:405", indicator: "count badge", pattern: "Shows count of toggled-on items. 'Show N more ▼' expander." },
+                      { type: "Multi Select",  node: "13848:477", indicator: "count badge", pattern: "Shows count of checked items. 'Show N more ▼' expander." },
+                      { type: "Priority",      node: "13851:366", indicator: "count badge", pattern: "Shows count of checked priorities (Critical · High · Medium · Low)." },
+                      { type: "Date Presets",  node: "13851:482", indicator: "count badge", pattern: "Shows 1 when any preset is selected. Radio — single selection only." },
                       { type: "Numeric Range", node: "13852:471", indicator: '"Clear"',   pattern: "Appears when min or max field has a value." },
-                      { type: "Search Select", node: "13996:2054", indicator: "{x} badge", pattern: "Shows count of checked items. Filters list via search input." },
+                      { type: "Search Select", node: "13996:2054", indicator: "count badge", pattern: "Shows count of checked items. Filters list via search input." },
                       { type: "Single Select", node: "14056:459", indicator: '"Clear"',   pattern: "Appears when a non-default option is selected." },
                       { type: "Chip Select",   node: "11971:786", indicator: '"Clear"',   pattern: "Appears when ≥1 chip selected. '+N more' hides overflow chips." },
                       { type: "Assignment",    node: "14091:418", indicator: '"Clear"',   pattern: "Appears when ≥1 assignee selected. '+N' shows overflow count." },
@@ -33029,12 +33786,7 @@ function FiltersPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                           ) : row.indicator === '"Clear"' ? (
                             <span className="text-[13px] font-medium" style={{ color: "var(--primary)" }}>Clear</span>
                           ) : (
-                            <span
-                              className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-[5px] rounded-full text-[11px] font-semibold"
-                              style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)", color: "var(--tag-informative-fg)" }}
-                            >
-                              {"{2}"}
-                            </span>
+                            <Tag variant="informative" size="sm">2</Tag>
                           )}
                         </td>
                         <td className="px-[14px] py-[10px] text-[12px]" style={{ color: "var(--field-supporting)" }}>{row.pattern}</td>
@@ -33518,6 +34270,7 @@ function TypographyPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <div className="flex items-start min-h-[32px] pt-[2px]">
                     <span
                       className={[s.tailwind, s.isLink ? "text-[#2173ff] dark:text-[#2b7fff]" : "text-[var(--foreground)]"].join(" ")}
+                      style={s.doNotUse ? { opacity: 0.6 } : undefined}
                     >
                       {cat === "Display" ? "Heading" : cat === "Link" ? "Link text" : cat === "Caption" ? "Caption text" : `${cat} sample`}
                     </span>
@@ -33525,7 +34278,19 @@ function TypographyPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
                   {/* Right: metadata + Tailwind class */}
                   <div className="flex flex-col gap-[6px]">
-                    <span className="text-[12px] text-[var(--field-supporting)]">{s.dsName}</span>
+                    <div className="flex flex-wrap items-center gap-[6px]">
+                      <span className="text-[12px] text-[var(--field-supporting)]">{s.dsName}</span>
+                      {s.doNotUse && <Tag variant="alert" size="sm">Do not use</Tag>}
+                    </div>
+                    {s.doNotUse && s.note && (
+                      <div className="flex gap-[6px] items-start px-[8px] py-[6px] rounded-[6px]" style={{ background: "var(--color-surface-alert-more-subtle)" }}>
+                        <LucideIcons.AlertTriangle size={12} style={{ color: "var(--color-text-alert)", flexShrink: 0, marginTop: 1 }} />
+                        <span className="text-[11px] leading-[1.4]" style={{ color: "var(--color-text-alert)" }}>{s.note}</span>
+                      </div>
+                    )}
+                    {!s.doNotUse && s.note && (
+                      <span className="text-[10px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>{s.note}</span>
+                    )}
                     <div className="flex flex-wrap gap-[6px] items-center">
                       <span className="text-[11px] font-mono bg-[var(--code-bg)] text-[var(--foreground)] px-[6px] py-[2px] rounded-[4px]">{s.size}</span>
                       <span className="text-[11px] font-mono bg-[var(--code-bg)] text-[var(--foreground)] px-[6px] py-[2px] rounded-[4px]">lh {s.lineHeight}</span>
@@ -34045,10 +34810,10 @@ function AppBackgroundPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <pre className="text-[12px] leading-[20px] p-[16px] rounded-[6px] overflow-x-auto" style={{ background: "var(--surface-raised)", color: "var(--field-label)" }}>{`// 1 — Default (switches light/dark automatically)
 <AppBackground />
 
-// 2 — With arrow (appears below trigger)
+// 2 — Contextual color variant (static — same in light and dark)
 <AppBackground variant="green" />
 
-// 3 — On an icon button row (typical usage)
+// 3 — Typical usage: first child of the screen root
 <div class="relative w-full h-screen">
   <AppBackground />              {/* always first child */}
   {/* ...screen content... */}
@@ -34608,7 +35373,7 @@ const SPACING_DONT = [
   "Do not use 0px spacing between interactive elements that need a touch target gap.",
 ]
 
-function SpacingPage(_: { openSpec: (s: SpecModal) => void }) {
+function SpacingPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   return (
     <div className="flex flex-col gap-[40px]">
 
@@ -34623,6 +35388,7 @@ function SpacingPage(_: { openSpec: (s: SpecModal) => void }) {
           </p>
         </div>
         <div className="flex items-center gap-[8px] shrink-0">
+          <SpecButton onClick={() => openSpec("spacing")} />
           <FigmaLink href="https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4492-12478" />
         </div>
       </div>
@@ -34749,240 +35515,6 @@ function SpacingPage(_: { openSpec: (s: SpecModal) => void }) {
         </div>
       </div>
 
-        {/* !! old two-column wireframe removed — screenshot overlay above replaces it !! */}
-        <div className="flex rounded-[10px] overflow-hidden" style={{ display: "none" }}>
-          <div style={{ flex: "0 0 74%", background: "#0C1222", display: "flex", flexDirection: "column", borderRight: "0.5px solid rgba(255,255,255,0.08)" }}>
-
-            {/* Topbar — H:40 */}
-            <div style={{ height: 40, flexShrink: 0, display: "flex", alignItems: "center", gap: 8, padding: "0 14px", background: "#111827", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-              <div style={{ width: 18, height: 18, borderRadius: 4, background: "rgba(255,255,255,0.14)" }} />
-              <div style={{ width: 56, height: 7, borderRadius: 3, background: "rgba(255,255,255,0.14)" }} />
-              <div style={{ flex: 1 }} />
-              <div style={{ width: 130, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.06)", border: "0.5px solid rgba(255,255,255,0.10)" }} />
-              <div style={{ flex: 1 }} />
-              <div style={{ display: "flex", gap: 6 }}>
-                {[0,1,2].map(i => <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />)}
-              </div>
-            </div>
-
-            {/* Main row */}
-            <div style={{ flex: 1, display: "flex" }}>
-
-              {/* Sidebar — W:44 */}
-              <div style={{ width: 44, flexShrink: 0, background: "#0E1628", borderRight: "0.5px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingTop: 10 }}>
-                {[true,false,false,false,false].map((active, j) => (
-                  <div key={j} style={{ width: 24, height: 24, borderRadius: 6, background: active ? "rgba(33,115,255,0.30)" : "rgba(255,255,255,0.07)", border: active ? "0.5px solid rgba(33,115,255,0.40)" : "none" }} />
-                ))}
-              </div>
-
-              {/* Content column */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-
-                {/* Header — H:60 — shows 32px left/right padding as dashed strips */}
-                <div style={{ height: 60, flexShrink: 0, display: "flex", alignItems: "center", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-                  {/* Left 32px indicator */}
-                  <div style={{ width: 32, height: "100%", flexShrink: 0, background: "rgba(33,115,255,0.11)", borderRight: "1.5px dashed rgba(33,115,255,0.38)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 7, fontWeight: 700, color: "#2173FF", fontFamily: "monospace", writingMode: "vertical-rl", transform: "rotate(180deg)" }}>32px</span>
-                  </div>
-                  {/* Header content */}
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "0 12px" }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ height: 10, width: "42%", borderRadius: 3, background: "rgba(255,255,255,0.28)", marginBottom: 7 }} />
-                      <div style={{ height: 6, width: "62%", borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
-                    </div>
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <div style={{ width: 40, height: 18, borderRadius: 999, background: "rgba(33,115,255,0.20)", border: "0.5px solid rgba(33,115,255,0.30)" }} />
-                      <div style={{ width: 54, height: 22, borderRadius: 6, background: "rgba(33,115,255,0.38)", border: "0.5px solid rgba(33,115,255,0.50)" }} />
-                    </div>
-                  </div>
-                  {/* Right 32px indicator */}
-                  <div style={{ width: 32, height: "100%", flexShrink: 0, background: "rgba(33,115,255,0.11)", borderLeft: "1.5px dashed rgba(33,115,255,0.38)" }} />
-                </div>
-
-                {/* Scroll area — padding 0 32px */}
-                <div style={{ flex: 1, padding: "0 32px", display: "flex", flexDirection: "column" }}>
-
-                  {/* Gap 8px — H:8 */}
-                  <div style={{ height: 8, flexShrink: 0, background: "rgba(245,158,11,0.16)" }} />
-
-                  {/* Tabs — H:28 */}
-                  <div style={{ height: 28, flexShrink: 0, display: "flex", alignItems: "flex-end", gap: 16, borderBottom: "0.5px solid rgba(255,255,255,0.08)" }}>
-                    {[1,0].map(active => (
-                      <div key={active} style={{ paddingBottom: 6, borderBottom: active ? "2px solid #2173FF" : "none" }}>
-                        <div style={{ height: 7, width: active ? 30 : 24, borderRadius: 3, background: active ? "rgba(33,115,255,0.65)" : "rgba(255,255,255,0.18)" }} />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Gap 24px (Tabs → Filters) — H:24 */}
-                  <div style={{ height: 24, flexShrink: 0, background: "rgba(9,226,171,0.10)" }} />
-
-                  {/* Filters — H:32 */}
-                  <div style={{ height: 32, flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 100, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.10)", display: "flex", alignItems: "center", padding: "0 8px", gap: 5 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "rgba(255,255,255,0.20)" }} />
-                      <div style={{ flex: 1, height: 5, borderRadius: 2, background: "rgba(255,255,255,0.12)" }} />
-                    </div>
-                    {[54,68,50].map((w,k) => (
-                      <div key={k} style={{ width: w, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.10)" }} />
-                    ))}
-                    <div style={{ flex: 1 }} />
-                    <div style={{ width: 56, height: 22, borderRadius: 6, background: "rgba(255,255,255,0.07)", border: "0.5px solid rgba(255,255,255,0.10)" }} />
-                  </div>
-
-                  {/* Gap 24px (Filters → List) — H:24 */}
-                  <div style={{ height: 24, flexShrink: 0, background: "rgba(9,226,171,0.10)" }} />
-
-                  {/* Entity cards — H:84 each, H:12 gap */}
-                  {[0,1,2].map(i => (
-                    <div key={i}>
-                      <div style={{ height: 84, flexShrink: 0, borderRadius: 8, border: "0.5px solid rgba(255,255,255,0.10)", background: "#141E30", display: "flex", flexDirection: "column", padding: "10px 12px", gap: 5 }}>
-                        {/* Title row */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 22, height: 22, borderRadius: 5, background: i === 0 ? "rgba(16,185,129,0.25)" : i === 1 ? "rgba(33,115,255,0.25)" : "rgba(255,255,255,0.10)", flexShrink: 0 }} />
-                          <div style={{ height: 8, width: "38%", borderRadius: 3, background: "rgba(255,255,255,0.30)" }} />
-                          <div style={{ flex: 1 }} />
-                          <div style={{ width: 38, height: 14, borderRadius: 999, background: i === 0 ? "rgba(16,185,129,0.22)" : i === 1 ? "rgba(33,115,255,0.22)" : "rgba(255,255,255,0.09)" }} />
-                          <div style={{ width: 24, height: 6, borderRadius: 2, background: "rgba(255,255,255,0.10)" }} />
-                        </div>
-                        {/* Description */}
-                        <div style={{ height: 6, width: "80%", borderRadius: 2, background: "rgba(255,255,255,0.11)" }} />
-                        {/* AI summary strip */}
-                        <div style={{ height: 18, borderRadius: 4, background: "rgba(124,58,237,0.18)", border: "0.5px solid rgba(124,58,237,0.28)", display: "flex", alignItems: "center", gap: 6, padding: "0 8px" }}>
-                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(167,139,250,0.75)" }} />
-                          <div style={{ height: 5, width: "68%", borderRadius: 2, background: "rgba(167,139,250,0.28)" }} />
-                        </div>
-                        {/* Meta row */}
-                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                          {[28,42,18,30,14].map((w,m) => (
-                            <div key={m} style={{ height: 5, width: w, borderRadius: 2, background: "rgba(255,255,255,0.10)" }} />
-                          ))}
-                        </div>
-                      </div>
-                      {/* Gap 12px between cards */}
-                      {i < 2 && <div style={{ height: 12, flexShrink: 0, background: "rgba(167,139,250,0.12)" }} />}
-                    </div>
-                  ))}
-
-                  {/* 64px scroll guard — H:48 visual */}
-                  <div style={{ height: 48, flexShrink: 0, background: "rgba(255,100,103,0.09)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ position: "relative", width: "55%", height: 1, background: "rgba(255,100,103,0.35)" }}>
-                      <div style={{ position: "absolute", left: 0, top: -3, width: 1, height: 7, background: "rgba(255,100,103,0.55)" }} />
-                      <div style={{ position: "absolute", right: 0, top: -3, width: 1, height: 7, background: "rgba(255,100,103,0.55)" }} />
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Pagination — H:36 */}
-                <div style={{ height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, padding: "0 32px", background: "#0E1628", borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
-                  {[1,2,3,"…",8].map((p,k) => (
-                    <div key={k} style={{ width: 20, height: 20, borderRadius: 4, background: k === 0 ? "rgba(33,115,255,0.35)" : "rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, color: k === 0 ? "#5B9BFF" : "rgba(255,255,255,0.28)", fontFamily: "monospace" }}>{p}</span>
-                    </div>
-                  ))}
-                </div>
-
-              </div>
-            </div>
-          </div>
-
-          {/* ── Annotation rail (right 26%) ── Heights must match wireframe exactly */}
-          <div style={{ flex: "0 0 26%", display: "flex", flexDirection: "column", background: "var(--field-bg)" }}>
-
-            {/* Topbar spacer — H:40 */}
-            <div style={{ height: 40, flexShrink: 0 }} />
-
-            {/* Header spacer — H:60 — shows 32px horizontal padding callout */}
-            <div style={{ height: 60, flexShrink: 0, display: "flex", alignItems: "center", paddingLeft: 16, gap: 8, borderTop: "0.5px solid var(--field-border)" }}>
-              <div style={{ width: 10, height: 10, borderRadius: 2, background: "#2173FF", flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#2173FF", fontFamily: "monospace" }}>32px</div>
-                <div style={{ fontSize: 9, color: "var(--field-supporting)", fontFamily: "monospace", lineHeight: 1.3 }}>horizontal padding</div>
-              </div>
-            </div>
-
-            {/* 8px gap annotation — H:8 */}
-            <div style={{ height: 8, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 12px", gap: 4, background: "rgba(245,158,11,0.09)", borderTop: "0.5px solid rgba(245,158,11,0.25)" }}>
-              <div style={{ flex: 1, height: 1, background: "rgba(245,158,11,0.50)" }} />
-              <span style={{ fontSize: 8, fontWeight: 700, color: "#f59e0b", fontFamily: "monospace", whiteSpace: "nowrap" }}>8px</span>
-              <div style={{ width: 4, height: 1, background: "rgba(245,158,11,0.50)" }} />
-            </div>
-
-            {/* Tabs spacer — H:28 */}
-            <div style={{ height: 28, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
-
-            {/* 24px gap: Tabs → Filters — H:24 */}
-            <div style={{ height: 24, flexShrink: 0, display: "flex", alignItems: "center", paddingLeft: 12, gap: 8, background: "rgba(9,226,171,0.07)", borderTop: "0.5px solid rgba(9,226,171,0.25)" }}>
-              <div style={{ display: "flex", flexDirection: "column", height: "100%", width: 10, flexShrink: 0 }}>
-                <div style={{ height: 1, width: 10, background: "#09E2AB" }} />
-                <div style={{ flex: 1, width: 1, background: "#09E2AB", marginLeft: 5 }} />
-                <div style={{ height: 1, width: 10, background: "#09E2AB" }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#09E2AB", fontFamily: "monospace" }}>24px</div>
-                <div style={{ fontSize: 8, color: "#09E2AB", opacity: 0.65, fontFamily: "monospace" }}>Tabs → Filters</div>
-              </div>
-            </div>
-
-            {/* Filters spacer — H:32 */}
-            <div style={{ height: 32, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
-
-            {/* 24px gap: Filters → List — H:24 */}
-            <div style={{ height: 24, flexShrink: 0, display: "flex", alignItems: "center", paddingLeft: 12, gap: 8, background: "rgba(9,226,171,0.07)", borderTop: "0.5px solid rgba(9,226,171,0.25)" }}>
-              <div style={{ display: "flex", flexDirection: "column", height: "100%", width: 10, flexShrink: 0 }}>
-                <div style={{ height: 1, width: 10, background: "#09E2AB" }} />
-                <div style={{ flex: 1, width: 1, background: "#09E2AB", marginLeft: 5 }} />
-                <div style={{ height: 1, width: 10, background: "#09E2AB" }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#09E2AB", fontFamily: "monospace" }}>24px</div>
-                <div style={{ fontSize: 8, color: "#09E2AB", opacity: 0.65, fontFamily: "monospace" }}>Filters → List</div>
-              </div>
-            </div>
-
-            {/* Card 1 spacer — H:84 */}
-            <div style={{ height: 84, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
-
-            {/* 12px gap annotation — H:12 */}
-            <div style={{ height: 12, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 12px", gap: 4, background: "rgba(167,139,250,0.08)", borderTop: "0.5px solid rgba(167,139,250,0.25)" }}>
-              <div style={{ flex: 1, height: 1, background: "rgba(167,139,250,0.55)" }} />
-              <span style={{ fontSize: 8, fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", whiteSpace: "nowrap" }}>12px</span>
-              <div style={{ width: 4, height: 1, background: "rgba(167,139,250,0.55)" }} />
-            </div>
-
-            {/* Card 2 spacer — H:84 */}
-            <div style={{ height: 84, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
-
-            {/* 12px gap annotation — H:12 */}
-            <div style={{ height: 12, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 12px", gap: 4, background: "rgba(167,139,250,0.08)", borderTop: "0.5px solid rgba(167,139,250,0.25)" }}>
-              <div style={{ flex: 1, height: 1, background: "rgba(167,139,250,0.55)" }} />
-              <span style={{ fontSize: 8, fontWeight: 700, color: "#a78bfa", fontFamily: "monospace", whiteSpace: "nowrap" }}>12px</span>
-              <div style={{ width: 4, height: 1, background: "rgba(167,139,250,0.55)" }} />
-            </div>
-
-            {/* Card 3 spacer — H:84 */}
-            <div style={{ height: 84, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
-
-            {/* 64px scroll guard annotation — H:48 */}
-            <div style={{ height: 48, flexShrink: 0, display: "flex", alignItems: "center", paddingLeft: 12, gap: 8, background: "rgba(255,100,103,0.07)", borderTop: "0.5px solid rgba(255,100,103,0.25)" }}>
-              <div style={{ display: "flex", flexDirection: "column", height: "100%", width: 10, flexShrink: 0 }}>
-                <div style={{ height: 1, width: 10, background: "#ff6467" }} />
-                <div style={{ flex: 1, width: 1, background: "#ff6467", marginLeft: 5 }} />
-                <div style={{ height: 1, width: 10, background: "#ff6467" }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#ff6467", fontFamily: "monospace" }}>64px</div>
-                <div style={{ fontSize: 8, color: "#ff6467", opacity: 0.65, fontFamily: "monospace" }}>scroll guard</div>
-              </div>
-            </div>
-
-            {/* Pagination spacer — H:36 */}
-            <div style={{ height: 36, flexShrink: 0, borderTop: "0.5px solid var(--field-border)" }} />
-
-          </div>
-        </div>
-
       {/* ── Usage guidelines ── */}
       <div className="flex flex-col gap-[12px]">
         <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Usage guidelines</h2>
@@ -35017,12 +35549,16 @@ function SpacingPage(_: { openSpec: (s: SpecModal) => void }) {
 }
 
 function ElevationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  // Figma defines this as a single mode-agnostic scale — light and dark share
+  // the same value (see the matching comment in src/index.css). 2026-08 audit:
+  // this table previously showed fabricated, different light/dark numbers
+  // that didn't match the real --shadow-elevation-* tokens at all.
   const EL_TOKENS = [
-    { level: 1, token: "--shadow-elevation-1", role: "Micro",  usage: "Focused inputs, toggles, subtle chip lift",           lightVal: "0 1px 4px rgba(0,0,0,0.06)",                                            darkVal: "0 1px 4px rgba(0,0,0,0.16)"                                           },
-    { level: 2, token: "--shadow-elevation-2", role: "Low",    usage: "Card rest state, inline panels",                      lightVal: "0 2px 8px rgba(0,0,0,0.10)",                                            darkVal: "0 2px 8px rgba(0,0,0,0.24)"                                           },
-    { level: 3, token: "--shadow-elevation-3", role: "Mid",    usage: "Dropdown menus, select overlays, filter dropdowns",   lightVal: "0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)",             darkVal: "0 4px 24px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.16)"             },
-    { level: 4, token: "--shadow-elevation-4", role: "High",   usage: "Modals, topbar sheets, large floating panels",        lightVal: "0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)",             darkVal: "0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.24)"             },
-    { level: 5, token: "--shadow-elevation-5", role: "Float",  usage: "Diagonal offset for floating containers (SwitchTab)", lightVal: "8px 8px 16px rgba(0,0,0,0.08)",                                         darkVal: "8px 8px 24px rgba(0,0,0,0.32)"                                         },
+    { level: 1, token: "--shadow-elevation-1", role: "Micro",  usage: "Focused inputs, toggles, subtle chip lift",           value: "2px 2px 8px 1px rgba(0,0,0,0.06)"  },
+    { level: 2, token: "--shadow-elevation-2", role: "Low",    usage: "Card rest state, inline panels",                      value: "4px 4px 12px 2px rgba(0,0,0,0.08)" },
+    { level: 3, token: "--shadow-elevation-3", role: "Mid",    usage: "Dropdown menus, select overlays, filter dropdowns",   value: "4px 4px 12px 2px rgba(0,0,0,0.12)" },
+    { level: 4, token: "--shadow-elevation-4", role: "High",   usage: "Modals, topbar sheets, large floating panels",        value: "8px 8px 16px 8px rgba(0,0,0,0.08)" },
+    { level: 5, token: "--shadow-elevation-5", role: "Float",  usage: "Diagonal offset for floating containers (SwitchTab)", value: "8px 8px 16px 0px rgba(0,0,0,0.08)" },
   ]
 
   return (
@@ -35074,11 +35610,14 @@ function ElevationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
       {/* Token values table */}
       <div className="flex flex-col gap-[12px]">
         <h2 className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--field-supporting)" }}>Token values</h2>
+        <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+          One value per level — Figma defines elevation as mode-agnostic, so light and dark resolve to the same shadow.
+        </p>
         <div className="overflow-x-auto rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
           <table className="w-full text-[12px]" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "0.5px solid var(--field-border)", background: "var(--field-bg)" }}>
-                {["Token", "Level", "Dark mode value", "Light mode value"].map(h => (
+                {["Token", "Level", "Value (light = dark)"].map(h => (
                   <th key={h} className="px-[14px] py-[10px] text-left font-semibold" style={{ color: "var(--field-label)" }}>{h}</th>
                 ))}
               </tr>
@@ -35088,8 +35627,7 @@ function ElevationPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <tr key={t.token} style={{ borderBottom: i < EL_TOKENS.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
                   <td className="px-[14px] py-[10px]"><code style={{ color: "var(--primary)", fontSize: 11 }}>{t.token}</code></td>
                   <td className="px-[14px] py-[10px]" style={{ color: "var(--foreground)", fontWeight: 600 }}>Elevation-{t.level} {t.role}</td>
-                  <td className="px-[14px] py-[10px]"><code className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>{t.darkVal}</code></td>
-                  <td className="px-[14px] py-[10px]"><code className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>{t.lightVal}</code></td>
+                  <td className="px-[14px] py-[10px]"><code className="text-[10px] font-mono" style={{ color: "var(--field-supporting)" }}>{t.value}</code></td>
                 </tr>
               ))}
             </tbody>
@@ -35261,6 +35799,45 @@ function ColorsPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </div>
               </div>
             ))}
+
+            {/* Usage guidelines */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage guidelines</h2>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-success-bg)", border: "1px solid var(--tag-success-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-success-fg)" }}>✅ When to use</p>
+                  {[
+                    "Always consume color via a semantic var(--token-name) — Text/Surface/Border/Icon — never a hardcoded hex in component code.",
+                    "Pick the token that matches the element's role (Text/Body for body copy, Surface/Primary/Default for primary actions), not just a visually similar shade.",
+                    "Trust that light/dark resolve automatically per token — never write conditional light/dark color logic in a component.",
+                    "Reference the primitive palette only when defining a new semantic token in index.css, not directly inside component code.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-success-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+                <div
+                  className="flex flex-col gap-[10px] rounded-[8px] p-[16px]"
+                  style={{ background: "var(--tag-error-bg)", border: "1px solid var(--tag-error-bd)" }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--tag-error-fg)" }}>❌ When not to use</p>
+                  {[
+                    "Don't hardcode a hex value in component code — always resolve to the matching CSS var so token updates propagate automatically.",
+                    "Don't borrow a token from the wrong category just because it happens to be the right shade — Border/Success/Default is for borders, not a green-text shortcut.",
+                    "Don't invent a new opacity/alpha variant of an existing token inline — a missing shade is a token gap to flag, not something to patch with an ad-hoc rgba().",
+                    "Don't assume light and dark share the same value — check index.css; several tokens intentionally differ between modes.",
+                  ].map((t, i) => (
+                    <p key={i} className="text-[12px] flex gap-[6px]" style={{ color: "var(--tag-error-fg)" }}>
+                      <span className="shrink-0">·</span>{t}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -35303,7 +35880,7 @@ function AppNav({ active, onSelect, search, onSearch, isDark, onToggle }: {
     const restItems     = NAV_SECTIONS.filter(s => s.group !== "Overview")
     return [
       ...overviewItems,
-      { id: "proto-gallery", label: `PM Screen Gallery${PROTOTYPE_PAGES.length > 0 ? ` (${PROTOTYPE_PAGES.length})` : ""}`, group: "Prototypes", description: `${PROTOTYPE_PAGES.length} pantalla${PROTOTYPE_PAGES.length !== 1 ? "s" : ""} generada${PROTOTYPE_PAGES.length !== 1 ? "s" : ""} por PMs con componentes reales del DS` },
+      { id: "proto-gallery", label: `PM Screen Gallery${PROTOTYPE_PAGES.length > 0 ? ` (${PROTOTYPE_PAGES.length})` : ""}`, group: "Prototypes", description: `${PROTOTYPE_PAGES.length} screen${PROTOTYPE_PAGES.length !== 1 ? "s" : ""} generated by PMs using real DS components` },
       ...restItems,
     ]
   }, [])
@@ -35696,10 +36273,10 @@ const [open, setOpen] = useState(false)
             <h2 className="text-[18px] font-semibold" style={{ color: "var(--foreground)" }}>Width presets</h2>
             <div className="grid grid-cols-4 gap-[12px]">
               {[
-                { name: "Default (1/3)",  width: "450px", note: "Standard. Works for most configuration and detail panels." },
-                { name: "Expanded 1/3",   width: "480px", note: "Slightly wider. Fits more complex inline forms." },
-                { name: "Expanded 1/2",   width: "704px", note: "Half the viewport. Use when panel and content are equally important." },
-                { name: "Min width",      width: "300px", note: "Small screens or multiple side panels (e.g. Workflow Builder)." },
+                { name: "S (default)",   width: "350px", note: "Starting width (defaultWidth prop) — fixed, does not scale with viewport." },
+                { name: "M",              width: "450px", note: "Second snap point (widthPresets[1]) — drag the edge past S to reach it." },
+                { name: "Half-screen",    width: "50vw",  note: "Third snap point — always exactly half the live window width, computed on drag." },
+                { name: "Collapsed",      width: "48px",  note: "Strip shown when closed (showCollapsedStrip, default true) — keeps nav icons reachable." },
               ].map(p => (
                 <div key={p.name} className="rounded-[8px] p-[16px]" style={{ background: "var(--card)", border: "1px solid var(--field-border)" }}>
                   <p className="text-[18px] font-bold mb-[2px]" style={{ color: "var(--primary)" }}>{p.width}</p>
@@ -35715,35 +36292,37 @@ const [open, setOpen] = useState(false)
             <div>
               <h2 className="text-[18px] font-semibold mb-[4px]" style={{ color: "var(--foreground)" }}>Split Screen Definitions</h2>
               <p className="text-[13px]" style={{ color: "var(--field-supporting)" }}>
-                The side panel supports 3 preset widths that control how much of the main workspace remains visible.
-                Panel opens at 1/3 by default; drag the edge handle to snap to 1/2.
+                The side panel drags between 2 fixed-px presets plus a dynamic half-screen snap point that
+                adapts to the current window size. Panel opens at S (350px) by default; drag the edge handle
+                to snap through M (450px) up to Half-screen. Bars below are illustrated at a 1200px reference
+                viewport — S and M stay fixed at any window size, only Half-screen scales with it.
               </p>
             </div>
 
             {/* Proportional diagrams */}
             {[
               {
-                name: "1/3 S — Minimum",
-                px: "300px",
-                panelPct: 33,
-                contentPct: 67,
-                note: "Small screens or multiple panels open simultaneously (e.g. Workflow Builder).",
-                tag: "min",
-              },
-              {
-                name: "1/3 M — Default",
-                px: "450px",
-                panelPct: 33,
-                contentPct: 67,
-                note: "Default layout for most pages. Panel opens here. Remaining 2/3 shows primary workspace.",
+                name: "S — Default",
+                px: "350px",
+                panelPct: 29,
+                contentPct: 71,
+                note: "Starting width (defaultWidth). Fixed regardless of window size.",
                 tag: "default",
               },
               {
-                name: "1/2 — Expanded",
-                px: "704px",
+                name: "M",
+                px: "450px",
+                panelPct: 38,
+                contentPct: 62,
+                note: "Second snap point (widthPresets[1]). Fixed regardless of window size — reached by dragging past S.",
+                tag: "m",
+              },
+              {
+                name: "Half-screen",
+                px: "50vw",
                 panelPct: 50,
                 contentPct: 50,
-                note: "Use when Side Panel and content are equally important. Activated by dragging the resize handle.",
+                note: "Third snap point — always exactly half the live window width. The only preset that scales with viewport.",
                 tag: "expanded",
               },
             ].map(preset => (
@@ -35798,16 +36377,16 @@ const [open, setOpen] = useState(false)
                 <table className="w-full text-[12px]">
                   <thead>
                     <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
-                      {["Preset", "%", "px", "Usage scenario"].map(h => (
+                      {["Preset", "Scales with viewport?", "px", "Usage scenario"].map(h => (
                         <th key={h} className="text-left px-[14px] py-[8px] font-semibold" style={{ color: "var(--foreground)" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {[
-                      { preset: "1/3 S", pct: "33.33%", px: "300px", use: "Minimum width — small screens, multi-panel layouts" },
-                      { preset: "1/3 M", pct: "33.33%", px: "450px", use: "Default — opens here on most pages" },
-                      { preset: "1/2",   pct: "50%",    px: "704px", use: "Expanded — drag handle past 40% threshold to snap" },
+                      { preset: "S", pct: "No (fixed)", px: "350px", use: "Default open width (defaultWidth) — opens here on most pages" },
+                      { preset: "M", pct: "No (fixed)", px: "450px", use: "Second snap point (widthPresets[1]) — reached by dragging past S" },
+                      { preset: "Half-screen", pct: "Yes — always 50%", px: "50vw (dynamic)", use: "Third snap point — snapped to on drag-release past the M/half midpoint" },
                     ].map((row, i) => (
                       <tr key={i} style={{ borderBottom: "1px solid var(--field-border)" }}>
                         <td className="px-[14px] py-[10px] font-mono font-semibold" style={{ color: "var(--primary)" }}>{row.preset}</td>
@@ -35828,7 +36407,7 @@ const [open, setOpen] = useState(false)
             <div className="grid grid-cols-2 gap-[12px]">
               <div className="rounded-[8px] p-[16px]" style={{ background: "var(--card)", border: "1px solid var(--color-border-success-default)" }}>
                 <p className="text-[12px] font-semibold mb-[10px]" style={{ color: "var(--color-text-success)" }}>✓ Do</p>
-                {["Use when the user needs continuous access to contextual information", "Use for node configuration, item inspection, secondary editing workflows", "Let the body scroll internally — keep header and footer fixed", "Use width={300} on small screens or when running multiple panels"].map((t, i) => (
+                {["Use when the user needs continuous access to contextual information", "Use for node configuration, item inspection, secondary editing workflows", "Let the body scroll internally — keep header and footer fixed", "Use defaultWidth={350} (the S preset) on small screens or when running multiple panels"].map((t, i) => (
                   <p key={i} className="text-[12px] leading-[18px] mb-[6px]" style={{ color: "var(--field-supporting)" }}>• {t}</p>
                 ))}
               </div>

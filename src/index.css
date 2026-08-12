@@ -63,7 +63,7 @@
     --radius-l:            16px;  /* Radius/Radius-L — was 12px, confirmed drift vs live Figma (tailwind.config.js already had the correct value) */
     --radius-xl:           24px;  /* Radius/Radius-XL — was 16px, confirmed drift vs live Figma */
     --radius-xxl:          32px;  /* Radius/Radius-XXL — was 24px, confirmed drift vs live Figma */
-    --radius-full:         9999px; /* Radius/Radius-Full */
+    --radius-full:         100px; /* Radius/Radius-Full */
     --sidebar:             #0D1120;
     --sidebar-foreground:  #ffffffcc;
     --sidebar-primary:     #2b7fff;

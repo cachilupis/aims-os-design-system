@@ -14,12 +14,14 @@ import { Tag, type TagVariant } from "@/components/ui/tag"
  * Right-side 380px panel triggered by the "All filters" button in the Filters bar.
  * Contains 12 filter section types, each with 4 state variants:
  *   Expanded × No active filter
- *   Expanded × Has active filter (shows "Clear" or count badge)
+ *   Expanded × Has active filter (shows "Clear" or a count badge)
  *   Collapsed × No active filter
- *   Collapsed × Has active filter (shows "Clear" or {x} badge)
+ *   Collapsed × Has active filter (shows "Clear" or a count badge)
  *
  * Active indicator rules:
- *   Count badge {x}  → count-based sections: Toggle List, Multi Select, Priority, Search Select
+ *   Count badge     → count-based sections: Toggle List, Multi Select, Priority, Search Select.
+ *                      Rendered via the real Tag atom (variant="informative", size="sm") —
+ *                      shows just the number, e.g. "3", not "{3}".
  *   "Clear" text     → clear-action sections: Single Select, Numeric Range, Chip Select,
  *                       Assignment, Date & Time, AI Insights
  *   No indicator     → Sort (always has a value)
@@ -31,16 +33,9 @@ import { Tag, type TagVariant } from "@/components/ui/tag"
 
 function ActiveBadge({ count }: { count: number }) {
   return (
-    <span
-      className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-[5px] rounded-full text-[11px] font-semibold leading-none"
-      style={{
-        background: "var(--tag-informative-bg)",
-        border: "1px solid var(--tag-informative-bd)",
-        color: "var(--tag-informative-fg)",
-      }}
-    >
-      {`{${count}}`}
-    </span>
+    <Tag variant="informative" size="sm">
+      {count}
+    </Tag>
   )
 }
 
@@ -168,7 +163,7 @@ function SortSectionContent() {
 }
 
 // ─── 2. Toggle List ───────────────────────────────────────────────────────────
-// node 13848:405 — toggles, expandable, {x} badge
+// node 13848:405 — toggles, expandable, count badge
 
 const DEFAULT_TOGGLE_OPTIONS = ["Option A", "Option B", "Option C", "Option D", "Option E", "Option F"]
 
@@ -199,7 +194,7 @@ function ToggleListSectionContent({ options = DEFAULT_TOGGLE_OPTIONS }: { option
 }
 
 // ─── 3. Multi Select ──────────────────────────────────────────────────────────
-// node 13848:477 — checkboxes, expandable, {x} badge
+// node 13848:477 — checkboxes, expandable, count badge
 
 const DEFAULT_MULTI_OPTIONS = ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5", "Option 6"]
 
@@ -230,7 +225,7 @@ function MultiSelectSectionContent({ options = DEFAULT_MULTI_OPTIONS }: { option
 }
 
 // ─── 4. Priority ──────────────────────────────────────────────────────────────
-// node 13851:366 — colored-dot checkboxes, {x} badge
+// node 13851:366 — colored-dot checkboxes, count badge
 
 const PRIORITY_LEVELS = [
   { label: "Critical", color: "var(--priority-critical)" },
@@ -274,7 +269,7 @@ function PrioritySectionContent() {
 }
 
 // ─── 5. Date Presets ──────────────────────────────────────────────────────────
-// node 13851:482 — radio date options, {x} badge when non-default selected
+// node 13851:482 — radio date options, count badge when non-default selected
 
 const DATE_PRESET_OPTIONS = [
   "Today", "Yesterday", "Last 7 days", "Last 30 days", "This month", "Custom range",
@@ -352,7 +347,7 @@ function NumericRangeSectionContent() {
 }
 
 // ─── 7. Search Select ────────────────────────────────────────────────────────
-// node 13996:2054 — search input + checkboxes, {x} badge
+// node 13996:2054 — search input + checkboxes, count badge
 
 const DEFAULT_SEARCH_OPTIONS = ["Option 1", "Option 2", "Option 3", "Option 4"]
 
