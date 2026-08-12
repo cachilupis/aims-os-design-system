@@ -1332,6 +1332,15 @@ export function WidgetCanvasView({ initialSlots, className }: WidgetCanvasViewPr
                 position: "relative",
                 gridColumn: ePos ? `${ePos.colStart} / span ${colSpanForWidth(currentWidth)}` : `span ${colSpanForWidth(currentWidth)}`,
                 gridRow: ePos ? `${ePos.rowStart} / span ${effectiveRowSpan}` : `span ${effectiveRowSpan}`,
+                // Explicit height (not just grid-area stretch) — a grid item's default
+                // min-height:auto resolves to its content's min-content size, which can
+                // exceed the assigned track height and make the item balloon past its
+                // cell, visually overlapping the widget below. Fixed height + minHeight:0
+                // forces the overflow down into the inner CardContainer/ScrollArea
+                // (already overflow:hidden) instead. Same defensive pattern as the
+                // stacked-slot branch above, which sets height explicitly for the same reason.
+                height: guToPixels(effectiveRowSpan),
+                minHeight: 0,
                 opacity: isGhost ? 0 : (isThisResizing || isVertResizing) ? 0.7 : 1,
                 borderRadius: 16,
                 boxShadow: edgeShadow,
