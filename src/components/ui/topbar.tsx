@@ -48,6 +48,8 @@ export type TopbarAction = {
   badge?:    boolean
   variant?:  "default" | "primary"
   onClick?:  () => void
+  /** Stable identifier for actions Topbar gives special dropdown behavior to — currently only "notifications" (see notificationsContent). */
+  id?:       string
 }
 
 export type TopbarVariant = "default" | "tablet"
@@ -78,6 +80,13 @@ export type TopbarProps = {
   onThemeToggle?:       () => void
   variant?:             TopbarVariant
   onMenuClick?:         () => void
+  /**
+   * Content rendered in a floating panel below the action whose `id` is
+   * "notifications" (e.g. `<NotificationCenter .../>`). Topbar manages the
+   * open/close state and position — the same pattern as the workspace and
+   * profile dropdowns. Omit to make that action a plain button with no dropdown.
+   */
+  notificationsContent?: ReactNode
   className?:           string
 }
 
@@ -1527,6 +1536,7 @@ export function Topbar({
   onThemeToggle,
   variant              = "default",
   onMenuClick,
+  notificationsContent,
   className,
 }: TopbarProps) {
   const isTablet  = variant === "tablet"
@@ -1536,11 +1546,15 @@ export function Topbar({
   const [leftMenuOpen,  setLeftMenuOpen]  = useState(false)
   const [rightMenuOpen, setRightMenuOpen] = useState(false)
   const [searchOpen,    setSearchOpen]    = useState(false)
+  const [notifOpen,     setNotifOpen]     = useState(false)
   const [leftMenuPos,   setLeftMenuPos]   = useState<{ top: number; left: number } | null>(null)
   const [rightMenuPos,  setRightMenuPos]  = useState<{ top: number; right: number } | null>(null)
+  const [notifPos,      setNotifPos]      = useState<{ top: number; right: number } | null>(null)
   const [wsHover,       setWsHover]       = useState(false)
   const [searchHover,   setSearchHover]   = useState(false)
   const [profileHover,  setProfileHover]  = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
+  useClickOutside(notifRef, () => setNotifOpen(false))
   const leftRef  = useRef<HTMLDivElement>(null)
   const rightRef = useRef<HTMLDivElement>(null)
 
@@ -1679,16 +1693,52 @@ export function Topbar({
                isotipo white GROUP is in the DS file but sits at x:0 behind the
                IA button's gradient bg — not rendered as a separate interactive element */}
           <div className="flex items-center gap-[4px]" style={{ width: 80, height: 24 }}>
-            {actions.slice(0, 3).map((a, i) => (
-              <TopbarButton
-                key={i}
-                icon={a.icon}
-                label={a.label}
-                badge={a.badge}
-                variant={a.variant}
-                onClick={a.onClick}
-              />
-            ))}
+            {actions.slice(0, 3).map((a, i) => {
+              if (a.id === "notifications" && notificationsContent) {
+                return (
+                  <div key={i} ref={notifRef} className="relative">
+                    <TopbarButton
+                      icon={a.icon}
+                      label={a.label}
+                      badge={a.badge}
+                      variant={a.variant}
+                      onClick={() => {
+                        if (!notifOpen && notifRef.current) {
+                          const r = notifRef.current.getBoundingClientRect()
+                          setNotifPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+                        }
+                        setNotifOpen(v => !v)
+                        setLeftMenuOpen(false)
+                        setRightMenuOpen(false)
+                        a.onClick?.()
+                      }}
+                    />
+                    {notifOpen && (
+                      <div
+                        style={{
+                          position: notifPos ? "fixed" : "absolute",
+                          top:      notifPos ? notifPos.top : "calc(100% + 4px)",
+                          right:    notifPos ? notifPos.right : 0,
+                          zIndex:   9999,
+                        }}
+                      >
+                        {notificationsContent}
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+              return (
+                <TopbarButton
+                  key={i}
+                  icon={a.icon}
+                  label={a.label}
+                  badge={a.badge}
+                  variant={a.variant}
+                  onClick={a.onClick}
+                />
+              )
+            })}
           </div>
 
           {/* Vertical divider — Border/Neutral/Subtle */}

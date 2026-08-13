@@ -235,7 +235,10 @@ export function ModalDialog({
   // Real modal: fixed scrim + animated card
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center p-[16px]"
+      // z-[10020]: same reasoning as SlideOut's z-[10010] — a modal is a top-level,
+      // app-wide overlay and must out-rank any fixed-position chrome, including
+      // this doc site's full-screen preview wrappers (z-index up to 10002).
+      className="fixed inset-0 z-[10020] flex items-center justify-center p-[16px]"
       style={{
         background:           "var(--modal-scrim)",
         backdropFilter:       "blur(10px)",

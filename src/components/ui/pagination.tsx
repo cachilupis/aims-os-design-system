@@ -27,12 +27,21 @@ export function Pagination({
   const [dropPos,  setDropPos]    = useState<{ left: number; bottom: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const selectorRef  = useRef<HTMLButtonElement>(null)
+  const dropdownRef  = useRef<HTMLDivElement>(null)
 
-  // Close on outside click
+  // Close on outside click — must also exclude the dropdown's own content (a
+  // fixed-position portal-like element outside selectorRef): checking only
+  // selectorRef here meant clicking an option fired this handler on mousedown
+  // (closing + unmounting the dropdown) before the option's own onClick could
+  // fire on the subsequent click event, making every option silently a no-op.
   useEffect(() => {
     if (!dropOpen) return
     const handler = (e: MouseEvent) => {
-      if (selectorRef.current && !selectorRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        selectorRef.current && !selectorRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         setDropOpen(false)
       }
     }
@@ -40,7 +49,15 @@ export function Pagination({
     return () => document.removeEventListener("mousedown", handler)
   }, [dropOpen])
 
-  if (totalPages <= 1) return null
+  // Visibility is driven by total item count against the smallest page-size
+  // option, NOT by whether the CURRENT page size happens to fit everything on
+  // one page. Hiding whenever totalPages<=1 meant switching "rows per page" to
+  // a bigger number made the whole control (including the page-size picker
+  // itself) disappear — locking the user out of ever changing it back. As long
+  // as there's more content than the smallest page size, pagination access
+  // must stay available, consistently, everywhere this component is used.
+  const minPageSize = Math.min(...rowsPerPageOptions)
+  if (totalItems <= minPageSize) return null
 
   const start   = (currentPage - 1) * itemsPerPage + 1
   const end     = Math.min(currentPage * itemsPerPage, totalItems)
@@ -162,6 +179,7 @@ export function Pagination({
       {/* Dropdown — fixed, above component, left-aligned to selector button */}
       {dropOpen && dropPos && (
         <div
+          ref={dropdownRef}
           role="listbox"
           aria-label="Rows per page"
           style={{
