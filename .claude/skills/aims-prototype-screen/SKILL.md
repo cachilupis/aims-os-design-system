@@ -12,10 +12,9 @@ Turn one plain-language description into a finished prototype screen: the file e
 The whole value proposition of this repo (see the "DS Strategy" page in the app itself) is that a PM's prototype is built from the *exact same components* engineering will ship — not an approximation. That only holds if every screen is actually composed from `src/components/ui/` and `src/components/layouts/`, uses only `var(--token)` colors, and follows the same handful of layout patterns every other screen uses. Left unguided, it's easy to reach for a plausible-looking custom `div` instead of the real `EntityList`, and the screen silently loses hover states, token updates, and behaviors that ship with the real component. This skill exists to make the disciplined path the default path.
 
 It deliberately doesn't re-explain rules that already live elsewhere — it points to them and applies them:
-- **`CLAUDE.md`** (repo root, loaded automatically every session) — the actual composition ruleset: List View / Detail / Filter / Overlay / navigation-depth patterns, button hierarchy, anti-patterns.
-- **`aims-os-prototyping`** skill (if installed in this session) or `.claude/commands/aims-os-prototyping.md` — the pre-delivery consistency checklist (interaction pairing, token rules, spacing).
+- **`CLAUDE.md`** (repo root, loaded automatically every session) — the composition ruleset AND the pre-delivery consistency checklist: List View / Detail / Filter / Overlay / navigation-depth patterns, button hierarchy, interaction pairing, token rules, spacing, anti-patterns.
 
-If either of those changes, follow the current file — this skill's job is orchestration, not being a second source of truth that can drift out of sync with the first.
+If that file changes, follow the current version — this skill's job is orchestration, not being a second source of truth that can drift out of sync with the first.
 
 ## The one constraint that shapes the whole shipping step
 
