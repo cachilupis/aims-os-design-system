@@ -23,22 +23,138 @@ If either of those changes, follow the current file — this skill's job is orch
 
 Because of this, keep the `App.tsx` diff to *exactly* those two lines, every time. That's what makes the review a 10-second glance instead of a real audit.
 
-## Phase 0 — Understand the ask, then move
+## Phase 0 — Guided Design Interview, then move
 
-Read the description for: the entity (workers, tickets, connections...), the shape it implies, the fields shown per item, the actions and their hierarchy, which fields are filterable, and the author's name (needed for the file name and branch — ask for it if genuinely missing, everything else, infer and keep going).
+Phase 0 has two parts. First, auto-resolve everything technical from the description so the person never has to name a component, token, or prop. Second, run a short guided interview — one question at a time, always with a recommendation — to help them think through decisions and edge cases they might not have considered. The interview is about product thinking, not technical data gathering.
 
-**Shape → pattern** (full detail lives in `CLAUDE.md` → "Pattern composition"):
+### Part A — Auto-resolve from the description
+
+Read the description and silently resolve:
+
+- **Entity** — what's being listed or shown ("agentes", "automations", "tickets")
+- **Author** — needed for the filename; ask once at the start if genuinely missing
+- **Pattern** — from the table below; infer from layout hints and quantity signals
+- **Components** — from the intent-to-component table below; never ask about these
+- **Defaults** — auto-apply without asking: `EmptyState` on every list, `Pagination` when items can exceed 10, Archive + Duplicate in the kebab, 24px between every nav layer
+
+**Shape → pattern:**
 
 | The description sounds like... | Compose as |
 |---|---|
-| "a list of X", "all X", "manage X" | List View — `ListViewSection` inside `ScreenLayout`, `Pagination` on `ScreenLayout` |
-| "click into X and see...", "X detail with tabs" | Detail page — `Header` (`backButton` at depth 2, breadcrumbs at 3+) + `Tabs` (Overview always first via `WidgetCanvasView`, Logs always last via `Table`) |
-| "queue", "inbox", "review these one at a time" | Master-detail — `EntityList` queue on the left, decision/detail panel on the right (see `pm-michael-attention-room.tsx` for the shape) |
-| "overview", "dashboard", "KPIs" | `WidgetCanvasView` + `HighlightIcon`/`HighlightCard` widgets |
-| "form to create/edit X", "settings for X" | Form/wizard — `patterns-forms` page: 16px field gap, 24px section gap, validate on blur |
-| "history", "audit log", "activity" | `Table` + `Filters` (Search · Status) + `Pagination` — Logs Table pattern |
+| "lista de X", "ver todos", "all X", "manage X" | List View — `ListViewSection` inside `ScreenLayout`, `Pagination` on `ScreenLayout` |
+| "detalle de X", "click into X", "X detail with tabs" | Detail page — `Header` (`backButton` at depth 2, breadcrumbs at 3+) + `Tabs` (Overview always first via `WidgetCanvasView`, Logs always last via `Table`) |
+| "cola", "queue", "inbox", "review these one at a time" | Master-detail — `EntityList` queue on the left, decision/detail panel on the right (see `pm-michael-attention-room.tsx` for the shape) |
+| "overview", "dashboard", "KPIs", "métricas" | `WidgetCanvasView` + `HighlightIcon`/`HighlightCard` widgets |
+| "form to create/edit X", "settings", "configuración" | Form/wizard — `patterns-forms` page: 16px field gap, 24px section gap, validate on blur |
+| "historial", "audit log", "activity", "logs" | `Table` + `Filters` (Search · Status) + `Pagination` — Logs Table pattern |
 
-A genuine ambiguity that would produce the *wrong* pattern is worth one crisp clarifying question. A missing detail that just needs a sensible default (an icon choice, a filter's exact option list) isn't — infer it and let the person react to something real instead of a requirements interview. Before writing anything, skim one existing screen in `src/screens/` with the same shape (e.g. `pm-lex-htl-work-queue.tsx` for a queue) — it's faster to match an existing structure than to reconstruct one from CLAUDE.md's prose each time.
+**Intent → component (resolved silently, never asked):**
+
+| PM says | Resolved to |
+|---|---|
+| "filtros", "filtrar por", "buscar por campo" | `<Filters>` slots + `<FiltersSlideout>` wired with apply/reset |
+| "buscar", "search" | Search slot inside `<Filters>` |
+| "preview", "panel lateral", "ver detalles rápido" | Eye button in `EntityList actions` + `<SlideOut type="with-variants">` |
+| "crear", "nuevo", "agregar" | `<Button variant="main">` in `Header.primaryAction` |
+| "archivar" | Kebab → Archive option + `<ModalDialog tone="warning" iconName="Archive">` |
+| "eliminar", "borrar", "delete" | Kebab → Delete option + `<ModalDialog tone="error" iconName="Trash2" ctaPrimary.destructive>` |
+| "tabs", "pestañas", "secciones" | `<Tabs>` — Overview always first, Logs always last |
+| "tabla", "columnas" | `<Table>` as tab content or inside `ListViewSection` |
+| "métricas", "KPIs", "estadísticas" | `<WidgetCanvasView>` + `<HighlightCard>` via `KpiContent` |
+| "actividad reciente", "últimas acciones" | `<Table size="sm">` widget slot inside `WidgetCanvasView` |
+| "estado", "activo/inactivo", "status" | `<Tag>` on entity card — `success`/`neutral`/`error` by state |
+| "toggle", "activar/desactivar" | `<Toggle>` in SlideOut Config tab or inline in table row |
+
+Before writing anything, skim one existing screen in `src/screens/` with the same shape (e.g. `pm-lex-htl-work-queue.tsx` for a queue) — it's faster to match a working structure than to reconstruct one from CLAUDE.md prose each time.
+
+### Part B — Guided design interview
+
+After auto-resolving, run the interview. **Ask one question at a time. Always include your recommendation. Wait for the answer before the next question.** A one-word "sí" accepts the recommendation and moves on.
+
+The interview has two rounds. Never skip Round 2 — it's where most prototype gaps live.
+
+**Round 1 — Core spec (up to 5 questions)**
+
+Run only the questions where the description left a genuine decision open. Skip any whose answer is already clear from the description.
+
+> **Pattern confirm** (only if ambiguous after Part A)
+> "¿Esta pantalla muestra una lista de [entidad] o el detalle de una sola?"
+> *Mi recomendación: Lista con filtros, por las señales en tu descripción.*
+
+> **Author** (only if missing)
+> "¿Cuál es tu nombre para el nombre del archivo?"
+
+> **Item actions**
+> "¿Qué puede hacer el usuario con cada [entidad] en la lista?"
+> *Mi recomendación: Preview en panel lateral + Archive + Duplicate en el menú de opciones. ¿Agregamos Delete o alguna acción específica del dominio?*
+
+> **Filters**
+> "¿Por qué campos puede filtrar el usuario?"
+> *Mi recomendación: Status + Type como filtros visibles, con 'All Filters' para filtros avanzados.*
+
+> **Header action**
+> "¿Hay una acción principal para crear un nuevo [entidad]?"
+> *Mi recomendación: Botón 'New [Entidad]' en el header. ¿O esta pantalla es solo de lectura?*
+
+**Round 2 — Edge cases (always ask all 5, one at a time)**
+
+Introduce Round 2 with:
+> "Antes de generar el código, quiero que pensemos en algunos casos que se suelen omitir:"
+
+> **Q6 — Empty states**
+> "¿Qué ve el usuario si no hay ningún [entidad] todavía (primera visita) versus si sus filtros no dan resultados?"
+> *Mi recomendación: Dos variantes distintas — 'No [entidades] todavía' con CTA de crear, y 'Sin resultados' con CTA de limpiar filtros. ¿Hay algún caso más específico que quieras cubrir?*
+
+> **Q7 — Errors and failures**
+> "Si el usuario intenta archivar o eliminar un ítem y la operación falla, ¿qué debería pasar?"
+> *Mi recomendación: Toast de error genérico. ¿Hay casos donde el fallo sea esperado — por ejemplo, el ítem está en uso o el usuario no tiene permisos — y necesite un mensaje específico?*
+
+> **Q8 — Permissions**
+> "¿Todos los usuarios que acceden a esta pantalla pueden hacer todas las acciones, o hay roles con acceso restringido?"
+> *Mi recomendación: Asumir acceso completo en V1 y marcar con `// DS-GAP: RBAC` donde irían las restricciones. ¿Hay alguna acción que definitivamente no deben ver ciertos roles?*
+
+> **Q9 — Data volume**
+> "¿Cuántos registros hay típicamente en esta lista — decenas, cientos, miles?"
+> *Mi recomendación: Pagination con page size 10 si puede superar 20 registros. ¿Hay un límite real del backend que debamos reflejar en el prototipo?*
+
+> **Q10 — Creation flow**
+> "Cuando el usuario hace clic en 'New [Entidad]', ¿adónde va — un modal, una pantalla nueva, un slide-out?"
+> *Mi recomendación: Modal inline si el formulario tiene 6 campos o menos; pantalla separada si es más complejo. ¿Cuántos campos tiene la creación?*
+
+### Part C — Structured spec before Phase 1
+
+After Round 2, show the resolved spec and wait for a final confirm before writing any code:
+
+```
+Entity:     [Entidad, plural]
+Pattern:    [nombre del patrón]
+Author:     [nombre]
+File:       src/screens/pm-[author]-[feature].tsx
+
+Core spec:
+  Header CTA:   [acción principal o "read-only"]
+  Filters:      [slots inferidos]
+  Item actions: [lista de acciones]
+
+Edge cases covered:
+  EmptyState/global:    "[texto]" + CTA [acción]
+  EmptyState/filtered:  "[texto]" + CTA limpiar filtros
+  Error action:         [toast genérico / mensaje específico]
+  Permissions:          [V1 full access / restricciones marcadas]
+  Volume:               Pagination page [n], max [n] registros
+  Creation:             [modal / pantalla / slide-out] ([n] campos)
+
+Auto-applied (not asked):
+  EmptyState, Pagination, 24px nav gaps, Archive + Duplicate defaults
+
+Mock data:
+  [3–5 campos realistas inferidos del tipo de entidad]
+  [Valores enterprise: nombres reales, fechas, IDs — nunca Lorem ipsum]
+
+¿Confirmamos o ajustamos algo antes de escribir el código?
+```
+
+A one-word "sí" or "yes" is enough to proceed to Phase 1.
 
 ## Phase 1 — Compose
 
