@@ -31167,8 +31167,10 @@ function NotificationItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }
   const [pgActionCount, setPgActionCount] = useState<0 | 1 | 2>(2)
   const [pgForceAvatar, setPgForceAvatar] = useState(false)
   // Click-routing live examples (Reference tab) — real SlideOut/Modal, not a mock,
-  // so the decision tree is demonstrated with working code, not just prose.
-  const [routingNavMessage, setRoutingNavMessage] = useState<string | null>(null)
+  // so the decision tree is demonstrated with working code, not just prose. Full
+  // Navigation has no working example here on purpose — it leaves this page for a
+  // dedicated editor/console, so there is nothing genuine to open inline; the row
+  // below is shown for reference only (see intro copy), not wired to a fake destination.
   const [routingSlideoutOpen, setRoutingSlideoutOpen] = useState(false)
   const [routingModalOpen, setRoutingModalOpen] = useState(false)
 
@@ -31446,15 +31448,13 @@ function NotificationItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }
 
             <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[8px]">Try it — one row per pattern, wired to the real components</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              Each row below fires the actual navigation used in production — SlideOut and ModalDialog are the real DS components (not mocks), and both the row's onClick and the primaryAction's onClick call the identical handler, per the rule above.
+              Slideout and Modal below open the real DS components (not mocks), and both the row's onClick and the primaryAction's onClick call the identical handler, per the rule above. Full Navigation has no click wired — it leaves this page entirely, so there's nothing real to open inline; the row is shown for the tag/pattern reference only.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
               <NotificationItem
                 iconVariant="error" iconName="Workflow" title="Customer Sync workflow failed"
                 timestamp="25 min ago" description="3 consecutive sync attempts failed. Manual retry required."
                 tags={[{ label: "Workflow", variant: "secondary" }, { label: "Full Navigation", variant: "informative" }]}
-                primaryAction={{ label: "Open", onClick: () => setRoutingNavMessage("→ Navigated to: Workflow Editor — Customer Sync (record #4821)") }}
-                onClick={() => setRoutingNavMessage("→ Navigated to: Workflow Editor — Customer Sync (record #4821)")}
               />
               <div className="h-px w-full" style={{ background: "var(--table-border)" }} />
               <NotificationItem
@@ -31473,11 +31473,6 @@ function NotificationItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }
                 onClick={() => setRoutingModalOpen(true)}
               />
             </div>
-            {routingNavMessage && (
-              <div className="rounded-[8px] p-[10px] text-[12px] mb-[16px]" style={{ background: "var(--tag-informative-bg)", color: "var(--primary)" }}>
-                {routingNavMessage} <span style={{ color: "var(--field-supporting)" }}>— a real app would route here; this doc can only report the destination.</span>
-              </div>
-            )}
 
             <SlideOut
               open={routingSlideoutOpen}
@@ -31742,10 +31737,11 @@ function NotificationCenterPreviewScreen({ onClose }: { onClose: () => void }) {
   // why this can't live inside Filters itself.
   const [openFilterSlot, setOpenFilterSlot] = useState<"Source" | "Studio" | null>(null)
   const [filterAnchor, setFilterAnchor] = useState<{ left: number; top: number } | null>(null)
-  // Click-routing live examples — the SAME 3 patterns documented on Notification
-  // Item's Reference tab, wired here too so the decision tree is demonstrable
-  // inside the actual "Open preview" flow, not only on a separate docs page.
-  const [previewNavMessage, setPreviewNavMessage] = useState<string | null>(null)
+  // Slideout/Modal click-routing, wired to 2 of the realistic demo rows below —
+  // the same real components used on Notification Item's Reference tab, so the
+  // pattern is demonstrated with working code inside the actual "Open preview"
+  // flow too. Full Navigation has no example here on purpose (see Reference tab
+  // for why) — this preview only simulates destinations it can genuinely open.
   const [previewSlideoutOpen, setPreviewSlideoutOpen] = useState(false)
   const [previewModalOpen, setPreviewModalOpen] = useState(false)
 
@@ -31868,11 +31864,17 @@ function NotificationCenterPreviewScreen({ onClose }: { onClose: () => void }) {
               />
             </div>
 
-            {/* Anchored multi-select dropdown for whichever slot is open — same
-                chrome established by the Filter System pattern's Layer-1 preview
-                (var(--menu-bg) blur, 0.5px field-border, radius 8, minWidth 200,
-                shadow-elevation-3); Checkbox rows replace that pattern's single-
-                select buttons since Source/Studio need OR-logic multi-select. */}
+            {/* Anchored multi-select dropdown for whichever slot is open — the real
+                Menu/MenuSection/MenuItem components (size="sm"), not a hand-rolled
+                stand-in. MenuItem's own onClick is the single toggle handler for the
+                whole row; the embedded Checkbox is deliberately passed no onChange of
+                its own — Checkbox's plain (label-less) render still attaches its own
+                onClick internally, so giving it a second handler here would double-fire
+                on a direct hit (Checkbox's onClick, then the bubble to MenuItem's) and
+                cancel itself out — exactly the "click the checkbox and nothing happens"
+                bug this replaces. Checkbox here is purely the visual indicator; MenuItem
+                owns the interaction, same as NotificationItem's own primaryAction/
+                secondaryAction stopPropagation pattern one file over. */}
             {openFilterSlot && filterAnchor && (() => {
               const opts = openFilterSlot === "Source" ? SOURCE_OPTIONS : STUDIO_OPTIONS
               const selected = openFilterSlot === "Source" ? sourceFilter : studioFilter
@@ -31884,34 +31886,19 @@ function NotificationCenterPreviewScreen({ onClose }: { onClose: () => void }) {
               return (
                 <>
                   <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setOpenFilterSlot(null)} />
-                  <div
-                    className="flex flex-col overflow-hidden"
-                    style={{
-                      position: "fixed", left: filterAnchor.left, top: filterAnchor.top + 4, zIndex: 10001,
-                      background: "var(--menu-bg)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-                      border: "0.5px solid var(--field-border)", borderRadius: 8, minWidth: 200,
-                      boxShadow: "var(--shadow-elevation-3)",
-                    }}
-                  >
-                    <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>{openFilterSlot}</span>
-                    </div>
-                    {opts.map(opt => {
-                      const isSel = selected.includes(opt)
-                      return (
-                        <button
+                  <div style={{ position: "fixed", left: filterAnchor.left, top: filterAnchor.top + 4, zIndex: 10001 }}>
+                    <Menu className="w-auto min-w-[200px]">
+                      <MenuSection label={openFilterSlot} />
+                      {opts.map(opt => (
+                        <MenuItem
                           key={opt}
-                          className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full"
-                          style={{ fontSize: 13, color: "var(--foreground)" }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "var(--color-surface-neutral-default)" }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent" }}
+                          size="sm"
+                          label={opt}
+                          checkbox={<Checkbox size="sm" checked={selected.includes(opt)} />}
                           onClick={() => toggle(opt)}
-                        >
-                          <Checkbox checked={isSel} onChange={() => toggle(opt)} />
-                          <span className="flex-1">{opt}</span>
-                        </button>
-                      )
-                    })}
+                        />
+                      ))}
+                    </Menu>
                   </div>
                 </>
               )
@@ -31931,10 +31918,6 @@ function NotificationCenterPreviewScreen({ onClose }: { onClose: () => void }) {
               </p>
             )}
 
-            <div className="rounded-[8px] p-[10px] text-[12px]" style={{ background: "var(--tag-informative-bg)", color: "var(--primary)" }}>
-              Click routing, live — each labeled row below demonstrates a different destination: Full Navigation · Slideout · Modal. Same 3 patterns documented on Notification Item's Reference tab.
-            </div>
-
             <div className="flex flex-col gap-[24px]">
               {groupByDate(pagedItems).map(group => (
                 <div key={group.label} className="flex flex-col gap-[12px]">
@@ -31943,38 +31926,28 @@ function NotificationCenterPreviewScreen({ onClose }: { onClose: () => void }) {
                     <div className="h-px flex-1" style={{ background: "var(--color-border-neutral-lighter)" }} />
                   </div>
                   {group.items.map(item => {
-                    const routing =
-                      item.id === "3"  ? { label: "Full Navigation example", onClick: () => setPreviewNavMessage("→ Navigated to: Workflow Editor — Customer Sync (record #4821)") } :
-                      item.id === "2"  ? { label: "Slideout example",        onClick: () => setPreviewSlideoutOpen(true) } :
-                      item.id === "11" ? { label: "Modal example",          onClick: () => setPreviewModalOpen(true) } :
+                    // Only Slideout (id 2) and Modal (id 11) get real click-routing here —
+                    // both open genuine DS components. There's no Full Navigation example in
+                    // this preview since it would leave the page for a destination that
+                    // doesn't exist in this doc; see Notification Item's Reference tab for
+                    // that pattern documented without a fabricated click handler.
+                    const onOpen =
+                      item.id === "2"  ? () => setPreviewSlideoutOpen(true) :
+                      item.id === "11" ? () => setPreviewModalOpen(true) :
                       undefined
-                    const rowProps = routing ? {
-                      onClick: routing.onClick,
-                      primaryAction: item.primaryAction ? { ...item.primaryAction, onClick: routing.onClick } : undefined,
+                    const rowProps = onOpen ? {
+                      onClick: onOpen,
+                      primaryAction: item.primaryAction ? { ...item.primaryAction, onClick: onOpen } : undefined,
                     } : {}
                     return (
-                      <div key={item.id} className="flex flex-col gap-[4px]">
-                        {routing && (
-                          <div className="flex items-center gap-[4px] pl-[4px]">
-                            <LucideIcons.CornerDownRight size={11} style={{ color: "var(--primary)" }} />
-                            <span className="text-[11px] font-semibold" style={{ color: "var(--primary)" }}>{routing.label} — click the row or its button</span>
-                          </div>
-                        )}
-                        <CardContainer size="sm" variant="default">
-                          <NotificationItem {...item} {...rowProps} className="p-0" hoverable={false} />
-                        </CardContainer>
-                      </div>
+                      <CardContainer key={item.id} size="sm" variant="default">
+                        <NotificationItem {...item} {...rowProps} className="p-0" hoverable={false} />
+                      </CardContainer>
                     )
                   })}
                 </div>
               ))}
             </div>
-
-            {previewNavMessage && (
-              <div className="rounded-[8px] p-[10px] text-[12px]" style={{ background: "var(--tag-informative-bg)", color: "var(--primary)" }}>
-                {previewNavMessage} <span style={{ color: "var(--field-supporting)" }}>— a real app would route here; this doc can only report the destination.</span>
-              </div>
-            )}
           </div>
         )}
       </ScreenLayout>
