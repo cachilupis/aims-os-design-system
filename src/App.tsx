@@ -76,6 +76,8 @@ import { FormsCreatePageExampleScreen }       from "./screens/forms-create-page-
 import { SlideOutDetailExampleScreen }        from "./screens/slideout-detail-example"
 import { SlideOutFormExampleScreen }          from "./screens/slideout-form-example"
 import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
+import { ChatWorkflowConfigScreen }           from "./screens/chat-workflow-config"
+import { WorkflowsListScreen }               from "./screens/workflows-list"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -142,6 +144,8 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-michael-attention-room",label: "Attention Room",                description: "Master-detail attention queue — Overdue/Today/Next groups, Approvals/Work/Tasks/Messages filter, search, EntityList queue (left) + decision detail panel (right) with blast radius, comment composer and Approve/Decline actions", author: "Michael", component: PMMichaelAttentionRoomScreen },
   { id: "proto-michael-login",         label: "Login View",                    description: "Sign-in screen — email/password with inline validation and show/hide toggle, Google one-click sign-in, Remember me, Forgot password SlideOut, and a signed-in confirmation state for both auth paths", author: "Michael", component: PMMichaelLoginScreen },
   { id: "proto-thomas-universal-profile", label: "Universal Profile — Thomas", description: "Unified entity profile (Person, Employee, Company) aggregating Governance, Risk, and Connections studies — Overview canvas with adaptive study widgets (hidden when empty, error+retry when failed), Activity feed (last 20), paginated Logs, Edit + Export for all types, Archive for Person/Employee only", author: "Thomas", component: PMThomasUniversalProfileScreen },
+  { id: "proto-chat-workflow-config",     label: "Chat Workflow Config",         description: "Conversational governance gates — 4-stage sequence (Intent → Classification → Data Sources → Systems) producing a governed workflow draft with node-vocabulary enforcement, SVG canvas view, and instrumentation panel", author: "Thomas", component: ChatWorkflowConfigScreen },
+  { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", component: WorkflowsListScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
@@ -39836,6 +39840,11 @@ export default function App() {
     // drops any part of the URL it isn't explicitly given, so the hash must
     // be re-appended every time or it's lost before the target page can read it.
     const hash = window.location.hash
+    const params = new URLSearchParams(window.location.search)
+    // Guard: React StrictMode double-invokes mount effects. Without this, the
+    // URL sync fires with the initial active="home" and clobbers a ?proto= deep-link
+    // before the deep-link effect's second invocation can read it.
+    if (active === "home" && params.get("proto")) return
     const isProto = PROTOTYPE_PAGES.some(p => p.id === active)
     if (isProto) {
       window.history.replaceState(null, "", `?proto=${active}${hash}`)
@@ -39844,7 +39853,7 @@ export default function App() {
       // usePageTab in src/lib/use-page-tab.ts, or HomePage's hand-rolled
       // equivalent) so a page's Overview/Playground/Reference deep-link
       // survives sidebar navigation instead of always resetting to Overview.
-      const currentTab = new URLSearchParams(window.location.search).get("tab")
+      const currentTab = params.get("tab")
       const tabSuffix  = currentTab ? `&tab=${currentTab}` : ""
       window.history.replaceState(null, "", `?page=${active}${tabSuffix}${hash}`)
     }
