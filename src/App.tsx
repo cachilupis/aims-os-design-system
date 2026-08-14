@@ -44,6 +44,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
+import { RecordHeader, type RecordHeaderVariant, type EmployeeRecord, type CustomerRecord, type ClientRecord, type NextBestAction } from "@/components/ui/record-header"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
@@ -78,8 +79,8 @@ import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -171,6 +172,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "notification-item",   label: "Notification Item",   group: "Components", description: "Single-row notification · lead icon + title/timestamp + description + tags/actions · unread indicator dot · 5 states × Read/Unread: Default, Hover, Pressed, Focus, Disabled" },
   { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
+  { id: "record-header",   label: "Record Header",     group: "Components",  description: "Entity profile header for Employee/Customer/Client records · avatar + name + context chips + up to 3 actions · Next Best Action signal bar · expandable Details grid · one shared layout across all 3 variants" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "side-panel",      label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 350px default, 450px + dynamic half-screen snap points · header + scrollable body + optional footer" },
@@ -2101,6 +2103,63 @@ const NOTIFICATION_CENTER_SPEC = {
   ],
 }
 
+// figmaNodeId/figmaUrl intentionally empty — this is a new component, not yet
+// synced from a Figma node. See record-header.tsx's own header comment for the
+// 3 industry patterns (Salesforce Highlights Panel, HubSpot conditional
+// sections, Next Best Action engine) it's modeled on instead.
+const RECORD_HEADER_SPEC = {
+  name: "Record Header",
+  figmaNodeId: "—",
+  figmaUrl: "",
+  description: "Entity profile header used atop Employee/Customer/Client dashboard views. 3-layer architecture: Identity row (always visible — avatar, name, type, up to 3 context Tags, up to 3 actions), Signal (always visible — a single NextBestAction, semantically colored by severity), Details (disclosure — secondary fields grid). One shared layout for all 3 variants; only which fields land in chips vs. Details changes per variant.",
+  properties: [
+    { name: "variant",        type: "Variant",  values: ["employee","customer","client"], default: "required", note: "Selects which of the 3 record shapes `data` must match, and which fields populate the context chips vs. the Details grid — see getRecordFields in record-header.tsx." },
+    { name: "data",           type: "object",   values: ["EmployeeRecord | CustomerRecord | ClientRecord"], default: "required" },
+    { name: "signal",         type: "object",   values: ["NextBestAction — { label, severity, dueContext?, onAction? }"], default: "required", note: "Fed by the AIMS OS Next Best Action engine. Same shape for all 3 variants — the engine never needs variant-specific branching." },
+    { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? } · max 3"], default: "[]", note: "Same shape as EntityList's ELAction, reused on purpose." },
+    { name: "defaultExpanded",type: "Boolean",  values: ["true","false"], default: "false", note: "Uncontrolled initial state for the Details disclosure." },
+  ],
+  sizes: [
+    { size: "Card",     dimensions: "100% width, auto height", padding: "16px H / 24px V (CardContainer default)", gap: "16px between layers" },
+    { size: "Avatar",   dimensions: "32×32px (AvatarCircle lg)", padding: "—", gap: "—" },
+    { size: "Signal",   dimensions: "100% width × auto", padding: "12px H / 10px V", gap: "8px" },
+  ],
+  typography: [
+    { element: "Name",        family: "Inter", size: "18px", weight: "Semi Bold (600)", lineHeight: "1.3", variable: "--color-text-title" },
+    { element: "Type label",  family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1",   variable: "--field-supporting" },
+    { element: "Signal text", family: "Inter", size: "13px", weight: "Semi Bold (600)", lineHeight: "1.4", variable: "per-severity — see states below" },
+    { element: "Detail label",family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1",   variable: "--field-supporting" },
+    { element: "Detail value",family: "Inter", size: "13px", weight: "Regular",         lineHeight: "1.4", variable: "--foreground" },
+  ],
+  states: [
+    { name: "Signal — success",     borderWidth: "0.5px", tokens: [
+      { role: "Background", variable: "--ab-success-bg", varId: "", light: "#e5fdf8", dark: "#0a1f1a" },
+      { role: "Border",     variable: "--ab-success-bd", varId: "", light: "rgba(0,153,120,0.25)", dark: "rgba(0,153,120,0.25)" },
+      { role: "Icon + text",variable: "--ab-success-text", varId: "", light: "#003328", dark: "#6ee7b7" },
+    ]},
+    { name: "Signal — alert",       borderWidth: "0.5px", tokens: [
+      { role: "Background", variable: "--ab-alert-bg", varId: "", light: "#fff4e5", dark: "#281e00" },
+      { role: "Border",     variable: "--ab-alert-bd", varId: "", light: "rgba(180,83,9,0.25)", dark: "rgba(180,83,9,0.25)" },
+      { role: "Icon + text",variable: "--ab-alert-text", varId: "", light: "#663c00", dark: "#fcd34d" },
+    ]},
+    { name: "Signal — error",       borderWidth: "0.5px", tokens: [
+      { role: "Background", variable: "--ab-error-bg", varId: "", light: "#fdeded", dark: "#2d1515" },
+      { role: "Border",     variable: "--ab-error-bd", varId: "", light: "rgba(153,34,34,0.25)", dark: "rgba(153,34,34,0.25)" },
+      { role: "Icon + text",variable: "--ab-error-text", varId: "", light: "#5f2120", dark: "#ff6467" },
+    ]},
+    { name: "Signal — informative (fallback, see file header)", borderWidth: "0.5px", tokens: [
+      { role: "Background", variable: "--tag-informative-bg", varId: "", light: "#e9f1ff", dark: "rgba(21,93,252,0.15)" },
+      { role: "Border",     variable: "--tag-informative-bd", varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "Icon + text",variable: "--tag-informative-fg", varId: "", light: "#001740", dark: "rgba(255,255,255,0.80)" },
+    ]},
+    { name: "Signal — neutral (fallback, see file header)", borderWidth: "0.5px", tokens: [
+      { role: "Background", variable: "--tag-neutral-bg", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.08)" },
+      { role: "Border",     variable: "--tag-neutral-bd", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+      { role: "Icon + text",variable: "--tag-neutral-fg", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+    ]},
+  ],
+}
+
 const SIDEBAR_SPEC = {
   name: "Sidebar",
   figmaNodeId: "8572:42410",
@@ -3183,6 +3242,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
   if (id === "notification-item")   return NOTIFICATION_ITEM_SPEC   as AnySpec
   if (id === "notification-center") return NOTIFICATION_CENTER_SPEC as AnySpec
+  if (id === "record-header")       return RECORD_HEADER_SPEC       as AnySpec
   if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
   if (id === "filters")          return FILTERS_SPEC          as AnySpec
   if (id === "empty-state")      return EMPTY_STATE_SPEC      as AnySpec
@@ -3539,6 +3599,10 @@ function FigmaLogoIcon() {
 }
 
 function FigmaLink({ href }: { href: string }) {
+  // Guard added for RecordHeader — the first component in this catalog with no
+  // real Figma node yet. Every other spec always has a real href; don't render
+  // a "View in Figma" link that goes nowhere.
+  if (!href) return null
   return (
     <a
       href={href}
@@ -32305,6 +32369,304 @@ function NotificationCenterPage({ openSpec }: { openSpec: (s: SpecModal) => void
   )
 }
 
+// Mock data for the 3 variants — realistic values, not "Lorem ipsum" placeholders,
+// per this repo's own screen-generation guardrails (CLAUDE.md's prototyping rules
+// apply just as much to the catalog's own demo data as to a PM screen).
+
+const RH_EMPLOYEE: EmployeeRecord = {
+  name: "Sarah Chen", role: "Senior Software Engineer", department: "Engineering",
+  manager: "David Kim", location: "Remote — Austin, TX", email: "sarah.chen@aimsos.ai",
+  phone: "+1 (512) 555-0142", startDate: "March 3, 2023", team: "Platform Infra",
+  accessRole: "Admin",
+}
+const RH_EMPLOYEE_SIGNAL: NextBestAction = {
+  label: "2 tasks pending your approval", severity: "alert", dueContext: "Oldest due today", onAction: () => {},
+}
+
+const RH_CUSTOMER: CustomerRecord = {
+  accountName: "Acme Corp", segment: "Enterprise", owner: "Jamie Rivera", tier: "Tier 1",
+  renewalDate: "Sep 2, 2026", mrr: "$18,400", lastContact: "3 days ago", openTickets: 2,
+  adoptionLevel: "Low", primaryContact: "Jane Doe — VP Operations",
+}
+const RH_CUSTOMER_SIGNAL: NextBestAction = {
+  label: "Health score dropped to 61 — renews in 19 days", severity: "error", dueContext: "Renewal at risk", onAction: () => {},
+}
+
+const RH_CLIENT: ClientRecord = {
+  name: "Marcus Webb", company: "Initech", dealStage: "Negotiation", dealValue: "$42,000",
+  owner: "Priya Nair", email: "marcus.webb@initech.com", phone: "+1 (415) 555-0188",
+  leadSource: "Referral", lastInteraction: "Yesterday", expectedCloseDate: "Aug 29, 2026",
+}
+const RH_CLIENT_SIGNAL: NextBestAction = {
+  label: "Ready to send final proposal", severity: "success", dueContext: "NBA engine · confidence 82%", onAction: () => {},
+}
+
+function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+  const [pgVariant, setPgVariant] = useState<RecordHeaderVariant>("employee")
+
+  const pgData   = pgVariant === "employee" ? RH_EMPLOYEE : pgVariant === "customer" ? RH_CUSTOMER : RH_CLIENT
+  const pgSignal = pgVariant === "employee" ? RH_EMPLOYEE_SIGNAL : pgVariant === "customer" ? RH_CUSTOMER_SIGNAL : RH_CLIENT_SIGNAL
+
+  return (
+    <div>
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Record Header</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[640px]">
+            Entity profile header for Employee/Customer/Client dashboard views. Identity row + Signal always visible; Details expands on demand. One shared layout — only the content per variant changes.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("record-header")} />
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{
+              color: tab === t ? "var(--primary)" : "var(--field-supporting)",
+              borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+          {/* Each variant shown twice — collapsed (default) and expanded (defaultExpanded) —
+              per the brief's "3 variants × both states, mock realistic data" requirement. */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — collapsed (Identity + Signal only)</p>
+            <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={RH_EMPLOYEE_SIGNAL}
+              actions={[{ label: "Message" }, { label: "View profile", variant: "primary" }]} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — expanded (Details grid revealed)</p>
+            <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={RH_EMPLOYEE_SIGNAL} defaultExpanded
+              actions={[{ label: "Message" }, { label: "View profile", variant: "primary" }]} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — collapsed</p>
+            <RecordHeader variant="customer" data={RH_CUSTOMER} signal={RH_CUSTOMER_SIGNAL}
+              actions={[{ label: "Log activity" }, { label: "Contact account", variant: "primary" }]} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — expanded</p>
+            <RecordHeader variant="customer" data={RH_CUSTOMER} signal={RH_CUSTOMER_SIGNAL} defaultExpanded
+              actions={[{ label: "Log activity" }, { label: "Contact account", variant: "primary" }]} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — collapsed</p>
+            <RecordHeader variant="client" data={RH_CLIENT} signal={RH_CLIENT_SIGNAL}
+              actions={[{ label: "Log call" }, { label: "Send proposal", variant: "primary" }]} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — expanded</p>
+            <RecordHeader variant="client" data={RH_CLIENT} signal={RH_CLIENT_SIGNAL} defaultExpanded
+              actions={[{ label: "Log call" }, { label: "Send proposal", variant: "primary" }]} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
+            <div className="grid grid-cols-2 gap-[16px]">
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[#059669] uppercase tracking-widest">Use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["Atop a dashboard view for a single Employee, Customer, or Client record", "A Next Best Action recommendation exists (or a sensible neutral fallback) for that record", "Secondary contact/metadata fields exist but shouldn't compete with the primary identity at a glance"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="text-[#059669] shrink-0">✓</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[#dc2626] uppercase tracking-widest">Don't use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["Listing multiple records at once (use EntityList)", "There's no single actionable signal to show — don't force a fake NextBestAction", "More than 3 chips or 3 actions are needed — trim to the 3 that matter most instead of overflowing the row"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="text-[#dc2626] shrink-0">✕</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[32px]">
+          <RecordHeader
+            variant={pgVariant}
+            data={pgData}
+            signal={pgSignal}
+            actions={
+              pgVariant === "employee" ? [{ label: "Message" }, { label: "View profile", variant: "primary" }] :
+              pgVariant === "customer" ? [{ label: "Log activity" }, { label: "Contact account", variant: "primary" }] :
+              [{ label: "Log call" }, { label: "Send proposal", variant: "primary" }]
+            }
+          />
+
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Variant — same layout, only data/content changes</p>
+            <div className="flex flex-wrap gap-[4px]">
+              {(["employee", "customer", "client"] as const).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setPgVariant(v)}
+                  className="px-[10px] py-[5px] rounded text-[11px] font-medium capitalize transition-colors"
+                  style={{
+                    background: pgVariant === v ? "#2173ff" : "var(--ctrl-inactive-bg)",
+                    color: pgVariant === v ? "#fff" : "var(--field-label)",
+                    border: pgVariant === v ? "none" : "1px solid var(--field-border)",
+                  }}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
+              Click the chevron on the Identity row to expand/collapse Details — real disclosure state, not a mock.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[32px]">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">The NextBestAction shape — transversal to all 3 variants</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              This is the one thing AIMS OS's Next Best Action engine needs to return. The component never branches on <code className="text-[var(--primary)]">variant</code> to interpret it — Employee, Customer, and Client Signals are rendered by the exact same code path.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Field", "Meaning"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["label",       "The recommendation itself, e.g. \"2 tasks pending your approval\""],
+                ["severity",    "success | alert | error | informative | neutral — drives the Signal bar's color"],
+                ["dueContext?", "Short supporting text, e.g. \"Oldest due today\", \"SLA breached 2h ago\""],
+                ["onAction?",   "Present → the whole Signal row becomes clickable (same model as NotificationItem's row onClick)"],
+              ].map(([field, desc], i) => (
+                <div key={field} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono font-semibold text-[var(--primary)]">{field}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Per-variant field mapping</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              The only variant-specific logic in the whole component lives in one function (<code className="text-[var(--primary)]">getRecordFields</code>) — it decides which fields become context chips (max 3, always visible) vs. Details (behind the disclosure). Everything downstream renders identically.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[110px_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Variant", "Context chips (max 3)", "Details grid"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Employee", "role, department, location", "manager, email, phone, startDate, team, accessRole"],
+                ["Customer", "tier, segment, adoptionLevel", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact"],
+                ["Client",   "dealStage, company, leadSource", "dealValue, owner, email, phone, lastInteraction, expectedCloseDate"],
+              ].map(([v, chips, details], i) => (
+                <div key={v} className="grid grid-cols-[110px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{v}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{chips}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{details}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Why Tag, not Chip, for context chips</p>
+            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                The brief calls them "chips," but this repo's <code>Chip</code> component is documented as the interactive filter-row control (toggleable, used in Filters/quick-filter rows). Context chips here are pure metadata — never clickable — which is exactly what <code>Tag</code> is for. Same visual weight, correct semantics.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Assumed tokens — verify before relying on this in production</p>
+            <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
+              <div>
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>--ab-informative-* and --ab-neutral-* do not exist yet</p>
+                <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                  Alert Banner (this Signal bar's visual model) only ships success/alert/error. For the other 2 severities this component falls back to Tag's own <code style={{ fontSize: 11 }}>--tag-informative-*</code> and <code style={{ fontSize: 11 }}>--tag-neutral-*</code> triads — real, existing tokens, just borrowed from a different component's family rather than invented. If Michael adds a complete <code style={{ fontSize: 11 }}>--ab-*</code> set for all 5 severities, swap <code style={{ fontSize: 11 }}>SEVERITY_CONFIG</code> in record-header.tsx to use them instead.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Design tokens — Signal severities</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[110px_1fr_130px_130px] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Severity", "Token family", "Light", "Dark"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["success",     "--ab-success-*",     "#e5fdf8", "#0a1f1a"],
+                ["alert",       "--ab-alert-*",       "#fff4e5", "#281e00"],
+                ["error",       "--ab-error-*",       "#fdeded", "#2d1515"],
+                ["informative", "--tag-informative-*", "#e9f1ff", "rgba(21,93,252,0.15)"],
+                ["neutral",     "--tag-neutral-*",     "#f2f2f2", "rgba(255,255,255,0.08)"],
+              ].map(([sev, token, light, dark], i) => (
+                <div key={sev} className="grid grid-cols-[110px_1fr_130px_130px] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{sev}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{token}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{light}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{dark}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Anatomy</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[160px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Layer", "Composition"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1. Identity (always visible)", "AvatarCircle sizeKey=lg · Name (18px, --color-text-title, never truncated) · type label · up to 3 Tag chips · up to 3 Buttons · disclosure chevron. Salesforce Highlights Panel pattern."],
+                ["2. Signal (always visible)",   "One NextBestAction — icon + label + dueContext, semantically colored by severity, clickable when onAction is set. HubSpot conditional-section + Next Best Action engine pattern."],
+                ["3. Details (disclosure)",      "2–3 col grid of label/value pairs, max-height transition (320ms), aria-expanded on the trigger button, Enter/Space activation via native <button>."],
+              ].map(([el, desc], i) => (
+                <div key={el} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[12px] text-[13px] font-semibold text-[var(--field-text)]">{el}</div>
+                  <div className="px-[12px] py-[12px] text-[13px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function HighlightCardPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [pgStyle, setPgStyle] = useState<HighlightCardStyle>("default")
@@ -39213,6 +39575,7 @@ export default function App() {
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "notification-item"   && <NotificationItemPage   openSpec={setSpecModal} />}
           {active === "notification-center" && <NotificationCenterPage openSpec={setSpecModal} />}
+          {active === "record-header"       && <RecordHeaderPage      openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "breadcrumb"      && <BreadcrumbPage openSpec={setSpecModal} />}
           {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}
