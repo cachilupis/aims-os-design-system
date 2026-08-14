@@ -31173,6 +31173,10 @@ function NotificationItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }
   // below is shown for reference only (see intro copy), not wired to a fake destination.
   const [routingSlideoutOpen, setRoutingSlideoutOpen] = useState(false)
   const [routingModalOpen, setRoutingModalOpen] = useState(false)
+  // Overview tab's own click-behavior demo — separate state from the Reference
+  // tab's routingModalOpen so switching tabs never leaves the other tab's panel
+  // stuck open.
+  const [ovModalOpen, setOvModalOpen] = useState(false)
 
   const scenario = NOTIF_SCENARIOS.find(s => s.key === pgScenario)!
   // Tag slot 2 is derived from the selected scenario's REAL severity so the control
@@ -31275,6 +31279,32 @@ function NotificationItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }
                 description="This notification type has been turned off." disabled
               />
             </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Click behavior — what happens when a row is clicked</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[640px]">
+              A click on the row (or its <code className="text-[var(--primary)]">primaryAction</code>) always routes somewhere real — Full Navigation, Slideout, or Modal, chosen by what the notification needs, never left unwired. Below is the Modal case: an immediate, single-click binary decision. See the Reference tab for the full 3-way decision table and a live Slideout example too.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <NotificationItem
+                iconVariant="error" iconName="UserCog" title="Vulnerable customer flagged for review"
+                timestamp="Yesterday, 8:47 AM" description="HTL detected a crisis-response signal in ticket #5521 — needs human review."
+                tags={[{ label: "HTL", variant: "secondary" }, { label: "Critical", variant: "error" }]}
+                primaryAction={{ label: "Review", onClick: () => setOvModalOpen(true) }}
+                onClick={() => setOvModalOpen(true)}
+              />
+            </div>
+            <ModalDialog
+              isOpen={ovModalOpen}
+              onClose={() => setOvModalOpen(false)}
+              variant="confirmation"
+              tone="error"
+              title="Escalate to a human reviewer?"
+              description="HTL detected a crisis-response signal in ticket #5521. This assigns it to the on-call reviewer immediately."
+              ctaPrimary={{ label: "Escalate now", destructive: true, onClick: () => setOvModalOpen(false) }}
+              ctaSecondary={{ label: "Cancel", onClick: () => setOvModalOpen(false) }}
+            />
           </section>
 
           <section>
@@ -31474,35 +31504,65 @@ function NotificationItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }
               />
             </div>
 
+            {/* Standardized with-variants composition per the SlideOut/SidePanel Content page:
+                AI Summary → Key Metrics → Primary list → CTA footer — not a hand-rolled body,
+                and not type="full-slot" (which would skip the real header entirely). */}
             <SlideOut
               open={routingSlideoutOpen}
               onClose={() => setRoutingSlideoutOpen(false)}
-              type="full-slot"
+              type="with-variants"
               size="m"
+              title="Lead Qualification Agent"
+              subtitle="AI Agent · Agentic Studio"
+              statusLabel="Approval required"
+              showIcon
+              showStatus
+              showTopButton={false}
+              showTabs={false}
+              showSearchBar={false}
+              showChips={false}
+              showCta
+              ctaPrimaryLabel="Approve outreach"
+              ctaSecondaryLabel="Dismiss"
+              onCtaPrimary={() => setRoutingSlideoutOpen(false)}
+              onCtaSecondary={() => setRoutingSlideoutOpen(false)}
             >
-              {/* type="full-slot" skips the with-variants header (title+tabs+search are
-                  bundled together with no way to show just the title) — a plain confirmation
-                  detail like this doesn't need tabs or search, so a small custom header row
-                  keeps the panel clean instead of showing unrelated placeholder chrome. */}
-              <div className="flex flex-col gap-[12px] p-[20px]">
-                <div className="flex items-start justify-between gap-[8px]">
-                  <div>
-                    <p className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>Lead Qualification Agent</p>
-                    <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Approval required · Agentic Studio</p>
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>AI Summary</span>
+                <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]" style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+                  <div className="flex items-center gap-[6px]">
+                    <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+                    <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
                   </div>
-                  <Button variant="tertiary" size="sm" iconPosition="alone" icon={<LucideIcons.X size={14} />} aria-label="Close panel" onClick={() => setRoutingSlideoutOpen(false)} />
+                  <ul className="flex flex-col gap-[4px]">
+                    {["Reviewed 3 leads against your qualification criteria", "1 lead flagged for manual approval before outreach", "Confidence 62% — below your 75% auto-approve threshold"].map((b, bi) => (
+                      <li key={bi} className="flex items-start gap-[6px] text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>
+                        <span className="mt-[6px] w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--color-text-purple)" }} />{b}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <p className="text-[13px]" style={{ color: "var(--field-text)" }}>
-                  ORI reviewed 3 leads against your qualification criteria and flagged 1 for manual approval before outreach begins.
-                </p>
-                <div className="rounded-[8px] border border-[var(--table-border)] p-[12px] flex flex-col gap-[6px]">
-                  <p className="text-[12px] font-semibold" style={{ color: "var(--field-text)" }}>Flagged lead</p>
-                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Acme Corp — Jane Doe (jane@acme.com). Confidence: 62% (below your 75% auto-approve threshold).</p>
-                </div>
-                <div className="flex gap-[8px]">
-                  <Button variant="primary" size="sm" onClick={() => setRoutingSlideoutOpen(false)}>Approve outreach</Button>
-                  <Button variant="secondary" size="sm" onClick={() => setRoutingSlideoutOpen(false)}>Dismiss</Button>
-                </div>
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Key Metrics</span>
+                <AdaptiveMetricGrid cards={[
+                  { label: "Leads reviewed", value: "3",   iconName: "Users" },
+                  { label: "Flagged",        value: "1",   iconName: "Flag"  },
+                  { label: "Confidence",     value: "62%", iconName: "Gauge" },
+                ]} />
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Flagged lead</span>
+                <EntityList items={[
+                  {
+                    id: "lead-1", title: "Jane Doe — Acme Corp",
+                    iconName: "User", iconVariant: "yellow",
+                    state: { label: "Needs review", variant: "alert" },
+                    primaryMeta: [{ iconName: "Mail", label: "jane@acme.com" }],
+                  },
+                ]} />
               </div>
             </SlideOut>
 
@@ -31727,7 +31787,9 @@ function NotificationCenterPreviewScreen({ onClose }: { onClose: () => void }) {
   const [listPage, setListPage] = useState(1)
   // Real "rows per page" control, not a fixed constant — Pagination's own picker
   // (5/25/50/100/200) is decorative unless onItemsPerPageChange is wired to state.
-  const [listPageSize, setListPageSize] = useState(5)
+  // Default 25 so the Slideout/Modal click-routing examples (further down the
+  // 14-item demo list) are visible without paginating on first open.
+  const [listPageSize, setListPageSize] = useState(25)
   // Source/Studio only apply in the full List View, not the dropdown (which has no
   // Source/Studio chips of its own) — kept separate from `filtered` below on purpose.
   const [sourceFilter, setSourceFilter] = useState<string[]>([])
@@ -31952,31 +32014,64 @@ function NotificationCenterPreviewScreen({ onClose }: { onClose: () => void }) {
         )}
       </ScreenLayout>
 
+      {/* Same standardized with-variants composition as the Reference tab's Slideout
+          example — AI Summary → Key Metrics → Primary list → CTA footer. */}
       <SlideOut
         open={previewSlideoutOpen}
         onClose={() => setPreviewSlideoutOpen(false)}
-        type="full-slot"
+        type="with-variants"
         size="m"
+        title="Lead Qualification Agent"
+        subtitle="AI Agent · Agentic Studio"
+        statusLabel="Approval required"
+        showIcon
+        showStatus
+        showTopButton={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta
+        ctaPrimaryLabel="Approve outreach"
+        ctaSecondaryLabel="Dismiss"
+        onCtaPrimary={() => setPreviewSlideoutOpen(false)}
+        onCtaSecondary={() => setPreviewSlideoutOpen(false)}
       >
-        <div className="flex flex-col gap-[12px] p-[20px]">
-          <div className="flex items-start justify-between gap-[8px]">
-            <div>
-              <p className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>Lead Qualification Agent</p>
-              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Approval required · Agentic Studio</p>
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>AI Summary</span>
+          <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]" style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
+            <div className="flex items-center gap-[6px]">
+              <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
+              <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
             </div>
-            <Button variant="tertiary" size="sm" iconPosition="alone" icon={<LucideIcons.X size={14} />} aria-label="Close panel" onClick={() => setPreviewSlideoutOpen(false)} />
+            <ul className="flex flex-col gap-[4px]">
+              {["Reviewed 3 leads against your qualification criteria", "1 lead flagged for manual approval before outreach", "Confidence 62% — below your 75% auto-approve threshold"].map((b, bi) => (
+                <li key={bi} className="flex items-start gap-[6px] text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>
+                  <span className="mt-[6px] w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--color-text-purple)" }} />{b}
+                </li>
+              ))}
+            </ul>
           </div>
-          <p className="text-[13px]" style={{ color: "var(--field-text)" }}>
-            ORI reviewed 3 leads against your qualification criteria and flagged 1 for manual approval before outreach begins.
-          </p>
-          <div className="rounded-[8px] border border-[var(--table-border)] p-[12px] flex flex-col gap-[6px]">
-            <p className="text-[12px] font-semibold" style={{ color: "var(--field-text)" }}>Flagged lead</p>
-            <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Acme Corp — Jane Doe (jane@acme.com). Confidence: 62% (below your 75% auto-approve threshold).</p>
-          </div>
-          <div className="flex gap-[8px]">
-            <Button variant="primary" size="sm" onClick={() => setPreviewSlideoutOpen(false)}>Approve outreach</Button>
-            <Button variant="secondary" size="sm" onClick={() => setPreviewSlideoutOpen(false)}>Dismiss</Button>
-          </div>
+        </div>
+
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Key Metrics</span>
+          <AdaptiveMetricGrid cards={[
+            { label: "Leads reviewed", value: "3",   iconName: "Users" },
+            { label: "Flagged",        value: "1",   iconName: "Flag"  },
+            { label: "Confidence",     value: "62%", iconName: "Gauge" },
+          ]} />
+        </div>
+
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Flagged lead</span>
+          <EntityList items={[
+            {
+              id: "lead-1", title: "Jane Doe — Acme Corp",
+              iconName: "User", iconVariant: "yellow",
+              state: { label: "Needs review", variant: "alert" },
+              primaryMeta: [{ iconName: "Mail", label: "jane@acme.com" }],
+            },
+          ]} />
         </div>
       </SlideOut>
 
