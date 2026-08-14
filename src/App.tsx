@@ -4691,126 +4691,6 @@ function HomePage() {
               </div>
             </div>
 
-            {/* ── Why this approach ── */}
-            <DocSection title="Why this approach" collapsible defaultOpen={false}>
-              <Prose>
-                There are several ways a PM can generate screens — Figma, static HTML, prompts without context. This is the only one that produces screens that are source-of-truth for development.
-              </Prose>
-
-              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                {[
-                  {
-                    label: "Figma",
-                    pro: "High visual fidelity",
-                    con: "The PM can't generate it alone — needs Michael. Every screen is a manual Figma. Doesn't scale.",
-                    ok: false,
-                  },
-                  {
-                    label: "Static HTML + CSS",
-                    pro: "No install needed — just Claude.ai",
-                    con: "The CSS is a snapshot of the DS from a specific date. If the DS changes, prototypes go stale. No real interactions.",
-                    ok: false,
-                  },
-                  {
-                    label: "Claude without repo context",
-                    pro: "Easiest to start",
-                    con: "Claude rebuilds components from scratch every session. The result looks like the DS but isn't — slightly off colors, wrong spacing, invented patterns.",
-                    ok: false,
-                  },
-                  {
-                    label: "Claude Code + this React repo",
-                    pro: "Real components, real tokens, correct patterns",
-                    con: "Requires initial setup (~45 min). After that, fully autonomous.",
-                    ok: true,
-                  },
-                ].map((row, i) => (
-                  <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < 3 ? "0.5px solid var(--field-border)" : undefined }}>
-                    <div className="shrink-0 mt-[1px] w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: row.ok ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", color: row.ok ? "#00a07e" : "#e53935", border: `0.5px solid ${row.ok ? "#00a07e40" : "#e5393540"}` }}>
-                      {row.ok ? "✓" : "✗"}
-                    </div>
-                    <div className="flex flex-col gap-[3px]">
-                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{row.label}</p>
-                      <p className="text-[12px] leading-[1.5]" style={{ color: row.ok ? "#00a07e" : "var(--field-supporting)" }}>{row.ok ? row.pro : row.con}</p>
-                      {row.ok && <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{row.con}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-                <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                  <strong>The key difference:</strong> when Claude Code reads the CLAUDE.md in this repo, it's not interpreting the DS — it's importing the exact components that Development will use. What the PM sees in the browser is literally the same code that will go to production.
-                </p>
-              </div>
-            </DocSection>
-
-            <Divider />
-
-            {/* ── Architecture visual ── */}
-            <DocSection title="How the system works" collapsible defaultOpen={false}>
-              <Prose>
-                PMs work directly in this React repo. Claude Code reads the <code>CLAUDE.md</code> file already in the root — which documents exactly what components exist, how to use them, and what patterns to apply. The PM describes the screen they need, Claude generates the <code>.tsx</code> file with real components, and the result appears in the browser in real time. No approximate CSS, no drift — the same components development will see.
-              </Prose>
-
-              {/* Flow diagram */}
-              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Architecture</span>
-                </div>
-                <div className="px-[16px] py-[16px] flex flex-col gap-[12px]">
-                  {/* Row 1 */}
-                  <div className="flex items-center gap-[10px] flex-wrap">
-                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)", color: "var(--primary)" }}>
-                      src/components/ui/
-                    </div>
-                    <div style={{ color: "var(--field-supporting)", fontSize: 13 }}>←</div>
-                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
-                      Real components (React + Tailwind)
-                    </div>
-                  </div>
-                  {/* Vertical connector */}
-                  <div className="ml-[80px]" style={{ borderLeft: "1.5px dashed var(--field-border)", height: 16 }} />
-                  {/* Row 2 */}
-                  <div className="flex items-center gap-[10px] flex-wrap">
-                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
-                      PM describes screen
-                    </div>
-                    <div style={{ color: "var(--field-supporting)", fontSize: 13 }}>→</div>
-                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
-                      Claude generates src/screens/pm-[name].tsx
-                    </div>
-                    <div style={{ color: "var(--field-supporting)", fontSize: 13 }}>→</div>
-                    <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)", color: "var(--foreground)" }}>
-                      Appears in Prototypes (sidebar)
-                    </div>
-                  </div>
-                  <p className="text-[11px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
-                    Claude Code reads CLAUDE.md to know exactly which components to import, which patterns to apply, and which rules to respect.
-                  </p>
-                </div>
-              </div>
-
-              {/* Why this approach is source-of-truth */}
-              <div className="rounded-md px-[16px] py-[12px] flex items-start gap-[12px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
-                <div>
-                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Why this approach is source-of-truth</p>
-                  <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-                    Other approaches (static CSS, HTML snippets) are snapshots of the DS at a point in time. This repo is the DS. When Michael updates a component in <code style={{ fontSize: 11 }}>src/components/ui/</code>, all existing prototypes reflect it automatically on the next <code style={{ fontSize: 11 }}>git pull</code> — without the PM touching a single line.
-                  </p>
-                </div>
-              </div>
-
-              {/* Where prototypes are seen */}
-              <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                <p className="text-[12px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>Where are prototypes viewed?</p>
-                <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
-                  Locally on <code style={{ fontSize: 11 }}>localhost:5173</code> while the dev server is running. Deployed at <strong>aims-os-design-system.vercel.app</strong>. Each prototype has its own shareable direct link — see Part 4.
-                </p>
-              </div>
-            </DocSection>
-
-            <Divider />
-
             {/* ── Part 1: Setup ── */}
             <DocSection title="Part 1 — Setup (once, ~45 min for the terminal path; ~10 min for the no-terminal path)" collapsible defaultOpen={false}>
               <Prose>
@@ -4887,54 +4767,8 @@ function HomePage() {
 
             <Divider />
 
-            {/* ── DS Protection — NEW SECTION ── */}
-            <DocSection title="Design System Protection — What PMs can and cannot edit" collapsible defaultOpen={false}>
-              <Prose>
-                PMs have write access to the repository, but there is a clear rule: <strong>PMs only create and edit files inside <code>src/screens/</code></strong>. Everything else belongs to Michael and must never be modified by PMs.
-              </Prose>
-
-              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Access rules</span>
-                </div>
-                {[
-                  { path: "src/screens/pm-[name].tsx", who: "PM",          ok: true,  note: "PM prototype files — create and edit freely" },
-                  { path: "src/components/",           who: "Michael only", ok: false, note: "DS components — never touch" },
-                  { path: "src/App.tsx",               who: "Michael only", ok: false, note: "DS navigation and registry — never touch" },
-                  { path: "src/index.css",             who: "Michael only", ok: false, note: "Design tokens — never touch" },
-                  { path: "src/lib/",                  who: "Michael only", ok: false, note: "Shared utilities — never touch" },
-                  { path: "CLAUDE.md",                 who: "Michael only", ok: false, note: "AI rules for this repo — never touch" },
-                  { path: "tailwind.config.*",         who: "Michael only", ok: false, note: "Design scale config — never touch" },
-                ].map((row, i) => (
-                  <div key={i} className="flex items-center gap-[12px] px-[14px] py-[10px]" style={{ borderBottom: i < 6 ? "0.5px solid var(--field-border)" : undefined }}>
-                    <div className="shrink-0 w-[16px] h-[16px] rounded-full flex items-center justify-center text-[9px] font-bold" style={{ background: row.ok ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", color: row.ok ? "#00a07e" : "#e53935", border: `0.5px solid ${row.ok ? "#00a07e40" : "#e5393540"}` }}>
-                      {row.ok ? "✓" : "✗"}
-                    </div>
-                    <code className="text-[11px] shrink-0 px-[4px] py-[1px] rounded" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>{row.path}</code>
-                    <span className="text-[11px] px-[5px] py-[1px] rounded-full shrink-0" style={{ background: row.ok ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-subtle)", color: row.ok ? "var(--primary)" : "var(--field-supporting)", border: `0.5px solid ${row.ok ? "var(--primary)" : "var(--field-border)"}` }}>{row.who}</span>
-                    <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{row.note}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
-                <div>
-                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>How this is enforced — CODEOWNERS</p>
-                  <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-                    The repo contains a <code style={{ fontSize: 11 }}>.github/CODEOWNERS</code> file that assigns Michael as the required reviewer for any change outside <code style={{ fontSize: 11 }}>src/screens/</code>. If a PM accidentally modifies a DS file, GitHub will block the merge until Michael reviews and approves it. This is a safety net — Claude Code already knows not to touch these files when it reads CLAUDE.md.
-                  </p>
-                </div>
-              </div>
-
-              <Callout>
-                Claude Code will never modify DS files on its own — it reads the CLAUDE.md rules at session start. The CODEOWNERS file is an extra safety net for cases where a file is edited manually.
-              </Callout>
-            </DocSection>
-
-            <Divider />
-
             {/* ── Part 2: Day-to-day ── */}
-            <DocSection title="Part 2 — Day-to-day workflow" collapsible defaultOpen={false}>
+            <DocSection title="Part 2 — Describe your screen, Claude does the rest" collapsible defaultOpen={false}>
               <Prose>
                 The PM only writes in natural language — Claude does the rest. The exact steps to get Claude Code running differ slightly by which option you picked in Part 1; everything from "Describe the screen" onward is identical either way.
               </Prose>
@@ -5025,7 +4859,7 @@ function HomePage() {
 
                 <NumberedStep n={7} title="Merge and confirm your screen is live">
                   <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">If your PR only touches <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/screens/</code>, you can merge it yourself — no need to wait for Michael. Click <strong>Merge pull request</strong> on GitHub. Vercel deploys automatically within ~1 minute. Share the Vercel URL (see Part 4).</p>
+                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">If your PR only touches <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/screens/</code>, you can merge it yourself — no need to wait for Michael. Click <strong>Merge pull request</strong> on GitHub. Vercel deploys automatically within ~1 minute. Share the Vercel URL (see Part 3).</p>
                     <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
                       <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}><strong>If the merge is blocked:</strong> your PR touched a DS-owned file (components, tokens, App.tsx, or config). This is the safety net working as intended — not an error. Tag Michael in the PR; he reviews and approves.</p>
                     </div>
@@ -5040,36 +4874,8 @@ function HomePage() {
 
             <Divider />
 
-            {/* ── Part 3: DS updates ── */}
-            <DocSection title="Part 3 — When the DS updates" collapsible defaultOpen={false}>
-              <Prose>
-                This is the advantage of working directly in the repo. The PM doesn't need to do anything special — just a pull.
-              </Prose>
-
-              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                {[
-                  { actor: "Michael", step: "Updates a component in src/components/ui/ — visual improvement, new variant, token fix", color: "#00a07e" },
-                  { actor: "Michael", step: "Commit + push to the repo on GitHub", color: "#00a07e" },
-                  { actor: "PM", step: "git pull — or ask Claude to pull the latest changes", color: "#2173ff" },
-                  { actor: "Auto", step: "The dev server reloads automatically — all existing prototypes reflect the updated component without changing a single line", color: "#9333ea" },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < 3 ? "0.5px solid var(--field-border)" : undefined }}>
-                    <div className="shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: item.color + "20", border: `0.5px solid ${item.color}50`, color: item.color }}>
-                      {i + 1}
-                    </div>
-                    <div className="flex items-center gap-[8px] flex-1 flex-wrap pt-[2px]">
-                      <span className="text-[9px] font-bold uppercase tracking-widest px-[6px] py-[1px] rounded-full shrink-0" style={{ background: item.color + "18", color: item.color }}>{item.actor}</span>
-                      <p className="text-[13px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>{item.step}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </DocSection>
-
-            <Divider />
-
-            {/* ── Part 4: Sharing ── */}
-            <DocSection title="Part 4 — Sharing prototypes with stakeholders" collapsible defaultOpen={false}>
+            {/* ── Part 3: Sharing ── */}
+            <DocSection title="Part 3 — Sharing prototypes with stakeholders" collapsible defaultOpen={false}>
               <Prose>
                 Prototypes are deployed at <strong>aims-os-design-system.vercel.app</strong>. Each prototype has its own direct URL — stakeholders open the screen directly, no navigation required.
               </Prose>
@@ -5104,174 +4910,6 @@ function HomePage() {
                     <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">The sidebar groups all prototypes under <strong>Prototypes</strong>. Naming convention: <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>pm-[name]-[feature].tsx</code> — makes it easy to know who created what. The <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>author</code> field in App.tsx enables filtering by PM as the list grows.</p>
                   </div>
                 </NumberedStep>
-              </div>
-            </DocSection>
-
-            <Divider />
-
-            {/* ── Pipeline diagram ── */}
-            <DocSection title="Full pipeline at a glance" collapsible defaultOpen={false}>
-              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                <div className="px-[16px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>End-to-end flow</p>
-                </div>
-                <div className="px-[16px] py-[16px] flex flex-col gap-[0px]">
-                  {[
-                    { actor: "Setup",  step: "Michael adds PM as collaborator → PM connects the repo once, via terminal or via Claude Code Desktop/claude.ai/code (see Part 1)", icon: "0", color: "#9333ea" },
-                    { actor: "PM",     step: "Pull the latest changes and open Claude Code — same session as before if using Desktop/claude.ai/code, or two terminals (server + claude) if using the CLI", icon: "1", color: "#2173ff" },
-                    { actor: "PM",     step: "Describe the screen in Claude Code with concrete data, actions and states", icon: "2", color: "#2173ff" },
-                    { actor: "Auto",   step: "Claude generates src/screens/pm-[name].tsx with real components + registers it in App.tsx", icon: "↓", color: "#9333ea" },
-                    { actor: "PM",     step: "Validate at localhost:5173 → ask Claude for corrections if needed", icon: "3", color: "#2173ff" },
-                    { actor: "PM",     step: "Commit → push → open PR → merge → Vercel rebuilds automatically", icon: "4", color: "#2173ff" },
-                    { actor: "PM",     step: "Share: aims-os-design-system.vercel.app/?proto=[id] — stakeholders open directly", icon: "5", color: "#2173ff" },
-                    { actor: "Design", step: "Michael reviews visually → approves or adjusts. CODEOWNERS protects DS files from accidental edits.", icon: "6", color: "#00a07e" },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-[12px] py-[10px]" style={{ borderBottom: i < 7 ? "0.5px solid var(--field-border)" : undefined }}>
-                      <div className="shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: item.color + "20", border: `0.5px solid ${item.color}50`, color: item.color }}>
-                        {item.icon}
-                      </div>
-                      <div className="flex items-center gap-[8px] flex-1 flex-wrap pt-[2px]">
-                        <span className="text-[9px] font-bold uppercase tracking-widest px-[6px] py-[1px] rounded-full shrink-0" style={{ background: item.color + "18", color: item.color }}>{item.actor}</span>
-                        <p className="text-[13px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>{item.step}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
-                  <strong style={{ color: "var(--foreground)" }}>Core principle:</strong> PMs only create in <code>src/screens/</code> — never touch components or tokens. Michael controls the DS. Claude knows the rules because it reads <code>CLAUDE.md</code>. CODEOWNERS enforces the boundary at the GitHub level. The result is consistent with the real DS, without depending on Michael for every screen.
-                </p>
-              </div>
-            </DocSection>
-
-            <Divider />
-
-            {/* ── Review scenarios ── */}
-            <DocSection title="When Michael reviews a prototype — 3 scenarios" collapsible defaultOpen={false}>
-              <Prose>
-                After a PM pushes a prototype, Michael reviews it visually. There are three types of issues he may find, each with a different resolution path.
-              </Prose>
-
-              <div className="flex flex-col gap-[12px]">
-                {[
-                  {
-                    tag: "Case 1",
-                    title: "Error in the prototype",
-                    subtitle: "Wrong token, wrong spacing, wrong variant, misaligned layout",
-                    color: "#e53935",
-                    steps: [
-                      "Michael opens Claude Code in the repo",
-                      'Asks: "Fix [specific issue] in src/screens/pm-[name].tsx"',
-                      "Claude fixes using the correct DS token or component",
-                      "Commit + push — PM sees it on next git pull",
-                    ],
-                    note: "Optional: if the same error keeps appearing, Michael adds a rule to CLAUDE.md so Claude never repeats it.",
-                  },
-                  {
-                    tag: "Case 2",
-                    title: "Component used incorrectly",
-                    subtitle: "The right DS component is there, but applied in the wrong context or with wrong props",
-                    color: "#ed6c02",
-                    steps: [
-                      "Same flow as Case 1 — fix directly in the screen file",
-                      "If it's a recurring pattern: add a usage rule to CLAUDE.md for that component",
-                    ],
-                    note: "The PM doesn't need to do anything — Michael handles all DS corrections.",
-                  },
-                  {
-                    tag: "Case 3",
-                    title: "DS-GAP found",
-                    subtitle: "The PM needed something that doesn't exist in the DS — Claude created it in src/components/experimental/ with a // DS-GAP: comment",
-                    color: "#9333ea",
-                    steps: [
-                      "Michael evaluates: is this a valid DS gap, or can it be solved with existing components?",
-                      "If YES → design the Figma node first → implement in src/components/ui/ with Claude Code → document in App.tsx → delete the experimental version",
-                      "If NO → refactor the PM screen to use composition of existing DS components → delete the experimental version",
-                    ],
-                    note: "The DS-GAP comment is the handoff artifact. Michael decides if it becomes official DS or gets dissolved into composition.",
-                  },
-                ].map((c, i) => (
-                  <div key={i} className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                    <div className="flex items-center gap-[10px] px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                      <span className="text-[9px] font-bold uppercase tracking-widest px-[6px] py-[1px] rounded-full shrink-0" style={{ background: c.color + "18", color: c.color, border: `0.5px solid ${c.color}40` }}>{c.tag}</span>
-                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{c.title}</p>
-                    </div>
-                    <div className="px-[14px] py-[12px] flex flex-col gap-[10px]">
-                      <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{c.subtitle}</p>
-                      <div className="flex flex-col gap-[4px]">
-                        {c.steps.map((s, j) => (
-                          <div key={j} className="flex items-start gap-[8px]">
-                            <div className="shrink-0 w-[16px] h-[16px] rounded-full flex items-center justify-center text-[8px] font-bold mt-[1px]" style={{ background: c.color + "18", color: c.color, border: `0.5px solid ${c.color}40` }}>{j + 1}</div>
-                            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{s}</p>
-                          </div>
-                        ))}
-                      </div>
-                      {c.note && (
-                        <div className="rounded px-[10px] py-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-                          <p className="text-[11px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}><strong style={{ color: "var(--foreground)" }}>Note:</strong> {c.note}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </DocSection>
-
-            <Divider />
-
-            {/* ── Prototyping Skill ── */}
-            <DocSection title="The aims-prototype-screen skill" collapsible defaultOpen={false}>
-              <Prose>
-                This repo ships a Claude Code skill that runs the entire pipeline above automatically — compose, register, verify, and ship — from a single plain-language description. It's not a command you type; it triggers on its own whenever you describe a screen, view, dashboard, list, queue, or flow you want.
-              </Prose>
-
-              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Where it lives</span>
-                </div>
-                <div className="px-[16px] py-[14px] flex flex-col gap-[10px]">
-                  <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Automatically available to anyone with the repo connected: <code style={{ fontSize: 11 }}>.claude/skills/aims-prototype-screen/</code>. No slash command, no manual setup step — just describe the screen in Part 2, step 2.</p>
-                  <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>It's also published as an installable plugin, for anyone who wants it outside this repo's automatic loading:</p>
-                  <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                    <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
-                      /plugin marketplace add cachilupis/aims-os-design-system<br/>
-                      /plugin install aims-prototype-screen
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-                <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>What it does end-to-end</span>
-                </div>
-                <div className="flex flex-col">
-                  {[
-                    { rule: "Compose", detail: "Builds the screen from only src/components/ui/ and src/components/layouts/, only var(--token) colors, wired interactions — no onClick left undefined." },
-                    { rule: "Register", detail: "Adds the exact 2-line diff to App.tsx: one import, one PROTOTYPE_PAGES entry. Nothing else in App.tsx changes." },
-                    { rule: "Verify", detail: "npx tsc -b --noEmit, a browser screenshot of every state, a hardcoded-color grep, and a re-read of every interactive element's pairing — in that order." },
-                    { rule: "Ship", detail: "Creates the pm-[name]/[feature] branch, commits, pushes, and opens the PR — the same branch → PR → merge flow as Part 2 above." },
-                  ].map((item, i, arr) => (
-                    <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--field-border)" : undefined }}>
-                      <div className="shrink-0 w-[6px] h-[6px] rounded-full mt-[6px]" style={{ background: "var(--primary)" }} />
-                      <div className="flex flex-col gap-[2px]">
-                        <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{item.rule}</p>
-                        <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{item.detail}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
-                <div>
-                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Never run <code style={{ fontSize: 11 }}>npm run deploy</code> yourself</p>
-                  <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-                    That command publishes straight to GitHub Pages from whatever is on your machine at that moment — it skips branches, PRs, and CODEOWNERS entirely, and it overwrites whatever anyone else's prototype was showing. It's a separate, manual-only mirror that only Michael runs, and only after your PR is already merged to <code style={{ fontSize: 11 }}>main</code>. The skill's Ship step (above) never touches it — merging your PR is the only step you need.
-                  </p>
-                </div>
               </div>
             </DocSection>
 
@@ -5331,6 +4969,346 @@ function HomePage() {
                   </div>
                 ))}
               </div>
+
+              <div className="flex items-center gap-[10px] mt-[8px]">
+                <span className="text-[10px] font-semibold uppercase tracking-widest shrink-0" style={{ color: "var(--field-supporting)" }}>More detail</span>
+                <div className="h-px flex-1" style={{ background: "var(--field-border)" }} />
+              </div>
+
+              <DocSection title="Why do PMs work directly in this repo instead of just using Figma or plain HTML?" collapsible defaultOpen={false}>
+                <Prose>
+                  There are several ways a PM can generate screens — Figma, static HTML, prompts without context. This is the only one that produces screens that are source-of-truth for development.
+                </Prose>
+
+                <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  {[
+                    {
+                      label: "Figma",
+                      pro: "High visual fidelity",
+                      con: "The PM can't generate it alone — needs Michael. Every screen is a manual Figma. Doesn't scale.",
+                      ok: false,
+                    },
+                    {
+                      label: "Static HTML + CSS",
+                      pro: "No install needed — just Claude.ai",
+                      con: "The CSS is a snapshot of the DS from a specific date. If the DS changes, prototypes go stale. No real interactions.",
+                      ok: false,
+                    },
+                    {
+                      label: "Claude without repo context",
+                      pro: "Easiest to start",
+                      con: "Claude rebuilds components from scratch every session. The result looks like the DS but isn't — slightly off colors, wrong spacing, invented patterns.",
+                      ok: false,
+                    },
+                    {
+                      label: "Claude Code + this React repo",
+                      pro: "Real components, real tokens, correct patterns",
+                      con: "Requires initial setup (~45 min). After that, fully autonomous.",
+                      ok: true,
+                    },
+                  ].map((row, i) => (
+                    <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < 3 ? "0.5px solid var(--field-border)" : undefined }}>
+                      <div className="shrink-0 mt-[1px] w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: row.ok ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", color: row.ok ? "#00a07e" : "#e53935", border: `0.5px solid ${row.ok ? "#00a07e40" : "#e5393540"}` }}>
+                        {row.ok ? "✓" : "✗"}
+                      </div>
+                      <div className="flex flex-col gap-[3px]">
+                        <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{row.label}</p>
+                        <p className="text-[12px] leading-[1.5]" style={{ color: row.ok ? "#00a07e" : "var(--field-supporting)" }}>{row.ok ? row.pro : row.con}</p>
+                        {row.ok && <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{row.con}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+                  <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                    <strong>The key difference:</strong> when Claude Code reads the CLAUDE.md in this repo, it's not interpreting the DS — it's importing the exact components that Development will use. What the PM sees in the browser is literally the same code that will go to production.
+                  </p>
+                </div>
+              </DocSection>
+
+              <DocSection title="How does the system work, end to end?" collapsible defaultOpen={false}>
+                <Prose>
+                  PMs work directly in this React repo. Claude Code reads the <code>CLAUDE.md</code> file already in the root — which documents exactly what components exist, how to use them, and what patterns to apply. The PM describes the screen they need, Claude generates the <code>.tsx</code> file with real components, and the result appears in the browser in real time. No approximate CSS, no drift — the same components development will see.
+                </Prose>
+
+                <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Architecture</span>
+                  </div>
+                  <div className="px-[16px] py-[16px] flex flex-col gap-[12px]">
+                    <div className="flex items-center gap-[10px] flex-wrap">
+                      <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)", color: "var(--primary)" }}>
+                        src/components/ui/
+                      </div>
+                      <div style={{ color: "var(--field-supporting)", fontSize: 13 }}>←</div>
+                      <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
+                        Real components (React + Tailwind)
+                      </div>
+                    </div>
+                    <div className="ml-[80px]" style={{ borderLeft: "1.5px dashed var(--field-border)", height: 16 }} />
+                    <div className="flex items-center gap-[10px] flex-wrap">
+                      <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
+                        PM describes screen
+                      </div>
+                      <div style={{ color: "var(--field-supporting)", fontSize: 13 }}>→</div>
+                      <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>
+                        Claude generates src/screens/pm-[name].tsx
+                      </div>
+                      <div style={{ color: "var(--field-supporting)", fontSize: 13 }}>→</div>
+                      <div className="px-[12px] py-[8px] rounded-md text-[12px] font-medium" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)", color: "var(--foreground)" }}>
+                        Appears in Prototypes (sidebar)
+                      </div>
+                    </div>
+                    <p className="text-[11px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                      Claude Code reads CLAUDE.md to know exactly which components to import, which patterns to apply, and which rules to respect.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-md px-[16px] py-[12px] flex items-start gap-[12px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
+                  <div>
+                    <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Why this approach is source-of-truth</p>
+                    <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                      Other approaches (static CSS, HTML snippets) are snapshots of the DS at a point in time. This repo is the DS. When Michael updates a component in <code style={{ fontSize: 11 }}>src/components/ui/</code>, all existing prototypes reflect it automatically on the next <code style={{ fontSize: 11 }}>git pull</code> — without the PM touching a single line.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[12px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>Where are prototypes viewed?</p>
+                  <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                    Locally on <code style={{ fontSize: 11 }}>localhost:5173</code> while the dev server is running. Deployed at <strong>aims-os-design-system.vercel.app</strong>. Each prototype has its own shareable direct link — see Part 3.
+                  </p>
+                </div>
+              </DocSection>
+
+              <DocSection title="What can I edit as a PM, and what's off-limits (Michael only)?" collapsible defaultOpen={false}>
+                <Prose>
+                  PMs have write access to the repository, but there is a clear rule: <strong>PMs only create and edit files inside <code>src/screens/</code></strong>. Everything else belongs to Michael and must never be modified by PMs.
+                </Prose>
+
+                <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Access rules</span>
+                  </div>
+                  {[
+                    { path: "src/screens/pm-[name].tsx", who: "PM",          ok: true,  note: "PM prototype files — create and edit freely" },
+                    { path: "src/components/",           who: "Michael only", ok: false, note: "DS components — never touch" },
+                    { path: "src/App.tsx",               who: "Michael only", ok: false, note: "DS navigation and registry — never touch" },
+                    { path: "src/index.css",             who: "Michael only", ok: false, note: "Design tokens — never touch" },
+                    { path: "src/lib/",                  who: "Michael only", ok: false, note: "Shared utilities — never touch" },
+                    { path: "CLAUDE.md",                 who: "Michael only", ok: false, note: "AI rules for this repo — never touch" },
+                    { path: "tailwind.config.*",         who: "Michael only", ok: false, note: "Design scale config — never touch" },
+                  ].map((row, i) => (
+                    <div key={i} className="flex items-center gap-[12px] px-[14px] py-[10px]" style={{ borderBottom: i < 6 ? "0.5px solid var(--field-border)" : undefined }}>
+                      <div className="shrink-0 w-[16px] h-[16px] rounded-full flex items-center justify-center text-[9px] font-bold" style={{ background: row.ok ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", color: row.ok ? "#00a07e" : "#e53935", border: `0.5px solid ${row.ok ? "#00a07e40" : "#e5393540"}` }}>
+                        {row.ok ? "✓" : "✗"}
+                      </div>
+                      <code className="text-[11px] shrink-0 px-[4px] py-[1px] rounded" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)", color: "var(--foreground)" }}>{row.path}</code>
+                      <span className="text-[11px] px-[5px] py-[1px] rounded-full shrink-0" style={{ background: row.ok ? "var(--color-surface-primary-subtle)" : "var(--color-surface-neutral-subtle)", color: row.ok ? "var(--primary)" : "var(--field-supporting)", border: `0.5px solid ${row.ok ? "var(--primary)" : "var(--field-border)"}` }}>{row.who}</span>
+                      <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{row.note}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
+                  <div>
+                    <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>How this is enforced — CODEOWNERS</p>
+                    <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                      The repo contains a <code style={{ fontSize: 11 }}>.github/CODEOWNERS</code> file that assigns Michael as the required reviewer for any change outside <code style={{ fontSize: 11 }}>src/screens/</code>. If a PM accidentally modifies a DS file, GitHub will block the merge until Michael reviews and approves it. This is a safety net — Claude Code already knows not to touch these files when it reads CLAUDE.md.
+                    </p>
+                  </div>
+                </div>
+
+                <Callout>
+                  Claude Code will never modify DS files on its own — it reads the CLAUDE.md rules at session start. The CODEOWNERS file is an extra safety net for cases where a file is edited manually.
+                </Callout>
+              </DocSection>
+
+              <DocSection title="What happens to my prototypes when Michael updates a DS component?" collapsible defaultOpen={false}>
+                <Prose>
+                  This is the advantage of working directly in the repo. The PM doesn't need to do anything special — just a pull.
+                </Prose>
+
+                <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  {[
+                    { actor: "Michael", step: "Updates a component in src/components/ui/ — visual improvement, new variant, token fix", color: "#00a07e" },
+                    { actor: "Michael", step: "Commit + push to the repo on GitHub", color: "#00a07e" },
+                    { actor: "PM", step: "git pull — or ask Claude to pull the latest changes", color: "#2173ff" },
+                    { actor: "Auto", step: "The dev server reloads automatically — all existing prototypes reflect the updated component without changing a single line", color: "#9333ea" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < 3 ? "0.5px solid var(--field-border)" : undefined }}>
+                      <div className="shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: item.color + "20", border: `0.5px solid ${item.color}50`, color: item.color }}>
+                        {i + 1}
+                      </div>
+                      <div className="flex items-center gap-[8px] flex-1 flex-wrap pt-[2px]">
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-[6px] py-[1px] rounded-full shrink-0" style={{ background: item.color + "18", color: item.color }}>{item.actor}</span>
+                        <p className="text-[13px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>{item.step}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </DocSection>
+
+              <DocSection title="What does the full pipeline look like, step by step?" collapsible defaultOpen={false}>
+                <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div className="px-[16px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>End-to-end flow</p>
+                  </div>
+                  <div className="px-[16px] py-[16px] flex flex-col gap-[0px]">
+                    {[
+                      { actor: "Setup",  step: "Michael adds PM as collaborator → PM connects the repo once, via terminal or via Claude Code Desktop/claude.ai/code (see Part 1)", icon: "0", color: "#9333ea" },
+                      { actor: "PM",     step: "Pull the latest changes and open Claude Code — same session as before if using Desktop/claude.ai/code, or two terminals (server + claude) if using the CLI", icon: "1", color: "#2173ff" },
+                      { actor: "PM",     step: "Describe the screen in Claude Code with concrete data, actions and states", icon: "2", color: "#2173ff" },
+                      { actor: "Auto",   step: "Claude generates src/screens/pm-[name].tsx with real components + registers it in App.tsx", icon: "↓", color: "#9333ea" },
+                      { actor: "PM",     step: "Validate at localhost:5173 → ask Claude for corrections if needed", icon: "3", color: "#2173ff" },
+                      { actor: "PM",     step: "Commit → push → open PR → merge → Vercel rebuilds automatically", icon: "4", color: "#2173ff" },
+                      { actor: "PM",     step: "Share: aims-os-design-system.vercel.app/?proto=[id] — stakeholders open directly", icon: "5", color: "#2173ff" },
+                      { actor: "Design", step: "Michael reviews visually → approves or adjusts. CODEOWNERS protects DS files from accidental edits.", icon: "6", color: "#00a07e" },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-start gap-[12px] py-[10px]" style={{ borderBottom: i < 7 ? "0.5px solid var(--field-border)" : undefined }}>
+                        <div className="shrink-0 w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: item.color + "20", border: `0.5px solid ${item.color}50`, color: item.color }}>
+                          {item.icon}
+                        </div>
+                        <div className="flex items-center gap-[8px] flex-1 flex-wrap pt-[2px]">
+                          <span className="text-[9px] font-bold uppercase tracking-widest px-[6px] py-[1px] rounded-full shrink-0" style={{ background: item.color + "18", color: item.color }}>{item.actor}</span>
+                          <p className="text-[13px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>{item.step}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                    <strong style={{ color: "var(--foreground)" }}>Core principle:</strong> PMs only create in <code>src/screens/</code> — never touch components or tokens. Michael controls the DS. Claude knows the rules because it reads <code>CLAUDE.md</code>. CODEOWNERS enforces the boundary at the GitHub level. The result is consistent with the real DS, without depending on Michael for every screen.
+                  </p>
+                </div>
+              </DocSection>
+
+              <DocSection title="What happens when Michael reviews my prototype and finds an issue?" collapsible defaultOpen={false}>
+                <Prose>
+                  After a PM pushes a prototype, Michael reviews it visually. There are three types of issues he may find, each with a different resolution path.
+                </Prose>
+
+                <div className="flex flex-col gap-[12px]">
+                  {[
+                    {
+                      tag: "Case 1",
+                      title: "Error in the prototype",
+                      subtitle: "Wrong token, wrong spacing, wrong variant, misaligned layout",
+                      color: "#e53935",
+                      steps: [
+                        "Michael opens Claude Code in the repo",
+                        'Asks: "Fix [specific issue] in src/screens/pm-[name].tsx"',
+                        "Claude fixes using the correct DS token or component",
+                        "Commit + push — PM sees it on next git pull",
+                      ],
+                      note: "Optional: if the same error keeps appearing, Michael adds a rule to CLAUDE.md so Claude never repeats it.",
+                    },
+                    {
+                      tag: "Case 2",
+                      title: "Component used incorrectly",
+                      subtitle: "The right DS component is there, but applied in the wrong context or with wrong props",
+                      color: "#ed6c02",
+                      steps: [
+                        "Same flow as Case 1 — fix directly in the screen file",
+                        "If it's a recurring pattern: add a usage rule to CLAUDE.md for that component",
+                      ],
+                      note: "The PM doesn't need to do anything — Michael handles all DS corrections.",
+                    },
+                    {
+                      tag: "Case 3",
+                      title: "DS-GAP found",
+                      subtitle: "The PM needed something that doesn't exist in the DS — Claude created it in src/components/experimental/ with a // DS-GAP: comment",
+                      color: "#9333ea",
+                      steps: [
+                        "Michael evaluates: is this a valid DS gap, or can it be solved with existing components?",
+                        "If YES → design the Figma node first → implement in src/components/ui/ with Claude Code → document in App.tsx → delete the experimental version",
+                        "If NO → refactor the PM screen to use composition of existing DS components → delete the experimental version",
+                      ],
+                      note: "The DS-GAP comment is the handoff artifact. Michael decides if it becomes official DS or gets dissolved into composition.",
+                    },
+                  ].map((c, i) => (
+                    <div key={i} className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                      <div className="flex items-center gap-[10px] px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-[6px] py-[1px] rounded-full shrink-0" style={{ background: c.color + "18", color: c.color, border: `0.5px solid ${c.color}40` }}>{c.tag}</span>
+                        <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{c.title}</p>
+                      </div>
+                      <div className="px-[14px] py-[12px] flex flex-col gap-[10px]">
+                        <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{c.subtitle}</p>
+                        <div className="flex flex-col gap-[4px]">
+                          {c.steps.map((s, j) => (
+                            <div key={j} className="flex items-start gap-[8px]">
+                              <div className="shrink-0 w-[16px] h-[16px] rounded-full flex items-center justify-center text-[8px] font-bold mt-[1px]" style={{ background: c.color + "18", color: c.color, border: `0.5px solid ${c.color}40` }}>{j + 1}</div>
+                              <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{s}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {c.note && (
+                          <div className="rounded px-[10px] py-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+                            <p className="text-[11px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}><strong style={{ color: "var(--foreground)" }}>Note:</strong> {c.note}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </DocSection>
+
+              <DocSection title="What is the aims-prototype-screen skill, and how do I use it?" collapsible defaultOpen={false}>
+                <Prose>
+                  This repo ships a Claude Code skill that runs the entire pipeline above automatically — compose, register, verify, and ship — from a single plain-language description. It's not a command you type; it triggers on its own whenever you describe a screen, view, dashboard, list, queue, or flow you want.
+                </Prose>
+
+                <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>Where it lives</span>
+                  </div>
+                  <div className="px-[16px] py-[14px] flex flex-col gap-[10px]">
+                    <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Automatically available to anyone with the repo connected: <code style={{ fontSize: 11 }}>.claude/skills/aims-prototype-screen/</code>. No slash command, no manual setup step — just describe the screen in Part 2, step 2.</p>
+                    <p className="text-[13px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>It's also published as an installable plugin, for anyone who wants it outside this repo's automatic loading:</p>
+                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                      <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
+                        /plugin marketplace add cachilupis/aims-os-design-system<br/>
+                        /plugin install aims-prototype-screen
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <div className="px-[14px] py-[10px]" style={{ background: "var(--field-bg)", borderBottom: "0.5px solid var(--field-border)" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--field-supporting)" }}>What it does end-to-end</span>
+                  </div>
+                  <div className="flex flex-col">
+                    {[
+                      { rule: "Compose", detail: "Builds the screen from only src/components/ui/ and src/components/layouts/, only var(--token) colors, wired interactions — no onClick left undefined." },
+                      { rule: "Register", detail: "Adds the exact 2-line diff to App.tsx: one import, one PROTOTYPE_PAGES entry. Nothing else in App.tsx changes." },
+                      { rule: "Verify", detail: "npx tsc -b --noEmit, a browser screenshot of every state, a hardcoded-color grep, and a re-read of every interactive element's pairing — in that order." },
+                      { rule: "Ship", detail: "Creates the pm-[name]/[feature] branch, commits, pushes, and opens the PR — the same branch → PR → merge flow as Part 2 above." },
+                    ].map((item, i, arr) => (
+                      <div key={i} className="flex items-start gap-[12px] px-[14px] py-[12px]" style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--field-border)" : undefined }}>
+                        <div className="shrink-0 w-[6px] h-[6px] rounded-full mt-[6px]" style={{ background: "var(--primary)" }} />
+                        <div className="flex flex-col gap-[2px]">
+                          <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{item.rule}</p>
+                          <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>{item.detail}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
+                  <div>
+                    <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Never run <code style={{ fontSize: 11 }}>npm run deploy</code> yourself</p>
+                    <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                      That command publishes straight to GitHub Pages from whatever is on your machine at that moment — it skips branches, PRs, and CODEOWNERS entirely, and it overwrites whatever anyone else's prototype was showing. It's a separate, manual-only mirror that only Michael runs, and only after your PR is already merged to <code style={{ fontSize: 11 }}>main</code>. The skill's Ship step (above) never touches it — merging your PR is the only step you need.
+                    </p>
+                  </div>
+                </div>
+              </DocSection>
             </DocSection>
           </>
         )}
