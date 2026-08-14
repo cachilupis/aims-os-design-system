@@ -530,7 +530,12 @@ export function SlideOut({
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-50 flex justify-end pointer-events-none",
+        // z-[10010]: SlideOut is a top-level, app-wide overlay — it portals to
+        // document.body and must out-rank ANY fixed-position chrome a consuming
+        // screen might have, including full-screen "live preview" wrappers in
+        // this very doc site that use up to z-index 9999-10002 for their own
+        // floating controls. A plain z-50 got silently buried behind those.
+        "fixed inset-0 z-[10010] flex justify-end pointer-events-none",
         open && "pointer-events-auto",
       )}
       aria-hidden={!open}

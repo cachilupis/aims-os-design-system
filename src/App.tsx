@@ -13,6 +13,7 @@ import { AvatarCircle, AVATAR_SIZE_SPECS, AVATAR_COLOR_KEYS, type AvatarSizeKey,
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { CardContainer, type CardVariant } from "@/components/ui/card-container"
+import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Tag, type TagVariant } from "@/components/ui/tag"
 import { Badge, type BadgeVariant } from "@/components/ui/badge"
 import { Menu, MenuItem, MenuDivider, MenuSection } from "@/components/ui/menu-item"
@@ -40,6 +41,8 @@ import { Topbar, TopbarButton, TopbarLeftMenu, TopbarRightMenu, GlobalSearch, ty
 import { Sidebar, DEFAULT_SIDEBAR_ITEMS } from "@/components/ui/sidebar"
 import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "@/components/ui/entity-list"
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
+import { NotificationItem } from "@/components/ui/notification-item"
+import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
@@ -74,8 +77,8 @@ import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -162,6 +165,8 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "input",           label: "Input",             group: "Components",  description: "Single-line text field · 2 sizes · 5 validation states · icon slots" },
   { id: "menu-item",       label: "Menu / Dropdown",   group: "Components",  description: "Dropdown list panel · 2 sizes · 4 states · leading icon, subtext, dividers, section headers" },
   { id: "modal-dialog",    label: "Modal Dialog",      group: "Components",  description: "2 variants: Confirmation (centered, max 900px) and Content (left-aligned, max 900px). Icon, title, description, slot, informative card, CTA pair." },
+  { id: "notification-center", label: "Notification Center", group: "Components", description: "420px floating panel · header with count + Mark all read + overflow · filter chips · date-grouped Notification Item list · footer View all · 5 states: Default, Empty, Loading, Error, Offline" },
+  { id: "notification-item",   label: "Notification Item",   group: "Components", description: "Single-row notification · lead icon + title/timestamp + description + tags/actions · unread indicator dot · 5 states × Read/Unread: Default, Hover, Pressed, Focus, Disabled" },
   { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
@@ -1986,6 +1991,114 @@ const MODAL_DIALOG_SPEC = {
   ],
 }
 
+const NOTIFICATION_ITEM_SPEC = {
+  name: "Notification Item",
+  figmaNodeId: "18687:577",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18687-577",
+  description: "Single-row notification: lead visual (Avatar or icon) + title/timestamp + description + tags/actions. 5 states (Default, Hover, Pressed, Focus, Disabled) × Read Status (Unread, Read). Read Status does not change any color — it only controls whether the unread dot renders. Composes AvatarCircle or HighlightIcon (lead), Badge variant=lightBlue (unread dot), Tag (tags), and Button (actions) — no custom re-implementations. Content toggles mirror Figma's own component properties (Show Description / Show Tags / Show Actions / Show Timestamp) exactly — omit the corresponding prop to hide that region, matching the DS boolean 1:1.",
+  properties: [
+    { name: "avatarName",      type: "string",   values: ["any string"],      default: "undefined", note: "Leading-visual priority 1 — renders AvatarCircle instead of the icon. Never replace an existing Avatar with a product icon." },
+    { name: "avatarSrc",       type: "string",   values: ["image URL"],       default: "undefined", note: "Optional photo for the Avatar; falls back to initials when omitted" },
+    { name: "iconVariant",     type: "Variant",  values: ["informative","success","alert","error","neutral","yellow","lime","purple","light-blue"], default: '"informative"', note: "Reuses HighlightIcon's semantic variants. Ignored when avatarName is set." },
+    { name: "iconName",        type: "string",   values: ["Lucide icon name"], default: '"Bell"' },
+    { name: "title",           type: "string",   values: ["any string"],      default: "required" },
+    { name: "timestamp",       type: "string",   values: ["any string"],      default: "required" },
+    { name: "showTimestamp",   type: "Boolean",  values: ["true","false"],    default: "true",      note: "Figma \"Show Timestamp\" boolean — hides the relative-time text (unread dot, if any, still renders)" },
+    { name: "description",    type: "string",   values: ["any string"],      default: "undefined", note: "Figma \"Show Description\" — omit to hide the row entirely" },
+    { name: "unread",          type: "Boolean",  values: ["true","false"],    default: "false",     note: "Shows the lightBlue Badge dot next to the timestamp" },
+    { name: "tags",            type: "Array",    values: ["{ label, variant? }[] — max 2 recommended, 3 technically supported"], default: "undefined", note: "Tag 1 = category, variant defaults to \"secondary\". Tag 2 = severity — pass variant=\"success\"|\"alert\"|\"error\" explicitly (never \"secondary\"); omit tag 2 for Info severity. Verbatim DS rule, Figma node 18749:7093." },
+    { name: "primaryAction",   type: "object",   values: ["{ label, variant?, onClick? }"], default: "undefined", note: "Figma \"Show Actions\" — DS mock defines both action slots as variant=tertiary only" },
+    { name: "secondaryAction", type: "object",   values: ["{ label, variant?, onClick? }"], default: "undefined", note: "Figma \"Second Action\" — omit to show only the primary action" },
+    { name: "disabled",        type: "Boolean",  values: ["true","false"],    default: "false" },
+    { name: "onClick",         type: "Function", values: ["() => void"],      default: "undefined", note: "Must resolve to the same destination as primaryAction.onClick — never two different outcomes for the same row" },
+    { name: "hoverable",       type: "Boolean",  values: ["true","false"],    default: "true",      note: "The row's own gray hover/press background. Keep true in Notification Center's dropdown. Set false when wrapping in a container that owns its own hover (e.g. CardContainer in a List View) to avoid two competing hover treatments." },
+  ],
+  sizes: [
+    { size: "Row",       dimensions: "420×auto (100px typical)", padding: "12px all sides", gap: "12px" },
+    { size: "Lead icon", dimensions: "24×24px (HighlightIcon sm)", padding: "—", gap: "—" },
+    { size: "Unread dot",dimensions: "8×8px (Badge)", padding: "—", gap: "—" },
+  ],
+  typography: [
+    { element: "Title",       family: "Inter", size: "14px", weight: "Semi Bold (600)", lineHeight: "1", variable: "--color-text-title" },
+    { element: "Timestamp",   family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "20px", variable: "--color-text-caption" },
+    { element: "Description", family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "20px", variable: "--color-text-body" },
+  ],
+  states: [
+    { name: "Default", borderWidth: "1px transparent", tokens: [
+      { role: "Background", variable: "—", varId: "", light: "transparent", dark: "transparent" },
+    ]},
+    { name: "Hover", borderWidth: "1px transparent", tokens: [
+      { role: "Background", variable: "--menu-item-hover", varId: "", light: "rgba(242,242,242,0.95)", dark: "rgba(32,42,62,0.90)" },
+    ]},
+    { name: "Pressed", borderWidth: "1px transparent", tokens: [
+      { role: "Background", variable: "--color-surface-neutral-subtle", varId: "", light: "#fafafa", dark: "rgba(255,255,255,0.05)" },
+    ]},
+    { name: "Focus", borderWidth: "1px", tokens: [
+      { role: "Background (reused from Pressed)", variable: "--color-surface-neutral-subtle", varId: "", light: "#fafafa", dark: "rgba(255,255,255,0.05)" },
+      { role: "Focus ring", variable: "--field-border-focus", varId: "", light: "#2173ff", dark: "#2b7fff" },
+    ]},
+    { name: "Disabled", borderWidth: "1px transparent", tokens: [
+      { role: "Opacity", variable: "—", varId: "", light: "40%", dark: "40%" },
+    ]},
+    { name: "Unread indicator (reused)", borderWidth: "0", tokens: [
+      { role: "Dot fill", variable: "--badge-light-blue", varId: "", light: "#00b5d9", dark: "#51a2ff" },
+    ]},
+  ],
+}
+
+const NOTIFICATION_CENTER_SPEC = {
+  name: "Notification Center",
+  figmaNodeId: "18695:1059",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18695-1059",
+  description: "420px floating panel — the bell icon's dropdown. Header (bell + title + count + \"Mark all read ✓\" compound control) → filter chips → date-grouped Notification Item list → footer View all. 5 states: Default, Empty, Loading, Error, Offline. Panel surface reuses --surface-floating-default (same concept as Menu/SidePanel/SlideOut) — no dedicated alias since there's no unique tinting.",
+  properties: [
+    { name: "state",           type: "Variant",  values: ["default","empty","loading","error","offline"], default: '"default"' },
+    { name: "count",           type: "number",   values: ["any positive integer"], default: "0", note: "Shown as \"(N)\" next to the title" },
+    { name: "groups",          type: "Array",    values: ["{ label, items: NotificationItemData[] }[]"], default: "[]", note: "Date-grouped rows, e.g. TODAY / YESTERDAY / EARLIER" },
+    { name: "filters",         type: "Array",    values: ["string[]"], default: '["All","Unread"]', note: "Rendered as Chip — active filter uses variant=primary, inactive uses variant=secondary" },
+    { name: "activeFilter",    type: "string",   values: ["any string"], default: '"All"' },
+    { name: "onFilterChange",  type: "Function", values: ["(filter) => void"], default: "undefined" },
+    { name: "onMarkAllRead",   type: "Function", values: ["() => void"], default: "undefined", note: "Fires the compound \"Mark all read\" control — the text button AND the adjacent check-icon button both call this. Omitting it hides both. Only shown in the default state." },
+    { name: "onViewAll",       type: "Function", values: ["() => void"], default: "undefined" },
+    { name: "emptyTitle / emptyDescription / emptyCtaLabel / onEmptyCta", type: "string/Function", values: ["—"], default: '"You\'re all caught up"', note: "Passed through to the reused EmptyState atom" },
+    { name: "errorTitle / errorDescription / retryLabel / onRetry",       type: "string/Function", values: ["—"], default: '"Something went wrong"', note: "Passed through to the reused EmptyState atom" },
+    { name: "offlineMessage",  type: "string",   values: ["any string"], default: '"You\'re offline. Showing cached notifications."' },
+  ],
+  sizes: [
+    { size: "Panel",  dimensions: "420×560px", padding: "—", gap: "—", cornerRadius: "8px" },
+    { size: "Header", dimensions: "420×56px",  padding: "16px", gap: "8px" },
+    { size: "Filter bar", dimensions: "420×36px", padding: "8px 16px", gap: "4px" },
+    { size: "Footer", dimensions: "420×52px",  padding: "12px 16px" },
+  ],
+  typography: [
+    { element: "Panel title", family: "Inter", size: "14px", weight: "Semi Bold (600)", lineHeight: "1", variable: "--color-text-title" },
+    { element: "Count",       family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1", variable: "--color-text-caption" },
+    { element: "Date-group label", family: "Inter", size: "12px", weight: "Semi Bold (600)", lineHeight: "1", variable: "--color-text-caption" },
+    { element: "Offline banner text", family: "Inter", size: "12px", weight: "Medium (500)", lineHeight: "20px", variable: "--color-text-alert" },
+  ],
+  states: [
+    { name: "Chrome (all states)", borderWidth: "0", tokens: [
+      { role: "Panel background", variable: "--surface-floating-default", varId: "", light: "rgba(255,255,255,0.92)", dark: "rgba(16,22,40,0.92)" },
+      { role: "Divider",          variable: "--color-border-neutral-lighter", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)" },
+      { role: "Bell icon",        variable: "--foreground", varId: "", light: "#1a1a1a", dark: "#ffffffcc" },
+    ]},
+    { name: "Header actions (reused)", description: "Mark all read (text) / View all → Button variant=tertiary size=sm. Mark all read (check icon) → Button variant=tertiary size=sm pill iconPosition=alone — both call the same onMarkAllRead, matching the two adjacent instances in Figma's Header > Actions frame.", borderWidth: "0", tokens: [
+      { role: "Button text (→ Button spec)", variable: "--btn-tertiary-fg", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.8)" },
+    ]},
+    { name: "Filter chips (reused)", description: "Active → Chip variant=primary size=s. Inactive → Chip variant=secondary size=s. See Chip spec for the full token set.", borderWidth: "0", tokens: [
+      { role: "Active chip bg (→ Chip spec)", variable: "--color-surface-primary-default", varId: "", light: "#2173ff", dark: "#2b7fff" },
+      { role: "Inactive chip bg (→ Chip spec)", variable: "--chip-secondary-bg", varId: "", light: "#ffffff", dark: "rgba(255,255,255,0.1)" },
+    ]},
+    { name: "Offline banner", borderWidth: "0", tokens: [
+      { role: "Background", variable: "--color-surface-alert-more-subtle", varId: "", light: "#fff4e5", dark: "#281e00" },
+      { role: "Text (reused)", variable: "--color-text-alert", varId: "", light: "#663c00", dark: "#fcd34d" },
+    ]},
+    { name: "Loading / Empty / Error (reused)", description: "Loading → Skeleton (circle + text shapes). Empty and Error → EmptyState atom with different title/description/CTA. See their own specs for tokens.", borderWidth: "0", tokens: [
+      { role: "Skeleton shimmer (→ Skeleton spec)", variable: "--skeleton-base", varId: "", light: "see Skeleton spec", dark: "see Skeleton spec" },
+    ]},
+  ],
+}
+
 const SIDEBAR_SPEC = {
   name: "Sidebar",
   figmaNodeId: "8572:42410",
@@ -3066,6 +3179,8 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "app-background")   return APP_BACKGROUND_SPEC   as AnySpec
   if (id === "entity-list")      return ENTITY_LIST_SPEC      as AnySpec
   if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
+  if (id === "notification-item")   return NOTIFICATION_ITEM_SPEC   as AnySpec
+  if (id === "notification-center") return NOTIFICATION_CENTER_SPEC as AnySpec
   if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
   if (id === "filters")          return FILTERS_SPEC          as AnySpec
   if (id === "empty-state")      return EMPTY_STATE_SPEC      as AnySpec
@@ -28486,7 +28601,7 @@ function TopbarPage({ openSpec, onAppThemeChange }: { openSpec: (s: SpecModal) =
   // All icons: 16×16 (Button pad:4,4,4,4 → 24-8=16px icon space)
   const defaultActions: TopbarAction[] = [
     { icon: SparkleIcon ? <SparkleIcon size={16} strokeWidth={2} /> : null, label: "AI Assistant", variant: "primary" },
-    { icon: BellIcon     ? <BellIcon     size={16} strokeWidth={1.75} /> : null, label: "Notifications", badge: showBadge },
+    { icon: BellIcon     ? <BellIcon     size={16} strokeWidth={1.75} /> : null, label: "Notifications", badge: showBadge, id: "notifications" },
     { icon: SettingsIcon ? <SettingsIcon size={16} strokeWidth={1.75} /> : null, label: "Settings" },
   ]
 
@@ -28577,6 +28692,7 @@ function TopbarPage({ openSpec, onAppThemeChange }: { openSpec: (s: SpecModal) =
                   themeMode={demoThemeMode}
                   onThemeChange={handleThemeChange}
                   actions={defaultActions}
+                  notificationsContent={<TopbarNotificationsDemo />}
                 />
               </PreviewWrap>
             </div>
@@ -28614,6 +28730,7 @@ function TopbarPage({ openSpec, onAppThemeChange }: { openSpec: (s: SpecModal) =
                   {[
                     "Place exactly once at the top of every app view — it's a singleton, not a reusable per-page component.",
                     "Pass `actions` to expose global utilities (notifications, settings, app switcher) — max 3 buttons.",
+                    "The Notifications bell is wired by default — every screen built on ScreenLayout gets a working Notification Center dropdown with zero setup (see the callout below).",
                     "Wire `onSearchFocus` to open the Global Search overlay; don't embed a real search within the topbar.",
                     "Wire `onWorkspaceClick` and `onCompanyClick` to open the DS Left Menu dropdown.",
                     "Use the `tablet` variant when the viewport is below 1024px — adds hamburger for sidebar toggle.",
@@ -28642,6 +28759,13 @@ function TopbarPage({ openSpec, onAppThemeChange }: { openSpec: (s: SpecModal) =
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-[8px] p-[16px]" style={{ background: "var(--tag-informative-bg)", border: "1px solid var(--tag-informative-bd)" }}>
+              <p className="text-[13px] font-semibold mb-[6px]" style={{ color: "var(--primary)" }}>Notifications is a built-in behavior, not an opt-in feature</p>
+              <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-text)" }}>
+                <code className="text-[11px] bg-[var(--code-bg)] px-[4px] py-[1px] rounded-[3px]">ScreenLayout</code> — the canonical shell every real screen is built on — always renders <code className="text-[11px] bg-[var(--code-bg)] px-[4px] py-[1px] rounded-[3px]">Topbar</code> with a <code className="text-[11px] bg-[var(--code-bg)] px-[4px] py-[1px] rounded-[3px]">notificationsContent</code> prop that defaults to a real, working Notification Center dropdown (Mark all read, filters, date-grouped list all functional). A PM who drops <code className="text-[11px] bg-[var(--code-bg)] px-[4px] py-[1px] rounded-[3px]">{"<ScreenLayout>"}</code> into a prototype gets a clickable bell icon for free — no wiring required. To use a custom dataset instead of the default demo data, pass your own <code className="text-[11px] bg-[var(--code-bg)] px-[4px] py-[1px] rounded-[3px]">{"<NotificationCenter>"}</code> via that same prop. This is the same mechanism demonstrated live in the Notification Center page's "Open preview" — see that page for the full dropdown → "View all" → List View flow.
+              </p>
             </div>
 
           </div>
@@ -28943,9 +29067,10 @@ function TopbarPage({ openSpec, onAppThemeChange }: { openSpec: (s: SpecModal) =
                 onThemeChange={handleThemeChange}
                 actions={[
                   { icon: SparkleIcon ? <SparkleIcon size={16} strokeWidth={2} /> : null, label: "AI Assistant", variant: "primary" as const },
-                  { icon: BellIcon ? <BellIcon size={16} strokeWidth={1.75} /> : null, label: "Notifications", badge: showBadge },
+                  { icon: BellIcon ? <BellIcon size={16} strokeWidth={1.75} /> : null, label: "Notifications", badge: showBadge, id: "notifications" },
                   { icon: SettingsIcon ? <SettingsIcon size={16} strokeWidth={1.75} /> : null, label: "Settings" },
                 ]}
+                notificationsContent={<TopbarNotificationsDemo />}
               />
             </PreviewWrap>
 
@@ -30924,6 +31049,1213 @@ const HC_STYLE_VARIANTS: { style: HighlightCardStyle; label: string; description
   { style: "lime-bg",       label: "Lime Green BG", description: "Lime tint · eco/growth/sustainability",               feedbackType: "neutral", feedbackText: "Feedback text" },
   { style: "red",           label: "Red",           description: "Error tint · critical/failure-state KPIs",            feedbackType: "neutral", feedbackText: "Feedback text" },
 ]
+
+// Tag 1 = category, always variant="secondary" (component default, kept explicit
+// here for clarity). Tag 2 = severity — variant is NEVER "secondary"; it's omitted
+// entirely for severity="Info" since Info has no color in the 3-value rule below.
+// Verbatim from Figma node 18749:7093 ("FOR CLAUDE CODE"): "Category tags (tag 1)
+// default to Secondary (neutral). Severity tags (tag 2) always use their semantic
+// color — Success, Alert, or Error — never Secondary." + "Maximum 2 visible tags."
+const SEVERITY_TAG_VARIANT: Partial<Record<string, TagVariant>> = {
+  Success: "success", Warning: "alert", Critical: "error",
+}
+
+const NOTIF_ITEM_DEMO_TAGS = [{ label: "Billing", variant: "secondary" as const }]
+
+// Pool for the Playground's tag-count control. Slot 1 is always the category tag;
+// slot 2 is computed from the selected scenario's real severity (see
+// SEVERITY_TAG_VARIANT below in the component) so a 2-tag row always demonstrates
+// the real rule instead of a second arbitrary secondary tag. A 3rd tag is a
+// discouraged edge case — the component supports it (Figma "Third tag" property,
+// default false) but DS guidance caps visible tags at 2.
+const NOTIF_ITEM_TAG_POOL = [{ label: "Billing", variant: "secondary" as const }, { label: "Enterprise", variant: "secondary" as const }, { label: "Beta", variant: "secondary" as const }]
+
+// Real classification examples pulled verbatim from Figma's "AIMS OS Notification
+// Classification Examples" (node 18749:7093, section 03) — grounds the Playground
+// in the actual taxonomy instead of abstract toggles. Severity → iconVariant per
+// the documented mapping: Info→informative, Success→success, Warning→alert,
+// Critical→error. "Human actor" is not present in the Figma examples (all 12 are
+// system/agent/workflow-sourced) but is added here since the taxonomy explicitly
+// calls it out as leading-visual priority 1 — Avatar must win over any icon.
+const NOTIF_SCENARIOS = [
+  {
+    key: "human-comment", label: "Human comment",
+    taxonomy: { source: "Human actor", eventType: "Comment", attention: "Passive", severity: "Info" },
+    props: {
+      avatarName: "Sarah Chen", title: "New comment on your ticket", timestamp: "5 min ago",
+      description: "Sarah left a comment on 'Login page redesign'.", unread: true,
+      tags: NOTIF_ITEM_DEMO_TAGS,
+    },
+  },
+  {
+    key: "approval-agent", label: "Approval required (AI Agent)",
+    taxonomy: { source: "AI Agent (ORI)", eventType: "Approval required", attention: "Action Required", severity: "Info" },
+    props: {
+      iconVariant: "informative" as HighlightIconVariant, iconName: "Bot",
+      title: "Lead Qualification Agent needs approval", timestamp: "2 min ago",
+      description: "Reviewed 3 leads and flagged 1 for manual approval before outreach.", unread: true,
+      tags: [{ label: "Agentic Studio", variant: "secondary" as const }],
+      primaryAction: { label: "Review" }, secondaryAction: { label: "Dismiss" },
+    },
+  },
+  {
+    key: "workflow-failure", label: "Workflow failure",
+    taxonomy: { source: "Workflow", eventType: "Failure", attention: "Action Required", severity: "Critical" },
+    props: {
+      iconVariant: "error" as HighlightIconVariant, iconName: "Workflow",
+      title: "Customer Sync workflow failed", timestamp: "10 min ago",
+      description: "3 consecutive sync attempts failed. Manual retry required.", unread: true,
+      tags: [{ label: "Workflow", variant: "secondary" as const }, { label: "Critical", variant: "error" as const }],
+      primaryAction: { label: "Retry" },
+    },
+  },
+  {
+    key: "integration-warning", label: "Integration warning",
+    taxonomy: { source: "Integration", eventType: "Input required", attention: "Action Required", severity: "Warning" },
+    props: {
+      iconVariant: "alert" as HighlightIconVariant, iconName: "Link2",
+      title: "Google Drive connection requires re-authentication", timestamp: "3 hours ago",
+      description: "4 active workflows depend on this connection and are currently paused.", unread: true,
+      tags: [{ label: "Integration", variant: "secondary" as const }, { label: "Warning", variant: "alert" as const }],
+      primaryAction: { label: "Reconnect" },
+    },
+  },
+  {
+    key: "deployment-success", label: "Deployment success",
+    taxonomy: { source: "System", eventType: "Deployment", attention: "Passive", severity: "Success" },
+    props: {
+      iconVariant: "success" as HighlightIconVariant, iconName: "Rocket",
+      title: "Runtime v3.2.1 deployed successfully", timestamp: "1 hour ago",
+      description: "All health checks passed.",
+      tags: [{ label: "Deployment", variant: "secondary" as const }, { label: "Success", variant: "success" as const }],
+    },
+  },
+  {
+    key: "assignment", label: "Assignment (passive)",
+    taxonomy: { source: "Workflow", eventType: "Assignment", attention: "Passive", severity: "Info" },
+    props: {
+      iconVariant: "informative" as HighlightIconVariant, iconName: "UserPlus",
+      title: "You were assigned to Churn Risk Intervention", timestamp: "Yesterday",
+      description: "Workflow requires review before the next scheduled run.",
+      tags: [{ label: "Workflow", variant: "secondary" as const }],
+    },
+  },
+  {
+    key: "reminder", label: "Reminder",
+    taxonomy: { source: "System", eventType: "Reminder", attention: "Passive", severity: "Info" },
+    props: {
+      iconVariant: "informative" as HighlightIconVariant, iconName: "Clock",
+      title: "Reminder: Sprint review in 30 min", timestamp: "Just now",
+      description: "Conference Room B · 12 attendees.",
+    },
+  },
+] as const
+
+type NotifScenarioKey = typeof NOTIF_SCENARIOS[number]["key"]
+
+function NotificationItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+  const [pgScenario, setPgScenario] = useState<NotifScenarioKey>("approval-agent")
+  const [pgUnread, setPgUnread]     = useState(true)
+  const [pgDisabled, setPgDisabled] = useState(false)
+  // Edge-case controls — mirror Figma's own component properties 1:1 (Show Description /
+  // Show Tags / Show Actions / Show Timestamp / Lead), layered on top of the selected
+  // scenario so every region of the row can be exercised independently of taxonomy content.
+  const [pgShowDescription, setPgShowDescription] = useState(true)
+  const [pgShowTimestamp, setPgShowTimestamp]     = useState(true)
+  const [pgTagCount, setPgTagCount]     = useState<0 | 1 | 2 | 3>(1)
+  const [pgActionCount, setPgActionCount] = useState<0 | 1 | 2>(2)
+  const [pgForceAvatar, setPgForceAvatar] = useState(false)
+  // Click-routing live examples (Reference tab) — real SlideOut/Modal, not a mock,
+  // so the decision tree is demonstrated with working code, not just prose.
+  const [routingNavMessage, setRoutingNavMessage] = useState<string | null>(null)
+  const [routingSlideoutOpen, setRoutingSlideoutOpen] = useState(false)
+  const [routingModalOpen, setRoutingModalOpen] = useState(false)
+
+  const scenario = NOTIF_SCENARIOS.find(s => s.key === pgScenario)!
+  // Tag slot 2 is derived from the selected scenario's REAL severity so the control
+  // demonstrates the actual rule (Success/Alert/Error, never Secondary) instead of a
+  // second arbitrary tag — and correctly disappears for Info severity, per the rule.
+  const severityVariant = SEVERITY_TAG_VARIANT[scenario.taxonomy.severity]
+  const playgroundTags = [
+    NOTIF_ITEM_TAG_POOL[0],
+    ...(severityVariant ? [{ label: scenario.taxonomy.severity, variant: severityVariant }] : []),
+    NOTIF_ITEM_TAG_POOL[2],
+  ]
+
+  const pgProps = {
+    ...scenario.props,
+    unread: pgUnread,
+    disabled: pgDisabled,
+    showTimestamp: pgShowTimestamp,
+    description: pgShowDescription ? scenario.props.description : undefined,
+    tags: pgTagCount > 0 ? playgroundTags.slice(0, pgTagCount) : undefined,
+    primaryAction: pgActionCount >= 1 ? ("primaryAction" in scenario.props ? scenario.props.primaryAction : { label: "View" }) : undefined,
+    secondaryAction: pgActionCount >= 2 ? ("secondaryAction" in scenario.props ? scenario.props.secondaryAction : { label: "Dismiss" }) : undefined,
+    ...(pgForceAvatar ? { avatarName: "Sarah Chen", avatarSrc: undefined } : {}),
+  }
+
+  return (
+    <div>
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Notification Item</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
+            Single-row notification. Lead icon + title/timestamp + description + tags/actions. Composes HighlightIcon, Badge, Tag, and Button — no custom re-implementations.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("notification-item")} />
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{
+              color: tab === t ? "var(--primary)" : "var(--field-supporting)",
+              borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Read vs Unread</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <NotificationItem
+                iconVariant="informative" title="New comment on your ticket" timestamp="2 min ago"
+                description="Sarah left a comment on 'Login page redesign'." unread
+                tags={NOTIF_ITEM_DEMO_TAGS}
+                primaryAction={{ label: "View", variant: "tertiary" }}
+              />
+              <div className="h-px" style={{ background: "var(--table-border)" }} />
+              <NotificationItem
+                iconVariant="success" title="Deployment succeeded" timestamp="1 hour ago"
+                description="v2.4.1 is now live in production."
+              />
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Leading visual priority — Avatar wins over icon</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[640px]">
+              Per taxonomy §04: an identifiable human actor always renders as an Avatar (priority 1) — never replaced by a product-area icon. Everything else (system, workflow, AI agent) falls back to HighlightIcon.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <NotificationItem {...NOTIF_SCENARIOS[0].props} />
+              <div className="h-px" style={{ background: "var(--table-border)" }} />
+              <NotificationItem {...NOTIF_SCENARIOS[1].props} />
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">With actions — always variant=&quot;tertiary&quot;</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[640px]">
+              Both action slots are <code className="text-[var(--primary)]">variant=&quot;tertiary&quot;</code> in the DS mock — a notification feed stays quiet even for Action Required items. Only override to a stronger variant for a genuine single-CTA moment, not routine reads.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <NotificationItem {...NOTIF_SCENARIOS[2].props} />
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Disabled</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <NotificationItem
+                iconVariant="neutral" title="Archived notification" timestamp="3 days ago"
+                description="This notification type has been turned off." disabled
+              />
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
+            <div className="grid grid-cols-2 gap-[16px]">
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[#059669] uppercase tracking-widest">Use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["Inside the Notification Center panel's grouped list", "Any feed of timestamped, actionable events", "Rows need an unread indicator or inline actions"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="text-[#059669] shrink-0">✓</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[#dc2626] uppercase tracking-widest">Don't use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["General-purpose list rows with no timestamp (use Entity List)", "Standalone toast/snackbar feedback (use Alert Banner)", "Rows need checkboxes or bulk selection (use Table)"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="text-[#dc2626] shrink-0">✕</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[32px]">
+          <div className="rounded-[8px] border border-[var(--table-border)]">
+            <NotificationItem {...pgProps} />
+          </div>
+
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Scenario — real taxonomy classification</p>
+            <div className="flex flex-wrap gap-[4px]">
+              {NOTIF_SCENARIOS.map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setPgScenario(s.key)}
+                  className="px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors"
+                  style={{
+                    background: pgScenario === s.key ? "#2173ff" : "var(--ctrl-inactive-bg)",
+                    color: pgScenario === s.key ? "#fff" : "var(--field-label)",
+                    border: pgScenario === s.key ? "none" : "1px solid var(--field-border)",
+                  }}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Edge cases — every Figma component property, independent of the scenario's own content */}
+          <div className="flex flex-col gap-[10px]">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Edge cases (Figma component properties)</p>
+            <CtrlToggle label="Show Description" value={pgShowDescription} onChange={setPgShowDescription} />
+            <CtrlToggle label="Show Timestamp"   value={pgShowTimestamp}   onChange={setPgShowTimestamp} />
+            <CtrlGroup label="Show Tags" options={[0,1,2,3].map(n => ({ label: String(n), value: String(n) }))} value={String(pgTagCount)} onChange={v => setPgTagCount(Number(v) as 0|1|2|3)} />
+            <p className="text-[11px] text-[var(--field-supporting)] pl-[122px] -mt-[4px]">
+              Tag 1 = category (always <code className="text-[var(--primary)]">secondary</code>). Tag 2 = severity — colored per the scenario's real severity
+              ({severityVariant ? <code className="text-[var(--primary)]">{severityVariant}</code> : <>omitted, since this scenario's severity is <strong>Info</strong> — never <code className="text-[var(--primary)]">secondary</code></>}).
+              Tag 3 is a discouraged edge case — DS guidance caps visible tags at 2.
+            </p>
+            <CtrlGroup label="Show Actions" options={[0,1,2].map(n => ({ label: n === 0 ? "None" : n === 1 ? "Primary only" : "Primary + Secondary", value: String(n) }))} value={String(pgActionCount)} onChange={v => setPgActionCount(Number(v) as 0|1|2)} />
+            <CtrlToggle label="Force avatar lead" value={pgForceAvatar} onChange={setPgForceAvatar} />
+            <CtrlToggle label="Unread"   value={pgUnread}   onChange={setPgUnread} />
+            <CtrlToggle label="Disabled" value={pgDisabled} onChange={setPgDisabled} />
+          </div>
+
+          {/* Taxonomy readout for the selected scenario — makes the classification legible, not just the visual result */}
+          <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+            <div className="grid grid-cols-4 bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+              {["Source", "Event Type", "Attention", "Severity"].map(h => (
+                <div key={h} className="px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-4">
+              {[scenario.taxonomy.source, scenario.taxonomy.eventType, scenario.taxonomy.attention, scenario.taxonomy.severity].map((v, i) => (
+                <div key={i} className="px-[12px] py-[10px] text-[13px] text-[var(--field-text)]">{v}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[32px]">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Notification taxonomy</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              Pulled verbatim from Figma&apos;s &quot;Notification Architecture &amp; Taxonomy&quot; documentation (node 18749:7093). These are independent metadata dimensions — <strong className="text-[var(--field-label)]">they must never be implemented as separate Notification Item variants</strong>. They map to props/visual treatment per the rules below.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[16px]">
+              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Dimension", "Question it answers · values"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Source",      "Who or what generated it? — Data Studio, Governance Studio, Agentic Studio, Work Surfaces, HTL, or a human actor"],
+                ["Event Type",  "What happened? — Approval required, Input required, Assignment, Failure, Escalation, Completion, Security event, Deployment, Reminder, Update, Governance block, Permission change"],
+                ["Attention",   "Does the user need to act? — Passive · Action Required"],
+                ["Severity",    "How important/risky is it? — Info · Success · Warning · Critical"],
+                ["Read Status", "Has the user seen it? — Unread · Read"],
+                ["Lifecycle",   "Is it active, archived, or expired? — Active · Archived · Expired (+ user flags: Pinned, Muted — not lifecycle values)"],
+              ].map(([dim, desc], i) => (
+                <div key={dim} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{dim}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[8px]">Metadata → UI mapping rules</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[12px] mb-[16px]" style={{ background: "var(--surface)" }}>
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[4px]">Leading visual priority (highest wins, do not reorder)</p>
+                <ol className="flex flex-col gap-[2px] text-[12px] text-[var(--field-supporting)] list-decimal pl-[18px]">
+                  <li>Identifiable human actor → <code className="text-[var(--primary)]">avatarName</code></li>
+                  <li>Product area / module → <code className="text-[var(--primary)]">iconVariant</code> + <code className="text-[var(--primary)]">iconName</code> (module default)</li>
+                  <li>Explicit Event Type override → specific event icon</li>
+                  <li>No actor or product-area context → <code className="text-[var(--primary)]">iconName=&quot;Bell&quot;</code> fallback</li>
+                </ol>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[4px]">Severity → color (overrides the module's default icon color)</p>
+                <div className="flex flex-wrap gap-[8px]">
+                  {[["Info", "informative"], ["Success", "success"], ["Warning", "alert"], ["Critical", "error"]].map(([sev, variant]) => (
+                    <span key={sev} className="text-[12px] text-[var(--field-supporting)]">{sev} → <code className="text-[var(--primary)]">{variant}</code></span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[4px]">Attention → UI</p>
+                <p className="text-[12px] text-[var(--field-supporting)]">Passive → no action-specific treatment. Action Required → contextual action(s) + tag.</p>
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[4px]">Read Status → UI</p>
+                <p className="text-[12px] text-[var(--field-supporting)]">Unread → dot visible. Read → dot hidden. Title typography stays identical either way — read status must never be communicated by color alone.</p>
+              </div>
+            </div>
+
+            <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[8px]">Click routing — Modal vs. Slideout vs. Full Navigation</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Pattern", "Use when"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Full Navigation", "The user needs to create, edit, or resolve something in a dedicated editor or console."],
+                ["Slideout",        "Content exceeds one paragraph, or requires reviewing evidence/history — \"I glance quickly to understand what happened\" without losing the list."],
+                ["Modal",           "The response is an immediate 1-click binary confirmation only — \"I decide now.\" If it doesn't fit without scrolling, use Slideout instead."],
+              ].map(([pattern, desc], i) => (
+                <div key={pattern} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{pattern}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-[8px] p-[12px] flex gap-[8px] mb-[16px]" style={{ background: "var(--color-surface-alert-more-subtle)" }}>
+              <span style={{ color: "var(--color-text-alert)" }}>⚠</span>
+              <p className="text-[12px]" style={{ color: "var(--color-text-alert)" }}>
+                <strong>UX rule:</strong> clicking the row and clicking <code>primaryAction</code> must always resolve to the same destination — never wire them to two different outcomes. Both onClick handlers should call the same navigation function.
+              </p>
+            </div>
+
+            <p className="text-[12px] font-semibold text-[var(--field-label)] mb-[8px]">Try it — one row per pattern, wired to the real components</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              Each row below fires the actual navigation used in production — SlideOut and ModalDialog are the real DS components (not mocks), and both the row's onClick and the primaryAction's onClick call the identical handler, per the rule above.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <NotificationItem
+                iconVariant="error" iconName="Workflow" title="Customer Sync workflow failed"
+                timestamp="25 min ago" description="3 consecutive sync attempts failed. Manual retry required."
+                tags={[{ label: "Workflow", variant: "secondary" }, { label: "Full Navigation", variant: "informative" }]}
+                primaryAction={{ label: "Open", onClick: () => setRoutingNavMessage("→ Navigated to: Workflow Editor — Customer Sync (record #4821)") }}
+                onClick={() => setRoutingNavMessage("→ Navigated to: Workflow Editor — Customer Sync (record #4821)")}
+              />
+              <div className="h-px w-full" style={{ background: "var(--table-border)" }} />
+              <NotificationItem
+                iconVariant="informative" iconName="Bot" title="Lead Qualification Agent needs approval"
+                timestamp="12 min ago" description="Reviewed 3 leads and flagged 1 for manual approval before outreach."
+                tags={[{ label: "AI Agent", variant: "secondary" }, { label: "Slideout", variant: "informative" }]}
+                primaryAction={{ label: "Review", onClick: () => setRoutingSlideoutOpen(true) }}
+                onClick={() => setRoutingSlideoutOpen(true)}
+              />
+              <div className="h-px w-full" style={{ background: "var(--table-border)" }} />
+              <NotificationItem
+                iconVariant="error" iconName="UserCog" title="Vulnerable customer flagged for review"
+                timestamp="Yesterday, 8:47 AM" description="HTL detected a crisis-response signal in ticket #5521 — needs human review."
+                tags={[{ label: "HTL", variant: "secondary" }, { label: "Modal", variant: "informative" }]}
+                primaryAction={{ label: "Review", onClick: () => setRoutingModalOpen(true) }}
+                onClick={() => setRoutingModalOpen(true)}
+              />
+            </div>
+            {routingNavMessage && (
+              <div className="rounded-[8px] p-[10px] text-[12px] mb-[16px]" style={{ background: "var(--tag-informative-bg)", color: "var(--primary)" }}>
+                {routingNavMessage} <span style={{ color: "var(--field-supporting)" }}>— a real app would route here; this doc can only report the destination.</span>
+              </div>
+            )}
+
+            <SlideOut
+              open={routingSlideoutOpen}
+              onClose={() => setRoutingSlideoutOpen(false)}
+              type="full-slot"
+              size="m"
+            >
+              {/* type="full-slot" skips the with-variants header (title+tabs+search are
+                  bundled together with no way to show just the title) — a plain confirmation
+                  detail like this doesn't need tabs or search, so a small custom header row
+                  keeps the panel clean instead of showing unrelated placeholder chrome. */}
+              <div className="flex flex-col gap-[12px] p-[20px]">
+                <div className="flex items-start justify-between gap-[8px]">
+                  <div>
+                    <p className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>Lead Qualification Agent</p>
+                    <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Approval required · Agentic Studio</p>
+                  </div>
+                  <Button variant="tertiary" size="sm" iconPosition="alone" icon={<LucideIcons.X size={14} />} aria-label="Close panel" onClick={() => setRoutingSlideoutOpen(false)} />
+                </div>
+                <p className="text-[13px]" style={{ color: "var(--field-text)" }}>
+                  ORI reviewed 3 leads against your qualification criteria and flagged 1 for manual approval before outreach begins.
+                </p>
+                <div className="rounded-[8px] border border-[var(--table-border)] p-[12px] flex flex-col gap-[6px]">
+                  <p className="text-[12px] font-semibold" style={{ color: "var(--field-text)" }}>Flagged lead</p>
+                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Acme Corp — Jane Doe (jane@acme.com). Confidence: 62% (below your 75% auto-approve threshold).</p>
+                </div>
+                <div className="flex gap-[8px]">
+                  <Button variant="primary" size="sm" onClick={() => setRoutingSlideoutOpen(false)}>Approve outreach</Button>
+                  <Button variant="secondary" size="sm" onClick={() => setRoutingSlideoutOpen(false)}>Dismiss</Button>
+                </div>
+              </div>
+            </SlideOut>
+
+            <ModalDialog
+              isOpen={routingModalOpen}
+              onClose={() => setRoutingModalOpen(false)}
+              variant="confirmation"
+              tone="error"
+              title="Escalate to a human reviewer?"
+              description="HTL detected a crisis-response signal in ticket #5521. This assigns it to the on-call reviewer immediately."
+              ctaPrimary={{ label: "Escalate now", destructive: true, onClick: () => setRoutingModalOpen(false) }}
+              ctaSecondary={{ label: "Cancel", onClick: () => setRoutingModalOpen(false) }}
+            />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Design tokens</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[160px_1fr_130px_130px] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Role", "Token", "Light", "Dark"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Hover bg",   "--menu-item-hover",             "rgba(242,242,242,0.95)", "rgba(32,42,62,0.90)"],
+                ["Pressed/Focus bg", "--color-surface-neutral-subtle", "#fafafa", "rgba(255,255,255,0.05)"],
+                ["Focus ring", "--field-border-focus",          "#2173ff", "#2b7fff"],
+                ["Title",      "--color-text-title",            "#000000", "rgba(255,255,255,0.80)"],
+                ["Timestamp",  "--color-text-caption",          "#5c5c5c", "rgba(255,255,255,0.50)"],
+                ["Description","--color-text-body",             "#5C5C5C", "#94A3B8"],
+                ["Unread dot", "--badge-light-blue",             "#00b5d9", "#51a2ff"],
+              ].map(([role, token, light, dark], i) => (
+                <div key={token} className="grid grid-cols-[160px_1fr_130px_130px] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{role}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{token}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{light}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{dark}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Anatomy</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[160px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Element", "Description"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Leading visual", "AvatarCircle sizeKey=md when avatarName is set (priority 1) · otherwise HighlightIcon size=sm, iconColor=default"],
+                ["Title row",  "Flex row, space-between · Title (truncates) · Unread dot (Badge) + Timestamp"],
+                ["Timestamp",  "Figma \"Show Timestamp\" boolean, default true — omit showTimestamp={false} only for rows that genuinely have no relative time"],
+                ["Description","12px Medium, 2-line clamp not enforced — pass short copy. Figma \"Show Description\" boolean — omit the prop to hide the row entirely"],
+                ["Tags row",   "Tag size=sm · flex-1, truncates before actions. Tag 1 = category (variant=secondary). Tag 2 = severity (variant=success/alert/error, never secondary; omitted for Info). Max 2 visible per DS guidance — a 3rd tag exists as a component property but is a discouraged edge case."],
+                ["Actions",    "Button size=sm · secondary action renders before primary, right-aligned. Figma \"Show Actions\" / \"Second Action\" booleans — omit primaryAction and/or secondaryAction for 0, 1, or 2 actions"],
+                ["Row hover",  "hoverable prop, default true — a neutral gray background on hover/press/focus. Set true in Notification Center's dropdown (the row is the only interactive surface there). Set hoverable={false} when nesting inside a container that owns its own hover treatment, e.g. a List View CardContainer — otherwise the two hover states visually compete."],
+              ].map(([el, desc], i) => (
+                <div key={el} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[12px] text-[13px] font-semibold text-[var(--field-text)]">{el}</div>
+                  <div className="px-[12px] py-[12px] text-[13px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 9 rows across 3 date groups — enough to overflow the 560px max-height and
+// prove the list scrolls independently of the header/footer (see Task: verify
+// scroll behavior). Grounded in the same taxonomy classification examples used
+// in the Notification Item Playground, plus an `assignedToMe` demo-only flag
+// so the "Assigned to me" filter chip has something real to filter against —
+// filtering logic itself lives in the consuming page, NotificationCenter only
+// renders whatever `groups` it's given (same division of responsibility as Filters).
+// Source and Studio are two INDEPENDENT taxonomy dimensions (Figma node 18749:7093,
+// sections "SOURCE — VALUES & STUDIO MAPPING" and "PRODUCTAREA/MODULE — STUDIO VALUES"):
+//   Studio = where the user SEES the notification (5 confirmed values: Data Studio,
+//            Governance Studio, Agentic Studio, Work Surfaces, HTL).
+//   Source = the backend engine that GENERATED it — distinct from Studio; a single
+//            Studio can receive notifications from several Sources, and a Source can
+//            surface in more than one Studio (e.g. "AI Agent" → Agentic Studio AND
+//            Work Surfaces). Confirmed values only (per the doc's own status column —
+//            "Pending"/"Deprioritized" sources are not real filter options yet):
+//            AI Agent, HTL, Workflow, Integration, System: Guardrails, System: Document Intake.
+// Menu label convention (verbatim doc rule): short form only — "AI Agent" not
+// "AI Agent (ORI)", "System: Guardrails" not "... (The Council)".
+// "System: Guardrails" has audienceScope: internal-admin — never shown to an end-user,
+// so it's deliberately absent from both SOURCE_OPTIONS below and this demo dataset
+// (this persona, Michael O., is an end-user, not an admin — a real admin build would
+// need its own Source list). Not every notification has a Source: a human-authored
+// comment isn't generated by a backend engine, and some system events don't map
+// cleanly to one of the 6 confirmed values — both are left undefined below, which is
+// the realistic/correct state, not a gap.
+export const STUDIO_OPTIONS = ["Data Studio", "Governance Studio", "Agentic Studio", "Work Surfaces", "HTL"] as const
+export const SOURCE_OPTIONS = ["AI Agent", "HTL", "Workflow", "Integration", "System: Document Intake"] as const
+
+type DemoNotifItem = NotificationItemData & {
+  assignedToMe?: boolean
+  day: "TODAY" | "YESTERDAY" | "EARLIER"
+  source?: typeof SOURCE_OPTIONS[number]
+  studio?: typeof STUDIO_OPTIONS[number]
+}
+const NOTIF_CENTER_ALL_ITEMS: DemoNotifItem[] = [
+  { id: "1", day: "TODAY", avatarName: "Sarah Chen", title: "New comment on your ticket", timestamp: "2 min ago", description: "Sarah left a comment on 'Login page redesign'.", unread: true, tags: [{ label: "Billing", variant: "secondary" }], assignedToMe: true },
+  { id: "2", day: "TODAY", iconVariant: "informative", iconName: "Bot", title: "Lead Qualification Agent needs approval", timestamp: "12 min ago", description: "Reviewed 3 leads and flagged 1 for manual approval before outreach.", unread: true, tags: [{ label: "Agentic Studio", variant: "secondary" }], primaryAction: { label: "Review" }, assignedToMe: true, source: "AI Agent", studio: "Agentic Studio" },
+  { id: "3", day: "TODAY", iconVariant: "error", iconName: "Workflow", title: "Customer Sync workflow failed", timestamp: "25 min ago", description: "3 consecutive sync attempts failed. Manual retry required.", unread: true, tags: [{ label: "Workflow", variant: "secondary" }, { label: "Critical", variant: "error" }], primaryAction: { label: "Retry" }, source: "Workflow", studio: "Agentic Studio" },
+  { id: "4", day: "TODAY", iconVariant: "alert", iconName: "Link2", title: "Google Drive connection requires re-authentication", timestamp: "1 hour ago", description: "4 active workflows depend on this connection and are currently paused.", unread: true, tags: [{ label: "Integration", variant: "secondary" }, { label: "Warning", variant: "alert" }], primaryAction: { label: "Reconnect" }, assignedToMe: true, source: "Integration", studio: "Data Studio" },
+  { id: "5", day: "TODAY", iconVariant: "success", iconName: "Rocket", title: "Runtime v3.2.1 deployed successfully", timestamp: "3 hours ago", description: "All health checks passed.", tags: [{ label: "Deployment", variant: "secondary" }, { label: "Success", variant: "success" }], source: "Workflow", studio: "Agentic Studio" },
+  { id: "6", day: "YESTERDAY", iconVariant: "informative", iconName: "UserPlus", title: "You were assigned to Churn Risk Intervention", timestamp: "Yesterday, 4:12 PM", description: "Workflow requires review before the next scheduled run.", assignedToMe: true, source: "Workflow", studio: "Agentic Studio" },
+  { id: "7", day: "YESTERDAY", iconVariant: "informative", iconName: "Settings2", title: "System update available", timestamp: "Yesterday, 9:00 AM", description: "Version 4.1 includes performance improvements." },
+  { id: "10", day: "YESTERDAY", iconVariant: "success", iconName: "ShieldCheck", title: "PII masking review completed", timestamp: "Yesterday, 11:20 AM", description: "Document Intake finished redacting 3 flagged claims.", tags: [{ label: "Document Intake", variant: "secondary" }, { label: "Success", variant: "success" }], source: "System: Document Intake", studio: "Governance Studio" },
+  { id: "11", day: "YESTERDAY", iconVariant: "error", iconName: "UserCog", title: "Vulnerable customer flagged for review", timestamp: "Yesterday, 8:47 AM", description: "HTL detected a crisis-response signal in ticket #5521 — needs human review.", unread: true, tags: [{ label: "HTL", variant: "secondary" }, { label: "Critical", variant: "error" }], primaryAction: { label: "Review" }, source: "HTL", studio: "HTL" },
+  { id: "8", day: "EARLIER", iconVariant: "error", iconName: "AlertTriangle", title: "Build #1892 failed", timestamp: "2 days ago", description: "Failed at the deployment stage — check the CI logs.", tags: [{ label: "CI/CD", variant: "secondary" }, { label: "Critical", variant: "error" }], primaryAction: { label: "View logs" }, source: "Workflow", studio: "Agentic Studio" },
+  { id: "9", day: "EARLIER", iconVariant: "informative", iconName: "Clock", title: "Reminder: Sprint review in 30 min", timestamp: "3 days ago", description: "Conference Room B · 12 attendees.", source: "AI Agent", studio: "Work Surfaces" },
+  { id: "12", day: "EARLIER", iconVariant: "informative", iconName: "Sparkles", title: "3 new leads captured this week", timestamp: "3 days ago", description: "ORI surfaced them in your Work Surfaces queue for triage.", tags: [{ label: "Agentic", variant: "secondary" }], source: "AI Agent", studio: "Work Surfaces" },
+  { id: "13", day: "EARLIER", iconVariant: "success", iconName: "RefreshCw", title: "Salesforce sync completed", timestamp: "4 days ago", description: "12,480 records updated, 0 conflicts.", tags: [{ label: "Integration", variant: "secondary" }, { label: "Success", variant: "success" }], source: "Integration", studio: "Data Studio" },
+  { id: "14", day: "EARLIER", iconVariant: "alert", iconName: "FileWarning", title: "Claim document flagged for manual review", timestamp: "5 days ago", description: "Confidence score below threshold — needs a Governance Studio reviewer.", unread: true, tags: [{ label: "Document Intake", variant: "secondary" }, { label: "Warning", variant: "alert" }], primaryAction: { label: "Review" }, source: "System: Document Intake", studio: "Governance Studio" },
+]
+
+// Groups by each item's own `day` field (not array position) so grouping stays correct
+// under filtering and pagination — a paginated slice can start mid-group.
+function groupByDate(items: DemoNotifItem[]): NotificationGroup[] {
+  const order: DemoNotifItem["day"][] = ["TODAY", "YESTERDAY", "EARLIER"]
+  return order
+    .map(label => ({ label, items: items.filter(i => i.day === label) }))
+    .filter(g => g.items.length > 0)
+}
+
+// Self-contained bell-icon dropdown for live Topbar previews (Overview + Playground
+// tabs on TopbarPage) — reuses the same 9-item taxonomy-grounded dataset as the
+// Notification Center doc page so the Topbar's "default behavior" demo isn't a
+// second, divergent fake dataset. Mark-all-read is real (local state); filtering
+// mirrors NotificationCenterPage's own division of responsibility.
+function TopbarNotificationsDemo() {
+  const [items, setItems] = useState(NOTIF_CENTER_ALL_ITEMS)
+  const [filter, setFilter] = useState("All")
+
+  const filtered =
+    filter === "Unread"         ? items.filter(i => i.unread) :
+    filter === "Assigned to me" ? items.filter(i => i.assignedToMe) :
+    items
+  const groups = groupByDate(filtered)
+  const unreadCount = items.filter(i => i.unread).length
+
+  return (
+    <NotificationCenter
+      count={unreadCount}
+      groups={groups}
+      activeFilter={filter}
+      onFilterChange={setFilter}
+      onMarkAllRead={() => setItems(prev => prev.map(i => ({ ...i, unread: false })))}
+    />
+  )
+}
+
+// Per the taxonomy doc's explicit rule: Source and Studio are each multi-select
+// (OR logic within one filter — Source=Workflow OR Source=Integration), and
+// combine with each other and the quick filter chips using AND logic — that
+// combination is applied by the caller (see `listFiltered` below), not inside
+// any single filter control.
+//
+// Source/Studio are passed to the REAL Filters component via its `slots` prop
+// — not a hand-rolled chip — so the trigger, the active/inactive chip style,
+// and the "selected value" display all come from that one real component.
+// Filters already renders an active slot as a Tag (with a remove/X button) plus
+// a chevron to reopen it (see filters.tsx); `FilterSlot.value` is a single
+// string, so a multi-select summary ("Workflow, Integration" or "3 selected")
+// is computed by the caller below and passed as that string.
+//
+// `FilterSlot.onOpen` takes no event argument, so the dropdown's anchor
+// position can't come from inside Filters itself. This reuses the established
+// fix for exactly that problem from the Filter System pattern's Layer-1 full
+// preview: capture the clicked chip's rect via onClickCapture on the wrapping
+// row, then render the dropdown with the same chrome that pattern already uses
+// for a chip-opens-anchored-dropdown case (var(--menu-bg), blur(16px), 0.5px
+// field-border, radius 8, minWidth 200, shadow-elevation-3) — Checkbox rows are
+// the only addition here, since Source/Studio need multi-select, not one-of.
+function filterSlotSummary(selected: string[]): string | undefined {
+  if (selected.length === 0) return undefined
+  return selected.length > 2 ? `${selected.length} selected` : selected.join(", ")
+}
+
+// Full-screen preview — shows the exact behavior that will be replicated across the
+// platform via ScreenLayout: a real Topbar with the bell icon wired to the real
+// NotificationCenter, then "View all" navigating to the REAL "Notification List"
+// screen from Figma (node 19173:18397, page "Notifications WIP" > "Notification
+// flow" > "Light mode" > "Notification List") — Header + Filters + Quick Filter
+// Chips + Time Separator + card-wrapped Notification Item rows + Pagination.
+// Every piece is an existing DS component (Header, Filters, Chip, Pagination)
+// verified against Figma's own instances in that frame — this is not a new
+// invented layout.
+//
+// Built on top of ScreenLayout (the same canonical shell every real screen
+// uses) rather than hand-rolled Topbar+Sidebar, for two concrete reasons found
+// by inspecting the rendered DOM:
+//  1. ScreenLayout renders <AppBackground /> as its first child — an opaque
+//     full-bleed layer. Without it, the docs site's own page (still mounted
+//     behind this fixed overlay) bled through the Topbar/Sidebar's translucent
+//     surfaces as faint ghosted text.
+//  2. ScreenLayout's `pagination` prop floats fixed at the bottom of the
+//     content area (position: absolute; bottom: 0) instead of flowing inline
+//     at the end of the scrollable list — matching every other List View
+//     pattern in this codebase.
+//
+// Rows use the real CardContainer (size="sm", variant="default") — Figma's Card
+// Component set (5388:23473) defines a real Hover state for this exact variant
+// (border darkens to --card-default-hover-bd + a soft shadow), verified on the
+// node directly, so the card's own hover is the intended feedback in this List
+// View context. NotificationItem is rendered with hoverable={false} here so its
+// own internal gray hover background doesn't visually compete with the card's —
+// that background is reserved for the floating dropdown, the one place where
+// the row itself (not a wrapping card) is the interactive surface.
+function NotificationCenterPreviewScreen({ onClose }: { onClose: () => void }) {
+  const [items, setItems] = useState(NOTIF_CENTER_ALL_ITEMS)
+  const [filter, setFilter] = useState("All")
+  const [view, setView] = useState<"home" | "all">("home")
+  const [listPage, setListPage] = useState(1)
+  // Real "rows per page" control, not a fixed constant — Pagination's own picker
+  // (5/25/50/100/200) is decorative unless onItemsPerPageChange is wired to state.
+  const [listPageSize, setListPageSize] = useState(5)
+  // Source/Studio only apply in the full List View, not the dropdown (which has no
+  // Source/Studio chips of its own) — kept separate from `filtered` below on purpose.
+  const [sourceFilter, setSourceFilter] = useState<string[]>([])
+  const [studioFilter, setStudioFilter] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  // Anchored Source/Studio dropdown state — see filterSlotSummary's comment for
+  // why this can't live inside Filters itself.
+  const [openFilterSlot, setOpenFilterSlot] = useState<"Source" | "Studio" | null>(null)
+  const [filterAnchor, setFilterAnchor] = useState<{ left: number; top: number } | null>(null)
+  // Click-routing live examples — the SAME 3 patterns documented on Notification
+  // Item's Reference tab, wired here too so the decision tree is demonstrable
+  // inside the actual "Open preview" flow, not only on a separate docs page.
+  const [previewNavMessage, setPreviewNavMessage] = useState<string | null>(null)
+  const [previewSlideoutOpen, setPreviewSlideoutOpen] = useState(false)
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
+
+  const filtered =
+    filter === "Unread"         ? items.filter(i => i.unread) :
+    filter === "Assigned to me" ? items.filter(i => i.assignedToMe) :
+    items
+  const unreadCount = items.filter(i => i.unread).length
+
+  // AND logic between Source, Studio, the quick filter, and search (per the
+  // taxonomy doc's explicit rule); OR logic within each multi-select — e.g.
+  // Source=[Workflow, Integration] matches either. An item with no source/studio
+  // never matches a non-empty selection (correct: it genuinely isn't from any of
+  // those Sources).
+  const q = searchQuery.trim().toLowerCase()
+  const listFiltered = filtered.filter(i =>
+    (sourceFilter.length === 0 || (i.source !== undefined && sourceFilter.includes(i.source))) &&
+    (studioFilter.length === 0 || (i.studio !== undefined && studioFilter.includes(i.studio))) &&
+    (q === "" || i.title.toLowerCase().includes(q) || (i.description?.toLowerCase().includes(q) ?? false))
+  )
+
+  const pagedItems = listFiltered.slice((listPage - 1) * listPageSize, listPage * listPageSize)
+
+  return (
+    <>
+      <button
+        onClick={onClose}
+        className="fixed flex items-center gap-[6px] rounded-[6px]"
+        style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+      >
+        <LucideIcons.X size={12} /> Close Preview
+      </button>
+
+      <ScreenLayout
+        workspaceName="Product Design"
+        companyName="AIMS OS"
+        userName="Michael O."
+        userEmail="michael@aimsos.ai"
+        sidebarItems={DEFAULT_SIDEBAR_ITEMS}
+        topbarActions={[
+          { icon: <LucideIcons.Sparkle size={16} strokeWidth={2} />, label: "AI Assistant", variant: "primary" },
+          { icon: <LucideIcons.Bell size={16} strokeWidth={1.75} />, label: "Notifications", badge: unreadCount > 0, id: "notifications" },
+          { icon: <LucideIcons.Settings size={16} strokeWidth={1.75} />, label: "Settings" },
+        ]}
+        notificationsContent={
+          <NotificationCenter
+            count={unreadCount}
+            groups={groupByDate(filtered)}
+            activeFilter={filter}
+            onFilterChange={setFilter}
+            onMarkAllRead={() => setItems(prev => prev.map(i => ({ ...i, unread: false })))}
+            onViewAll={() => {
+              setView("all")
+              setListPage(1)
+              // Topbar's dropdown open state is internal (no imperative close API) —
+              // its useClickOutside listens on document mousedown, so dispatching one
+              // closes it the same way a real outside click would.
+              document.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }))
+            }}
+          />
+        }
+        header={() => view === "all" ? (
+          <div className="flex items-center gap-[4px] px-[32px] pt-[16px] pb-[8px]">
+            <Button variant="tertiary" size="sm" iconPosition="alone" aria-label="Back" icon={<LucideIcons.ArrowLeft size={16} strokeWidth={1.75} />} onClick={() => setView("home")} />
+            <h1 className="text-[18px] font-semibold leading-tight text-[var(--foreground)]">Notifications</h1>
+          </div>
+        ) : null}
+        pagination={view === "all" ? (
+          <Pagination
+            currentPage={listPage}
+            totalItems={listFiltered.length}
+            itemsPerPage={listPageSize}
+            onPageChange={setListPage}
+            onItemsPerPageChange={size => { setListPageSize(size); setListPage(1) }}
+          />
+        ) : undefined}
+      >
+        {view === "home" ? (
+          <div className="h-full flex flex-col items-center justify-center gap-[8px] text-center">
+            <LucideIcons.Bell size={28} style={{ color: "var(--field-supporting)" }} />
+            <p className="text-[13px] text-[var(--field-supporting)]">Click the bell icon in the top bar to open Notifications.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-[16px]">
+            {/* Real Filters component — search sits first (grows), then the Source/
+                Studio slot chips right after it, all on the LEFT; "All filters" +
+                Sort stay on the RIGHT (both bundled inside <Filters> itself). This
+                is Filters' own built-in layout — nothing here is a hand-rolled
+                stand-in chip. */}
+            <div
+              onClickCapture={(e: React.MouseEvent) => {
+                const btn = (e.target as HTMLElement).closest("button")
+                if (!btn) return
+                const containerRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                setFilterAnchor({ left: btn.getBoundingClientRect().left, top: containerRect.bottom })
+              }}
+            >
+              <Filters
+                searchPlaceholder="Search notifications"
+                searchValue={searchQuery}
+                onSearchChange={q => { setSearchQuery(q); setListPage(1) }}
+                slots={[
+                  {
+                    placeholder: "Source",
+                    value: filterSlotSummary(sourceFilter),
+                    onOpen: () => setOpenFilterSlot(prev => prev === "Source" ? null : "Source"),
+                    onRemove: () => { setSourceFilter([]); setListPage(1) },
+                  },
+                  {
+                    placeholder: "Studio",
+                    value: filterSlotSummary(studioFilter),
+                    onOpen: () => setOpenFilterSlot(prev => prev === "Studio" ? null : "Studio"),
+                    onRemove: () => { setStudioFilter([]); setListPage(1) },
+                  },
+                ]}
+                showAllFilters
+                showSort
+                sortLabel="Newest first"
+                showViewToggle={false}
+              />
+            </div>
+
+            {/* Anchored multi-select dropdown for whichever slot is open — same
+                chrome established by the Filter System pattern's Layer-1 preview
+                (var(--menu-bg) blur, 0.5px field-border, radius 8, minWidth 200,
+                shadow-elevation-3); Checkbox rows replace that pattern's single-
+                select buttons since Source/Studio need OR-logic multi-select. */}
+            {openFilterSlot && filterAnchor && (() => {
+              const opts = openFilterSlot === "Source" ? SOURCE_OPTIONS : STUDIO_OPTIONS
+              const selected = openFilterSlot === "Source" ? sourceFilter : studioFilter
+              const setSelected = openFilterSlot === "Source" ? setSourceFilter : setStudioFilter
+              const toggle = (opt: string) => {
+                setSelected(prev => prev.includes(opt) ? prev.filter(o => o !== opt) : [...prev, opt])
+                setListPage(1)
+              }
+              return (
+                <>
+                  <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setOpenFilterSlot(null)} />
+                  <div
+                    className="flex flex-col overflow-hidden"
+                    style={{
+                      position: "fixed", left: filterAnchor.left, top: filterAnchor.top + 4, zIndex: 10001,
+                      background: "var(--menu-bg)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+                      border: "0.5px solid var(--field-border)", borderRadius: 8, minWidth: 200,
+                      boxShadow: "var(--shadow-elevation-3)",
+                    }}
+                  >
+                    <div style={{ padding: "8px 12px 6px", borderBottom: "0.5px solid var(--field-border)" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)" }}>{openFilterSlot}</span>
+                    </div>
+                    {opts.map(opt => {
+                      const isSel = selected.includes(opt)
+                      return (
+                        <button
+                          key={opt}
+                          className="flex items-center gap-[8px] px-[12px] py-[10px] text-left w-full"
+                          style={{ fontSize: 13, color: "var(--foreground)" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--color-surface-neutral-default)" }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent" }}
+                          onClick={() => toggle(opt)}
+                        >
+                          <Checkbox checked={isSel} onChange={() => toggle(opt)} />
+                          <span className="flex-1">{opt}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )
+            })()}
+
+            <div className="flex items-center gap-[4px]">
+              {["All", "Unread", "Assigned to me"].map(f => (
+                <Chip key={f} variant={f === filter ? "primary" : "secondary"} size="s" onClick={() => { setFilter(f); setListPage(1) }}>
+                  {f}
+                </Chip>
+              ))}
+            </div>
+
+            {(sourceFilter.length > 0 || studioFilter.length > 0) && (
+              <p className="text-[12px] text-[var(--field-supporting)]">
+                Showing {listFiltered.length} of {filtered.length} — Source/Studio use OR within each filter, AND across Source, Studio, and the quick filter above.
+              </p>
+            )}
+
+            <div className="rounded-[8px] p-[10px] text-[12px]" style={{ background: "var(--tag-informative-bg)", color: "var(--primary)" }}>
+              Click routing, live — each labeled row below demonstrates a different destination: Full Navigation · Slideout · Modal. Same 3 patterns documented on Notification Item's Reference tab.
+            </div>
+
+            <div className="flex flex-col gap-[24px]">
+              {groupByDate(pagedItems).map(group => (
+                <div key={group.label} className="flex flex-col gap-[12px]">
+                  <div className="flex items-center gap-[16px]">
+                    <span className="text-xs font-semibold shrink-0" style={{ color: "var(--color-text-caption)" }}>{group.label}</span>
+                    <div className="h-px flex-1" style={{ background: "var(--color-border-neutral-lighter)" }} />
+                  </div>
+                  {group.items.map(item => {
+                    const routing =
+                      item.id === "3"  ? { label: "Full Navigation example", onClick: () => setPreviewNavMessage("→ Navigated to: Workflow Editor — Customer Sync (record #4821)") } :
+                      item.id === "2"  ? { label: "Slideout example",        onClick: () => setPreviewSlideoutOpen(true) } :
+                      item.id === "11" ? { label: "Modal example",          onClick: () => setPreviewModalOpen(true) } :
+                      undefined
+                    const rowProps = routing ? {
+                      onClick: routing.onClick,
+                      primaryAction: item.primaryAction ? { ...item.primaryAction, onClick: routing.onClick } : undefined,
+                    } : {}
+                    return (
+                      <div key={item.id} className="flex flex-col gap-[4px]">
+                        {routing && (
+                          <div className="flex items-center gap-[4px] pl-[4px]">
+                            <LucideIcons.CornerDownRight size={11} style={{ color: "var(--primary)" }} />
+                            <span className="text-[11px] font-semibold" style={{ color: "var(--primary)" }}>{routing.label} — click the row or its button</span>
+                          </div>
+                        )}
+                        <CardContainer size="sm" variant="default">
+                          <NotificationItem {...item} {...rowProps} className="p-0" hoverable={false} />
+                        </CardContainer>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+
+            {previewNavMessage && (
+              <div className="rounded-[8px] p-[10px] text-[12px]" style={{ background: "var(--tag-informative-bg)", color: "var(--primary)" }}>
+                {previewNavMessage} <span style={{ color: "var(--field-supporting)" }}>— a real app would route here; this doc can only report the destination.</span>
+              </div>
+            )}
+          </div>
+        )}
+      </ScreenLayout>
+
+      <SlideOut
+        open={previewSlideoutOpen}
+        onClose={() => setPreviewSlideoutOpen(false)}
+        type="full-slot"
+        size="m"
+      >
+        <div className="flex flex-col gap-[12px] p-[20px]">
+          <div className="flex items-start justify-between gap-[8px]">
+            <div>
+              <p className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>Lead Qualification Agent</p>
+              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Approval required · Agentic Studio</p>
+            </div>
+            <Button variant="tertiary" size="sm" iconPosition="alone" icon={<LucideIcons.X size={14} />} aria-label="Close panel" onClick={() => setPreviewSlideoutOpen(false)} />
+          </div>
+          <p className="text-[13px]" style={{ color: "var(--field-text)" }}>
+            ORI reviewed 3 leads against your qualification criteria and flagged 1 for manual approval before outreach begins.
+          </p>
+          <div className="rounded-[8px] border border-[var(--table-border)] p-[12px] flex flex-col gap-[6px]">
+            <p className="text-[12px] font-semibold" style={{ color: "var(--field-text)" }}>Flagged lead</p>
+            <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Acme Corp — Jane Doe (jane@acme.com). Confidence: 62% (below your 75% auto-approve threshold).</p>
+          </div>
+          <div className="flex gap-[8px]">
+            <Button variant="primary" size="sm" onClick={() => setPreviewSlideoutOpen(false)}>Approve outreach</Button>
+            <Button variant="secondary" size="sm" onClick={() => setPreviewSlideoutOpen(false)}>Dismiss</Button>
+          </div>
+        </div>
+      </SlideOut>
+
+      <ModalDialog
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        variant="confirmation"
+        tone="error"
+        title="Escalate to a human reviewer?"
+        description="HTL detected a crisis-response signal in ticket #5521. This assigns it to the on-call reviewer immediately."
+        ctaPrimary={{ label: "Escalate now", destructive: true, onClick: () => setPreviewModalOpen(false) }}
+        ctaSecondary={{ label: "Cancel", onClick: () => setPreviewModalOpen(false) }}
+      />
+    </>
+  )
+}
+
+function NotificationCenterPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [ncPreviewOpen, setNcPreviewOpen] = useState(false)
+  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+  const [pgState, setPgState] = useState<NotificationCenterState>("default")
+  const [pgFilter, setPgFilter] = useState("All")
+  const [ovItems, setOvItems] = useState(NOTIF_CENTER_ALL_ITEMS)
+  const [showcaseIdx, setShowcaseIdx] = useState(0)
+
+  const STATES: NotificationCenterState[] = ["default", "empty", "loading", "error", "offline"]
+  const SHOWCASE_STATES: NotificationCenterState[] = ["empty", "loading", "error", "offline"]
+  const showcaseState = SHOWCASE_STATES[showcaseIdx]
+
+  const filteredItems =
+    pgFilter === "Unread"        ? NOTIF_CENTER_ALL_ITEMS.filter(i => i.unread) :
+    pgFilter === "Assigned to me" ? NOTIF_CENTER_ALL_ITEMS.filter(i => i.assignedToMe) :
+    NOTIF_CENTER_ALL_ITEMS
+  const pgGroups = groupByDate(filteredItems)
+  const unreadCount = ovItems.filter(i => i.unread).length
+
+  return (
+    <div>
+      {ncPreviewOpen && (
+        <div className="fixed inset-0" style={{ zIndex: 9999 }}>
+          <NotificationCenterPreviewScreen onClose={() => setNcPreviewOpen(false)} />
+        </div>
+      )}
+
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Notification Center</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
+            420px floating panel — the bell icon's dropdown. Header + filter chips + date-grouped Notification Item list + footer. Five states: Default, Empty, Loading, Error, Offline.
+          </p>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          <button
+            onClick={() => setNcPreviewOpen(true)}
+            className="shrink-0 flex items-center gap-[6px] px-[14px] h-[32px] rounded-[6px] text-[12px] font-semibold transition-opacity hover:opacity-85 cursor-pointer"
+            style={{ background: "var(--primary)", color: "var(--color-text-negative)" }}
+          >
+            Open preview →
+          </button>
+          <SpecButton onClick={() => openSpec("notification-center")} />
+        </div>
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "playground", "reference"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold capitalize transition-colors"
+            style={{
+              color: tab === t ? "var(--primary)" : "var(--field-supporting)",
+              borderBottom: tab === t ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: -1,
+            }}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Default — 9 items across 3 date groups, scrollable</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[640px]">
+              The panel is a fixed <code className="text-[var(--primary)]">h-560px</code> (Figma's exact size, every state) — it never shrinks or grows; the list inside scrolls independently once content exceeds it. Header, filter bar, and footer stay pinned. "Mark all read" is wired below — try it.
+            </p>
+            <div className="flex justify-center p-[24px] rounded-[12px]" style={{ background: "var(--canvas)" }}>
+              <NotificationCenter
+                state="default"
+                count={unreadCount}
+                groups={groupByDate(ovItems)}
+                onMarkAllRead={() => setOvItems(prev => prev.map(i => ({ ...i, unread: false })))}
+              />
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Empty · Loading · Error · Offline</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[640px]">
+              Only one state renders at a time inside the real bell dropdown — browse the other three with the arrows or dots below.
+            </p>
+            <div className="flex flex-col items-center gap-[16px]">
+              <div className="flex flex-col items-center gap-[12px] p-[20px] rounded-[12px] border border-[var(--table-border)]" style={{ background: "var(--canvas)" }}>
+                <NotificationCenter
+                  state={showcaseState}
+                  count={showcaseState === "offline" ? unreadCount : 0}
+                  groups={showcaseState === "offline" ? groupByDate(NOTIF_CENTER_ALL_ITEMS.slice(0, 3)) : []}
+                />
+                <p className="text-[11px] font-mono text-[var(--field-supporting)] capitalize">{showcaseState}</p>
+              </div>
+              <div className="flex items-center gap-[4px]">
+                <Button
+                  variant="tertiary" size="sm" iconPosition="alone"
+                  icon={<LucideIcons.ChevronLeft size={13} />}
+                  aria-label="Previous state"
+                  onClick={() => setShowcaseIdx(i => (i - 1 + SHOWCASE_STATES.length) % SHOWCASE_STATES.length)}
+                />
+                {SHOWCASE_STATES.map((_, i) => (
+                  <button
+                    key={i}
+                    aria-label={`Show ${SHOWCASE_STATES[i]} state`}
+                    onClick={() => setShowcaseIdx(i)}
+                    style={{
+                      width: i === showcaseIdx ? 16 : 6, height: 6, borderRadius: 3,
+                      background: i === showcaseIdx ? "var(--primary)" : "var(--field-border)",
+                      border: "none", padding: 0, cursor: "pointer",
+                      transition: "width 200ms, background 200ms",
+                    }}
+                  />
+                ))}
+                <Button
+                  variant="tertiary" size="sm" iconPosition="alone"
+                  icon={<LucideIcons.ChevronRight size={13} />}
+                  aria-label="Next state"
+                  onClick={() => setShowcaseIdx(i => (i + 1) % SHOWCASE_STATES.length)}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
+            <div className="grid grid-cols-2 gap-[16px]">
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[#059669] uppercase tracking-widest">Use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["Topbar bell icon's dropdown panel", "A dedicated notifications feed with filtering", "Content needs date grouping + mark-all-read + view-all"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="text-[#059669] shrink-0">✓</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold text-[#dc2626] uppercase tracking-widest">Don't use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["A single one-off notification (use Alert Banner)", "Full-page notification history — use the \"All Notifications\" List View pattern instead (Header + Filters + Chips + card-wrapped Notification Item rows + Pagination — see Open preview → View all)", "Non-notification dropdown content (use Menu / Dropdown)"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="text-[#dc2626] shrink-0">✕</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[32px]">
+          <div className="flex justify-center p-[24px] rounded-[12px]" style={{ background: "var(--canvas)" }}>
+            <NotificationCenter
+              state={pgState}
+              count={pgState === "default" ? filteredItems.filter(i => i.unread).length : pgState === "offline" ? unreadCount : 0}
+              groups={pgState === "default" ? pgGroups : pgState === "offline" ? groupByDate(NOTIF_CENTER_ALL_ITEMS.slice(0, 3)) : []}
+              filters={["All", "Unread", "Assigned to me"]}
+              activeFilter={pgFilter}
+              onFilterChange={setPgFilter}
+              onMarkAllRead={() => {}}
+              onViewAll={() => {}}
+            />
+          </div>
+          <CtrlGroup label="State" options={STATES.map(s => ({ label: s, value: s }))} value={pgState} onChange={v => setPgState(v as NotificationCenterState)} />
+          {pgState === "default" && (
+            <CtrlGroup label="Filter" options={["All", "Unread", "Assigned to me"].map(f => ({ label: f, value: f }))} value={pgFilter} onChange={setPgFilter} />
+          )}
+          <p className="text-[12px] text-[var(--field-supporting)] max-w-[640px]">
+            Click "Mark all read" (or the adjacent check icon — both do the same thing) to see the unread dots clear in real time.
+          </p>
+        </div>
+      )}
+
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[32px]">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Design tokens</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[160px_1fr_130px_130px] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Role", "Token", "Light", "Dark"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Panel bg",         "--surface-floating-default",      "rgba(255,255,255,0.92)", "rgba(16,22,40,0.92)"],
+                ["Divider",          "--color-border-neutral-lighter",  "#bababa", "rgba(255,255,255,0.15)"],
+                ["Bell icon",        "--foreground",                    "#1a1a1a", "#ffffffcc"],
+                ["Title",            "--color-text-title",              "#000000", "rgba(255,255,255,0.80)"],
+                ["Count / date label","--color-text-caption",           "#5c5c5c", "rgba(255,255,255,0.50)"],
+                ["Offline banner bg","--color-surface-alert-more-subtle","#fff4e5", "#281e00"],
+                ["Offline banner text","--color-text-alert",            "#663c00", "#fcd34d"],
+              ].map(([role, token, light, dark], i) => (
+                <div key={token} className="grid grid-cols-[160px_1fr_130px_130px] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{role}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{token}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{light}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{dark}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Anatomy</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[160px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Element", "Description"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Header", "56px · Bell + Title + Count · ONE \"Mark all read\" Button (variant=tertiary, size=sm, icon=Check, iconPosition=\"right\") — the Button component set has a combined label+trailing-icon variant built for exactly this. There is no overflow/settings/mute dropdown anywhere in this component."],
+                ["Filter bar", "36px · 3 Chips from the DS mock: All (variant=primary, active) / Unread / Assigned to me (variant=secondary, inactive), size=s"],
+                ["List",       "Date-group label (12px SemiBold) + Notification Item rows (hoverable=true), NO divider between rows or after the label — verified directly on Figma's node tree: every Divider layer inside the \"Notification List\" frame is hidden=true. Only the Header/List and List/Footer boundary dividers render. Filtering logic (which items match the active chip) is the consumer's responsibility — pass the already-filtered groups"],
+                ["Footer",     "52px · \"View all\" Button variant=tertiary size=sm, full width"],
+                ["Loading",    "4× Skeleton circle(24) + 2 Skeleton text lines, no divider between rows (same hidden=true pattern, verified on node 18693:1181)"],
+                ["Empty/Error","EmptyState atom, centered in the remaining flex-1 space (not a fixed padding) so it stays centered regardless of panel height"],
+                ["Panel sizing","h-[560px], a FIXED height — matches every one of Figma's \"Feed State=…\" symbols (Default/Empty/Loading/Error/Offline), all exactly 420×560 with no auto-height. It never shrinks for a short list or grows for a long one; only the list region (flex-1, overflow-y-auto) absorbs the difference."],
+                ["List View reuse", "The full \"All Notifications\" page (Figma node 19173:18397) wraps each Notification Item in a real CardContainer (size=\"sm\", variant=\"default\") instead of the dropdown's flush rows — Figma's Card Component set defines its own Hover state (border + shadow) for this exact variant. Pass hoverable={false} to Notification Item in that context so its internal gray hover doesn't compete with the card's."],
+              ].map(([el, desc], i) => (
+                <div key={el} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[12px] text-[13px] font-semibold text-[var(--field-text)]">{el}</div>
+                  <div className="px-[12px] py-[12px] text-[13px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function HighlightCardPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
@@ -37831,6 +39163,8 @@ export default function App() {
           {active === "slide-out"       && <SlideOutPage      openSpec={setSpecModal} />}
           {active === "entity-list"     && <EntityListPage    openSpec={setSpecModal} />}
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
+          {active === "notification-item"   && <NotificationItemPage   openSpec={setSpecModal} />}
+          {active === "notification-center" && <NotificationCenterPage openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "breadcrumb"      && <BreadcrumbPage openSpec={setSpecModal} />}
           {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}

@@ -521,6 +521,7 @@
     --color-surface-neutral-white:      #FFFFFF;                  /* Surface/Neutral/White            */
     --color-border-neutral-lighter:     rgba(255,255,255,0.15);   /* Border/Neutral/Lighter — was 0.08; 3 independent components (Toggle, Filters, Modal) already used 0.15 */
     --color-text-title:                 rgba(255,255,255,0.80);   /* Text/Title                       */
+    --color-text-caption:               rgba(255,255,255,0.50);   /* Text/Caption — muted timestamps, counts, date-group labels */
     --color-text-subtitle:              rgba(255,255,255,0.60);   /* Text/Subtitle                    */
     --color-text-success:               #6ee7b7;                  /* Text/Success                     */
     --color-text-error:                 #ff6467;                  /* Text/Error                       */
@@ -1202,6 +1203,7 @@
     --color-surface-neutral-white:      #FFFFFF;                  /* Surface/Neutral/White            */
     --color-border-neutral-lighter:     #BABABA;                  /* Border/Neutral/Lighter — was #E8E8E8, confirmed drift vs live Figma */
     --color-text-title:                 #000000;                  /* Text/Title — was #1A1A1A, confirmed drift vs live Figma */
+    --color-text-caption:               #5c5c5c;                  /* Text/Caption — muted timestamps, counts, date-group labels */
     --color-text-subtitle:              #2a2a2a;                  /* Text/Subtitle                    */
     --color-text-success:               #003328;                  /* Text/Success                     */
     --color-text-error:                 #5f2120;                  /* Text/Error                       */

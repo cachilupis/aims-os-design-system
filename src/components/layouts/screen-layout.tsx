@@ -7,12 +7,45 @@ import { Sidebar } from "@/components/ui/sidebar"
 import type { SidebarItem } from "@/components/ui/sidebar"
 import { AppBackground } from "@/components/ui/app-background"
 import type { AppBgVariant } from "@/components/ui/app-background"
+import { NotificationCenter, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
 
 const DEFAULT_TOPBAR_ACTIONS: TopbarAction[] = [
   { icon: <Sparkles size={16} />, label: "AI",            variant: "primary" },
-  { icon: <Bell     size={16} />, label: "Notifications" },
+  { icon: <Bell     size={16} />, label: "Notifications", id: "notifications" },
   { icon: <Settings size={16} />, label: "Settings"      },
 ]
+
+// ── Default Notifications dropdown ──────────────────────────────────────────
+// Self-contained so the bell icon opens something real out of the box with
+// zero setup — pass `notificationsContent` to ScreenLayout to override with
+// real data. Kept intentionally small (3 items); the full taxonomy-grounded
+// demo set lives in the Notification Center doc page, not duplicated here.
+
+const DEFAULT_NOTIF_ITEMS: NotificationItemData[] = [
+  { id: "1", avatarName: "Sarah Chen", title: "New comment on your ticket", timestamp: "2 min ago", description: "Sarah left a comment on 'Login page redesign'.", unread: true },
+  { id: "2", iconVariant: "error", iconName: "Workflow", title: "Customer Sync workflow failed", timestamp: "25 min ago", description: "3 consecutive sync attempts failed. Manual retry required.", unread: true, primaryAction: { label: "Retry" } },
+  { id: "3", iconVariant: "success", iconName: "Rocket", title: "Runtime v3.2.1 deployed successfully", timestamp: "3 hours ago", description: "All health checks passed." },
+]
+
+function DefaultNotificationsDropdown() {
+  const [items, setItems] = useState(DEFAULT_NOTIF_ITEMS)
+  const [filter, setFilter] = useState("All")
+
+  const visible = filter === "Unread" ? items.filter(i => i.unread) : items
+  const groups: NotificationGroup[] = visible.length > 0 ? [{ label: "TODAY", items: visible }] : []
+
+  return (
+    <NotificationCenter
+      state={groups.length > 0 ? "default" : "empty"}
+      count={items.filter(i => i.unread).length}
+      groups={groups}
+      filters={["All", "Unread"]}
+      activeFilter={filter}
+      onFilterChange={setFilter}
+      onMarkAllRead={() => setItems(prev => prev.map(i => ({ ...i, unread: false })))}
+    />
+  )
+}
 
 // ── ScreenLayout ──────────────────────────────────────────────────────────────
 //
@@ -53,6 +86,13 @@ export interface ScreenLayoutProps {
   companyName?: string
   /** Topbar action buttons — defaults to AI + Notifications + Settings */
   topbarActions?: TopbarAction[]
+  /**
+   * Content rendered in the floating panel below the Notifications bell icon
+   * (the action with id="notifications" in topbarActions). Defaults to a
+   * self-contained demo NotificationCenter so the bell works out of the box —
+   * pass a real, data-connected <NotificationCenter> to override.
+   */
+  notificationsContent?: ReactNode
   /** AppBackground color variant — defaults to "default" */
   bgVariant?: AppBgVariant
   /** Left sidebar navigation items */
@@ -96,6 +136,7 @@ export function ScreenLayout({
   userEmail,
   companyName = "AIMS OS",
   topbarActions = DEFAULT_TOPBAR_ACTIONS,
+  notificationsContent = <DefaultNotificationsDropdown />,
   bgVariant = "default",
   sidebarItems,
   activeSidebarId,
@@ -123,6 +164,7 @@ export function ScreenLayout({
         userEmail={userEmail}
         companyName={companyName}
         actions={topbarActions}
+        notificationsContent={notificationsContent}
       />
 
       <div className="flex flex-1 overflow-hidden">
