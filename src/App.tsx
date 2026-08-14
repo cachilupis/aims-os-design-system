@@ -4695,47 +4695,76 @@ function HomePage() {
             <Divider />
 
             {/* ── Part 1: Setup ── */}
-            <DocSection title="Part 1 — Setup (once, ~45 min)" collapsible defaultOpen={false}>
+            <DocSection title="Part 1 — Setup (once, ~45 min for the terminal path; ~10 min for the no-terminal path)" collapsible defaultOpen={false}>
               <Prose>
-                This only needs to be done once. Michael must add the PM as a collaborator in the repo before starting.
+                This only needs to be done once. Michael must add the PM as a collaborator in the repo before starting. There are two ways to run Claude Code against this repo — pick whichever fits how you like to work. Both give the exact same result from Part 2 onward: the conversation, the generated screen, and the branch/PR flow are identical either way.
               </Prose>
+
+              <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Two ways to run Claude Code — pick one</p>
+                <p className="text-[12px] leading-[1.6] mt-[6px]" style={{ color: "var(--field-supporting)" }}>
+                  <strong>Option A — Terminal (CLI).</strong> Install Node.js and the Claude Code CLI on your machine, clone the repo yourself. More one-time setup, everything runs locally.
+                </p>
+                <p className="text-[12px] leading-[1.6] mt-[6px]" style={{ color: "var(--field-supporting)" }}>
+                  <strong>Option B — Claude Code Desktop app or claude.ai/code.</strong> No terminal, no local Node.js install. Open the Claude desktop app (Mac/Windows) or <code style={{ fontSize: 11 }}>claude.ai/code</code> in your browser, connect your GitHub account, and work in the repo from there.
+                </p>
+                <p className="text-[12px] leading-[1.6] mt-[8px]" style={{ color: "var(--foreground)" }}>
+                  If you don't want to touch a terminal at all, go with Option B — steps 2 and 3 below fork by option, everything after that is the same conversation either way.
+                </p>
+              </div>
 
               <div className="flex flex-col gap-[18px]">
                 <NumberedStep n={1} title="Michael adds the PM as a collaborator">
-                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">On GitHub: <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>cachilupis/aims-os-design-system</code> → Settings → Collaborators → Add people → enter the PM's GitHub email or username. The PM will receive an invitation email.</p>
+                  <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">On GitHub: <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>cachilupis/aims-os-design-system</code> → Settings → Collaborators → Add people → enter the PM's GitHub email or username. The PM will receive an invitation email. Needed for both options below.</p>
                 </NumberedStep>
 
-                <NumberedStep n={2} title="Install Node.js">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Download <strong>Node.js LTS</strong> from <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>nodejs.org</code>. It's a graphical installer — next, next, install. No additional configuration needed. Only install once.</p>
-                  </div>
-                </NumberedStep>
-
-                <NumberedStep n={3} title="Install Claude Code">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Open the terminal and run:</p>
-                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                      <p className="text-[12px] font-mono" style={{ color: "var(--field-supporting)" }}>npm install -g @anthropic-ai/claude-code</p>
+                <NumberedStep n={2} title="Install / open Claude Code">
+                  <div className="flex flex-col gap-[14px]">
+                    <div className="flex flex-col gap-[8px]">
+                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Option A — Terminal</p>
+                      <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">First, download <strong>Node.js LTS</strong> from <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>nodejs.org</code> (graphical installer — next, next, install). Then open the terminal and run:</p>
+                      <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                        <p className="text-[12px] font-mono" style={{ color: "var(--field-supporting)" }}>npm install -g @anthropic-ai/claude-code</p>
+                      </div>
+                      <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Then sign in with your Anthropic account: run <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>claude</code> and follow the authentication flow.</p>
                     </div>
-                    <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Then sign in with your Anthropic account: run <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>claude</code> and follow the authentication flow.</p>
-                  </div>
-                </NumberedStep>
-
-                <NumberedStep n={4} title="Clone the repo and install dependencies">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">In the terminal (or GitHub Desktop → File → Clone Repository):</p>
-                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                      <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
-                        git clone https://github.com/cachilupis/aims-os-design-system<br/>
-                        cd aims-os-design-system<br/>
-                        npm install
-                      </p>
-                    </div>
-                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
-                      <p className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}><code style={{ fontSize: 11 }}>npm install</code> only runs once (or after a <code style={{ fontSize: 11 }}>git pull</code> that changes package.json). It installs all project dependencies.</p>
+                    <div className="flex flex-col gap-[8px]" style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 14 }}>
+                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Option B — Desktop app or claude.ai/code (no terminal)</p>
+                      <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Go to <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>claude.ai/code</code> in your browser, or download the Claude desktop app for Mac/Windows and open its Claude Code section. Sign in with your Anthropic account — no Node.js and no command line needed for this step.</p>
                     </div>
                   </div>
                 </NumberedStep>
+
+                <NumberedStep n={3} title="Connect the repo">
+                  <div className="flex flex-col gap-[14px]">
+                    <div className="flex flex-col gap-[8px]">
+                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Option A — Terminal</p>
+                      <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                        <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
+                          git clone https://github.com/cachilupis/aims-os-design-system<br/>
+                          cd aims-os-design-system<br/>
+                          npm install
+                        </p>
+                      </div>
+                      <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
+                        <p className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}><code style={{ fontSize: 11 }}>npm install</code> only runs once (or after a <code style={{ fontSize: 11 }}>git pull</code> that changes package.json). It installs all project dependencies.</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-[8px]" style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 14 }}>
+                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Option B — Desktop app or claude.ai/code</p>
+                      <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">You'll be prompted to connect your GitHub account (a one-time authorization) and then select <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>cachilupis/aims-os-design-system</code> from your repositories. There's no separate <code style={{ fontSize: 11 }}>npm install</code> step to run yourself — the environment sets up dependencies for you.</p>
+                    </div>
+                  </div>
+                </NumberedStep>
+              </div>
+
+              <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Before rolling Option B out to the team</p>
+                  <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                    Everything past this point (CLAUDE.md, the DS rules, the <code style={{ fontSize: 11 }}>aims-prototype-screen</code> skill, git/PR operations, CODEOWNERS review) works identically regardless of which option you picked — none of it is terminal-specific. The one thing Michael should confirm firsthand before pointing a PM at Option B: how the live preview (the terminal path's <code style={{ fontSize: 11 }}>localhost:5173</code>) is exposed in the desktop app / claude.ai/code, since that session's dev server isn't running on the PM's own machine the same way. Try generating one screen end-to-end via Option B yourself first.
+                  </p>
+                </div>
               </div>
             </DocSection>
 
@@ -4789,37 +4818,31 @@ function HomePage() {
             {/* ── Part 2: Day-to-day ── */}
             <DocSection title="Part 2 — Day-to-day workflow" collapsible defaultOpen={false}>
               <Prose>
-                Two terminals open: one runs the server, the other runs Claude. The PM only writes in natural language — Claude does the rest.
+                The PM only writes in natural language — Claude does the rest. The exact steps to get Claude Code running differ slightly by which option you picked in Part 1; everything from "Describe the screen" onward is identical either way.
               </Prose>
 
               <div className="flex flex-col gap-[18px]">
-                <NumberedStep n={1} title="Update the repo and start the server">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">In GitHub Desktop: <strong>Fetch origin → Pull</strong> (to get the latest DS changes). Then in the terminal:</p>
-                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                      <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
-                        cd ~/Desktop/aims-os-design-system<br/>
-                        npm run dev
-                      </p>
+                <NumberedStep n={1} title="Update the repo and start Claude Code">
+                  <div className="flex flex-col gap-[14px]">
+                    <div className="flex flex-col gap-[8px]">
+                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Option A — Terminal</p>
+                      <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">In GitHub Desktop: <strong>Fetch origin → Pull</strong> (to get the latest DS changes). Then, in one terminal, start the dev server and leave it running:</p>
+                      <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
+                        <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
+                          cd aims-os-design-system<br/>
+                          npm run dev
+                        </p>
+                      </div>
+                      <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>The server runs at <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>localhost:5173</code> — open it in the browser. Then open a <strong>second</strong> terminal in the same folder and run <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>claude</code>. Two terminals stay open side by side: one serving the preview, one running the conversation.</p>
                     </div>
-                    <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Leave this terminal open. The server runs at <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>localhost:5173</code> — open it in the browser.</p>
+                    <div className="flex flex-col gap-[8px]" style={{ borderTop: "0.5px solid var(--field-border)", paddingTop: 14 }}>
+                      <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Option B — Desktop app or claude.ai/code</p>
+                      <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Open the repo where you left it (Part 1, step 3) — it's the same one continuous session, no separate terminals to juggle. If it's been a while since you last opened it, just ask Claude in plain language to pull the latest changes and start the dev server; there's no GitHub Desktop step here since the connection already tracks the repo.</p>
+                    </div>
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={2} title="Open Claude Code in a second terminal">
-                  <div className="flex flex-col gap-[8px]">
-                    <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Open a second terminal and type:</p>
-                    <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
-                      <p className="text-[12px] font-mono leading-[1.8]" style={{ color: "var(--field-supporting)" }}>
-                        cd ~/Desktop/aims-os-design-system<br/>
-                        claude
-                      </p>
-                    </div>
-                    <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>Claude Code reads <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>CLAUDE.md</code> automatically on start — it already has the full DS context. Nothing to copy or paste.</p>
-                  </div>
-                </NumberedStep>
-
-                <NumberedStep n={3} title="Describe the screen">
+                <NumberedStep n={2} title="Describe the screen">
                   <div className="flex flex-col gap-[8px]">
                     <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">In Claude Code, describe what screen you need. Be specific about data, actions and states.</p>
                     <div className="rounded-md px-[14px] py-[11px] flex flex-col gap-[6px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
@@ -4829,7 +4852,7 @@ function HomePage() {
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={4} title="Claude generates the screen">
+                <NumberedStep n={3} title="Claude generates the screen">
                   <div className="flex flex-col gap-[8px]">
                     <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Claude creates the file at <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/screens/pm-juan-ai-workers.tsx</code> and registers it in App.tsx automatically. The browser at <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>localhost:5173</code> updates in real time.</p>
                     <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
@@ -4838,13 +4861,13 @@ function HomePage() {
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={5} title="Review visually and iterate">
+                <NumberedStep n={4} title="Review visually and iterate">
                   <div className="flex flex-col gap-[8px]">
                     <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">Open <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>localhost:5173</code> and review the screen. If anything needs adjustment, describe it to Claude in the same session — it already has full context and will update the file immediately.</p>
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={6} title="Publish via branch → PR → merge">
+                <NumberedStep n={5} title="Publish via branch → PR → merge">
                   <div className="flex flex-col gap-[12px]">
                     <div className="rounded-md px-[14px] py-[12px] flex flex-col gap-[6px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
                       <p className="text-[12px] font-semibold leading-[1.4]" style={{ color: "var(--foreground)" }}>Why we use branches — not a direct push to main</p>
@@ -4873,7 +4896,7 @@ function HomePage() {
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={7} title="Open a Pull Request on GitHub">
+                <NumberedStep n={6} title="Open a Pull Request on GitHub">
                   <div className="flex flex-col gap-[8px]">
                     <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">After pushing, GitHub shows a yellow banner with a shortcut link. You can also go to <strong>github.com → cachilupis/aims-os-design-system → Pull requests → New pull request</strong>, select your branch, add a short description, and click <strong>Create pull request</strong>.</p>
                     <div className="rounded-md px-[14px] py-[10px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>
@@ -4882,7 +4905,7 @@ function HomePage() {
                   </div>
                 </NumberedStep>
 
-                <NumberedStep n={8} title="Merge and confirm your screen is live">
+                <NumberedStep n={7} title="Merge and confirm your screen is live">
                   <div className="flex flex-col gap-[8px]">
                     <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5]">If your PR only touches <code className="px-[4px] py-[1px] rounded text-[11px]" style={{ background: "var(--field-bg)", border: "0.5px solid var(--field-border)" }}>src/screens/</code>, you can merge it yourself — no need to wait for Michael. Click <strong>Merge pull request</strong> on GitHub. Vercel deploys automatically within ~1 minute. Share the Vercel URL (see Part 4).</p>
                     <div className="rounded-md px-[14px] py-[11px]" style={{ background: "var(--color-surface-success-more-subtle)", border: "0.5px solid var(--color-surface-success-default)" }}>
@@ -4976,8 +4999,8 @@ function HomePage() {
                 </div>
                 <div className="px-[16px] py-[16px] flex flex-col gap-[0px]">
                   {[
-                    { actor: "Setup",  step: "Michael adds PM as collaborator → PM clones repo, npm install, npm run dev (once)", icon: "0", color: "#9333ea" },
-                    { actor: "PM",     step: "GitHub Desktop pull → open terminal → npm run dev + claude", icon: "1", color: "#2173ff" },
+                    { actor: "Setup",  step: "Michael adds PM as collaborator → PM connects the repo once, via terminal or via Claude Code Desktop/claude.ai/code (see Part 1)", icon: "0", color: "#9333ea" },
+                    { actor: "PM",     step: "Pull the latest changes and open Claude Code — same session as before if using Desktop/claude.ai/code, or two terminals (server + claude) if using the CLI", icon: "1", color: "#2173ff" },
                     { actor: "PM",     step: "Describe the screen in Claude Code with concrete data, actions and states", icon: "2", color: "#2173ff" },
                     { actor: "Auto",   step: "Claude generates src/screens/pm-[name].tsx with real components + registers it in App.tsx", icon: "↓", color: "#9333ea" },
                     { actor: "PM",     step: "Validate at localhost:5173 → ask Claude for corrections if needed", icon: "3", color: "#2173ff" },
