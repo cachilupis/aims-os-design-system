@@ -6,6 +6,7 @@ import PMMichaelTestV1Screen      from "./screens/pm-michael-test-v1"
 import PMLexHTLWorkQueueScreen    from "./screens/pm-lex-htl-work-queue"
 import PMHomeCanvasScreen         from "./screens/pm-home-canvas"
 import PMMichaelAttentionRoomScreen from "./screens/pm-michael-attention-room"
+import PMThomasUniversalProfileScreen from "./screens/pm-thomas-universal-profile"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AvatarCircle, AVATAR_SIZE_SPECS, AVATAR_COLOR_KEYS, type AvatarSizeKey, type AvatarColorKey } from "@/components/ui/avatar"
@@ -134,6 +135,7 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-michael-test-v1",       label: "AI Workers — Test v1",          description: "Initial DS prototype test: Status/Category filters, Publish/Edit actions, Eye → SlideOut (Overview · Users · Logs), context menu, detail view, pagination", author: "Michael", component: PMMichaelTestV1Screen },
   { id: "proto-lex-htl-work-queue",    label: "HTL Work Queue",                description: "Human Touch Layer Work Queue — Act Now / Critical / Action / Heads-up severity tiers, multi-studio filter, event detail SlideOut with blast radius, Studio Health overview, activity log", author: "Lex", component: PMLexHTLWorkQueueScreen },
   { id: "proto-michael-attention-room",label: "Attention Room",                description: "Master-detail attention queue — Overdue/Today/Next groups, Approvals/Work/Tasks/Messages filter, search, EntityList queue (left) + decision detail panel (right) with blast radius, comment composer and Approve/Decline actions", author: "Michael", component: PMMichaelAttentionRoomScreen },
+  { id: "proto-thomas-universal-profile", label: "Universal Profile — Thomas", description: "Unified entity profile (Person, Employee, Company) aggregating Governance, Risk, and Connections studies — Overview canvas with adaptive study widgets (hidden when empty, error+retry when failed), Activity feed (last 20), paginated Logs, Edit + Export for all types, Archive for Person/Employee only", author: "Thomas", component: PMThomasUniversalProfileScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
