@@ -1,5 +1,9 @@
 import { useState } from "react"
-import { ChevronDown, ChevronUp, CircleCheck, TriangleAlert, CircleX, Info, Circle } from "lucide-react"
+import {
+  ChevronDown, ChevronUp, CircleCheck, TriangleAlert, CircleX, Info, Circle, Sparkles,
+  User, Mail, Phone, Calendar, CalendarCheck, Users, ShieldCheck, DollarSign, Ticket, Contact, Clock,
+  type LucideIcon,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
@@ -56,6 +60,22 @@ import { Button } from "@/components/ui/button"
  *   Alert Banner family), swap SEVERITY_CONFIG below to use them instead —
  *   flagging this here instead of quietly hardcoding a new color, per the
  *   no-invented-tokens rule.
+ *
+ * Token family — Signal source ("this is an AI suggestion" vs. a plain status):
+ *   `signal.aiGenerated` swaps the whole bar to --tag-purple-bg/--tag-purple-bd/
+ *   --tag-purple-fg + a Sparkles icon — the EXACT token trio and icon EntityList's
+ *   own aiInsight block already uses (see entity-list.tsx's "AI {action}" row) —
+ *   not the --color-surface-purple-more-subtle/--card-purple-border pairing used
+ *   for the unrelated AI Summary panels elsewhere in this app's SlideOut content.
+ *   Two different purple treatments already coexist in this DS; this reuses the
+ *   one that's actually about "AI produced this specific recommendation," which
+ *   is what a NextBestAction is.
+ *   Use aiGenerated ONLY for a probabilistic/inferred suggestion (e.g. "ready to
+ *   send proposal — confidence 82%") — NOT for a deterministic operational fact
+ *   or an urgent risk state (e.g. "2 tasks pending approval," "renewal at risk").
+ *   Severity color communicates urgency; urgency should always win visually over
+ *   "by the way, AI produced this" — so aiGenerated is the exception, not the
+ *   default, even though every Signal is technically NBA-engine-sourced.
  */
 
 // ── Shared Next Best Action shape ──────────────────────────────────────────
@@ -69,8 +89,17 @@ export interface NextBestAction {
   /** e.g. "3 tasks pending approval", "Renews in 12 days — health dropped to 61", "Best next step: schedule demo" */
   label: string
   severity: NBASeverity
-  /** Short supporting context, e.g. "Due today", "SLA breached 2h ago" */
+  /** Short supporting context, e.g. "Due today", "SLA breached 2h ago", "NBA engine · confidence 82%" */
   dueContext?: string
+  /**
+   * True → this specific recommendation is an AI-inferred suggestion (not a
+   * deterministic fact), so the bar uses the purple/Sparkles "AI produced
+   * this" treatment instead of the severity color — see file header for why
+   * this is the exception, not the default. `severity` is still required
+   * even when true (kept for sorting/prioritization); it just isn't what
+   * renders visually in that case.
+   */
+  aiGenerated?: boolean
   /** Present → the whole Signal row becomes clickable (same interaction model as NotificationItem's onClick rows) */
   onAction?: () => void
 }
@@ -145,7 +174,7 @@ export interface RecordHeaderProps {
 // ── Severity → token mapping (Signal) ──────────────────────────────────────
 // See file header for why informative/neutral fall back to Tag's tokens.
 
-const SEVERITY_CONFIG: Record<NBASeverity, { Icon: typeof CircleCheck; bg: string; bd: string; fg: string }> = {
+const SEVERITY_CONFIG: Record<NBASeverity, { Icon: LucideIcon; bg: string; bd: string; fg: string }> = {
   success: { Icon: CircleCheck,   bg: "var(--ab-success-bg)",     bd: "var(--ab-success-bd)",     fg: "var(--ab-success-text)" },
   alert:   { Icon: TriangleAlert, bg: "var(--ab-alert-bg)",       bd: "var(--ab-alert-bd)",       fg: "var(--ab-alert-text)" },
   error:   { Icon: CircleX,       bg: "var(--ab-error-bg)",       bd: "var(--ab-error-bd)",       fg: "var(--ab-error-text)" },
@@ -153,19 +182,32 @@ const SEVERITY_CONFIG: Record<NBASeverity, { Icon: typeof CircleCheck; bg: strin
   neutral:     { Icon: Circle,    bg: "var(--tag-neutral-bg)",     bd: "var(--tag-neutral-bd)",     fg: "var(--tag-neutral-fg)" },
 }
 
+// Same trio + icon as EntityList's own aiInsight block ("AI {action}" row) —
+// deliberately NOT a new "purple severity," since aiGenerated overrides
+// severity's color rather than being one of its values.
+const AI_SIGNAL_CONFIG: { Icon: LucideIcon; bg: string; bd: string; fg: string } = {
+  Icon: Sparkles, bg: "var(--tag-purple-bg)", bd: "var(--tag-purple-bd)", fg: "var(--tag-purple-fg)",
+}
+
 // ── Per-variant content mapping ─────────────────────────────────────────────
 // This is the ONLY place variant-specific logic lives. Everything below this
 // function renders the exact same JSX regardless of which variant was passed —
 // per the brief's "one shared layout, only slot content changes" constraint.
+
+type DetailField = { label: string; value: string; icon: LucideIcon }
 
 type RecordFields = {
   name: string
   typeLabel: string
   /** Max 3 — enforced by slicing, not by trusting the caller */
   chips: string[]
-  details: { label: string; value: string }[]
+  details: DetailField[]
 }
 
+// One icon per Details field so the expanded grid scans as icon+label pairs,
+// not a wall of text — same "leading icon on a metadata row" idea as
+// EntityList's primaryMeta/secondaryMeta rows, applied to a 2-col grid instead
+// of an inline list.
 function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["data"]): RecordFields {
   if (variant === "employee") {
     const d = data as EmployeeRecord
@@ -174,12 +216,12 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
       typeLabel: "Employee",
       chips: [d.role, d.department, d.location],
       details: [
-        { label: "Manager",     value: d.manager },
-        { label: "Email",       value: d.email },
-        { label: "Phone",       value: d.phone },
-        { label: "Start date",  value: d.startDate },
-        { label: "Team",        value: d.team },
-        { label: "Access role", value: d.accessRole },
+        { label: "Manager",     value: d.manager,    icon: User },
+        { label: "Email",       value: d.email,       icon: Mail },
+        { label: "Phone",       value: d.phone,       icon: Phone },
+        { label: "Start date",  value: d.startDate,   icon: Calendar },
+        { label: "Team",        value: d.team,        icon: Users },
+        { label: "Access role", value: d.accessRole,  icon: ShieldCheck },
       ],
     }
   }
@@ -190,12 +232,12 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
       typeLabel: "Customer account",
       chips: [d.tier, d.segment, d.adoptionLevel],
       details: [
-        { label: "Owner",           value: d.owner },
-        { label: "Renewal date",    value: d.renewalDate },
-        { label: "MRR",             value: d.mrr },
-        { label: "Last contact",    value: d.lastContact },
-        { label: "Open tickets",    value: String(d.openTickets) },
-        { label: "Primary contact", value: d.primaryContact },
+        { label: "Owner",           value: d.owner,                  icon: User },
+        { label: "Renewal date",    value: d.renewalDate,            icon: Calendar },
+        { label: "MRR",             value: d.mrr,                    icon: DollarSign },
+        { label: "Last contact",    value: d.lastContact,            icon: Clock },
+        { label: "Open tickets",    value: String(d.openTickets),    icon: Ticket },
+        { label: "Primary contact", value: d.primaryContact,         icon: Contact },
       ],
     }
   }
@@ -205,12 +247,12 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
     typeLabel: "Client (deal)",
     chips: [d.dealStage, d.company, d.leadSource],
     details: [
-      { label: "Deal value",          value: d.dealValue },
-      { label: "Owner",                value: d.owner },
-      { label: "Email",                value: d.email },
-      { label: "Phone",                value: d.phone },
-      { label: "Last interaction",     value: d.lastInteraction },
-      { label: "Expected close date",  value: d.expectedCloseDate },
+      { label: "Deal value",          value: d.dealValue,          icon: DollarSign },
+      { label: "Owner",                value: d.owner,              icon: User },
+      { label: "Email",                value: d.email,              icon: Mail },
+      { label: "Phone",                value: d.phone,              icon: Phone },
+      { label: "Last interaction",     value: d.lastInteraction,    icon: Clock },
+      { label: "Expected close date",  value: d.expectedCloseDate,  icon: CalendarCheck },
     ],
   }
 }
@@ -229,7 +271,7 @@ function RecordHeader({
   const fields = getRecordFields(variant, data)
   const visibleChips   = fields.chips.filter(Boolean).slice(0, 3)
   const visibleActions = actions.slice(0, 3)
-  const sig = SEVERITY_CONFIG[signal.severity]
+  const sig = signal.aiGenerated ? AI_SIGNAL_CONFIG : SEVERITY_CONFIG[signal.severity]
 
   return (
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
@@ -298,16 +340,22 @@ function RecordHeader({
         >
           <div className="pt-[4px] flex flex-col gap-[12px]" style={{ borderTop: expanded ? "0.5px solid var(--color-border-neutral-lighter)" : undefined }}>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-[16px] gap-y-[12px]">
-              {fields.details.map((f, i) => (
-                <div key={i} className="flex flex-col gap-[2px] min-w-0">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
-                    {f.label}
-                  </span>
-                  <span className="text-[13px] leading-[1.4] truncate" style={{ color: "var(--foreground)" }}>
-                    {f.value}
-                  </span>
-                </div>
-              ))}
+              {fields.details.map((f, i) => {
+                const FieldIcon = f.icon
+                return (
+                  <div key={i} className="flex items-start gap-[8px] min-w-0">
+                    <FieldIcon size={14} strokeWidth={1.75} className="shrink-0 mt-[2px]" style={{ color: "var(--field-supporting)" }} />
+                    <div className="flex flex-col gap-[2px] min-w-0">
+                      <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                        {f.label}
+                      </span>
+                      <span className="text-[13px] leading-[1.4] truncate" style={{ color: "var(--foreground)" }}>
+                        {f.value}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -324,7 +372,7 @@ function SignalBar({
   sig,
 }: {
   signal: NextBestAction
-  sig: { Icon: typeof CircleCheck; bg: string; bd: string; fg: string }
+  sig: { Icon: LucideIcon; bg: string; bd: string; fg: string }
 }) {
   const { Icon } = sig
   const clickable = Boolean(signal.onAction)
