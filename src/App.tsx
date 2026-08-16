@@ -32379,8 +32379,12 @@ const RH_EMPLOYEE: EmployeeRecord = {
   phone: "+1 (512) 555-0142", startDate: "March 3, 2023", team: "Platform Infra",
   accessRole: "Admin",
 }
+// No onAction here — these are the static "what the NBA engine returned" data.
+// The real handlers (which destination each Signal opens) are wired inside
+// RecordHeaderPage below, since that's presentation-layer routing, not
+// something the engine or the data shape should know about.
 const RH_EMPLOYEE_SIGNAL: NextBestAction = {
-  label: "2 tasks pending your approval", severity: "alert", dueContext: "Oldest due today", onAction: () => {},
+  label: "2 tasks pending your approval", severity: "alert", dueContext: "Oldest due today",
 }
 
 const RH_CUSTOMER: CustomerRecord = {
@@ -32389,7 +32393,7 @@ const RH_CUSTOMER: CustomerRecord = {
   adoptionLevel: "Low", primaryContact: "Jane Doe — VP Operations",
 }
 const RH_CUSTOMER_SIGNAL: NextBestAction = {
-  label: "Health score dropped to 61 — renews in 19 days", severity: "error", dueContext: "Renewal at risk", onAction: () => {},
+  label: "Health score dropped to 61 — renews in 19 days", severity: "error", dueContext: "Renewal at risk",
 }
 
 const RH_CLIENT: ClientRecord = {
@@ -32397,16 +32401,37 @@ const RH_CLIENT: ClientRecord = {
   owner: "Priya Nair", email: "marcus.webb@initech.com", phone: "+1 (415) 555-0188",
   leadSource: "Referral", lastInteraction: "Yesterday", expectedCloseDate: "Aug 29, 2026",
 }
+// aiGenerated: true — unlike the other 2 (deterministic counts/metrics), this
+// is a genuine probabilistic recommendation (note the confidence score), so it
+// gets the purple/Sparkles "AI produced this" treatment instead of a severity
+// color — see the aiGenerated doc comment in record-header.tsx for why.
 const RH_CLIENT_SIGNAL: NextBestAction = {
-  label: "Ready to send final proposal", severity: "success", dueContext: "NBA engine · confidence 82%", onAction: () => {},
+  label: "Ready to send final proposal", severity: "success", dueContext: "NBA engine · confidence 82%", aiGenerated: true,
 }
 
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [pgVariant, setPgVariant] = useState<RecordHeaderVariant>("employee")
 
+  // Click destinations for Signal.onAction — one real overlay per variant,
+  // chosen the same way Notification Item's Reference tab picks Full
+  // Navigation vs. Slideout vs. Modal (see that page's decision table):
+  //   Employee — several items need reviewing one by one → Slideout (content
+  //   exceeds one paragraph, needs review before deciding).
+  //   Customer — a risk state to investigate, not a single click-to-fix →
+  //   Slideout (evidence: the score trend + suggested next steps).
+  //   Client — one immediate, reversible-by-cancel decision ("send it or
+  //   not") → Modal (fits the "1-click binary confirmation" rule exactly).
+  const [rhApprovalsOpen, setRhApprovalsOpen] = useState(false)
+  const [rhHealthOpen,    setRhHealthOpen]    = useState(false)
+  const [rhProposalOpen,  setRhProposalOpen]  = useState(false)
+
+  const rhEmployeeSignal: NextBestAction = { ...RH_EMPLOYEE_SIGNAL, onAction: () => setRhApprovalsOpen(true) }
+  const rhCustomerSignal: NextBestAction = { ...RH_CUSTOMER_SIGNAL, onAction: () => setRhHealthOpen(true) }
+  const rhClientSignal:   NextBestAction = { ...RH_CLIENT_SIGNAL,   onAction: () => setRhProposalOpen(true) }
+
   const pgData   = pgVariant === "employee" ? RH_EMPLOYEE : pgVariant === "customer" ? RH_CUSTOMER : RH_CLIENT
-  const pgSignal = pgVariant === "employee" ? RH_EMPLOYEE_SIGNAL : pgVariant === "customer" ? RH_CUSTOMER_SIGNAL : RH_CLIENT_SIGNAL
+  const pgSignal = pgVariant === "employee" ? rhEmployeeSignal : pgVariant === "customer" ? rhCustomerSignal : rhClientSignal
 
   return (
     <div>
@@ -32443,37 +32468,37 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               per the brief's "3 variants × both states, mock realistic data" requirement. */}
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — collapsed (Identity + Signal only)</p>
-            <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={RH_EMPLOYEE_SIGNAL}
+            <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal}
               actions={[{ label: "Message" }, { label: "View profile", variant: "primary" }]} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — expanded (Details grid revealed)</p>
-            <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={RH_EMPLOYEE_SIGNAL} defaultExpanded
+            <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal} defaultExpanded
               actions={[{ label: "Message" }, { label: "View profile", variant: "primary" }]} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — collapsed</p>
-            <RecordHeader variant="customer" data={RH_CUSTOMER} signal={RH_CUSTOMER_SIGNAL}
+            <RecordHeader variant="customer" data={RH_CUSTOMER} signal={rhCustomerSignal}
               actions={[{ label: "Log activity" }, { label: "Contact account", variant: "primary" }]} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — expanded</p>
-            <RecordHeader variant="customer" data={RH_CUSTOMER} signal={RH_CUSTOMER_SIGNAL} defaultExpanded
+            <RecordHeader variant="customer" data={RH_CUSTOMER} signal={rhCustomerSignal} defaultExpanded
               actions={[{ label: "Log activity" }, { label: "Contact account", variant: "primary" }]} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — collapsed</p>
-            <RecordHeader variant="client" data={RH_CLIENT} signal={RH_CLIENT_SIGNAL}
+            <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal}
               actions={[{ label: "Log call" }, { label: "Send proposal", variant: "primary" }]} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — expanded</p>
-            <RecordHeader variant="client" data={RH_CLIENT} signal={RH_CLIENT_SIGNAL} defaultExpanded
+            <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal} defaultExpanded
               actions={[{ label: "Log call" }, { label: "Send proposal", variant: "primary" }]} />
           </section>
 
@@ -32560,6 +32585,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["label",       "The recommendation itself, e.g. \"2 tasks pending your approval\""],
                 ["severity",    "success | alert | error | informative | neutral — drives the Signal bar's color"],
                 ["dueContext?", "Short supporting text, e.g. \"Oldest due today\", \"SLA breached 2h ago\""],
+                ["aiGenerated?", "True → overrides severity color with the purple/Sparkles \"AI produced this\" treatment (--tag-purple-*, same trio as EntityList's own aiInsight). Use only for a probabilistic suggestion, not a deterministic fact or urgency state."],
                 ["onAction?",   "Present → the whole Signal row becomes clickable (same model as NotificationItem's row onClick)"],
               ].map(([field, desc], i) => (
                 <div key={field} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
@@ -32630,6 +32656,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["error",       "--ab-error-*",       "#fdeded", "#2d1515"],
                 ["informative", "--tag-informative-*", "#e9f1ff", "rgba(21,93,252,0.15)"],
                 ["neutral",     "--tag-neutral-*",     "#f2f2f2", "rgba(255,255,255,0.08)"],
+                ["aiGenerated: true (overrides severity)", "--tag-purple-*", "#f3e9fd", "#120520"],
               ].map(([sev, token, light, dark], i) => (
                 <div key={sev} className="grid grid-cols-[110px_1fr_130px_130px] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{sev}</div>
@@ -32661,8 +32688,128 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               ))}
             </div>
           </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Signal click destinations — one real example per variant</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              RecordHeader never decides this itself — <code className="text-[var(--primary)]">onAction</code> is whatever the consuming screen wires up. Same decision framework as Notification Item's Reference tab (Full Navigation / Slideout / Modal), applied per variant below. Click any Signal in Overview to see the real result.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[110px_100px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Variant", "Opens", "Why"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Employee", "Slideout", "Multiple items need reviewing one by one (PTO, expense) — content exceeds one paragraph, needs review before deciding."],
+                ["Customer", "Slideout", "A risk state to investigate, not a single click-to-fix — shows the score trend and why it dropped before recommending a next step."],
+                ["Client",   "Modal",   "One immediate, reversible-by-Cancel decision — \"send it or not\" fits the 1-click binary confirmation rule exactly."],
+              ].map(([v, dest, why], i) => (
+                <div key={v} className="grid grid-cols-[110px_100px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{v}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{dest}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{why}</div>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       )}
+
+      {/* ── Signal click destinations — real overlays, not fake alerts, same
+          honesty standard as Notification Item/Center's own click-routing
+          demos. Employee and Customer open a Slideout (content to review
+          before deciding); Client opens a Modal (one immediate yes/no). */}
+      <SlideOut
+        open={rhApprovalsOpen}
+        onClose={() => setRhApprovalsOpen(false)}
+        type="with-variants"
+        size="m"
+        title="Pending approvals"
+        subtitle="Sarah Chen · Employee"
+        statusLabel="2 open"
+        showIcon
+        showStatus
+        showTopButton={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta={false}
+      >
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Awaiting your review</span>
+          {/* Single action ("Review"), due-date in primaryMeta rather than a
+              right-aligned state Tag — a 350px Slideout is too narrow for
+              title + 2 action buttons + a tag on the same row without
+              crowding; this keeps every row legible at the panel's default
+              width instead of relying on the user dragging it wider. */}
+          <EntityList items={[
+            {
+              id: "appr-1", title: "PTO request — Aug 24–28",
+              iconName: "Calendar", iconVariant: "info",
+              primaryMeta: [{ iconName: "Clock", label: "Due today" }],
+              actions: [{ label: "Review", variant: "primary" }],
+            },
+            {
+              id: "appr-2", title: "Expense report — $340.00",
+              iconName: "Receipt", iconVariant: "info",
+              primaryMeta: [{ iconName: "Clock", label: "Due tomorrow" }],
+              actions: [{ label: "Review", variant: "primary" }],
+            },
+          ]} />
+        </div>
+      </SlideOut>
+
+      <SlideOut
+        open={rhHealthOpen}
+        onClose={() => setRhHealthOpen(false)}
+        type="with-variants"
+        size="m"
+        title="Account health"
+        subtitle="Acme Corp · Customer account"
+        statusLabel="At risk"
+        showIcon
+        showStatus
+        showTopButton={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta
+        ctaPrimaryLabel="Schedule renewal call"
+        ctaSecondaryLabel="Dismiss"
+        onCtaPrimary={() => setRhHealthOpen(false)}
+        onCtaSecondary={() => setRhHealthOpen(false)}
+      >
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Key metrics</span>
+          <AdaptiveMetricGrid cards={[
+            { label: "Health score", value: "61", iconName: "Activity" },
+            { label: "Open tickets", value: "2",  iconName: "Ticket" },
+            { label: "Renews in",    value: "19d", iconName: "Calendar" },
+          ]} />
+        </div>
+        <div className="flex flex-col gap-[8px]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Why this dropped</span>
+          <ul className="flex flex-col gap-[4px]">
+            {["Product adoption fell to \"Low\" this quarter", "2 open support tickets, oldest unresolved for 6 days", "No executive contact in the last 30 days"].map((b, bi) => (
+              <li key={bi} className="flex items-start gap-[6px] text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                <span className="mt-[6px] w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--field-supporting)" }} />{b}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </SlideOut>
+
+      <ModalDialog
+        isOpen={rhProposalOpen}
+        onClose={() => setRhProposalOpen(false)}
+        variant="confirmation"
+        tone="success"
+        title="Send final proposal to Initech?"
+        description="Marcus Webb will receive the $42,000 proposal by email. The NBA engine flagged this as the recommended next step (confidence 82%)."
+        ctaPrimary={{ label: "Send proposal", onClick: () => setRhProposalOpen(false) }}
+        ctaSecondary={{ label: "Not yet", onClick: () => setRhProposalOpen(false) }}
+      />
     </div>
   )
 }
