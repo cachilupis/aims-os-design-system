@@ -32439,6 +32439,30 @@ const RH_CLIENT_SIGNAL_CALM: NextBestAction = {
   label: "Early discovery — no next step due yet", severity: "informative", dueContext: "Last touched 2 days ago", dismissible: true,
 }
 
+// Edge-case demo data — each isolates ONE case (missing data / loading /
+// error / locked / no agent) rather than combining several, so the showcase
+// makes clear which prop produced which visual. Loading/error/locked/no-agent
+// reuse the existing fully-populated mocks above + toggle the relevant prop —
+// only "missing data" needs its own record, since every other mock is
+// deliberately complete.
+
+// Missing data (task 1) — no industry (chips compact from 3 to 2, not a gap
+// or a "—"), and adoptionLevel/primaryContact are both absent too, so those
+// Details rows are omitted entirely rather than showing a placeholder.
+const RH_CUSTOMER_MISSING_DATA: CustomerRecord = {
+  accountName: "Northwind Traders", segment: "Mid-market", owner: "Alex Kim", tier: "Tier 2",
+  renewalDate: "Nov 14, 2026", mrr: "$4,200", lastContact: "1 week ago", openTickets: 0,
+}
+const RH_CUSTOMER_MISSING_DATA_SIGNAL: NextBestAction = {
+  label: "No action needed right now", severity: "neutral",
+}
+
+// Locked (task 5) — the CTA/overflow disable; the agent trigger and this
+// Signal itself stay fully interactive, since viewing isn't editing.
+const RH_EMPLOYEE_LOCKED_SIGNAL: NextBestAction = {
+  label: "On leave — record frozen until return", severity: "informative", dueContext: "Returns Sep 1, 2026",
+}
+
 // Assigned AI agent — one per variant, same shape (see AssignedAgent in
 // record-header.tsx). onOpenChat is wired inside RecordHeaderPage below,
 // same delegation pattern as the Signal/action handlers.
@@ -32584,6 +32608,45 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge cases — missing data, loading/error, locked, no agent</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Real data isn't always complete, resolved, or editable. These 5 examples each isolate one edge case — see the Reference tab for the full rule behind each.
+            </p>
+            <div className="flex flex-col gap-[24px]">
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Missing data — no industry, no adoption level, no primary contact</p>
+                <RecordHeader variant="customer" data={RH_CUSTOMER_MISSING_DATA} signal={RH_CUSTOMER_MISSING_DATA_SIGNAL} defaultExpanded
+                  assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER_MISSING_DATA.accountName)}
+                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Signal loading — NBA engine still computing</p>
+                <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal} signalStatus="loading"
+                  assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
+                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Signal error — NBA engine timed out</p>
+                <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal} signalStatus="error"
+                  assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
+                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Locked — CTA/overflow disabled, agent + Signal stay interactive</p>
+                <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={RH_EMPLOYEE_LOCKED_SIGNAL} locked
+                  assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
+                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">No assigned agent — trigger disables with a Tooltip, doesn't disappear</p>
+                <RecordHeader variant="customer" data={RH_CUSTOMER} signal={RH_CUSTOMER_SIGNAL_CALM}
+                  assignedAgent={null}
+                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
+              </div>
+            </div>
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
             <div className="grid grid-cols-2 gap-[16px]">
               <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
@@ -32704,6 +32767,30 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Signal states — the NBA engine is asynchronous</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              <code className="text-[var(--primary)]">signal</code> above assumes a resolved value already exists. In a real integration it doesn't — the NBA engine has to be called and can be slow or fail. <code className="text-[var(--primary)]">signalStatus</code> (default <code>"resolved"</code>) covers the other 2 cases without touching the NextBestAction shape itself: "error" doesn't add a field to that shape, it substitutes a different, centralized VALUE of it (<code className="text-[var(--primary)]">RECORD_HEADER_FALLBACKS.nbaError</code>). Neither state changes the bar's footprint — no layout shift when the real value lands.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[110px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["State", "Behavior"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["loading",  "signal is ignored; the bar renders in the neutral container with a Skeleton circle + Skeleton text bar instead of icon+label. Never clickable, never dismissible — nothing resolved yet to act on or close."],
+                ["resolved", "(default) signal renders exactly as documented above — the normal case."],
+                ["error",    "signal is ignored; the bar renders RECORD_HEADER_FALLBACKS.nbaError instead — severity: \"neutral\", label: \"No recommendation available\", no actionLabel/onAction. Never a broken or half-rendered Signal, never the bar disappearing (that would change the header's height)."],
+              ].map(([state, desc], i) => (
+                <div key={state} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono font-semibold text-[var(--primary)]">{state}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
             {/* Content-mapping table, transposed from the old chips/Details/actions-only
                 table (kept below in spirit, not duplicated) to cover every slot a reader
                 actually hits top-to-bottom on the card — Primary through Details — since
@@ -32744,6 +32831,36 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <div className="rounded-md px-[14px] py-[12px] mt-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
                 <strong>Adding a 4th variant:</strong> the layout doesn't change. Define its row in the table above (Primary / Type label / Identity tags / Signal / Signal action / Primary CTA / Details) and its data source — a new <code>XRecord</code> interface plus a branch in <code>getRecordFields</code> (and, if it needs a default CTA, an entry in <code>RECORD_HEADER_RECOMMENDED_ACTIONS</code>). <code>record-header.tsx</code>'s own JSX is untouched — this table and that function are the only two places a 4th variant needs to be taught.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Missing or empty data — one rule for every slot</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              Every non-Primary field on <code className="text-[var(--primary)]">EmployeeRecord</code>/<code className="text-[var(--primary)]">CustomerRecord</code>/<code className="text-[var(--primary)]">ClientRecord</code> is optional — a real record can legitimately lack any of them. The rule is the same wherever it happens: <strong style={{ color: "var(--foreground)" }}>omit, never placeholder.</strong>
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Slot", "When a field is missing"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Identity tags",  "Dropped via .filter(Boolean) before the max-3 slice — no gap, no \"—\", the row just compacts (down to not rendering at all if all 3 are absent)."],
+                ["Details",        "The row is omitted entirely, not shown with a \"—\" placeholder — same behavior as identity tags, so the two content slots agree on one rule instead of two. The disclosure chevron itself only renders if at least one Details row still has a value."],
+                ["assignedAgent",  "Not a \"missing field\" case — it's a required prop whose VALUE can be null. Renders the same button, disabled, with a Tooltip (RECORD_HEADER_FALLBACKS.noAgentTooltip) — never silently missing, never broken."],
+                ["Avatar",         "A blank name falls back to AvatarCircle's own avatarStyle=\"empty\" glyph instead of empty initials. A single-character name (e.g. \"J\") isn't special-cased — it already renders fine as one initial."],
+              ].map(([slot, rule], i) => (
+                <div key={slot} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{slot}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{rule}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>Permissions and field visibility are NOT RecordHeader's decision.</strong> Whether a viewer should see MRR, health score, access role, salary, or any other sensitive field is the consuming screen's call, based on that viewer's role — RecordHeader has no concept of "who's looking." The natural pattern: the host screen omits a field the current viewer can't see from the <code>data</code> object it passes in, and RecordHeader already treats an omitted field as "absent" via the exact rule above — no separate visibility API needed. Don't build a prototype that assumes every field is always shown; that assumption belongs to the screen wiring the data, not to this component.
               </p>
             </div>
           </section>
@@ -32800,6 +32917,24 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Locked — a read-only record, not a read-only card</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              Set <code className="text-[var(--primary)]">locked</code> when the record itself is frozen (e.g. an employee on leave, a closed deal) — it's a top-level prop like <code>signal</code>/<code>assignedAgent</code>, not per-variant data, since being locked isn't an Employee/Customer/Client-specific concept.
+            </p>
+            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>Displays as:</strong> a read-only Tag ("Locked", with a small Lock icon) next to the type label — not an identity chip, since Locked is a STATE, not a stable attribute (same reasoning that keeps Deal stage/Adoption level out of the chips row — see "Identity tags" below).
+              </p>
+              <p className="text-[13px] leading-[1.6] mt-[10px]" style={{ color: "var(--foreground)" }}>
+                <strong>What disables:</strong> the contextual CTA and the overflow menu's write actions — both disable with a Tooltip ("This record is locked — read-only"), rather than hiding, so the reason is always visible on hover.
+              </p>
+              <p className="text-[13px] leading-[1.6] mt-[10px]" style={{ color: "var(--foreground)" }}>
+                <strong>What stays available:</strong> the AI agent trigger and the Signal itself — both fully interactive. Consulting a locked record (asking the agent about it, reading or clicking through its Signal) isn't the same permission as editing it, so neither should be disabled just because writes are blocked.
+              </p>
+            </div>
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Identity tags — read-only, max 3, stable attributes only</p>
             <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
@@ -32807,6 +32942,34 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </p>
               <p className="text-[13px] leading-[1.6] mt-[10px]" style={{ color: "var(--foreground)" }}>
                 Two more rules on top of that, enforced by <code>getRecordFields</code> slicing the array rather than by trusting the caller: <strong>max 3</strong>, and <strong>stable identity attributes only</strong> — role/department/location, tier/segment/industry, company/deal value/lead source. Never a dynamic state or a metric. <code>Deal stage</code> and <code>Adoption level</code> are the concrete counter-examples: both look like they'd fit here, but both change over the record's lifecycle, so both live in Details instead (and, when urgent enough to act on, in Signal) — not as an identity tag. A tag you'd need to update when something <em>happens</em> to the record is in the wrong slot.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Desktop overflow — long content, not just narrow viewports</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              Mobile-narrow is only half the overflow story — this card can also sit in a narrower panel (a SlideOut, a resized widget) on an otherwise-desktop screen, and real names/labels run longer than the demo data above. Two concrete behaviors:
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[160px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Content", "Behavior"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Long name",              "Still never truncated — wraps instead, exactly as documented at the top of this page. What gives way instead is everything ELSE in the row (see priority order below)."],
+                ["Long Signal label/dueContext", "Truncates to one line past ~60 characters, with a Tooltip revealing the full text on hover. Short text (every existing mock) is completely unaffected — no Tooltip wrapper added unless the text is actually long."],
+              ].map(([content, desc], i) => (
+                <div key={content} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{content}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>Collapse priority — what gives first when the card itself is narrow</strong> (measured via ResizeObserver on the card's own rendered width, not the viewport, since a container can be narrow on a wide screen): identity tags hide completely first, then the contextual CTA folds into the "···" overflow menu at a narrower width still. The AI agent trigger and the disclosure chevron are never sacrificed — the agent is the platform's one persistent entry point, and the chevron is the only way to reach Details once they exist. No Figma node exists for this component yet, so the 2 width thresholds (<code style={{ fontSize: 11 }}>COLLAPSE_HIDE_TAGS_WIDTH</code>/<code style={{ fontSize: 11 }}>COLLAPSE_HIDE_CTA_WIDTH</code> in record-header.tsx) are calibrated estimates, not a spec'd breakpoint.
               </p>
             </div>
           </section>
@@ -32892,6 +33055,15 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{why}</div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">i18n — static labels grow in other languages</p>
+            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                The static labels used throughout this page ("Employee," "Contact account," "Schedule renewal call") run roughly 30% longer in languages like Spanish. Every label-bearing slot here is already content-driven width, not a fixed pixel box — <code>Button</code> sizes itself by padding around its label (checked directly: only the icon-only square sizes are fixed-width), and the Signal action button is the same <code>Button</code> component — so a longer translated label simply takes more room rather than clipping or breaking layout. Nothing to change here; noted so a translated screen isn't second-guessed for "looking different" than the English mock.
+              </p>
             </div>
           </section>
         </div>
