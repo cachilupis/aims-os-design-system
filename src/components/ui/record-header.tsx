@@ -269,9 +269,21 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
 // only (never onClick) — wiring the actual handler is always the consuming
 // screen's job, same as `signal.onAction`. A caller can still pass a fully
 // custom `actions` array; this is a default, not an enforced constraint.
+// Revised after an AIMS OS context check: RecordHeader always sits ON that
+// record's own profile page (Overview widgets + tabs, incl. Activity Log,
+// render right below it) — so an action must do something the page below it
+// doesn't already offer, or it's dead weight.
+//   Employee: dropped "View profile" — circular, we're already on it. Left
+//   with a single action; not every variant needs 2.
+//   Customer: dropped "Log activity" — the Activity tab below already has its
+//   own log-activity affordance, so the header doesn't need a second one.
+//   Replaced with "View contract" (a reference action nothing else on the
+//   page covers) — deliberately NOT "Schedule renewal call," since that's
+//   already the Signal's own onAction for the at-risk case; repeating it here
+//   would just duplicate the Signal one row down.
 export const RECORD_HEADER_RECOMMENDED_ACTIONS: Record<RecordHeaderVariant, RecordAction[]> = {
-  employee: [{ label: "Message" }, { label: "View profile", variant: "primary" }],
-  customer: [{ label: "Log activity" }, { label: "Contact account", variant: "primary" }],
+  employee: [{ label: "Message", variant: "primary" }],
+  customer: [{ label: "View contract" }, { label: "Contact account", variant: "primary" }],
   client:   [{ label: "Log call" }, { label: "Send proposal", variant: "primary" }],
 }
 
@@ -356,7 +368,10 @@ function RecordHeader({
             transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1)",
           }}
         >
-          <div className="pt-[4px] flex flex-col gap-[12px]" style={{ borderTop: expanded ? "0.5px solid var(--color-border-neutral-lighter)" : undefined }}>
+          {/* pt-[16px] matches the outer flex gap-[16px] above (Identity→Signal,
+              Signal→this wrapper) so the divider sits at an equal 16px from
+              both neighbors instead of 16px above / 4px below. */}
+          <div className="pt-[16px]" style={{ borderTop: expanded ? "0.5px solid var(--color-border-neutral-lighter)" : undefined }}>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-[16px] gap-y-[12px]">
               {fields.details.map((f, i) => {
                 const FieldIcon = f.icon

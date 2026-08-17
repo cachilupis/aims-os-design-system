@@ -124,7 +124,7 @@ Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard vi
 
 **Don't invent chips, Details fields, or action labels per screen** — pull them from the component's own exports so every instance stays predictable:
 - `getRecordFields(variant, data)` → which fields become the 3 context chips vs. the Details grid (see record-header.tsx or the Reference tab for the exact per-variant list)
-- `RECORD_HEADER_RECOMMENDED_ACTIONS[variant]` → the canonical 2-action pair (e.g. employee = "Message" + "View profile")
+- `RECORD_HEADER_RECOMMENDED_ACTIONS[variant]` → the canonical action set (not always 2 — e.g. `employee` is just "Message," since RecordHeader always sits on that record's own profile page, so anything the page already shows below it — like "View profile" — is dead weight, not a valid action)
 
 **Signal is required, not optional decoration** — every RecordHeader needs a `NextBestAction` (`{ label, severity, dueContext?, aiGenerated?, onAction? }`):
 - `severity` drives the color for a deterministic fact or urgency state (task counts, renewal risk, SLA breach) — this is the default.

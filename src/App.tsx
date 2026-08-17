@@ -32604,8 +32604,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Employee", "role, department, location", "manager, email, phone, startDate, team, accessRole", "Message (secondary) · View profile (primary)"],
-                ["Customer", "tier, segment, adoptionLevel", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact", "Log activity (secondary) · Contact account (primary)"],
+                ["Employee", "role, department, location", "manager, email, phone, startDate, team, accessRole", "Message (primary) — just one; \"View profile\" would be circular here"],
+                ["Customer", "tier, segment, adoptionLevel", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact", "View contract (secondary) · Contact account (primary)"],
                 ["Client",   "dealStage, company, leadSource", "dealValue, owner, email, phone, lastInteraction, expectedCloseDate", "Log call (secondary) · Send proposal (primary)"],
               ].map(([v, chips, details, actions], i) => (
                 <div key={v} className="grid grid-cols-[100px_1fr_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
