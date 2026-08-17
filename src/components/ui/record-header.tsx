@@ -41,7 +41,12 @@ import { Button } from "@/components/ui/button"
  *                "status, category and label" atom — context chips here are pure
  *                metadata, never clickable, so Tag is the correct atom even though
  *                the brief calls them "chips."
- *   Actions    → Button (size="sm") — variant per action, default "secondary."
+ *   Actions    → Button (size="sm") — variant per action, default "secondary." A
+ *                recommended label set per variant lives in
+ *                RECORD_HEADER_RECOMMENDED_ACTIONS below — use it unless the
+ *                screen genuinely needs different CTAs; it's what keeps every
+ *                Employee/Customer/Client card's actions predictable instead
+ *                of every screen inventing its own pair of verbs.
  *   Disclosure → local expanded state + max-height transition, the same technique
  *                already used by widget-father.tsx for its collapse animation, and
  *                the same chevron-rotate affordance DocSection/EntityList already
@@ -255,6 +260,19 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
       { label: "Expected close date",  value: d.expectedCloseDate,  icon: CalendarCheck },
     ],
   }
+}
+
+// ── Recommended actions per variant ─────────────────────────────────────────
+// The single source of truth for "which 2 CTAs go on this card" — used by the
+// catalog's Overview/Playground/CLAUDE.md guidance so all 3 stay in sync
+// instead of three separately hardcoded copies of the same answer. Labels
+// only (never onClick) — wiring the actual handler is always the consuming
+// screen's job, same as `signal.onAction`. A caller can still pass a fully
+// custom `actions` array; this is a default, not an enforced constraint.
+export const RECORD_HEADER_RECOMMENDED_ACTIONS: Record<RecordHeaderVariant, RecordAction[]> = {
+  employee: [{ label: "Message" }, { label: "View profile", variant: "primary" }],
+  customer: [{ label: "Log activity" }, { label: "Contact account", variant: "primary" }],
+  client:   [{ label: "Log call" }, { label: "Send proposal", variant: "primary" }],
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
