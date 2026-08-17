@@ -32704,26 +32704,35 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Per-variant structure — chips, Details, and recommended actions</p>
+            {/* Content-mapping table, transposed from the old chips/Details/actions-only
+                table (kept below in spirit, not duplicated) to cover every slot a reader
+                actually hits top-to-bottom on the card — Primary through Details — since
+                "Tier 1" on a Tag tells you nothing about which slot it came from or why,
+                which is the definition gap this section exists to close. */}
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Content mapping — what goes in each slot, per variant</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              The only variant-specific logic in the whole component lives in two places: <code className="text-[var(--primary)]">getRecordFields</code> (chips vs. Details) and <code className="text-[var(--primary)]">RECORD_HEADER_RECOMMENDED_ACTIONS</code> (the canonical CTA pair below). Both are exported from <code className="text-[var(--primary)]">record-header.tsx</code> — a generated screen should pull from these rather than inventing new chip fields or action labels per instance, so every Employee/Customer/Client card stays predictable.
+              The only variant-specific logic in the whole component lives in two places: <code className="text-[var(--primary)]">getRecordFields</code> (name/type label/tags/Details) and <code className="text-[var(--primary)]">RECORD_HEADER_RECOMMENDED_ACTIONS</code> (the canonical CTA below). Both are exported from <code className="text-[var(--primary)]">record-header.tsx</code> — a generated screen should pull from these rather than inventing new fields or action labels per instance, so every Employee/Customer/Client card stays predictable. Signal and Signal action aren't in either export — they're whatever the NBA engine returns for that record right now (see the NextBestAction table above), so the cells below show a representative example, not a fixed field name.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[100px_1fr_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Variant", "Context chips (max 3)", "Details grid", "Recommended actions"].map(h => (
+              <div className="grid grid-cols-[170px_1fr_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Slot", "Employee", "Customer", "Client"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
               {[
-                ["Employee", "role, department, location", "manager, email, phone, startDate, team, accessRole", "Message — the only CTA (\"View profile\" would be circular here)"],
-                ["Customer", "tier, segment, industry", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact, adoptionLevel", "Contact account (CTA) · View contract (overflow)"],
-                ["Client",   "company, dealValue, leadSource", "owner, email, phone, lastInteraction, expectedCloseDate", "Email (CTA) · Log call (overflow — belongs to the Activity tab)"],
-              ].map(([v, chips, details, actions], i) => (
-                <div key={v} className="grid grid-cols-[100px_1fr_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{v}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{chips}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{details}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{actions}</div>
+                ["Primary (name)", "data.name — e.g. \"Sarah Chen\"", "data.accountName — e.g. \"Acme Corp\" (note: not .name)", "data.name — e.g. \"Marcus Webb\""],
+                ["Type label", "\"Employee\" (static)", "\"Customer account\" (static)", "\"Client (deal)\" (static)"],
+                ["Identity tags (max 3, read-only — see rule below)", "role, department, location", "tier, segment, industry", "company, dealValue, leadSource"],
+                ["Signal", "NBA recommendation — e.g. \"2 tasks pending your approval\"", "NBA recommendation — e.g. \"Health score dropped to 61\"", "NBA recommendation — e.g. \"Ready to send final proposal\" (can be aiGenerated)"],
+                ["Signal action (optional)", "none in this example — several distinct items, not one action to name", "\"Schedule renewal call\" — one nameable next step", "\"Send proposal\" — the one decision; replaces a separate CTA entirely"],
+                ["Primary CTA", "Message", "Contact account (CTA) · View contract (overflow)", "Email (CTA) · Log call (overflow)"],
+                ["Details (expanded)", "manager, email, phone, startDate, team, accessRole", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact, adoptionLevel", "dealStage, owner, email, phone, lastInteraction, expectedCloseDate"],
+              ].map(([slot, emp, cus, cli], i) => (
+                <div key={slot} className="grid grid-cols-[170px_1fr_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{slot}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{emp}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{cus}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{cli}</div>
                 </div>
               ))}
             </div>
@@ -32731,6 +32740,49 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
                 <strong>Picking the variant:</strong> an internal team member (has a manager/department/access role) → <code>employee</code>. An existing paying account (has MRR/renewal date/tier) → <code>customer</code>. A prospect still in the pipeline (has a deal stage/value/close date, not yet paying) → <code>client</code>. If a record has fields from none of these 3 shapes, RecordHeader is the wrong component — flag it as a <code>// DS-GAP</code> instead of forcing a mismatched variant.
               </p>
+            </div>
+            <div className="rounded-md px-[14px] py-[12px] mt-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>Adding a 4th variant:</strong> the layout doesn't change. Define its row in the table above (Primary / Type label / Identity tags / Signal / Signal action / Primary CTA / Details) and its data source — a new <code>XRecord</code> interface plus a branch in <code>getRecordFields</code> (and, if it needs a default CTA, an entry in <code>RECORD_HEADER_RECOMMENDED_ACTIONS</code>). <code>record-header.tsx</code>'s own JSX is untouched — this table and that function are the only two places a 4th variant needs to be taught.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            {/* Glossary — every value here comes from this page's own mock data, not a
+                confirmed backend contract. Scales/thresholds are marked as assumptions
+                (see the callout below) rather than documented as settled, since nothing
+                here has been confirmed against a real Tier/health-score/NBA-confidence
+                source yet. */}
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Glossary — terms that aren't self-explanatory from the examples alone</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              Seeing "Tier 1" on a Tag or "confidence 82%" in a Signal doesn't say what scale it's on or where the number comes from. This table is that missing definition layer.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Term", "Definition"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Tier",            "Customer account tier shown as an identity tag (e.g. \"Tier 1\"). Assumed scale: Tier 1 = highest strategic value/spend, counting down from there — not confirmed against a real CS/RevOps tiering source."],
+                ["Health score",    "Numeric customer-health indicator shown in Signal (e.g. \"Health score dropped to 61\"). Assumed 0–100 scale with assumed thresholds — roughly ≥80 on track, 60–79 watch, <60 at risk — consistent with this page's own mocks (61 = at risk, 92 = on track) but not confirmed against a real scoring model."],
+                ["Confidence % (NBA engine)", "Attached to an aiGenerated: true NextBestAction (e.g. \"confidence 82%\") — meant to convey the NBA engine's certainty in a probabilistic recommendation, as opposed to a deterministic fact. The calculation itself isn't confirmed; treat the number as illustrative, not a defined formula."],
+                ["Adoption level",  "Qualitative product-adoption level shown in Customer's Details (e.g. \"Low\"). Assumed values: Low / Medium / High — the enum isn't confirmed against a real product-usage data source."],
+              ].map(([term, def], i) => (
+                <div key={term} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{term}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{def}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
+              <div>
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Every scale/threshold above is an assumption, not a confirmed contract</p>
+                <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                  Tier's value range, health score's 0–100 scale and at-risk/on-track thresholds, the NBA engine's confidence % calculation, and Adoption level's enum are all inferred from this page's own mock data, not confirmed by whatever backend eventually feeds this component. Verify each against the real source before a generated screen treats them as fixed.
+                </p>
+              </div>
             </div>
           </section>
 
@@ -32748,10 +32800,13 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Why Tag, not Chip, for context chips</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Identity tags — read-only, max 3, stable attributes only</p>
             <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
                 The brief calls them "chips," but this repo's <code>Chip</code> component is documented as the interactive filter-row control (toggleable, used in Filters/quick-filter rows). Context chips here are pure metadata — never clickable — which is exactly what <code>Tag</code> is for. Same visual weight, correct semantics.
+              </p>
+              <p className="text-[13px] leading-[1.6] mt-[10px]" style={{ color: "var(--foreground)" }}>
+                Two more rules on top of that, enforced by <code>getRecordFields</code> slicing the array rather than by trusting the caller: <strong>max 3</strong>, and <strong>stable identity attributes only</strong> — role/department/location, tier/segment/industry, company/deal value/lead source. Never a dynamic state or a metric. <code>Deal stage</code> and <code>Adoption level</code> are the concrete counter-examples: both look like they'd fit here, but both change over the record's lifecycle, so both live in Details instead (and, when urgent enough to act on, in Signal) — not as an identity tag. A tag you'd need to update when something <em>happens</em> to the record is in the wrong slot.
               </p>
             </div>
           </section>
