@@ -113,6 +113,30 @@ actions={[
 actions={[{ icon: "Eye", onClick: () => {} }]}
 ```
 
+### Record Header — entity profile header (Employee/Customer/Client)
+Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard view that summarizes a **single** Employee, Customer, or Client record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; RecordHeader sits inside the content area, typically the Overview tab).
+
+**Picking the variant** — by which fields the record actually has, not by guessing:
+- Has manager/department/access role → `employee`
+- Has MRR/renewal date/tier (existing paying account) → `customer`
+- Has deal stage/value/expected close date (still in the pipeline) → `client`
+- None of the 3 shapes fit → don't force it; flag `// DS-GAP: RecordHeader has no variant for this record shape`
+
+**Don't invent chips, Details fields, or action labels per screen** — pull them from the component's own exports so every instance stays predictable:
+- `getRecordFields(variant, data)` → which fields become the 3 context chips vs. the Details grid (see record-header.tsx or the Reference tab for the exact per-variant list)
+- `RECORD_HEADER_RECOMMENDED_ACTIONS[variant]` → the canonical 2-action pair (e.g. employee = "Message" + "View profile")
+
+**Signal is required, not optional decoration** — every RecordHeader needs a `NextBestAction` (`{ label, severity, dueContext?, aiGenerated?, onAction? }`):
+- `severity` drives the color for a deterministic fact or urgency state (task counts, renewal risk, SLA breach) — this is the default.
+- `aiGenerated: true` swaps to the purple/Sparkles treatment **only** for a genuine probabilistic recommendation (confidence-scored, inferred) — never for a plain count or a real risk state. Urgency should always win visually over "an AI produced this."
+- If there's truly nothing actionable to surface, use `severity: "neutral"` with a plain status line — never fabricate a fake NextBestAction just to fill the slot.
+
+**Signal click destination** — same framework as Entity click behavior above, applied to `signal.onAction`:
+- Multiple items need reviewing one by one before deciding (e.g. several pending approvals) → `SlideOut`
+- A risk/health state to investigate, with evidence to show before recommending a step → `SlideOut`
+- One immediate, reversible-by-Cancel decision ("do this specific thing now?") → `ModalDialog`
+- Never Full Navigation from a Signal click — RecordHeader already lives on that record's own page.
+
 ### Empty states
 **ALWAYS** use `EmptyState` from `src/components/ui/empty-state.tsx` when a view, section, or search has no content to display. **NEVER** hardcode a custom div, illustration, or message — custom empty states break visual consistency and are invisible to the DS.
 

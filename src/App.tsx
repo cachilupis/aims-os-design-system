@@ -44,7 +44,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { RecordHeader, type RecordHeaderVariant, type EmployeeRecord, type CustomerRecord, type ClientRecord, type NextBestAction } from "@/components/ui/record-header"
+import { RecordHeader, RECORD_HEADER_RECOMMENDED_ACTIONS, type RecordHeaderVariant, type EmployeeRecord, type CustomerRecord, type ClientRecord, type NextBestAction } from "@/components/ui/record-header"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
@@ -32469,37 +32469,37 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — collapsed (Identity + Signal only)</p>
             <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal}
-              actions={[{ label: "Message" }, { label: "View profile", variant: "primary" }]} />
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — expanded (Details grid revealed)</p>
             <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal} defaultExpanded
-              actions={[{ label: "Message" }, { label: "View profile", variant: "primary" }]} />
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — collapsed</p>
             <RecordHeader variant="customer" data={RH_CUSTOMER} signal={rhCustomerSignal}
-              actions={[{ label: "Log activity" }, { label: "Contact account", variant: "primary" }]} />
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — expanded</p>
             <RecordHeader variant="customer" data={RH_CUSTOMER} signal={rhCustomerSignal} defaultExpanded
-              actions={[{ label: "Log activity" }, { label: "Contact account", variant: "primary" }]} />
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — collapsed</p>
             <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal}
-              actions={[{ label: "Log call" }, { label: "Send proposal", variant: "primary" }]} />
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — expanded</p>
             <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal} defaultExpanded
-              actions={[{ label: "Log call" }, { label: "Send proposal", variant: "primary" }]} />
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
           </section>
 
           <section>
@@ -32536,11 +32536,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             variant={pgVariant}
             data={pgData}
             signal={pgSignal}
-            actions={
-              pgVariant === "employee" ? [{ label: "Message" }, { label: "View profile", variant: "primary" }] :
-              pgVariant === "customer" ? [{ label: "Log activity" }, { label: "Contact account", variant: "primary" }] :
-              [{ label: "Log call" }, { label: "Send proposal", variant: "primary" }]
-            }
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS[pgVariant]}
           />
 
           <div>
@@ -32597,27 +32593,33 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Per-variant field mapping</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Per-variant structure — chips, Details, and recommended actions</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              The only variant-specific logic in the whole component lives in one function (<code className="text-[var(--primary)]">getRecordFields</code>) — it decides which fields become context chips (max 3, always visible) vs. Details (behind the disclosure). Everything downstream renders identically.
+              The only variant-specific logic in the whole component lives in two places: <code className="text-[var(--primary)]">getRecordFields</code> (chips vs. Details) and <code className="text-[var(--primary)]">RECORD_HEADER_RECOMMENDED_ACTIONS</code> (the canonical CTA pair below). Both are exported from <code className="text-[var(--primary)]">record-header.tsx</code> — a generated screen should pull from these rather than inventing new chip fields or action labels per instance, so every Employee/Customer/Client card stays predictable.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[110px_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Variant", "Context chips (max 3)", "Details grid"].map(h => (
+              <div className="grid grid-cols-[100px_1fr_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Variant", "Context chips (max 3)", "Details grid", "Recommended actions"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
               {[
-                ["Employee", "role, department, location", "manager, email, phone, startDate, team, accessRole"],
-                ["Customer", "tier, segment, adoptionLevel", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact"],
-                ["Client",   "dealStage, company, leadSource", "dealValue, owner, email, phone, lastInteraction, expectedCloseDate"],
-              ].map(([v, chips, details], i) => (
-                <div key={v} className="grid grid-cols-[110px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                ["Employee", "role, department, location", "manager, email, phone, startDate, team, accessRole", "Message (secondary) · View profile (primary)"],
+                ["Customer", "tier, segment, adoptionLevel", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact", "Log activity (secondary) · Contact account (primary)"],
+                ["Client",   "dealStage, company, leadSource", "dealValue, owner, email, phone, lastInteraction, expectedCloseDate", "Log call (secondary) · Send proposal (primary)"],
+              ].map(([v, chips, details, actions], i) => (
+                <div key={v} className="grid grid-cols-[100px_1fr_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{v}</div>
                   <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{chips}</div>
                   <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{details}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{actions}</div>
                 </div>
               ))}
+            </div>
+            <div className="rounded-md px-[14px] py-[12px] mt-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>Picking the variant:</strong> an internal team member (has a manager/department/access role) → <code>employee</code>. An existing paying account (has MRR/renewal date/tier) → <code>customer</code>. A prospect still in the pipeline (has a deal stage/value/close date, not yet paying) → <code>client</code>. If a record has fields from none of these 3 shapes, RecordHeader is the wrong component — flag it as a <code>// DS-GAP</code> instead of forcing a mismatched variant.
+              </p>
             </div>
           </section>
 
