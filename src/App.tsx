@@ -2111,13 +2111,14 @@ const RECORD_HEADER_SPEC = {
   name: "Record Header",
   figmaNodeId: "—",
   figmaUrl: "",
-  description: "Entity profile header used atop Employee/Customer/Client dashboard views. 3-layer architecture: Identity row (always visible — avatar, name, type, up to 3 context Tags, up to 3 actions), Signal (always visible — a single NextBestAction, semantically colored by severity), Details (disclosure — secondary fields grid). One shared layout for all 3 variants; only which fields land in chips vs. Details changes per variant.",
+  description: "Entity profile header used atop Employee/Customer/Client dashboard views. 3-layer architecture: Identity row (always visible — avatar, name, type, up to 3 stable-attribute Tags, a 3-tier action row), Signal (always visible — a single NextBestAction, semantically colored, optionally actionable inline), Details (disclosure — secondary fields grid). One shared layout for all 3 variants; only which fields land in chips vs. Details vs. actions changes per variant.",
   properties: [
     { name: "variant",        type: "Variant",  values: ["employee","customer","client"], default: "required", note: "Selects which of the 3 record shapes `data` must match, and which fields populate the context chips vs. the Details grid — see getRecordFields in record-header.tsx." },
     { name: "data",           type: "object",   values: ["EmployeeRecord | CustomerRecord | ClientRecord"], default: "required" },
-    { name: "signal",         type: "object",   values: ["NextBestAction — { label, severity, dueContext?, onAction? }"], default: "required", note: "Fed by the AIMS OS Next Best Action engine. Same shape for all 3 variants — the engine never needs variant-specific branching." },
-    { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? } · max 3"], default: "[]", note: "Same shape as EntityList's ELAction, reused on purpose." },
-    { name: "defaultExpanded",type: "Boolean",  values: ["true","false"], default: "false", note: "Uncontrolled initial state for the Details disclosure." },
+    { name: "signal",         type: "object",   values: ["NextBestAction — { label, severity, dueContext?, aiGenerated?, actionLabel?, onAction? }"], default: "required", note: "Fed by the AIMS OS Next Best Action engine. Same shape for all 3 variants. actionLabel renders a real inline button (calls onAction) when the recommendation names one specific action." },
+    { name: "assignedAgent",  type: "object",   values: ["AssignedAgent — { id, name, onOpenChat }"], default: "required", note: "AIMS OS is agent-first — every record has one. Renders as an always-present icon-only button (Sparkle, variant=\"primary\") that opens a chat scoped to this record. RecordHeader never renders the chat UI itself." },
+    { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as the one contextual CTA button; actions[1+] land in the \"···\" overflow Menu. Same RecordAction shape as EntityList's ELAction." },
+    { name: "defaultExpanded",type: "Boolean",  values: ["true","false"], default: "false", note: "Uncontrolled initial state for the Details disclosure. Chevron only renders when there's at least one Details field." },
   ],
   sizes: [
     { size: "Card",     dimensions: "100% width, auto height", padding: "16px H / 24px V (CardContainer default)", gap: "16px between layers" },
@@ -32389,11 +32390,15 @@ const RH_EMPLOYEE_SIGNAL: NextBestAction = {
 
 const RH_CUSTOMER: CustomerRecord = {
   accountName: "Acme Corp", segment: "Enterprise", owner: "Jamie Rivera", tier: "Tier 1",
-  renewalDate: "Sep 2, 2026", mrr: "$18,400", lastContact: "3 days ago", openTickets: 2,
-  adoptionLevel: "Low", primaryContact: "Jane Doe — VP Operations",
+  industry: "Retail", renewalDate: "Sep 2, 2026", mrr: "$18,400", lastContact: "3 days ago",
+  openTickets: 2, adoptionLevel: "Low", primaryContact: "Jane Doe — VP Operations",
 }
+// actionLabel: "Schedule renewal call" — nameable AND there's still more worth
+// reviewing (why the score dropped) before acting, so the bar keeps both the
+// inline button and the click-through (see SignalBar's actionLabel doc).
 const RH_CUSTOMER_SIGNAL: NextBestAction = {
   label: "Health score dropped to 61 — renews in 19 days", severity: "error", dueContext: "Renewal at risk",
+  actionLabel: "Schedule renewal call",
 }
 
 const RH_CLIENT: ClientRecord = {
@@ -32405,8 +32410,21 @@ const RH_CLIENT: ClientRecord = {
 // is a genuine probabilistic recommendation (note the confidence score), so it
 // gets the purple/Sparkles "AI produced this" treatment instead of a severity
 // color — see the aiGenerated doc comment in record-header.tsx for why.
+// actionLabel: "Send proposal" — the action IS the only thing here (a single
+// yes/no decision, nothing further to review), so this replaces "Send
+// proposal" as a loose Identity-row CTA entirely rather than duplicating it.
 const RH_CLIENT_SIGNAL: NextBestAction = {
   label: "Ready to send final proposal", severity: "success", dueContext: "NBA engine · confidence 82%", aiGenerated: true,
+  actionLabel: "Send proposal",
+}
+
+// Assigned AI agent — one per variant, same shape (see AssignedAgent in
+// record-header.tsx). onOpenChat is wired inside RecordHeaderPage below,
+// same delegation pattern as the Signal/action handlers.
+const RH_AGENTS: Record<RecordHeaderVariant, { id: string; name: string }> = {
+  employee: { id: "agent-hr",       name: "HR Copilot" },
+  customer: { id: "agent-success",  name: "Success Copilot" },
+  client:   { id: "agent-sales",    name: "Sales Copilot" },
 }
 
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
@@ -32429,6 +32447,18 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const rhEmployeeSignal: NextBestAction = { ...RH_EMPLOYEE_SIGNAL, onAction: () => setRhApprovalsOpen(true) }
   const rhCustomerSignal: NextBestAction = { ...RH_CUSTOMER_SIGNAL, onAction: () => setRhHealthOpen(true) }
   const rhClientSignal:   NextBestAction = { ...RH_CLIENT_SIGNAL,   onAction: () => setRhProposalOpen(true) }
+
+  // Assigned agent chat (task 5) — no dedicated "agent chat" component exists
+  // anywhere in src/components/ui/ yet (checked directly), so this demo reuses
+  // the generic SidePanel — the same "reuse what exists, don't invent a new
+  // overlay mechanism" rule the Signal overlays above already follow. Any
+  // consumer screen wires assignedAgent.onOpenChat to whatever chat surface it
+  // already has; this is one example of what that can look like.
+  const [rhChatWith, setRhChatWith] = useState<{ id: string; name: string; recordName: string } | null>(null)
+  const rhAssignedAgent = (v: RecordHeaderVariant, recordName: string) => ({
+    ...RH_AGENTS[v],
+    onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
+  })
 
   const pgData   = pgVariant === "employee" ? RH_EMPLOYEE : pgVariant === "customer" ? RH_CUSTOMER : RH_CLIENT
   const pgSignal = pgVariant === "employee" ? rhEmployeeSignal : pgVariant === "customer" ? rhCustomerSignal : rhClientSignal
@@ -32469,36 +32499,42 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — collapsed (Identity + Signal only)</p>
             <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal}
+              assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
               actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — expanded (Details grid revealed)</p>
             <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal} defaultExpanded
+              assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
               actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — collapsed</p>
             <RecordHeader variant="customer" data={RH_CUSTOMER} signal={rhCustomerSignal}
+              assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER.accountName)}
               actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — expanded</p>
             <RecordHeader variant="customer" data={RH_CUSTOMER} signal={rhCustomerSignal} defaultExpanded
+              assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER.accountName)}
               actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — collapsed</p>
             <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal}
+              assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
               actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — expanded</p>
             <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal} defaultExpanded
+              assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
               actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
           </section>
 
@@ -32536,6 +32572,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             variant={pgVariant}
             data={pgData}
             signal={pgSignal}
+            assignedAgent={rhAssignedAgent(pgVariant, pgVariant === "customer" ? (pgData as CustomerRecord).accountName : (pgData as EmployeeRecord | ClientRecord).name)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS[pgVariant]}
           />
 
@@ -32604,9 +32641,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Employee", "role, department, location", "manager, email, phone, startDate, team, accessRole", "Message (primary) — just one; \"View profile\" would be circular here"],
-                ["Customer", "tier, segment, adoptionLevel", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact", "View contract (secondary) · Contact account (primary)"],
-                ["Client",   "dealStage, company, leadSource", "dealValue, owner, email, phone, lastInteraction, expectedCloseDate", "Log call (secondary) · Send proposal (primary)"],
+                ["Employee", "role, department, location", "manager, email, phone, startDate, team, accessRole", "Message — the only CTA (\"View profile\" would be circular here)"],
+                ["Customer", "tier, segment, industry", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact, adoptionLevel", "Contact account (CTA) · View contract (overflow)"],
+                ["Client",   "company, dealValue, leadSource", "owner, email, phone, lastInteraction, expectedCloseDate", "Email (CTA) · Log call (overflow — belongs to the Activity tab)"],
               ].map(([v, chips, details, actions], i) => (
                 <div key={v} className="grid grid-cols-[100px_1fr_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{v}</div>
@@ -32621,6 +32658,16 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <strong>Picking the variant:</strong> an internal team member (has a manager/department/access role) → <code>employee</code>. An existing paying account (has MRR/renewal date/tier) → <code>customer</code>. A prospect still in the pipeline (has a deal stage/value/close date, not yet paying) → <code>client</code>. If a record has fields from none of these 3 shapes, RecordHeader is the wrong component — flag it as a <code>// DS-GAP</code> instead of forcing a mismatched variant.
               </p>
             </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">3-tier action hierarchy + assigned agent</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              AIMS OS is agent-first — every record has an assigned agent, so that trigger is required and identical across all 3 variants (<code className="text-[var(--primary)]">assignedAgent: {"{ id, name, onOpenChat }"}</code>), not something each screen decides to include. The action row is always, in order: AI agent (icon-only, <code>variant="primary"</code> — the row's one visually prominent button) → the variant's contextual CTA → "···" overflow (<code>Menu</code>/<code>MenuItem</code>) for anything else. <code className="text-[var(--primary)]">actions[0]</code> is always the CTA; <code className="text-[var(--primary)]">actions[1+]</code> land in overflow automatically.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[680px]">
+              <strong style={{ color: "var(--foreground)" }}>Signal is actionable, not just readable:</strong> set <code className="text-[var(--primary)]">signal.actionLabel</code> when the NBA engine names one specific action (e.g. "Send proposal," "Schedule renewal call") — it renders as a real inline button instead of an implicit click-anywhere chevron. Leave it unset when there's no single action (Employee's "2 tasks pending approval" — several distinct items, not one thing to do).
+            </p>
           </section>
 
           <section>
@@ -32812,6 +32859,36 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         ctaPrimary={{ label: "Send proposal", onClick: () => setRhProposalOpen(false) }}
         ctaSecondary={{ label: "Not yet", onClick: () => setRhProposalOpen(false) }}
       />
+
+      {/* Assigned-agent chat (task 5) — SidePanel, the repo's real inline (not
+          overlay) panel primitive, since there's no dedicated chat component
+          to reuse yet. Content here is a minimal, honest demo — a real chat
+          surface is a separate build, not something RecordHeader should
+          assume the shape of. */}
+      <SidePanel
+        open={rhChatWith !== null}
+        onClose={() => setRhChatWith(null)}
+        title={rhChatWith?.name}
+        description={rhChatWith ? `Chatting about ${rhChatWith.recordName}` : undefined}
+        titleIcon={<LucideIcons.Sparkle size={14} strokeWidth={1.75} />}
+        titleIconVariant="purple"
+        footer={
+          <div className="flex items-center gap-[8px] w-full">
+            <Input placeholder="Ask about this record…" className="flex-1" />
+            <Button variant="primary" size="sm" iconPosition="alone" icon={<LucideIcons.Send size={14} />} aria-label="Send" />
+          </div>
+        }
+      >
+        {rhChatWith && (
+          <div className="flex flex-col gap-[12px] p-[4px]">
+            <div className="rounded-[8px] px-[12px] py-[10px] self-start max-w-[85%]" style={{ background: "var(--tag-purple-bg)", border: "1px solid var(--tag-purple-bd)" }}>
+              <p className="text-[13px] leading-[1.5]" style={{ color: "var(--tag-purple-fg)" }}>
+                Hi! I'm {rhChatWith.name}, assigned to {rhChatWith.recordName}. Ask me anything about their history, open items, or what to do next.
+              </p>
+            </div>
+          </div>
+        )}
+      </SidePanel>
     </div>
   )
 }
