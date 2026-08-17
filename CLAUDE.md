@@ -68,7 +68,7 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER** pass the `label` prop to `Input` or `Textarea` in desktop screen files.
 
 ### Buttons & overlays
-- **NEVER** use `variant="main"` inside a widget, card, SlideOut, or modal — use `primary`.
+- **NEVER** use `variant="main"` inside a widget, card, SlideOut, or modal — use `primary`. One named exception: `RecordHeader`'s AI agent trigger — see the Button hierarchy rules below.
 - **NEVER** open a `ModalDialog` for non-blocking or non-destructive content — use `SlideOut`.
 - **NEVER** show a filter chip before the user clicks Apply.
 
@@ -128,13 +128,13 @@ Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard vi
 - `getRecordFields(variant, data)` → which fields become the 3 identity chips vs. the Details grid (see record-header.tsx or the Reference tab for the exact per-variant list)
 - `RECORD_HEADER_RECOMMENDED_ACTIONS[variant]` → `actions[0]` is the one contextual CTA, `actions[1+]` land in the "···" overflow. Not always 2 — e.g. `employee` is just "Message," since RecordHeader always sits on that record's own profile page, so anything the page already shows below it (Overview/Activity/Log tabs) — like "View profile" or "Log activity" — is dead weight, not a valid action. Genuinely tab-duplicate actions (e.g. "Log call," which belongs to Activity) go in the overflow, not the header's one CTA slot.
 
-**`assignedAgent` is required, not optional** (`{ id, name, onOpenChat }`) — AIMS OS is agent-first, every record has one. Renders as an always-present, most-prominent (icon-only, `variant="primary"`) button using the Topbar's own `Sparkle` glyph (the single 4-point one, not the 3-star `Sparkles`) — never omit it, and never use `variant="main"` for it (RecordHeader is a card; see the Button hierarchy rule below).
+**`assignedAgent` is required, not optional** (`{ id, name, onOpenChat }`) — AIMS OS is agent-first, every record has one. Renders as an always-present, most-prominent (icon-only, `variant="main"`) button using the Topbar's own `Sparkle` glyph (the single 4-point one, not the 3-star `Sparkles`) — never omit it. This is the one confirmed exception to "never `main` inside a card" (see Button hierarchy rules below) — don't extend that exception to any other button in this file.
 
-**Signal is required, not optional decoration** — every RecordHeader needs a `NextBestAction` (`{ label, severity, dueContext?, aiGenerated?, actionLabel?, onAction? }`):
-- `severity` drives the color for a deterministic fact or urgency state (task counts, renewal risk, SLA breach) — this is the default.
+**Signal is required, not optional decoration** — every RecordHeader needs a `NextBestAction` (`{ label, severity, dueContext?, aiGenerated?, actionLabel?, onAction? }`) — but **required-as-a-prop does not mean "always urgent."** Most records, most of the time, have nothing pressing; forcing an alert-colored Signal onto a record that's genuinely fine is as wrong as omitting Signal would be. Pick `severity` from what's actually true about THIS record right now, never from a fixed per-variant template — see the Record Header catalog page's "All 3 variants — nothing urgent to surface" (Overview) and the Playground's "Needs attention / All good" toggle for the concrete range:
+- `success`/`alert`/`error` — a real urgency or risk state (task counts, renewal risk, SLA breach) or a genuinely good milestone worth flagging. This is the exception, not the default.
+- `informative`/`neutral` — a calm, non-urgent status line ("No pending approvals," "Early discovery, no next step due yet"). This is the common case — reach for it whenever nothing warrants an alert color.
 - `aiGenerated: true` swaps to the purple/Sparkles treatment **only** for a genuine probabilistic recommendation (confidence-scored, inferred) — never for a plain count or a real risk state. Urgency should always win visually over "an AI produced this."
-- `actionLabel` — set it when the NBA engine names ONE specific action ("Send proposal," "Schedule renewal call"); it renders as a real inline button, not just an implicit click-through. Leave it unset when there are several distinct items to review (e.g. "2 tasks pending approval") rather than one thing to do.
-- If there's truly nothing actionable to surface, use `severity: "neutral"` with a plain status line — never fabricate a fake NextBestAction just to fill the slot.
+- `actionLabel` — set it when the NBA engine names ONE specific action ("Send proposal," "Schedule renewal call"); it renders as a real inline button, not just an implicit click-through. Leave it unset when there are several distinct items to review (e.g. "2 tasks pending approval") rather than one thing to do, AND leave it unset for a calm/neutral status — there's nothing to act on.
 
 **Signal click destination** — same framework as Entity click behavior above, applied to `signal.onAction`:
 - Multiple items need reviewing one by one before deciding (e.g. several pending approvals) → `SlideOut`, no `actionLabel` (nothing single to name)
@@ -672,6 +672,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 - **Never repeat `main` more than once per view.** If a widget or card needs a call-to-action, use `primary`, not `main`.
 - **No more than 2 `primary` buttons visible at the same time** in a single scrolled viewport. If more actions compete, demote lower-priority ones to `secondary`.
 - Action order is always: `main` (header) → `primary` → `secondary` → `tertiary`.
+- **One confirmed exception:** `RecordHeader`'s AI agent trigger uses `variant="main"` even though it renders inside a `CardContainer`. Confirmed directly by Michael — the agent button is the platform's one persistent, always-present entry point (same role as Topbar's own IA-icon), not a regular card CTA, so it earns the top-of-hierarchy treatment. Do not treat this as precedent for any other card/widget/SlideOut button — it's a named, single-purpose exception, not a loophole.
 
 ---
 
@@ -682,7 +683,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 - Rendering dropdowns inside `overflow: hidden` parents — use fixed positioning to escape.
 - Creating a new button/input/card component when `src/components/ui/` has one.
 - Showing two secondary buttons side by side — order is always primary → secondary → tertiary.
-- Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead.
+- Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead (except `RecordHeader`'s AI agent trigger — see Button hierarchy rules).
 - Adding a filter chip before Apply is clicked.
 - Opening a Modal for non-destructive/non-blocking content — use SlideOut instead.
 - Showing a loading indicator for operations under 300ms.

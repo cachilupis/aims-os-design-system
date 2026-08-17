@@ -61,13 +61,18 @@ import { Menu, MenuItem } from "@/components/ui/menu-item"
  *                "IA-icon" uses — `Sparkle` (single 4-point sparkle), NOT
  *                `Sparkles` (3-star) — see topbar.tsx's own header comment,
  *                which already corrected this exact mix-up once. Uses
- *                variant="primary", NOT variant="main": Topbar's IA-icon has
- *                its own one-off radial-gradient treatment, but CLAUDE.md's
- *                Button hierarchy rule explicitly bans variant="main" "inside
- *                a widget, card, or SlideOut" — RecordHeader is a card
- *                (CardContainer). variant="primary" is the correct escalation
- *                per that same rule, and still reads as the most prominent
- *                button in the row since nothing else here uses primary.
+ *                variant="main" — a DELIBERATE, NAMED EXCEPTION to CLAUDE.md's
+ *                Button hierarchy rule ("never variant=main inside a widget,
+ *                card, or SlideOut"), confirmed directly by Michael: the
+ *                agent trigger is the platform's one persistent, always-there
+ *                entry point (same conceptual role as Topbar's own IA-icon,
+ *                which gets its own one-off gradient treatment precisely
+ *                because it's not "just another card CTA"), so it earns the
+ *                same top-of-hierarchy treatment even though it physically
+ *                renders inside a CardContainer. This is the ONLY sanctioned
+ *                main-inside-a-card case — see the CLAUDE.md exception note
+ *                next to the Button hierarchy rule. Don't use this exception
+ *                as precedent for any other card-level button.
  *   Overflow   → Menu/MenuItem (menu-item.tsx) — the repo's real dropdown atom,
  *                anchored the same way NotificationCenter's own filter dropdown
  *                is (capture the trigger's rect on click, render fixed-position,
@@ -436,8 +441,10 @@ function RecordHeader({
               items, and the AI button is the first child within it, so it's
               the last thing to get pushed off on a narrow viewport. */}
           <div className="flex items-center gap-[6px] shrink-0 flex-wrap justify-end">
+            {/* variant="main" — deliberate exception, see file header comment
+                and the CLAUDE.md Button hierarchy exception note. */}
             <Button
-              variant="primary"
+              variant="main"
               size="sm"
               iconPosition="alone"
               icon={<Sparkle size={16} strokeWidth={1.75} />}
