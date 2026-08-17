@@ -1,6 +1,6 @@
 import { useState } from "react"
 import {
-  ChevronDown, ChevronUp, CircleCheck, TriangleAlert, CircleX, Info, Circle, Sparkles, Sparkle, MoreHorizontal,
+  ChevronDown, ChevronUp, CircleCheck, TriangleAlert, CircleX, Info, Sparkles, Sparkle, MoreHorizontal, X, Flag,
   User, Mail, Phone, Calendar, CalendarCheck, Users, ShieldCheck, DollarSign, Ticket, Contact, Clock, Activity,
   type LucideIcon,
 } from "lucide-react"
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
 import { Tag } from "@/components/ui/tag"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Menu, MenuItem } from "@/components/ui/menu-item"
 
@@ -153,6 +154,16 @@ export interface NextBestAction {
    * already documents, applied here instead of inventing a second rule.
    */
   onAction?: () => void
+  /**
+   * True → the bar gets a small close (X) affordance, same treatment as
+   * AlertBanner's own onClose. Reserve this for the "nothing pressing"
+   * cases — a Signal with a real actionLabel/onAction shouldn't be
+   * dismissable, since dismissing it would let the actual next step get
+   * lost. Dismissal is local UI state (session-only); pass onDismiss if the
+   * host needs to persist the choice.
+   */
+  dismissible?: boolean
+  onDismiss?: () => void
 }
 
 // ── Assigned AI agent (transversal — task 5) ────────────────────────────────
@@ -230,10 +241,11 @@ export interface CustomerRecord {
 export interface ClientRecord {
   name: string
   company: string
-  /** No longer an identity chip — a deal stage is a dynamic state, not a
-   *  stable attribute. Surfaced instead as a small badge on the Signal row
-   *  (see getRecordFields' `signalBadge`), next to the thing it actually
-   *  contextualizes. */
+  /** Not an identity chip — a deal stage is a dynamic state, not a stable
+   *  attribute (see the chip-content rule below). It's reference info, not
+   *  urgent, so it lives in Details rather than on the Signal row itself —
+   *  Signal has no badge/Tag slot; AlertBanner, the real component it's
+   *  styled after, doesn't have one either. */
   dealStage: string
   dealValue: string
   owner: string
@@ -262,13 +274,20 @@ export interface RecordHeaderProps {
 
 // ── Severity → token mapping (Signal) ──────────────────────────────────────
 // See file header for why informative/neutral fall back to Tag's tokens.
+// neutral has no Icon: there's no lucide glyph that reads as "status: fine,
+// nothing to report" without either duplicating informative's Info icon or
+// looking like a form control (an empty ringed circle reads as an unchecked
+// radio button — that's exactly what this used to render and what prompted
+// this fix). Badge's own neutral dot (badge.tsx) already IS the DS's real
+// "muted/inactive status" indicator, so SignalBar renders that instead of an
+// icon for this one severity — see the null check at its render site.
 
-const SEVERITY_CONFIG: Record<NBASeverity, { Icon: LucideIcon; bg: string; bd: string; fg: string }> = {
+const SEVERITY_CONFIG: Record<NBASeverity, { Icon: LucideIcon | null; bg: string; bd: string; fg: string }> = {
   success: { Icon: CircleCheck,   bg: "var(--ab-success-bg)",     bd: "var(--ab-success-bd)",     fg: "var(--ab-success-text)" },
   alert:   { Icon: TriangleAlert, bg: "var(--ab-alert-bg)",       bd: "var(--ab-alert-bd)",       fg: "var(--ab-alert-text)" },
   error:   { Icon: CircleX,       bg: "var(--ab-error-bg)",       bd: "var(--ab-error-bd)",       fg: "var(--ab-error-text)" },
   informative: { Icon: Info,      bg: "var(--tag-informative-bg)", bd: "var(--tag-informative-bd)", fg: "var(--tag-informative-fg)" },
-  neutral:     { Icon: Circle,    bg: "var(--tag-neutral-bg)",     bd: "var(--tag-neutral-bd)",     fg: "var(--tag-neutral-fg)" },
+  neutral:     { Icon: null,      bg: "var(--tag-neutral-bg)",     bd: "var(--tag-neutral-bd)",     fg: "var(--tag-neutral-fg)" },
 }
 
 // Same trio + icon as EntityList's own aiInsight block ("AI {action}" row) —
@@ -294,12 +313,6 @@ type RecordFields = {
    *  just reference info). */
   chips: string[]
   details: DetailField[]
-  /** Small contextual badge rendered on the Signal row itself, for the one
-   *  case (Client) where a dynamic attribute needs to live "next to" the
-   *  Signal rather than in the identity chips. Not part of NextBestAction —
-   *  this is variant-specific data from `data`, not something the NBA engine
-   *  returns, so it stays out of that shape. */
-  signalBadge?: string
 }
 
 // One icon per Details field so the expanded grid scans as icon+label pairs,
@@ -345,8 +358,8 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
     name: d.name,
     typeLabel: "Client (deal)",
     chips: [d.company, d.dealValue, d.leadSource],
-    signalBadge: d.dealStage,
     details: [
+      { label: "Deal stage",           value: d.dealStage,          icon: Flag },
       { label: "Owner",                value: d.owner,              icon: User },
       { label: "Email",                value: d.email,              icon: Mail },
       { label: "Phone",                value: d.phone,              icon: Phone },
@@ -483,7 +496,7 @@ function RecordHeader({
             when the NBA engine names a specific action (signal.actionLabel), it renders
             as a real inline button instead of asking the user to click-through and hunt
             for it. */}
-        <SignalBar signal={signal} sig={sig} badge={fields.signalBadge} />
+        <SignalBar signal={signal} sig={sig} />
 
         {/* ── Layer 3: Details (disclosure) — secondary fields, revealed on demand.
             max-height transition mirrors widget-father.tsx's own collapse animation
@@ -573,16 +586,15 @@ function ActionOverflowMenu({ items }: { items: RecordAction[] }) {
 function SignalBar({
   signal,
   sig,
-  badge,
 }: {
   signal: NextBestAction
-  sig: { Icon: LucideIcon; bg: string; bd: string; fg: string }
-  /** Client's dealStage — a dynamic attribute shown next to the Signal instead
-   *  of as an identity chip (see ClientRecord.dealStage's own comment). */
-  badge?: string
+  sig: { Icon: LucideIcon | null; bg: string; bd: string; fg: string }
 }) {
   const { Icon } = sig
   const clickable = Boolean(signal.onAction)
+  const [dismissed, setDismissed] = useState(false)
+
+  if (dismissed) return null
 
   return (
     <div
@@ -599,9 +611,13 @@ function SignalBar({
       )}
       style={{ background: sig.bg, border: `0.5px solid ${sig.bd}` }}
     >
-      <Icon size={16} strokeWidth={1.75} style={{ color: sig.fg }} className="shrink-0" />
-      {badge && (
-        <Tag variant="secondary" size="sm" className="shrink-0">{badge}</Tag>
+      {/* neutral has no Icon (see SEVERITY_CONFIG) — Badge's own neutral dot
+          is the real "muted status" indicator, not a stroked icon standing
+          in for one. */}
+      {Icon ? (
+        <Icon size={16} strokeWidth={1.75} style={{ color: sig.fg }} className="shrink-0" />
+      ) : (
+        <Badge variant="neutral" className="shrink-0" />
       )}
       <span className="text-[13px] font-semibold leading-[1.4] flex-1 min-w-0" style={{ color: sig.fg }}>
         {signal.label}
@@ -609,7 +625,7 @@ function SignalBar({
           <span className="font-medium opacity-80"> · {signal.dueContext}</span>
         )}
       </span>
-      {signal.actionLabel ? (
+      {signal.actionLabel && (
         // The action is nameable — a real button replaces the plain chevron
         // hint, since "click somewhere on this bar" is a worse affordance
         // than a labeled button once there's a specific verb to show.
@@ -624,8 +640,23 @@ function SignalBar({
         >
           {signal.actionLabel}
         </Button>
-      ) : (
-        clickable && <ChevronDown size={14} strokeWidth={1.75} style={{ color: sig.fg, transform: "rotate(-90deg)" }} className="shrink-0" />
+      )}
+      {!signal.actionLabel && clickable && (
+        <ChevronDown size={14} strokeWidth={1.75} style={{ color: sig.fg, transform: "rotate(-90deg)" }} className="shrink-0" />
+      )}
+      {signal.dismissible && (
+        // Same affordance as AlertBanner's onClose — reserved for signals with
+        // no actionLabel/onAction (see the field's own doc comment above), so
+        // dismissing never hides an actual next step.
+        <button
+          type="button"
+          aria-label="Dismiss"
+          onClick={e => { e.stopPropagation(); setDismissed(true); signal.onDismiss?.() }}
+          className="shrink-0 w-[24px] h-[24px] flex items-center justify-center rounded-[4px] transition-opacity hover:opacity-70 focus-visible:outline-none"
+          style={{ color: sig.fg }}
+        >
+          <X size={14} strokeWidth={1.75} />
+        </button>
       )}
     </div>
   )
