@@ -2116,7 +2116,7 @@ const RECORD_HEADER_SPEC = {
     { name: "variant",        type: "Variant",  values: ["employee","customer","client"], default: "required", note: "Selects which of the 3 record shapes `data` must match, and which fields populate the context chips vs. the Details grid — see getRecordFields in record-header.tsx." },
     { name: "data",           type: "object",   values: ["EmployeeRecord | CustomerRecord | ClientRecord"], default: "required" },
     { name: "signal",         type: "object",   values: ["NextBestAction — { label, severity, dueContext?, aiGenerated?, actionLabel?, onAction? }"], default: "required", note: "Fed by the AIMS OS Next Best Action engine. Same shape for all 3 variants. actionLabel renders a real inline button (calls onAction) when the recommendation names one specific action." },
-    { name: "assignedAgent",  type: "object",   values: ["AssignedAgent — { id, name, onOpenChat }"], default: "required", note: "AIMS OS is agent-first — every record has one. Renders as an always-present icon-only button (Sparkle, variant=\"primary\") that opens a chat scoped to this record. RecordHeader never renders the chat UI itself." },
+    { name: "assignedAgent",  type: "object",   values: ["AssignedAgent — { id, name, onOpenChat }"], default: "required", note: "AIMS OS is agent-first — every record has one. Renders as an always-present icon-only button (Sparkle, variant=\"main\" — a named exception to the usual no-main-in-a-card rule) that opens a chat scoped to this record. RecordHeader never renders the chat UI itself." },
     { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as the one contextual CTA button; actions[1+] land in the \"···\" overflow Menu. Same RecordAction shape as EntityList's ELAction." },
     { name: "defaultExpanded",type: "Boolean",  values: ["true","false"], default: "false", note: "Uncontrolled initial state for the Details disclosure. Chevron only renders when there's at least one Details field." },
   ],
@@ -32418,6 +32418,23 @@ const RH_CLIENT_SIGNAL: NextBestAction = {
   actionLabel: "Send proposal",
 }
 
+// "Nothing urgent" Signals — the other 3 mocks above all happen to need
+// attention, which risks reading as "Signal = always an alert." It doesn't:
+// most records, most of the time, have nothing pressing. No actionLabel and
+// no onAction here on purpose — there's genuinely nothing to click through
+// to. Deliberately spread across 3 different severities (neutral/success/
+// informative) rather than reusing one, so it's visually obvious severity
+// tracks the record's real state, not a fixed template per variant.
+const RH_EMPLOYEE_SIGNAL_CALM: NextBestAction = {
+  label: "No pending approvals", severity: "neutral", dueContext: "All caught up",
+}
+const RH_CUSTOMER_SIGNAL_CALM: NextBestAction = {
+  label: "Health steady at 92", severity: "success", dueContext: "On track — renews in 140 days",
+}
+const RH_CLIENT_SIGNAL_CALM: NextBestAction = {
+  label: "Early discovery — no next step due yet", severity: "informative", dueContext: "Last touched 2 days ago",
+}
+
 // Assigned AI agent — one per variant, same shape (see AssignedAgent in
 // record-header.tsx). onOpenChat is wired inside RecordHeaderPage below,
 // same delegation pattern as the Signal/action handlers.
@@ -32430,6 +32447,9 @@ const RH_AGENTS: Record<RecordHeaderVariant, { id: string; name: string }> = {
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [pgVariant, setPgVariant] = useState<RecordHeaderVariant>("employee")
+  // "Needs attention" vs. "All good" — demonstrates that Signal's severity
+  // and content follow the record's REAL state; it isn't always an alert.
+  const [pgSignalState, setPgSignalState] = useState<"attention" | "calm">("attention")
 
   // Click destinations for Signal.onAction — one real overlay per variant,
   // chosen the same way Notification Item's Reference tab picks Full
@@ -32460,8 +32480,11 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
   })
 
-  const pgData   = pgVariant === "employee" ? RH_EMPLOYEE : pgVariant === "customer" ? RH_CUSTOMER : RH_CLIENT
-  const pgSignal = pgVariant === "employee" ? rhEmployeeSignal : pgVariant === "customer" ? rhCustomerSignal : rhClientSignal
+  const pgData = pgVariant === "employee" ? RH_EMPLOYEE : pgVariant === "customer" ? RH_CUSTOMER : RH_CLIENT
+  const pgSignal =
+    pgSignalState === "calm"
+      ? (pgVariant === "employee" ? RH_EMPLOYEE_SIGNAL_CALM : pgVariant === "customer" ? RH_CUSTOMER_SIGNAL_CALM : RH_CLIENT_SIGNAL_CALM)
+      : (pgVariant === "employee" ? rhEmployeeSignal : pgVariant === "customer" ? rhCustomerSignal : rhClientSignal)
 
   return (
     <div>
@@ -32539,6 +32562,24 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">All 3 variants — nothing urgent to surface</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              The examples above all happen to need attention — that's not the rule, it's a coincidence of realistic demo data. Most records, most of the time, have nothing pressing. No <code>actionLabel</code>, no <code>onAction</code> here — there's genuinely nothing to click through to. Note the severities are 3 different colors (neutral/success/informative), not one reused template — severity tracks the record's actual state.
+            </p>
+            <div className="flex flex-col gap-[16px]">
+              <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={RH_EMPLOYEE_SIGNAL_CALM}
+                assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
+                actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
+              <RecordHeader variant="customer" data={RH_CUSTOMER} signal={RH_CUSTOMER_SIGNAL_CALM}
+                assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER.accountName)}
+                actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
+              <RecordHeader variant="client" data={RH_CLIENT} signal={RH_CLIENT_SIGNAL_CALM}
+                assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
+                actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
+            </div>
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
             <div className="grid grid-cols-2 gap-[16px]">
               <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
@@ -32596,6 +32637,32 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </div>
             <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
               Click the chevron on the Identity row to expand/collapse Details — real disclosure state, not a mock.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Signal state — not every record needs an urgent-looking Signal</p>
+            <div className="flex flex-wrap gap-[4px]">
+              {([
+                { key: "attention", label: "Needs attention" },
+                { key: "calm",      label: "All good" },
+              ] as const).map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setPgSignalState(s.key)}
+                  className="px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors"
+                  style={{
+                    background: pgSignalState === s.key ? "#2173ff" : "var(--ctrl-inactive-bg)",
+                    color: pgSignalState === s.key ? "#fff" : "var(--field-label)",
+                    border: pgSignalState === s.key ? "none" : "1px solid var(--field-border)",
+                  }}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
+              Same variant, same layout — only <code>signal</code>'s content and severity change. Most records, most of the time, are "All good"; reach for an urgent color only when the state genuinely warrants it.
             </p>
           </div>
         </div>
@@ -32663,10 +32730,13 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">3-tier action hierarchy + assigned agent</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              AIMS OS is agent-first — every record has an assigned agent, so that trigger is required and identical across all 3 variants (<code className="text-[var(--primary)]">assignedAgent: {"{ id, name, onOpenChat }"}</code>), not something each screen decides to include. The action row is always, in order: AI agent (icon-only, <code>variant="primary"</code> — the row's one visually prominent button) → the variant's contextual CTA → "···" overflow (<code>Menu</code>/<code>MenuItem</code>) for anything else. <code className="text-[var(--primary)]">actions[0]</code> is always the CTA; <code className="text-[var(--primary)]">actions[1+]</code> land in overflow automatically.
+              AIMS OS is agent-first — every record has an assigned agent, so that trigger is required and identical across all 3 variants (<code className="text-[var(--primary)]">assignedAgent: {"{ id, name, onOpenChat }"}</code>), not something each screen decides to include. The action row is always, in order: AI agent (icon-only, <code>variant="main"</code> — a deliberate, named exception to this repo's usual "never main in a card" rule, since this is the platform's one persistent agent entry point, not a regular card CTA) → the variant's contextual CTA → "···" overflow (<code>Menu</code>/<code>MenuItem</code>) for anything else. <code className="text-[var(--primary)]">actions[0]</code> is always the CTA; <code className="text-[var(--primary)]">actions[1+]</code> land in overflow automatically.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
+              <strong style={{ color: "var(--foreground)" }}>Signal is actionable, not just readable:</strong> set <code className="text-[var(--primary)]">signal.actionLabel</code> when the NBA engine names one specific action (e.g. "Send proposal," "Schedule renewal call") — it renders as a real inline button instead of an implicit click-anywhere chevron. Leave it unset when there's no single action (Employee's "2 tasks pending approval" — several distinct items, not one thing to do).
             </p>
             <p className="text-[12px] text-[var(--field-supporting)] max-w-[680px]">
-              <strong style={{ color: "var(--foreground)" }}>Signal is actionable, not just readable:</strong> set <code className="text-[var(--primary)]">signal.actionLabel</code> when the NBA engine names one specific action (e.g. "Send proposal," "Schedule renewal call") — it renders as a real inline button instead of an implicit click-anywhere chevron. Leave it unset when there's no single action (Employee's "2 tasks pending approval" — several distinct items, not one thing to do).
+              <strong style={{ color: "var(--foreground)" }}>Not every Signal is an alert.</strong> Pick severity from the record's actual state, not from a fixed per-variant template: <code>alert</code>/<code>error</code> for something urgent or at-risk, <code>success</code> for a genuinely good state worth noting, <code>informative</code>/<code>neutral</code> for a calm status with nothing pressing. See "All 3 variants — nothing urgent to surface" in Overview, and the Playground's "Needs attention / All good" toggle — the same variant looks completely different depending on what's actually true about that record.
             </p>
           </section>
 
