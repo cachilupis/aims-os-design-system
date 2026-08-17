@@ -2115,7 +2115,7 @@ const RECORD_HEADER_SPEC = {
   properties: [
     { name: "variant",        type: "Variant",  values: ["employee","customer","client"], default: "required", note: "Selects which of the 3 record shapes `data` must match, and which fields populate the context chips vs. the Details grid — see getRecordFields in record-header.tsx." },
     { name: "data",           type: "object",   values: ["EmployeeRecord | CustomerRecord | ClientRecord"], default: "required" },
-    { name: "signal",         type: "object",   values: ["NextBestAction — { label, severity, dueContext?, aiGenerated?, actionLabel?, onAction? }"], default: "required", note: "Fed by the AIMS OS Next Best Action engine. Same shape for all 3 variants. actionLabel renders a real inline button (calls onAction) when the recommendation names one specific action." },
+    { name: "signal",         type: "object",   values: ["NextBestAction — { label, severity, dueContext?, aiGenerated?, actionLabel?, onAction?, dismissible?, onDismiss? }"], default: "required", note: "Fed by the AIMS OS Next Best Action engine. Same shape for all 3 variants. actionLabel renders a real inline button (calls onAction) when the recommendation names one specific action. dismissible adds a close (X) — reserve it for signals with no actionLabel/onAction, so dismissing never buries a real next step." },
     { name: "assignedAgent",  type: "object",   values: ["AssignedAgent — { id, name, onOpenChat }"], default: "required", note: "AIMS OS is agent-first — every record has one. Renders as an always-present icon-only button (Sparkle, variant=\"main\" — a named exception to the usual no-main-in-a-card rule) that opens a chat scoped to this record. RecordHeader never renders the chat UI itself." },
     { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as the one contextual CTA button; actions[1+] land in the \"···\" overflow Menu. Same RecordAction shape as EntityList's ELAction." },
     { name: "defaultExpanded",type: "Boolean",  values: ["true","false"], default: "false", note: "Uncontrolled initial state for the Details disclosure. Chevron only renders when there's at least one Details field." },
@@ -32425,14 +32425,18 @@ const RH_CLIENT_SIGNAL: NextBestAction = {
 // to. Deliberately spread across 3 different severities (neutral/success/
 // informative) rather than reusing one, so it's visually obvious severity
 // tracks the record's real state, not a fixed template per variant.
+// dismissible: true — these are exactly the case that field's doc comment
+// calls out: nothing actionable here, so keeping the bar pinned forever adds
+// no value. A Signal with actionLabel/onAction (the other 3 mocks above)
+// should NOT set this — dismissing those would bury the real next step.
 const RH_EMPLOYEE_SIGNAL_CALM: NextBestAction = {
-  label: "No pending approvals", severity: "neutral", dueContext: "All caught up",
+  label: "No pending approvals", severity: "neutral", dueContext: "All caught up", dismissible: true,
 }
 const RH_CUSTOMER_SIGNAL_CALM: NextBestAction = {
-  label: "Health steady at 92", severity: "success", dueContext: "On track — renews in 140 days",
+  label: "Health steady at 92", severity: "success", dueContext: "On track — renews in 140 days", dismissible: true,
 }
 const RH_CLIENT_SIGNAL_CALM: NextBestAction = {
-  label: "Early discovery — no next step due yet", severity: "informative", dueContext: "Last touched 2 days ago",
+  label: "Early discovery — no next step due yet", severity: "informative", dueContext: "Last touched 2 days ago", dismissible: true,
 }
 
 // Assigned AI agent — one per variant, same shape (see AssignedAgent in
@@ -32686,7 +32690,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["severity",    "success | alert | error | informative | neutral — drives the Signal bar's color"],
                 ["dueContext?", "Short supporting text, e.g. \"Oldest due today\", \"SLA breached 2h ago\""],
                 ["aiGenerated?", "True → overrides severity color with the purple/Sparkles \"AI produced this\" treatment (--tag-purple-*, same trio as EntityList's own aiInsight). Use only for a probabilistic suggestion, not a deterministic fact or urgency state."],
-                ["onAction?",   "Present → the whole Signal row becomes clickable (same model as NotificationItem's row onClick)"],
+                ["actionLabel?", "Names one specific action, e.g. \"Send proposal\" → renders a real inline button (calls onAction) instead of a plain click-through chevron. Omit when there are several distinct things to review, not one action."],
+                ["onAction?",   "Fires on the actionLabel button (if set) and on a click anywhere else on the bar — same row-and-primary-action-share-a-destination rule as NotificationItem"],
+                ["dismissible?", "True → adds a small close (X), same treatment as AlertBanner's onClose. Reserve for signals with no actionLabel/onAction — a real next step should never be dismissable away."],
+                ["onDismiss?",  "Optional — fires when the close (X) is clicked, so the host can persist that choice. Dismissal itself is local UI state either way."],
               ].map(([field, desc], i) => (
                 <div key={field} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-mono font-semibold text-[var(--primary)]">{field}</div>
