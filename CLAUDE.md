@@ -122,19 +122,24 @@ Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard vi
 - Has deal stage/value/expected close date (still in the pipeline) → `client`
 - None of the 3 shapes fit → don't force it; flag `// DS-GAP: RecordHeader has no variant for this record shape`
 
-**Don't invent chips, Details fields, or action labels per screen** — pull them from the component's own exports so every instance stays predictable:
-- `getRecordFields(variant, data)` → which fields become the 3 context chips vs. the Details grid (see record-header.tsx or the Reference tab for the exact per-variant list)
-- `RECORD_HEADER_RECOMMENDED_ACTIONS[variant]` → the canonical action set (not always 2 — e.g. `employee` is just "Message," since RecordHeader always sits on that record's own profile page, so anything the page already shows below it — like "View profile" — is dead weight, not a valid action)
+**Identity chips are stable attributes ONLY — never a dynamic state or metric.** Role/department/location, tier/segment/industry, company/deal value/lead source — yes. Adoption level, deal stage, health score — no, those change and belong in Signal (if urgent) or Details (if just reference). A chip you'd need to update when something *happens* to the record is in the wrong slot.
 
-**Signal is required, not optional decoration** — every RecordHeader needs a `NextBestAction` (`{ label, severity, dueContext?, aiGenerated?, onAction? }`):
+**Don't invent chips, Details fields, or action labels per screen** — pull them from the component's own exports so every instance stays predictable:
+- `getRecordFields(variant, data)` → which fields become the 3 identity chips vs. the Details grid (see record-header.tsx or the Reference tab for the exact per-variant list)
+- `RECORD_HEADER_RECOMMENDED_ACTIONS[variant]` → `actions[0]` is the one contextual CTA, `actions[1+]` land in the "···" overflow. Not always 2 — e.g. `employee` is just "Message," since RecordHeader always sits on that record's own profile page, so anything the page already shows below it (Overview/Activity/Log tabs) — like "View profile" or "Log activity" — is dead weight, not a valid action. Genuinely tab-duplicate actions (e.g. "Log call," which belongs to Activity) go in the overflow, not the header's one CTA slot.
+
+**`assignedAgent` is required, not optional** (`{ id, name, onOpenChat }`) — AIMS OS is agent-first, every record has one. Renders as an always-present, most-prominent (icon-only, `variant="primary"`) button using the Topbar's own `Sparkle` glyph (the single 4-point one, not the 3-star `Sparkles`) — never omit it, and never use `variant="main"` for it (RecordHeader is a card; see the Button hierarchy rule below).
+
+**Signal is required, not optional decoration** — every RecordHeader needs a `NextBestAction` (`{ label, severity, dueContext?, aiGenerated?, actionLabel?, onAction? }`):
 - `severity` drives the color for a deterministic fact or urgency state (task counts, renewal risk, SLA breach) — this is the default.
 - `aiGenerated: true` swaps to the purple/Sparkles treatment **only** for a genuine probabilistic recommendation (confidence-scored, inferred) — never for a plain count or a real risk state. Urgency should always win visually over "an AI produced this."
+- `actionLabel` — set it when the NBA engine names ONE specific action ("Send proposal," "Schedule renewal call"); it renders as a real inline button, not just an implicit click-through. Leave it unset when there are several distinct items to review (e.g. "2 tasks pending approval") rather than one thing to do.
 - If there's truly nothing actionable to surface, use `severity: "neutral"` with a plain status line — never fabricate a fake NextBestAction just to fill the slot.
 
 **Signal click destination** — same framework as Entity click behavior above, applied to `signal.onAction`:
-- Multiple items need reviewing one by one before deciding (e.g. several pending approvals) → `SlideOut`
-- A risk/health state to investigate, with evidence to show before recommending a step → `SlideOut`
-- One immediate, reversible-by-Cancel decision ("do this specific thing now?") → `ModalDialog`
+- Multiple items need reviewing one by one before deciding (e.g. several pending approvals) → `SlideOut`, no `actionLabel` (nothing single to name)
+- A risk/health state to investigate, with evidence to show before recommending a step → `SlideOut` + `actionLabel` (both the click-through and the named button lead here)
+- One immediate, reversible-by-Cancel decision ("do this specific thing now?") → `ModalDialog` + `actionLabel` (the named button is the only entry point — no separate click-through chevron)
 - Never Full Navigation from a Signal click — RecordHeader already lives on that record's own page.
 
 ### Empty states
