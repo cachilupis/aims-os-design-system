@@ -1,237 +1,204 @@
 import { useState, useRef, useLayoutEffect } from "react"
 import {
-  ChevronDown, ChevronUp, CircleCheck, TriangleAlert, CircleX, Info, Sparkles, Sparkle, MoreHorizontal, X, Lock,
-  Mail, Phone, Contact, ArrowUpRight, StickyNote, ListChecks, CalendarPlus,
+  ChevronDown, ChevronUp, Sparkle, MoreHorizontal, Lock, Info, Workflow, Bot, Clock,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
 import { Tag } from "@/components/ui/tag"
-import { Badge } from "@/components/ui/badge"
+import { Badge, type BadgeVariant } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Menu, MenuItem } from "@/components/ui/menu-item"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip } from "@/components/ui/tooltip"
 
 /**
  * Record Header — AIMS OS Design System
  *
  * NOT YET IN FIGMA — this is a new component, not synced from an existing node.
- * It's modeled on well-established patterns (there is no invented interaction
- * here, only a composition of them), formalized as 3 CONTENT ZONES (a content
- * contract, not a visual redesign — see the Reference tab's own "Content
- * contract" section for the full framing):
- *   Zone 1 — Identity  → Salesforce Lightning "Highlights Panel" (compact
- *      layout): avatar + primary field + stable identity tags. Fixed, never
- *      changes shape.
- *   Zone 2 — Signal    → HubSpot's conditional "why this matters now" section,
- *      fed by a Next Best Action engine — one recommendation, not a dashboard.
- *   Zone 3 — Actions + secondary actions → the action row (agent/CTA/overflow,
- *      top-right of Zone 1's physical position) plus a disclosure of secondary
- *      actions revealed by the chevron, collapsed by default (predictable
- *      header height). Both halves of Zone 3 are grouped conceptually, not
- *      physically moved — see SecondaryAction's own doc comment for the 3
- *      kinds (contact/navigation/creation) it can produce.
- *      HISTORY, for whoever reads this file mid-iteration: this went through
- *      2 revisions. Originally a 6-field plain-text metadata grid behind a
- *      disclosure. Then, briefly, a max-3-4 "key fields" row that was ALWAYS
- *      visible (true Salesforce Highlights Panel — fields never hidden behind
- *      a click), once the plain-text fields were trimmed to only
- *      glanceable+actionable ones. Then a follow-up brief grew the action set
- *      back up (Add note/Create task/Schedule meeting + several navigation-
- *      only TODO actions per variant, ~6-8 total) — too many to keep always-
- *      visible without the row dominating the card, so the disclosure came
- *      back, now holding SecondaryAction buttons instead of plain-text pairs.
- *      Reference tab's "Content contract" section documents the CURRENT
- *      contract; don't re-derive it from this history note. Fields that don't
- *      appear here aren't deleted from the data shape — see the `// TODO:
- *      pertenece al Overview/tab de detalle` comments on EmployeeRecord/
- *      CustomerRecord/ClientRecord below for exactly which ones and why.
- * Before this ships to Figma, Michael should design a real node for it and this
- * file should get a figmaNodeId/figmaUrl like every other component in ui/.
  *
- * One shared layout for all 3 variants (employee/customer/client) — only the
- * chip/key-field/action *content* changes per variant, never the structure or
- * the styles. This is what makes wiring a Next Best Action engine variant-
- * agnostic: the engine only ever returns one NextBestAction shape, regardless
- * of which of the 3 record types it's reacting to.
+ * ═══════════════════════════════════════════════════════════════════════════
+ * MAJOR RESTRUCTURE (this revision): this file previously modeled a generic
+ * Employee/Customer/Client entity header with a Next Best Action Signal bar
+ * and a variable secondary-actions list (Email/Phone/Manager-link/Add note/
+ * Create task/etc.). That version is GONE, replaced end to end by the
+ * governed card product defined for AIMS OS Work Surfaces:
+ *   - Variants renamed: employee/customer/client → uep/ucp/uvp (Universal
+ *     Employee/Customer/Vendor Profile) — this component now lives ONLY in
+ *     Work Surfaces, never replicated inside Governance/Data/Agentic Studio.
+ *   - Signal/NextBestAction (severity color, actionLabel, loading/error
+ *     states, aiGenerated purple treatment) is RETIRED. DECISION FLAGGED —
+ *     inferred, not explicitly stated in the brief: the brief's card
+ *     skeleton is Identity + 3 expandable zones, full stop, with no Signal
+ *     row anywhere in it. Its "at a glance, is something up" role splits in
+ *     two: a minimal `statusDot` next to the name (Identity row, always
+ *     visible, color-only) for the glance, and "Your Intervention" (a real,
+ *     expandable, HTL-specific detail zone) for the substance — matching
+ *     Law 3 (HTL states are calm and explanatory, never red errors) far
+ *     better than a colored Signal bar ever could. If this reads wrong,
+ *     Signal's old code is fully recoverable from git history before this
+ *     commit — flagging the call, not silently deleting without a trace.
+ *   - The variable secondary-actions disclosure (contact/navigation/
+ *     creation Buttons) is also RETIRED — replaced by exactly 2 fixed,
+ *     always-the-same-shape expandable zones: AGENTIC SYSTEM (Active
+ *     Workflow, Last Agent) and RECORD (governed field grid with
+ *     provenance). Neither is a "pick whichever actions apply" list
+ *     anymore; both are fixed slots every variant fills the same way.
+ * ═══════════════════════════════════════════════════════════════════════════
  *
- * Page context this was refined against: RecordHeader always sits atop that
- * record's own profile page — Overview widgets + Activity/Log tabs render
- * right below it. Two consequences that shape this file:
- *   - Identity chips show only STABLE attributes (role, industry, source) —
- *     never a dynamic state or metric, since those belong in Signal/key
- *     fields, not in an always-visible "who is this" row that shouldn't need
- *     updating every time a status changes.
- *   - Header actions must not duplicate a tab below (see
- *     RECORD_HEADER_RECOMMENDED_ACTIONS for the specific calls this drove).
+ * Governance canon (AIMS OS law, not preference — see the Reference tab's
+ * own "Governance canon" section for the full, reader-facing version):
+ *   Law 1 — Authority/origin of every field is ALWAYS visible. Every RECORD
+ *     field carries a FieldProvenance and renders its origin-system badge
+ *     inline — never a value floating with no traceable source.
+ *   Law 2 — Every governed answer carries provenance reachable WITHOUT
+ *     leaving the view. The (i) icon next to the RECORD heading opens the
+ *     Data Provenance SlideOut from right here — no navigating away first.
+ *   Law 3 — HTL (human-in-the-loop) items are first-class states with their
+ *     own calm, explanatory language — NEVER rendered as red errors. "Your
+ *     Intervention" uses the same informative/neutral token family as this
+ *     repo's Alert Banner, deliberately never the error/red one, regardless
+ *     of the underlying severity value.
+ *   Law 4 — PII resolves only at display-time, per viewer entitlements. A
+ *     hydrated (real) field and a masked field are the SAME RecordField in
+ *     2 states — see RecordField's own doc comment. This component renders
+ *     whichever state it's given; it never resolves entitlements itself.
+ *
+ * Structure — Identity (fixed) + 3 expandable zones, one shared skeleton for
+ * all 3 variants (uep/ucp/uvp) — only the zone CONTENT changes per variant,
+ * never the skeleton:
+ *   Identity (always visible) → avatar, name + statusDot, type label, up to
+ *     3 read-only Tags, Locked state. Actions: AI agent trigger (persistent,
+ *     icon-only) → 1 contact CTA (Message) → "···" overflow → disclosure
+ *     chevron.
+ *   AGENTIC SYSTEM (expanded) → Active Workflow + Last Agent, each a Button
+ *     variant="tertiary" with a leading icon (Workflow/Bot) — never a
+ *     colored card, per explicit instruction. Opens a SlideOut per item.
+ *   YOUR INTERVENTION (expanded, only if `intervention` is set) → the HTL
+ *     pending-decision block. Calm/informative token family (Law 3), never
+ *     error-red, regardless of `intervention.severity`. Opens the "Pending
+ *     Decisions" SlideOut via its Review button.
+ *   RECORD (expanded) → label/value grid, each field with an inline origin-
+ *     system badge (Tag, wrapped in Tooltip — Law 1). The (i) provenance
+ *     icon sits directly next to the "RECORD" heading (Law 2 — findable,
+ *     not floating unlabeled at the row's far edge) and opens the Data
+ *     Provenance SlideOut for the whole section.
  *
  * Composition — reuses existing DS atoms, no custom re-implementations:
- *   Card       → CardContainer (size="default", variant="default") — same size used by
- *                every other "entity header" context in this repo.
- *   Avatar     → AvatarCircle sizeKey="lg" — Avatar's own doc calls "lg" out for
- *                exactly this use case ("Entity headers, cards").
- *   Identity metadata → Tag (size="sm"), NOT Chip. Verified directly in this repo:
- *                Chip (chip.tsx) is documented as the *interactive* filter-row
- *                control (used in Filters/quick-filter rows, has hover/press/
- *                disabled states implying affordance). Tag (tag.tsx) is the
- *                non-interactive "status, category and label" atom — no onClick
- *                in its own type, pure display. Identity attributes here are
- *                read-only and never clickable, so Tag is the only one of the
- *                two that doesn't communicate a false affordance. If this ever
- *                looks ambiguous again: Chip = you can act on it, Tag = you can
- *                only read it.
- *   AI agent trigger → Button icon-only. Reuses the exact glyph Topbar's own
- *                "IA-icon" uses — `Sparkle` (single 4-point sparkle), NOT
- *                `Sparkles` (3-star) — see topbar.tsx's own header comment,
- *                which already corrected this exact mix-up once. Uses
- *                variant="main" — a DELIBERATE, NAMED EXCEPTION to CLAUDE.md's
- *                Button hierarchy rule ("never variant=main inside a widget,
- *                card, or SlideOut"), confirmed directly by Michael: the
- *                agent trigger is the platform's one persistent, always-there
- *                entry point (same conceptual role as Topbar's own IA-icon,
- *                which gets its own one-off gradient treatment precisely
- *                because it's not "just another card CTA"), so it earns the
- *                same top-of-hierarchy treatment even though it physically
- *                renders inside a CardContainer. This is the ONLY sanctioned
- *                main-inside-a-card case — see the CLAUDE.md exception note
- *                next to the Button hierarchy rule. Don't use this exception
- *                as precedent for any other card-level button.
- *   Overflow   → Menu/MenuItem (menu-item.tsx) — the repo's real dropdown atom,
- *                anchored the same way NotificationCenter's own filter dropdown
- *                is (capture the trigger's rect on click, render fixed-position,
- *                dismiss on backdrop click) — not a new positioning technique.
- *   Disclosure  → local expanded state + max-height transition, the same
- *                technique already used by widget-father.tsx for its collapse
- *                animation, and the same chevron-rotate affordance
- *                DocSection/EntityList already use elsewhere in this app —
- *                not a new pattern. Only rendered when there's at least one
- *                SecondaryAction to reveal.
- *   Secondary actions (Zone 3) → every one of them is the SAME primitive —
- *                Button variant="tertiary" with a leading icon, wrapped in
- *                Tooltip — never plain text, never a different button style
- *                per kind. Only the icon differs by what the action actually
- *                does (contact/navigation/creation — see SecondaryAction's
- *                own doc comment). Wired (real onAction) only for contact
- *                (Email/Phone) and relational navigation (Manager/Owner) —
- *                everything else (Add note/Create task/Schedule meeting, and
- *                every navigation target still unconfirmed) renders with a
- *                real label + icon + Tooltip but a `// TODO` in place of
- *                onAction, per explicit instruction not to invent a
- *                destination.
- *
- * Token family — Signal severity:
- *   success/alert/error reuse Alert Banner's own token family (--ab-{state}-*),
- *   since Signal is functionally the same "colored surface + icon + text" shape
- *   Alert Banner already established — no new colors invented.
- *   ASSUMPTION TO VERIFY: --ab-informative-* and --ab-neutral-* do NOT exist in
- *   index.css today (checked directly — only alert/error/success are defined).
- *   Rather than invent them, "informative" and "neutral" fall back to the Tag
- *   component's existing --tag-informative-* and --tag-neutral-* triads, which
- *   cover the identical two semantics elsewhere in this app. If Michael later
- *   adds --ab-informative-* and --ab-neutral-* tokens (to fully complete the
- *   Alert Banner family), swap SEVERITY_CONFIG below to use them instead —
- *   flagging this here instead of quietly hardcoding a new color, per the
- *   no-invented-tokens rule.
- *
- * Token family — Signal source ("this is an AI suggestion" vs. a plain status):
- *   `signal.aiGenerated` swaps the whole bar to --tag-purple-bg/--tag-purple-bd/
- *   --tag-purple-fg + a Sparkles icon (the 3-star one is correct HERE — this
- *   matches EntityList's own aiInsight block exactly, see entity-list.tsx's
- *   "AI {action}" row) — not the --color-surface-purple-more-subtle/
- *   --card-purple-border pairing used for the unrelated AI Summary panels
- *   elsewhere in this app's SlideOut content. Two different purple treatments
- *   already coexist in this DS; this reuses the one that's actually about "AI
- *   produced this specific recommendation," which is what a NextBestAction is.
- *   Use aiGenerated ONLY for a probabilistic/inferred suggestion (e.g. "ready to
- *   send proposal — confidence 82%") — NOT for a deterministic operational fact
- *   or an urgent risk state (e.g. "2 tasks pending approval," "renewal at risk").
- *   Severity color communicates urgency; urgency should always win visually over
- *   "by the way, AI produced this" — so aiGenerated is the exception, not the
- *   default, even though every Signal is technically NBA-engine-sourced.
+ *   Card       → CardContainer (size="default", variant="default").
+ *   Avatar     → AvatarCircle sizeKey="lg".
+ *   Status dot → Badge (badge.tsx) — the repo's real filled-dot status
+ *                primitive, not a new one. success/alert/neutral variants.
+ *   Identity metadata → Tag (size="sm"), NOT Chip — same reasoning as every
+ *                prior revision of this file: Chip is the interactive
+ *                filter-row control, Tag is the read-only display atom.
+ *   AI agent trigger → Button icon-only, `Sparkle` glyph, variant="main" —
+ *                the same named, single-purpose exception to the "never
+ *                main in a card" rule this file has documented since it was
+ *                first confirmed with Michael. Still the only sanctioned
+ *                case — don't extend it here either.
+ *   Overflow   → Menu/MenuItem (menu-item.tsx), anchored via captured
+ *                getBoundingClientRect() on trigger click — this file's
+ *                established positioning technique, unchanged.
+ *   Disclosure → local expanded state + max-height transition — unchanged
+ *                technique from every prior revision of this file.
+ *   Agentic System items / provenance icon → Button variant="tertiary" with
+ *                a leading icon. Never a colored card for metadata, per
+ *                explicit instruction.
+ *   Field origin badge → Tag (size="sm"), wrapped in Tooltip showing the
+ *                fuller provenance (system + model version + synced-ago).
+ *   Governed SlideOuts (Workflow detail, Pending Decisions, Agent detail,
+ *                Data Provenance) → RecordHeader itself never renders them
+ *                — same delegation rule this file has followed since
+ *                `signal.onAction`/`assignedAgent.onOpenChat` first existed:
+ *                every clickable surface exposes an `onOpen`/`onAction`
+ *                callback, and the consuming screen (App.tsx's
+ *                RecordHeaderPage demo) owns the actual SlideOut/SidePanel
+ *                instance. This keeps the DS component free of page-level
+ *                overlay state and matches "reuse the existing SlideOut/
+ *                SidePanel primitive" literally — RecordHeader doesn't
+ *                reimplement it internally.
  */
 
-// ── Shared Next Best Action shape ──────────────────────────────────────────
-// Deliberately minimal and identical across all 3 record types — the whole
-// point is that AIMS OS's NBA engine only has to return this one shape; this
-// component never branches its rendering logic on `variant` to interpret it.
-
-export type NBASeverity = "success" | "alert" | "error" | "informative" | "neutral"
-
-export interface NextBestAction {
-  /** e.g. "3 tasks pending approval", "Renews in 12 days — health dropped to 61", "Best next step: schedule demo" */
-  label: string
-  severity: NBASeverity
-  /** Short supporting context, e.g. "Due today", "SLA breached 2h ago", "NBA engine · confidence 82%" */
-  dueContext?: string
-  /**
-   * True → this specific recommendation is an AI-inferred suggestion (not a
-   * deterministic fact), so the bar uses the purple/Sparkles "AI produced
-   * this" treatment instead of the severity color — see file header for why
-   * this is the exception, not the default. `severity` is still required
-   * even when true (kept for sorting/prioritization); it just isn't what
-   * renders visually in that case.
-   */
-  aiGenerated?: boolean
-  /**
-   * Label for an explicit inline button that fires `onAction` directly (e.g.
-   * "Send proposal," "Schedule renewal call") — makes the NBA engine's
-   * recommendation something you DO from the Signal, not just something you
-   * read and then have to go find a button for elsewhere. Omit when there's
-   * no single action to name (e.g. "2 tasks pending approval" — several
-   * distinct items, not one action); the bar then falls back to a plain
-   * click-through affordance, same as before this field existed.
-   */
-  actionLabel?: string
-  /**
-   * Fires on the inline action button (when actionLabel is set) AND on a
-   * click anywhere else on the bar — same "row and its primary action must
-   * resolve to the same destination" rule this repo's NotificationItem
-   * already documents, applied here instead of inventing a second rule.
-   */
-  onAction?: () => void
-  /**
-   * True → the bar gets a small close (X) affordance, same treatment as
-   * AlertBanner's own onClose. Reserve this for the "nothing pressing"
-   * cases — a Signal with a real actionLabel/onAction shouldn't be
-   * dismissable, since dismissing it would let the actual next step get
-   * lost. Dismissal is local UI state (session-only); pass onDismiss if the
-   * host needs to persist the choice.
-   */
-  dismissible?: boolean
-  onDismiss?: () => void
+// ── Field-level provenance (Law 1 + Law 2) ──────────────────────────────────
+// Every RECORD field carries exactly this — never a bare value with no
+// traceable source. `systemAbbr` is the short badge label (e.g. "WD"); the
+// Tooltip on that badge (and the Data Provenance SlideOut, Law 2) both read
+// from the same object, so the two surfaces can never drift out of sync.
+export interface FieldProvenance {
+  /** Full source-system name, e.g. "Workday", "Okta", "Salesforce". */
+  system: string
+  /** Short badge label, e.g. "WD", "OK", "SF" — what actually renders inline. */
+  systemAbbr: string
+  /** Unified profile model version, e.g. "UEP v2.3". */
+  modelVersion: string
+  /** e.g. "2h ago" — when Source last synced into the Model layer. */
+  syncedAgo: string
 }
 
-// ── Assigned AI agent (transversal — task 5) ────────────────────────────────
-// AIMS OS is agent-first: every Employee/Customer/Client has an assigned
-// agent. This is a top-level prop (like `signal`), not nested per-variant
-// data, because the trigger button and its behavior are identical regardless
-// of variant — only *which* agent is assigned changes.
-// NOTE TO VERIFY: this shape is a reasonable guess (id/name/onOpenChat) based
-// on how `signal.onAction` and RecordAction.onClick already delegate behavior
-// to the caller in this file. If AIMS OS already models "assigned agent"
-// somewhere in the backend/repo with a different shape, map to THAT shape
-// instead of this one — flagging instead of assuming, per the no-invented-
-// contracts rule.
+// ── A single RECORD field (Law 4 — display-time PII resolution) ────────────
+// A "hydrated" field and a "masked" field are the SAME field in 2 possible
+// entitlement states — NOT two different field types. RecordHeader renders
+// whichever state it's given; it never resolves permissions itself. See the
+// Reference tab's "PII / masking (Law 4)" section for the full framing.
+export interface RecordField {
+  label: string
+  provenance: FieldProvenance
+  // Ley 4: display-time PII resolution — masking depende de entitlements del
+  // backend. This component does NOT implement entitlement resolution; the
+  // caller decides which state to construct this field in per the current
+  // viewer's permissions. Both states still carry full provenance (Law 1
+  // applies regardless of masking — the badge/Tooltip never disappear).
+  state: "hydrated" | "masked"
+  /** The real value — rendered when state === "hydrated". */
+  value: string
+  /** Shown instead of `value` when state === "masked", e.g. "•••• (restricted)". */
+  maskedValue?: string
+}
+
+// ── Agentic System (Zone: AGENTIC SYSTEM) ───────────────────────────────────
+// Exactly 2 fixed slots, not a variable list — every variant fills both the
+// same way. Each opens its own SlideOut; RecordHeader only holds the trigger.
+export interface AgenticSystemInfo {
+  activeWorkflow?: {
+    name: string
+    onOpen?: () => void
+  }
+  lastAgent?: {
+    name: string
+    onOpen?: () => void
+  }
+}
+
+// ── Your Intervention (Zone: YOUR INTERVENTION, conditional) ───────────────
+// A first-class HTL state (Law 3) — only rendered when there's a real
+// pending decision; omitted entirely otherwise (never an empty "0 actions"
+// placeholder). `severity` feeds the Pending Decisions SlideOut's own
+// display — it does NOT change this block's calm/informative visual
+// treatment on the card itself, which stays constant regardless of
+// severity (that constancy IS Law 3, not an oversight).
+export interface PendingIntervention {
+  count: number
+  description: string
+  severity: "high" | "medium" | "low"
+  onReview: () => void
+}
+
+// ── Assigned AI agent (transversal across variants) ─────────────────────────
+// AIMS OS is agent-first: every Employee/Customer/Vendor record has one.
+// NOTE TO VERIFY: this shape (id/name/onOpenChat) is a reasonable guess based
+// on how every other callback in this file delegates behavior to the caller.
+// If AIMS OS already models "assigned agent" elsewhere with a different
+// shape, map to THAT shape instead — flagging instead of assuming.
 export interface AssignedAgent {
-  id:   string
+  id: string
   name: string
   /** Opens a chat scoped to this record. RecordHeader never renders the chat
-   *  UI itself — same delegation pattern as signal.onAction: whatever side
-   *  panel/slide-out mechanism the consuming screen already uses for chat,
-   *  it stays there. There is no dedicated "agent chat" component yet
-   *  anywhere in src/components/ui/ — checked directly — so if one gets
-   *  built, this is the callback it should be wired to. */
+   *  UI itself — same delegation pattern as every onOpen/onAction below. */
   onOpenChat: () => void
 }
 
-// ── Record action (Identity row) ────────────────────────────────────────────
-// Same shape as EntityList's own ELAction — reused on purpose so callers who
-// already build EntityList actions don't have to learn a second convention.
-// actions[0] renders as the one contextual CTA button; actions[1+] render
-// inside the "···" overflow Menu — see the 3-tier action hierarchy below.
-
+// ── Record action (Identity row CTA + overflow) ─────────────────────────────
 export type RecordActionVariant = "primary" | "secondary" | "tertiary"
 
 export interface RecordAction {
@@ -240,152 +207,97 @@ export interface RecordAction {
   onClick?: () => void
 }
 
+// ── Status dot (Identity row) ───────────────────────────────────────────────
+// DECISION FLAGGED — inferred detail, not explicitly spec'd: a minimal,
+// glanceable "is something up with this record" indicator, replacing the
+// old always-visible Signal bar (see file header HISTORY note). Maps
+// directly onto Badge's own existing variants — no new color semantics.
+export type RecordStatusDot = "attention" | "success" | "neutral"
+
+const STATUS_DOT_VARIANT: Record<RecordStatusDot, BadgeVariant> = {
+  attention: "alert",
+  success: "success",
+  neutral: "neutral",
+}
+
 // ── Per-variant record data ─────────────────────────────────────────────────
 // Only the Primary-slot field (name/accountName) is required — every other
-// field is genuinely optional in real data (a customer without a confirmed
-// industry, a client with no expectedCloseDate yet, etc.). getRecordFields
-// coalesces a missing field to "" and the render layer drops it — see the
-// "missing data" fallback rule at the identity-tags and key-fields render sites.
-//
-// on*Click callbacks: same embedded-callback convention this file already
-// uses for NextBestAction.onAction and RecordAction.onClick — the click
-// destination is presentation-layer routing (which record to navigate to,
-// what a "contact" action actually does), not something RecordHeader decides.
-// DECISION FLAGGED FOR TEAM REVIEW: onEmailClick/onPhoneClick are NOT
-// defaulted to mailto:/tel: internally, even though that's arguably a safe,
-// unambiguous browser behavior rather than a guessed business action — kept
-// fully delegated instead, for consistency with every other action in this
-// file ("RecordHeader never renders navigation/business logic itself"). If
-// the team decides mailto:/tel: should be a built-in default, that's a
-// one-line change at the contactAction() call sites below, not a shape change.
+// field is genuinely optional in real data. getRecordFields coalesces a
+// missing field to "" and the render layer drops it — same missing-data
+// rule this file has used since it was first introduced.
 
-export interface EmployeeRecord {
+export interface UEPRecord {
   name: string
   role?: string
   department?: string
-  manager?: string
-  /** Fires when the Manager secondary action (navigation kind) is clicked —
-   *  routes to that person's own record. Not wired by RecordHeader itself. */
-  onManagerClick?: () => void
   location?: string
-  email?: string
-  onEmailClick?: () => void
-  phone?: string
-  onPhoneClick?: () => void
-  /** TODO: pertenece al Overview/tab de detalle — pure reference info, no
-   *  glanceable+actionable use in the header itself (see Reference tab's
-   *  content contract). Kept on the data shape; just not rendered here. */
-  startDate?: string
-  /** TODO: pertenece al Overview/tab de detalle — same reasoning as startDate. */
-  team?: string
-  /** TODO: pertenece al Overview/tab de detalle — not actionable (no click
-   *  destination), so it fails the glanceable+actionable filter. */
-  accessRole?: string
+  manager?: RecordField
+  accessRole?: RecordField
+  /** Governed/sourced counterpart to the plain `department` chip above —
+   *  deliberately kept as a separate field rather than reused, since the
+   *  chip is an informal glance-level label with no provenance, while this
+   *  is the same fact backed by a real source system. */
+  departmentDetail?: RecordField
+  jobTitle?: RecordField
+  startDate?: RecordField
 }
 
-export interface CustomerRecord {
+export interface UCPRecord {
   accountName: string
   segment?: string
-  owner?: string
-  /** Fires when the Owner secondary action (navigation kind) is clicked. */
-  onOwnerClick?: () => void
   tier?: string
-  /** Stable identity attribute — added so the identity row has a 3rd chip
-   *  that isn't a health/adoption metric (see chips content rule below). */
-  industry?: string
-  /** TODO: pertenece al Overview/tab de detalle. */
-  renewalDate?: string
-  /** TODO: pertenece al Overview/tab de detalle. */
-  mrr?: string
-  /** TODO: pertenece al Overview/tab de detalle. */
-  lastContact?: string
-  /** TODO: pertenece al Overview/tab de detalle. */
-  openTickets?: number
-  /** TODO: pertenece al Overview/tab de detalle — already not an identity
-   *  chip (see its own note below); also not a header key field, since a
-   *  level/score alone isn't actionable. */
-  adoptionLevel?: string
-  /** DECISION FLAGGED FOR TEAM REVIEW: the brief's "Componentes del DS a
-   *  usar" section lists Primary Contact under "Contexto relacional → link,"
-   *  but the per-variant starting point says "contacto a Primary Contact →
-   *  Button tertiary." CustomerRecord has no separate email/phone field FOR
-   *  the primary contact today — only this one name/title string — so
-   *  there's no data to build a contact-kind (Button tertiary) field from
-   *  without inventing a channel that doesn't exist. Implemented as a
-   *  relational link (matches the authoritative component-mapping section);
-   *  if AIMS OS wants a direct "contact the primary contact" action, this
-   *  record shape needs its own email/phone field first. */
-  primaryContact?: string
-  onPrimaryContactClick?: () => void
+  accountType?: string
+  owner?: RecordField
+  renewalDate?: RecordField
+  arr?: RecordField
 }
 
-export interface ClientRecord {
+export interface UVPRecord {
   name: string
-  company?: string
-  /** TODO: pertenece al Overview/tab de detalle — a deal stage is a dynamic
-   *  state; Signal already surfaces it when it's urgent enough to act on
-   *  (see the chip-content rule below), so a second, always-visible copy of
-   *  it in the header is redundant rather than additive. */
-  dealStage?: string
-  dealValue?: string
-  owner?: string
-  /** Fires when the Owner secondary action (navigation kind) is clicked. */
-  onOwnerClick?: () => void
-  email?: string
-  onEmailClick?: () => void
-  phone?: string
-  onPhoneClick?: () => void
-  leadSource?: string
-  /** TODO: pertenece al Overview/tab de detalle. */
-  lastInteraction?: string
-  /** TODO: pertenece al Overview/tab de detalle. */
-  expectedCloseDate?: string
+  vendorType?: string
+  contractStatus?: string
+  category?: string
+  procurementOwner?: RecordField
+  contractEndDate?: RecordField
+  spendYtd?: RecordField
 }
 
-export type RecordHeaderVariant = "employee" | "customer" | "client"
+export type RecordHeaderVariant = "uep" | "ucp" | "uvp"
 
 export interface RecordHeaderProps {
   variant: RecordHeaderVariant
-  data: EmployeeRecord | CustomerRecord | ClientRecord
-  /** Fed by the NBA engine (or a static fallback) — same shape for all 3 variants, see NextBestAction above */
-  signal: NextBestAction
-  /**
-   * "resolved" (default) renders `signal` as-is. "loading" shows a Skeleton
-   * placeholder in the exact same footprint while the NBA engine is still
-   * computing — never an empty bar, never a layout jump when the real value
-   * lands. "error" ignores whatever `signal` was passed and substitutes the
-   * centralized RECORD_HEADER_FALLBACKS.nbaError instead, so a timed-out
-   * engine call never renders a broken/partial Signal.
-   */
-  signalStatus?: "loading" | "resolved" | "error"
+  data: UEPRecord | UCPRecord | UVPRecord
+  /** Minimal glanceable indicator next to the name — see RecordStatusDot's own doc comment for why this replaces the old Signal bar. */
+  statusDot?: RecordStatusDot
   /**
    * Required as a PROP (every caller must decide), but the value itself can
-   * be `null` for a record that genuinely has no assigned agent yet — this
-   * is "required with a fallback state," not optional. `null` renders the
-   * same button, disabled, with a Tooltip explaining why (see
-   * RECORD_HEADER_FALLBACKS.noAgent) — never a silently missing button and
-   * never a broken one. See AssignedAgent above.
+   * be `null` for a record that genuinely has no assigned agent yet. `null`
+   * renders the same button, disabled, with a Tooltip explaining why —
+   * never a silently missing button and never a broken one.
    */
   assignedAgent: AssignedAgent | null
-  /** actions[0] = the one contextual CTA; actions[1+] = overflow menu items. See RECORD_HEADER_RECOMMENDED_ACTIONS for the default per variant. */
+  /** actions[0] = the one contact CTA (Message); actions[1+] = overflow menu items. */
   actions?: RecordAction[]
-  /** Uncontrolled initial state for the Zone 3 secondary-actions disclosure. Default: false (collapsed) — predictable header height until the user asks for more. */
+  /** Zone: AGENTIC SYSTEM. Omit the whole prop (or leave both slots unset) to skip the zone entirely — see hasAgenticSystem below. */
+  agenticSystem?: AgenticSystemInfo
+  /** Zone: YOUR INTERVENTION — only rendered when set. */
+  intervention?: PendingIntervention
+  /** Opens the Data Provenance SlideOut for the whole RECORD zone (Law 2). */
+  onProvenanceOpen?: () => void
+  /** Uncontrolled initial state for the zones disclosure. Default: false (collapsed) — predictable header height. */
   defaultExpanded?: boolean
   /**
-   * True → this record is read-only right now. The contextual CTA and the
+   * True → this record is read-only right now. The contact CTA and the
    * overflow's write actions disable (with a Tooltip explaining why) — but
-   * the AI agent trigger and the Signal stay fully interactive, since
-   * consulting a record isn't the same permission as editing it.
+   * the AI agent trigger stays fully interactive, since consulting a
+   * record isn't the same permission as editing it.
    */
   locked?: boolean
   className?: string
 }
 
-// ── Centralized fallback copy (task constraint: configurable/centralized,
-// never scattered inline in JSX) ────────────────────────────────────────────
+// ── Centralized fallback copy (configurable/centralized, never scattered inline in JSX) ──
 export const RECORD_HEADER_FALLBACKS = {
-  /** Shown when signalStatus === "error" — replaces whatever `signal` was passed. */
-  nbaError: { label: "No recommendation available", severity: "neutral" } as NextBestAction,
   /** Tooltip on the agent trigger when assignedAgent is null. */
   noAgentTooltip: "No agent assigned to this record",
   /** The read-only Tag shown next to the type label when `locked` is true. */
@@ -394,234 +306,83 @@ export const RECORD_HEADER_FALLBACKS = {
   lockedActionTooltip: "This record is locked — read-only",
 }
 
-// ── Severity → token mapping (Signal) ──────────────────────────────────────
-// See file header for why informative/neutral fall back to Tag's tokens.
-// neutral has no Icon: there's no lucide glyph that reads as "status: fine,
-// nothing to report" without either duplicating informative's Info icon or
-// looking like a form control (an empty ringed circle reads as an unchecked
-// radio button — that's exactly what this used to render and what prompted
-// this fix). Badge's own neutral dot (badge.tsx) already IS the DS's real
-// "muted/inactive status" indicator, so SignalBar renders that instead of an
-// icon for this one severity — see the null check at its render site.
-
-const SEVERITY_CONFIG: Record<NBASeverity, { Icon: LucideIcon | null; bg: string; bd: string; fg: string }> = {
-  success: { Icon: CircleCheck,   bg: "var(--ab-success-bg)",     bd: "var(--ab-success-bd)",     fg: "var(--ab-success-text)" },
-  alert:   { Icon: TriangleAlert, bg: "var(--ab-alert-bg)",       bd: "var(--ab-alert-bd)",       fg: "var(--ab-alert-text)" },
-  error:   { Icon: CircleX,       bg: "var(--ab-error-bg)",       bd: "var(--ab-error-bd)",       fg: "var(--ab-error-text)" },
-  informative: { Icon: Info,      bg: "var(--tag-informative-bg)", bd: "var(--tag-informative-bd)", fg: "var(--tag-informative-fg)" },
-  neutral:     { Icon: null,      bg: "var(--tag-neutral-bg)",     bd: "var(--tag-neutral-bd)",     fg: "var(--tag-neutral-fg)" },
-}
-
-// Same trio + icon as EntityList's own aiInsight block ("AI {action}" row) —
-// deliberately NOT a new "purple severity," since aiGenerated overrides
-// severity's color rather than being one of its values.
-const AI_SIGNAL_CONFIG: { Icon: LucideIcon; bg: string; bd: string; fg: string } = {
-  Icon: Sparkles, bg: "var(--tag-purple-bg)", bd: "var(--tag-purple-bd)", fg: "var(--tag-purple-fg)",
-}
-
 // ── Per-variant content mapping ─────────────────────────────────────────────
 // This is the ONLY place variant-specific logic lives. Everything below this
-// function renders the exact same JSX regardless of which variant was passed —
-// per the brief's "one shared layout, only slot content changes" constraint.
-
-// ── Secondary actions (Zone 3 disclosure) ───────────────────────────────────
-// 3 kinds — all render as the EXACT same primitive (Button tertiary + leading
-// icon + Tooltip); only the icon and onAction wiring differ, never the style
-// (see file header's Composition note). "Log activity" is deliberately never
-// one of these — see the DECISION note at RECORD_HEADER_SECONDARY_ACTIONS
-// below for why.
-//   contact    — a real communication channel (Email, Phone). Wired to a
-//                real onAction (mailto:/tel: at the call site — see the
-//                DECISION FLAGGED comment on on*Click above for why this
-//                file doesn't default that internally).
-//   navigation — goes to ANOTHER record or a different view. Manager/Owner
-//                (an existing, confirmed person-record link) are wired;
-//                everything else here (manage access, view team, view deal,
-//                view activity, view interaction history) is `// TODO` —
-//                those destinations/views aren't confirmed in AIMS OS yet.
-//   creation   — starts a new object attached to this record (Add note,
-//                Create task, Schedule meeting). Always `// TODO` — AIMS OS
-//                doesn't have real users yet, so there's no real destination
-//                to route these to. Rendered anyway (label + icon + Tooltip)
-//                per explicit instruction: show the intended structure, don't
-//                invent a fake destination to fill it.
-export type SecondaryActionKind = "contact" | "navigation" | "creation"
-
-export interface SecondaryAction {
-  label: string
-  kind: SecondaryActionKind
-  icon: LucideIcon
-  /** What the Tooltip explains — every secondary action gets one, wired or not. */
-  tooltip: string
-  /** Undefined → renders normally, just doesn't do anything yet on click.
-   *  See the kind-level doc above for which ones are TODO by design. */
-  onAction?: () => void
-}
+// function renders the exact same JSX regardless of which variant was
+// passed — per the "one shared skeleton, only slot content changes" rule.
 
 type RecordFields = {
   name: string
   typeLabel: string
   /** Max 3 — enforced by slicing, not by trusting the caller. Stable identity
-   *  attributes ONLY (role, industry, source) — never a dynamic state or a
-   *  metric; those belong in Signal (if urgent/actionable) or a secondary
-   *  action / the Overview tab (if just reference info).
-   *
-   *  Missing-data rule: a blank/undefined field never renders as a gap or a
-   *  "—" placeholder — the render site's `.filter(Boolean)` drops it, and
-   *  the row compacts to whatever chips remain (down to zero, in which case
-   *  the whole chips row doesn't render at all). */
+   *  attributes ONLY — never a dynamic state or metric. Missing-data rule:
+   *  a blank/undefined field is dropped via .filter(Boolean), never shown as
+   *  a gap or "—" — the row just compacts. */
   chips: string[]
-  /** Zone 3's disclosure content — up to ~6-8 per variant now that the brief
-   *  grew this from "glanceable key fields" to a fuller secondary-action set
-   *  (see SecondaryAction's own doc comment and the file header's HISTORY
-   *  note for why this went back behind a chevron). */
-  secondaryActions: SecondaryAction[]
-}
-
-// Builder helpers, not exported — only for the 2 kinds that are conditional
-// on a real data value being present (contact channels, person-navigation
-// links). The always-present TODO action slots below (Add note, view-X
-// navigation) aren't gated on any data field, so they're written as plain
-// literals directly in each variant's list instead of forcing them through
-// a builder that implies a missing-data condition that doesn't apply to them.
-function contactAction(label: string, value: string | undefined, icon: LucideIcon, tooltip: string, onAction?: () => void): SecondaryAction[] {
-  return value ? [{ kind: "contact", label, icon, tooltip, onAction }] : []
-}
-function navigationAction(label: string, target: string | undefined, icon: LucideIcon, tooltip: string, onAction?: () => void): SecondaryAction[] {
-  return target ? [{ kind: "navigation", label, icon, tooltip, onAction }] : []
+  /** Zone: RECORD. Each already carries provenance (Law 1) and a masking
+   *  state (Law 4) — see RecordField's own doc comment. */
+  recordFields: RecordField[]
 }
 
 function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["data"]): RecordFields {
-  if (variant === "employee") {
-    const d = data as EmployeeRecord
+  if (variant === "uep") {
+    const d = data as UEPRecord
     return {
       name: d.name,
       typeLabel: "Employee",
       chips: [d.role ?? "", d.department ?? "", d.location ?? ""],
-      secondaryActions: [
-        ...navigationAction("Manager", d.manager, ArrowUpRight, d.manager ? `Go to ${d.manager}'s record` : "", d.onManagerClick),
-        ...contactAction("Email", d.email, Mail, "Send an email", d.onEmailClick),
-        ...contactAction("Phone", d.phone, Phone, "Call this number", d.onPhoneClick),
-        // TODO: confirmar vista de gestión de accesos y permisos — no existe
-        // todavía en AIMS OS, así que onAction queda sin cablear a propósito.
-        { kind: "navigation", label: "Manage access", icon: ArrowUpRight, tooltip: "Manage this employee's access and permissions" },
-        // TODO: confirmar si la vista de equipo/reportes directos existe.
-        { kind: "navigation", label: "View team", icon: ArrowUpRight, tooltip: "View direct reports" },
-        { kind: "creation", label: "Add note", icon: StickyNote, tooltip: "Add a note to this record" },
-        // TODO: confirmar si "Create task" aplica a Employee — a diferencia
-        // de Customer/Client, aquí ni siquiera la INCLUSIÓN del botón está
-        // confirmada con producto, no solo su destino. Se incluye igual
-        // (label + Button tertiary + Tooltip) por instrucción explícita de
-        // no omitirlo, pero es el candidato más probable a eliminarse tras
-        // revisión.
-        { kind: "creation", label: "Create task", icon: ListChecks, tooltip: "Create a task for this record" },
-        // No "Schedule meeting" for Employee — explicit exclusion rule.
-        // No "Log activity" — see RECORD_HEADER_RECOMMENDED_ACTIONS' own
-        // comment: activity history lives in the record's own Activity tab.
-      ],
+      recordFields: [d.manager, d.accessRole, d.jobTitle, d.startDate].filter((f): f is RecordField => Boolean(f)),
     }
   }
-  if (variant === "customer") {
-    const d = data as CustomerRecord
+  if (variant === "ucp") {
+    const d = data as UCPRecord
     return {
       name: d.accountName,
       typeLabel: "Customer account",
-      chips: [d.tier ?? "", d.segment ?? "", d.industry ?? ""],
-      secondaryActions: [
-        ...navigationAction("Owner/CSM", d.owner, ArrowUpRight, d.owner ? `Go to ${d.owner}'s record` : "", d.onOwnerClick),
-        // Primary contact — tagged "contact" kind per this brief (unlike the
-        // earlier DECISION FLAGGED note that classified it as relational),
-        // but CustomerRecord still has no separate email/phone channel FOR
-        // the primary contact — only this one name/title string — so unlike
-        // Email/Phone above, there's no real mailto:/tel: to wire. onAction
-        // stays TODO despite the "contact" kind tag; flagging this specific
-        // inconsistency rather than inventing a channel that doesn't exist.
-        ...(d.primaryContact ? [{ kind: "contact", label: "Primary contact", icon: Contact, tooltip: `Contact ${d.primaryContact}`, onAction: d.onPrimaryContactClick } as SecondaryAction] : []),
-        // TODO: confirmar destino de la vista de actividad de la cuenta.
-        { kind: "navigation", label: "View activity", icon: ArrowUpRight, tooltip: "View this account's activity history" },
-        { kind: "creation", label: "Add note", icon: StickyNote, tooltip: "Add a note to this record" },
-        { kind: "creation", label: "Create task", icon: ListChecks, tooltip: "Create a task for this record" },
-        { kind: "creation", label: "Schedule meeting", icon: CalendarPlus, tooltip: "Schedule a meeting" },
-      ],
+      chips: [d.tier ?? "", d.segment ?? "", d.accountType ?? ""],
+      recordFields: [d.owner, d.renewalDate, d.arr].filter((f): f is RecordField => Boolean(f)),
     }
   }
-  const d = data as ClientRecord
+  const d = data as UVPRecord
   return {
     name: d.name,
-    typeLabel: "Client (deal)",
-    chips: [d.company ?? "", d.dealValue ?? "", d.leadSource ?? ""],
-    secondaryActions: [
-      ...contactAction("Email", d.email, Mail, "Send an email", d.onEmailClick),
-      ...contactAction("Phone", d.phone, Phone, "Call this number", d.onPhoneClick),
-      ...navigationAction("Owner", d.owner, ArrowUpRight, d.owner ? `Go to ${d.owner}'s record` : "", d.onOwnerClick),
-      // TODO: confirmar destino de la vista de deal/oportunidad.
-      { kind: "navigation", label: "View deal", icon: ArrowUpRight, tooltip: "View this deal's details" },
-      // TODO: confirmar destino del historial de interacciones.
-      { kind: "navigation", label: "View interactions", icon: ArrowUpRight, tooltip: "View interaction history with this client" },
-      { kind: "creation", label: "Add note", icon: StickyNote, tooltip: "Add a note to this record" },
-      { kind: "creation", label: "Create task", icon: ListChecks, tooltip: "Create a task for this record" },
-      { kind: "creation", label: "Schedule meeting", icon: CalendarPlus, tooltip: "Schedule a meeting" },
-    ],
+    typeLabel: "Vendor",
+    chips: [d.vendorType ?? "", d.contractStatus ?? "", d.category ?? ""],
+    recordFields: [d.procurementOwner, d.contractEndDate, d.spendYtd].filter((f): f is RecordField => Boolean(f)),
   }
 }
 
 // ── Recommended actions per variant ─────────────────────────────────────────
-// The single source of truth for "which CTA(s) go on this card" — used by the
-// catalog's Overview/Playground/CLAUDE.md guidance so they can't drift apart.
-// actions[0] is the one contextual CTA (rendered as a real button, next to the
-// always-present AI agent trigger); actions[1+] land in the "···" overflow.
-//
-// Revised after an AIMS OS page-context check: RecordHeader always sits ON
-// that record's own profile page, with Overview/Activity/Log tabs rendering
-// right below it — so an action must do something no tab already covers.
-//   Employee: just "Message" — "View profile" was circular (already on it).
-//   Customer: "Contact account" is the CTA; "View contract" is the only
-//   overflow item — "Log activity" was dropped, since the Activity tab below
-//   already has its own log-activity affordance.
-//   Client: "Email" is the CTA (mirrors Employee's Message / Customer's
-//   Contact account — a "reach out" action, not covered elsewhere). "Log
-//   call" moved to overflow — it belongs to the Activity tab, not gone
-//   entirely, since some screens may still want it one tap away. "Send
-//   proposal" is deliberately NOT here anymore: it's now the Signal's own
-//   inline action (see NextBestAction.actionLabel) — keeping it here too
-//   would duplicate the exact recommendation the Signal already surfaces.
-// No variant sets a "primary" RecordAction here on purpose: the AI agent
-// button now owns the row's one "primary" visual weight (see the component
-// below) — a second primary-blue button next to it would blur which action
-// is actually the most important one to notice first.
+// The single source of truth for "which CTA goes on this card" — one
+// contact action (Message) across all 3 variants, per explicit instruction.
+// No overflow items specified for any variant — left empty rather than
+// inventing content not asked for.
 export const RECORD_HEADER_RECOMMENDED_ACTIONS: Record<RecordHeaderVariant, RecordAction[]> = {
-  employee: [{ label: "Message" }],
-  customer: [{ label: "Contact account" }, { label: "View contract" }],
-  client:   [{ label: "Email" }, { label: "Log call" }],
+  uep: [{ label: "Message" }],
+  ucp: [{ label: "Message" }],
+  uvp: [{ label: "Message" }],
 }
 
 // ── Desktop overflow — container-width collapse thresholds ─────────────────
-// Not viewport breakpoints: this card can sit in a narrower panel (a SlideOut,
-// a resized widget) on an otherwise-desktop screen, so width is measured on
-// the card's own rendered box via ResizeObserver, not read from Tailwind's
-// sm:/md: (which only sees the viewport). No Figma node exists for this
-// component yet (see file header), so these two px values are calibrated
-// estimates, not a spec'd breakpoint — revisit once one exists.
-// Priority order when space runs out (least-important first): identity tags
-// hide completely below COLLAPSE_HIDE_TAGS_WIDTH; the contextual CTA folds
-// into the "···" overflow menu below the narrower COLLAPSE_HIDE_CTA_WIDTH.
-// The AI agent trigger and the disclosure chevron are NEVER sacrificed — the
-// agent is the platform's one persistent entry point (see file header), and
-// the chevron is the only way to reach the secondary actions once there are
-// any. The name itself never truncates (wraps instead) — unaffected by
-// either threshold.
+// Not viewport breakpoints: this card can sit in a narrower panel on an
+// otherwise-desktop screen, so width is measured on the card's own rendered
+// box via ResizeObserver, not read from Tailwind's sm:/md:. No Figma node
+// exists for this component yet, so this px value is a calibrated estimate,
+// not a spec'd breakpoint. Below it, identity tags hide completely — the
+// agent trigger and disclosure chevron are never sacrificed.
 const COLLAPSE_HIDE_TAGS_WIDTH = 560
-const COLLAPSE_HIDE_CTA_WIDTH = 440
 
 // ── Component ────────────────────────────────────────────────────────────────
 
 function RecordHeader({
   variant,
   data,
-  signal,
-  signalStatus = "resolved",
+  statusDot,
   assignedAgent,
   actions = [],
+  agenticSystem,
+  intervention,
+  onProvenanceOpen,
   defaultExpanded = false,
   locked = false,
   className,
@@ -630,68 +391,50 @@ function RecordHeader({
   const fields = getRecordFields(variant, data)
   const [primaryAction, ...overflowActions] = actions
 
-  // Signal loading/error — see RecordHeaderProps.signalStatus doc. Neither
-  // path touches the NextBestAction shape itself; "error" just substitutes a
-  // different, centralized VALUE of that same shape.
-  const effectiveSignal = signalStatus === "error" ? RECORD_HEADER_FALLBACKS.nbaError : signal
-  const sig = effectiveSignal.aiGenerated ? AI_SIGNAL_CONFIG : SEVERITY_CONFIG[effectiveSignal.severity]
-
-  const hasSecondaryActions = fields.secondaryActions.length > 0
+  const hasAgenticSystem = Boolean(agenticSystem?.activeWorkflow || agenticSystem?.lastAgent)
+  const hasRecordFields = fields.recordFields.length > 0
+  const hasAnyZone = hasAgenticSystem || Boolean(intervention) || hasRecordFields
 
   // Avatar fallback: only a genuinely blank name gets the DS's own "empty"
   // glyph (avatar.tsx's existing avatarStyle="empty") instead of initials —
-  // a single-character name (e.g. "J") already renders fine as one initial,
-  // so it isn't special-cased here, only true emptiness is.
+  // a single-character name already renders fine as one initial.
   const hasName = Boolean(fields.name && fields.name.trim())
 
-  // Desktop overflow (task 3) — width-driven, not a 2-pass "measure after
-  // hiding" algorithm: both thresholds read the SAME measured width
-  // independently, so there's no flicker and it naturally reverses when the
-  // card grows back (no state to "un-collapse" — it's derived every measure).
+  // Desktop overflow — width-driven, derived fresh on every measure (no
+  // "un-collapse" state to manage — it naturally reverses when the card
+  // grows back).
   const rootRef = useRef<HTMLDivElement>(null)
   const [tagsHidden, setTagsHidden] = useState(false)
-  const [ctaCollapsed, setCtaCollapsed] = useState(false)
   useLayoutEffect(() => {
     const el = rootRef.current
     if (!el) return
-    const measure = () => {
-      const w = el.clientWidth
-      setTagsHidden(w < COLLAPSE_HIDE_TAGS_WIDTH)
-      setCtaCollapsed(w < COLLAPSE_HIDE_CTA_WIDTH)
-    }
+    const measure = () => setTagsHidden(el.clientWidth < COLLAPSE_HIDE_TAGS_WIDTH)
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
 
-  // When the CTA collapses for width, it doesn't disappear — it folds into
-  // the same overflow menu the 1+ extra actions already use, so it's still
-  // one click away instead of gone.
-  const effectiveOverflowItems = ctaCollapsed && primaryAction ? [primaryAction, ...overflowActions] : overflowActions
-
   return (
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
       <div ref={rootRef} className="flex flex-col gap-[16px]">
 
-        {/* ── Layer 1: Identity row (always visible) — Salesforce Highlights Panel pattern:
-            avatar + primary field (name) + stable identity metadata + a 3-tier action row. */}
+        {/* ── Identity row (always visible, fixed) — avatar + name + statusDot +
+            type label + up to 3 stable-attribute Tags + action row. */}
         <div className="flex items-start gap-[12px] flex-wrap">
           <AvatarCircle name={fields.name || fields.typeLabel} sizeKey="lg" avatarStyle={hasName ? "text" : "empty"} />
 
           <div className="flex-1 min-w-0 flex flex-col gap-[6px]">
-            {/* Name is the single most prominent element — never truncated (wraps instead), never repeated by a chip below */}
-            <div className="flex items-baseline gap-[8px] flex-wrap">
+            <div className="flex items-center gap-[8px] flex-wrap">
               <span className="text-[18px] font-semibold leading-[1.3]" style={{ color: "var(--color-text-title)" }}>
                 {fields.name}
               </span>
+              {/* Status dot — see RecordStatusDot's own doc comment. Badge's
+                  own aria label carries the meaning for screen readers. */}
+              {statusDot && <Badge variant={STATUS_DOT_VARIANT[statusDot]} label={`Status: ${statusDot}`} />}
               <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>
                 {fields.typeLabel}
               </span>
-              {/* Locked (task 5) — a STATE, not a stable attribute, so it never
-                  competes for one of the 3 identity-chip slots (same reasoning
-                  that keeps Deal stage/Adoption level out of chips) — it sits
-                  next to the type label instead, read-only Tag, no onClick. */}
               {locked && (
                 <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />}>
                   {RECORD_HEADER_FALLBACKS.lockedTagLabel}
@@ -699,13 +442,6 @@ function RecordHeader({
               )}
             </div>
 
-            {/* Read-only identity metadata — Tag, not Chip (see file header). Stable
-                attributes only; a dynamic state here would need updating every time
-                it changes, which is exactly what Signal/Details are for instead.
-                Missing-data rule: .filter(Boolean) drops any blank field before
-                slicing to 3 — no gap, no "—", the row just compacts. Hidden
-                entirely (not just compacted) when the card itself is too narrow
-                to fit both this row and the action group — see COLLAPSE_HIDE_TAGS_WIDTH. */}
             {!tagsHidden && fields.chips.filter(Boolean).length > 0 && (
               <div className="flex items-center gap-[6px] flex-wrap">
                 {fields.chips.filter(Boolean).slice(0, 3).map((label, i) => (
@@ -715,17 +451,8 @@ function RecordHeader({
             )}
           </div>
 
-          {/* 3-tier action hierarchy: AI agent (always, most prominent) → one
-              contextual CTA → overflow for anything else. Mobile-first: this
-              group is first in DOM order among the wrapping row's trailing
-              items, and the AI button is the first child within it, so it's
-              the last thing to get pushed off on a narrow viewport. */}
           <div className="flex items-center gap-[6px] shrink-0 flex-wrap justify-end">
-            {/* variant="main" — deliberate exception, see file header comment
-                and the CLAUDE.md Button hierarchy exception note.
-                assignedAgent === null (task 1c) — the button still renders,
-                disabled, with a Tooltip explaining why — never a silently
-                missing or broken trigger. */}
+            {/* variant="main" — deliberate, named exception, see file header. */}
             {assignedAgent ? (
               <Button
                 variant="main"
@@ -748,12 +475,7 @@ function RecordHeader({
               </Tooltip>
             )}
 
-            {/* Locked (task 5): the contextual CTA is a write action, so it
-                disables with a Tooltip — but it isn't hidden, same "explain,
-                don't silently omit" rule as the no-agent case above. Folds
-                into the overflow menu instead of rendering here at all when
-                the card is too narrow (task 3) — ctaCollapsed. */}
-            {primaryAction && !ctaCollapsed && (
+            {primaryAction && (
               locked ? (
                 <Tooltip content={RECORD_HEADER_FALLBACKS.lockedActionTooltip}>
                   <Button variant={primaryAction.variant ?? "secondary"} size="sm" disabled>
@@ -767,27 +489,21 @@ function RecordHeader({
               )
             )}
 
-            {effectiveOverflowItems.length > 0 && (
+            {overflowActions.length > 0 && (
               <ActionOverflowMenu
-                items={effectiveOverflowItems}
+                items={overflowActions}
                 disabled={locked}
                 disabledTooltip={RECORD_HEADER_FALLBACKS.lockedActionTooltip}
               />
             )}
 
-            {/* Disclosure trigger — native <button> gets Enter/Space activation for
-                free; aria-expanded is the only piece that needs adding by hand.
-                Only rendered when there's at least one secondary action to reveal.
-                Always enabled even when locked — viewing this list is a read
-                action (whether each item inside is itself wired is a separate
-                question this component doesn't decide for the reader). */}
-            {hasSecondaryActions && (
+            {hasAnyZone && (
               <Button
                 variant="tertiary"
                 size="sm"
                 iconPosition="alone"
                 aria-expanded={expanded}
-                aria-label={expanded ? "Hide secondary actions" : "Show secondary actions"}
+                aria-label={expanded ? "Hide record detail" : "Show record detail"}
                 icon={expanded ? <ChevronUp size={16} strokeWidth={1.75} /> : <ChevronDown size={16} strokeWidth={1.75} />}
                 onClick={() => setExpanded(v => !v)}
               />
@@ -795,47 +511,113 @@ function RecordHeader({
           </div>
         </div>
 
-        {/* ── Layer 2: Signal (always visible) — HubSpot conditional-section + Next Best
-            Action pattern: exactly one recommendation, answering "why does this record
-            matter right now", never a dashboard of every possible metric. Actionable:
-            when the NBA engine names a specific action (signal.actionLabel), it renders
-            as a real inline button instead of asking the user to click-through and hunt
-            for it. Loading/error (task 2): see signalStatus doc on RecordHeaderProps —
-            neither state removes the bar or changes its footprint, only its content. */}
-        <SignalBar signal={effectiveSignal} sig={sig} loading={signalStatus === "loading"} />
-
-        {/* ── Zone 3, part 2: secondary actions (disclosure) — collapsed by
-            default (predictable header height), revealed by the chevron
-            above. Every action is the SAME primitive regardless of kind —
-            Button tertiary + leading icon, wrapped in Tooltip — only the
-            icon and onAction wiring differ; see SecondaryAction's own doc
-            comment for the 3 kinds and which ones are wired vs. TODO. Zone 3
-            conceptually also includes the action row above (agent/CTA/
-            overflow) — kept in its existing physical position rather than
-            moved down here, per "don't redo the layout"; see the Reference
-            tab's content-contract section for the full 3-zone framing and
-            the final per-variant action list. */}
-        {hasSecondaryActions && (
+        {/* ── Expandable zones — collapsed by default, predictable header height. */}
+        {hasAnyZone && (
           <div
             style={{
-              maxHeight: expanded ? 999 : 0,
+              maxHeight: expanded ? 2000 : 0,
               overflow: "hidden",
               transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1)",
             }}
           >
-            {/* pt-[16px] matches the outer flex gap-[16px] above (Identity→Signal,
-                Signal→this wrapper) so the divider sits at an equal 16px from
-                both neighbors instead of 16px above / 4px below. */}
-            <div className="pt-[16px]" style={{ borderTop: expanded ? "0.5px solid var(--color-border-neutral-lighter)" : undefined }}>
-              <div className="flex flex-wrap items-center gap-[8px]">
-                {fields.secondaryActions.map((a, i) => (
-                  <Tooltip key={i} content={a.tooltip}>
-                    <Button variant="tertiary" size="sm" icon={<a.icon size={14} strokeWidth={1.75} />} onClick={a.onAction}>
-                      {a.label}
+            <div className="pt-[16px] flex flex-col gap-[16px]" style={{ borderTop: "0.5px solid var(--color-border-neutral-lighter)" }}>
+
+              {hasAgenticSystem && (
+                <div className="flex flex-col gap-[8px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                    Agentic System
+                  </span>
+                  <div className="flex flex-wrap items-center gap-[8px]">
+                    {agenticSystem?.activeWorkflow && (
+                      <Button variant="tertiary" size="sm" icon={<Workflow size={14} strokeWidth={1.75} />} onClick={agenticSystem.activeWorkflow.onOpen}>
+                        {agenticSystem.activeWorkflow.name}
+                      </Button>
+                    )}
+                    {agenticSystem?.lastAgent && (
+                      <Button variant="tertiary" size="sm" icon={<Bot size={14} strokeWidth={1.75} />} onClick={agenticSystem.lastAgent.onOpen}>
+                        {agenticSystem.lastAgent.name}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {intervention && (
+                <div className="flex flex-col gap-[8px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                    Your Intervention
+                  </span>
+                  {/* Law 3 — calm/informative token family ALWAYS, regardless of
+                      intervention.severity. Never the error/red family — that
+                      constancy is the law, not an oversight. */}
+                  <div
+                    className="flex items-start gap-[10px] rounded-[8px] px-[12px] py-[10px]"
+                    style={{ background: "var(--tag-informative-bg)", border: "0.5px solid var(--tag-informative-bd)" }}
+                  >
+                    <Clock size={16} strokeWidth={1.75} style={{ color: "var(--tag-informative-fg)" }} className="shrink-0 mt-[2px]" />
+                    <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+                      <span className="text-[13px] font-semibold leading-[1.4]" style={{ color: "var(--tag-informative-fg)" }}>
+                        {intervention.count} {intervention.count === 1 ? "ACTION" : "ACTIONS"} AWAITING REVIEW
+                      </span>
+                      <span className="text-[12px] leading-[1.5]" style={{ color: "var(--tag-informative-fg)" }}>
+                        {intervention.description}
+                      </span>
+                    </div>
+                    <Button variant="secondary" size="sm" className="shrink-0" onClick={intervention.onReview}>
+                      Review
                     </Button>
-                  </Tooltip>
-                ))}
-              </div>
+                  </div>
+                </div>
+              )}
+
+              {hasRecordFields && (
+                <div className="flex flex-col gap-[8px]">
+                  {/* Law 2 — the (i) provenance icon sits directly next to the
+                      RECORD label, not floating unlabeled at the row's far
+                      edge, so it's actually findable. */}
+                  <div className="flex items-center gap-[4px]">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                      Record
+                    </span>
+                    {onProvenanceOpen && (
+                      <Tooltip content="Data provenance for every field below">
+                        <button
+                          type="button"
+                          aria-label="View data provenance"
+                          onClick={onProvenanceOpen}
+                          className="flex items-center justify-center rounded-full transition-opacity hover:opacity-70 focus-visible:outline-none"
+                          style={{ color: "var(--field-supporting)" }}
+                        >
+                          <Info size={12} strokeWidth={1.75} />
+                        </button>
+                      </Tooltip>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-[16px] gap-y-[12px]">
+                    {fields.recordFields.map((f, i) => (
+                      <div key={i} className="flex flex-col gap-[4px] min-w-0">
+                        <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                          {f.label}
+                        </span>
+                        <div className="flex items-center gap-[6px] min-w-0">
+                          <span
+                            className="text-[13px] leading-[1.4] truncate"
+                            style={{ color: f.state === "masked" ? "var(--field-supporting)" : "var(--foreground)", fontStyle: f.state === "masked" ? "italic" : undefined }}
+                          >
+                            {f.state === "masked" ? (f.maskedValue ?? "•••• (restricted)") : f.value}
+                          </span>
+                          {/* Field origin badge — Law 1, always renders regardless
+                              of masking state (provenance ≠ the value itself). */}
+                          <Tooltip content={`${f.provenance.system} · ${f.provenance.modelVersion} · Synced ${f.provenance.syncedAgo}`}>
+                            <Tag variant="secondary" size="sm" className="shrink-0">{f.provenance.systemAbbr}</Tag>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         )}
@@ -854,8 +636,6 @@ function ActionOverflowMenu({
   disabledTooltip,
 }: {
   items: RecordAction[]
-  /** Locked (task 5) — every item in this menu is a write action, so the
-   *  whole trigger disables rather than opening a menu of dead entries. */
   disabled?: boolean
   disabledTooltip?: string
 }) {
@@ -900,126 +680,5 @@ function ActionOverflowMenu({
   )
 }
 
-// ── Signal bar — kept as its own small function for readability, not a
-// separately-exported component (it's not meant to be used outside RecordHeader). ──
-
-function SignalBar({
-  signal,
-  sig,
-  loading,
-}: {
-  signal: NextBestAction
-  sig: { Icon: LucideIcon | null; bg: string; bd: string; fg: string }
-  /** Task 2 — NBA engine still computing. Same footprint (padding/border/
-   *  radius), Skeleton content instead of icon+label, never clickable,
-   *  never dismissible — there's nothing resolved yet to act on or close. */
-  loading?: boolean
-}) {
-  const { Icon } = sig
-  const clickable = !loading && Boolean(signal.onAction)
-  const [dismissed, setDismissed] = useState(false)
-
-  if (dismissed) return null
-
-  // Task 3 — long label/dueContext truncates (with a Tooltip for the full
-  // text) past a rough length threshold, instead of wrapping the bar taller
-  // and shifting everything below it. Short text (the common case, and every
-  // existing mock) is completely unaffected — no Tooltip wrapper at all.
-  const fullText = signal.dueContext ? `${signal.label} · ${signal.dueContext}` : signal.label
-  const isLongText = fullText.length > 60
-
-  // Loading always renders the neutral container — there's no severity yet
-  // to color it by (see SEVERITY_CONFIG.neutral, already in module scope).
-  const containerBg = loading ? SEVERITY_CONFIG.neutral.bg : sig.bg
-  const containerBd = loading ? SEVERITY_CONFIG.neutral.bd : sig.bd
-
-  const labelContent = (
-    <>
-      {signal.label}
-      {signal.dueContext && (
-        <span className="font-medium opacity-80"> · {signal.dueContext}</span>
-      )}
-    </>
-  )
-
-  return (
-    <div
-      role={clickable ? "button" : undefined}
-      tabIndex={clickable ? 0 : undefined}
-      onClick={loading ? undefined : signal.onAction}
-      onKeyDown={e => {
-        if (!clickable) return
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); signal.onAction?.() }
-      }}
-      className={cn(
-        "flex items-center gap-[8px] rounded-[8px] px-[12px] py-[10px] outline-none",
-        clickable && "cursor-pointer transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:[ring-offset-color:var(--canvas)]",
-      )}
-      style={{ background: containerBg, border: `0.5px solid ${containerBd}` }}
-    >
-      {loading ? (
-        <>
-          <Skeleton shape="circle" width={16} height={16} />
-          <Skeleton shape="text" width="55%" height={13} className="flex-1" />
-        </>
-      ) : (
-        <>
-          {/* neutral has no Icon (see SEVERITY_CONFIG) — Badge's own neutral dot
-              is the real "muted status" indicator, not a stroked icon standing
-              in for one. */}
-          {Icon ? (
-            <Icon size={16} strokeWidth={1.75} style={{ color: sig.fg }} className="shrink-0" />
-          ) : (
-            <Badge variant="neutral" className="shrink-0" />
-          )}
-          {isLongText ? (
-            <Tooltip content={fullText} triggerClassName="block min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-semibold leading-[1.4]" style={{ color: sig.fg }}>
-                {labelContent}
-              </span>
-            </Tooltip>
-          ) : (
-            <span className="text-[13px] font-semibold leading-[1.4] flex-1 min-w-0" style={{ color: sig.fg }}>
-              {labelContent}
-            </span>
-          )}
-          {signal.actionLabel && (
-            // The action is nameable — a real button replaces the plain chevron
-            // hint, since "click somewhere on this bar" is a worse affordance
-            // than a labeled button once there's a specific verb to show.
-            // stopPropagation so this doesn't also fire the row's own onClick —
-            // same double-invoke risk this repo's NotificationCenter filter fix
-            // already ran into once with a similarly-nested click target.
-            <Button
-              variant="secondary"
-              size="sm"
-              className="shrink-0"
-              onClick={e => { e.stopPropagation(); signal.onAction?.() }}
-            >
-              {signal.actionLabel}
-            </Button>
-          )}
-          {!signal.actionLabel && clickable && (
-            <ChevronDown size={14} strokeWidth={1.75} style={{ color: sig.fg, transform: "rotate(-90deg)" }} className="shrink-0" />
-          )}
-          {signal.dismissible && (
-            // Same affordance as AlertBanner's onClose — reserved for signals with
-            // no actionLabel/onAction (see the field's own doc comment above), so
-            // dismissing never hides an actual next step.
-            <button
-              type="button"
-              aria-label="Dismiss"
-              onClick={e => { e.stopPropagation(); setDismissed(true); signal.onDismiss?.() }}
-              className="shrink-0 w-[24px] h-[24px] flex items-center justify-center rounded-[4px] transition-opacity hover:opacity-70 focus-visible:outline-none"
-              style={{ color: sig.fg }}
-            >
-              <X size={14} strokeWidth={1.75} />
-            </button>
-          )}
-        </>
-      )}
-    </div>
-  )
-}
-
 export { RecordHeader }
+export type { LucideIcon }

@@ -44,7 +44,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { RecordHeader, RECORD_HEADER_RECOMMENDED_ACTIONS, type RecordHeaderVariant, type EmployeeRecord, type CustomerRecord, type ClientRecord, type NextBestAction } from "@/components/ui/record-header"
+import { RecordHeader, RECORD_HEADER_RECOMMENDED_ACTIONS, type RecordHeaderVariant, type UEPRecord, type UCPRecord, type UVPRecord, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo } from "@/components/ui/record-header"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
@@ -172,7 +172,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "notification-item",   label: "Notification Item",   group: "Components", description: "Single-row notification · lead icon + title/timestamp + description + tags/actions · unread indicator dot · 5 states × Read/Unread: Default, Hover, Pressed, Focus, Disabled" },
   { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
-  { id: "record-header",   label: "Record Header",     group: "Components",  description: "Entity profile header for Employee/Customer/Client records · avatar + name + context chips + up to 3 actions · Next Best Action signal bar · expandable secondary-actions row (contact/navigation/creation) · one shared layout across all 3 variants" },
+  { id: "record-header",   label: "Record Header",     group: "Components",  description: "Governed entity card for Work Surfaces (UEP/UCP/UVP) · identity + statusDot · expandable Agentic System / Your Intervention / Record zones · every field carries an origin-system badge and reachable provenance · one shared skeleton across all 3 variants" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "side-panel",      label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 350px default, 450px + dynamic half-screen snap points · header + scrollable body + optional footer" },
@@ -2111,53 +2111,46 @@ const RECORD_HEADER_SPEC = {
   name: "Record Header",
   figmaNodeId: "—",
   figmaUrl: "",
-  description: "Entity profile header used atop Employee/Customer/Client dashboard views. 3 content zones: Identity (fixed — avatar, name, type, up to 3 stable-attribute Tags), Signal (contextual — a single NextBestAction, semantically colored, optionally actionable inline), Actions + key fields (contextual — the agent/CTA/overflow action row, plus up to ~3-4 glanceable+actionable key fields, always visible — no disclosure). One shared layout for all 3 variants; only which fields land in chips vs. key fields vs. actions changes per variant.",
+  description: "Governed entity card for AIMS OS Work Surfaces — UEP (Employee), UCP (Customer), UVP (Vendor). Identity (fixed) + 3 expandable zones: Agentic System, Your Intervention (conditional), Record. One shared skeleton for all 3 variants; only zone content changes. See the Reference tab's Governance canon section for the 4 laws this component is built to enforce.",
   properties: [
-    { name: "variant",        type: "Variant",  values: ["employee","customer","client"], default: "required", note: "Selects which of the 3 record shapes `data` must match, and which fields populate the context chips vs. the key fields — see getRecordFields in record-header.tsx." },
-    { name: "data",           type: "object",   values: ["EmployeeRecord | CustomerRecord | ClientRecord"], default: "required" },
-    { name: "signal",         type: "object",   values: ["NextBestAction — { label, severity, dueContext?, aiGenerated?, actionLabel?, onAction?, dismissible?, onDismiss? }"], default: "required", note: "Fed by the AIMS OS Next Best Action engine. Same shape for all 3 variants. actionLabel renders a real inline button (calls onAction) when the recommendation names one specific action. dismissible adds a close (X) — reserve it for signals with no actionLabel/onAction, so dismissing never buries a real next step." },
-    { name: "signalStatus",   type: "\"loading\"|\"resolved\"|\"error\"", values: ["loading","resolved","error"], default: "resolved", note: "Signal is asynchronous (NBA engine call). loading shows a Skeleton in the same footprint; error substitutes RECORD_HEADER_FALLBACKS.nbaError instead of signal. Never removes the bar or changes its height." },
-    { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "AIMS OS is agent-first — every record has one, but the value can be null for a record with none assigned yet. Renders an always-present icon-only button (Sparkle, variant=\"main\" — a named exception to the usual no-main-in-a-card rule); null disables it with a Tooltip instead of omitting it. RecordHeader never renders the chat UI itself." },
-    { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as the one contextual CTA button; actions[1+] land in the \"···\" overflow Menu. Same RecordAction shape as EntityList's ELAction. Folds into overflow entirely on a narrow card (see collapse priority in Reference)." },
-    { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "Read-only record. Shows a \"Locked\" Tag next to the type label; disables the CTA/overflow (Tooltip explains why); the agent trigger and Signal stay fully interactive." },
+    { name: "variant",        type: "Variant",  values: ["uep","ucp","uvp"], default: "required", note: "Selects which of the 3 record shapes `data` must match — see getRecordFields in record-header.tsx." },
+    { name: "data",           type: "object",   values: ["UEPRecord | UCPRecord | UVPRecord"], default: "required" },
+    { name: "statusDot",      type: "\"attention\"|\"success\"|\"neutral\"", values: ["attention","success","neutral"], default: "undefined", note: "Minimal glanceable indicator next to the name — maps directly to Badge's own variants (alert/success/neutral). DECISION FLAGGED: replaces an earlier always-visible Signal bar, retired in this revision — see Reference tab." },
+    { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "AIMS OS is agent-first — every record has one, but the value can be null. Renders an always-present icon-only button (Sparkle, variant=\"main\"); null disables it with a Tooltip. RecordHeader never renders the chat UI itself." },
+    { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as the one contact CTA (Message); actions[1+] land in the \"···\" overflow Menu." },
+    { name: "agenticSystem",  type: "object",   values: ["AgenticSystemInfo — { activeWorkflow?: {name,onOpen?}, lastAgent?: {name,onOpen?} }"], default: "undefined", note: "Zone: AGENTIC SYSTEM. Exactly 2 fixed slots, each a Button variant=\"tertiary\" with a leading icon (Workflow/Bot) — never a colored card. Zone omitted entirely if neither slot is set." },
+    { name: "intervention",   type: "object",   values: ["PendingIntervention — { count, description, severity, onReview }"], default: "undefined", note: "Zone: YOUR INTERVENTION — only rendered when set (a real pending HTL decision). Calm/informative styling ALWAYS, regardless of severity — Law 3." },
+    { name: "onProvenanceOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Data Provenance SlideOut for the RECORD zone — the (i) icon next to the RECORD heading (Law 2)." },
+    { name: "defaultExpanded", type: "Boolean", values: ["true","false"], default: "false", note: "Uncontrolled initial state for the zones disclosure. Predictable header height when collapsed." },
+    { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "Read-only record. Shows a \"Locked\" Tag next to the type label; disables the contact CTA/overflow (Tooltip explains why); the agent trigger stays fully interactive." },
   ],
   sizes: [
-    { size: "Card",     dimensions: "100% width, auto height", padding: "16px H / 24px V (CardContainer default)", gap: "16px between layers" },
+    { size: "Card",     dimensions: "100% width, auto height", padding: "16px H / 24px V (CardContainer default)", gap: "16px between rows" },
     { size: "Avatar",   dimensions: "32×32px (AvatarCircle lg)", padding: "—", gap: "—" },
-    { size: "Signal",   dimensions: "100% width × auto", padding: "12px H / 10px V", gap: "8px" },
+    { size: "Your Intervention block", dimensions: "100% width × auto", padding: "12px H / 10px V", gap: "10px" },
   ],
   typography: [
     { element: "Name",        family: "Inter", size: "18px", weight: "Semi Bold (600)", lineHeight: "1.3", variable: "--color-text-title" },
     { element: "Type label",  family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1",   variable: "--field-supporting" },
-    { element: "Signal text", family: "Inter", size: "13px", weight: "Semi Bold (600)", lineHeight: "1.4", variable: "per-severity — see states below" },
-    { element: "Key field label",family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1",   variable: "--field-supporting" },
-    { element: "Key field value (relational)", family: "Inter", size: "13px", weight: "Regular", lineHeight: "1.4", variable: "--primary (TableCellLink)" },
+    { element: "Zone heading (AGENTIC SYSTEM/YOUR INTERVENTION/RECORD)", family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1", variable: "--field-supporting" },
+    { element: "Record field label", family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1", variable: "--field-supporting" },
+    { element: "Record field value (hydrated)", family: "Inter", size: "13px", weight: "Regular", lineHeight: "1.4", variable: "--foreground" },
+    { element: "Record field value (masked)",   family: "Inter", size: "13px", weight: "Regular, Italic", lineHeight: "1.4", variable: "--field-supporting" },
   ],
   states: [
-    { name: "Signal — success",     borderWidth: "0.5px", tokens: [
-      { role: "Background", variable: "--ab-success-bg", varId: "", light: "#e5fdf8", dark: "#0a1f1a" },
-      { role: "Border",     variable: "--ab-success-bd", varId: "", light: "rgba(0,153,120,0.25)", dark: "rgba(0,153,120,0.25)" },
-      { role: "Icon + text",variable: "--ab-success-text", varId: "", light: "#003328", dark: "#6ee7b7" },
+    { name: "Status dot — attention", borderWidth: "—", tokens: [
+      { role: "Fill", variable: "--badge-alert", varId: "", light: "#f59e0b", dark: "#f59e0b" },
     ]},
-    { name: "Signal — alert",       borderWidth: "0.5px", tokens: [
-      { role: "Background", variable: "--ab-alert-bg", varId: "", light: "#fff4e5", dark: "#281e00" },
-      { role: "Border",     variable: "--ab-alert-bd", varId: "", light: "rgba(180,83,9,0.25)", dark: "rgba(180,83,9,0.25)" },
-      { role: "Icon + text",variable: "--ab-alert-text", varId: "", light: "#663c00", dark: "#fcd34d" },
+    { name: "Status dot — success", borderWidth: "—", tokens: [
+      { role: "Fill", variable: "--badge-success", varId: "", light: "#10b981", dark: "#10b981" },
     ]},
-    { name: "Signal — error",       borderWidth: "0.5px", tokens: [
-      { role: "Background", variable: "--ab-error-bg", varId: "", light: "#fdeded", dark: "#2d1515" },
-      { role: "Border",     variable: "--ab-error-bd", varId: "", light: "rgba(153,34,34,0.25)", dark: "rgba(153,34,34,0.25)" },
-      { role: "Icon + text",variable: "--ab-error-text", varId: "", light: "#5f2120", dark: "#ff6467" },
+    { name: "Status dot — neutral", borderWidth: "—", tokens: [
+      { role: "Fill", variable: "--badge-neutral", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.50)" },
     ]},
-    { name: "Signal — informative (fallback, see file header)", borderWidth: "0.5px", tokens: [
+    { name: "Your Intervention (Law 3 — calm, never error-red)", borderWidth: "0.5px", tokens: [
       { role: "Background", variable: "--tag-informative-bg", varId: "", light: "#e9f1ff", dark: "rgba(21,93,252,0.15)" },
       { role: "Border",     variable: "--tag-informative-bd", varId: "", light: "#2173ff", dark: "#2b7fff" },
       { role: "Icon + text",variable: "--tag-informative-fg", varId: "", light: "#001740", dark: "rgba(255,255,255,0.80)" },
-    ]},
-    { name: "Signal — neutral (fallback, see file header)", borderWidth: "0.5px", tokens: [
-      { role: "Background", variable: "--tag-neutral-bg", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.08)" },
-      { role: "Border",     variable: "--tag-neutral-bd", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
-      { role: "Icon + text",variable: "--tag-neutral-fg", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
     ]},
   ],
 }
@@ -32371,180 +32364,236 @@ function NotificationCenterPage({ openSpec }: { openSpec: (s: SpecModal) => void
   )
 }
 
-// Mock data for the 3 variants — realistic values, not "Lorem ipsum" placeholders,
-// per this repo's own screen-generation guardrails (CLAUDE.md's prototyping rules
-// apply just as much to the catalog's own demo data as to a PM screen).
+// Mock data for the 3 Work Surface variants (UEP/UCP/UVP) — realistic
+// values marked as EXAMPLES, not confirmed AIMS OS data, per this repo's
+// own screen-generation guardrails (CLAUDE.md's prototyping rules apply
+// just as much to the catalog's own demo data as to a PM screen).
 
-// on*Click below: real, presentation-layer routing for the 2 kinds that have
-// an unambiguous destination (mailto:/tel: — a plain browser behavior, not a
-// guessed business action) — same "this belongs in the page, not the engine
-// or the data shape" framing this file already uses for Signal/agent
-// handlers. onManagerClick is deliberately a no-op with only a comment —
-// there's no cross-record navigation in this catalog to route to, and
-// inventing a fake destination would be worse than leaving it honestly
-// unimplemented (per the brief's own "leave the slot ready but empty" rule).
-const RH_EMPLOYEE: EmployeeRecord = {
-  name: "Sarah Chen", role: "Senior Software Engineer", department: "Engineering",
-  manager: "David Kim",
-  onManagerClick: () => { /* TODO: route to David Kim's own Employee record once cross-record navigation exists in this catalog */ },
-  location: "Remote — Austin, TX",
-  email: "sarah.chen@aimsos.ai", onEmailClick: () => { window.location.href = "mailto:sarah.chen@aimsos.ai" },
-  phone: "+1 (512) 555-0142", onPhoneClick: () => { window.location.href = "tel:+15125550142" },
-  startDate: "March 3, 2023", team: "Platform Infra",
-  accessRole: "Admin",
-}
-// No onAction here — these are the static "what the NBA engine returned" data.
-// The real handlers (which destination each Signal opens) are wired inside
-// RecordHeaderPage below, since that's presentation-layer routing, not
-// something the engine or the data shape should know about.
-const RH_EMPLOYEE_SIGNAL: NextBestAction = {
-  label: "2 tasks pending your approval", severity: "alert", dueContext: "Oldest due today",
-}
+// Provenance builders — not exported, just so every mock field below cites
+// a real system + model version + freshness instead of a bare value with
+// no traceable source (Law 1).
+const wdProv = (syncedAgo: string): FieldProvenance => ({ system: "Workday", systemAbbr: "WD", modelVersion: "UEP v2.3", syncedAgo })
+const oktaProv = (syncedAgo: string): FieldProvenance => ({ system: "Okta", systemAbbr: "OK", modelVersion: "UEP v2.3", syncedAgo })
+const sfProv = (syncedAgo: string): FieldProvenance => ({ system: "Salesforce", systemAbbr: "SF", modelVersion: "UCP v1.8", syncedAgo })
+const nsProv = (syncedAgo: string): FieldProvenance => ({ system: "NetSuite", systemAbbr: "NS", modelVersion: "UCP v1.8", syncedAgo })
+const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba", systemAbbr: "AR", modelVersion: "UVP v1.2", syncedAgo })
 
-const RH_CUSTOMER: CustomerRecord = {
-  accountName: "Acme Corp", segment: "Enterprise",
-  owner: "Jamie Rivera",
-  onOwnerClick: () => { /* TODO: route to Jamie Rivera's own record once cross-record navigation exists in this catalog */ },
-  tier: "Tier 1",
-  industry: "Retail", renewalDate: "Sep 2, 2026", mrr: "$18,400", lastContact: "3 days ago",
-  openTickets: 2, adoptionLevel: "Low",
-  primaryContact: "Jane Doe — VP Operations",
-  onPrimaryContactClick: () => { /* TODO: route to Jane Doe's own record — see the DECISION FLAGGED comment on CustomerRecord.primaryContact for the link-vs-Button-tertiary tension to resolve with the team */ },
-}
-// actionLabel: "Schedule renewal call" — nameable AND there's still more worth
-// reviewing (why the score dropped) before acting, so the bar keeps both the
-// inline button and the click-through (see SignalBar's actionLabel doc).
-const RH_CUSTOMER_SIGNAL: NextBestAction = {
-  label: "Health score dropped to 61 — renews in 19 days", severity: "error", dueContext: "Renewal at risk",
-  actionLabel: "Schedule renewal call",
+// UEP — the reference variant (brief's own words: "la card de referencia").
+// RECORD fields deliberately follow the brief's literal list (Manager/Access
+// Role/Department/Job Title/Start Date) even though Department and Job
+// Title overlap with the identity chips below — that's an accepted,
+// flagged redundancy (glance-level chip vs. governed/sourced record field
+// answering the same fact), not an oversight.
+const RH_UEP: UEPRecord = {
+  name: "Sarah Chen", role: "Senior Software Engineer", department: "Engineering", location: "Remote — Austin, TX",
+  manager:          { label: "Manager",        value: "David Kim",                state: "hydrated", provenance: wdProv("2h ago") },
+  accessRole:       { label: "Access Role",     value: "Admin",                    state: "hydrated", provenance: oktaProv("15m ago") },
+  departmentDetail: { label: "Department",      value: "Engineering",              state: "hydrated", provenance: wdProv("2h ago") },
+  jobTitle:         { label: "Job Title",       value: "Senior Software Engineer", state: "hydrated", provenance: wdProv("2h ago") },
+  startDate:        { label: "Start Date",      value: "March 3, 2023",            state: "hydrated", provenance: wdProv("2h ago") },
 }
 
-const RH_CLIENT: ClientRecord = {
-  name: "Marcus Webb", company: "Initech", dealStage: "Negotiation", dealValue: "$42,000",
-  owner: "Priya Nair",
-  onOwnerClick: () => { /* TODO: route to Priya Nair's own record once cross-record navigation exists in this catalog */ },
-  email: "marcus.webb@initech.com", onEmailClick: () => { window.location.href = "mailto:marcus.webb@initech.com" },
-  phone: "+1 (415) 555-0188", onPhoneClick: () => { window.location.href = "tel:+14155550188" },
-  leadSource: "Referral", lastInteraction: "Yesterday", expectedCloseDate: "Aug 29, 2026",
-}
-// aiGenerated: true — unlike the other 2 (deterministic counts/metrics), this
-// is a genuine probabilistic recommendation (note the confidence score), so it
-// gets the purple/Sparkles "AI produced this" treatment instead of a severity
-// color — see the aiGenerated doc comment in record-header.tsx for why.
-// actionLabel: "Send proposal" — the action IS the only thing here (a single
-// yes/no decision, nothing further to review), so this replaces "Send
-// proposal" as a loose Identity-row CTA entirely rather than duplicating it.
-const RH_CLIENT_SIGNAL: NextBestAction = {
-  label: "Ready to send final proposal", severity: "success", dueContext: "NBA engine · confidence 82%", aiGenerated: true,
-  actionLabel: "Send proposal",
+// UCP (Customer) — EXAMPLE data, not confirmed AIMS OS content.
+const RH_UCP: UCPRecord = {
+  accountName: "Acme Corp", segment: "Enterprise", tier: "Tier 1", accountType: "Direct",
+  owner:       { label: "Owner",        value: "Jamie Rivera", state: "hydrated", provenance: sfProv("30m ago") },
+  renewalDate: { label: "Renewal Date", value: "Sep 2, 2026",  state: "hydrated", provenance: sfProv("30m ago") },
+  arr:         { label: "ARR",          value: "$220,800",     state: "hydrated", provenance: nsProv("6h ago") },
 }
 
-// "Nothing urgent" Signals — the other 3 mocks above all happen to need
-// attention, which risks reading as "Signal = always an alert." It doesn't:
-// most records, most of the time, have nothing pressing. No actionLabel and
-// no onAction here on purpose — there's genuinely nothing to click through
-// to. Deliberately spread across 3 different severities (neutral/success/
-// informative) rather than reusing one, so it's visually obvious severity
-// tracks the record's real state, not a fixed template per variant.
-// dismissible: true — these are exactly the case that field's doc comment
-// calls out: nothing actionable here, so keeping the bar pinned forever adds
-// no value. A Signal with actionLabel/onAction (the other 3 mocks above)
-// should NOT set this — dismissing those would bury the real next step.
-const RH_EMPLOYEE_SIGNAL_CALM: NextBestAction = {
-  label: "No pending approvals", severity: "neutral", dueContext: "All caught up", dismissible: true,
-}
-const RH_CUSTOMER_SIGNAL_CALM: NextBestAction = {
-  label: "Health steady at 92", severity: "success", dueContext: "On track — renews in 140 days", dismissible: true,
-}
-const RH_CLIENT_SIGNAL_CALM: NextBestAction = {
-  label: "Early discovery — no next step due yet", severity: "informative", dueContext: "Last touched 2 days ago", dismissible: true,
+// UVP (Vendor) — EXAMPLE data, not confirmed AIMS OS content.
+const RH_UVP: UVPRecord = {
+  name: "Meridian Logistics", vendorType: "Logistics", contractStatus: "Active", category: "Strategic",
+  procurementOwner: { label: "Procurement Owner", value: "Alex Torres",   state: "hydrated", provenance: aribaProv("4h ago") },
+  contractEndDate:  { label: "Contract End",      value: "Dec 31, 2026",  state: "hydrated", provenance: aribaProv("4h ago") },
+  spendYtd:         { label: "Spend YTD",         value: "$1.2M",         state: "hydrated", provenance: aribaProv("4h ago") },
 }
 
-// Edge-case demo data — each isolates ONE case (missing data / loading /
-// error / locked / no agent) rather than combining several, so the showcase
-// makes clear which prop produced which visual. Loading/error/locked/no-agent
-// reuse the existing fully-populated mocks above + toggle the relevant prop —
-// only "missing data" needs its own record, since every other mock is
-// deliberately complete.
-
-// Missing data (task 1) — no industry (chips compact from 3 to 2, not a gap
-// or a "—"), and no primaryContact (Zone 3 renders just the 1 key field it
-// does have — Owner — rather than a gap where Primary contact would sit).
-const RH_CUSTOMER_MISSING_DATA: CustomerRecord = {
-  accountName: "Northwind Traders", segment: "Mid-market",
-  owner: "Alex Kim",
-  onOwnerClick: () => { /* TODO: route to Alex Kim's own record once cross-record navigation exists in this catalog */ },
-  tier: "Tier 2",
-  renewalDate: "Nov 14, 2026", mrr: "$4,200", lastContact: "1 week ago", openTickets: 0,
-}
-const RH_CUSTOMER_MISSING_DATA_SIGNAL: NextBestAction = {
-  label: "No action needed right now", severity: "neutral",
-}
-
-// Locked (task 5) — the CTA/overflow disable; the agent trigger and this
-// Signal itself stay fully interactive, since viewing isn't editing.
-const RH_EMPLOYEE_LOCKED_SIGNAL: NextBestAction = {
-  label: "On leave — record frozen until return", severity: "informative", dueContext: "Returns Sep 1, 2026",
+// Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
+// field is masked, to demonstrate the "same field, 2 entitlement states"
+// rule concretely without redesigning the reference example itself. The
+// masking decision itself is never made here — this mock simply represents
+// what a lower-permission viewer would already have been handed.
+const RH_UEP_MASKED: UEPRecord = {
+  ...RH_UEP,
+  accessRole: { label: "Access Role", value: "Admin", state: "masked", maskedValue: "•••• (restricted)", provenance: oktaProv("15m ago") },
 }
 
 // Assigned AI agent — one per variant, same shape (see AssignedAgent in
-// record-header.tsx). onOpenChat is wired inside RecordHeaderPage below,
-// same delegation pattern as the Signal/action handlers.
+// record-header.tsx). onOpenChat is wired inside RecordHeaderPage below.
 const RH_AGENTS: Record<RecordHeaderVariant, { id: string; name: string }> = {
-  employee: { id: "agent-hr",       name: "HR Copilot" },
-  customer: { id: "agent-success",  name: "Success Copilot" },
-  client:   { id: "agent-sales",    name: "Sales Copilot" },
+  uep: { id: "agent-people-sync",  name: "People Sync" },
+  ucp: { id: "agent-renewal",      name: "Renewal Copilot" },
+  uvp: { id: "agent-procurement",  name: "Procurement Copilot" },
+}
+
+// ── Demo SlideOut content — realistic mock data for the 4 wired flows ──────
+// Not exported, not part of the DS component itself — RecordHeader only
+// exposes onOpen/onAction callbacks (see its own file-header Composition
+// note); every SlideOut instance below is owned by this demo page, same
+// delegation pattern this catalog has used for every prior overlay demo.
+
+type WorkflowDetail = {
+  name: string
+  owner: string
+  started: string
+  nextTrigger?: string
+  steps: { label: string; status: ProcessStatus; date?: string }[]
+}
+
+const RH_WORKFLOWS: Record<RecordHeaderVariant, WorkflowDetail> = {
+  uep: {
+    name: "Access Recertification", owner: "People Sync", started: "Aug 12, 2026", nextTrigger: "Sep 12, 2026 (monthly)",
+    steps: [
+      { label: "Access snapshot pulled from Okta", status: "done", date: "Aug 12, 2026" },
+      { label: "Manager notified for review", status: "done", date: "Aug 13, 2026" },
+      { label: "Awaiting manager decision", status: "loading" },
+      { label: "Access updated in Okta", status: "pending" },
+    ],
+  },
+  ucp: {
+    name: "Renewal Playbook", owner: "Renewal Copilot", started: "Jul 28, 2026", nextTrigger: "Aug 26, 2026",
+    steps: [
+      { label: "Health score recalculated", status: "done", date: "Jul 28, 2026" },
+      { label: "Renewal risk flagged to CSM", status: "done", date: "Aug 1, 2026" },
+      { label: "Renewal call scheduled", status: "loading" },
+      { label: "Renewal quote sent", status: "pending" },
+    ],
+  },
+  uvp: {
+    name: "Vendor Requalification", owner: "Procurement Copilot", started: "Jun 30, 2026", nextTrigger: "Dec 1, 2026 (annual)",
+    steps: [
+      { label: "Compliance documents requested", status: "done", date: "Jun 30, 2026" },
+      { label: "Insurance certificate verified", status: "done", date: "Jul 14, 2026" },
+      { label: "Risk review in progress", status: "loading" },
+      { label: "Requalification approved", status: "pending" },
+    ],
+  },
+}
+
+type AgentDetail = {
+  agentName: string
+  sessionSummary: string
+  latestFinding: string
+  recommendation: { text: string; actionLabel?: string }
+}
+
+const RH_AGENT_DETAILS: Record<RecordHeaderVariant, AgentDetail> = {
+  uep: {
+    agentName: "People Sync",
+    sessionSummary: "Reviewed Sarah Chen's access grants against her current role and department after a lateral move into Platform Infra 2 weeks ago.",
+    latestFinding: "Sarah still holds Admin access to 2 repos outside Platform Infra's ownership boundary, granted under her prior team.",
+    recommendation: { text: "Scope Admin access down to Platform Infra's own repos; keep read access to the other 2 for continuity.", actionLabel: "Apply recommendation" },
+  },
+  ucp: {
+    agentName: "Renewal Copilot",
+    sessionSummary: "Monitored Acme Corp's product usage and support signals in the 90 days leading up to renewal.",
+    latestFinding: "Seat utilization dropped 18% after the Q2 reorg, and 2 support tickets cite the reporting module as a blocker.",
+    recommendation: { text: "Offer a seat-count true-down at renewal paired with a reporting-module walkthrough, rather than a flat renewal.", actionLabel: "Draft renewal proposal" },
+  },
+  uvp: {
+    agentName: "Procurement Copilot",
+    sessionSummary: "Cross-checked Meridian Logistics' certifications and spend pattern ahead of its annual requalification window.",
+    latestFinding: "Insurance certificate renewed on time, but YTD spend is trending 22% above the contracted cap.",
+    recommendation: { text: "Flag the spend overage to the category manager before requalification is approved.", actionLabel: "Notify category manager" },
+  },
+}
+
+const RH_INTERVENTIONS: Partial<Record<RecordHeaderVariant, PendingIntervention & { detail: string }>> = {
+  uep: {
+    count: 1, severity: "high",
+    description: "Elevated access request needs manager approval before it takes effect.",
+    detail: "Sarah Chen requested temporary Admin access to the Billing service repo to support an incident on Aug 15. The request exceeds her current role's standing access and requires explicit manager sign-off before Okta grants it. No access has been changed yet — this is a request, not a completed action.",
+    onReview: () => {},
+  },
+  ucp: {
+    count: 1, severity: "medium",
+    description: "A discount above standard approval thresholds needs sign-off before the renewal quote can go out.",
+    detail: "Renewal Copilot drafted a 12% loyalty discount for Acme Corp's renewal, above the 10% threshold reps can approve unassisted. The quote is held until a deal desk reviewer signs off — nothing has been sent to the customer yet.",
+    onReview: () => {},
+  },
+  // No intervention for UVP in this example — demonstrates the zone being
+  // omitted entirely when there's genuinely nothing pending, not shown as
+  // an empty "0 actions" placeholder.
+}
+
+// Data Provenance (Law 2) — reuses the SAME FieldProvenance objects already
+// attached to each RecordField; this SlideOut is just a fuller 3-layer view
+// of data the card already cites via each field's badge/Tooltip, not a
+// second, separate source of truth.
+function ProvenanceRow({ field }: { field: RecordField }) {
+  return (
+    <div className="flex flex-col gap-[8px] pb-[16px] mb-[16px]" style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+      <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{field.label}</span>
+      <div className="grid grid-cols-[70px_1fr] gap-y-[6px] text-[12px]">
+        <span style={{ color: "var(--field-supporting)" }}>Source</span>
+        <span style={{ color: "var(--foreground)" }}>{field.provenance.system} · synced {field.provenance.syncedAgo}</span>
+        <span style={{ color: "var(--field-supporting)" }}>Model</span>
+        <span style={{ color: "var(--foreground)" }}>{field.provenance.modelVersion}</span>
+        <span style={{ color: "var(--field-supporting)" }}>Displayed</span>
+        <span style={{ color: "var(--foreground)" }}>Here, in this card</span>
+      </div>
+    </div>
+  )
 }
 
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
-  const [pgVariant, setPgVariant] = useState<RecordHeaderVariant>("employee")
-  // "Needs attention" vs. "All good" — demonstrates that Signal's severity
-  // and content follow the record's REAL state; it isn't always an alert.
-  const [pgSignalState, setPgSignalState] = useState<"attention" | "calm">("attention")
+  const [pgVariant, setPgVariant] = useState<RecordHeaderVariant>("uep")
+  const [pgMasked, setPgMasked] = useState(false)
 
-  // Click destinations for Signal.onAction — one real overlay per variant,
-  // chosen the same way Notification Item's Reference tab picks Full
-  // Navigation vs. Slideout vs. Modal (see that page's decision table):
-  //   Employee — several items need reviewing one by one → Slideout (content
-  //   exceeds one paragraph, needs review before deciding).
-  //   Customer — a risk state to investigate, not a single click-to-fix →
-  //   Slideout (evidence: the score trend + suggested next steps).
-  //   Client — one immediate, reversible-by-cancel decision ("send it or
-  //   not") → Modal (fits the "1-click binary confirmation" rule exactly).
-  const [rhApprovalsOpen, setRhApprovalsOpen] = useState(false)
-  const [rhHealthOpen,    setRhHealthOpen]    = useState(false)
-  const [rhProposalOpen,  setRhProposalOpen]  = useState(false)
+  // Governed SlideOut state — one boolean per flow, reused across variants
+  // (content keyed by whichever variant/record was actually clicked).
+  const [rhOpenVariant, setRhOpenVariant] = useState<RecordHeaderVariant | null>(null)
+  const [rhWorkflowOpen, setRhWorkflowOpen] = useState(false)
+  const [rhAgentOpen, setRhAgentOpen] = useState(false)
+  const [rhReviewOpen, setRhReviewOpen] = useState(false)
+  const [rhProvenanceOpen, setRhProvenanceOpen] = useState(false)
+  const [rhReviewResolved, setRhReviewResolved] = useState<"approved" | "dismissed" | null>(null)
 
-  const rhEmployeeSignal: NextBestAction = { ...RH_EMPLOYEE_SIGNAL, onAction: () => setRhApprovalsOpen(true) }
-  const rhCustomerSignal: NextBestAction = { ...RH_CUSTOMER_SIGNAL, onAction: () => setRhHealthOpen(true) }
-  const rhClientSignal:   NextBestAction = { ...RH_CLIENT_SIGNAL,   onAction: () => setRhProposalOpen(true) }
+  const rhOpenWorkflow = (v: RecordHeaderVariant) => { setRhOpenVariant(v); setRhWorkflowOpen(true) }
+  const rhOpenAgent = (v: RecordHeaderVariant) => { setRhOpenVariant(v); setRhAgentOpen(true) }
+  const rhOpenReview = (v: RecordHeaderVariant) => { setRhOpenVariant(v); setRhReviewOpen(true); setRhReviewResolved(null) }
+  const rhOpenProvenance = (v: RecordHeaderVariant) => { setRhOpenVariant(v); setRhProvenanceOpen(true) }
 
-  // Assigned agent chat (task 5) — no dedicated "agent chat" component exists
-  // anywhere in src/components/ui/ yet (checked directly), so this demo reuses
-  // the generic SidePanel — the same "reuse what exists, don't invent a new
-  // overlay mechanism" rule the Signal overlays above already follow. Any
-  // consumer screen wires assignedAgent.onOpenChat to whatever chat surface it
-  // already has; this is one example of what that can look like.
+  const rhAgenticSystem = (v: RecordHeaderVariant): AgenticSystemInfo => ({
+    activeWorkflow: { name: RH_WORKFLOWS[v].name, onOpen: () => rhOpenWorkflow(v) },
+    lastAgent: { name: RH_AGENT_DETAILS[v].agentName, onOpen: () => rhOpenAgent(v) },
+  })
+  const rhIntervention = (v: RecordHeaderVariant): PendingIntervention | undefined => {
+    const src = RH_INTERVENTIONS[v]
+    return src ? { count: src.count, severity: src.severity, description: src.description, onReview: () => rhOpenReview(v) } : undefined
+  }
+
+  // Assigned agent chat — no dedicated "agent chat" component exists yet
+  // anywhere in src/components/ui/ (checked directly), so this demo reuses
+  // the generic SidePanel — same "reuse what exists" rule every overlay
+  // demo on this page already follows.
   const [rhChatWith, setRhChatWith] = useState<{ id: string; name: string; recordName: string } | null>(null)
   const rhAssignedAgent = (v: RecordHeaderVariant, recordName: string) => ({
     ...RH_AGENTS[v],
     onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
   })
 
-  const pgData = pgVariant === "employee" ? RH_EMPLOYEE : pgVariant === "customer" ? RH_CUSTOMER : RH_CLIENT
-  const pgSignal =
-    pgSignalState === "calm"
-      ? (pgVariant === "employee" ? RH_EMPLOYEE_SIGNAL_CALM : pgVariant === "customer" ? RH_CUSTOMER_SIGNAL_CALM : RH_CLIENT_SIGNAL_CALM)
-      : (pgVariant === "employee" ? rhEmployeeSignal : pgVariant === "customer" ? rhCustomerSignal : rhClientSignal)
+  const pgData = pgVariant === "uep" ? (pgMasked ? RH_UEP_MASKED : RH_UEP) : pgVariant === "ucp" ? RH_UCP : RH_UVP
+  const pgName = pgVariant === "ucp" ? (pgData as UCPRecord).accountName : (pgData as UEPRecord | UVPRecord).name
+  const openVariant = rhOpenVariant ?? "uep"
+  const openWorkflow = RH_WORKFLOWS[openVariant]
+  const openAgent = RH_AGENT_DETAILS[openVariant]
+  const openIntervention = RH_INTERVENTIONS[openVariant]
+  const openRecordFields = openVariant === "uep"
+    ? [RH_UEP.manager, RH_UEP.accessRole, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate]
+    : openVariant === "ucp"
+    ? [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr]
+    : [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd]
 
   return (
     <div>
       <div className="flex items-start justify-between gap-[16px] mb-[28px]">
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Record Header</h1>
-          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[640px]">
-            Entity profile header for Employee/Customer/Client dashboard views. 3 content zones — Identity + Signal always visible; Actions + secondary actions collapsed by default, revealed by the chevron. One shared layout — only the content per variant changes.
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[680px]">
+            Governed entity card for AIMS OS Work Surfaces — UEP (Employee), UCP (Customer), UVP (Vendor). Identity always visible; Agentic System / Your Intervention / Record collapsed by default, revealed by the chevron. One shared skeleton — only the content per variant changes.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("record-header")} />
@@ -32569,85 +32618,69 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
       {tab === "overview" && (
         <div className="flex flex-col gap-[40px]">
-          {/* One example per variant, shown expanded (defaultExpanded) so the
-              full secondary-actions list is visible without an extra click —
-              the real default is still collapsed (see the component's own
-              defaultExpanded={"{false}"}); this is a docs-only override. Click
-              the chevron to collapse and see the real predictable-height default. */}
+          {/* Each variant shown expanded (defaultExpanded) so all 3 zones are
+              visible without an extra click — the real default is still
+              collapsed; this is a docs-only override. */}
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee</p>
-            <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal} defaultExpanded
-              assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">UEP — Employee (reference variant)</p>
+            <RecordHeader variant="uep" data={RH_UEP} statusDot="attention" defaultExpanded
+              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.uep}
+              agenticSystem={rhAgenticSystem("uep")}
+              intervention={rhIntervention("uep")}
+              onProvenanceOpen={() => rhOpenProvenance("uep")} />
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer</p>
-            <RecordHeader variant="customer" data={RH_CUSTOMER} signal={rhCustomerSignal} defaultExpanded
-              assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER.accountName)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer (example)</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
+            <RecordHeader variant="ucp" data={RH_UCP} statusDot="neutral" defaultExpanded
+              assignedAgent={rhAssignedAgent("ucp", RH_UCP.accountName)}
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.ucp}
+              agenticSystem={rhAgenticSystem("ucp")}
+              intervention={rhIntervention("ucp")}
+              onProvenanceOpen={() => rhOpenProvenance("ucp")} />
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client</p>
-            <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal} defaultExpanded
-              assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor (example)</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content. No pending intervention here on purpose — the zone is fully omitted, not shown empty.</p>
+            <RecordHeader variant="uvp" data={RH_UVP} statusDot="success" defaultExpanded
+              assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.uvp}
+              agenticSystem={rhAgenticSystem("uvp")}
+              intervention={rhIntervention("uvp")}
+              onProvenanceOpen={() => rhOpenProvenance("uvp")} />
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">All 3 variants — nothing urgent to surface</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Law 4 — PII masking, same field in 2 entitlement states</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              The examples above all happen to need attention — that's not the rule, it's a coincidence of realistic demo data. Most records, most of the time, have nothing pressing. No <code>actionLabel</code>, no <code>onAction</code> here — there's genuinely nothing to click through to. Note the severities are 3 different colors (neutral/success/informative), not one reused template — severity tracks the record's actual state.
+              Identical record to UEP above, except <code>accessRole</code> is now the SAME RecordField constructed in its masked state — a lower-permission viewer sees this instead of "Admin." The origin badge still renders (Law 1 applies regardless of masking).
             </p>
-            <div className="flex flex-col gap-[16px]">
-              <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={RH_EMPLOYEE_SIGNAL_CALM}
-                assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
-                actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
-              <RecordHeader variant="customer" data={RH_CUSTOMER} signal={RH_CUSTOMER_SIGNAL_CALM}
-                assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER.accountName)}
-                actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
-              <RecordHeader variant="client" data={RH_CLIENT} signal={RH_CLIENT_SIGNAL_CALM}
-                assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
-                actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
-            </div>
+            <RecordHeader variant="uep" data={RH_UEP_MASKED} statusDot="attention" defaultExpanded
+              assignedAgent={rhAssignedAgent("uep", RH_UEP_MASKED.name)}
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.uep}
+              agenticSystem={rhAgenticSystem("uep")}
+              onProvenanceOpen={() => rhOpenProvenance("uep")} />
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge cases — missing data, loading/error, locked, no agent</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Real data isn't always complete, resolved, or editable. These 5 examples each isolate one edge case — see the Reference tab for the full rule behind each.
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge cases — no agent, Locked</p>
             <div className="flex flex-col gap-[24px]">
               <div>
-                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Missing data — no industry, no primary contact</p>
-                <RecordHeader variant="customer" data={RH_CUSTOMER_MISSING_DATA} signal={RH_CUSTOMER_MISSING_DATA_SIGNAL}
-                  assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER_MISSING_DATA.accountName)}
-                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Signal loading — NBA engine still computing</p>
-                <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal} signalStatus="loading"
-                  assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
-                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Signal error — NBA engine timed out</p>
-                <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal} signalStatus="error"
-                  assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
-                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Locked — CTA/overflow disabled, agent + Signal stay interactive</p>
-                <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={RH_EMPLOYEE_LOCKED_SIGNAL} locked
-                  assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
-                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
-              </div>
-              <div>
                 <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">No assigned agent — trigger disables with a Tooltip, doesn't disappear</p>
-                <RecordHeader variant="customer" data={RH_CUSTOMER} signal={RH_CUSTOMER_SIGNAL_CALM}
+                <RecordHeader variant="ucp" data={RH_UCP} statusDot="neutral"
                   assignedAgent={null}
-                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
+                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.ucp}
+                  agenticSystem={rhAgenticSystem("ucp")} />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Locked — contact CTA disabled, agent trigger stays interactive</p>
+                <RecordHeader variant="uep" data={RH_UEP} statusDot="neutral" locked
+                  assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.uep}
+                  agenticSystem={rhAgenticSystem("uep")} />
               </div>
             </div>
           </section>
@@ -32658,7 +32691,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
                 <p className="text-[11px] font-semibold text-[#059669] uppercase tracking-widest">Use when</p>
                 <ul className="flex flex-col gap-[6px]">
-                  {["Atop a dashboard view for a single Employee, Customer, or Client record", "A Next Best Action recommendation exists (or a sensible neutral fallback) for that record", "Secondary contact/metadata fields exist but shouldn't compete with the primary identity at a glance"].map(t => (
+                  {["Atop a Work Surface dashboard for a single UEP/UCP/UVP record", "The record is fed by AIMS OS's governed data model, so every field has a real, citable source", "There's an assigned agent and/or an agentic workflow to surface, not a generic entity with none"].map(t => (
                     <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
                       <span className="text-[#059669] shrink-0">✓</span>{t}
                     </li>
@@ -32668,7 +32701,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
                 <p className="text-[11px] font-semibold text-[#dc2626] uppercase tracking-widest">Don't use when</p>
                 <ul className="flex flex-col gap-[6px]">
-                  {["Listing multiple records at once (use EntityList)", "There's no single actionable signal to show — don't force a fake NextBestAction", "More than 3 chips or 3 actions are needed — trim to the 3 that matter most instead of overflowing the row"].map(t => (
+                  {["Listing multiple records at once (use EntityList)", "Outside Work Surfaces — never replicate this card inside Governance/Data/Agentic Studio", "A field has no real system of record to cite — that's a data-model gap, not a reason to fake provenance"].map(t => (
                     <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
                       <span className="text-[#dc2626] shrink-0">✕</span>{t}
                     </li>
@@ -32685,19 +32718,22 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <RecordHeader
             variant={pgVariant}
             data={pgData}
-            signal={pgSignal}
-            assignedAgent={rhAssignedAgent(pgVariant, pgVariant === "customer" ? (pgData as CustomerRecord).accountName : (pgData as EmployeeRecord | ClientRecord).name)}
+            statusDot={pgVariant === "ucp" ? "neutral" : pgVariant === "uvp" ? "success" : "attention"}
+            assignedAgent={rhAssignedAgent(pgVariant, pgName)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS[pgVariant]}
+            agenticSystem={rhAgenticSystem(pgVariant)}
+            intervention={rhIntervention(pgVariant)}
+            onProvenanceOpen={() => rhOpenProvenance(pgVariant)}
           />
 
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Variant — same layout, only data/content changes</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Variant — same skeleton, only content changes</p>
             <div className="flex flex-wrap gap-[4px]">
-              {(["employee", "customer", "client"] as const).map(v => (
+              {(["uep", "ucp", "uvp"] as const).map(v => (
                 <button
                   key={v}
                   onClick={() => setPgVariant(v)}
-                  className="px-[10px] py-[5px] rounded text-[11px] font-medium capitalize transition-colors"
+                  className="px-[10px] py-[5px] rounded text-[11px] font-medium uppercase transition-colors"
                   style={{
                     background: pgVariant === v ? "#2173ff" : "var(--ctrl-inactive-bg)",
                     color: pgVariant === v ? "#fff" : "var(--field-label)",
@@ -32709,574 +32745,311 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               ))}
             </div>
             <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
-              Zone 3's secondary-actions list changes with the variant too — click the chevron on the Identity row to expand/collapse it, real disclosure state, not a mock.
+              Click the chevron on the Identity row to expand/collapse Agentic System / Your Intervention / Record — real disclosure state, not a mock. Click Active Workflow, Last Agent, Review, or the (i) icon next to RECORD to open the real SlideOuts.
             </p>
           </div>
 
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Signal state — not every record needs an urgent-looking Signal</p>
-            <div className="flex flex-wrap gap-[4px]">
-              {([
-                { key: "attention", label: "Needs attention" },
-                { key: "calm",      label: "All good" },
-              ] as const).map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => setPgSignalState(s.key)}
-                  className="px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors"
-                  style={{
-                    background: pgSignalState === s.key ? "#2173ff" : "var(--ctrl-inactive-bg)",
-                    color: pgSignalState === s.key ? "#fff" : "var(--field-label)",
-                    border: pgSignalState === s.key ? "none" : "1px solid var(--field-border)",
-                  }}
-                >
-                  {s.label}
-                </button>
-              ))}
+          {pgVariant === "uep" && (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Law 4 — PII masking toggle</p>
+              <div className="flex flex-wrap gap-[4px]">
+                {([{ key: false, label: "Hydrated" }, { key: true, label: "Masked" }] as const).map(o => (
+                  <button
+                    key={String(o.key)}
+                    onClick={() => setPgMasked(o.key)}
+                    className="px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors"
+                    style={{
+                      background: pgMasked === o.key ? "#2173ff" : "var(--ctrl-inactive-bg)",
+                      color: pgMasked === o.key ? "#fff" : "var(--field-label)",
+                      border: pgMasked === o.key ? "none" : "1px solid var(--field-border)",
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
+                Toggles Access Role between its 2 entitlement states — same RecordField either way, just constructed differently upstream (Law 4). This component never decides which state to show.
+              </p>
             </div>
-            <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
-              Same variant, same layout — only <code>signal</code>'s content and severity change. Most records, most of the time, are "All good"; reach for an urgent color only when the state genuinely warrants it.
-            </p>
-          </div>
+          )}
         </div>
       )}
 
       {tab === "reference" && (
         <div className="flex flex-col gap-[32px]">
           <section>
-            {/* The content contract — this is the single most important
-                section on this page for anyone generating a new RecordHeader
-                instance — read this before touching an action. */}
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Content contract — 3 zones (Salesforce Highlights Panel pattern)</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              RecordHeader is 3 content zones, not a fixed field list. Zones 2-3 are <strong style={{ color: "var(--foreground)" }}>data-driven</strong> — their content comes from <code className="text-[var(--primary)]">signal</code>/<code className="text-[var(--primary)]">getRecordFields</code> and changes with the record's real state, never hardcoded JSX per variant.
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[12px]">
-              <div className="grid grid-cols-[110px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Zone", "What goes here"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1. Identity",                   "Fixed — doesn't change per record state. Avatar, name, type label, up to 3 stable-attribute Tags. See \"Identity tags\" below for the read-only/max-3/stable-only rule."],
-                ["2. Signal",                      "Contextual — the record's current urgency, one NextBestAction, semantically colored. The \"is there anything to attend to, at a glance\" detector — see the NextBestAction table below."],
-                ["3. Actions + secondary actions", "Contextual — the action row (agent trigger, always most prominent · the one contextual CTA · \"···\" overflow) plus a disclosure of secondary actions, collapsed by default for predictable header height. Physically two areas of the existing layout (action row stays top-right of Zone 1; secondary actions render below Signal, behind the chevron) grouped under one zone because both are data-driven, unlike Zones 1-2's fixed shape — not moved, to honor \"don't redo the layout.\""],
-              ].map(([zone, what], i) => (
-                <div key={zone} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{zone}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{what}</div>
-                </div>
-              ))}
-            </div>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              Every secondary action is the <strong style={{ color: "var(--foreground)" }}>same primitive</strong> — Button variant="tertiary" with a leading icon, wrapped in Tooltip — never plain text, never a different button style. Only the icon (and whether onAction is wired) differs by kind:
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Governance canon — AIMS OS law, not preference</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              These 4 rules aren't a style choice for this component — they're AIMS OS design law, and RecordHeader is built to make them impossible to violate by accident.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[110px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Kind", "What it is · wiring"].map(h => (
+              <div className="grid grid-cols-[70px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Law", "Rule · where it's enforced"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
               {[
-                ["Contact",    "A real communication channel (Email, Phone). Wired to a real onAction (mailto:/tel: at the call site)."],
-                ["Navigation", "A link to ANOTHER record or a different view (Manager, Owner — wired; \"view team\"/\"view deal\"/\"manage access\"/etc. — TODO, destination not confirmed yet)."],
-                ["Creation",   "Starts a new object attached to this record (Add note, Create task, Schedule meeting). Always TODO — AIMS OS doesn't have real users yet, so there's no real destination to route to."],
-              ].map(([kind, what], i) => (
-                <div key={kind} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{kind}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{what}</div>
-                </div>
-              ))}
-            </div>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[4px] max-w-[720px]">
-              Final per-variant list — <span style={{ color: "var(--primary)" }}>wired</span> vs. <span style={{ color: "#d97706" }}>TODO</span>:
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[110px_1fr_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Kind", "Employee", "Customer", "Client"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["Contact",    "Email · Phone", "Primary contact (TODO — see flagged decision below)", "Email · Phone"],
-                ["Navigation", "Manager · Manage access (TODO) · View team (TODO)", "Owner/CSM · View activity (TODO)", "Owner · View deal (TODO) · View interactions (TODO)"],
-                ["Creation",   "Add note · Create task (TODO — even inclusion unconfirmed for Employee)", "Add note · Create task · Schedule meeting", "Add note · Create task · Schedule meeting"],
-              ].map(([kind, emp, cus, cli], i) => (
-                <div key={kind} className="grid grid-cols-[110px_1fr_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{kind}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{emp}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{cus}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{cli}</div>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-md px-[14px] py-[12px] mb-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>"Log activity" is deliberately NOT in this list.</strong> Activity history lives in the record's own Activity tab, below RecordHeader on the same page — a header action that just re-opens content already one tab away is dead weight, not a shortcut (same reasoning <code>RECORD_HEADER_RECOMMENDED_ACTIONS</code>'s own comment already applies to the primary CTA slot). If a screen needs one-tap logging from the header specifically, that's a product decision to make explicitly, not something to default into this list.
-              </p>
-            </div>
-            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Concrete actions are pending real use cases, not this page's job to guess.</strong> AIMS OS doesn't have real users yet — the point of this contract is a structure that holds future actions without redesigning, not a claim that the list above is final forever. Adding, removing, or re-classifying a secondary action later is a <code>getRecordFields</code> change, never a layout change. See the DECISION FLAGGED / TODO comments in record-header.tsx (particularly <code>CustomerRecord.primaryContact</code>, tagged "contact" kind despite having no real channel to wire, and Employee's <code>Create task</code>, whose very inclusion is unconfirmed) for the specific calls made without full certainty, left for team review.
-              </p>
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">The NextBestAction shape — transversal to all 3 variants</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              This is the one thing AIMS OS's Next Best Action engine needs to return. The component never branches on <code className="text-[var(--primary)]">variant</code> to interpret it — Employee, Customer, and Client Signals are rendered by the exact same code path.
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Field", "Meaning"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["label",       "The recommendation itself, e.g. \"2 tasks pending your approval\""],
-                ["severity",    "success | alert | error | informative | neutral — drives the Signal bar's color"],
-                ["dueContext?", "Short supporting text, e.g. \"Oldest due today\", \"SLA breached 2h ago\""],
-                ["aiGenerated?", "True → overrides severity color with the purple/Sparkles \"AI produced this\" treatment (--tag-purple-*, same trio as EntityList's own aiInsight). Use only for a probabilistic suggestion, not a deterministic fact or urgency state."],
-                ["actionLabel?", "Names one specific action, e.g. \"Send proposal\" → renders a real inline button (calls onAction) instead of a plain click-through chevron. Omit when there are several distinct things to review, not one action."],
-                ["onAction?",   "Fires on the actionLabel button (if set) and on a click anywhere else on the bar — same row-and-primary-action-share-a-destination rule as NotificationItem"],
-                ["dismissible?", "True → adds a small close (X), same treatment as AlertBanner's onClose. Reserve for signals with no actionLabel/onAction — a real next step should never be dismissable away."],
-                ["onDismiss?",  "Optional — fires when the close (X) is clicked, so the host can persist that choice. Dismissal itself is local UI state either way."],
-              ].map(([field, desc], i) => (
-                <div key={field} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono font-semibold text-[var(--primary)]">{field}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Signal states — the NBA engine is asynchronous</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              <code className="text-[var(--primary)]">signal</code> above assumes a resolved value already exists. In a real integration it doesn't — the NBA engine has to be called and can be slow or fail. <code className="text-[var(--primary)]">signalStatus</code> (default <code>"resolved"</code>) covers the other 2 cases without touching the NextBestAction shape itself: "error" doesn't add a field to that shape, it substitutes a different, centralized VALUE of it (<code className="text-[var(--primary)]">RECORD_HEADER_FALLBACKS.nbaError</code>). Neither state changes the bar's footprint — no layout shift when the real value lands.
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[110px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["State", "Behavior"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["loading",  "signal is ignored; the bar renders in the neutral container with a Skeleton circle + Skeleton text bar instead of icon+label. Never clickable, never dismissible — nothing resolved yet to act on or close."],
-                ["resolved", "(default) signal renders exactly as documented above — the normal case."],
-                ["error",    "signal is ignored; the bar renders RECORD_HEADER_FALLBACKS.nbaError instead — severity: \"neutral\", label: \"No recommendation available\", no actionLabel/onAction. Never a broken or half-rendered Signal, never the bar disappearing (that would change the header's height)."],
-              ].map(([state, desc], i) => (
-                <div key={state} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono font-semibold text-[var(--primary)]">{state}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            {/* Content-mapping table, covering every slot a reader actually hits
-                top-to-bottom on the card — Primary through Zone 3's secondary
-                actions — since "Tier 1" on a Tag tells you nothing about which
-                slot it came from or why, which is the definition gap this
-                section exists to close. */}
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Content mapping — what goes in each slot, per variant</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              The only variant-specific logic in the whole component lives in two places: <code className="text-[var(--primary)]">getRecordFields</code> (name/type label/tags/secondary actions) and <code className="text-[var(--primary)]">RECORD_HEADER_RECOMMENDED_ACTIONS</code> (the canonical CTA below). Both are exported from <code className="text-[var(--primary)]">record-header.tsx</code> — a generated screen should pull from these rather than inventing new fields or action labels per instance, so every Employee/Customer/Client card stays predictable. Signal and Signal action aren't in either export — they're whatever the NBA engine returns for that record right now (see the NextBestAction table above), so the cells below show a representative example, not a fixed field name.
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[170px_1fr_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Slot", "Employee", "Customer", "Client"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["Primary (name)", "data.name — e.g. \"Sarah Chen\"", "data.accountName — e.g. \"Acme Corp\" (note: not .name)", "data.name — e.g. \"Marcus Webb\""],
-                ["Type label", "\"Employee\" (static)", "\"Customer account\" (static)", "\"Client (deal)\" (static)"],
-                ["Identity tags (max 3, read-only — see rule below)", "role, department, location", "tier, segment, industry", "company, dealValue, leadSource"],
-                ["Signal", "NBA recommendation — e.g. \"2 tasks pending your approval\"", "NBA recommendation — e.g. \"Health score dropped to 61\"", "NBA recommendation — e.g. \"Ready to send final proposal\" (can be aiGenerated)"],
-                ["Signal action (optional)", "none in this example — several distinct items, not one action to name", "\"Schedule renewal call\" — one nameable next step", "\"Send proposal\" — the one decision; replaces a separate CTA entirely"],
-                ["Primary CTA", "Message", "Contact account (CTA) · View contract (overflow)", "Email (CTA) · Log call (overflow)"],
-                ["Secondary actions (Zone 3, disclosure)", "Manager, Email, Phone (wired) · Manage access, View team (TODO nav) · Add note, Create task (TODO)", "Owner/CSM (wired) · Primary contact (TODO — see flagged decision) · View activity (TODO) · Add note, Create task, Schedule meeting (TODO)", "Email, Phone, Owner (wired) · View deal, View interactions (TODO) · Add note, Create task, Schedule meeting (TODO)"],
-              ].map(([slot, emp, cus, cli], i) => (
-                <div key={slot} className="grid grid-cols-[170px_1fr_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{slot}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{emp}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{cus}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{cli}</div>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-md px-[14px] py-[12px] mt-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Picking the variant:</strong> an internal team member (has a manager/department/access role) → <code>employee</code>. An existing paying account (has MRR/renewal date/tier) → <code>customer</code>. A prospect still in the pipeline (has a deal stage/value/close date, not yet paying) → <code>client</code>. If a record has fields from none of these 3 shapes, RecordHeader is the wrong component — flag it as a <code>// DS-GAP</code> instead of forcing a mismatched variant.
-              </p>
-            </div>
-            <div className="rounded-md px-[14px] py-[12px] mt-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Adding a 4th variant:</strong> the layout doesn't change. Define its row in the table above (Primary / Type label / Identity tags / Signal / Signal action / Primary CTA / Secondary actions) and its data source — a new <code>XRecord</code> interface plus a branch in <code>getRecordFields</code> (and, if it needs a default CTA, an entry in <code>RECORD_HEADER_RECOMMENDED_ACTIONS</code>). <code>record-header.tsx</code>'s own JSX is untouched — this table and that function are the only two places a 4th variant needs to be taught.
-              </p>
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Missing or empty data — one rule for every slot</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              Every non-Primary field on <code className="text-[var(--primary)]">EmployeeRecord</code>/<code className="text-[var(--primary)]">CustomerRecord</code>/<code className="text-[var(--primary)]">ClientRecord</code> is optional — a real record can legitimately lack any of them. The rule is the same wherever it happens: <strong style={{ color: "var(--foreground)" }}>omit, never placeholder.</strong>
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Slot", "When a field is missing"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["Identity tags",  "Dropped via .filter(Boolean) before the max-3 slice — no gap, no \"—\", the row just compacts (down to not rendering at all if all 3 are absent)."],
-                ["Secondary actions — contact/wired navigation", "contactAction()/navigationAction() return [] for a falsy value, same omit rule as identity tags — no gap, no \"—\". Only affects the data-backed items (Email/Phone/Manager/Owner); the always-present TODO action slots (Add note, view-X navigation) aren't gated on any data field, so they always appear."],
-                ["assignedAgent",  "Not a \"missing field\" case — it's a required prop whose VALUE can be null. Renders the same button, disabled, with a Tooltip (RECORD_HEADER_FALLBACKS.noAgentTooltip) — never silently missing, never broken."],
-                ["Avatar",         "A blank name falls back to AvatarCircle's own avatarStyle=\"empty\" glyph instead of empty initials. A single-character name (e.g. \"J\") isn't special-cased — it already renders fine as one initial."],
-              ].map(([slot, rule], i) => (
-                <div key={slot} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{slot}</div>
+                ["1", "Authority/origin of every field is ALWAYS visible. Every RECORD field carries a FieldProvenance and renders its origin-system badge inline (Tag, wrapped in Tooltip) — there's no code path that renders a value without one."],
+                ["2", "Every governed answer carries provenance reachable WITHOUT leaving the view. The (i) icon sits directly next to the RECORD heading (not floating unlabeled at the row's edge) and opens the Data Provenance SlideOut from right here."],
+                ["3", "HTL items are first-class states with calm, explanatory language — NEVER red errors. Your Intervention always renders in the informative/neutral token family, regardless of intervention.severity — that constancy is the law."],
+                ["4", "PII resolves only at display-time, per viewer entitlements. A hydrated field and a masked field are the SAME RecordField in 2 states — see the PII/masking section below. This component renders whichever state it's given; it never resolves entitlements."],
+              ].map(([law, rule], i) => (
+                <div key={law} className="grid grid-cols-[70px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{law}</div>
                   <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{rule}</div>
                 </div>
               ))}
             </div>
-            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Permissions and field visibility are NOT RecordHeader's decision.</strong> Whether a viewer should see MRR, health score, access role, salary, or any other sensitive field is the consuming screen's call, based on that viewer's role — RecordHeader has no concept of "who's looking." The natural pattern: the host screen omits a field the current viewer can't see from the <code>data</code> object it passes in, and RecordHeader already treats an omitted field as "absent" via the exact rule above — no separate visibility API needed. Don't build a prototype that assumes every field is always shown; that assumption belongs to the screen wiring the data, not to this component.
-              </p>
-            </div>
           </section>
 
           <section>
-            {/* Glossary — every value here comes from this page's own mock data, not a
-                confirmed backend contract. Scales/thresholds are marked as assumptions
-                (see the callout below) rather than documented as settled, since nothing
-                here has been confirmed against a real Tier/health-score/NBA-confidence
-                source yet. */}
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Glossary — terms that aren't self-explanatory from the examples alone</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              Seeing "Tier 1" on a Tag or "confidence 82%" in a Signal doesn't say what scale it's on or where the number comes from. This table is that missing definition layer.
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Term", "Definition"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["Tier",            "Customer account tier shown as an identity tag (e.g. \"Tier 1\"). Assumed scale: Tier 1 = highest strategic value/spend, counting down from there — not confirmed against a real CS/RevOps tiering source."],
-                ["Health score",    "Numeric customer-health indicator shown in Signal (e.g. \"Health score dropped to 61\"). Assumed 0–100 scale with assumed thresholds — roughly ≥80 on track, 60–79 watch, <60 at risk — consistent with this page's own mocks (61 = at risk, 92 = on track) but not confirmed against a real scoring model."],
-                ["Confidence % (NBA engine)", "Attached to an aiGenerated: true NextBestAction (e.g. \"confidence 82%\") — meant to convey the NBA engine's certainty in a probabilistic recommendation, as opposed to a deterministic fact. The calculation itself isn't confirmed; treat the number as illustrative, not a defined formula."],
-              ].map(([term, def], i) => (
-                <div key={term} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{term}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{def}</div>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
-              <div>
-                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Every scale/threshold above is an assumption, not a confirmed contract</p>
-                <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-                  Tier's value range, health score's 0–100 scale and at-risk/on-track thresholds, and the NBA engine's confidence % calculation are all inferred from this page's own mock data, not confirmed by whatever backend eventually feeds this component. Verify each against the real source before a generated screen treats them as fixed.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">3-tier action hierarchy + assigned agent</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              AIMS OS is agent-first — every record has an assigned agent, so that trigger is required and identical across all 3 variants (<code className="text-[var(--primary)]">assignedAgent: {"{ id, name, onOpenChat }"}</code>), not something each screen decides to include. The action row is always, in order: AI agent (icon-only, <code>variant="main"</code> — a deliberate, named exception to this repo's usual "never main in a card" rule, since this is the platform's one persistent agent entry point, not a regular card CTA) → the variant's contextual CTA → "···" overflow (<code>Menu</code>/<code>MenuItem</code>) for anything else. <code className="text-[var(--primary)]">actions[0]</code> is always the CTA; <code className="text-[var(--primary)]">actions[1+]</code> land in overflow automatically.
-            </p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              <strong style={{ color: "var(--foreground)" }}>Signal is actionable, not just readable:</strong> set <code className="text-[var(--primary)]">signal.actionLabel</code> when the NBA engine names one specific action (e.g. "Send proposal," "Schedule renewal call") — it renders as a real inline button instead of an implicit click-anywhere chevron. Leave it unset when there's no single action (Employee's "2 tasks pending approval" — several distinct items, not one thing to do).
-            </p>
-            <p className="text-[12px] text-[var(--field-supporting)] max-w-[680px]">
-              <strong style={{ color: "var(--foreground)" }}>Not every Signal is an alert.</strong> Pick severity from the record's actual state, not from a fixed per-variant template: <code>alert</code>/<code>error</code> for something urgent or at-risk, <code>success</code> for a genuinely good state worth noting, <code>informative</code>/<code>neutral</code> for a calm status with nothing pressing. See "All 3 variants — nothing urgent to surface" in Overview, and the Playground's "Needs attention / All good" toggle — the same variant looks completely different depending on what's actually true about that record.
-            </p>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Locked — a read-only record, not a read-only card</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              Set <code className="text-[var(--primary)]">locked</code> when the record itself is frozen (e.g. an employee on leave, a closed deal) — it's a top-level prop like <code>signal</code>/<code>assignedAgent</code>, not per-variant data, since being locked isn't an Employee/Customer/Client-specific concept.
-            </p>
-            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Displays as:</strong> a read-only Tag ("Locked", with a small Lock icon) next to the type label — not an identity chip, since Locked is a STATE, not a stable attribute (same reasoning that keeps Deal stage/Adoption level out of the chips row — see "Identity tags" below).
-              </p>
-              <p className="text-[13px] leading-[1.6] mt-[10px]" style={{ color: "var(--foreground)" }}>
-                <strong>What disables:</strong> the contextual CTA and the overflow menu's write actions — both disable with a Tooltip ("This record is locked — read-only"), rather than hiding, so the reason is always visible on hover.
-              </p>
-              <p className="text-[13px] leading-[1.6] mt-[10px]" style={{ color: "var(--foreground)" }}>
-                <strong>What stays available:</strong> the AI agent trigger and the Signal itself — both fully interactive. Consulting a locked record (asking the agent about it, reading or clicking through its Signal) isn't the same permission as editing it, so neither should be disabled just because writes are blocked.
-              </p>
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Identity tags — read-only, max 3, stable attributes only</p>
-            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                The brief calls them "chips," but this repo's <code>Chip</code> component is documented as the interactive filter-row control (toggleable, used in Filters/quick-filter rows). Context chips here are pure metadata — never clickable — which is exactly what <code>Tag</code> is for. Same visual weight, correct semantics.
-              </p>
-              <p className="text-[13px] leading-[1.6] mt-[10px]" style={{ color: "var(--foreground)" }}>
-                Two more rules on top of that, enforced by <code>getRecordFields</code> slicing the array rather than by trusting the caller: <strong>max 3</strong>, and <strong>stable identity attributes only</strong> — role/department/location, tier/segment/industry, company/deal value/lead source. Never a dynamic state or a metric. <code>Deal stage</code> and <code>Adoption level</code> are the concrete counter-examples: both look like they'd fit here, but both change over the record's lifecycle. Neither is a secondary action either (see the content contract) — a state label alone is neither a contact channel nor a navigation/creation action — so both are removed from the header entirely (see the <code>// TODO: pertenece al Overview/tab de detalle</code> comments on their own record interfaces); when either becomes urgent enough to act on, it surfaces via Signal instead. A tag you'd need to update when something <em>happens</em> to the record is in the wrong slot.
-              </p>
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Desktop overflow — long content, not just narrow viewports</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              Mobile-narrow is only half the overflow story — this card can also sit in a narrower panel (a SlideOut, a resized widget) on an otherwise-desktop screen, and real names/labels run longer than the demo data above. Two concrete behaviors:
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[160px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Content", "Behavior"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["Long name",              "Still never truncated — wraps instead, exactly as documented at the top of this page. What gives way instead is everything ELSE in the row (see priority order below)."],
-                ["Long Signal label/dueContext", "Truncates to one line past ~60 characters, with a Tooltip revealing the full text on hover. Short text (every existing mock) is completely unaffected — no Tooltip wrapper added unless the text is actually long."],
-              ].map(([content, desc], i) => (
-                <div key={content} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{content}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Collapse priority — what gives first when the card itself is narrow</strong> (measured via ResizeObserver on the card's own rendered width, not the viewport, since a container can be narrow on a wide screen): identity tags hide completely first, then the contextual CTA folds into the "···" overflow menu at a narrower width still. The AI agent trigger and the disclosure chevron are never sacrificed — the agent is the platform's one persistent entry point, and the chevron is the only way to reach the secondary actions once there are any. Zone 3's secondary actions (when expanded) wrap onto additional lines rather than hiding — there can be up to ~6-8 of them per variant now, so wrapping (not hiding) keeps every action reachable regardless of width. No Figma node exists for this component yet, so the 2 width thresholds (<code style={{ fontSize: 11 }}>COLLAPSE_HIDE_TAGS_WIDTH</code>/<code style={{ fontSize: 11 }}>COLLAPSE_HIDE_CTA_WIDTH</code> in record-header.tsx) are calibrated estimates, not a spec'd breakpoint.
-              </p>
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Assumed tokens — verify before relying on this in production</p>
-            <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
-              <div>
-                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>--ab-informative-* and --ab-neutral-* do not exist yet</p>
-                <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-                  Alert Banner (this Signal bar's visual model) only ships success/alert/error. For the other 2 severities this component falls back to Tag's own <code style={{ fontSize: 11 }}>--tag-informative-*</code> and <code style={{ fontSize: 11 }}>--tag-neutral-*</code> triads — real, existing tokens, just borrowed from a different component's family rather than invented. If Michael adds a complete <code style={{ fontSize: 11 }}>--ab-*</code> set for all 5 severities, swap <code style={{ fontSize: 11 }}>SEVERITY_CONFIG</code> in record-header.tsx to use them instead.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Design tokens — Signal severities</p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[110px_1fr_130px_130px] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Severity", "Token family", "Light", "Dark"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["success",     "--ab-success-*",     "#e5fdf8", "#0a1f1a"],
-                ["alert",       "--ab-alert-*",       "#fff4e5", "#281e00"],
-                ["error",       "--ab-error-*",       "#fdeded", "#2d1515"],
-                ["informative", "--tag-informative-*", "#e9f1ff", "rgba(21,93,252,0.15)"],
-                ["neutral",     "--tag-neutral-*",     "#f2f2f2", "rgba(255,255,255,0.08)"],
-                ["aiGenerated: true (overrides severity)", "--tag-purple-*", "#f3e9fd", "#120520"],
-              ].map(([sev, token, light, dark], i) => (
-                <div key={sev} className="grid grid-cols-[110px_1fr_130px_130px] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{sev}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{token}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{light}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{dark}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Anatomy</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Skeleton — Identity + 3 expandable zones, one shape for all 3 variants</p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
               <div className="grid grid-cols-[160px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Layer", "Composition"].map(h => (
+                {["Zone", "Content"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
               {[
-                ["1. Identity (always visible)", "AvatarCircle sizeKey=lg · Name (18px, --color-text-title, never truncated) · type label · up to 3 Tag chips · agent trigger + contextual CTA + overflow + disclosure chevron (up to 4 Buttons). Salesforce Highlights Panel pattern."],
-                ["2. Signal (always visible)",   "One NextBestAction — icon + label + dueContext, semantically colored by severity, clickable when onAction is set. HubSpot conditional-section + Next Best Action engine pattern."],
-                ["3. Secondary actions (disclosure)", "Zone 3's secondary-actions half: up to ~6-8 per variant, each a Button variant=\"tertiary\" with a leading icon, wrapped in Tooltip — same primitive regardless of kind (contact/navigation/creation). max-height transition (320ms), aria-expanded on the chevron trigger, collapsed by default. Flex-wrap row when expanded."],
-              ].map(([el, desc], i) => (
-                <div key={el} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[12px] text-[13px] font-semibold text-[var(--field-text)]">{el}</div>
-                  <div className="px-[12px] py-[12px] text-[13px] text-[var(--field-supporting)]">{desc}</div>
+                ["Identity (fixed)", "Avatar · name + statusDot · type label · up to 3 read-only Tags · Locked state. Actions: AI agent trigger (persistent) → 1 contact CTA (Message) → \"···\" overflow → disclosure chevron."],
+                ["Agentic System",  "Active Workflow + Last Agent, each a Button variant=\"tertiary\" with a leading icon (Workflow/Bot) — never a colored card. Opens a SlideOut per item."],
+                ["Your Intervention (conditional)", "Only rendered when there's a real pending decision. Calm/informative token family always (Law 3). \"{N} ACTION(S) AWAITING REVIEW\" + description + Review button → Pending Decisions SlideOut."],
+                ["Record",          "Label/value grid, each field with an inline origin-system badge (Law 1). The (i) icon next to the RECORD heading opens Data Provenance (Law 2)."],
+              ].map(([zone, content], i) => (
+                <div key={zone} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{zone}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{content}</div>
                 </div>
               ))}
             </div>
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Signal click destinations — one real example per variant</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              RecordHeader never decides this itself — <code className="text-[var(--primary)]">onAction</code> is whatever the consuming screen wires up. Same decision framework as Notification Item's Reference tab (Full Navigation / Slideout / Modal), applied per variant below. Click any Signal in Overview to see the real result.
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Clickable elements → destination</p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[110px_100px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Variant", "Opens", "Why"].map(h => (
+              <div className="grid grid-cols-[160px_100px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Element", "Opens", "Content"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
               {[
-                ["Employee", "Slideout", "Multiple items need reviewing one by one (PTO, expense) — content exceeds one paragraph, needs review before deciding."],
-                ["Customer", "Slideout", "A risk state to investigate, not a single click-to-fix — shows the score trend and why it dropped before recommending a next step."],
-                ["Client",   "Modal",   "One immediate, reversible-by-Cancel decision — \"send it or not\" fits the 1-click binary confirmation rule exactly."],
-              ].map(([v, dest, why], i) => (
-                <div key={v} className="grid grid-cols-[110px_100px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{v}</div>
+                ["AI agent trigger (sparkle)", "SidePanel", "Contextual chat with assignedAgent — no dedicated chat component exists yet, checked directly; this demo reuses SidePanel."],
+                ["Message (contact CTA)", "TODO", "Render only — onAction left as // TODO: confirmar flujo real. Contact-channel destination not confirmed."],
+                ["Active Workflow", "SlideOut", "Steps completed/pending (ProcessItem), timeline dates, Next Trigger, Started, Owner (agent)."],
+                ["Last Agent", "SlideOut", "Session Summary, Agent's Latest Finding, and a Recommendation modeled to expose an action (actionLabel/onAction), not just text."],
+                ["Review (Your Intervention)", "SlideOut", "\"Pending Decisions\" — severity, full explanation, Approve / Dismiss actions."],
+                ["(i) provenance icon", "SlideOut", "\"Data Provenance\" — per RECORD field, Source → Model → Displayed-here, reusing the exact same FieldProvenance object as the field's own badge."],
+                ["Field origin badge (WD/OK/...)", "Tooltip", "On hover: system + model version + \"Synced X ago.\""],
+              ].map(([el, dest, content], i) => (
+                <div key={el} className="grid grid-cols-[160px_100px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{el}</div>
                   <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{dest}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{why}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{content}</div>
                 </div>
               ))}
             </div>
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">i18n — static labels grow in other languages</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">PII / masking — Law 4, prepared not wired</p>
             <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                The static labels used throughout this page ("Employee," "Contact account," "Schedule renewal call") run roughly 30% longer in languages like Spanish. Every label-bearing slot here is already content-driven width, not a fixed pixel box — <code>Button</code> sizes itself by padding around its label (checked directly: only the icon-only square sizes are fixed-width), and the Signal action button is the same <code>Button</code> component — so a longer translated label simply takes more room rather than clipping or breaking layout. Nothing to change here; noted so a translated screen isn't second-guessed for "looking different" than the English mock.
+                Every <code>RecordField</code> has a <code>state: "hydrated" | "masked"</code> and both a <code>value</code> and an optional <code>maskedValue</code>. RecordHeader renders whichever state the caller passes — it does <strong>not</strong> check entitlements, call a permissions service, or decide anything about who can see what. That resolution happens upstream, per this comment on the type itself: <code>// Ley 4: display-time PII resolution — masking depende de entitlements del backend</code>. The origin badge (Law 1) still renders in both states — provenance isn't PII, so it's never masked. See the Playground's masking toggle for a live example of the same field in both states.
               </p>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Variants — UEP / UCP / UVP, one skeleton</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[70px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Variant", "Content per zone"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["UEP", "Identity tags: role/department/location. Agentic: Access Recertification workflow, People Sync agent. Intervention: access request approval. Record: Manager/Access Role/Department/Job Title/Start Date (Workday + Okta)."],
+                ["UCP", "Identity tags: tier/segment/account type. Agentic: Renewal Playbook workflow, Renewal Copilot agent. Intervention: discount approval. Record: Owner/Renewal Date/ARR (Salesforce + NetSuite). Example data, not confirmed."],
+                ["UVP", "Identity tags: vendor type/contract status/category. Agentic: Vendor Requalification workflow, Procurement Copilot agent. No intervention in this example. Record: Procurement Owner/Contract End/Spend YTD (SAP Ariba). Example data, not confirmed."],
+              ].map(([v, content], i) => (
+                <div key={v} className="grid grid-cols-[70px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{v}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{content}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-md px-[14px] py-[12px] mt-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>Work Surfaces only.</strong> This card lives exclusively in Work Surfaces — it is never replicated inside Governance, Data, or Agentic Studio. HTL as a whole is a separate product surface; "Your Intervention" here is this card's own pointer into it, not a re-implementation of it.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Signal retired — a flagged decision, not silent scope creep</p>
+            <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
+              <div>
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>DECISION FLAGGED — inferred, not explicitly instructed</p>
+                <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                  Earlier revisions of this component had an always-visible NextBestAction "Signal" bar (severity color, actionLabel, loading/error states). This governed-card brief's skeleton is Identity + 3 expandable zones, full stop, with no Signal row in it. Its role splits in two here: <code>statusDot</code> (Identity row, glanceable, color-only) for the at-a-glance read, and Your Intervention (expandable, HTL-specific, substantive) for the detail. If this reads wrong, the old Signal implementation is fully recoverable from git history — flagging the call for review rather than silently deleting without a trace.
+                </p>
+              </div>
             </div>
           </section>
         </div>
       )}
 
-      {/* ── Signal click destinations — real overlays, not fake alerts, same
-          honesty standard as Notification Item/Center's own click-routing
-          demos. Employee and Customer open a Slideout (content to review
-          before deciding); Client opens a Modal (one immediate yes/no). */}
+      {/* ── Agent chat — reuses SidePanel, same pattern as every prior agent-chat demo on this page. */}
+      <SidePanel
+        open={Boolean(rhChatWith)}
+        onClose={() => setRhChatWith(null)}
+        title={rhChatWith?.name ?? ""}
+        description={rhChatWith ? `Chatting about ${rhChatWith.recordName}` : ""}
+        titleIcon={<LucideIcons.Sparkle size={14} />}
+        titleIconVariant="purple"
+        showCollapsedStrip
+        footer={
+          <div className="flex items-center gap-[8px] p-[12px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+            <Input placeholder="Message the agent…" className="flex-1" />
+            <Button variant="primary" size="sm">Send</Button>
+          </div>
+        }
+      >
+        <div className="p-[16px]">
+          <div className="rounded-[8px] px-[12px] py-[10px] max-w-[80%]" style={{ background: "var(--tag-purple-bg)", color: "var(--tag-purple-fg)" }}>
+            <p className="text-[13px]">Hi — I'm {rhChatWith?.name}, here to help with {rhChatWith?.recordName}. What do you need?</p>
+          </div>
+        </div>
+      </SidePanel>
+
+      {/* ── Active Workflow detail. */}
       <SlideOut
-        open={rhApprovalsOpen}
-        onClose={() => setRhApprovalsOpen(false)}
+        open={rhWorkflowOpen}
+        onClose={() => setRhWorkflowOpen(false)}
         type="with-variants"
         size="m"
-        title="Pending approvals"
-        subtitle="Sarah Chen · Employee"
-        statusLabel="2 open"
-        showIcon
+        title={openWorkflow.name}
+        subtitle={`Owner · ${openWorkflow.owner}`}
         showStatus
-        showTopButton={false}
+        statusLabel="Active"
         showTabs={false}
         showSearchBar={false}
         showChips={false}
         showCta={false}
       >
-        <div className="flex flex-col gap-[8px]">
-          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Awaiting your review</span>
-          {/* Single action ("Review"), due-date in primaryMeta rather than a
-              right-aligned state Tag — a 350px Slideout is too narrow for
-              title + 2 action buttons + a tag on the same row without
-              crowding; this keeps every row legible at the panel's default
-              width instead of relying on the user dragging it wider. */}
-          <EntityList items={[
-            {
-              id: "appr-1", title: "PTO request — Aug 24–28",
-              iconName: "Calendar", iconVariant: "info",
-              primaryMeta: [{ iconName: "Clock", label: "Due today" }],
-              actions: [{ label: "Review", variant: "primary" }],
-            },
-            {
-              id: "appr-2", title: "Expense report — $340.00",
-              iconName: "Receipt", iconVariant: "info",
-              primaryMeta: [{ iconName: "Clock", label: "Due tomorrow" }],
-              actions: [{ label: "Review", variant: "primary" }],
-            },
-          ]} />
+        <div className="p-[16px] flex flex-col gap-[16px]">
+          <div className="grid grid-cols-2 gap-[12px] text-[12px]">
+            <div>
+              <p className="uppercase tracking-widest text-[10px] font-semibold" style={{ color: "var(--field-supporting)" }}>Started</p>
+              <p className="mt-[2px]" style={{ color: "var(--foreground)" }}>{openWorkflow.started}</p>
+            </div>
+            {openWorkflow.nextTrigger && (
+              <div>
+                <p className="uppercase tracking-widest text-[10px] font-semibold" style={{ color: "var(--field-supporting)" }}>Next Trigger</p>
+                <p className="mt-[2px]" style={{ color: "var(--foreground)" }}>{openWorkflow.nextTrigger}</p>
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="uppercase tracking-widest text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-supporting)" }}>Steps</p>
+            {openWorkflow.steps.map((s, i) => (
+              <ProcessItem key={i} title={s.label} timestamp={s.date} status={s.status} number={i + 1} showLine={i < openWorkflow.steps.length - 1} />
+            ))}
+          </div>
         </div>
       </SlideOut>
 
+      {/* ── Last Agent detail — Recommendation exposes a real action, not just text. */}
       <SlideOut
-        open={rhHealthOpen}
-        onClose={() => setRhHealthOpen(false)}
+        open={rhAgentOpen}
+        onClose={() => setRhAgentOpen(false)}
         type="with-variants"
         size="m"
-        title="Account health"
-        subtitle="Acme Corp · Customer account"
-        statusLabel="At risk"
-        showIcon
-        showStatus
-        showTopButton={false}
+        title={openAgent.agentName}
+        subtitle="Latest session"
+        showStatus={false}
         showTabs={false}
         showSearchBar={false}
         showChips={false}
-        showCta
-        ctaPrimaryLabel="Schedule renewal call"
-        ctaSecondaryLabel="Dismiss"
-        onCtaPrimary={() => setRhHealthOpen(false)}
-        onCtaSecondary={() => setRhHealthOpen(false)}
+        showCta={false}
       >
-        <div className="flex flex-col gap-[8px]">
-          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Key metrics</span>
-          <AdaptiveMetricGrid cards={[
-            { label: "Health score", value: "61", iconName: "Activity" },
-            { label: "Open tickets", value: "2",  iconName: "Ticket" },
-            { label: "Renews in",    value: "19d", iconName: "Calendar" },
-          ]} />
-        </div>
-        <div className="flex flex-col gap-[8px]">
-          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Why this dropped</span>
-          <ul className="flex flex-col gap-[4px]">
-            {["Product adoption fell to \"Low\" this quarter", "2 open support tickets, oldest unresolved for 6 days", "No executive contact in the last 30 days"].map((b, bi) => (
-              <li key={bi} className="flex items-start gap-[6px] text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
-                <span className="mt-[6px] w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--field-supporting)" }} />{b}
-              </li>
-            ))}
-          </ul>
+        <div className="p-[16px] flex flex-col gap-[16px]">
+          <div>
+            <p className="uppercase tracking-widest text-[10px] font-semibold mb-[4px]" style={{ color: "var(--field-supporting)" }}>Session Summary</p>
+            <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>{openAgent.sessionSummary}</p>
+          </div>
+          <div>
+            <p className="uppercase tracking-widest text-[10px] font-semibold mb-[4px]" style={{ color: "var(--field-supporting)" }}>Agent's Latest Finding</p>
+            <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>{openAgent.latestFinding}</p>
+          </div>
+          <div className="rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[8px]" style={{ background: "var(--tag-purple-bg)", border: "0.5px solid var(--tag-purple-bd)" }}>
+            <p className="uppercase tracking-widest text-[10px] font-semibold" style={{ color: "var(--tag-purple-fg)" }}>Recommendation</p>
+            <p className="text-[13px] leading-[1.6]" style={{ color: "var(--tag-purple-fg)" }}>{openAgent.recommendation.text}</p>
+            {openAgent.recommendation.actionLabel && (
+              <Button variant="secondary" size="sm" className="self-start" onClick={() => setRhAgentOpen(false)}>
+                {openAgent.recommendation.actionLabel}
+              </Button>
+            )}
+          </div>
         </div>
       </SlideOut>
 
-      <ModalDialog
-        isOpen={rhProposalOpen}
-        onClose={() => setRhProposalOpen(false)}
-        variant="confirmation"
-        tone="success"
-        title="Send final proposal to Initech?"
-        description="Marcus Webb will receive the $42,000 proposal by email. The NBA engine flagged this as the recommended next step (confidence 82%)."
-        ctaPrimary={{ label: "Send proposal", onClick: () => setRhProposalOpen(false) }}
-        ctaSecondary={{ label: "Not yet", onClick: () => setRhProposalOpen(false) }}
-      />
-
-      {/* Assigned-agent chat (task 5) — SidePanel, the repo's real inline (not
-          overlay) panel primitive, since there's no dedicated chat component
-          to reuse yet. Content here is a minimal, honest demo — a real chat
-          surface is a separate build, not something RecordHeader should
-          assume the shape of. */}
-      <SidePanel
-        open={rhChatWith !== null}
-        onClose={() => setRhChatWith(null)}
-        title={rhChatWith?.name}
-        description={rhChatWith ? `Chatting about ${rhChatWith.recordName}` : undefined}
-        titleIcon={<LucideIcons.Sparkle size={14} strokeWidth={1.75} />}
-        titleIconVariant="purple"
-        footer={
-          <div className="flex items-center gap-[8px] w-full">
-            <Input placeholder="Ask about this record…" className="flex-1" />
-            <Button variant="primary" size="sm" iconPosition="alone" icon={<LucideIcons.Send size={14} />} aria-label="Send" />
-          </div>
-        }
+      {/* ── Pending Decisions (Your Intervention → Review). */}
+      <SlideOut
+        open={rhReviewOpen}
+        onClose={() => setRhReviewOpen(false)}
+        type="with-variants"
+        size="m"
+        title="Pending Decisions"
+        subtitle={openIntervention ? `${openIntervention.count} awaiting review` : ""}
+        showStatus={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta={!rhReviewResolved}
+        ctaPrimaryLabel="Approve"
+        ctaSecondaryLabel="Dismiss"
+        onCtaPrimary={() => setRhReviewResolved("approved")}
+        onCtaSecondary={() => setRhReviewResolved("dismissed")}
       >
-        {rhChatWith && (
-          <div className="flex flex-col gap-[12px] p-[4px]">
-            <div className="rounded-[8px] px-[12px] py-[10px] self-start max-w-[85%]" style={{ background: "var(--tag-purple-bg)", border: "1px solid var(--tag-purple-bd)" }}>
-              <p className="text-[13px] leading-[1.5]" style={{ color: "var(--tag-purple-fg)" }}>
-                Hi! I'm {rhChatWith.name}, assigned to {rhChatWith.recordName}. Ask me anything about their history, open items, or what to do next.
+        <div className="p-[16px] flex flex-col gap-[16px]">
+          {openIntervention && (
+            <>
+              <Tag variant={openIntervention.severity === "high" ? "alert" : openIntervention.severity === "medium" ? "informative" : "secondary"} size="sm">
+                {openIntervention.severity.toUpperCase()}
+              </Tag>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                {(RH_INTERVENTIONS[openVariant] as (PendingIntervention & { detail: string }) | undefined)?.detail}
               </p>
-            </div>
-          </div>
-        )}
-      </SidePanel>
+              {rhReviewResolved && (
+                <div className="rounded-[8px] px-[12px] py-[10px]" style={{ background: "var(--tag-informative-bg)", color: "var(--tag-informative-fg)" }}>
+                  <p className="text-[13px] font-semibold">{rhReviewResolved === "approved" ? "Approved" : "Dismissed"}</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </SlideOut>
+
+      {/* ── Data Provenance (Law 2) — Source → Model → Displayed-here per field. */}
+      <SlideOut
+        open={rhProvenanceOpen}
+        onClose={() => setRhProvenanceOpen(false)}
+        type="with-variants"
+        size="m"
+        title="Data Provenance"
+        subtitle="Every RECORD field, traced"
+        showStatus={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta={false}
+      >
+        <div className="p-[16px]">
+          {openRecordFields.filter((f): f is RecordField => Boolean(f)).map((f, i) => <ProvenanceRow key={i} field={f} />)}
+        </div>
+      </SlideOut>
     </div>
   )
 }
