@@ -32386,27 +32386,27 @@ const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba"
 // answering the same fact), not an oversight.
 const RH_UEP: UEPRecord = {
   name: "Sarah Chen", role: "Senior Software Engineer", department: "Engineering", location: "Remote — Austin, TX",
-  manager:          { label: "Manager",        value: "David Kim",                state: "hydrated", provenance: wdProv("2h ago") },
-  accessRole:       { label: "Access Role",     value: "Admin",                    state: "hydrated", provenance: oktaProv("15m ago") },
-  departmentDetail: { label: "Department",      value: "Engineering",              state: "hydrated", provenance: wdProv("2h ago") },
-  jobTitle:         { label: "Job Title",       value: "Senior Software Engineer", state: "hydrated", provenance: wdProv("2h ago") },
-  startDate:        { label: "Start Date",      value: "March 3, 2023",            state: "hydrated", provenance: wdProv("2h ago") },
+  manager:          { label: "Manager",        icon: LucideIcons.User,        value: "David Kim",                state: "hydrated", provenance: wdProv("2h ago") },
+  accessRole:       { label: "Access Role",     icon: LucideIcons.ShieldCheck, value: "Admin",                    state: "hydrated", provenance: oktaProv("15m ago") },
+  departmentDetail: { label: "Department",      icon: LucideIcons.Building2,   value: "Engineering",              state: "hydrated", provenance: wdProv("2h ago") },
+  jobTitle:         { label: "Job Title",       icon: LucideIcons.Briefcase,   value: "Senior Software Engineer", state: "hydrated", provenance: wdProv("2h ago") },
+  startDate:        { label: "Start Date",      icon: LucideIcons.CalendarDays,value: "March 3, 2023",            state: "hydrated", provenance: wdProv("2h ago") },
 }
 
 // UCP (Customer) — EXAMPLE data, not confirmed AIMS OS content.
 const RH_UCP: UCPRecord = {
   accountName: "Acme Corp", segment: "Enterprise", tier: "Tier 1", accountType: "Direct",
-  owner:       { label: "Owner",        value: "Jamie Rivera", state: "hydrated", provenance: sfProv("30m ago") },
-  renewalDate: { label: "Renewal Date", value: "Sep 2, 2026",  state: "hydrated", provenance: sfProv("30m ago") },
-  arr:         { label: "ARR",          value: "$220,800",     state: "hydrated", provenance: nsProv("6h ago") },
+  owner:       { label: "Owner",        icon: LucideIcons.User,          value: "Jamie Rivera", state: "hydrated", provenance: sfProv("30m ago") },
+  renewalDate: { label: "Renewal Date", icon: LucideIcons.CalendarClock, value: "Sep 2, 2026",  state: "hydrated", provenance: sfProv("30m ago") },
+  arr:         { label: "ARR",          icon: LucideIcons.DollarSign,    value: "$220,800",     state: "hydrated", provenance: nsProv("6h ago") },
 }
 
 // UVP (Vendor) — EXAMPLE data, not confirmed AIMS OS content.
 const RH_UVP: UVPRecord = {
   name: "Meridian Logistics", vendorType: "Logistics", contractStatus: "Active", category: "Strategic",
-  procurementOwner: { label: "Procurement Owner", value: "Alex Torres",   state: "hydrated", provenance: aribaProv("4h ago") },
-  contractEndDate:  { label: "Contract End",      value: "Dec 31, 2026",  state: "hydrated", provenance: aribaProv("4h ago") },
-  spendYtd:         { label: "Spend YTD",         value: "$1.2M",         state: "hydrated", provenance: aribaProv("4h ago") },
+  procurementOwner: { label: "Procurement Owner", icon: LucideIcons.User,         value: "Alex Torres",   state: "hydrated", provenance: aribaProv("4h ago") },
+  contractEndDate:  { label: "Contract End",      icon: LucideIcons.CalendarDays, value: "Dec 31, 2026",  state: "hydrated", provenance: aribaProv("4h ago") },
+  spendYtd:         { label: "Spend YTD",         icon: LucideIcons.DollarSign,   value: "$1.2M",         state: "hydrated", provenance: aribaProv("4h ago") },
 }
 
 // Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
@@ -32416,7 +32416,7 @@ const RH_UVP: UVPRecord = {
 // what a lower-permission viewer would already have been handed.
 const RH_UEP_MASKED: UEPRecord = {
   ...RH_UEP,
-  accessRole: { label: "Access Role", value: "Admin", state: "masked", maskedValue: "•••• (restricted)", provenance: oktaProv("15m ago") },
+  accessRole: { label: "Access Role", icon: LucideIcons.ShieldCheck, value: "Admin", state: "masked", maskedValue: "•••• (restricted)", provenance: oktaProv("15m ago") },
 }
 
 // Assigned AI agent — one per variant, same shape (see AssignedAgent in
@@ -32812,10 +32812,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Identity (fixed)", "Avatar · name + statusDot · type label · up to 3 read-only Tags · Locked state. Actions: AI agent trigger (persistent) → 1 contact CTA (Message) → \"···\" overflow → disclosure chevron."],
-                ["Agentic System",  "Active Workflow + Last Agent, each a Button variant=\"tertiary\" with a leading icon (Workflow/Bot) — never a colored card. Opens a SlideOut per item."],
-                ["Your Intervention (conditional)", "Only rendered when there's a real pending decision. Calm/informative token family always (Law 3). \"{N} ACTION(S) AWAITING REVIEW\" + description + Review button → Pending Decisions SlideOut."],
-                ["Record",          "Label/value grid, each field with an inline origin-system badge (Law 1). The (i) icon next to the RECORD heading opens Data Provenance (Law 2)."],
+                ["Identity (fixed)", "Avatar · name + statusDot · type label · up to 3 read-only Tags (hidden once the card expands, animated — no abrupt height jump) · Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip when the card is narrow or the name is long) → 1 contact CTA (Message) → \"···\" overflow → disclosure chevron."],
+                ["Agentic System",  "Active Workflow + Last Agent, each a Button variant=\"tertiary\" with a leading icon (Workflow/Bot), a Tooltip explaining what opens, and a trailing ChevronRight — never a colored card. Opens a SlideOut per item."],
+                ["Your Intervention (conditional)", "Only rendered when there's a real pending decision. Uses the DS's real InformativeCard (state=\"alert\") — never a hand-rolled container. Calm/amber token family always (Law 3), regardless of intervention.severity. Review button → Pending Decisions SlideOut."],
+                ["Record",          "Each field is its own Button variant=\"tertiary\" row — leading field icon, label/value, origin-system badge (Law 1), trailing ChevronRight — opening Data Provenance directly. The (i) icon next to the RECORD heading opens that identical panel (Law 2): a second entry point, not a different one."],
               ].map(([zone, content], i) => (
                 <div key={zone} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{zone}</div>
@@ -32834,11 +32834,12 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["AI agent trigger (sparkle)", "SidePanel", "Contextual chat with assignedAgent — no dedicated chat component exists yet, checked directly; this demo reuses SidePanel."],
+                ["\"Ask about {name}\" / \"Ask AI\"", "SlideOut", "Chat with assignedAgent — PLACEHOLDER body only (// TODO: reemplazar con el componente de Chat cuando exista en el repo). No Chat component exists anywhere in src/components/ui/ yet, checked directly."],
                 ["Message (contact CTA)", "TODO", "Render only — onAction left as // TODO: confirmar flujo real. Contact-channel destination not confirmed."],
-                ["Active Workflow", "SlideOut", "Steps completed/pending (ProcessItem), timeline dates, Next Trigger, Started, Owner (agent)."],
-                ["Last Agent", "SlideOut", "Session Summary, Agent's Latest Finding, and a Recommendation modeled to expose an action (actionLabel/onAction), not just text."],
-                ["Review (Your Intervention)", "SlideOut", "\"Pending Decisions\" — severity, full explanation, Approve / Dismiss actions."],
+                ["Active Workflow", "SlideOut", "Steps completed/pending (ProcessItem), timeline dates, Next Trigger, Started, Owner (agent). Tooltip on hover explains the destination before clicking."],
+                ["Last Agent", "SlideOut", "Session Summary, Agent's Latest Finding, and a Recommendation modeled to expose an action (actionLabel/onAction), not just text. Tooltip on hover explains the destination before clicking."],
+                ["Any RECORD field row", "SlideOut", "Opens \"Data Provenance\" for the whole RECORD zone — same destination as the (i) icon below, not a separate per-field panel."],
+                ["Review (Your Intervention)", "SlideOut", "\"Pending Decisions\" — severity as a compact inline Tag (never full-width), full explanation, Approve / Dismiss actions."],
                 ["(i) provenance icon", "SlideOut", "\"Data Provenance\" — per RECORD field, Source → Model → Displayed-here, reusing the exact same FieldProvenance object as the field's own badge."],
                 ["Field origin badge (WD/OK/...)", "Tooltip", "On hover: system + model version + \"Synced X ago.\""],
               ].map(([el, dest, content], i) => (
@@ -32846,6 +32847,40 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{el}</div>
                   <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{dest}</div>
                   <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{content}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Panel content — follows "SlideOut/SidePanel — Content"</p>
+            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                Every SlideOut this card opens (chat, Active Workflow, Last Agent, Pending Decisions, Data Provenance) composes its content with the same primitives documented on the "SlideOut/SidePanel — Content" pattern page: a Section Title row (11px semibold uppercase, <code>--field-label</code>, 32px min-height) introduces each content block — never an ad-hoc heading. Severity Tags (e.g. Pending Decisions' "HIGH"/"MEDIUM") always render compact/inline: each is wrapped in its own non-flex container so the parent's <code>flex-col</code> layout can't stretch it full-width — that's a documented failure mode of plain flex-item Tags, not a one-off fix scoped to this card.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement — 7 scoped changes, same skeleton</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Change"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "Identity Tags hide once the card expands (animated max-height/opacity, not an abrupt height jump) — the facts they summarize reappear in full detail below."],
+                ["2", "AI agent trigger: icon-only → \"Ask about {firstName}\" (falls back to \"Ask AI\" + Tooltip when the card is narrow or the name is long). Opens a SlideOut with a chat PLACEHOLDER — no Chat component exists in the repo yet."],
+                ["3", "Your Intervention now renders with the real InformativeCard component (state=\"alert\"), not a hand-rolled container."],
+                ["4", "Every SlideOut this card opens follows the \"SlideOut/SidePanel — Content\" pattern page: Section Title rows, and severity Tags render compact/inline — never stretched full-width."],
+                ["5", "Every RECORD field now carries a leading icon (RecordField.icon)."],
+                ["6", "Agentic System buttons (Active Workflow, Last Agent) get a Tooltip explaining what opens on click."],
+                ["7", "One learnable \"opens a detail panel\" convention — Button variant=\"tertiary\" + trailing ChevronRight — applied identically to Active Workflow, Last Agent, and every RECORD field row."],
+              ].map(([n, change], i) => (
+                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
                 </div>
               ))}
             </div>
@@ -32900,28 +32935,37 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         </div>
       )}
 
-      {/* ── Agent chat — reuses SidePanel, same pattern as every prior agent-chat demo on this page. */}
-      <SidePanel
+      {/* ── AI Assistant — "Ask about {name}" opens this SlideOut. Body is a
+           PLACEHOLDER: no Chat component exists anywhere in src/components/ui/
+           yet (pending from Figma) — do not build a real chat UI here. Swap
+           the body below when that component lands. */}
+      <SlideOut
         open={Boolean(rhChatWith)}
         onClose={() => setRhChatWith(null)}
+        type="with-variants"
+        size="m"
         title={rhChatWith?.name ?? ""}
-        description={rhChatWith ? `Chatting about ${rhChatWith.recordName}` : ""}
-        titleIcon={<LucideIcons.Sparkle size={14} />}
-        titleIconVariant="purple"
-        showCollapsedStrip
-        footer={
-          <div className="flex items-center gap-[8px] p-[12px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
-            <Input placeholder="Message the agent…" className="flex-1" />
-            <Button variant="primary" size="sm">Send</Button>
-          </div>
-        }
+        subtitle={rhChatWith ? `Ask about ${rhChatWith.recordName}` : ""}
+        showStatus={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta={false}
       >
-        <div className="p-[16px]">
+        {/* TODO: reemplazar con el componente de Chat cuando exista en el repo */}
+        <div className="p-[16px] flex flex-col gap-[16px]">
+          <div className="flex items-center h-[32px]">
+            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Conversation</span>
+          </div>
           <div className="rounded-[8px] px-[12px] py-[10px] max-w-[80%]" style={{ background: "var(--tag-purple-bg)", color: "var(--tag-purple-fg)" }}>
             <p className="text-[13px]">Hi — I'm {rhChatWith?.name}, here to help with {rhChatWith?.recordName}. What do you need?</p>
           </div>
+          <div className="flex items-center gap-[8px] mt-auto pt-[16px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+            <Input placeholder="Message the agent…" className="flex-1" disabled />
+            <Button variant="primary" size="sm" disabled>Send</Button>
+          </div>
         </div>
-      </SidePanel>
+      </SlideOut>
 
       {/* ── Active Workflow detail. */}
       <SlideOut
@@ -32939,20 +32983,27 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         showCta={false}
       >
         <div className="p-[16px] flex flex-col gap-[16px]">
-          <div className="grid grid-cols-2 gap-[12px] text-[12px]">
-            <div>
-              <p className="uppercase tracking-widest text-[10px] font-semibold" style={{ color: "var(--field-supporting)" }}>Started</p>
-              <p className="mt-[2px]" style={{ color: "var(--foreground)" }}>{openWorkflow.started}</p>
+          <div>
+            <div className="flex items-center h-[32px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Details</span>
             </div>
-            {openWorkflow.nextTrigger && (
+            <div className="grid grid-cols-2 gap-[12px] text-[12px] mt-[4px]">
               <div>
-                <p className="uppercase tracking-widest text-[10px] font-semibold" style={{ color: "var(--field-supporting)" }}>Next Trigger</p>
-                <p className="mt-[2px]" style={{ color: "var(--foreground)" }}>{openWorkflow.nextTrigger}</p>
+                <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Started</p>
+                <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openWorkflow.started}</p>
               </div>
-            )}
+              {openWorkflow.nextTrigger && (
+                <div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Next Trigger</p>
+                  <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openWorkflow.nextTrigger}</p>
+                </div>
+              )}
+            </div>
           </div>
           <div>
-            <p className="uppercase tracking-widest text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-supporting)" }}>Steps</p>
+            <div className="flex items-center h-[32px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Steps</span>
+            </div>
             {openWorkflow.steps.map((s, i) => (
               <ProcessItem key={i} title={s.label} timestamp={s.date} status={s.status} number={i + 1} showLine={i < openWorkflow.steps.length - 1} />
             ))}
@@ -32976,21 +33027,29 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
       >
         <div className="p-[16px] flex flex-col gap-[16px]">
           <div>
-            <p className="uppercase tracking-widest text-[10px] font-semibold mb-[4px]" style={{ color: "var(--field-supporting)" }}>Session Summary</p>
-            <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>{openAgent.sessionSummary}</p>
+            <div className="flex items-center h-[32px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Session Summary</span>
+            </div>
+            <p className="text-[13px] leading-[1.6] mt-[4px]" style={{ color: "var(--foreground)" }}>{openAgent.sessionSummary}</p>
           </div>
           <div>
-            <p className="uppercase tracking-widest text-[10px] font-semibold mb-[4px]" style={{ color: "var(--field-supporting)" }}>Agent's Latest Finding</p>
-            <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>{openAgent.latestFinding}</p>
+            <div className="flex items-center h-[32px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Agent's Latest Finding</span>
+            </div>
+            <p className="text-[13px] leading-[1.6] mt-[4px]" style={{ color: "var(--foreground)" }}>{openAgent.latestFinding}</p>
           </div>
-          <div className="rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[8px]" style={{ background: "var(--tag-purple-bg)", border: "0.5px solid var(--tag-purple-bd)" }}>
-            <p className="uppercase tracking-widest text-[10px] font-semibold" style={{ color: "var(--tag-purple-fg)" }}>Recommendation</p>
-            <p className="text-[13px] leading-[1.6]" style={{ color: "var(--tag-purple-fg)" }}>{openAgent.recommendation.text}</p>
-            {openAgent.recommendation.actionLabel && (
-              <Button variant="secondary" size="sm" className="self-start" onClick={() => setRhAgentOpen(false)}>
-                {openAgent.recommendation.actionLabel}
-              </Button>
-            )}
+          <div>
+            <div className="flex items-center h-[32px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Recommendation</span>
+            </div>
+            <div className="rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[8px] mt-[4px]" style={{ background: "var(--tag-purple-bg)", border: "0.5px solid var(--tag-purple-bd)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--tag-purple-fg)" }}>{openAgent.recommendation.text}</p>
+              {openAgent.recommendation.actionLabel && (
+                <Button variant="secondary" size="sm" className="self-start" onClick={() => setRhAgentOpen(false)}>
+                  {openAgent.recommendation.actionLabel}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </SlideOut>
@@ -33016,9 +33075,16 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div className="p-[16px] flex flex-col gap-[16px]">
           {openIntervention && (
             <>
-              <Tag variant={openIntervention.severity === "high" ? "alert" : openIntervention.severity === "medium" ? "informative" : "secondary"} size="sm">
-                {openIntervention.severity.toUpperCase()}
-              </Tag>
+              <div>
+                <div className="flex items-center h-[32px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Decision</span>
+                </div>
+                {/* Wrapped in a non-flex div so the Tag can't be stretched full-width by
+                    the parent's flex-col cross-axis — severity Tags stay compact/inline. */}
+                <Tag variant={openIntervention.severity === "high" ? "alert" : openIntervention.severity === "medium" ? "informative" : "secondary"} size="sm" className="mt-[4px]">
+                  {openIntervention.severity.toUpperCase()}
+                </Tag>
+              </div>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
                 {(RH_INTERVENTIONS[openVariant] as (PendingIntervention & { detail: string }) | undefined)?.detail}
               </p>
@@ -33047,7 +33113,12 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         showCta={false}
       >
         <div className="p-[16px]">
-          {openRecordFields.filter((f): f is RecordField => Boolean(f)).map((f, i) => <ProvenanceRow key={i} field={f} />)}
+          <div className="flex items-center h-[32px]">
+            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Fields</span>
+          </div>
+          <div className="mt-[8px]">
+            {openRecordFields.filter((f): f is RecordField => Boolean(f)).map((f, i) => <ProvenanceRow key={i} field={f} />)}
+          </div>
         </div>
       </SlideOut>
     </div>

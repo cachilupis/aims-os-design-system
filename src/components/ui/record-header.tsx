@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from "react"
 import {
-  ChevronDown, ChevronUp, Sparkle, MoreHorizontal, Lock, Info, Workflow, Bot, Clock,
+  ChevronDown, ChevronUp, ChevronRight, Sparkle, MoreHorizontal, Lock, Info, Workflow, Bot,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -11,6 +11,7 @@ import { Badge, type BadgeVariant } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Menu, MenuItem } from "@/components/ui/menu-item"
 import { Tooltip } from "@/components/ui/tooltip"
+import { InformativeCard } from "@/components/ui/informative-card"
 
 /**
  * Record Header — AIMS OS Design System
@@ -68,21 +69,50 @@ import { Tooltip } from "@/components/ui/tooltip"
  * all 3 variants (uep/ucp/uvp) — only the zone CONTENT changes per variant,
  * never the skeleton:
  *   Identity (always visible) → avatar, name + statusDot, type label, up to
- *     3 read-only Tags, Locked state. Actions: AI agent trigger (persistent,
- *     icon-only) → 1 contact CTA (Message) → "···" overflow → disclosure
- *     chevron.
+ *     3 read-only Tags (hidden once expanded — see REFINEMENT below), Locked
+ *     state. Actions: AI agent trigger ("Ask about {firstName}", persistent)
+ *     → 1 contact CTA (Message) → "···" overflow → disclosure chevron.
  *   AGENTIC SYSTEM (expanded) → Active Workflow + Last Agent, each a Button
- *     variant="tertiary" with a leading icon (Workflow/Bot) — never a
- *     colored card, per explicit instruction. Opens a SlideOut per item.
+ *     variant="tertiary" with a leading icon (Workflow/Bot), a Tooltip
+ *     explaining what opens, and a trailing ChevronRight — never a colored
+ *     card. Opens a SlideOut per item.
  *   YOUR INTERVENTION (expanded, only if `intervention` is set) → the HTL
- *     pending-decision block. Calm/informative token family (Law 3), never
- *     error-red, regardless of `intervention.severity`. Opens the "Pending
- *     Decisions" SlideOut via its Review button.
- *   RECORD (expanded) → label/value grid, each field with an inline origin-
- *     system badge (Tag, wrapped in Tooltip — Law 1). The (i) provenance
- *     icon sits directly next to the "RECORD" heading (Law 2 — findable,
- *     not floating unlabeled at the row's far edge) and opens the Data
- *     Provenance SlideOut for the whole section.
+ *     pending-decision block, rendered with InformativeCard (state="alert")
+ *     — the DS's own canonical "first-class calm state" primitive, not a
+ *     hand-rolled container. Never state="error" (red), regardless of
+ *     `intervention.severity`. Opens the "Pending Decisions" SlideOut via
+ *     its Review button.
+ *   RECORD (expanded) → each field is its OWN Button variant="tertiary" row
+ *     (leading field icon + label/value + origin badge + trailing
+ *     ChevronRight — Law 1 + the same "opens detail" convention as Agentic
+ *     System above), opening the Data Provenance SlideOut. The (i) icon
+ *     next to the "RECORD" heading (Law 2 — findable, not floating
+ *     unlabeled at the row's far edge) opens the identical panel — a second
+ *     entry point to the same content, not a different one.
+ *
+ * REFINEMENT (this revision) — 7 scoped changes on top of the governed-card
+ * structure above, none of which touch the 3-zone skeleton or the variants:
+ *   1. Identity tags hide once expanded (animated, not an abrupt height
+ *      jump) — the facts they summarize reappear in full detail below, so
+ *      showing both is pure redundancy.
+ *   2. AI agent trigger: icon-only → "Ask about {firstName}" (falls back to
+ *      "Ask AI" + Tooltip on a narrow card or a long name) — the button now
+ *      communicates WHO it's scoped to, not just "there is an assistant."
+ *      Opens a SlideOut with a CHAT PLACEHOLDER — no Chat component exists
+ *      in this repo yet (it's coming from Figma later); see the // TODO in
+ *      App.tsx's demo wiring. Don't build a real chat component here.
+ *   3. Your Intervention → InformativeCard (was a hand-rolled div).
+ *   4. Every SlideOut this card opens follows the "SlideOut/SidePanel —
+ *      Content" pattern page's conventions (Section Titles, and severity
+ *      Tags render compact/inline — never stretched full-width) — enforced
+ *      in App.tsx's demo wiring, since RecordHeader itself doesn't render
+ *      the SlideOuts (see Composition below).
+ *   5. Every RECORD field now carries a leading icon (RecordField.icon).
+ *   6. Agentic System buttons get a Tooltip explaining what opens on click.
+ *   7. One convention for "this opens a detail panel": Button variant=
+ *      "tertiary" + trailing ChevronRight — applied identically to Active
+ *      Workflow, Last Agent, and every RECORD field row. Learn the chevron
+ *      once, recognize it everywhere.
  *
  * Composition — reuses existing DS atoms, no custom re-implementations:
  *   Card       → CardContainer (size="default", variant="default").
@@ -92,7 +122,7 @@ import { Tooltip } from "@/components/ui/tooltip"
  *   Identity metadata → Tag (size="sm"), NOT Chip — same reasoning as every
  *                prior revision of this file: Chip is the interactive
  *                filter-row control, Tag is the read-only display atom.
- *   AI agent trigger → Button icon-only, `Sparkle` glyph, variant="main" —
+ *   AI agent trigger → Button icon+label, `Sparkle` glyph, variant="main" —
  *                the same named, single-purpose exception to the "never
  *                main in a card" rule this file has documented since it was
  *                first confirmed with Michael. Still the only sanctioned
@@ -101,23 +131,27 @@ import { Tooltip } from "@/components/ui/tooltip"
  *                getBoundingClientRect() on trigger click — this file's
  *                established positioning technique, unchanged.
  *   Disclosure → local expanded state + max-height transition — unchanged
- *                technique from every prior revision of this file.
- *   Agentic System items / provenance icon → Button variant="tertiary" with
- *                a leading icon. Never a colored card for metadata, per
- *                explicit instruction.
+ *                technique from every prior revision of this file, now also
+ *                reused for the identity-tags hide-on-expand transition.
+ *   Agentic System items / RECORD field rows → Button variant="tertiary",
+ *                leading icon, trailing ChevronRight. Never a colored card
+ *                for metadata, per explicit instruction.
+ *   Your Intervention → InformativeCard (informative-card.tsx), state=
+ *                "alert" — its real amber/warning semantic, never "error".
  *   Field origin badge → Tag (size="sm"), wrapped in Tooltip showing the
  *                fuller provenance (system + model version + synced-ago).
  *   Governed SlideOuts (Workflow detail, Pending Decisions, Agent detail,
- *                Data Provenance) → RecordHeader itself never renders them
- *                — same delegation rule this file has followed since
- *                `signal.onAction`/`assignedAgent.onOpenChat` first existed:
- *                every clickable surface exposes an `onOpen`/`onAction`
- *                callback, and the consuming screen (App.tsx's
- *                RecordHeaderPage demo) owns the actual SlideOut/SidePanel
- *                instance. This keeps the DS component free of page-level
- *                overlay state and matches "reuse the existing SlideOut/
- *                SidePanel primitive" literally — RecordHeader doesn't
- *                reimplement it internally.
+ *                Data Provenance, agent chat placeholder) → RecordHeader
+ *                itself never renders them — same delegation rule this
+ *                file has followed since `assignedAgent.onOpenChat` first
+ *                existed: every clickable surface exposes an
+ *                `onOpen`/`onAction` callback, and the consuming screen
+ *                (App.tsx's RecordHeaderPage demo) owns the actual
+ *                SlideOut/SidePanel instance, composed per the "SlideOut/
+ *                SidePanel — Content" pattern page. This keeps the DS
+ *                component free of page-level overlay state and matches
+ *                "reuse the existing SlideOut/SidePanel primitive"
+ *                literally — RecordHeader doesn't reimplement it internally.
  */
 
 // ── Field-level provenance (Law 1 + Law 2) ──────────────────────────────────
@@ -143,6 +177,9 @@ export interface FieldProvenance {
 // Reference tab's "PII / masking (Law 4)" section for the full framing.
 export interface RecordField {
   label: string
+  /** Leading icon for scanability — also reinforces Law 1 (authority/origin
+   *  always visible) alongside the provenance badge, not a decoration. */
+  icon: LucideIcon
   provenance: FieldProvenance
   // Ley 4: display-time PII resolution — masking depende de entitlements del
   // backend. This component does NOT implement entitlement resolution; the
@@ -367,10 +404,17 @@ export const RECORD_HEADER_RECOMMENDED_ACTIONS: Record<RecordHeaderVariant, Reco
 // Not viewport breakpoints: this card can sit in a narrower panel on an
 // otherwise-desktop screen, so width is measured on the card's own rendered
 // box via ResizeObserver, not read from Tailwind's sm:/md:. No Figma node
-// exists for this component yet, so this px value is a calibrated estimate,
-// not a spec'd breakpoint. Below it, identity tags hide completely — the
-// agent trigger and disclosure chevron are never sacrificed.
+// exists for this component yet, so these px values are calibrated
+// estimates, not a spec'd breakpoint. Below COLLAPSE_HIDE_TAGS_WIDTH,
+// identity tags hide completely; below the narrower
+// COLLAPSE_SHORTEN_ASSISTANT_WIDTH, "Ask about {name}" shortens to "Ask AI"
+// — the agent trigger and disclosure chevron are never sacrificed, only
+// their label content adapts.
 const COLLAPSE_HIDE_TAGS_WIDTH = 560
+const COLLAPSE_SHORTEN_ASSISTANT_WIDTH = 480
+// A long first name can overflow even at full width — this is a length
+// guard, not a replacement for the width measurement above; both apply.
+const ASSISTANT_LABEL_MAX_NAME_LENGTH = 12
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -405,15 +449,29 @@ function RecordHeader({
   // grows back).
   const rootRef = useRef<HTMLDivElement>(null)
   const [tagsHidden, setTagsHidden] = useState(false)
+  const [assistantShortened, setAssistantShortened] = useState(false)
   useLayoutEffect(() => {
     const el = rootRef.current
     if (!el) return
-    const measure = () => setTagsHidden(el.clientWidth < COLLAPSE_HIDE_TAGS_WIDTH)
+    const measure = () => {
+      setTagsHidden(el.clientWidth < COLLAPSE_HIDE_TAGS_WIDTH)
+      setAssistantShortened(el.clientWidth < COLLAPSE_SHORTEN_ASSISTANT_WIDTH)
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+
+  // AI Assistant CTA — "Ask about {firstName}" communicates this chat is
+  // scoped to THIS record, not a generic assistant entry point. Falls back
+  // to "Ask AI" (+ Tooltip carrying the same context) when the card is
+  // narrow OR the first name itself is long enough to risk breaking the
+  // action row — either condition alone is enough to trigger the fallback.
+  const assistantFirstName = fields.name.trim().split(/\s+/)[0] ?? ""
+  const assistantUseFallback = assistantShortened || assistantFirstName.length > ASSISTANT_LABEL_MAX_NAME_LENGTH
+  const assistantLabel = assistantUseFallback ? "Ask AI" : `Ask about ${assistantFirstName}`
+  const assistantTooltip = `Pregúntale al asistente con contexto de ${fields.name}`
 
   return (
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
@@ -442,36 +500,73 @@ function RecordHeader({
               )}
             </div>
 
-            {!tagsHidden && fields.chips.filter(Boolean).length > 0 && (
-              <div className="flex items-center gap-[6px] flex-wrap">
-                {fields.chips.filter(Boolean).slice(0, 3).map((label, i) => (
-                  <Tag key={i} variant="secondary" size="sm">{label}</Tag>
-                ))}
-              </div>
-            )}
+            {/* Task 1 — identity tags hide once the card expands: the same
+                facts they summarize (workflow/agent state, HTL pending,
+                and — for UEP — department/role) reappear in full detail in
+                the zones below, so keeping both visible is pure redundancy.
+                max-height transition (not a hard unmount) so the collapse
+                is animated, not an abrupt height jump. */}
+            <div
+              style={{
+                maxHeight: expanded ? 0 : 40,
+                opacity: expanded ? 0 : 1,
+                overflow: "hidden",
+                transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease",
+              }}
+            >
+              {!tagsHidden && fields.chips.filter(Boolean).length > 0 && (
+                <div className="flex items-center gap-[6px] flex-wrap">
+                  {fields.chips.filter(Boolean).slice(0, 3).map((label, i) => (
+                    <Tag key={i} variant="secondary" size="sm">{label}</Tag>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-[6px] shrink-0 flex-wrap justify-end">
-            {/* variant="main" — deliberate, named exception, see file header. */}
+            {/* variant="main" — deliberate, named exception, see file header.
+                Task 2 — icon+label, not icon-only: "Ask about {firstName}"
+                names WHO the assistant is scoped to, so the button itself
+                communicates context instead of relying on a generic sparkle.
+                Falls back to "Ask AI" + Tooltip (still carrying the full
+                name) when the card is narrow or the name is long — see
+                assistantUseFallback above. */}
             {assignedAgent ? (
-              <Button
-                variant="main"
-                size="sm"
-                iconPosition="alone"
-                icon={<Sparkle size={16} strokeWidth={1.75} />}
-                aria-label={`Chat with ${assignedAgent.name}`}
-                onClick={assignedAgent.onOpenChat}
-              />
+              assistantUseFallback ? (
+                <Tooltip content={assistantTooltip}>
+                  <Button
+                    variant="main"
+                    size="sm"
+                    icon={<Sparkle size={16} strokeWidth={1.75} />}
+                    aria-label={assistantTooltip}
+                    onClick={assignedAgent.onOpenChat}
+                  >
+                    {assistantLabel}
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Button
+                  variant="main"
+                  size="sm"
+                  icon={<Sparkle size={16} strokeWidth={1.75} />}
+                  aria-label={assistantTooltip}
+                  onClick={assignedAgent.onOpenChat}
+                >
+                  {assistantLabel}
+                </Button>
+              )
             ) : (
               <Tooltip content={RECORD_HEADER_FALLBACKS.noAgentTooltip}>
                 <Button
                   variant="main"
                   size="sm"
-                  iconPosition="alone"
                   icon={<Sparkle size={16} strokeWidth={1.75} />}
                   aria-label={RECORD_HEADER_FALLBACKS.noAgentTooltip}
                   disabled
-                />
+                >
+                  {assistantLabel}
+                </Button>
               </Tooltip>
             )}
 
@@ -527,16 +622,26 @@ function RecordHeader({
                   <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
                     Agentic System
                   </span>
+                  {/* Task 6 — Tooltip explains what opens on click. Task 7 —
+                      same "opens detail" convention as the RECORD rows below:
+                      Button tertiary + trailing ChevronRight, so there's one
+                      visual language for "this has a detail panel," not two. */}
                   <div className="flex flex-wrap items-center gap-[8px]">
                     {agenticSystem?.activeWorkflow && (
-                      <Button variant="tertiary" size="sm" icon={<Workflow size={14} strokeWidth={1.75} />} onClick={agenticSystem.activeWorkflow.onOpen}>
-                        {agenticSystem.activeWorkflow.name}
-                      </Button>
+                      <Tooltip content={`Open "${agenticSystem.activeWorkflow.name}" — steps, timeline, and who's running it`}>
+                        <Button variant="tertiary" size="sm" icon={<Workflow size={14} strokeWidth={1.75} />} onClick={agenticSystem.activeWorkflow.onOpen}>
+                          {agenticSystem.activeWorkflow.name}
+                          <ChevronRight size={14} strokeWidth={1.75} className="ml-[2px]" style={{ color: "var(--field-supporting)" }} />
+                        </Button>
+                      </Tooltip>
                     )}
                     {agenticSystem?.lastAgent && (
-                      <Button variant="tertiary" size="sm" icon={<Bot size={14} strokeWidth={1.75} />} onClick={agenticSystem.lastAgent.onOpen}>
-                        {agenticSystem.lastAgent.name}
-                      </Button>
+                      <Tooltip content={`Open ${agenticSystem.lastAgent.name}'s latest session — summary, finding, and recommendation`}>
+                        <Button variant="tertiary" size="sm" icon={<Bot size={14} strokeWidth={1.75} />} onClick={agenticSystem.lastAgent.onOpen}>
+                          {agenticSystem.lastAgent.name}
+                          <ChevronRight size={14} strokeWidth={1.75} className="ml-[2px]" style={{ color: "var(--field-supporting)" }} />
+                        </Button>
+                      </Tooltip>
                     )}
                   </div>
                 </div>
@@ -547,26 +652,23 @@ function RecordHeader({
                   <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
                     Your Intervention
                   </span>
-                  {/* Law 3 — calm/informative token family ALWAYS, regardless of
-                      intervention.severity. Never the error/red family — that
-                      constancy is the law, not an oversight. */}
-                  <div
-                    className="flex items-start gap-[10px] rounded-[8px] px-[12px] py-[10px]"
-                    style={{ background: "var(--tag-informative-bg)", border: "0.5px solid var(--tag-informative-bd)" }}
-                  >
-                    <Clock size={16} strokeWidth={1.75} style={{ color: "var(--tag-informative-fg)" }} className="shrink-0 mt-[2px]" />
-                    <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
-                      <span className="text-[13px] font-semibold leading-[1.4]" style={{ color: "var(--tag-informative-fg)" }}>
-                        {intervention.count} {intervention.count === 1 ? "ACTION" : "ACTIONS"} AWAITING REVIEW
-                      </span>
-                      <span className="text-[12px] leading-[1.5]" style={{ color: "var(--tag-informative-fg)" }}>
-                        {intervention.description}
-                      </span>
-                    </div>
-                    <Button variant="secondary" size="sm" className="shrink-0" onClick={intervention.onReview}>
-                      Review
-                    </Button>
-                  </div>
+                  {/* Task 3 — the DS's own InformativeCard, not a hand-rolled
+                      container. state="alert" is InformativeCard's amber/
+                      warning semantic (Surface/Warning/Subtle + Icon/Alert/
+                      Default) — never state="error" (red). That's Law 3
+                      enforced by using the component correctly, not by
+                      copying its look: HTL items are a first-class calm
+                      state, not an error, regardless of intervention.severity
+                      (which only feeds the Pending Decisions SlideOut, not
+                      this card's own treatment — see PendingIntervention's
+                      own doc comment). */}
+                  <InformativeCard
+                    state="alert"
+                    size="sm"
+                    title={`${intervention.count} ${intervention.count === 1 ? "ACTION" : "ACTIONS"} AWAITING REVIEW`}
+                    description={intervention.description}
+                    cta={{ label: "Review", onClick: intervention.onReview }}
+                  />
                 </div>
               )}
 
@@ -593,27 +695,44 @@ function RecordHeader({
                       </Tooltip>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-[16px] gap-y-[12px]">
-                    {fields.recordFields.map((f, i) => (
-                      <div key={i} className="flex flex-col gap-[4px] min-w-0">
-                        <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
-                          {f.label}
-                        </span>
-                        <div className="flex items-center gap-[6px] min-w-0">
-                          <span
-                            className="text-[13px] leading-[1.4] truncate"
-                            style={{ color: f.state === "masked" ? "var(--field-supporting)" : "var(--foreground)", fontStyle: f.state === "masked" ? "italic" : undefined }}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-[8px] gap-y-[4px]">
+                    {fields.recordFields.map((f, i) => {
+                      const FieldIcon = f.icon
+                      return (
+                        // Task 5 — a leading icon per field, for scanability
+                        // AND to reinforce Law 1 alongside the badge. Task 7 —
+                        // the whole row is one Button tertiary + trailing
+                        // ChevronRight (same "opens detail" convention as
+                        // Agentic System above), opening the same Data
+                        // Provenance panel the (i) icon opens — this is a
+                        // second entry point to the identical content, not a
+                        // different one, so there's nothing to keep in sync.
+                        <Tooltip key={i} content={`${f.provenance.system} · ${f.provenance.modelVersion} · Synced ${f.provenance.syncedAgo}`}>
+                          <Button
+                            variant="tertiary"
+                            onClick={onProvenanceOpen}
+                            className="h-auto w-full justify-start px-[8px] py-[8px]"
                           >
-                            {f.state === "masked" ? (f.maskedValue ?? "•••• (restricted)") : f.value}
-                          </span>
-                          {/* Field origin badge — Law 1, always renders regardless
-                              of masking state (provenance ≠ the value itself). */}
-                          <Tooltip content={`${f.provenance.system} · ${f.provenance.modelVersion} · Synced ${f.provenance.syncedAgo}`}>
+                            <FieldIcon size={14} strokeWidth={1.75} className="shrink-0 mt-[2px]" style={{ color: "var(--field-supporting)" }} />
+                            <div className="flex flex-col items-start gap-[2px] flex-1 min-w-0 text-left">
+                              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                                {f.label}
+                              </span>
+                              <span
+                                className="text-[13px] leading-[1.4] truncate max-w-full"
+                                style={{ color: f.state === "masked" ? "var(--field-supporting)" : "var(--foreground)", fontStyle: f.state === "masked" ? "italic" : undefined }}
+                              >
+                                {f.state === "masked" ? (f.maskedValue ?? "•••• (restricted)") : f.value}
+                              </span>
+                            </div>
+                            {/* Field origin badge — Law 1, always renders regardless
+                                of masking state (provenance ≠ the value itself). */}
                             <Tag variant="secondary" size="sm" className="shrink-0">{f.provenance.systemAbbr}</Tag>
-                          </Tooltip>
-                        </div>
-                      </div>
-                    ))}
+                            <ChevronRight size={14} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--field-supporting)" }} />
+                          </Button>
+                        </Tooltip>
+                      )
+                    })}
                   </div>
                 </div>
               )}
