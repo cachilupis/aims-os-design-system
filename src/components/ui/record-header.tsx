@@ -1,7 +1,6 @@
 import { useState, useRef, useLayoutEffect } from "react"
 import {
-  ChevronDown, ChevronUp, CircleCheck, TriangleAlert, CircleX, Info, Sparkles, Sparkle, MoreHorizontal, X, Flag, Lock,
-  User, Mail, Phone, Calendar, CalendarCheck, Users, ShieldCheck, DollarSign, Ticket, Contact, Clock, Activity,
+  ChevronDown, CircleCheck, TriangleAlert, CircleX, Info, Sparkles, Sparkle, MoreHorizontal, X, Lock, Mail, Phone,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -13,35 +12,51 @@ import { Button } from "@/components/ui/button"
 import { Menu, MenuItem } from "@/components/ui/menu-item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip } from "@/components/ui/tooltip"
+import { TableCellLink } from "@/components/ui/table"
 
 /**
  * Record Header — AIMS OS Design System
  *
  * NOT YET IN FIGMA — this is a new component, not synced from an existing node.
  * It's modeled on well-established patterns (there is no invented interaction
- * here, only a composition of them):
- *   1. Identity row  → Salesforce Lightning "Highlights Panel" (compact layout):
- *      avatar + primary field + secondary fields + a 3-tier action row, always visible.
- *   2. Signal        → HubSpot's conditional "why this matters now" section, fed
- *      by a Next Best Action engine — one recommendation, not a dashboard.
- *   3. Details       → a standard disclosure/accordion revealing secondary
- *      fields, same idea as this repo's own DocSection collapsible pattern.
+ * here, only a composition of them), formalized as 3 CONTENT ZONES (a content
+ * contract, not a visual redesign — see the Reference tab's own "Content
+ * contract" section for the full framing):
+ *   Zone 1 — Identity  → Salesforce Lightning "Highlights Panel" (compact
+ *      layout): avatar + primary field + stable identity tags. Fixed, never
+ *      changes shape.
+ *   Zone 2 — Signal    → HubSpot's conditional "why this matters now" section,
+ *      fed by a Next Best Action engine — one recommendation, not a dashboard.
+ *   Zone 3 — Actions + key fields → the action row (agent/CTA/overflow, top-
+ *      right of Zone 1's physical position) plus a small set of glanceable+
+ *      actionable key fields (max ~3-4) rendered below Signal. Both halves of
+ *      Zone 3 are grouped conceptually, not physically moved — see KeyField's
+ *      own doc comment for the glanceable+actionable filter and the 2 kinds
+ *      (contact/relational) it can produce. This REPLACES an earlier version
+ *      of this file that showed up to 6 plain-text metadata fields behind an
+ *      expand/collapse disclosure — cut for 2 reasons: plain text isn't
+ *      glanceable+actionable, and Highlights Panel fields are never hidden
+ *      behind a click in the first place (that's what makes it a Highlights
+ *      Panel and not a details accordion). Fields that didn't survive the
+ *      filter aren't deleted from the data shape — see the `// TODO: pertenece
+ *      al Overview/tab de detalle` comments on EmployeeRecord/CustomerRecord/
+ *      ClientRecord below for exactly which ones and why.
  * Before this ships to Figma, Michael should design a real node for it and this
  * file should get a figmaNodeId/figmaUrl like every other component in ui/.
  *
  * One shared layout for all 3 variants (employee/customer/client) — only the
- * chip/detail/action *content* changes per variant, never the structure or the
- * styles. This is what makes wiring a Next Best Action engine variant-agnostic:
- * the engine only ever returns one NextBestAction shape, regardless of which of
- * the 3 record types it's reacting to.
+ * chip/key-field/action *content* changes per variant, never the structure or
+ * the styles. This is what makes wiring a Next Best Action engine variant-
+ * agnostic: the engine only ever returns one NextBestAction shape, regardless
+ * of which of the 3 record types it's reacting to.
  *
  * Page context this was refined against: RecordHeader always sits atop that
  * record's own profile page — Overview widgets + Activity/Log tabs render
  * right below it. Two consequences that shape this file:
  *   - Identity chips show only STABLE attributes (role, industry, source) —
- *     never a dynamic state or metric, since those belong in Signal/Details,
- *     not in an always-visible "who is this" row that shouldn't need updating
- *     every time a status changes.
+ *     never a dynamic state or metric, since those belong in Signal/key
+ *     fields, not in an always-visible "who is this" row that shouldn't need
+ *     updating every time a status changes.
  *   - Header actions must not duplicate a tab below (see
  *     RECORD_HEADER_RECOMMENDED_ACTIONS for the specific calls this drove).
  *
@@ -80,11 +95,17 @@ import { Tooltip } from "@/components/ui/tooltip"
  *                anchored the same way NotificationCenter's own filter dropdown
  *                is (capture the trigger's rect on click, render fixed-position,
  *                dismiss on backdrop click) — not a new positioning technique.
- *   Disclosure → local expanded state + max-height transition, the same technique
- *                already used by widget-father.tsx for its collapse animation, and
- *                the same chevron-rotate affordance DocSection/EntityList already
- *                use elsewhere in this app — not a new pattern. Only rendered when
- *                there's at least one Details field to reveal.
+ *   Key fields (Zone 3) → 2 kinds, each mapped to an existing DS primitive,
+ *                never plain text: "contact" (a real communication channel,
+ *                e.g. Email/Phone) → Button variant="tertiary" with a leading
+ *                icon, same component as the overflow trigger above, just
+ *                with a label. "relational" (a link to ANOTHER record, e.g.
+ *                Manager/Owner) → TableCellLink, the repo's actual "Link-
+ *                text=Yes" DS variant (table.tsx) — verified directly, no
+ *                dedicated Link/TextLink component exists elsewhere in
+ *                src/components/ui/, so this is the correct one to reuse
+ *                rather than inventing a new one. Always visible, no
+ *                disclosure — see the Zone 3 note above for why.
  *
  * Token family — Signal severity:
  *   success/alert/error reuse Alert Banner's own token family (--ab-{state}-*),
@@ -210,18 +231,41 @@ export interface RecordAction {
 // field is genuinely optional in real data (a customer without a confirmed
 // industry, a client with no expectedCloseDate yet, etc.). getRecordFields
 // coalesces a missing field to "" and the render layer drops it — see the
-// "missing data" fallback rule at the identity-tags and Details render sites.
+// "missing data" fallback rule at the identity-tags and key-fields render sites.
+//
+// on*Click callbacks: same embedded-callback convention this file already
+// uses for NextBestAction.onAction and RecordAction.onClick — the click
+// destination is presentation-layer routing (which record to navigate to,
+// what a "contact" action actually does), not something RecordHeader decides.
+// DECISION FLAGGED FOR TEAM REVIEW: onEmailClick/onPhoneClick are NOT
+// defaulted to mailto:/tel: internally, even though that's arguably a safe,
+// unambiguous browser behavior rather than a guessed business action — kept
+// fully delegated instead, for consistency with every other action in this
+// file ("RecordHeader never renders navigation/business logic itself"). If
+// the team decides mailto:/tel: should be a built-in default, that's a
+// one-line change at the contactField() call sites below, not a shape change.
 
 export interface EmployeeRecord {
   name: string
   role?: string
   department?: string
   manager?: string
+  /** Fires when the Manager key field (relational link) is clicked — routes
+   *  to that person's own record. Not wired by RecordHeader itself. */
+  onManagerClick?: () => void
   location?: string
   email?: string
+  onEmailClick?: () => void
   phone?: string
+  onPhoneClick?: () => void
+  /** TODO: pertenece al Overview/tab de detalle — pure reference info, no
+   *  glanceable+actionable use in the header itself (see Reference tab's
+   *  content contract). Kept on the data shape; just not rendered here. */
   startDate?: string
+  /** TODO: pertenece al Overview/tab de detalle — same reasoning as startDate. */
   team?: string
+  /** TODO: pertenece al Overview/tab de detalle — not actionable (no click
+   *  destination), so it fails the glanceable+actionable filter. */
   accessRole?: string
 }
 
@@ -229,37 +273,58 @@ export interface CustomerRecord {
   accountName: string
   segment?: string
   owner?: string
+  /** Fires when the Owner key field (relational link) is clicked. */
+  onOwnerClick?: () => void
   tier?: string
   /** Stable identity attribute — added so the identity row has a 3rd chip
    *  that isn't a health/adoption metric (see chips content rule below). */
   industry?: string
+  /** TODO: pertenece al Overview/tab de detalle. */
   renewalDate?: string
+  /** TODO: pertenece al Overview/tab de detalle. */
   mrr?: string
+  /** TODO: pertenece al Overview/tab de detalle. */
   lastContact?: string
+  /** TODO: pertenece al Overview/tab de detalle. */
   openTickets?: number
-  /** No longer shown as an identity chip — it's a dynamic health signal,
-   *  already represented by Signal, so surfacing it again as a "stable
-   *  attribute" chip was redundant. Still real data, so it's shown in
-   *  Details instead of being deleted outright. */
+  /** TODO: pertenece al Overview/tab de detalle — already not an identity
+   *  chip (see its own note below); also not a header key field, since a
+   *  level/score alone isn't actionable. */
   adoptionLevel?: string
+  /** DECISION FLAGGED FOR TEAM REVIEW: the brief's "Componentes del DS a
+   *  usar" section lists Primary Contact under "Contexto relacional → link,"
+   *  but the per-variant starting point says "contacto a Primary Contact →
+   *  Button tertiary." CustomerRecord has no separate email/phone field FOR
+   *  the primary contact today — only this one name/title string — so
+   *  there's no data to build a contact-kind (Button tertiary) field from
+   *  without inventing a channel that doesn't exist. Implemented as a
+   *  relational link (matches the authoritative component-mapping section);
+   *  if AIMS OS wants a direct "contact the primary contact" action, this
+   *  record shape needs its own email/phone field first. */
   primaryContact?: string
+  onPrimaryContactClick?: () => void
 }
 
 export interface ClientRecord {
   name: string
   company?: string
-  /** Not an identity chip — a deal stage is a dynamic state, not a stable
-   *  attribute (see the chip-content rule below). It's reference info, not
-   *  urgent, so it lives in Details rather than on the Signal row itself —
-   *  Signal has no badge/Tag slot; AlertBanner, the real component it's
-   *  styled after, doesn't have one either. */
+  /** TODO: pertenece al Overview/tab de detalle — a deal stage is a dynamic
+   *  state; Signal already surfaces it when it's urgent enough to act on
+   *  (see the chip-content rule below), so a second, always-visible copy of
+   *  it in the header is redundant rather than additive. */
   dealStage?: string
   dealValue?: string
   owner?: string
+  /** Fires when the Owner key field (relational link) is clicked. */
+  onOwnerClick?: () => void
   email?: string
+  onEmailClick?: () => void
   phone?: string
+  onPhoneClick?: () => void
   leadSource?: string
+  /** TODO: pertenece al Overview/tab de detalle. */
   lastInteraction?: string
+  /** TODO: pertenece al Overview/tab de detalle. */
   expectedCloseDate?: string
 }
 
@@ -290,8 +355,6 @@ export interface RecordHeaderProps {
   assignedAgent: AssignedAgent | null
   /** actions[0] = the one contextual CTA; actions[1+] = overflow menu items. See RECORD_HEADER_RECOMMENDED_ACTIONS for the default per variant. */
   actions?: RecordAction[]
-  /** Uncontrolled initial state for the Details disclosure. Default: false (collapsed) */
-  defaultExpanded?: boolean
   /**
    * True → this record is read-only right now. The contextual CTA and the
    * overflow's write actions disable (with a Tooltip explaining why) — but
@@ -345,30 +408,50 @@ const AI_SIGNAL_CONFIG: { Icon: LucideIcon; bg: string; bd: string; fg: string }
 // function renders the exact same JSX regardless of which variant was passed —
 // per the brief's "one shared layout, only slot content changes" constraint.
 
-type DetailField = { label: string; value: string; icon: LucideIcon }
+// ── Key fields (Zone 3) — the glanceable+actionable filter ──────────────────
+// Every key field is one of exactly 2 kinds — a pure-reference field (Start
+// date, MRR, Access role, ...) fails the filter entirely and isn't a KeyField
+// at all; see the TODO comments on the record interfaces above for what got
+// cut and why. Contact = a real communication channel → Button tertiary
+// (icon self-labels, no separate caption needed). Relational = a link to
+// ANOTHER record → TableCellLink (this repo's real "Link-text=Yes" DS
+// variant, table.tsx), with a small caption above it since a bare name
+// doesn't say who it's linking to or why.
+export type KeyField =
+  | { kind: "contact"; label: string; value: string; icon: LucideIcon; onClick?: () => void }
+  | { kind: "relational"; label: string; value: string; onClick?: () => void }
+
+// Small builder helpers, not exported — exist purely so every variant below
+// applies the SAME missing-data rule (omit when the value is falsy, don't
+// emit a placeholder) without repeating the conditional 6 times.
+function contactField(label: string, value: string | undefined, icon: LucideIcon, onClick?: () => void): KeyField[] {
+  return value ? [{ kind: "contact", label, value, icon, onClick }] : []
+}
+function relationalField(label: string, value: string | undefined, onClick?: () => void): KeyField[] {
+  return value ? [{ kind: "relational", label, value, onClick }] : []
+}
 
 type RecordFields = {
   name: string
   typeLabel: string
   /** Max 3 — enforced by slicing, not by trusting the caller. Stable identity
    *  attributes ONLY (role, industry, source) — never a dynamic state or a
-   *  metric; those belong in Signal (if urgent/actionable) or Details (if
-   *  just reference info).
+   *  metric; those belong in Signal (if urgent/actionable) or a key field /
+   *  the Overview tab (if just reference info).
    *
    *  Missing-data rule: a blank/undefined field never renders as a gap or a
    *  "—" placeholder — the render site's `.filter(Boolean)` drops it, and
    *  the row compacts to whatever chips remain (down to zero, in which case
-   *  the whole chips row doesn't render at all). Same rule for Details below —
-   *  a row with no value is omitted entirely, not shown with a dash, so the
-   *  two content slots agree on one behavior instead of two. */
+   *  the whole chips row doesn't render at all). Same rule for keyFields
+   *  below (contactField/relationalField return [] on a falsy value) — both
+   *  content slots agree on one behavior instead of two. */
   chips: string[]
-  details: DetailField[]
+  /** Zone 3's "campos clave" — max ~3-4 (sliced defensively below), each
+   *  already the correct kind for its DS primitive. See KeyField's own doc
+   *  comment for the glanceable+actionable filter these passed to get here. */
+  keyFields: KeyField[]
 }
 
-// One icon per Details field so the expanded grid scans as icon+label pairs,
-// not a wall of text — same "leading icon on a metadata row" idea as
-// EntityList's primaryMeta/secondaryMeta rows, applied to a 2-col grid instead
-// of an inline list.
 function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["data"]): RecordFields {
   if (variant === "employee") {
     const d = data as EmployeeRecord
@@ -376,14 +459,15 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
       name: d.name,
       typeLabel: "Employee",
       chips: [d.role ?? "", d.department ?? "", d.location ?? ""],
-      details: [
-        { label: "Manager",     value: d.manager ?? "",    icon: User },
-        { label: "Email",       value: d.email ?? "",       icon: Mail },
-        { label: "Phone",       value: d.phone ?? "",       icon: Phone },
-        { label: "Start date",  value: d.startDate ?? "",   icon: Calendar },
-        { label: "Team",        value: d.team ?? "",        icon: Users },
-        { label: "Access role", value: d.accessRole ?? "",  icon: ShieldCheck },
-      ],
+      keyFields: [
+        ...relationalField("Manager", d.manager, d.onManagerClick),
+        ...contactField("Email", d.email, Mail, d.onEmailClick),
+        ...contactField("Phone", d.phone, Phone, d.onPhoneClick),
+        // TODO: Start date, Team, Access role — removed from the header (see
+        // their own TODO comments on EmployeeRecord above). Pure reference
+        // info, not glanceable+actionable; belongs on the Overview/detail
+        // tab, not duplicated here.
+      ].slice(0, 4),
     }
   }
   if (variant === "customer") {
@@ -392,15 +476,16 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
       name: d.accountName,
       typeLabel: "Customer account",
       chips: [d.tier ?? "", d.segment ?? "", d.industry ?? ""],
-      details: [
-        { label: "Owner",           value: d.owner ?? "",                              icon: User },
-        { label: "Renewal date",    value: d.renewalDate ?? "",                        icon: Calendar },
-        { label: "MRR",             value: d.mrr ?? "",                                icon: DollarSign },
-        { label: "Last contact",    value: d.lastContact ?? "",                        icon: Clock },
-        { label: "Open tickets",    value: d.openTickets != null ? String(d.openTickets) : "", icon: Ticket },
-        { label: "Primary contact", value: d.primaryContact ?? "",                     icon: Contact },
-        { label: "Adoption level",  value: d.adoptionLevel ?? "",                      icon: Activity },
-      ],
+      keyFields: [
+        ...relationalField("Owner", d.owner, d.onOwnerClick),
+        // Primary contact — relational link, not a contact-kind Button.
+        // See the DECISION FLAGGED comment on CustomerRecord.primaryContact.
+        ...relationalField("Primary contact", d.primaryContact, d.onPrimaryContactClick),
+        // TODO: Renewal date, MRR, Last contact, Open tickets, Adoption
+        // level — removed from the header (see their own TODO comments on
+        // CustomerRecord above). Pure reference info; belongs on the
+        // Overview/detail tab, not duplicated here.
+      ].slice(0, 4),
     }
   }
   const d = data as ClientRecord
@@ -408,14 +493,15 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
     name: d.name,
     typeLabel: "Client (deal)",
     chips: [d.company ?? "", d.dealValue ?? "", d.leadSource ?? ""],
-    details: [
-      { label: "Deal stage",           value: d.dealStage ?? "",          icon: Flag },
-      { label: "Owner",                value: d.owner ?? "",              icon: User },
-      { label: "Email",                value: d.email ?? "",              icon: Mail },
-      { label: "Phone",                value: d.phone ?? "",              icon: Phone },
-      { label: "Last interaction",     value: d.lastInteraction ?? "",    icon: Clock },
-      { label: "Expected close date",  value: d.expectedCloseDate ?? "",  icon: CalendarCheck },
-    ],
+    keyFields: [
+      ...relationalField("Owner", d.owner, d.onOwnerClick),
+      ...contactField("Email", d.email, Mail, d.onEmailClick),
+      ...contactField("Phone", d.phone, Phone, d.onPhoneClick),
+      // TODO: Deal stage, Last interaction, Expected close date — removed
+      // from the header (see their own TODO comments on ClientRecord
+      // above). Pure reference info; belongs on the Overview/detail tab,
+      // not duplicated here.
+    ].slice(0, 4),
   }
 }
 
@@ -475,11 +561,9 @@ function RecordHeader({
   signalStatus = "resolved",
   assignedAgent,
   actions = [],
-  defaultExpanded = false,
   locked = false,
   className,
 }: RecordHeaderProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
   const fields = getRecordFields(variant, data)
   const [primaryAction, ...overflowActions] = actions
 
@@ -489,11 +573,7 @@ function RecordHeader({
   const effectiveSignal = signalStatus === "error" ? RECORD_HEADER_FALLBACKS.nbaError : signal
   const sig = effectiveSignal.aiGenerated ? AI_SIGNAL_CONFIG : SEVERITY_CONFIG[effectiveSignal.severity]
 
-  // Missing-data rule (Details): a field with no value is omitted, not shown
-  // as "—" — same behavior as the identity chips' .filter(Boolean) below, so
-  // both content slots degrade the same way instead of inventing two rules.
-  const visibleDetails = fields.details.filter(f => Boolean(f.value))
-  const hasDetails = visibleDetails.length > 0
+  const hasKeyFields = fields.keyFields.length > 0
 
   // Avatar fallback: only a genuinely blank name gets the DS's own "empty"
   // glyph (avatar.tsx's existing avatarStyle="empty") instead of initials —
@@ -631,22 +711,6 @@ function RecordHeader({
                 disabledTooltip={RECORD_HEADER_FALLBACKS.lockedActionTooltip}
               />
             )}
-
-            {/* Disclosure trigger — native <button> gets Enter/Space activation for
-                free; aria-expanded is the only piece that needs adding by hand.
-                Only rendered when there's actually something to disclose. Always
-                enabled even when locked — viewing Details is a read action. */}
-            {hasDetails && (
-              <Button
-                variant="tertiary"
-                size="sm"
-                iconPosition="alone"
-                aria-expanded={expanded}
-                aria-label={expanded ? "Hide details" : "Show details"}
-                icon={expanded ? <ChevronUp size={16} strokeWidth={1.75} /> : <ChevronDown size={16} strokeWidth={1.75} />}
-                onClick={() => setExpanded(v => !v)}
-              />
-            )}
           </div>
         </div>
 
@@ -659,39 +723,42 @@ function RecordHeader({
             neither state removes the bar or changes its footprint, only its content. */}
         <SignalBar signal={effectiveSignal} sig={sig} loading={signalStatus === "loading"} />
 
-        {/* ── Layer 3: Details (disclosure) — secondary fields, revealed on demand.
-            max-height transition mirrors widget-father.tsx's own collapse animation
-            rather than inventing a second technique for the same problem. */}
-        {hasDetails && (
-          <div
-            style={{
-              maxHeight: expanded ? 999 : 0,
-              overflow: "hidden",
-              transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1)",
-            }}
-          >
-            {/* pt-[16px] matches the outer flex gap-[16px] above (Identity→Signal,
-                Signal→this wrapper) so the divider sits at an equal 16px from
-                both neighbors instead of 16px above / 4px below. */}
-            <div className="pt-[16px]" style={{ borderTop: expanded ? "0.5px solid var(--color-border-neutral-lighter)" : undefined }}>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-[16px] gap-y-[12px]">
-                {visibleDetails.map((f, i) => {
-                  const FieldIcon = f.icon
-                  return (
-                    <div key={i} className="flex items-start gap-[8px] min-w-0">
-                      <FieldIcon size={14} strokeWidth={1.75} className="shrink-0 mt-[2px]" style={{ color: "var(--field-supporting)" }} />
-                      <div className="flex flex-col gap-[2px] min-w-0">
-                        <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
-                          {f.label}
-                        </span>
-                        <span className="text-[13px] leading-[1.4] truncate" style={{ color: "var(--foreground)" }}>
-                          {f.value}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+        {/* ── Zone 3, part 2: key fields — Salesforce Highlights Panel pattern:
+            always visible, never behind a disclosure toggle. This replaces
+            the old 6-field plain-text "Details" grid — the fields that
+            survived the glanceable+actionable filter (see KeyField's doc
+            comment) are few enough (max ~3-4) that hiding them behind a
+            click would cost more than it saves, which is exactly why
+            Highlights Panel fields are never collapsed in the first place.
+            Zone 3 conceptually also includes the action row above (agent/
+            CTA/overflow) — kept in its existing physical position rather
+            than moved down here, per "don't redo the layout"; see the
+            Reference tab's content-contract section for the full 3-zone
+            framing. */}
+        {hasKeyFields && (
+          <div className="pt-[16px]" style={{ borderTop: "0.5px solid var(--color-border-neutral-lighter)" }}>
+            <div className="flex flex-wrap items-start gap-x-[24px] gap-y-[12px]">
+              {fields.keyFields.map((f, i) =>
+                f.kind === "contact" ? (
+                  // Contact = a real communication channel → Button tertiary,
+                  // icon+label together (the icon self-labels — Mail/Phone —
+                  // so no separate uppercase caption above it, unlike relational).
+                  <Button key={i} variant="tertiary" size="sm" icon={<f.icon size={14} strokeWidth={1.75} />} onClick={f.onClick}>
+                    {f.value}
+                  </Button>
+                ) : (
+                  // Relational = a link to ANOTHER record → TableCellLink
+                  // (table.tsx's real "Link-text=Yes" DS variant). A caption
+                  // stays above it, since "David Kim" alone doesn't say
+                  // who's being linked to or why.
+                  <div key={i} className="flex flex-col gap-[2px] min-w-0">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                      {f.label}
+                    </span>
+                    <TableCellLink onClick={f.onClick}>{f.value}</TableCellLink>
+                  </div>
+                )
+              )}
             </div>
           </div>
         )}
