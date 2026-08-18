@@ -1,6 +1,7 @@
 import { useState, useRef, useLayoutEffect } from "react"
 import {
-  ChevronDown, CircleCheck, TriangleAlert, CircleX, Info, Sparkles, Sparkle, MoreHorizontal, X, Lock, Mail, Phone,
+  ChevronDown, ChevronUp, CircleCheck, TriangleAlert, CircleX, Info, Sparkles, Sparkle, MoreHorizontal, X, Lock,
+  Mail, Phone, Contact, ArrowUpRight, StickyNote, ListChecks, CalendarPlus,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -12,7 +13,6 @@ import { Button } from "@/components/ui/button"
 import { Menu, MenuItem } from "@/components/ui/menu-item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip } from "@/components/ui/tooltip"
-import { TableCellLink } from "@/components/ui/table"
 
 /**
  * Record Header — AIMS OS Design System
@@ -27,20 +27,27 @@ import { TableCellLink } from "@/components/ui/table"
  *      changes shape.
  *   Zone 2 — Signal    → HubSpot's conditional "why this matters now" section,
  *      fed by a Next Best Action engine — one recommendation, not a dashboard.
- *   Zone 3 — Actions + key fields → the action row (agent/CTA/overflow, top-
- *      right of Zone 1's physical position) plus a small set of glanceable+
- *      actionable key fields (max ~3-4) rendered below Signal. Both halves of
- *      Zone 3 are grouped conceptually, not physically moved — see KeyField's
- *      own doc comment for the glanceable+actionable filter and the 2 kinds
- *      (contact/relational) it can produce. This REPLACES an earlier version
- *      of this file that showed up to 6 plain-text metadata fields behind an
- *      expand/collapse disclosure — cut for 2 reasons: plain text isn't
- *      glanceable+actionable, and Highlights Panel fields are never hidden
- *      behind a click in the first place (that's what makes it a Highlights
- *      Panel and not a details accordion). Fields that didn't survive the
- *      filter aren't deleted from the data shape — see the `// TODO: pertenece
- *      al Overview/tab de detalle` comments on EmployeeRecord/CustomerRecord/
- *      ClientRecord below for exactly which ones and why.
+ *   Zone 3 — Actions + secondary actions → the action row (agent/CTA/overflow,
+ *      top-right of Zone 1's physical position) plus a disclosure of secondary
+ *      actions revealed by the chevron, collapsed by default (predictable
+ *      header height). Both halves of Zone 3 are grouped conceptually, not
+ *      physically moved — see SecondaryAction's own doc comment for the 3
+ *      kinds (contact/navigation/creation) it can produce.
+ *      HISTORY, for whoever reads this file mid-iteration: this went through
+ *      2 revisions. Originally a 6-field plain-text metadata grid behind a
+ *      disclosure. Then, briefly, a max-3-4 "key fields" row that was ALWAYS
+ *      visible (true Salesforce Highlights Panel — fields never hidden behind
+ *      a click), once the plain-text fields were trimmed to only
+ *      glanceable+actionable ones. Then a follow-up brief grew the action set
+ *      back up (Add note/Create task/Schedule meeting + several navigation-
+ *      only TODO actions per variant, ~6-8 total) — too many to keep always-
+ *      visible without the row dominating the card, so the disclosure came
+ *      back, now holding SecondaryAction buttons instead of plain-text pairs.
+ *      Reference tab's "Content contract" section documents the CURRENT
+ *      contract; don't re-derive it from this history note. Fields that don't
+ *      appear here aren't deleted from the data shape — see the `// TODO:
+ *      pertenece al Overview/tab de detalle` comments on EmployeeRecord/
+ *      CustomerRecord/ClientRecord below for exactly which ones and why.
  * Before this ships to Figma, Michael should design a real node for it and this
  * file should get a figmaNodeId/figmaUrl like every other component in ui/.
  *
@@ -95,17 +102,24 @@ import { TableCellLink } from "@/components/ui/table"
  *                anchored the same way NotificationCenter's own filter dropdown
  *                is (capture the trigger's rect on click, render fixed-position,
  *                dismiss on backdrop click) — not a new positioning technique.
- *   Key fields (Zone 3) → 2 kinds, each mapped to an existing DS primitive,
- *                never plain text: "contact" (a real communication channel,
- *                e.g. Email/Phone) → Button variant="tertiary" with a leading
- *                icon, same component as the overflow trigger above, just
- *                with a label. "relational" (a link to ANOTHER record, e.g.
- *                Manager/Owner) → TableCellLink, the repo's actual "Link-
- *                text=Yes" DS variant (table.tsx) — verified directly, no
- *                dedicated Link/TextLink component exists elsewhere in
- *                src/components/ui/, so this is the correct one to reuse
- *                rather than inventing a new one. Always visible, no
- *                disclosure — see the Zone 3 note above for why.
+ *   Disclosure  → local expanded state + max-height transition, the same
+ *                technique already used by widget-father.tsx for its collapse
+ *                animation, and the same chevron-rotate affordance
+ *                DocSection/EntityList already use elsewhere in this app —
+ *                not a new pattern. Only rendered when there's at least one
+ *                SecondaryAction to reveal.
+ *   Secondary actions (Zone 3) → every one of them is the SAME primitive —
+ *                Button variant="tertiary" with a leading icon, wrapped in
+ *                Tooltip — never plain text, never a different button style
+ *                per kind. Only the icon differs by what the action actually
+ *                does (contact/navigation/creation — see SecondaryAction's
+ *                own doc comment). Wired (real onAction) only for contact
+ *                (Email/Phone) and relational navigation (Manager/Owner) —
+ *                everything else (Add note/Create task/Schedule meeting, and
+ *                every navigation target still unconfirmed) renders with a
+ *                real label + icon + Tooltip but a `// TODO` in place of
+ *                onAction, per explicit instruction not to invent a
+ *                destination.
  *
  * Token family — Signal severity:
  *   success/alert/error reuse Alert Banner's own token family (--ab-{state}-*),
@@ -243,15 +257,15 @@ export interface RecordAction {
 // fully delegated instead, for consistency with every other action in this
 // file ("RecordHeader never renders navigation/business logic itself"). If
 // the team decides mailto:/tel: should be a built-in default, that's a
-// one-line change at the contactField() call sites below, not a shape change.
+// one-line change at the contactAction() call sites below, not a shape change.
 
 export interface EmployeeRecord {
   name: string
   role?: string
   department?: string
   manager?: string
-  /** Fires when the Manager key field (relational link) is clicked — routes
-   *  to that person's own record. Not wired by RecordHeader itself. */
+  /** Fires when the Manager secondary action (navigation kind) is clicked —
+   *  routes to that person's own record. Not wired by RecordHeader itself. */
   onManagerClick?: () => void
   location?: string
   email?: string
@@ -273,7 +287,7 @@ export interface CustomerRecord {
   accountName: string
   segment?: string
   owner?: string
-  /** Fires when the Owner key field (relational link) is clicked. */
+  /** Fires when the Owner secondary action (navigation kind) is clicked. */
   onOwnerClick?: () => void
   tier?: string
   /** Stable identity attribute — added so the identity row has a 3rd chip
@@ -315,7 +329,7 @@ export interface ClientRecord {
   dealStage?: string
   dealValue?: string
   owner?: string
-  /** Fires when the Owner key field (relational link) is clicked. */
+  /** Fires when the Owner secondary action (navigation kind) is clicked. */
   onOwnerClick?: () => void
   email?: string
   onEmailClick?: () => void
@@ -355,6 +369,8 @@ export interface RecordHeaderProps {
   assignedAgent: AssignedAgent | null
   /** actions[0] = the one contextual CTA; actions[1+] = overflow menu items. See RECORD_HEADER_RECOMMENDED_ACTIONS for the default per variant. */
   actions?: RecordAction[]
+  /** Uncontrolled initial state for the Zone 3 secondary-actions disclosure. Default: false (collapsed) — predictable header height until the user asks for more. */
+  defaultExpanded?: boolean
   /**
    * True → this record is read-only right now. The contextual CTA and the
    * overflow's write actions disable (with a Tooltip explaining why) — but
@@ -408,27 +424,38 @@ const AI_SIGNAL_CONFIG: { Icon: LucideIcon; bg: string; bd: string; fg: string }
 // function renders the exact same JSX regardless of which variant was passed —
 // per the brief's "one shared layout, only slot content changes" constraint.
 
-// ── Key fields (Zone 3) — the glanceable+actionable filter ──────────────────
-// Every key field is one of exactly 2 kinds — a pure-reference field (Start
-// date, MRR, Access role, ...) fails the filter entirely and isn't a KeyField
-// at all; see the TODO comments on the record interfaces above for what got
-// cut and why. Contact = a real communication channel → Button tertiary
-// (icon self-labels, no separate caption needed). Relational = a link to
-// ANOTHER record → TableCellLink (this repo's real "Link-text=Yes" DS
-// variant, table.tsx), with a small caption above it since a bare name
-// doesn't say who it's linking to or why.
-export type KeyField =
-  | { kind: "contact"; label: string; value: string; icon: LucideIcon; onClick?: () => void }
-  | { kind: "relational"; label: string; value: string; onClick?: () => void }
+// ── Secondary actions (Zone 3 disclosure) ───────────────────────────────────
+// 3 kinds — all render as the EXACT same primitive (Button tertiary + leading
+// icon + Tooltip); only the icon and onAction wiring differ, never the style
+// (see file header's Composition note). "Log activity" is deliberately never
+// one of these — see the DECISION note at RECORD_HEADER_SECONDARY_ACTIONS
+// below for why.
+//   contact    — a real communication channel (Email, Phone). Wired to a
+//                real onAction (mailto:/tel: at the call site — see the
+//                DECISION FLAGGED comment on on*Click above for why this
+//                file doesn't default that internally).
+//   navigation — goes to ANOTHER record or a different view. Manager/Owner
+//                (an existing, confirmed person-record link) are wired;
+//                everything else here (manage access, view team, view deal,
+//                view activity, view interaction history) is `// TODO` —
+//                those destinations/views aren't confirmed in AIMS OS yet.
+//   creation   — starts a new object attached to this record (Add note,
+//                Create task, Schedule meeting). Always `// TODO` — AIMS OS
+//                doesn't have real users yet, so there's no real destination
+//                to route these to. Rendered anyway (label + icon + Tooltip)
+//                per explicit instruction: show the intended structure, don't
+//                invent a fake destination to fill it.
+export type SecondaryActionKind = "contact" | "navigation" | "creation"
 
-// Small builder helpers, not exported — exist purely so every variant below
-// applies the SAME missing-data rule (omit when the value is falsy, don't
-// emit a placeholder) without repeating the conditional 6 times.
-function contactField(label: string, value: string | undefined, icon: LucideIcon, onClick?: () => void): KeyField[] {
-  return value ? [{ kind: "contact", label, value, icon, onClick }] : []
-}
-function relationalField(label: string, value: string | undefined, onClick?: () => void): KeyField[] {
-  return value ? [{ kind: "relational", label, value, onClick }] : []
+export interface SecondaryAction {
+  label: string
+  kind: SecondaryActionKind
+  icon: LucideIcon
+  /** What the Tooltip explains — every secondary action gets one, wired or not. */
+  tooltip: string
+  /** Undefined → renders normally, just doesn't do anything yet on click.
+   *  See the kind-level doc above for which ones are TODO by design. */
+  onAction?: () => void
 }
 
 type RecordFields = {
@@ -436,20 +463,32 @@ type RecordFields = {
   typeLabel: string
   /** Max 3 — enforced by slicing, not by trusting the caller. Stable identity
    *  attributes ONLY (role, industry, source) — never a dynamic state or a
-   *  metric; those belong in Signal (if urgent/actionable) or a key field /
-   *  the Overview tab (if just reference info).
+   *  metric; those belong in Signal (if urgent/actionable) or a secondary
+   *  action / the Overview tab (if just reference info).
    *
    *  Missing-data rule: a blank/undefined field never renders as a gap or a
    *  "—" placeholder — the render site's `.filter(Boolean)` drops it, and
    *  the row compacts to whatever chips remain (down to zero, in which case
-   *  the whole chips row doesn't render at all). Same rule for keyFields
-   *  below (contactField/relationalField return [] on a falsy value) — both
-   *  content slots agree on one behavior instead of two. */
+   *  the whole chips row doesn't render at all). */
   chips: string[]
-  /** Zone 3's "campos clave" — max ~3-4 (sliced defensively below), each
-   *  already the correct kind for its DS primitive. See KeyField's own doc
-   *  comment for the glanceable+actionable filter these passed to get here. */
-  keyFields: KeyField[]
+  /** Zone 3's disclosure content — up to ~6-8 per variant now that the brief
+   *  grew this from "glanceable key fields" to a fuller secondary-action set
+   *  (see SecondaryAction's own doc comment and the file header's HISTORY
+   *  note for why this went back behind a chevron). */
+  secondaryActions: SecondaryAction[]
+}
+
+// Builder helpers, not exported — only for the 2 kinds that are conditional
+// on a real data value being present (contact channels, person-navigation
+// links). The always-present TODO action slots below (Add note, view-X
+// navigation) aren't gated on any data field, so they're written as plain
+// literals directly in each variant's list instead of forcing them through
+// a builder that implies a missing-data condition that doesn't apply to them.
+function contactAction(label: string, value: string | undefined, icon: LucideIcon, tooltip: string, onAction?: () => void): SecondaryAction[] {
+  return value ? [{ kind: "contact", label, icon, tooltip, onAction }] : []
+}
+function navigationAction(label: string, target: string | undefined, icon: LucideIcon, tooltip: string, onAction?: () => void): SecondaryAction[] {
+  return target ? [{ kind: "navigation", label, icon, tooltip, onAction }] : []
 }
 
 function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["data"]): RecordFields {
@@ -459,15 +498,27 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
       name: d.name,
       typeLabel: "Employee",
       chips: [d.role ?? "", d.department ?? "", d.location ?? ""],
-      keyFields: [
-        ...relationalField("Manager", d.manager, d.onManagerClick),
-        ...contactField("Email", d.email, Mail, d.onEmailClick),
-        ...contactField("Phone", d.phone, Phone, d.onPhoneClick),
-        // TODO: Start date, Team, Access role — removed from the header (see
-        // their own TODO comments on EmployeeRecord above). Pure reference
-        // info, not glanceable+actionable; belongs on the Overview/detail
-        // tab, not duplicated here.
-      ].slice(0, 4),
+      secondaryActions: [
+        ...navigationAction("Manager", d.manager, ArrowUpRight, d.manager ? `Go to ${d.manager}'s record` : "", d.onManagerClick),
+        ...contactAction("Email", d.email, Mail, "Send an email", d.onEmailClick),
+        ...contactAction("Phone", d.phone, Phone, "Call this number", d.onPhoneClick),
+        // TODO: confirmar vista de gestión de accesos y permisos — no existe
+        // todavía en AIMS OS, así que onAction queda sin cablear a propósito.
+        { kind: "navigation", label: "Manage access", icon: ArrowUpRight, tooltip: "Manage this employee's access and permissions" },
+        // TODO: confirmar si la vista de equipo/reportes directos existe.
+        { kind: "navigation", label: "View team", icon: ArrowUpRight, tooltip: "View direct reports" },
+        { kind: "creation", label: "Add note", icon: StickyNote, tooltip: "Add a note to this record" },
+        // TODO: confirmar si "Create task" aplica a Employee — a diferencia
+        // de Customer/Client, aquí ni siquiera la INCLUSIÓN del botón está
+        // confirmada con producto, no solo su destino. Se incluye igual
+        // (label + Button tertiary + Tooltip) por instrucción explícita de
+        // no omitirlo, pero es el candidato más probable a eliminarse tras
+        // revisión.
+        { kind: "creation", label: "Create task", icon: ListChecks, tooltip: "Create a task for this record" },
+        // No "Schedule meeting" for Employee — explicit exclusion rule.
+        // No "Log activity" — see RECORD_HEADER_RECOMMENDED_ACTIONS' own
+        // comment: activity history lives in the record's own Activity tab.
+      ],
     }
   }
   if (variant === "customer") {
@@ -476,16 +527,22 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
       name: d.accountName,
       typeLabel: "Customer account",
       chips: [d.tier ?? "", d.segment ?? "", d.industry ?? ""],
-      keyFields: [
-        ...relationalField("Owner", d.owner, d.onOwnerClick),
-        // Primary contact — relational link, not a contact-kind Button.
-        // See the DECISION FLAGGED comment on CustomerRecord.primaryContact.
-        ...relationalField("Primary contact", d.primaryContact, d.onPrimaryContactClick),
-        // TODO: Renewal date, MRR, Last contact, Open tickets, Adoption
-        // level — removed from the header (see their own TODO comments on
-        // CustomerRecord above). Pure reference info; belongs on the
-        // Overview/detail tab, not duplicated here.
-      ].slice(0, 4),
+      secondaryActions: [
+        ...navigationAction("Owner/CSM", d.owner, ArrowUpRight, d.owner ? `Go to ${d.owner}'s record` : "", d.onOwnerClick),
+        // Primary contact — tagged "contact" kind per this brief (unlike the
+        // earlier DECISION FLAGGED note that classified it as relational),
+        // but CustomerRecord still has no separate email/phone channel FOR
+        // the primary contact — only this one name/title string — so unlike
+        // Email/Phone above, there's no real mailto:/tel: to wire. onAction
+        // stays TODO despite the "contact" kind tag; flagging this specific
+        // inconsistency rather than inventing a channel that doesn't exist.
+        ...(d.primaryContact ? [{ kind: "contact", label: "Primary contact", icon: Contact, tooltip: `Contact ${d.primaryContact}`, onAction: d.onPrimaryContactClick } as SecondaryAction] : []),
+        // TODO: confirmar destino de la vista de actividad de la cuenta.
+        { kind: "navigation", label: "View activity", icon: ArrowUpRight, tooltip: "View this account's activity history" },
+        { kind: "creation", label: "Add note", icon: StickyNote, tooltip: "Add a note to this record" },
+        { kind: "creation", label: "Create task", icon: ListChecks, tooltip: "Create a task for this record" },
+        { kind: "creation", label: "Schedule meeting", icon: CalendarPlus, tooltip: "Schedule a meeting" },
+      ],
     }
   }
   const d = data as ClientRecord
@@ -493,15 +550,18 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
     name: d.name,
     typeLabel: "Client (deal)",
     chips: [d.company ?? "", d.dealValue ?? "", d.leadSource ?? ""],
-    keyFields: [
-      ...relationalField("Owner", d.owner, d.onOwnerClick),
-      ...contactField("Email", d.email, Mail, d.onEmailClick),
-      ...contactField("Phone", d.phone, Phone, d.onPhoneClick),
-      // TODO: Deal stage, Last interaction, Expected close date — removed
-      // from the header (see their own TODO comments on ClientRecord
-      // above). Pure reference info; belongs on the Overview/detail tab,
-      // not duplicated here.
-    ].slice(0, 4),
+    secondaryActions: [
+      ...contactAction("Email", d.email, Mail, "Send an email", d.onEmailClick),
+      ...contactAction("Phone", d.phone, Phone, "Call this number", d.onPhoneClick),
+      ...navigationAction("Owner", d.owner, ArrowUpRight, d.owner ? `Go to ${d.owner}'s record` : "", d.onOwnerClick),
+      // TODO: confirmar destino de la vista de deal/oportunidad.
+      { kind: "navigation", label: "View deal", icon: ArrowUpRight, tooltip: "View this deal's details" },
+      // TODO: confirmar destino del historial de interacciones.
+      { kind: "navigation", label: "View interactions", icon: ArrowUpRight, tooltip: "View interaction history with this client" },
+      { kind: "creation", label: "Add note", icon: StickyNote, tooltip: "Add a note to this record" },
+      { kind: "creation", label: "Create task", icon: ListChecks, tooltip: "Create a task for this record" },
+      { kind: "creation", label: "Schedule meeting", icon: CalendarPlus, tooltip: "Schedule a meeting" },
+    ],
   }
 }
 
@@ -547,8 +607,9 @@ export const RECORD_HEADER_RECOMMENDED_ACTIONS: Record<RecordHeaderVariant, Reco
 // into the "···" overflow menu below the narrower COLLAPSE_HIDE_CTA_WIDTH.
 // The AI agent trigger and the disclosure chevron are NEVER sacrificed — the
 // agent is the platform's one persistent entry point (see file header), and
-// the chevron is the only way to reach Details once they exist. The name
-// itself never truncates (wraps instead) — unaffected by either threshold.
+// the chevron is the only way to reach the secondary actions once there are
+// any. The name itself never truncates (wraps instead) — unaffected by
+// either threshold.
 const COLLAPSE_HIDE_TAGS_WIDTH = 560
 const COLLAPSE_HIDE_CTA_WIDTH = 440
 
@@ -561,9 +622,11 @@ function RecordHeader({
   signalStatus = "resolved",
   assignedAgent,
   actions = [],
+  defaultExpanded = false,
   locked = false,
   className,
 }: RecordHeaderProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const fields = getRecordFields(variant, data)
   const [primaryAction, ...overflowActions] = actions
 
@@ -573,7 +636,7 @@ function RecordHeader({
   const effectiveSignal = signalStatus === "error" ? RECORD_HEADER_FALLBACKS.nbaError : signal
   const sig = effectiveSignal.aiGenerated ? AI_SIGNAL_CONFIG : SEVERITY_CONFIG[effectiveSignal.severity]
 
-  const hasKeyFields = fields.keyFields.length > 0
+  const hasSecondaryActions = fields.secondaryActions.length > 0
 
   // Avatar fallback: only a genuinely blank name gets the DS's own "empty"
   // glyph (avatar.tsx's existing avatarStyle="empty") instead of initials —
@@ -711,6 +774,24 @@ function RecordHeader({
                 disabledTooltip={RECORD_HEADER_FALLBACKS.lockedActionTooltip}
               />
             )}
+
+            {/* Disclosure trigger — native <button> gets Enter/Space activation for
+                free; aria-expanded is the only piece that needs adding by hand.
+                Only rendered when there's at least one secondary action to reveal.
+                Always enabled even when locked — viewing this list is a read
+                action (whether each item inside is itself wired is a separate
+                question this component doesn't decide for the reader). */}
+            {hasSecondaryActions && (
+              <Button
+                variant="tertiary"
+                size="sm"
+                iconPosition="alone"
+                aria-expanded={expanded}
+                aria-label={expanded ? "Hide secondary actions" : "Show secondary actions"}
+                icon={expanded ? <ChevronUp size={16} strokeWidth={1.75} /> : <ChevronDown size={16} strokeWidth={1.75} />}
+                onClick={() => setExpanded(v => !v)}
+              />
+            )}
           </div>
         </div>
 
@@ -723,42 +804,38 @@ function RecordHeader({
             neither state removes the bar or changes its footprint, only its content. */}
         <SignalBar signal={effectiveSignal} sig={sig} loading={signalStatus === "loading"} />
 
-        {/* ── Zone 3, part 2: key fields — Salesforce Highlights Panel pattern:
-            always visible, never behind a disclosure toggle. This replaces
-            the old 6-field plain-text "Details" grid — the fields that
-            survived the glanceable+actionable filter (see KeyField's doc
-            comment) are few enough (max ~3-4) that hiding them behind a
-            click would cost more than it saves, which is exactly why
-            Highlights Panel fields are never collapsed in the first place.
-            Zone 3 conceptually also includes the action row above (agent/
-            CTA/overflow) — kept in its existing physical position rather
-            than moved down here, per "don't redo the layout"; see the
-            Reference tab's content-contract section for the full 3-zone
-            framing. */}
-        {hasKeyFields && (
-          <div className="pt-[16px]" style={{ borderTop: "0.5px solid var(--color-border-neutral-lighter)" }}>
-            <div className="flex flex-wrap items-start gap-x-[24px] gap-y-[12px]">
-              {fields.keyFields.map((f, i) =>
-                f.kind === "contact" ? (
-                  // Contact = a real communication channel → Button tertiary,
-                  // icon+label together (the icon self-labels — Mail/Phone —
-                  // so no separate uppercase caption above it, unlike relational).
-                  <Button key={i} variant="tertiary" size="sm" icon={<f.icon size={14} strokeWidth={1.75} />} onClick={f.onClick}>
-                    {f.value}
-                  </Button>
-                ) : (
-                  // Relational = a link to ANOTHER record → TableCellLink
-                  // (table.tsx's real "Link-text=Yes" DS variant). A caption
-                  // stays above it, since "David Kim" alone doesn't say
-                  // who's being linked to or why.
-                  <div key={i} className="flex flex-col gap-[2px] min-w-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
-                      {f.label}
-                    </span>
-                    <TableCellLink onClick={f.onClick}>{f.value}</TableCellLink>
-                  </div>
-                )
-              )}
+        {/* ── Zone 3, part 2: secondary actions (disclosure) — collapsed by
+            default (predictable header height), revealed by the chevron
+            above. Every action is the SAME primitive regardless of kind —
+            Button tertiary + leading icon, wrapped in Tooltip — only the
+            icon and onAction wiring differ; see SecondaryAction's own doc
+            comment for the 3 kinds and which ones are wired vs. TODO. Zone 3
+            conceptually also includes the action row above (agent/CTA/
+            overflow) — kept in its existing physical position rather than
+            moved down here, per "don't redo the layout"; see the Reference
+            tab's content-contract section for the full 3-zone framing and
+            the final per-variant action list. */}
+        {hasSecondaryActions && (
+          <div
+            style={{
+              maxHeight: expanded ? 999 : 0,
+              overflow: "hidden",
+              transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1)",
+            }}
+          >
+            {/* pt-[16px] matches the outer flex gap-[16px] above (Identity→Signal,
+                Signal→this wrapper) so the divider sits at an equal 16px from
+                both neighbors instead of 16px above / 4px below. */}
+            <div className="pt-[16px]" style={{ borderTop: expanded ? "0.5px solid var(--color-border-neutral-lighter)" : undefined }}>
+              <div className="flex flex-wrap items-center gap-[8px]">
+                {fields.secondaryActions.map((a, i) => (
+                  <Tooltip key={i} content={a.tooltip}>
+                    <Button variant="tertiary" size="sm" icon={<a.icon size={14} strokeWidth={1.75} />} onClick={a.onAction}>
+                      {a.label}
+                    </Button>
+                  </Tooltip>
+                ))}
+              </div>
             </div>
           </div>
         )}
