@@ -1,6 +1,7 @@
 import { useState, useRef, useLayoutEffect } from "react"
 import {
   ChevronDown, ChevronUp, ChevronRight, Sparkle, MoreHorizontal, Lock, Info, Workflow, Bot,
+  AlertTriangle, User, Building2, Truck,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -98,9 +99,10 @@ import { InformativeCard } from "@/components/ui/informative-card"
  *   2. AI agent trigger: icon-only → "Ask about {firstName}" (falls back to
  *      "Ask AI" + Tooltip on a narrow card or a long name) — the button now
  *      communicates WHO it's scoped to, not just "there is an assistant."
- *      Opens a SlideOut with a CHAT PLACEHOLDER — no Chat component exists
- *      in this repo yet (it's coming from Figma later); see the // TODO in
- *      App.tsx's demo wiring. Don't build a real chat component here.
+ *      Opens a SidePanel (originally a SlideOut — see REFINEMENT 2 below)
+ *      with a CHAT PLACEHOLDER — no Chat component exists in this repo yet
+ *      (it's coming from Figma later); see the // TODO in App.tsx's demo
+ *      wiring. Don't build a real chat component here.
  *   3. Your Intervention → InformativeCard (was a hand-rolled div).
  *   4. Every SlideOut this card opens follows the "SlideOut/SidePanel —
  *      Content" pattern page's conventions (Section Titles, and severity
@@ -113,6 +115,36 @@ import { InformativeCard } from "@/components/ui/informative-card"
  *      "tertiary" + trailing ChevronRight — applied identically to Active
  *      Workflow, Last Agent, and every RECORD field row. Learn the chevron
  *      once, recognize it everywhere.
+ *
+ * REFINEMENT 2 (this revision) — 10 more scoped changes, still none of which
+ * touch the 3-zone skeleton or the variants:
+ *   1. Identity tags recast as governance-state indicators — assigned agent
+ *      (purple), active workflow (light blue), pending HTL (amber) — instead
+ *      of plain identity facts (role/department/location, now unused for
+ *      this purpose — see the NOTE above getRecordFields). Each tag's color
+ *      + icon carries down into its own zone below (Agentic System buttons
+ *      recolored to match; Your Intervention's heading recolored amber) —
+ *      the collapsed summary and the expanded detail now visibly correlate.
+ *   2. "Ask about {name}" opens a SidePanel, not a SlideOut (App.tsx's demo
+ *      wiring only — RecordHeader never renders it either way) — so the
+ *      user can keep the rest of the page visible while chatting.
+ *   3. Identity block centers vertically against the avatar once expanded
+ *      (items-center) instead of top-aligning (items-start, still used
+ *      while collapsed, where the tags row makes it a 2-line block).
+ *   4. Contact type → icon + Tooltip (User/Building2/Truck per variant),
+ *      replacing the plain text badge — "icons that communicate," same
+ *      direction as the rest of this card.
+ *   5. RecordField.hasDestination — a plain descriptive fact (Start Date,
+ *      Job Title) renders as static text, NOT a Button, no chevron; only a
+ *      field with somewhere real to go stays clickable. See its own doc
+ *      comment for the reasoning and RecordField's own field docs.
+ *   6. Every Tooltip in this file is side="cursor" — the only Tooltip mode
+ *      that actually flips off a viewport edge instead of clipping (see
+ *      tooltip.tsx's own header comment).
+ *   7–10. SlideOut header actions (no generic edit pencil), richer SlideOut
+ *      content (AI Summary, list sections), compact severity Tags, and the
+ *      governed-decision confirmation step are ALL in App.tsx's demo wiring
+ *      — RecordHeader itself doesn't render any of that (see Composition).
  *
  * Composition — reuses existing DS atoms, no custom re-implementations:
  *   Card       → CardContainer (size="default", variant="default").
@@ -141,8 +173,8 @@ import { InformativeCard } from "@/components/ui/informative-card"
  *   Field origin badge → Tag (size="sm"), wrapped in Tooltip showing the
  *                fuller provenance (system + model version + synced-ago).
  *   Governed SlideOuts (Workflow detail, Pending Decisions, Agent detail,
- *                Data Provenance, agent chat placeholder) → RecordHeader
- *                itself never renders them — same delegation rule this
+ *                Data Provenance) + the agent chat SidePanel → RecordHeader
+ *                itself never renders any of them — same delegation rule this
  *                file has followed since `assignedAgent.onOpenChat` first
  *                existed: every clickable surface exposes an
  *                `onOpen`/`onAction` callback, and the consuming screen
@@ -191,6 +223,17 @@ export interface RecordField {
   value: string
   /** Shown instead of `value` when state === "masked", e.g. "•••• (restricted)". */
   maskedValue?: string
+  /**
+   * Does this field have somewhere to go beyond its own provenance? Default
+   * true (most fields do — clicking opens Data Provenance, per the
+   * transversal "opens detail" convention). Set `false` for a plain
+   * descriptive fact with nothing further to show (e.g. Start Date, a pure
+   * date; ARR, a pure figure) — that field renders as static text, NO
+   * chevron, NOT a Button — only its provenance badge stays hoverable
+   * (Tooltip on the badge itself), per the interaction-logic rule: only
+   * elements with a real destination look clickable.
+   */
+  hasDestination?: boolean
 }
 
 // ── Agentic System (Zone: AGENTIC SYSTEM) ───────────────────────────────────
@@ -351,15 +394,23 @@ export const RECORD_HEADER_FALLBACKS = {
 type RecordFields = {
   name: string
   typeLabel: string
-  /** Max 3 — enforced by slicing, not by trusting the caller. Stable identity
-   *  attributes ONLY — never a dynamic state or metric. Missing-data rule:
-   *  a blank/undefined field is dropped via .filter(Boolean), never shown as
-   *  a gap or "—" — the row just compacts. */
-  chips: string[]
+  /** Icon standing in for typeLabel in the Identity row (this refinement —
+   *  iconography instead of a text badge, see the file's own doc comment). */
+  typeIcon: LucideIcon
   /** Zone: RECORD. Each already carries provenance (Law 1) and a masking
    *  state (Law 4) — see RecordField's own doc comment. */
   recordFields: RecordField[]
 }
+
+// NOTE — role/department/location (UEP), tier/segment/accountType (UCP), and
+// vendorType/contractStatus/category (UVP) on the *Record data types below
+// are intentionally NOT read here anymore. This refinement replaces the old
+// identity-row Tags (those plain identity facts) with 3 GOVERNANCE-STATE
+// tags — assigned agent / active workflow / pending HTL — computed straight
+// from props inside the component body (they need assignedAgent/
+// agenticSystem/intervention, not just `data`). The fields themselves stay
+// on the interfaces (harmless, may still serve other consumers later); nothing
+// in this file reads them for rendering purposes anymore.
 
 function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["data"]): RecordFields {
   if (variant === "uep") {
@@ -367,8 +418,14 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
     return {
       name: d.name,
       typeLabel: "Employee",
-      chips: [d.role ?? "", d.department ?? "", d.location ?? ""],
-      recordFields: [d.manager, d.accessRole, d.jobTitle, d.startDate].filter((f): f is RecordField => Boolean(f)),
+      typeIcon: User,
+      // DECISION FLAGGED — `departmentDetail` was defined on UEPRecord and
+      // documented in the Reference tab's RECORD row ("Manager/Access Role/
+      // Department/Job Title/Start Date") but was missing from this array,
+      // so it never actually rendered. Fixed while touching this function
+      // for the destination/no-destination split below — not a scope
+      // change, a pre-existing gap between the type and its own doc.
+      recordFields: [d.manager, d.accessRole, d.departmentDetail, d.jobTitle, d.startDate].filter((f): f is RecordField => Boolean(f)),
     }
   }
   if (variant === "ucp") {
@@ -376,7 +433,7 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
     return {
       name: d.accountName,
       typeLabel: "Customer account",
-      chips: [d.tier ?? "", d.segment ?? "", d.accountType ?? ""],
+      typeIcon: Building2,
       recordFields: [d.owner, d.renewalDate, d.arr].filter((f): f is RecordField => Boolean(f)),
     }
   }
@@ -384,7 +441,11 @@ function getRecordFields(variant: RecordHeaderVariant, data: RecordHeaderProps["
   return {
     name: d.name,
     typeLabel: "Vendor",
-    chips: [d.vendorType ?? "", d.contractStatus ?? "", d.category ?? ""],
+    // DECISION FLAGGED — Truck reads well for THIS demo's vendor (a logistics
+    // company), but "Vendor" as a type isn't always logistics. No DS icon
+    // spec exists yet for vendor-type iconography; flagging the pick rather
+    // than guessing something more "generic" with no real basis either.
+    typeIcon: Truck,
     recordFields: [d.procurementOwner, d.contractEndDate, d.spendYtd].filter((f): f is RecordField => Boolean(f)),
   }
 }
@@ -433,6 +494,7 @@ function RecordHeader({
 }: RecordHeaderProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const fields = getRecordFields(variant, data)
+  const TypeIcon = fields.typeIcon
   const [primaryAction, ...overflowActions] = actions
 
   const hasAgenticSystem = Boolean(agenticSystem?.activeWorkflow || agenticSystem?.lastAgent)
@@ -478,8 +540,12 @@ function RecordHeader({
       <div ref={rootRef} className="flex flex-col gap-[16px]">
 
         {/* ── Identity row (always visible, fixed) — avatar + name + statusDot +
-            type label + up to 3 stable-attribute Tags + action row. */}
-        <div className="flex items-start gap-[12px] flex-wrap">
+            type icon + up to 3 governance-state Tags + action row. Cross-axis
+            alignment is conditional: items-start while collapsed (the tags
+            row underneath makes this a 2-line block), items-center once
+            expanded (name row is the only line left, so it should sit
+            centered against the avatar, not pinned to its top edge). */}
+        <div className={cn("flex gap-[12px] flex-wrap", expanded ? "items-center" : "items-start")}>
           <AvatarCircle name={fields.name || fields.typeLabel} sizeKey="lg" avatarStyle={hasName ? "text" : "empty"} />
 
           <div className="flex-1 min-w-0 flex flex-col gap-[6px]">
@@ -490,9 +556,13 @@ function RecordHeader({
               {/* Status dot — see RecordStatusDot's own doc comment. Badge's
                   own aria label carries the meaning for screen readers. */}
               {statusDot && <Badge variant={STATUS_DOT_VARIANT[statusDot]} label={`Status: ${statusDot}`} />}
-              <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>
-                {fields.typeLabel}
-              </span>
+              {/* Contact type — icon + Tooltip instead of a text badge, same
+                  "icons that communicate" direction as the rest of this
+                  card. Tooltip carries the full type name for anyone who
+                  needs it spelled out (a11y, first-time users). */}
+              <Tooltip content={fields.typeLabel} side="cursor">
+                <TypeIcon size={14} strokeWidth={1.75} aria-label={fields.typeLabel} style={{ color: "var(--field-supporting)" }} />
+              </Tooltip>
               {locked && (
                 <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />}>
                   {RECORD_HEADER_FALLBACKS.lockedTagLabel}
@@ -500,12 +570,19 @@ function RecordHeader({
               )}
             </div>
 
-            {/* Task 1 — identity tags hide once the card expands: the same
-                facts they summarize (workflow/agent state, HTL pending,
-                and — for UEP — department/role) reappear in full detail in
-                the zones below, so keeping both visible is pure redundancy.
-                max-height transition (not a hard unmount) so the collapse
-                is animated, not an abrupt height jump. */}
+            {/* Identity tags hide once the card expands: the same facts they
+                summarize reappear in full detail in the zones below, so
+                keeping both visible is pure redundancy. max-height
+                transition (not a hard unmount) so the collapse is animated,
+                not an abrupt height jump.
+                Tag CONTENT — governance-state indicators, not plain identity
+                facts: assigned agent (purple, matches Last Agent below),
+                active workflow (light blue, matches Active Workflow below),
+                pending HTL (amber, matches Your Intervention below). Color +
+                icon continuity is the whole point — glance at the collapsed
+                summary, then recognize the same color when you expand into
+                its detail. At most 3, and each only renders when that data
+                actually exists (no empty placeholder tags). */}
             <div
               style={{
                 maxHeight: expanded ? 0 : 40,
@@ -514,11 +591,29 @@ function RecordHeader({
                 transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease",
               }}
             >
-              {!tagsHidden && fields.chips.filter(Boolean).length > 0 && (
+              {!tagsHidden && (assignedAgent || agenticSystem?.activeWorkflow || intervention) && (
                 <div className="flex items-center gap-[6px] flex-wrap">
-                  {fields.chips.filter(Boolean).slice(0, 3).map((label, i) => (
-                    <Tag key={i} variant="secondary" size="sm">{label}</Tag>
-                  ))}
+                  {assignedAgent && (
+                    <Tooltip content={`Assigned agent: ${assignedAgent.name}`} side="cursor">
+                      <Tag variant="purple" size="sm" leadingIcon={<Bot size={12} strokeWidth={1.75} />}>
+                        {assignedAgent.name}
+                      </Tag>
+                    </Tooltip>
+                  )}
+                  {agenticSystem?.activeWorkflow && (
+                    <Tooltip content={`Active workflow: ${agenticSystem.activeWorkflow.name}`} side="cursor">
+                      <Tag variant="lightBlue" size="sm" leadingIcon={<Workflow size={12} strokeWidth={1.75} />}>
+                        {agenticSystem.activeWorkflow.name}
+                      </Tag>
+                    </Tooltip>
+                  )}
+                  {intervention && (
+                    <Tooltip content={intervention.description} side="cursor">
+                      <Tag variant="alert" size="sm" leadingIcon={<AlertTriangle size={12} strokeWidth={1.75} />}>
+                        {intervention.count} pending
+                      </Tag>
+                    </Tooltip>
+                  )}
                 </div>
               )}
             </div>
@@ -534,7 +629,7 @@ function RecordHeader({
                 assistantUseFallback above. */}
             {assignedAgent ? (
               assistantUseFallback ? (
-                <Tooltip content={assistantTooltip}>
+                <Tooltip content={assistantTooltip} side="cursor">
                   <Button
                     variant="main"
                     size="sm"
@@ -557,7 +652,7 @@ function RecordHeader({
                 </Button>
               )
             ) : (
-              <Tooltip content={RECORD_HEADER_FALLBACKS.noAgentTooltip}>
+              <Tooltip content={RECORD_HEADER_FALLBACKS.noAgentTooltip} side="cursor">
                 <Button
                   variant="main"
                   size="sm"
@@ -572,7 +667,7 @@ function RecordHeader({
 
             {primaryAction && (
               locked ? (
-                <Tooltip content={RECORD_HEADER_FALLBACKS.lockedActionTooltip}>
+                <Tooltip content={RECORD_HEADER_FALLBACKS.lockedActionTooltip} side="cursor">
                   <Button variant={primaryAction.variant ?? "secondary"} size="sm" disabled>
                     {primaryAction.label}
                   </Button>
@@ -622,22 +717,43 @@ function RecordHeader({
                   <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
                     Agentic System
                   </span>
-                  {/* Task 6 — Tooltip explains what opens on click. Task 7 —
-                      same "opens detail" convention as the RECORD rows below:
-                      Button tertiary + trailing ChevronRight, so there's one
-                      visual language for "this has a detail panel," not two. */}
+                  {/* Tooltip explains what opens on click (side="cursor" so it
+                      flips instead of clipping near a viewport edge). Same
+                      "opens detail" convention as the RECORD rows below:
+                      Button tertiary + trailing ChevronRight — one visual
+                      language for "this has a detail panel," not two.
+                      Icon + text recolored to match the identity Tag that
+                      summarizes this same data above (light blue = workflow,
+                      purple = agent) — that color continuity is the point:
+                      recognize the collapsed tag's color again in its own
+                      expanded detail. Button's own `color` (set inline,
+                      beats the tertiary variant's default token class) is
+                      inherited by the icon too since neither sets its own
+                      color — one style prop tints both. */}
                   <div className="flex flex-wrap items-center gap-[8px]">
                     {agenticSystem?.activeWorkflow && (
-                      <Tooltip content={`Open "${agenticSystem.activeWorkflow.name}" — steps, timeline, and who's running it`}>
-                        <Button variant="tertiary" size="sm" icon={<Workflow size={14} strokeWidth={1.75} />} onClick={agenticSystem.activeWorkflow.onOpen}>
+                      <Tooltip content={`Open "${agenticSystem.activeWorkflow.name}" — steps, timeline, and who's running it`} side="cursor">
+                        <Button
+                          variant="tertiary"
+                          size="sm"
+                          icon={<Workflow size={14} strokeWidth={1.75} />}
+                          onClick={agenticSystem.activeWorkflow.onOpen}
+                          style={{ color: "var(--tag-lightblue-fg)" }}
+                        >
                           {agenticSystem.activeWorkflow.name}
                           <ChevronRight size={14} strokeWidth={1.75} className="ml-[2px]" style={{ color: "var(--field-supporting)" }} />
                         </Button>
                       </Tooltip>
                     )}
                     {agenticSystem?.lastAgent && (
-                      <Tooltip content={`Open ${agenticSystem.lastAgent.name}'s latest session — summary, finding, and recommendation`}>
-                        <Button variant="tertiary" size="sm" icon={<Bot size={14} strokeWidth={1.75} />} onClick={agenticSystem.lastAgent.onOpen}>
+                      <Tooltip content={`Open ${agenticSystem.lastAgent.name}'s latest session — summary, finding, and recommendation`} side="cursor">
+                        <Button
+                          variant="tertiary"
+                          size="sm"
+                          icon={<Bot size={14} strokeWidth={1.75} />}
+                          onClick={agenticSystem.lastAgent.onOpen}
+                          style={{ color: "var(--tag-purple-fg)" }}
+                        >
                           {agenticSystem.lastAgent.name}
                           <ChevronRight size={14} strokeWidth={1.75} className="ml-[2px]" style={{ color: "var(--field-supporting)" }} />
                         </Button>
@@ -649,7 +765,12 @@ function RecordHeader({
 
               {intervention && (
                 <div className="flex flex-col gap-[8px]">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                  {/* Heading recolored + iconed to match the amber HTL tag
+                      above — InformativeCard's own state="alert" is already
+                      amber, so this just extends the same color up into the
+                      zone label for full top-to-bottom continuity. */}
+                  <span className="flex items-center gap-[4px] text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--tag-alert-fg)" }}>
+                    <AlertTriangle size={11} strokeWidth={1.75} />
                     Your Intervention
                   </span>
                   {/* Task 3 — the DS's own InformativeCard, not a hand-rolled
@@ -682,7 +803,7 @@ function RecordHeader({
                       Record
                     </span>
                     {onProvenanceOpen && (
-                      <Tooltip content="Data provenance for every field below">
+                      <Tooltip content="Data provenance for every field below" side="cursor">
                         <button
                           type="button"
                           aria-label="View data provenance"
@@ -698,16 +819,62 @@ function RecordHeader({
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-[8px] gap-y-[4px]">
                     {fields.recordFields.map((f, i) => {
                       const FieldIcon = f.icon
+                      const valueText = f.state === "masked" ? (f.maskedValue ?? "•••• (restricted)") : f.value
+                      const provenanceText = `${f.provenance.system} · ${f.provenance.modelVersion} · Synced ${f.provenance.syncedAgo}`
+                      const badge = (
+                        <Tag variant="secondary" size="sm" className="shrink-0">{f.provenance.systemAbbr}</Tag>
+                      )
+                      const valueSpan = (
+                        <span
+                          className="text-[13px] leading-[1.4] truncate max-w-full"
+                          style={{ color: f.state === "masked" ? "var(--field-supporting)" : "var(--foreground)", fontStyle: f.state === "masked" ? "italic" : undefined }}
+                        >
+                          {valueText}
+                        </span>
+                      )
+
+                      // Destination split (this refinement) — only a field
+                      // with somewhere to go (hasDestination !== false) is a
+                      // clickable Button + chevron; a plain descriptive fact
+                      // (Start Date, a pure date; ARR, a pure figure — see
+                      // RecordField.hasDestination's own doc comment) renders
+                      // as static text. Its origin badge still gets a Tooltip
+                      // (Law 1 never turns off), and — since the value itself
+                      // can still truncate — the value gets its own Tooltip
+                      // too, wrapping each element that actually needs it,
+                      // never a "never cut without an escape" dead end.
+                      if (f.hasDestination === false) {
+                        return (
+                          <div key={i} className="flex items-start gap-[8px] px-[8px] py-[8px]">
+                            <FieldIcon size={14} strokeWidth={1.75} className="shrink-0 mt-[2px]" style={{ color: "var(--field-supporting)" }} />
+                            <div className="flex flex-col items-start gap-[2px] flex-1 min-w-0 text-left">
+                              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
+                                {f.label}
+                              </span>
+                              <Tooltip content={valueText} side="cursor" triggerClassName="block min-w-0 w-full">
+                                {valueSpan}
+                              </Tooltip>
+                            </div>
+                            <Tooltip content={provenanceText} side="cursor">
+                              {badge}
+                            </Tooltip>
+                          </div>
+                        )
+                      }
+
+                      // Task 5 — a leading icon per field, for scanability
+                      // AND to reinforce Law 1 alongside the badge. Task 7 —
+                      // the whole row is one Button tertiary + trailing
+                      // ChevronRight (same "opens detail" convention as
+                      // Agentic System above), opening the same Data
+                      // Provenance panel the (i) icon opens — this is a
+                      // second entry point to the identical content, not a
+                      // different one, so there's nothing to keep in sync.
+                      // Tooltip carries the full value (item 9 — truncated
+                      // values must never dead-end) alongside provenance,
+                      // since a clickable row only gets the one Tooltip.
                       return (
-                        // Task 5 — a leading icon per field, for scanability
-                        // AND to reinforce Law 1 alongside the badge. Task 7 —
-                        // the whole row is one Button tertiary + trailing
-                        // ChevronRight (same "opens detail" convention as
-                        // Agentic System above), opening the same Data
-                        // Provenance panel the (i) icon opens — this is a
-                        // second entry point to the identical content, not a
-                        // different one, so there's nothing to keep in sync.
-                        <Tooltip key={i} content={`${f.provenance.system} · ${f.provenance.modelVersion} · Synced ${f.provenance.syncedAgo}`}>
+                        <Tooltip key={i} content={`${valueText} — ${provenanceText}`} side="cursor">
                           <Button
                             variant="tertiary"
                             onClick={onProvenanceOpen}
@@ -718,16 +885,11 @@ function RecordHeader({
                               <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
                                 {f.label}
                               </span>
-                              <span
-                                className="text-[13px] leading-[1.4] truncate max-w-full"
-                                style={{ color: f.state === "masked" ? "var(--field-supporting)" : "var(--foreground)", fontStyle: f.state === "masked" ? "italic" : undefined }}
-                              >
-                                {f.state === "masked" ? (f.maskedValue ?? "•••• (restricted)") : f.value}
-                              </span>
+                              {valueSpan}
                             </div>
                             {/* Field origin badge — Law 1, always renders regardless
                                 of masking state (provenance ≠ the value itself). */}
-                            <Tag variant="secondary" size="sm" className="shrink-0">{f.provenance.systemAbbr}</Tag>
+                            {badge}
                             <ChevronRight size={14} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--field-supporting)" }} />
                           </Button>
                         </Tooltip>
@@ -777,7 +939,7 @@ function ActionOverflowMenu({
 
   return (
     <>
-      {disabled && disabledTooltip ? <Tooltip content={disabledTooltip}>{trigger}</Tooltip> : trigger}
+      {disabled && disabledTooltip ? <Tooltip content={disabledTooltip} side="cursor">{trigger}</Tooltip> : trigger}
       {anchor && (
         <>
           <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setAnchor(null)} />

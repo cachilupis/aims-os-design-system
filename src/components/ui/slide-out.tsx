@@ -66,7 +66,13 @@ export interface SlideOutProps {
    * Default: <Pencil size={14}/>
    */
   topButtonIcon?: React.ReactNode
-  onTopButtonClick?: () => void
+  /**
+   * Receives the native click event so callers can anchor a contextual
+   * menu (e.currentTarget.getBoundingClientRect()) — additive, backward
+   * compatible: existing `() => {...}` callbacks that ignore the argument
+   * still work unchanged.
+   */
+  onTopButtonClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
   /** DS prop: close. Show X close button. Default: true */
   showClose?: boolean
 
