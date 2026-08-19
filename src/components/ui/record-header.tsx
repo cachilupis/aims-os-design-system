@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
 import { Tag } from "@/components/ui/tag"
-import { Badge, type BadgeVariant } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Menu, MenuItem } from "@/components/ui/menu-item"
 import { Tooltip } from "@/components/ui/tooltip"
@@ -57,7 +56,12 @@ import { Skeleton } from "@/components/ui/skeleton"
  * model a generic Employee/Customer/Client header with a Next Best Action
  * Signal bar and a variable secondary-actions list. Replaced end to end by
  * the governed-card product: Identity (fixed) + 3 expandable zones (Agentic
- * System / Your Intervention / Record), `statusDot` instead of a Signal bar.
+ * System / Your Intervention / Record). An interim revision added a
+ * decorative `statusDot` next to the name in place of the Signal bar; that
+ * was removed (this revision) — a colored dot with no label/tooltip/meaning
+ * communicated nothing and was pure visual noise. If a glanceable status
+ * indicator is wanted here in the future, it needs an explicit meaning and
+ * a Tooltip, not a bare color.
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * Governance canon (AIMS OS law, not preference — see the Reference tab's
@@ -81,7 +85,8 @@ import { Skeleton } from "@/components/ui/skeleton"
  *
  * Structure — Identity (fixed) + 3 expandable zones, one shared skeleton for
  * any entity type — only the zone CONTENT changes, never the skeleton:
- *   Identity (always visible) → avatar, name + statusDot, entity-type icon +
+ *   Identity (always visible) → avatar, name (truncates with a Tooltip —
+ *     never stretches or wraps the row), entity-type icon +
  *     TEXT (both, not icon-only), up to 3 governance-state Tags (hidden once
  *     expanded), Locked state. Actions: AI agent trigger ("Ask about
  *     {firstName}") → 1 contact CTA (Message) → "···" overflow → disclosure
@@ -115,7 +120,6 @@ import { Skeleton } from "@/components/ui/skeleton"
  *                whole header; CardContainer (size="sm") for each Agentic
  *                System item.
  *   Avatar     → AvatarCircle sizeKey="lg".
- *   Status dot → Badge (badge.tsx). success/alert/neutral variants.
  *   Identity metadata → Tag (size="sm"), NOT Chip — Chip is the interactive
  *                filter-row control, Tag is the read-only display atom.
  *   AI agent trigger → Button icon+label, `Sparkle` glyph, variant="main" —
@@ -301,17 +305,6 @@ export interface RecordAction {
   disableWhenLocked?: boolean
 }
 
-// ── Status dot (Identity row) ───────────────────────────────────────────────
-// A minimal, glanceable "is something up with this record" indicator. Maps
-// directly onto Badge's own existing variants — no new color semantics.
-export type RecordStatusDot = "attention" | "success" | "neutral"
-
-const STATUS_DOT_VARIANT: Record<RecordStatusDot, BadgeVariant> = {
-  attention: "alert",
-  success: "success",
-  neutral: "neutral",
-}
-
 // ── Entity type (Block 4 — data-driven, not a closed enum) ─────────────────
 // Whatever this record IS — Employee, Customer, Vendor, Patient, Citizen,
 // Student, anything the host platform defines tomorrow — comes from the
@@ -345,8 +338,6 @@ export interface RecordHeaderProps {
    *  masking state (Law 4) — see RecordField's own doc comment. Omit or
    *  pass an empty array to skip the RECORD zone for this entity type. */
   recordFields?: RecordField[]
-  /** Minimal glanceable indicator next to the name — see RecordStatusDot's own doc comment. */
-  statusDot?: RecordStatusDot
   /**
    * Required as a PROP (every caller must decide), but the value itself can
    * be `null` for a record that genuinely has no assigned agent yet. `null`
@@ -434,7 +425,6 @@ function RecordHeader({
   name,
   entityType,
   recordFields = [],
-  statusDot,
   assignedAgent,
   actions = [],
   agenticSystem,
@@ -522,7 +512,7 @@ function RecordHeader({
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
       <div ref={rootRef} className="flex flex-col gap-[16px]">
 
-        {/* ── Identity row (always visible, fixed) — avatar + name + statusDot +
+        {/* ── Identity row (always visible, fixed) — avatar + name +
             entity-type icon+text + up to 3 governance-state Tags + action row.
             Cross-axis alignment is conditional: items-start while collapsed
             (the tags row underneath makes this a 2-line block), items-center
@@ -532,19 +522,21 @@ function RecordHeader({
           <AvatarCircle name={name || entityType.label} sizeKey="lg" avatarStyle={hasName ? "text" : "empty"} />
 
           <div className="flex-1 min-w-0 flex flex-col gap-[6px]">
-            <div className="flex items-center gap-[8px] flex-wrap">
-              {/* Overflow — long names wrap (no truncate class anywhere on
-                  this span), never cut off. */}
-              <span className="text-[18px] font-semibold leading-[1.3]" style={{ color: "var(--color-text-title)" }}>
-                {name}
-              </span>
-              {/* Status dot — see RecordStatusDot's own doc comment. Badge's
-                  own aria label carries the meaning for screen readers. */}
-              {statusDot && <Badge variant={STATUS_DOT_VARIANT[statusDot]} label={`Status: ${statusDot}`} />}
+            <div className="flex items-center gap-[8px] min-w-0">
+              {/* Overflow — a long name truncates with an ellipsis instead of
+                  wrapping/stretching the row; a Tooltip on hover carries the
+                  full value. Sibling elements (entity type, Locked tag) are
+                  shrink-0 so the name is the only thing that ever gives up
+                  width. */}
+              <Tooltip content={name} side="cursor" triggerClassName="block min-w-0 flex-1">
+                <span className="block truncate text-[18px] font-semibold leading-[1.3]" style={{ color: "var(--color-text-title)" }}>
+                  {name}
+                </span>
+              </Tooltip>
               {/* Entity type — icon AND text (not icon-only): "icons that
                   communicate," but the label stays legible on its own too. */}
               <Tooltip content={entityType.label} side="cursor">
-                <span className="inline-flex items-center gap-[4px]">
+                <span className="inline-flex items-center gap-[4px] shrink-0">
                   <TypeIcon size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />
                   <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>
                     {entityType.label}
@@ -552,7 +544,7 @@ function RecordHeader({
                 </span>
               </Tooltip>
               {locked && (
-                <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />}>
+                <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
                   {RECORD_HEADER_FALLBACKS.lockedTagLabel}
                 </Tag>
               )}

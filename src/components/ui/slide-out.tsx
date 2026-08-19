@@ -55,6 +55,14 @@ export interface SlideOutProps {
   showIcon?: boolean
   /** Custom content for the header icon container. Default: <Sparkles/> */
   iconContent?: React.ReactNode
+  /**
+   * Background of the header icon container. Default: purple (unchanged
+   * behavior for every existing caller). Set this whenever `iconContent`
+   * represents a specific colored source elsewhere in the UI (e.g. a
+   * workflow/agent item's own HighlightIcon) — the panel should read as
+   * "the same item, now in detail," not switch to an unrelated color.
+   */
+  iconBg?: string
   /** DS prop: status. Show green status tag. Default: true */
   showStatus?: boolean
   statusLabel?: string
@@ -129,6 +137,7 @@ export function SlideOut({
   subtitle = "Subtitle with a short description of what the user can do here",
   showIcon = true,
   iconContent,
+  iconBg = "var(--color-surface-purple-more-subtle)",
   showStatus = true,
   statusLabel = "Status",
   showTopButton = true,
@@ -326,7 +335,7 @@ export function SlideOut({
                 {showIcon && (
                   <div
                     className="flex items-center justify-center shrink-0 rounded-[8px]"
-                    style={{ width: 40, height: 40, padding: 8, background: "var(--color-surface-purple-more-subtle)" }}
+                    style={{ width: 40, height: 40, padding: 8, background: iconBg }}
                   >
                     {headerIcon}
                   </div>
@@ -386,7 +395,7 @@ export function SlideOut({
                 {showIcon && (
                   <div
                     className="flex items-center justify-center shrink-0 rounded-[8px]"
-                    style={{ width: 32, height: 32, padding: 8, background: "var(--color-surface-purple-more-subtle)" }}
+                    style={{ width: 32, height: 32, padding: 8, background: iconBg }}
                   >
                     {headerIcon}
                   </div>

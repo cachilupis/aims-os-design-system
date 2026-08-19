@@ -172,7 +172,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "notification-item",   label: "Notification Item",   group: "Components", description: "Single-row notification · lead icon + title/timestamp + description + tags/actions · unread indicator dot · 5 states × Read/Unread: Default, Hover, Pressed, Focus, Disabled" },
   { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
-  { id: "record-header",   label: "Record Header",     group: "Components",  description: "Governed entity card for Work Surfaces (UEP/UCP/UVP) · identity + statusDot · expandable Agentic System / Your Intervention / Record zones · every field carries an origin-system badge and reachable provenance · one shared skeleton across all 3 variants" },
+  { id: "record-header",   label: "Record Header",     group: "Components",  description: "Governed entity card for Work Surfaces (UEP/UCP/UVP) · identity (truncates, never breaks layout) · expandable Agentic System / Your Intervention / Record zones · every field carries an origin-system badge and reachable provenance · one shared skeleton across all 3 variants" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "side-panel",      label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 350px default, 450px + dynamic half-screen snap points · header + scrollable body + optional footer" },
@@ -2115,7 +2115,6 @@ const RECORD_HEADER_SPEC = {
   properties: [
     { name: "variant",        type: "Variant",  values: ["uep","ucp","uvp"], default: "required", note: "Selects which of the 3 record shapes `data` must match — see getRecordFields in record-header.tsx." },
     { name: "data",           type: "object",   values: ["UEPRecord | UCPRecord | UVPRecord"], default: "required" },
-    { name: "statusDot",      type: "\"attention\"|\"success\"|\"neutral\"", values: ["attention","success","neutral"], default: "undefined", note: "Minimal glanceable indicator next to the name — maps directly to Badge's own variants (alert/success/neutral). DECISION FLAGGED: replaces an earlier always-visible Signal bar, retired in this revision — see Reference tab." },
     { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "AIMS OS is agent-first — every record has one, but the value can be null. Renders an always-present icon-only button (Sparkle, variant=\"main\"); null disables it with a Tooltip. RecordHeader never renders the chat UI itself." },
     { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as the one contact CTA (Message); actions[1+] land in the \"···\" overflow Menu." },
     { name: "agenticSystem",  type: "object",   values: ["AgenticSystemInfo — { activeWorkflow?: {name,onOpen?}, lastAgent?: {name,onOpen?} }"], default: "undefined", note: "Zone: AGENTIC SYSTEM. Exactly 2 fixed slots, each a Button variant=\"tertiary\" with a leading icon (Workflow/Bot) — never a colored card. Zone omitted entirely if neither slot is set." },
@@ -32772,7 +32771,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">1 · Collapsed — governance-state Tags visible</p>
-          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="attention"
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep}
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")}
@@ -32781,7 +32780,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">2 · Your Intervention — empty (genuinely nothing pending)</p>
-          <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} statusDot="success" defaultExpanded
+          <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
             assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uvp")}
@@ -32790,7 +32789,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">3 · Agentic System — empty (freshly imported record)</p>
-          <RecordHeader name="Jordan Ellis" entityType={RH_ENTITY_TYPE.uep} recordFields={[]} statusDot="neutral" defaultExpanded
+          <RecordHeader name="Jordan Ellis" entityType={RH_ENTITY_TYPE.uep} recordFields={[]} defaultExpanded
             assignedAgent={null}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={{ status: "empty" }} />
@@ -32798,7 +32797,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">4 · Loading — agent/NBA still computing (Skeleton)</p>
-          <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} statusDot="neutral" defaultExpanded
+          <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
             assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={{ status: "loading" }}
@@ -32807,7 +32806,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">5 · No permission to approve — Review disabled, Escalate offered</p>
-          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="attention" defaultExpanded
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")}
@@ -32820,7 +32819,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">6 · Error approving — amber InformativeCard, never a red toast</p>
-          <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} statusDot="neutral" defaultExpanded
+          <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
             assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("ucp")}
@@ -32833,7 +32832,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">7 · Stale — already resolved by someone else, no Approve button</p>
-          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="success" defaultExpanded
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")}
@@ -32846,7 +32845,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">8 · PII masked — same field, 2 entitlement states (Law 4)</p>
-          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} statusDot="attention" defaultExpanded
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")} />
@@ -32860,19 +32859,19 @@ function RecordHeaderStatesGallery({
               RecordHeaderProps.locked's own doc comment in record-header.tsx,
               and RecordAction.disableWhenLocked's own doc comment (Block 6).
               // TODO: confirmar con Michael. */}
-          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="neutral" locked defaultExpanded
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} locked defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             actions={rhMessageAction(RH_UEP.name)}
             agenticSystem={rhAgenticSystem("uep")} />
         </div>
 
         <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">10 · Overflow — long name + long value, name never truncated</p>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">10 · Overflow — long name + long value, both truncate with a Tooltip</p>
           <RecordHeader
             name="Alexandria Christodoulopoulos-Fitzgerald-Whitmore"
             entityType={RH_ENTITY_TYPE.uep}
             recordFields={overflowFields}
-            statusDot="neutral" defaultExpanded
+            defaultExpanded
             assignedAgent={rhAssignedAgent("uep", "Alexandria Christodoulopoulos-Fitzgerald-Whitmore")}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
           />
@@ -32880,7 +32879,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">11 · Message — no contact channel on file, disabled + Tooltip explaining why</p>
-          <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} statusDot="neutral" defaultExpanded
+          <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
             assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
             actions={[{ label: "Message", disabled: true, disabledTooltip: "No contact channel on file for this vendor" }]}
             agenticSystem={rhAgenticSystem("uvp")} />
@@ -32888,7 +32887,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">12 · Message — no permission to contact, disabled + Tooltip (never silently hidden)</p>
-          <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} statusDot="neutral" defaultExpanded
+          <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
             assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
             actions={[{ label: "Message", disabled: true, disabledTooltip: "You don't have permission to contact this account" }]}
             agenticSystem={rhAgenticSystem("ucp")} />
@@ -32896,7 +32895,7 @@ function RecordHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">13 · Message — PII masked field, contacting still works (Law 4 resolves at send-time, not display-time)</p>
-          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} statusDot="attention" defaultExpanded
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             actions={rhMessageAction(RH_UEP.name)}
             agenticSystem={rhAgenticSystem("uep")} />
@@ -33034,7 +33033,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               collapsed; this is a docs-only override. */}
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">UEP — Employee (reference variant)</p>
-            <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="attention" defaultExpanded
+            <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
               actions={rhMessageAction(RH_UEP.name)}
               agenticSystem={rhAgenticSystem("uep")}
@@ -33045,7 +33044,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer (example)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
-            <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} statusDot="neutral" defaultExpanded
+            <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
               assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
               actions={rhMessageAction(RH_UCP.name)}
               agenticSystem={rhAgenticSystem("ucp")}
@@ -33056,7 +33055,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor (example)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content. No pending intervention here on purpose — the zone is fully omitted, not shown empty.</p>
-            <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} statusDot="success" defaultExpanded
+            <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
               actions={rhMessageAction(RH_UVP.name)}
               agenticSystem={rhAgenticSystem("uvp")}
@@ -33069,7 +33068,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Mock data — not confirmed AIMS OS content. Deliberately picked to be as unlike UEP/UCP/UVP as possible: a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba), and custom zone labels via the <code>labels</code> prop ("Care Workflows" / "Needs Your Attention" / "Patient Chart") to prove the headings are i18n-configurable, not baked-in English. Same colors (purple = agent, light blue = workflow, amber = intervention), same skeleton, zero changes to record-header.tsx.
             </p>
-            <RecordHeader name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient} recordFields={RH_RECORD_FIELDS.patient} statusDot="attention" defaultExpanded
+            <RecordHeader name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient} recordFields={RH_RECORD_FIELDS.patient} defaultExpanded
               assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
               actions={rhMessageAction(RH_PATIENT.name)}
               agenticSystem={rhAgenticSystem("patient")}
@@ -33083,7 +33082,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Identical record to UEP above, except <code>accessRole</code> is now the SAME RecordField constructed in its masked state — a lower-permission viewer sees this instead of "Admin." The origin badge still renders (Law 1 applies regardless of masking).
             </p>
-            <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} statusDot="attention" defaultExpanded
+            <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
               actions={rhMessageAction(RH_UEP.name)}
               agenticSystem={rhAgenticSystem("uep")}
@@ -33130,7 +33129,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             name={pgName}
             entityType={RH_ENTITY_TYPE[pgVariant]}
             recordFields={pgRecordFields}
-            statusDot={pgVariant === "ucp" ? "neutral" : pgVariant === "uvp" ? "success" : pgVariant === "patient" ? "attention" : "attention"}
             assignedAgent={rhAssignedAgent(pgVariant, pgName)}
             actions={rhMessageAction(pgName)}
             agenticSystem={rhAgenticSystem(pgVariant)}
@@ -33225,7 +33223,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Identity (fixed)", "Avatar · name + statusDot · entity-type icon AND text (not icon-only — a text label sits beside the icon) · up to 3 governance-state Tags — assigned agent (purple), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE (Block 2): clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → 1 contact CTA (Message) → \"···\" overflow → disclosure chevron."],
+                ["Identity (fixed)", "Avatar · name (truncates with an ellipsis + Tooltip — never wraps or stretches the row) · entity-type icon AND text (not icon-only — a text label sits beside the icon) · up to 3 governance-state Tags — assigned agent (purple), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE (Block 2): clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → 1 contact CTA (Message) → \"···\" overflow → disclosure chevron."],
                 ["Agentic System",  "Active Workflow + Last Agent lay out side by side (grid, not stacked — uses the card's width instead of wasting it). Each item is a plain card BORDER (not a nested CardContainer component — this already lives inside the header's own CardContainer, so a second one read as card-in-card) with a HighlightIcon (size=\"sm\", colored: light blue = workflow, purple = agent) + a NEUTRAL tertiary Button beside it — color lives in the icon, never in the button. Also renders \"empty\" (no workflow/agent yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
                 ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default), empty, loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
                 ["Record",          "Each field with a real destination (RecordField.hasDestination !== false) is a Button variant=\"tertiary\" row — leading field icon, label/value, origin-system badge (Law 1), trailing ChevronRight — opening Data Provenance directly. A plain descriptive fact (hasDestination: false — e.g. a pure date) renders as static text instead: no chevron, not a Button — but it still reserves the identical 14px trailing slot as an invisible spacer, so the origin-badge column lands at the exact same horizontal position on every row regardless of whether that field has a destination. The (i) icon next to the RECORD heading opens the same panel (Law 2) for every destination field at once. `recordFields` is a plain array the host builds — no fixed \"employee field\" shape inside the component (Block 4)."],
@@ -33365,6 +33363,27 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 4 — 3 targeted corrections</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Change"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "Removed the decorative statusDot next to the name entirely (prop, type, and render), across every variant. A bare colored dot with no label/tooltip/meaning communicated nothing — pure visual noise. If a glanceable status indicator is wanted here in the future, it needs an explicit meaning and a Tooltip, not a bare color."],
+                ["2", "Identity name now truncates with an ellipsis + Tooltip on hover instead of wrapping/stretching the row — fixes the \"10 · Overflow\" example, which previously broke layout by design (\"never truncate\"). Long RECORD values (e.g. Job Title) already truncated with a Tooltip from a prior pass; unchanged here, same pattern confirmed still correct."],
+                ["3", "Every SlideOut this card opens (Active Workflow, Last Agent, Pending Decisions, Data Provenance) now shows the SAME icon and semantic color as the card element that opened it — workflow → light blue Workflow icon, agent → purple Bot icon, intervention/Review → amber AlertTriangle, provenance → neutral Info — instead of the SlideOut's generic default (purple Sparkles) for all four. Required a small additive `iconBg` prop on SlideOut itself (default unchanged, purple) since the icon container's background was previously hardcoded — see the Slide Out component's own spec."],
+              ].map(([n, change], i) => (
+                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">States — full coverage (Block 3)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
               Every state this component can render, live in the Overview tab's "States" section (not just this table) — dev-facing coverage, not just the happy path.
@@ -33385,7 +33404,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["Resolved elsewhere (stale)", "intervention={{status:\"resolved-elsewhere\", resolvedBy, resolvedAgo, description}} — \"Already resolved by {name} · {time}\", no Approve/Review button."],
                 ["PII masked", "A RecordField in state=\"masked\" — same field, 2 entitlement states (Law 4). See the dedicated Law 4 section above too."],
                 ["Locked", "locked — contact CTA + overflow's write actions disable; agent trigger, Agentic System, and RECORD provenance stay active. // TODO: confirmar con Michael — hypothesis, not explicitly confirmed."],
-                ["Overflow — long name/value", "Name wraps (never truncates — no truncate class on that span). Long RECORD values truncate with a Tooltip carrying the full text; long Agentic System item names do the same."],
+                ["Overflow — long name/value", "The identity name truncates with an ellipsis and a Tooltip carrying the full value — it never wraps or stretches the row. Long RECORD values truncate with a Tooltip the same way; long Agentic System item names do too."],
                 ["Message — no channel on file", "actions={[{label:\"Message\", disabled:true, disabledTooltip}]} — disabled + Tooltip, never silently hidden (Block 6)."],
                 ["Message — no permission to contact", "Same disabled+Tooltip mechanism as above, different reason. Disabled ≠ hidden, consistently, for every action in this file."],
                 ["Message — PII masked, still contactable", "Message stays enabled on a record with a masked RecordField — Law 4 resolves the real channel at send-time per entitlements; the CTA itself never depends on what's currently displayed."],
@@ -33468,7 +33487,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <div>
                 <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>DECISION FLAGGED — inferred, not explicitly instructed</p>
                 <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-                  Earlier revisions of this component had an always-visible NextBestAction "Signal" bar (severity color, actionLabel, loading/error states). This governed-card brief's skeleton is Identity + 3 expandable zones, full stop, with no Signal row in it. Its role splits in two here: <code>statusDot</code> (Identity row, glanceable, color-only) for the at-a-glance read, and Your Intervention (expandable, HTL-specific, substantive) for the detail. If this reads wrong, the old Signal implementation is fully recoverable from git history — flagging the call for review rather than silently deleting without a trace.
+                  Earlier revisions of this component had an always-visible NextBestAction "Signal" bar (severity color, actionLabel, loading/error states). This governed-card brief's skeleton is Identity + 3 expandable zones, full stop, with no Signal row in it — Your Intervention (expandable, HTL-specific, substantive) is the one place that detail now lives. An interim revision also added a decorative <code>statusDot</code> next to the name for an at-a-glance read; that was removed in a later correction pass — a bare colored dot with no label or Tooltip communicated nothing and was pure visual noise, not a lighter version of Signal. If a glanceable indicator is wanted here again, it needs an explicit meaning and a Tooltip. Both the Signal bar and the statusDot are fully recoverable from git history — flagging the call for review rather than silently deleting without a trace.
                 </p>
               </div>
             </div>
@@ -33560,6 +33579,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         size="m"
         title={openWorkflow.name}
         subtitle={`Owner · ${openWorkflow.owner}`}
+        iconContent={<LucideIcons.Workflow size={24} style={{ color: "var(--hi-lightblue-icon)" }} />}
+        iconBg="var(--hi-lightblue-bg)"
         showStatus
         statusLabel="Active"
         showTabs={false}
@@ -33648,6 +33669,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         size="m"
         title={openAgent.agentName}
         subtitle="Latest session"
+        iconContent={<LucideIcons.Bot size={24} style={{ color: "var(--hi-purple-icon)" }} />}
+        iconBg="var(--hi-purple-bg)"
         showStatus={false}
         showTabs={false}
         showSearchBar={false}
@@ -33727,6 +33750,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         size="m"
         title="Pending Decisions"
         subtitle={openIntervention ? `${openIntervention.count} awaiting review` : ""}
+        iconContent={<LucideIcons.AlertTriangle size={24} style={{ color: "var(--ic-alert-icon)" }} />}
+        iconBg="var(--ic-alert-bg)"
         showStatus={false}
         showTabs={false}
         showSearchBar={false}
@@ -33826,6 +33851,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         size="m"
         title="Data Provenance"
         subtitle="Every RECORD field, traced"
+        iconContent={<LucideIcons.Info size={24} style={{ color: "var(--hi-neutral-icon)" }} />}
+        iconBg="var(--hi-neutral-bg)"
         showStatus={false}
         showTabs={false}
         showSearchBar={false}
@@ -39763,7 +39790,8 @@ const [open, setOpen] = useState(false)
     { prop: "title",           type: "string",                         def: '"Title of section"', desc: "Panel heading. 24px SemiBold (M) / 18px SemiBold (S)." },
     { prop: "subtitle",        type: "string",                         def: "DS default text",  desc: "DS prop: description. Body text below title. 14px (M) / 12px (S)." },
     { prop: "showIcon",        type: "boolean",                        def: "true",             desc: "DS prop: icon. Purple icon highlight in header. 40px (M) / 32px (S)." },
-    { prop: "iconContent",     type: "ReactNode",                      def: "<Sparkles/>",      desc: "Custom content inside the purple icon container." },
+    { prop: "iconContent",     type: "ReactNode",                      def: "<Sparkles/>",      desc: "Custom content inside the icon container." },
+    { prop: "iconBg",          type: "string",                         def: "purple surface token", desc: "Background of the icon container — override when iconContent represents a specific colored source elsewhere in the UI, so the panel reads as the same item, not an unrelated color." },
     { prop: "showStatus",      type: "boolean",                        def: "true",             desc: "DS prop: status. Green status tag next to title." },
     { prop: "statusLabel",     type: "string",                         def: '"Status"',         desc: "Label inside the status tag." },
     { prop: "showTopButton",   type: "boolean",                        def: "true",             desc: "DS prop: topButton. Edit (pencil) icon in top-right header." },
