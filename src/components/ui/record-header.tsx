@@ -99,7 +99,8 @@ import { Skeleton } from "@/components/ui/skeleton"
  *     (no workflow/agent yet) and "loading" (Skeleton) states.
  *   YOUR INTERVENTION (expanded, only if `intervention` is set) → renders
  *     one of 6 states through InformativeCard (size="sm", never red):
- *     pending (default) / empty / loading / no-permission (+ Escalate) /
+ *     pending (default, N items — most prioritized shown + "+N more"
+ *     disclosure, never a carousel) / empty / loading / no-permission (+ Escalate) /
  *     error / resolved-elsewhere. See PendingIntervention's own doc comment.
  *   RECORD (expanded) → each field is its OWN Button variant="tertiary" row
  *     when it has a destination (leading icon + label/value + origin badge
@@ -233,14 +234,33 @@ export type AgenticSystemInfo =
   | { status: "loading" }
   | { status: "empty"; message?: string }
 
+// ── A single pending decision (Zone: YOUR INTERVENTION, "pending" status) ──
+// Block 3 (this pass) — a record can have N pending interventions, not just
+// 1. Each keeps its own severity and its own Review action — approving one
+// never bundles or blocks the others. The host is expected to pass `items`
+// already ordered by priority (most prioritized first — typically highest
+// severity, then oldest); this component is a dumb renderer, not a sorting
+// engine, so it never re-sorts what it's given.
+export interface InterventionItem {
+  id: string
+  description: string
+  severity: "high" | "medium" | "low"
+  onReview: () => void
+}
+
 // ── Your Intervention (Zone: YOUR INTERVENTION, conditional) ───────────────
 // A first-class HTL state (Law 3) — a discriminated union covering every
 // state this revision's edge-case gallery calls for, all rendered through
 // InformativeCard's calm token families (never the red "error" state):
-//   status omitted or "pending" → the real HTL decision block. `severity`
-//     feeds the Pending Decisions SlideOut's own display only — it does
-//     NOT change this card's visual treatment, which stays alert/amber
-//     regardless (that constancy IS Law 3).
+//   status omitted or "pending" → `items: InterventionItem[]` (Block 3).
+//     The first item renders full-size and prioritized (severity feeds the
+//     Pending Decisions SlideOut's own display only — it does NOT change
+//     this card's visual treatment, which stays alert/amber regardless,
+//     that constancy IS Law 3); items[1:] collapse behind a "+N more"
+//     disclosure — see InterventionZoneContent's own doc comment for why
+//     that's a disclosure and NOT a carousel. Exactly 1 item renders with
+//     no counter at all — the counter only exists once there's something
+//     to count.
 //   "empty"             → genuinely nothing pending right now — a calm
 //     completion message, not an absent/broken zone.
 //   "loading"           → the NBA engine is still computing — Skeleton.
@@ -255,13 +275,7 @@ export type AgenticSystemInfo =
 // Omitting the whole `intervention` prop (undefined) means this entity type
 // has genuinely nothing to show here right now — the zone omits entirely.
 export type PendingIntervention =
-  | {
-      status?: "pending"
-      count: number
-      description: string
-      severity: "high" | "medium" | "low"
-      onReview: () => void
-    }
+  | { status?: "pending"; items: InterventionItem[] }
   | { status: "empty"; message?: string }
   | { status: "loading" }
   | { status: "no-permission"; description: string; onEscalate?: () => void }
@@ -382,7 +396,8 @@ export const RECORD_HEADER_FALLBACKS = {
   lockedActionTooltip: "This record is locked — read-only",
   /** Default empty-state copy when AgenticSystemInfo/PendingIntervention omit `message`. */
   agenticSystemEmpty: "No workflow or agent assigned yet",
-  interventionEmpty: "No interventions pending",
+  /** Reads as completion, not absence — an empty queue is a good state, not a broken one. */
+  interventionEmpty: "No interventions pending — you're all caught up",
 }
 
 // ── Recommended actions ──────────────────────────────────────────────────────
@@ -601,15 +616,15 @@ function RecordHeader({
                       </button>
                     </Tooltip>
                   )}
-                  {interventionStatus === "pending" && intervention && "count" in intervention && (
-                    <Tooltip content={intervention.description} side="cursor">
+                  {interventionStatus === "pending" && intervention && "items" in intervention && intervention.items.length > 0 && (
+                    <Tooltip content={intervention.items[0].description} side="cursor">
                       <button
                         type="button"
                         onClick={() => focusZone("intervention")}
                         className="cursor-pointer rounded-[8px]"
                       >
                         <Tag variant="alert" size="sm" leadingIcon={<AlertTriangle size={12} strokeWidth={1.75} />}>
-                          {intervention.count} pending
+                          {intervention.items.length} pending
                         </Tag>
                       </button>
                     </Tooltip>
@@ -887,7 +902,18 @@ function AgenticSystemItem({
 // Every branch goes through InformativeCard (size="sm") — never a hand-
 // rolled container, never state="error" (red). Title case: normal sentence
 // case, not literal ALL CAPS (Block 1, task 2).
+//
+// Block 3 (this pass) — "pending" can carry N items. The most prioritized
+// (items[0], host-sorted) renders full-size with its own Review; the rest
+// collapse behind a "+N more" disclosure (Button variant="tertiary", the
+// same expand/collapse mechanism the card's own outer zones already use —
+// no new interaction pattern). Deliberately NOT a carousel: urgent
+// decisions must be visible at a glance — how many there are and that they
+// exist — not hidden behind a swipe gesture the viewer has to discover.
+// Each item, expanded or not, keeps its own individual Review action.
 function InterventionZoneContent({ state }: { state: PendingIntervention }) {
+  const [showMore, setShowMore] = useState(false)
+
   // Narrow on `state.status` directly (not a copied local) — same reasoning
   // as AgenticSystemZoneContent above.
   if (state.status === "loading") {
@@ -947,15 +973,70 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
     )
   }
 
-  // "pending" (status omitted or explicitly "pending")
+  // "pending" (status omitted or explicitly "pending") — Block 3: N items,
+  // most-prioritized first (see InterventionItem's own doc comment on sort
+  // expectations). A "pending" status with an empty items array is a
+  // caller bug, not a real state — read it as "empty" rather than render a
+  // broken/blank alert card.
+  if (state.items.length === 0) {
+    return (
+      <InformativeCard
+        state="neutral"
+        size="sm"
+        icon={<CheckCircle2 className="w-[24px] h-[24px]" />}
+        title={RECORD_HEADER_FALLBACKS.interventionEmpty}
+      />
+    )
+  }
+
+  const [primary, ...rest] = state.items
   return (
-    <InformativeCard
-      state="alert"
-      size="sm"
-      title={`${state.count} ${state.count === 1 ? "action" : "actions"} awaiting review`}
-      description={state.description}
-      cta={{ label: "Review", onClick: state.onReview }}
-    />
+    <div className="flex flex-col gap-[8px]">
+      <InformativeCard
+        state="alert"
+        size="sm"
+        title={`${state.items.length} ${state.items.length === 1 ? "action" : "actions"} awaiting review`}
+        description={primary.description}
+        cta={{ label: "Review", onClick: primary.onReview }}
+      />
+      {rest.length > 0 && (
+        <>
+          <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
+            {showMore ? "Show less" : `+${rest.length} more`}
+            {showMore
+              ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
+              : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
+          </Button>
+          {showMore && (
+            <div className="flex flex-col gap-[6px]">
+              {rest.map(item => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-[8px] px-[8px] py-[6px] rounded-[8px] min-w-0"
+                  style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}
+                >
+                  <Tag
+                    variant={item.severity === "high" ? "alert" : item.severity === "medium" ? "informative" : "secondary"}
+                    size="sm"
+                    className="shrink-0"
+                  >
+                    {item.severity.toUpperCase()}
+                  </Tag>
+                  <Tooltip content={item.description} side="cursor" triggerClassName="flex-1 min-w-0 block">
+                    <span className="block truncate text-[12px]" style={{ color: "var(--foreground)" }}>
+                      {item.description}
+                    </span>
+                  </Tooltip>
+                  <Button variant="tertiary" size="sm" onClick={item.onReview} className="shrink-0">
+                    Review
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   )
 }
 

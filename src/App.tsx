@@ -2118,7 +2118,7 @@ const RECORD_HEADER_SPEC = {
     { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "AIMS OS is agent-first — every record has one, but the value can be null. Renders an always-present icon-only button (Sparkle, variant=\"main\"); null disables it with a Tooltip. RecordHeader never renders the chat UI itself." },
     { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as the one contact CTA (Message); actions[1+] land in the \"···\" overflow Menu." },
     { name: "agenticSystem",  type: "object",   values: ["AgenticSystemInfo — { activeWorkflow?: {name,onOpen?}, lastAgent?: {name,onOpen?} }"], default: "undefined", note: "Zone: AGENTIC SYSTEM. Exactly 2 fixed slots, each a Button variant=\"tertiary\" with a leading icon (Workflow/Bot) — never a colored card. Zone omitted entirely if neither slot is set." },
-    { name: "intervention",   type: "object",   values: ["PendingIntervention — { count, description, severity, onReview }"], default: "undefined", note: "Zone: YOUR INTERVENTION — only rendered when set (a real pending HTL decision). Calm/informative styling ALWAYS, regardless of severity — Law 3." },
+    { name: "intervention",   type: "object",   values: ["PendingIntervention — pending: { items: InterventionItem[] } — each { id, description, severity, onReview }"], default: "undefined", note: "Zone: YOUR INTERVENTION — only rendered when set (a real pending HTL decision). N items: most prioritized shown + \"+N-1 more\" disclosure, never a carousel. Calm/informative styling ALWAYS, regardless of severity — Law 3." },
     { name: "onProvenanceOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Data Provenance SlideOut for the RECORD zone — the (i) icon next to the RECORD heading (Law 2)." },
     { name: "defaultExpanded", type: "Boolean", values: ["true","false"], default: "false", note: "Uncontrolled initial state for the zones disclosure. Predictable header height when collapsed." },
     { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "Read-only record. Shows a \"Locked\" Tag next to the type label; disables the contact CTA/overflow (Tooltip explains why); the agent trigger stays fully interactive." },
@@ -32381,15 +32381,22 @@ const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba"
 // this still renders through the exact same component with zero changes to
 // record-header.tsx, that's the agnosticism claim demonstrated, not asserted.
 const epicProv = (syncedAgo: string): FieldProvenance => ({ system: "Epic", systemAbbr: "EP", modelVersion: "Chart v4.1", syncedAgo })
+// Civic registry — the government-vertical proof example (this pass).
+// Deliberately a THIRD distinct source system, on top of Epic — no reuse
+// of any Work Surfaces or healthcare system name.
+const civicProv = (syncedAgo: string): FieldProvenance => ({ system: "National Registry", systemAbbr: "NR", modelVersion: "CivicOS v1.1", syncedAgo })
 
-// Block 4 (agnosticism) — this demo shows 4 example entity types (an HR
-// record, a CRM record, a vendor record, and — Block 3, this pass — a
-// healthcare Patient record) to prove the SAME component serves all of
-// them, but RecordHeader itself no longer knows any of these names.
+// This demo page's own scope note (not a component doc — RecordHeader
+// itself never enumerates entity types): UEP/UCP/UVP are the 3 native
+// Work Surfaces entity shapes this card actually ships for. Patient and
+// Citizen exist ONLY to prove agnosticism across genuinely different
+// verticals (healthcare, government) — they are demonstration examples,
+// not additional native types, which is why the Playground groups them
+// separately (see the "Work Surfaces" vs. "Otros mercados" CtrlGroups).
 // `RhDemoKey` is this DEMO PAGE's own bookkeeping key (App.tsx's problem),
 // not a prop the component reads — RecordHeader only ever sees `name` +
 // `entityType` + `recordFields`, built from these mocks below.
-type RhDemoKey = "uep" | "ucp" | "uvp" | "patient"
+type RhDemoKey = "uep" | "ucp" | "uvp" | "patient" | "citizen"
 
 // Entity type icon + label — 100% host-defined (RecordHeaderEntityType).
 // This is exactly the kind of mapping a future host would extend with its
@@ -32408,6 +32415,10 @@ const RH_ENTITY_TYPE: Record<RhDemoKey, RecordHeaderEntityType> = {
   // NetSuite/Ariba), different Record fields, different zone labels (see
   // the `labels` prop on this variant's RecordHeader instance).
   patient: { icon: LucideIcons.Stethoscope, label: "Patient" },
+  // Second agnosticism example (this pass) — government, as unlike Patient
+  // as Patient was unlike UEP/UCP/UVP: different icon, different source
+  // system (National Registry), different Record fields.
+  citizen: { icon: LucideIcons.Landmark, label: "Citizen" },
 }
 
 // UEP — the reference variant (brief's own words: "la card de referencia").
@@ -32459,6 +32470,19 @@ const RH_PATIENT = {
   admissionDate:    { label: "Admission Date",     icon: LucideIcons.CalendarClock, value: "Aug 14, 2026", state: "hydrated", provenance: epicProv("6h ago"), hasDestination: false } satisfies RecordField,
 }
 
+// Citizen (Government) — second agnosticism proof example, EXAMPLE data,
+// not confirmed AIMS OS content. National ID/Residency Status are governed
+// facts with a destination (Data Provenance); Registered Address/ID Expiry
+// are plain descriptive facts — same "hasDestination: false" rule as any
+// other vertical, nothing HR- or healthcare-specific about it either.
+const RH_CITIZEN = {
+  name: "Marcus Webb", office: "Dept. of Civic Services",
+  nationalId:         { label: "National ID",        icon: LucideIcons.IdCard,        value: "GOV-2291-8834",           state: "hydrated", provenance: civicProv("1h ago") } satisfies RecordField,
+  residencyStatus:    { label: "Residency Status",    icon: LucideIcons.ShieldCheck,   value: "Permanent Resident",      state: "hydrated", provenance: civicProv("1h ago") } satisfies RecordField,
+  registeredAddress:  { label: "Registered Address",  icon: LucideIcons.MapPin,        value: "1420 Maple Ave, Unit 3B", state: "hydrated", provenance: civicProv("3h ago"), hasDestination: false } satisfies RecordField,
+  idExpiry:           { label: "ID Expiry",           icon: LucideIcons.CalendarClock, value: "Jun 30, 2028",            state: "hydrated", provenance: civicProv("3h ago"), hasDestination: false } satisfies RecordField,
+}
+
 // Record zone — the RECORD grid is a plain RecordField[] the host builds
 // directly (Block 4: no fixed "employee field" structure inside the
 // component anymore).
@@ -32467,6 +32491,7 @@ const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
   ucp: [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr],
   uvp: [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd],
   patient: [RH_PATIENT.primaryPhysician, RH_PATIENT.insurancePlan, RH_PATIENT.bloodType, RH_PATIENT.admissionDate],
+  citizen: [RH_CITIZEN.nationalId, RH_CITIZEN.residencyStatus, RH_CITIZEN.registeredAddress, RH_CITIZEN.idExpiry],
 }
 
 // Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
@@ -32484,6 +32509,7 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
   ucp: { id: "agent-renewal",      name: "Renewal Copilot" },
   uvp: { id: "agent-procurement",  name: "Procurement Copilot" },
   patient: { id: "agent-care-coordinator", name: "Care Coordinator AI" },
+  citizen: { id: "agent-civic-registry", name: "Civic Registry AI" },
 }
 
 // ── Demo SlideOut content — realistic mock data for the 4 wired flows ──────
@@ -32570,6 +32596,20 @@ const RH_WORKFLOWS: Record<RhDemoKey, WorkflowDetail> = {
       { date: "Aug 7, 2026", outcome: "success" },
     ],
   },
+  citizen: {
+    name: "Document Verification", owner: "Civic Registry AI", started: "Aug 10, 2026", nextTrigger: "Aug 24, 2026",
+    aiSummary: "Verifies Marcus Webb's residency renewal documents against the National Registry before his Permanent Resident status is reconfirmed — a third vertical, the exact same Agentic System zone.",
+    totalRuns: 4,
+    steps: [
+      { label: "Renewal application received", status: "done", date: "Aug 10, 2026" },
+      { label: "Proof of address cross-checked", status: "done", date: "Aug 11, 2026" },
+      { label: "Biometric re-capture requested", status: "loading" },
+      { label: "Residency status reconfirmed", status: "pending" },
+    ],
+    recentRuns: [
+      { date: "Feb 10, 2026", outcome: "success" },
+    ],
+  },
 }
 
 type AgentDetail = {
@@ -32624,46 +32664,98 @@ const RH_AGENT_DETAILS: Record<RhDemoKey, AgentDetail> = {
       { date: "Aug 14, 2026", label: "Reconciled admission medication list with Epic" },
     ],
   },
+  citizen: {
+    agentName: "Civic Registry AI",
+    sessionSummary: "Processed Marcus Webb's Permanent Resident renewal, cross-checking submitted documents against the National Registry.",
+    latestFinding: "The proof-of-address document is 4 months past the registry's 90-day freshness window, and the biometric scan on file has expired.",
+    recommendation: { text: "Request an updated proof of address and schedule a biometric re-capture before the renewal can be reconfirmed.", actionLabel: "Request updated documents" },
+    recentActivity: [
+      { date: "Aug 11, 2026", label: "Flagged stale proof-of-address document" },
+      { date: "Aug 10, 2026", label: "Cross-checked renewal application against National Registry" },
+    ],
+  },
 }
 
-// Extract<PendingIntervention, {count: number}> — the "pending" union
-// member specifically, so this intersection doesn't distribute over the
-// other 5 states (empty/loading/no-permission/error/resolved-elsewhere),
-// none of which have `count`/`severity` to intersect with.
-const RH_INTERVENTIONS: Partial<Record<RhDemoKey, Extract<PendingIntervention, { count: number }> & { detail: string; requestedBy: string; impact: string; history: { date: string; label: string }[] }>> = {
-  uep: {
-    count: 1, severity: "high",
-    description: "Elevated access request needs manager approval before it takes effect.",
-    detail: "Sarah Chen requested temporary Admin access to the Billing service repo to support an incident on Aug 15. The request exceeds her current role's standing access and requires explicit manager sign-off before Okta grants it. No access has been changed yet — this is a request, not a completed action.",
-    requestedBy: "Sarah Chen", impact: "Billing service repo · Admin · temporary (7 days)",
-    history: [
-      { date: "Jul 2, 2026", label: "Similar request for Payments repo — approved by David Kim" },
-    ],
-    onReview: () => {},
-  },
-  ucp: {
-    count: 1, severity: "medium",
-    description: "A discount above standard approval thresholds needs sign-off before the renewal quote can go out.",
-    detail: "Renewal Copilot drafted a 12% loyalty discount for Acme Corp's renewal, above the 10% threshold reps can approve unassisted. The quote is held until a deal desk reviewer signs off — nothing has been sent to the customer yet.",
-    requestedBy: "Renewal Copilot", impact: "Renewal quote · 12% discount · Acme Corp",
-    history: [
-      { date: "Feb 14, 2026", label: "8% discount on prior renewal — approved by deal desk" },
-    ],
-    onReview: () => {},
-  },
+// Block 3 (this pass) — Your Intervention can carry N items per record now,
+// not just 1 (see InterventionItem in record-header.tsx). Each entry here
+// carries its own Pending Decisions detail (detail/requestedBy/impact/
+// history) — `onReview` isn't wired per-item at the mock-data level since
+// it needs the item's own id in scope (see rhIntervention/rhOpenReview
+// below, which build the real InterventionItem[] and attach onReview per
+// item).
+type InterventionMock = {
+  id: string
+  description: string
+  severity: "high" | "medium" | "low"
+  detail: string
+  requestedBy: string
+  impact: string
+  history: { date: string; label: string }[]
+}
+
+const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
+  uep: [
+    {
+      id: "uep-access-request",
+      severity: "high",
+      description: "Elevated access request needs manager approval before it takes effect.",
+      detail: "Sarah Chen requested temporary Admin access to the Billing service repo to support an incident on Aug 15. The request exceeds her current role's standing access and requires explicit manager sign-off before Okta grants it. No access has been changed yet — this is a request, not a completed action.",
+      requestedBy: "Sarah Chen", impact: "Billing service repo · Admin · temporary (7 days)",
+      history: [
+        { date: "Jul 2, 2026", label: "Similar request for Payments repo — approved by David Kim" },
+      ],
+    },
+  ],
+  ucp: [
+    {
+      id: "ucp-discount-approval",
+      severity: "medium",
+      description: "A discount above standard approval thresholds needs sign-off before the renewal quote can go out.",
+      detail: "Renewal Copilot drafted a 12% loyalty discount for Acme Corp's renewal, above the 10% threshold reps can approve unassisted. The quote is held until a deal desk reviewer signs off — nothing has been sent to the customer yet.",
+      requestedBy: "Renewal Copilot", impact: "Renewal quote · 12% discount · Acme Corp",
+      history: [
+        { date: "Feb 14, 2026", label: "8% discount on prior renewal — approved by deal desk" },
+      ],
+    },
+  ],
   // No intervention for UVP in this example — demonstrates the zone being
   // omitted entirely when there's genuinely nothing pending, not shown as
   // an empty "0 actions" placeholder.
-  patient: {
-    count: 1, severity: "high",
-    description: "Lab result requires physician sign-off before the flagged medication change proceeds.",
-    detail: "Care Coordinator AI flagged a Warfarin/Aspirin interaction in Elena Vasquez's new prescription order. The interacting dose has not been administered — it's held pending the attending physician's explicit sign-off on the reconciled medication list.",
-    requestedBy: "Care Coordinator AI", impact: "Medication order · Warfarin 5mg · Room 4B-112",
-    history: [
-      { date: "Mar 3, 2026", label: "Similar interaction flag on a prior admission — approved by Dr. Osei" },
-    ],
-    onReview: () => {},
-  },
+  patient: [
+    {
+      id: "patient-medication-signoff",
+      severity: "high",
+      description: "Lab result requires physician sign-off before the flagged medication change proceeds.",
+      detail: "Care Coordinator AI flagged a Warfarin/Aspirin interaction in Elena Vasquez's new prescription order. The interacting dose has not been administered — it's held pending the attending physician's explicit sign-off on the reconciled medication list.",
+      requestedBy: "Care Coordinator AI", impact: "Medication order · Warfarin 5mg · Room 4B-112",
+      history: [
+        { date: "Mar 3, 2026", label: "Similar interaction flag on a prior admission — approved by Dr. Osei" },
+      ],
+    },
+  ],
+  // Block 3's real N-item example: Citizen has 2 pending interventions at
+  // once — the most prioritized (higher severity) renders full-size, the
+  // other collapses behind "+1 more."
+  citizen: [
+    {
+      id: "citizen-biometric-recapture",
+      severity: "high",
+      description: "Biometric re-capture required — the fingerprint scan on file expired before renewal could complete.",
+      detail: "Marcus Webb's fingerprint scan on file expired on Jul 30, 2026, 90 days after capture per National Registry policy. His Permanent Resident renewal can't be reconfirmed until a field office re-captures a current scan — no status change has occurred yet.",
+      requestedBy: "Civic Registry AI", impact: "Biometric record · Permanent Resident renewal",
+      history: [],
+    },
+    {
+      id: "citizen-address-verification",
+      severity: "medium",
+      description: "Proof of address document needs manual verification before renewal proceeds.",
+      detail: "The proof-of-address document Marcus Webb submitted is a utility bill dated 4 months ago, past the registry's 90-day freshness window. A caseworker needs to manually confirm it still reflects his current address before the renewal can proceed.",
+      requestedBy: "Civic Registry AI", impact: "Address verification · Permanent Resident renewal",
+      history: [
+        { date: "Feb 2, 2026", label: "Same document type accepted on prior renewal — approved by DMV field office" },
+      ],
+    },
+  ],
 }
 
 // Data Provenance (Law 2) — reuses the SAME FieldProvenance objects already
@@ -32755,6 +32847,7 @@ function RecordHeaderStatesGallery({
         {[
           "Identity — collapsed (#1, tags visible) vs. expanded (everywhere else)",
           "Your Intervention — pending (#1), empty (#2), loading (#4), no-permission (#5), error (#6), resolved-elsewhere (#7): all 6 states",
+          "Your Intervention — N items (Block 3): 1 shows alone, no counter (#1); N shows the most prioritized + \"+N-1 more\" disclosure, never a carousel (#14)",
           "Agentic System — populated (everywhere), empty (#3), loading (#4)",
           "Record — normal (everywhere), PII masked (#8), overflow (#10)",
           "Locked (#9) · Message — enabled (most cards), no channel (#11), no permission (#12), PII masked still works (#13), stays active when Locked (#9)",
@@ -32775,7 +32868,7 @@ function RecordHeaderStatesGallery({
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")}
-            intervention={{ count: 1, description: "Elevated access request needs manager approval.", severity: "high", onReview: () => {} }} />
+            intervention={{ items: [{ id: "gallery-1", description: "Elevated access request needs manager approval.", severity: "high", onReview: () => {} }] }} />
         </div>
 
         <div>
@@ -32901,6 +32994,21 @@ function RecordHeaderStatesGallery({
             agenticSystem={rhAgenticSystem("uep")} />
         </div>
 
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">14 · Your Intervention — 3 pending, most prioritized shown + "+2 more" (Block 3)</p>
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
+            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={rhAgenticSystem("uep")}
+            intervention={{
+              items: [
+                { id: "gallery-n-1", description: "Elevated access request needs manager approval before it takes effect.", severity: "high", onReview: () => {} },
+                { id: "gallery-n-2", description: "A discount above standard approval thresholds needs sign-off.", severity: "medium", onReview: () => {} },
+                { id: "gallery-n-3", description: "Vendor requalification checklist needs a final read-through.", severity: "low", onReview: () => {} },
+              ],
+            }} />
+        </div>
+
       </div>
     </section>
   )
@@ -32930,6 +33038,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [rhWorkflowOpen, setRhWorkflowOpen] = useState(false)
   const [rhAgentOpen, setRhAgentOpen] = useState(false)
   const [rhReviewOpen, setRhReviewOpen] = useState(false)
+  // Block 3 (this pass) — a record can have N pending interventions, so
+  // "which one is open in Pending Decisions" needs its own id, not just
+  // "which record."
+  const [rhReviewItemId, setRhReviewItemId] = useState<string | null>(null)
   const [rhProvenanceOpen, setRhProvenanceOpen] = useState(false)
   const [rhReviewResolved, setRhReviewResolved] = useState<"approved" | "dismissed" | null>(null)
 
@@ -32948,16 +33060,30 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
   const rhOpenWorkflow = (v: RhDemoKey) => { setRhOpenVariant(v); setRhWorkflowOpen(true) }
   const rhOpenAgent = (v: RhDemoKey) => { setRhOpenVariant(v); setRhAgentOpen(true) }
-  const rhOpenReview = (v: RhDemoKey) => { setRhOpenVariant(v); setRhReviewOpen(true); setRhReviewResolved(null) }
+  const rhOpenReview = (v: RhDemoKey, itemId: string) => {
+    setRhOpenVariant(v); setRhReviewItemId(itemId); setRhReviewOpen(true); setRhReviewResolved(null)
+  }
   const rhOpenProvenance = (v: RhDemoKey) => { setRhOpenVariant(v); setRhProvenanceOpen(true) }
 
   const rhAgenticSystem = (v: RhDemoKey): AgenticSystemInfo => ({
     activeWorkflow: { name: RH_WORKFLOWS[v].name, onOpen: () => rhOpenWorkflow(v) },
     lastAgent: { name: RH_AGENT_DETAILS[v].agentName, onOpen: () => rhOpenAgent(v) },
   })
+  // Block 3 (this pass) — maps this demo's mock array to the real
+  // InterventionItem[] shape, one onReview per item (not one shared
+  // callback for the whole record) so each keeps its own individual Review
+  // action per the brief.
   const rhIntervention = (v: RhDemoKey): PendingIntervention | undefined => {
     const src = RH_INTERVENTIONS[v]
-    return src ? { count: src.count, severity: src.severity, description: src.description, onReview: () => rhOpenReview(v) } : undefined
+    if (!src) return undefined
+    return {
+      items: src.map(item => ({
+        id: item.id,
+        description: item.description,
+        severity: item.severity,
+        onReview: () => rhOpenReview(v, item.id),
+      })),
+    }
   }
 
   // Assigned agent chat — no dedicated "agent chat" component exists yet
@@ -32989,12 +33115,16 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     },
   ]
 
-  const pgName = pgVariant === "ucp" ? RH_UCP.name : pgVariant === "uvp" ? RH_UVP.name : pgVariant === "patient" ? RH_PATIENT.name : RH_UEP.name
+  const pgName = pgVariant === "ucp" ? RH_UCP.name : pgVariant === "uvp" ? RH_UVP.name : pgVariant === "patient" ? RH_PATIENT.name : pgVariant === "citizen" ? RH_CITIZEN.name : RH_UEP.name
   const pgRecordFields = pgVariant === "uep" && pgMasked ? RH_UEP_MASKED_FIELDS : RH_RECORD_FIELDS[pgVariant]
   const openVariant = rhOpenVariant ?? "uep"
   const openWorkflow = RH_WORKFLOWS[openVariant]
   const openAgent = RH_AGENT_DETAILS[openVariant]
-  const openIntervention = RH_INTERVENTIONS[openVariant]
+  // The specific item within openVariant's intervention array that Review
+  // was clicked on (Block 3 — a record can have N, Pending Decisions shows
+  // exactly the one the viewer chose).
+  const openIntervention = RH_INTERVENTIONS[openVariant]?.find(item => item.id === rhReviewItemId)
+  const openInterventionCount = RH_INTERVENTIONS[openVariant]?.length ?? 0
   const openRecordFields = RH_RECORD_FIELDS[openVariant]
 
   return (
@@ -33078,6 +33208,19 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Second agnosticism example — a government vertical, same component</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Mock data — not confirmed AIMS OS content. A third distinct entity type (<code>Citizen</code>, <code>Landmark</code> icon), a third distinct RECORD shape (National ID/Residency Status/Registered Address/ID Expiry, sourced from a National Registry — not Workday/Okta/Salesforce/NetSuite/Ariba/Epic), and — this pass's own Block 3 — 2 pending interventions at once: the higher-severity one renders full-size, the other collapses behind "+1 more" (never a carousel). Same skeleton, same colors, zero changes to record-header.tsx.
+            </p>
+            <RecordHeader name={RH_CITIZEN.name} entityType={RH_ENTITY_TYPE.citizen} recordFields={RH_RECORD_FIELDS.citizen} defaultExpanded
+              assignedAgent={rhAssignedAgent("citizen", RH_CITIZEN.name)}
+              actions={rhMessageAction(RH_CITIZEN.name)}
+              agenticSystem={rhAgenticSystem("citizen")}
+              intervention={rhIntervention("citizen")}
+              onProvenanceOpen={() => rhOpenProvenance("citizen")} />
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Law 4 — PII masking, same field in 2 entitlement states</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Identical record to UEP above, except <code>accessRole</code> is now the SAME RecordField constructed in its masked state — a lower-permission viewer sees this instead of "Admin." The origin badge still renders (Law 1 applies regardless of masking).
@@ -33139,21 +33282,35 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Variant — same skeleton, only content changes</p>
-            <div className="flex flex-wrap gap-[4px]">
-              {(["uep", "ucp", "uvp", "patient"] as const).map(v => (
-                <button
-                  key={v}
-                  onClick={() => setPgVariant(v)}
-                  className="px-[10px] py-[5px] rounded text-[11px] font-medium uppercase transition-colors"
-                  style={{
-                    background: pgVariant === v ? "#2173ff" : "var(--ctrl-inactive-bg)",
-                    color: pgVariant === v ? "#fff" : "var(--field-label)",
-                    border: pgVariant === v ? "none" : "1px solid var(--field-border)",
-                  }}
-                >
-                  {v}
-                </button>
-              ))}
+            {/* Two labeled groups (this pass), reusing the repo's own CtrlGroup
+                segmentation pattern (used across every other component's
+                Playground on this page) rather than inventing a new selector.
+                Both groups drive the SAME pgVariant state — separating them
+                is purely about what they mean: "Work Surfaces" are this
+                card's 3 native entity shapes; "Otros mercados" exist ONLY to
+                prove the same skeleton tolerates a genuinely different
+                vertical, not to suggest AIMS OS ships Patient/Citizen as
+                additional native types. */}
+            <div className="flex flex-col gap-[8px]">
+              <CtrlGroup<RhDemoKey>
+                label="Work Surfaces"
+                value={pgVariant}
+                onChange={setPgVariant}
+                options={[
+                  { value: "uep", label: "Employee" },
+                  { value: "ucp", label: "Customer" },
+                  { value: "uvp", label: "Vendor" },
+                ]}
+              />
+              <CtrlGroup<RhDemoKey>
+                label="Otros mercados"
+                value={pgVariant}
+                onChange={setPgVariant}
+                options={[
+                  { value: "patient", label: "Patient" },
+                  { value: "citizen", label: "Citizen" },
+                ]}
+              />
             </div>
             <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
               Click the chevron on the Identity row to expand/collapse Agentic System / Your Intervention / Record — real disclosure state, not a mock. Click Active Workflow, Last Agent, Review, or the (i) icon next to RECORD to open the real SlideOuts.
@@ -33225,7 +33382,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               {[
                 ["Identity (fixed)", "Avatar · name (truncates with an ellipsis + Tooltip — never wraps or stretches the row) · entity-type icon AND text (not icon-only — a text label sits beside the icon) · up to 3 governance-state Tags — assigned agent (purple), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE (Block 2): clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → 1 contact CTA (Message) → \"···\" overflow → disclosure chevron."],
                 ["Agentic System",  "Active Workflow + Last Agent lay out side by side (grid, not stacked — uses the card's width instead of wasting it). Each item is a plain card BORDER (not a nested CardContainer component — this already lives inside the header's own CardContainer, so a second one read as card-in-card) with a HighlightIcon (size=\"sm\", colored: light blue = workflow, purple = agent) + a NEUTRAL tertiary Button beside it — color lives in the icon, never in the button. Also renders \"empty\" (no workflow/agent yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
-                ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default), empty, loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
+                ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default, N items — most prioritized shown + a \"+N-1 more\" disclosure, never a carousel), empty (reads as completion, not absence), loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
                 ["Record",          "Each field with a real destination (RecordField.hasDestination !== false) is a Button variant=\"tertiary\" row — leading field icon, label/value, origin-system badge (Law 1), trailing ChevronRight — opening Data Provenance directly. A plain descriptive fact (hasDestination: false — e.g. a pure date) renders as static text instead: no chevron, not a Button — but it still reserves the identical 14px trailing slot as an invisible spacer, so the origin-badge column lands at the exact same horizontal position on every row regardless of whether that field has a destination. The (i) icon next to the RECORD heading opens the same panel (Law 2) for every destination field at once. `recordFields` is a plain array the host builds — no fixed \"employee field\" shape inside the component (Block 4)."],
               ].map(([zone, content], i) => (
                 <div key={zone} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
@@ -33384,6 +33541,29 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 5 — persistent bug fixes + Playground grouping + N interventions</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Change"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "Re-verified \"Ask about {name}\" against the reported regression — checked directly in the DOM: it renders SidePanel's own root `<div>` (`--side-panel-bg` tokens, no backdrop, page stays fully interactive underneath), never SlideOut's `<aside>` (which would carry a dimming scrim). The source was already correct; if this still reads as a SlideOut somewhere, it's a stale preview/deploy, not this code — flagging so it isn't re-reported as a fresh bug next round."],
+                ["2", "Confirmed Your Intervention's \"empty\" status already renders through the real InformativeCard (state=\"neutral\", CheckCircle2 icon) — not a custom container. Strengthened the default copy (\"No interventions pending — you're all caught up\") so it explicitly reads as completion, not absence, per the empty-states law."],
+                ["3", "Playground's entity-type selector split into 2 labeled CtrlGroups — \"Work Surfaces\" (Employee/Customer/Vendor, the 3 native shapes) and \"Otros mercados\" (Patient/Citizen, agnosticism proof only) — reusing the repo's own CtrlGroup segmentation pattern (already used by every other component's Playground on this page) instead of inventing a new selector or hand-rolling another button row."],
+                ["4", "Added Citizen (government) as a second agnosticism example: a third distinct entity type/icon, a third distinct source system (National Registry, not Workday/Okta/Salesforce/NetSuite/Ariba/Epic), a third distinct RECORD shape — same skeleton, zero changes to record-header.tsx. Also the real example of Block 3's N-intervention case (2 pending at once)."],
+                ["5", "Your Intervention's \"pending\" status now models N items (InterventionItem[]), not just 1 — each keeps its own severity and its own Review action. 0 items → \"empty\" (see #2); exactly 1 → shown alone, no counter; N → the most prioritized shown full-size + a \"+N-1 more\" disclosure that reveals the rest. Deliberately a disclosure, not a carousel — urgent decisions must be visible at a glance (how many, that they exist), never hidden behind a swipe. See the States gallery's #14 and the Citizen example above for both a synthetic and a real-content case."],
+              ].map(([n, change], i) => (
+                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">States — full coverage (Block 3)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
               Every state this component can render, live in the Overview tab's "States" section (not just this table) — dev-facing coverage, not just the happy path.
@@ -33396,7 +33576,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
               {[
                 ["Collapsed, with Tags", "The 3 governance-state Tags (agent/workflow/HTL) visible, colored + iconed, clickable (Block 2)."],
-                ["Your Intervention — empty", "intervention={{status:\"empty\", message?}} — a calm \"nothing pending\" InformativeCard (state=\"neutral\"), not an absent/broken zone."],
+                ["Your Intervention — empty", "intervention={{status:\"empty\", message?}} — a calm \"nothing pending\" InformativeCard (state=\"neutral\"), not an absent/broken zone. Default copy: \"No interventions pending — you're all caught up\" — reads as completion, never as an error."],
+                ["Your Intervention — N pending items", "intervention={{items: InterventionItem[]}} — 1 item shows alone, no counter. N items show the most prioritized (items[0], host-sorted) full-size + a \"+N-1 more\" disclosure (Button variant=\"tertiary\") that reveals the rest, each keeping its own individual Review. Deliberately NOT a carousel — urgent decisions must be visible at a glance."],
                 ["Agentic System — empty", "agenticSystem={{status:\"empty\"}} — a calm \"no workflow/agent yet\" message, e.g. a freshly imported record."],
                 ["Loading", "status=\"loading\" on either zone — Skeleton rows matching the real content's footprint, no layout jump when data arrives."],
                 ["No permission to approve", "intervention={{status:\"no-permission\", description, onEscalate?}} — Review renders disabled (via InformativeCard's own cta.disabled), Escalate offered as the alternate action."],
@@ -33749,7 +33930,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         type="with-variants"
         size="m"
         title="Pending Decisions"
-        subtitle={openIntervention ? `${openIntervention.count} awaiting review` : ""}
+        subtitle={openInterventionCount > 0 ? `${openInterventionCount} ${openInterventionCount === 1 ? "item" : "items"} awaiting review` : ""}
         iconContent={<LucideIcons.AlertTriangle size={24} style={{ color: "var(--ic-alert-icon)" }} />}
         iconBg="var(--ic-alert-bg)"
         showStatus={false}
@@ -33779,7 +33960,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </Tag>
               </div>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                {(RH_INTERVENTIONS[openVariant] as (PendingIntervention & { detail: string }) | undefined)?.detail}
+                {openIntervention.detail}
               </p>
               <div>
                 <div className="flex items-center h-[32px]">
