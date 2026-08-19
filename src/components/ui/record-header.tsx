@@ -281,6 +281,24 @@ export interface RecordAction {
   label: string
   variant?: RecordActionVariant
   onClick?: () => void
+  /**
+   * Explicit disabled override, independent from `locked` — e.g. "no
+   * contact channel on file" or "you don't have permission to contact this
+   * record." Never hides the action (same "never a silently missing
+   * button" rule as assignedAgent === null) — it disables with
+   * `disabledTooltip` explaining why.
+   */
+  disabled?: boolean
+  /** Tooltip shown when disabled (by either `disabled` or the record's own `locked`). */
+  disabledTooltip?: string
+  /**
+   * Default true (disables like every other action when the record is
+   * `locked`). Set `false` when this specific action doesn't modify the
+   * record — e.g. Message/contact: DECISION FLAGGED, hypothesis not
+   * explicitly confirmed — // TODO: confirmar con Michael si "locked"
+   * debería seguir permitiendo contactar al record.
+   */
+  disableWhenLocked?: boolean
 }
 
 // ── Status dot (Identity row) ───────────────────────────────────────────────
@@ -393,6 +411,15 @@ export const RECORD_HEADER_RECOMMENDED_ACTIONS: RecordAction[] = [{ label: "Mess
 // their label content adapts.
 const COLLAPSE_HIDE_TAGS_WIDTH = 560
 const COLLAPSE_SHORTEN_ASSISTANT_WIDTH = 480
+// Record grid — 3 columns needs real room for the longest label (e.g.
+// "Procurement Owner") plus its icon; below this width the same
+// container-width measurement drops it to 2 columns so labels never
+// overlap. Was previously Tailwind's `sm:grid-cols-3` (a viewport
+// breakpoint), which stayed at 3 columns even when this card sat in a
+// narrow slot on an otherwise-wide viewport (e.g. the two-up States
+// gallery) — same class of bug the width measurement above already exists
+// to prevent for tags/assistant label.
+const COLLAPSE_RECORD_TO_2COL_WIDTH = 560
 // A long first name can overflow even at full width — this is a length
 // guard, not a replacement for the width measurement above; both apply.
 const ASSISTANT_LABEL_MAX_NAME_LENGTH = 12
@@ -466,12 +493,14 @@ function RecordHeader({
   const rootRef = useRef<HTMLDivElement>(null)
   const [tagsHidden, setTagsHidden] = useState(false)
   const [assistantShortened, setAssistantShortened] = useState(false)
+  const [recordGridNarrow, setRecordGridNarrow] = useState(false)
   useLayoutEffect(() => {
     const el = rootRef.current
     if (!el) return
     const measure = () => {
       setTagsHidden(el.clientWidth < COLLAPSE_HIDE_TAGS_WIDTH)
       setAssistantShortened(el.clientWidth < COLLAPSE_SHORTEN_ASSISTANT_WIDTH)
+      setRecordGridNarrow(el.clientWidth < COLLAPSE_RECORD_TO_2COL_WIDTH)
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -638,19 +667,29 @@ function RecordHeader({
               </Tooltip>
             )}
 
-            {primaryAction && (
-              locked ? (
-                <Tooltip content={RECORD_HEADER_FALLBACKS.lockedActionTooltip} side="cursor">
-                  <Button variant={primaryAction.variant ?? "secondary"} size="sm" disabled>
-                    {primaryAction.label}
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Button variant={primaryAction.variant ?? "secondary"} size="sm" onClick={primaryAction.onClick}>
+            {primaryAction && (() => {
+              // Block 6 (this pass) — an action can be disabled for 2
+              // independent reasons: the record is `locked` (unless this
+              // action opted out via `disableWhenLocked: false`), or the
+              // action itself is explicitly disabled (no channel, no
+              // permission — see RecordAction's own doc comment). Never
+              // silently hide it either way — same rule as assignedAgent
+              // === null: disabled + a Tooltip explaining why, always.
+              const lockDisabled = locked && primaryAction.disableWhenLocked !== false
+              const disabled = lockDisabled || Boolean(primaryAction.disabled)
+              const tooltip = lockDisabled ? RECORD_HEADER_FALLBACKS.lockedActionTooltip : primaryAction.disabledTooltip
+              const button = (
+                <Button
+                  variant={primaryAction.variant ?? "secondary"}
+                  size="sm"
+                  disabled={disabled}
+                  onClick={disabled ? undefined : primaryAction.onClick}
+                >
                   {primaryAction.label}
                 </Button>
               )
-            )}
+              return disabled && tooltip ? <Tooltip content={tooltip} side="cursor">{button}</Tooltip> : button
+            })()}
 
             {overflowActions.length > 0 && (
               <ActionOverflowMenu
@@ -735,7 +774,7 @@ function RecordHeader({
                       </Tooltip>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-[8px] gap-y-[4px]">
+                  <div className={cn("grid gap-x-[8px] gap-y-[4px]", recordGridNarrow ? "grid-cols-2" : "grid-cols-3")}>
                     {recordFields.map((f, i) => (
                       <RecordFieldCell key={i} field={f} onProvenanceOpen={onProvenanceOpen} />
                     ))}
@@ -780,7 +819,11 @@ function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
   }
 
   return (
-    <div className="flex flex-col gap-[8px]">
+    // Task 1 (Block 1, this pass) — Active Workflow + Last Agent lay out
+    // side by side on any width that can fit them (grid, not a flex-col
+    // stack), so the zone actually uses the card's available width instead
+    // of wasting it on 2 stacked full-width rows.
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-[8px]">
       {state.activeWorkflow && (
         <AgenticSystemItem
           icon={<Workflow size={16} strokeWidth={1.75} />}
@@ -817,7 +860,17 @@ function AgenticSystemItem({
   tooltip: string
 }) {
   return (
-    <CardContainer size="sm" variant="default">
+    // Task 2 (Block 1, this pass) — a plain card BORDER, not the
+    // CardContainer component: this item already lives inside the header's
+    // own CardContainer, so nesting a second one reads as card-in-card and
+    // wastes padding. Same visual result (border/radius/bg exactly match
+    // CardContainer's own "sm" size via its real tokens — nothing
+    // hardcoded), just not the component itself. Color still lives only in
+    // HighlightIcon; this border is neutral.
+    <div
+      className="rounded-[8px] border-[0.5px] p-[12px]"
+      style={{ background: "var(--card-default-bg)", borderColor: "var(--card-default-border)" }}
+    >
       <div className="flex items-center gap-[10px]">
         <HighlightIcon size="sm" variant={iconVariant} icon={icon} />
         {/* Overflow — long workflow/agent names truncate with their own
@@ -834,7 +887,7 @@ function AgenticSystemItem({
           </Button>
         </Tooltip>
       </div>
-    </CardContainer>
+    </div>
   )
 }
 
@@ -922,7 +975,7 @@ function RecordFieldCell({ field: f, onProvenanceOpen }: { field: RecordField; o
   const badge = <Tag variant="secondary" size="sm" className="shrink-0">{f.provenance.systemAbbr}</Tag>
   const valueSpan = (
     <span
-      className="text-[13px] leading-[1.4] truncate max-w-full"
+      className="block text-[13px] leading-[1.4] truncate max-w-full"
       style={{ color: f.state === "masked" ? "var(--field-supporting)" : "var(--foreground)", fontStyle: f.state === "masked" ? "italic" : undefined }}
     >
       {valueText}
@@ -934,9 +987,18 @@ function RecordFieldCell({ field: f, onProvenanceOpen }: { field: RecordField; o
   // renders as static text. Its origin badge still gets a Tooltip (Law 1
   // never turns off), and — since the value itself can still truncate — the
   // value gets its own Tooltip too (overflow: never a dead end).
+  //
+  // Task 3 (Block 1, this pass) — the trailing slot is ALWAYS reserved at
+  // the same 14px width, chevron or not: a destination row ends in a real
+  // ChevronRight, a non-destination row ends in an invisible spacer of the
+  // identical size. Both rows are otherwise the same flex row (icon → label/
+  // value → badge → trailing slot), so the badge column now lands at the
+  // exact same horizontal position on every row regardless of whether that
+  // particular field has a destination — that's the whole fix; there's
+  // nothing to align if the row *shapes* don't match first.
   if (f.hasDestination === false) {
     return (
-      <div className="flex items-start gap-[8px] px-[8px] py-[8px]">
+      <div className="flex items-start gap-[8px] px-[8px] py-[8px] min-w-0">
         <FieldIcon size={14} strokeWidth={1.75} className="shrink-0 mt-[2px]" style={{ color: "var(--field-supporting)" }} />
         <div className="flex flex-col items-start gap-[2px] flex-1 min-w-0 text-left">
           <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
@@ -949,16 +1011,17 @@ function RecordFieldCell({ field: f, onProvenanceOpen }: { field: RecordField; o
         <Tooltip content={provenanceText} side="cursor">
           {badge}
         </Tooltip>
+        <span aria-hidden className="shrink-0 mt-[2px]" style={{ width: 14, height: 14 }} />
       </div>
     )
   }
 
   return (
-    <Tooltip content={`${valueText} — ${provenanceText}`} side="cursor">
+    <Tooltip content={`${valueText} — ${provenanceText}`} side="cursor" triggerClassName="min-w-0 w-full">
       <Button
         variant="tertiary"
         onClick={onProvenanceOpen}
-        className="h-auto w-full justify-start px-[8px] py-[8px]"
+        className="h-auto w-full min-w-0 justify-start px-[8px] py-[8px]"
       >
         <FieldIcon size={14} strokeWidth={1.75} className="shrink-0 mt-[2px]" style={{ color: "var(--field-supporting)" }} />
         <div className="flex flex-col items-start gap-[2px] flex-1 min-w-0 text-left">
