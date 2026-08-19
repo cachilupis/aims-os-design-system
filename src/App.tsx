@@ -32763,12 +32763,14 @@ function RecordHeaderStatesGallery({
           <li key={line} className="text-[11px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>· {line}</li>
         ))}
       </ul>
-      <div className="grid grid-cols-2 gap-[24px]">
+      {/* Single column, full-width cards — a 2-up grid squeezes this card
+          into a narrower box than its own width-driven responsive behavior
+          (identity tags, Record's field-count columns) is meant for, which
+          is what actually caused it to visually break in an earlier pass.
+          One column per row keeps every state at the card's real width. */}
+      <div className="grid grid-cols-1 gap-[24px]">
 
-        <div className="col-span-2">
-          {/* col-span-2 — this card needs to render above
-              COLLAPSE_HIDE_TAGS_WIDTH (560px) or the identity tags this
-              example exists to show auto-hide, defeating its own point. */}
+        <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">1 · Collapsed — governance-state Tags visible</p>
           <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="attention"
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
