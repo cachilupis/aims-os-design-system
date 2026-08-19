@@ -537,7 +537,7 @@ function RecordHeader({
           <AvatarCircle name={name || entityType.label} sizeKey="lg" avatarStyle={hasName ? "text" : "empty"} />
 
           <div className="flex-1 min-w-0 flex flex-col gap-[6px]">
-            <div className="flex items-center gap-[8px] min-w-0">
+            <div className="flex items-center gap-[12px] min-w-0">
               {/* Overflow — a long name truncates with an ellipsis instead of
                   wrapping/stretching the row; a Tooltip on hover carries the
                   full value. Sibling elements (entity type, Locked tag) are

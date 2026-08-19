@@ -32385,18 +32385,26 @@ const epicProv = (syncedAgo: string): FieldProvenance => ({ system: "Epic", syst
 // Deliberately a THIRD distinct source system, on top of Epic — no reuse
 // of any Work Surfaces or healthcare system name.
 const civicProv = (syncedAgo: string): FieldProvenance => ({ system: "National Registry", systemAbbr: "NR", modelVersion: "CivicOS v1.1", syncedAgo })
+// Campus SIS — the education-vertical proof example (this pass).
+const eduProv = (syncedAgo: string): FieldProvenance => ({ system: "Campus SIS", systemAbbr: "SIS", modelVersion: "Enrollment v3.0", syncedAgo })
+// Asset registry (CMMS) — the strongest agnosticism proof of all: the
+// entity here isn't a person at all. Confirms nothing in this component
+// (Avatar, name, RECORD grid) assumes a human subject.
+const assetProv = (syncedAgo: string): FieldProvenance => ({ system: "Asset Registry", systemAbbr: "AST", modelVersion: "CMMS v2.4", syncedAgo })
 
 // This demo page's own scope note (not a component doc — RecordHeader
 // itself never enumerates entity types): UEP/UCP/UVP are the 3 native
-// Work Surfaces entity shapes this card actually ships for. Patient and
-// Citizen exist ONLY to prove agnosticism across genuinely different
-// verticals (healthcare, government) — they are demonstration examples,
-// not additional native types, which is why the Playground groups them
-// separately (see the "Work Surfaces" vs. "Otros mercados" CtrlGroups).
+// Work Surfaces entity shapes this card actually ships for. Patient,
+// Citizen, Student, and Asset exist ONLY to prove agnosticism across
+// genuinely different verticals (healthcare, government, education, and —
+// Asset — a non-person entity entirely) — they are demonstration
+// examples, not additional native types, which is why the Playground
+// groups them separately (see the "Work Surfaces" vs. "Other Markets"
+// CtrlGroups).
 // `RhDemoKey` is this DEMO PAGE's own bookkeeping key (App.tsx's problem),
 // not a prop the component reads — RecordHeader only ever sees `name` +
 // `entityType` + `recordFields`, built from these mocks below.
-type RhDemoKey = "uep" | "ucp" | "uvp" | "patient" | "citizen"
+type RhDemoKey = "uep" | "ucp" | "uvp" | "patient" | "citizen" | "student" | "asset"
 
 // Entity type icon + label — 100% host-defined (RecordHeaderEntityType).
 // This is exactly the kind of mapping a future host would extend with its
@@ -32419,6 +32427,13 @@ const RH_ENTITY_TYPE: Record<RhDemoKey, RecordHeaderEntityType> = {
   // as Patient was unlike UEP/UCP/UVP: different icon, different source
   // system (National Registry), different Record fields.
   citizen: { icon: LucideIcons.Landmark, label: "Citizen" },
+  // Third agnosticism example (this pass) — education: a fourth distinct
+  // icon/source system (Campus SIS), a fourth distinct Record shape.
+  student: { icon: LucideIcons.GraduationCap, label: "Student" },
+  // Fourth agnosticism example (this pass) — and the strongest proof of
+  // all: a non-person entity. Nothing in this component (Avatar initials,
+  // name, RECORD grid) assumes the subject is human.
+  asset: { icon: LucideIcons.Cpu, label: "Asset" },
 }
 
 // UEP — the reference variant (brief's own words: "la card de referencia").
@@ -32483,6 +32498,29 @@ const RH_CITIZEN = {
   idExpiry:           { label: "ID Expiry",           icon: LucideIcons.CalendarClock, value: "Jun 30, 2028",            state: "hydrated", provenance: civicProv("3h ago"), hasDestination: false } satisfies RecordField,
 }
 
+// Student (Education) — third agnosticism proof example, EXAMPLE data, not
+// confirmed AIMS OS content. Enrollment ID/Advisor are governed facts with
+// a destination; GPA/Expected Graduation are plain descriptive facts.
+const RH_STUDENT = {
+  name: "Priya Anand", program: "B.Sc. Computer Science",
+  enrollmentId:      { label: "Enrollment ID",       icon: LucideIcons.IdCard,        value: "STU-88213",                state: "hydrated", provenance: eduProv("2h ago") } satisfies RecordField,
+  advisor:           { label: "Academic Advisor",    icon: LucideIcons.User,          value: "Prof. Daniel Reyes",       state: "hydrated", provenance: eduProv("2h ago") } satisfies RecordField,
+  gpa:               { label: "GPA",                 icon: LucideIcons.BarChart3,     value: "3.7",                      state: "hydrated", provenance: eduProv("1d ago"), hasDestination: false } satisfies RecordField,
+  expectedGraduation:{ label: "Expected Graduation", icon: LucideIcons.CalendarClock, value: "May 2027",                 state: "hydrated", provenance: eduProv("1d ago"), hasDestination: false } satisfies RecordField,
+}
+
+// Asset (Equipment/IoT) — fourth agnosticism proof example, EXAMPLE data,
+// not confirmed AIMS OS content. The strongest proof of all: this "record"
+// isn't a person. Asset Tag/Owning Team are governed facts with a
+// destination; Location/Last Serviced are plain descriptive facts.
+const RH_ASSET = {
+  name: "Pump Station 12", location: "Building 4 — Utility Room",
+  assetTag:     { label: "Asset Tag",    icon: LucideIcons.Barcode,       value: "AST-4471",              state: "hydrated", provenance: assetProv("10m ago") } satisfies RecordField,
+  owningTeam:   { label: "Owning Team",  icon: LucideIcons.Users,         value: "Facilities Team",       state: "hydrated", provenance: assetProv("10m ago") } satisfies RecordField,
+  assetLocation:{ label: "Location",     icon: LucideIcons.MapPin,        value: "Building 4 — Utility Room", state: "hydrated", provenance: assetProv("6h ago"), hasDestination: false } satisfies RecordField,
+  lastServiced: { label: "Last Serviced",icon: LucideIcons.CalendarClock, value: "Jul 2, 2026",           state: "hydrated", provenance: assetProv("6h ago"), hasDestination: false } satisfies RecordField,
+}
+
 // Record zone — the RECORD grid is a plain RecordField[] the host builds
 // directly (Block 4: no fixed "employee field" structure inside the
 // component anymore).
@@ -32492,6 +32530,16 @@ const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
   uvp: [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd],
   patient: [RH_PATIENT.primaryPhysician, RH_PATIENT.insurancePlan, RH_PATIENT.bloodType, RH_PATIENT.admissionDate],
   citizen: [RH_CITIZEN.nationalId, RH_CITIZEN.residencyStatus, RH_CITIZEN.registeredAddress, RH_CITIZEN.idExpiry],
+  student: [RH_STUDENT.enrollmentId, RH_STUDENT.advisor, RH_STUDENT.gpa, RH_STUDENT.expectedGraduation],
+  asset: [RH_ASSET.assetTag, RH_ASSET.owningTeam, RH_ASSET.assetLocation, RH_ASSET.lastServiced],
+}
+
+// Display name per demo key — a lookup instead of a growing ternary chain
+// now that there are 7 variants across 2 groups (Work Surfaces + Other
+// Markets).
+const RH_NAME: Record<RhDemoKey, string> = {
+  uep: RH_UEP.name, ucp: RH_UCP.name, uvp: RH_UVP.name,
+  patient: RH_PATIENT.name, citizen: RH_CITIZEN.name, student: RH_STUDENT.name, asset: RH_ASSET.name,
 }
 
 // Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
@@ -32510,6 +32558,8 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
   uvp: { id: "agent-procurement",  name: "Procurement Copilot" },
   patient: { id: "agent-care-coordinator", name: "Care Coordinator AI" },
   citizen: { id: "agent-civic-registry", name: "Civic Registry AI" },
+  student: { id: "agent-academic-success", name: "Academic Success AI" },
+  asset: { id: "agent-predictive-maintenance", name: "Predictive Maintenance AI" },
 }
 
 // ── Demo SlideOut content — realistic mock data for the 4 wired flows ──────
@@ -32610,6 +32660,35 @@ const RH_WORKFLOWS: Record<RhDemoKey, WorkflowDetail> = {
       { date: "Feb 10, 2026", outcome: "success" },
     ],
   },
+  student: {
+    name: "Financial Aid Renewal", owner: "Academic Success AI", started: "Aug 5, 2026", nextTrigger: "Sep 1, 2026 (per semester)",
+    aiSummary: "Renews Priya Anand's financial aid package for the fall semester — a fourth vertical, the exact same Agentic System zone.",
+    totalRuns: 3,
+    steps: [
+      { label: "Enrollment status confirmed with registrar", status: "done", date: "Aug 5, 2026" },
+      { label: "Prior-year tax documents requested", status: "done", date: "Aug 6, 2026" },
+      { label: "Awaiting updated tax document", status: "loading" },
+      { label: "Aid package disbursed", status: "pending" },
+    ],
+    recentRuns: [
+      { date: "Jan 5, 2026", outcome: "success" },
+    ],
+  },
+  asset: {
+    name: "Vibration Anomaly Monitoring", owner: "Predictive Maintenance AI", started: "Aug 15, 2026", nextTrigger: "Continuous",
+    aiSummary: "Monitors Pump Station 12's vibration sensor readings for deviations from baseline — the same Agentic System zone, now watching equipment instead of a person.",
+    totalRuns: 212,
+    steps: [
+      { label: "Baseline vibration profile established", status: "done", date: "Jan 15, 2026" },
+      { label: "Sensor readings streamed continuously", status: "done" },
+      { label: "Anomaly threshold exceeded", status: "loading", date: "Aug 15, 2026" },
+      { label: "Inspection scheduled", status: "pending" },
+    ],
+    recentRuns: [
+      { date: "Aug 15, 2026", outcome: "error" },
+      { date: "Jul 1, 2026", outcome: "success" },
+    ],
+  },
 }
 
 type AgentDetail = {
@@ -32672,6 +32751,26 @@ const RH_AGENT_DETAILS: Record<RhDemoKey, AgentDetail> = {
     recentActivity: [
       { date: "Aug 11, 2026", label: "Flagged stale proof-of-address document" },
       { date: "Aug 10, 2026", label: "Cross-checked renewal application against National Registry" },
+    ],
+  },
+  student: {
+    agentName: "Academic Success AI",
+    sessionSummary: "Reviewed Priya Anand's financial aid renewal against her enrollment status and submitted documents for the fall semester.",
+    latestFinding: "Her prior-year tax document expired under the aid office's freshness window, holding disbursement.",
+    recommendation: { text: "Request an updated tax document directly from Priya before the semester's disbursement deadline.", actionLabel: "Request document" },
+    recentActivity: [
+      { date: "Aug 6, 2026", label: "Flagged expired tax document" },
+      { date: "Aug 5, 2026", label: "Confirmed enrollment status with registrar" },
+    ],
+  },
+  asset: {
+    agentName: "Predictive Maintenance AI",
+    sessionSummary: "Monitored Pump Station 12's vibration sensor readings against its established baseline profile.",
+    latestFinding: "Vibration amplitude is running 3.2x above baseline — a pattern that preceded bearing failure on 2 similar units this year.",
+    recommendation: { text: "Schedule an inspection before the next shift change to avoid unplanned downtime.", actionLabel: "Schedule inspection" },
+    recentActivity: [
+      { date: "Aug 15, 2026", label: "Flagged vibration threshold exceeded" },
+      { date: "Aug 1, 2026", label: "Baseline profile recalibrated after routine service" },
     ],
   },
 }
@@ -32753,6 +32852,20 @@ const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
       requestedBy: "Civic Registry AI", impact: "Address verification · Permanent Resident renewal",
       history: [
         { date: "Feb 2, 2026", label: "Same document type accepted on prior renewal — approved by DMV field office" },
+      ],
+    },
+  ],
+  // No intervention for Student in this example — same "genuinely nothing
+  // pending, zone omitted entirely" case as UVP above, on a 4th vertical.
+  asset: [
+    {
+      id: "asset-inspection-approval",
+      severity: "high",
+      description: "Emergency inspection needs facilities sign-off before the next shift change.",
+      detail: "Pump Station 12's vibration amplitude is running 3.2x above its established baseline — the same pattern that preceded bearing failure on 2 similar units this year. An inspection is recommended before the next shift change; nothing has been scheduled yet without facilities sign-off.",
+      requestedBy: "Predictive Maintenance AI", impact: "Pump Station 12 · unplanned downtime risk",
+      history: [
+        { date: "Mar 4, 2026", label: "Similar vibration flag on Pump Station 7 — approved, bearing replaced" },
       ],
     },
   ],
@@ -33014,6 +33127,109 @@ function RecordHeaderStatesGallery({
   )
 }
 
+// ── End-to-end flows (this pass) — 2 complete walkthroughs, not loose
+// states. Each step is a real, rendered piece of this same page (a focused
+// RecordHeader instance showing only the zone the step is about — zones
+// are conditional, so recordFields={[]}/agenticSystem={undefined} simply
+// omit the other zones, no special-casing needed — or a button that opens
+// the SAME real SlideOut/ModalDialog used everywhere else on this page).
+// Steps use ProcessItem (process-item.tsx) — the repo's own "sequence of
+// labeled steps" atom — instead of a hand-rolled stepper. Deliberately NOT
+// a multi-step interactive wizard (Block 2's own instruction): every step
+// renders simultaneously, stacked, so the whole walkthrough is visible at
+// a glance.
+function RecordHeaderFlowsSection({
+  rhAssignedAgent,
+  rhAgenticSystem,
+  rhIntervention,
+  rhOpenReview,
+  rhOpenAgent,
+}: {
+  rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent
+  rhAgenticSystem: (v: RhDemoKey) => AgenticSystemInfo
+  rhIntervention: (v: RhDemoKey) => PendingIntervention | undefined
+  rhOpenReview: (v: RhDemoKey, itemId: string) => void
+  rhOpenAgent: (v: RhDemoKey) => void
+}) {
+  return (
+    <section>
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">End-to-end flows — 2 complete walkthroughs</p>
+      <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[720px]">
+        Not loose states — 2 full walkthroughs, so dev can see how the card behaves start to finish. Every step below is a real rendered piece of this page (a focused RecordHeader instance or a button that opens the actual SlideOut/ModalDialog used elsewhere on this page), stacked so the whole flow is visible at once — no multi-step wizard to click through.
+      </p>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[32px]">
+
+        {/* ── Flow 1 — HTL Intervention ─────────────────────────────────── */}
+        <div>
+          <p className="text-[13px] font-semibold mb-[12px]" style={{ color: "var(--foreground)" }}>Flow 1 — HTL intervention</p>
+          <div className="flex flex-col gap-0">
+            <ProcessItem number={1} status="done" title="Intervention arrives" description="A governed decision needs a human before it takes effect — the same zone as the States gallery, but here it's step 1 of a story.">
+              <RecordHeader
+                name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={[]} defaultExpanded
+                assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
+                intervention={rhIntervention("ucp")}
+              />
+            </ProcessItem>
+            <ProcessItem number={2} status="done" title="User opens Review" description={`Clicking "Review" on the card above opens the real Pending Decisions SlideOut — try it:`}>
+              <Button variant="secondary" size="sm" onClick={() => rhOpenReview("ucp", "ucp-discount-approval")}>
+                Open Review <LucideIcons.ChevronRight size={14} className="ml-[2px]" />
+              </Button>
+            </ProcessItem>
+            <ProcessItem number={3} status="done" title="Approve" description="Approve/Dismiss inside that SlideOut always opens a ModalDialog confirmation first (see the SlideOut above) — a governed decision is never resolved on one click.">
+              <p className="text-[12px] text-[var(--field-supporting)]">Confirming resolves it — see the "Approved"/"Dismissed" banner appear inside the same SlideOut.</p>
+            </ProcessItem>
+            <ProcessItem number={4} status="pending" showLine={false} title="Two possible outcomes" description="What happens after Approve depends on the decision's own risk profile — this card doesn't decide which; the host does.">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-[8px]">
+                <InformativeCard
+                  state="success"
+                  size="sm"
+                  title="(a) Immediate execution"
+                  description={'Approved automatically — access granted right away. Demonstrated live above: Approve → confirm → the SlideOut shows "Approved."'}
+                />
+                <InformativeCard
+                  state="informative"
+                  size="sm"
+                  title="(b) Escalated to The Council"
+                  description={"High-impact or ambiguous decisions route to The Council — a multi-party review body — before they take effect; the record reads \"Awaiting Council review\" until that concludes. // TODO: model as a real PendingIntervention status once Council integration exists."}
+                />
+              </div>
+            </ProcessItem>
+          </div>
+        </div>
+
+        {/* ── Flow 2 — Agentic context query ───────────────────────────── */}
+        <div>
+          <p className="text-[13px] font-semibold mb-[12px]" style={{ color: "var(--foreground)" }}>Flow 2 — Agentic context query</p>
+          <div className="flex flex-col gap-0">
+            <ProcessItem number={1} status="done" title="User sees Last Agent" description="Agentic System always shows what last touched this record — a workflow, an agent, or both.">
+              <RecordHeader
+                name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={[]} defaultExpanded
+                assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+                agenticSystem={rhAgenticSystem("uep")}
+              />
+            </ProcessItem>
+            <ProcessItem number={2} status="done" title="Opens the agent's SlideOut" description={`Clicking "Last Agent" above opens the real detail SlideOut — Session Summary, Latest Finding, Recommendation:`}>
+              <Button variant="secondary" size="sm" onClick={() => rhOpenAgent("uep")}>
+                Open Last Agent <LucideIcons.ChevronRight size={14} className="ml-[2px]" />
+              </Button>
+            </ProcessItem>
+            <ProcessItem number={3} status="pending" showLine={false} title="Recommendation → governed action (optional)" description="The Recommendation section's own action button is where a real integration would create a new decision — not a dead end.">
+              <InformativeCard
+                state="informative"
+                size="sm"
+                title="If applied"
+                description={'Clicking "Apply recommendation" inside the SlideOut above would create a new pending intervention on this same record — looping straight back into Flow 1\'s exact pattern. // TODO: wire the recommendation action to create a real governed intervention once that pipeline exists.'}
+              />
+            </ProcessItem>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  )
+}
+
 // Block 5 (this pass) — ONE shared definition for every SlideOut/SidePanel
 // body's horizontal spacing, applied everywhere instead of patched panel by
 // panel. The panel primitives themselves already provide the correct 24px
@@ -33026,6 +33242,22 @@ function RecordHeaderStatesGallery({
 // the header/footer instead of matching their margin — this constant is the
 // one-time fix, so no individual panel can drift out of sync again.
 const PANEL_CONTENT_CLASS = "flex flex-col gap-[16px]"
+
+// Message composition — coherent per-record draft, keyed by name. This is
+// what makes the Message SidePanel demonstrable (this pass): the Textarea
+// is a real controlled field the viewer can type into, pre-filled with a
+// line that actually reflects that record's own governed content above —
+// never a generic "type here" filler. // TODO: confirmar canales
+// disponibles y componente de composición real cuando exista en el repo.
+const RH_MESSAGE_DRAFT: Record<string, string> = {
+  [RH_UEP.name]: `Hi ${RH_UEP.name.split(" ")[0]} — following up on the Billing repo access request that's awaiting your manager's sign-off. Let me know if there's anything you need from me to help it move.`,
+  [RH_UCP.name]: `Hi team — checking in on the 12% renewal discount currently held for deal-desk sign-off. Happy to jump on a call if that's faster than email.`,
+  [RH_UVP.name]: `Hi — your annual requalification review is in progress; the spend-cap overage is with our category manager now. We'll follow up as soon as that clears.`,
+  [RH_PATIENT.name]: `Hi Dr. Osei — flagging the Warfarin/Aspirin interaction on Elena's new prescription order. Could you confirm before the next dose is due?`,
+  [RH_CITIZEN.name]: `Hi ${RH_CITIZEN.name.split(" ")[0]} — we still need an updated proof of address and a biometric re-capture to complete your Permanent Resident renewal.`,
+  [RH_STUDENT.name]: `Hi ${RH_STUDENT.name.split(" ")[0]} — your prior-year tax document has expired, which is holding your financial aid disbursement. Could you upload an updated copy before the semester deadline?`,
+  [RH_ASSET.name]: `Flagging ${RH_ASSET.name} for the facilities team — vibration readings are running well above baseline. Recommend scheduling an inspection before the next shift change.`,
+}
 
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
@@ -33096,17 +33328,24 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
   })
 
-  // Block 6 (this pass) — Message (Type 5 interaction): opens a SidePanel
-  // (not a SlideOut) with the contact's context preloaded, same reasoning
-  // as "Ask about" — the user shouldn't have to leave the record to
-  // compose. No dedicated composition/channel component exists in the repo
-  // yet, so the SidePanel body is a PLACEHOLDER (Textarea, disabled) —
-  // // TODO: confirmar canales disponibles y componente de composición.
+  // Block 6 — Message (Type 5 interaction): opens a SidePanel (not a
+  // SlideOut) with the contact's context preloaded, same reasoning as "Ask
+  // about" — the user shouldn't have to leave the record to compose. The
+  // Textarea itself is a real controlled field with a coherent, record-
+  // specific draft (RH_MESSAGE_DRAFT below) — only the channel-resolution/
+  // send pipeline is still a TODO, since no dedicated component for that
+  // exists in the repo yet. // TODO: confirmar canales disponibles y
+  // componente de composición real cuando exista en el repo.
   const [rhMessageFor, setRhMessageFor] = useState<string | null>(null)
+  // Real controlled field (this pass) — pre-filled from RH_MESSAGE_DRAFT so
+  // the panel opens with a coherent, record-specific draft instead of a
+  // blank/disabled placeholder; the viewer can still edit it freely.
+  const [rhMessageDraft, setRhMessageDraft] = useState("")
+  const [rhMessageSent, setRhMessageSent] = useState(false)
   const rhMessageAction = (recordName: string): RecordAction[] => [
     {
       label: "Message",
-      onClick: () => setRhMessageFor(recordName),
+      onClick: () => { setRhMessageFor(recordName); setRhMessageDraft(RH_MESSAGE_DRAFT[recordName] ?? ""); setRhMessageSent(false) },
       // DECISION FLAGGED — hypothesis, not explicitly confirmed: contacting
       // a record doesn't modify it, so Message stays available even when
       // the record is locked (unlike write actions in the overflow menu).
@@ -33115,7 +33354,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     },
   ]
 
-  const pgName = pgVariant === "ucp" ? RH_UCP.name : pgVariant === "uvp" ? RH_UVP.name : pgVariant === "patient" ? RH_PATIENT.name : pgVariant === "citizen" ? RH_CITIZEN.name : RH_UEP.name
+  const pgName = RH_NAME[pgVariant]
   const pgRecordFields = pgVariant === "uep" && pgMasked ? RH_UEP_MASKED_FIELDS : RH_RECORD_FIELDS[pgVariant]
   const openVariant = rhOpenVariant ?? "uep"
   const openWorkflow = RH_WORKFLOWS[openVariant]
@@ -33221,6 +33460,32 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Third agnosticism example — an education vertical, same component</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Mock data — not confirmed AIMS OS content. A fourth distinct entity type (<code>Student</code>, <code>GraduationCap</code> icon), a fourth distinct RECORD shape (Enrollment ID/Academic Advisor/GPA/Expected Graduation, sourced from a Campus SIS — not any Work Surfaces or Patient/Citizen system). No intervention pending here on purpose — same "zone fully omitted, not shown empty" case as UVP above, on a 4th vertical.
+            </p>
+            <RecordHeader name={RH_STUDENT.name} entityType={RH_ENTITY_TYPE.student} recordFields={RH_RECORD_FIELDS.student} defaultExpanded
+              assignedAgent={rhAssignedAgent("student", RH_STUDENT.name)}
+              actions={rhMessageAction(RH_STUDENT.name)}
+              agenticSystem={rhAgenticSystem("student")}
+              intervention={rhIntervention("student")}
+              onProvenanceOpen={() => rhOpenProvenance("student")} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Fourth agnosticism example — a non-person entity, same component</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Mock data — not confirmed AIMS OS content. The strongest agnosticism proof: this "record" isn't a person at all — it's a piece of equipment (<code>Asset</code>, <code>Cpu</code> icon), monitored by <code>Predictive Maintenance AI</code> instead of assigned to a human colleague. Nothing in the Identity row, Avatar, or RECORD grid assumes a human subject — the initials avatar renders fine from "Pump Station 12" the same way it does from a person's name.
+            </p>
+            <RecordHeader name={RH_ASSET.name} entityType={RH_ENTITY_TYPE.asset} recordFields={RH_RECORD_FIELDS.asset} defaultExpanded
+              assignedAgent={rhAssignedAgent("asset", RH_ASSET.name)}
+              actions={rhMessageAction(RH_ASSET.name)}
+              agenticSystem={rhAgenticSystem("asset")}
+              intervention={rhIntervention("asset")}
+              onProvenanceOpen={() => rhOpenProvenance("asset")} />
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Law 4 — PII masking, same field in 2 entitlement states</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Identical record to UEP above, except <code>accessRole</code> is now the SAME RecordField constructed in its masked state — a lower-permission viewer sees this instead of "Admin." The origin badge still renders (Law 1 applies regardless of masking).
@@ -33236,6 +33501,14 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             rhAssignedAgent={rhAssignedAgent}
             rhAgenticSystem={rhAgenticSystem}
             rhMessageAction={rhMessageAction}
+          />
+
+          <RecordHeaderFlowsSection
+            rhAssignedAgent={rhAssignedAgent}
+            rhAgenticSystem={rhAgenticSystem}
+            rhIntervention={rhIntervention}
+            rhOpenReview={rhOpenReview}
+            rhOpenAgent={rhOpenAgent}
           />
 
           <section>
@@ -33287,10 +33560,11 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 Playground on this page) rather than inventing a new selector.
                 Both groups drive the SAME pgVariant state — separating them
                 is purely about what they mean: "Work Surfaces" are this
-                card's 3 native entity shapes; "Otros mercados" exist ONLY to
-                prove the same skeleton tolerates a genuinely different
-                vertical, not to suggest AIMS OS ships Patient/Citizen as
-                additional native types. */}
+                card's 3 native entity shapes; "Other Markets" exist ONLY to
+                prove the same skeleton tolerates genuinely different
+                verticals — including a non-person entity (Asset) — not to
+                suggest AIMS OS ships any of them as additional native
+                types. */}
             <div className="flex flex-col gap-[8px]">
               <CtrlGroup<RhDemoKey>
                 label="Work Surfaces"
@@ -33303,12 +33577,14 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ]}
               />
               <CtrlGroup<RhDemoKey>
-                label="Otros mercados"
+                label="Other Markets"
                 value={pgVariant}
                 onChange={setPgVariant}
                 options={[
                   { value: "patient", label: "Patient" },
                   { value: "citizen", label: "Citizen" },
+                  { value: "student", label: "Student" },
+                  { value: "asset", label: "Asset" },
                 ]}
               />
             </div>
@@ -33403,7 +33679,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
               {[
                 ["\"Ask about {name}\" / \"Ask AI\"", "SidePanel", "Chat with assignedAgent — PLACEHOLDER body only (// TODO: reemplazar con el componente de Chat cuando exista en el repo). No Chat component exists anywhere in src/components/ui/ yet, checked directly. SidePanel (not SlideOut) — docked, no backdrop, page stays visible/usable underneath."],
-                ["Message (contact CTA)", "SidePanel", "Block 6 — composition SidePanel with the contact's context preloaded (Textarea PLACEHOLDER, disabled — // TODO: confirmar canales disponibles y componente de composición). Same SidePanel-not-SlideOut reasoning as \"Ask about.\" Disables (with a Tooltip explaining why) for no channel on file or no permission to contact — never silently hidden. Stays enabled when the record is Locked (contacting isn't editing — // TODO: confirmar) and when the record's own PII is masked (Law 4 resolves the real channel at send-time, not display-time)."],
+                ["Message (contact CTA)", "SidePanel", "Block 6 — composition SidePanel with the contact's context preloaded. The Textarea is a real controlled field, pre-filled with a draft that reflects this record's own governed content (RH_MESSAGE_DRAFT) — not a disabled filler; Send enables once there's content and shows the same confirmation-banner pattern as Approve/Dismiss. Only the real channel-resolution/send pipeline is still // TODO: confirmar canales disponibles y componente de composición real. Same SidePanel-not-SlideOut reasoning as \"Ask about.\" Disables (with a Tooltip explaining why) for no channel on file or no permission to contact — never silently hidden. Stays enabled when the record is Locked (contacting isn't editing — // TODO: confirmar) and when the record's own PII is masked (Law 4 resolves the real channel at send-time, not display-time)."],
                 ["Identity Tags (agent/workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow/agent → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone's own Button/Review CTA."],
                 ["Active Workflow", "SlideOut", "AI Summary, Details (Started/Next Trigger/Total Runs), Steps (ProcessItem), Recent Runs list. \"···\" menu (View in Agentic Studio) instead of an edit pencil — read-only content. Tooltip on hover explains the destination before clicking."],
                 ["Last Agent", "SlideOut", "AI Summary (session summary), Agent's Latest Finding, Recent Activity list, and a Recommendation modeled to expose an action (actionLabel/onAction). Same \"···\" menu treatment as Active Workflow. Tooltip on hover explains the destination before clicking."],
@@ -33551,7 +33827,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               {[
                 ["1", "Re-verified \"Ask about {name}\" against the reported regression — checked directly in the DOM: it renders SidePanel's own root `<div>` (`--side-panel-bg` tokens, no backdrop, page stays fully interactive underneath), never SlideOut's `<aside>` (which would carry a dimming scrim). The source was already correct; if this still reads as a SlideOut somewhere, it's a stale preview/deploy, not this code — flagging so it isn't re-reported as a fresh bug next round."],
                 ["2", "Confirmed Your Intervention's \"empty\" status already renders through the real InformativeCard (state=\"neutral\", CheckCircle2 icon) — not a custom container. Strengthened the default copy (\"No interventions pending — you're all caught up\") so it explicitly reads as completion, not absence, per the empty-states law."],
-                ["3", "Playground's entity-type selector split into 2 labeled CtrlGroups — \"Work Surfaces\" (Employee/Customer/Vendor, the 3 native shapes) and \"Otros mercados\" (Patient/Citizen, agnosticism proof only) — reusing the repo's own CtrlGroup segmentation pattern (already used by every other component's Playground on this page) instead of inventing a new selector or hand-rolling another button row."],
+                ["3", "Playground's entity-type selector split into 2 labeled CtrlGroups — \"Work Surfaces\" (Employee/Customer/Vendor, the 3 native shapes) and \"Other Markets\" (Patient/Citizen, agnosticism proof only) — reusing the repo's own CtrlGroup segmentation pattern (already used by every other component's Playground on this page) instead of inventing a new selector or hand-rolling another button row."],
                 ["4", "Added Citizen (government) as a second agnosticism example: a third distinct entity type/icon, a third distinct source system (National Registry, not Workday/Okta/Salesforce/NetSuite/Ariba/Epic), a third distinct RECORD shape — same skeleton, zero changes to record-header.tsx. Also the real example of Block 3's N-intervention case (2 pending at once)."],
                 ["5", "Your Intervention's \"pending\" status now models N items (InterventionItem[]), not just 1 — each keeps its own severity and its own Review action. 0 items → \"empty\" (see #2); exactly 1 → shown alone, no counter; N → the most prioritized shown full-size + a \"+N-1 more\" disclosure that reveals the rest. Deliberately a disclosure, not a carousel — urgent decisions must be visible at a glance (how many, that they exist), never hidden behind a swipe. See the States gallery's #14 and the Citizen example above for both a synthetic and a real-content case."],
               ].map(([n, change], i) => (
@@ -33673,6 +33949,104 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             </div>
           </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">How to compose this component — the contract for humans and AI</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[720px]">
+              This is the capstone reference: everything a dev or an AI model needs to generate a new case (a new entity type, a new field, a new state) without touching record-header.tsx. If a case doesn't fit anywhere below, that's a real component gap — flag it, don't improvise past this contract.
+            </p>
+
+            <p className="text-[12px] font-semibold mb-[8px]" style={{ color: "var(--foreground)" }}>1 — The dimensions</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[16px]">
+              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Dimension", "What varies vs. what's fixed"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Entity type", "Extensible, never a closed enum — entityType is just { icon, label }, host-defined. Employee/Customer/Vendor are 3 native shapes; Patient/Citizen/Student/Asset (Asset isn't even a person) are proof it takes any vertical with zero code changes here."],
+                ["Zones present", "Agentic System / Your Intervention / Record are each independently OPTIONAL — omitting the prop entirely means \"this entity type doesn't use this zone,\" and it doesn't render, full stop. A record can have 0, 1, 2, or all 3. Never force a zone with fake/empty content just to fill space."],
+                ["Signal types", "Exactly 3 colors with FIXED semantics, never entity-bound: purple = agent, light blue = workflow, amber = HTL/intervention. A new vertical reuses these meanings — it never invents a 4th color or reassigns what a color means."],
+                ["Record field types", "Every field is the SAME shape (RecordField) — there's no separate \"text field\" vs. \"date field\" type. What varies: hasDestination (true/omitted = relational, opens Data Provenance; false = a plain descriptive fact — a pure date, a pure figure, nothing further to show) and state (hydrated vs. masked, Law 4). Icon + provenance are mandatory on every field regardless."],
+                ["States", "Each zone has its own state union, entirely independent of entity type — pending/empty/loading/no-permission/error/resolved-elsewhere for Your Intervention; ready/empty/loading for Agentic System. See the States gallery above for every one rendered live."],
+              ].map(([dim, desc], i) => (
+                <div key={dim} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{dim}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[12px] font-semibold mb-[8px]" style={{ color: "var(--foreground)" }}>2 — The data contract</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[16px]">
+              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Prop", "Structure"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["name / entityType", "name: string. entityType: { icon: LucideIcon, label: string } — that's the entire \"what kind of record is this\" contract."],
+                ["recordFields", "RecordField[] — { label, icon, value, state: \"hydrated\"|\"masked\", maskedValue?, provenance: { system, systemAbbr, modelVersion, syncedAgo }, hasDestination? }. Omit or pass [] to skip the RECORD zone entirely."],
+                ["assignedAgent", "AssignedAgent | null — { id, name, onOpenChat }. Required as a PROP (every caller must decide), but the VALUE can be null for a record with no agent yet — renders the same button, disabled, with a Tooltip explaining why. Never a silently missing button."],
+                ["intervention", "PendingIntervention | undefined. Omit entirely to skip the zone. \"pending\" status: { items: InterventionItem[] } — each { id, description, severity, onReview }, host-sorted by priority. Other statuses (empty/loading/no-permission/error/resolved-elsewhere) need their own specific fields — see record-header.tsx's own doc comment on the type."],
+                ["agenticSystem", "AgenticSystemInfo | undefined. Omit entirely to skip the zone. { activeWorkflow?: {name, onOpen?}, lastAgent?: {name, onOpen?} } for the ready case, plus \"empty\"/\"loading\" statuses."],
+                ["onProvenanceOpen / locked / labels", "onProvenanceOpen: () => void — opens Data Provenance for the whole RECORD zone (Law 2). locked: boolean — disables write actions, never read-only surfaces. labels: { agenticSystem?, intervention?, record? } — i18n-ready zone heading overrides."],
+              ].map(([prop, desc], i) => (
+                <div key={prop} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]"><code>{prop}</code></div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-md px-[14px] py-[12px] mb-[16px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>What this component does NOT decide:</strong> permissions/entitlements (who can see or approve what), PII masking resolution (whether a field is hydrated or masked is decided upstream — this card only renders whichever state it's handed, Law 4), and execution (approving/dismissing a decision, sending a message, running a workflow — every one of those is a callback the host implements; RecordHeader only exposes the button and the state, never the side effect). If a case needs the component itself to decide any of these, that's a signal the case belongs in the host, not here.
+              </p>
+            </div>
+
+            <p className="text-[12px] font-semibold mb-[8px]" style={{ color: "var(--foreground)" }}>3 — The content rule: does this field earn its place?</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
+              Every RECORD field has to answer that entity type's own central question — not just "is this a true fact about the record." A fact can be true and still not belong in the header.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[110px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Entity type", "Central question"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Customer", "Is the account healthy, and what does it need from us right now?"],
+                ["Employee", "How are they doing, and what do I need to manage on their behalf?"],
+                ["Patient", "What's their status, and what needs clinical attention right now?"],
+                ["Citizen", "What's the status of their case with us, and what's blocking it?"],
+                ["Asset", "Is it operating normally, and what needs facilities' attention right now?"],
+              ].map(([type, q], i) => (
+                <div key={type} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{type}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{q}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[720px]">
+              A field that answers the question becomes a RECORD field here. A field that's true but doesn't — an internal ID nobody acts on, a historical stat, a setting that never changes — belongs on the detail/Overview tab, not the header. When in doubt, ask: "if this were missing, would the viewer be missing something they need to act right now?" If no, it doesn't belong here.
+            </p>
+
+            <p className="text-[12px] font-semibold mb-[8px]" style={{ color: "var(--foreground)" }}>4 — How to add a new entity type (composition only, no code changes here)</p>
+            <ol className="flex flex-col gap-[6px] mb-[4px]">
+              {[
+                "Define entityType: pick an icon that reads as that vertical at a glance (Stethoscope for Patient, Landmark for Citizen, Cpu for Asset — never reuse an icon that already means something else in this file) and a plain-language label.",
+                "Decide which zones this entity type actually has — pass only those props. No agentic layer for this vertical yet? Omit agenticSystem entirely; don't fake an \"empty\" state just to look complete.",
+                "Build recordFields by running every candidate field through the content rule above (step 3) — keep only what answers the central question. Each field needs its own FieldProvenance (Law 1) and a hasDestination call (does it open Data Provenance, or is it a plain fact?).",
+                "Assign signal colors by SIGNAL TYPE, not by vertical — an agent is always purple, a workflow is always light blue, an HTL item is always amber, regardless of what the entity type is.",
+                "Override labels only if the domain has better names for the 3 zone headings (e.g. Patient's \"Patient Chart\" instead of \"Record\") — this is optional, defaults are fine for most cases.",
+                "Never edit record-header.tsx. If a case genuinely can't be expressed with the props above, that's a real gap — flag it (// DS-GAP / // TODO) instead of special-casing the component for one entity type.",
+              ].map((step, i) => (
+                <li key={i} className="text-[12px] text-[var(--field-supporting)] leading-[1.6] flex gap-[8px]">
+                  <span className="shrink-0 font-semibold" style={{ color: "var(--foreground)" }}>{i + 1}.</span>{step}
+                </li>
+              ))}
+            </ol>
+          </section>
         </div>
       )}
 
@@ -33714,11 +34088,18 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         document.body,
       )}
 
-      {/* ── Message (Block 6, this pass) — Type 5 interaction. Same reasoning
-           as "Ask about" above: a SidePanel, not a SlideOut, so the record
-           stays visible while composing. No dedicated composition/channel
-           component exists in the repo yet — Textarea placeholder, disabled.
-           // TODO: confirmar canales disponibles y componente de composición. */}
+      {/* ── Message (Block 6). Same reasoning as "Ask about" above: a
+           SidePanel, not a SlideOut, so the record stays visible while
+           composing. The Textarea is a real controlled field now (this
+           pass) — typeable, pre-filled with a draft that reflects this
+           record's own governed content (RH_MESSAGE_DRAFT), not a disabled
+           filler. Send enables once there's content and reuses the same
+           confirmation-banner convention as Pending Decisions' Approve/
+           Dismiss below, so both governed flows on this page speak the
+           same visual language. No dedicated channel-resolution/composition
+           component exists in the repo yet, so Send only flips local state
+           — // TODO: confirmar canales disponibles y componente de
+           composición real cuando exista en el repo. */}
       {rhMessageFor && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[10005] flex justify-end pointer-events-none">
           <div className="pointer-events-auto h-full">
@@ -33733,16 +34114,34 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               footer={
                 <div className="flex items-center gap-[8px] w-full">
                   <Button variant="secondary" size="sm" onClick={() => setRhMessageFor(null)}>Cancel</Button>
-                  {/* TODO: confirmar canales disponibles y componente de composición */}
-                  <Button variant="primary" size="sm" disabled className="flex-1">Send</Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={rhMessageSent || rhMessageDraft.trim().length === 0}
+                    className="flex-1"
+                    onClick={() => setRhMessageSent(true)}
+                  >
+                    {rhMessageSent ? "Sent" : "Send"}
+                  </Button>
                 </div>
               }
             >
               <div className="flex items-center h-[32px]">
                 <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Message</span>
               </div>
-              {/* TODO: confirmar canales disponibles y componente de composición */}
-              <Textarea placeholder={`Write a message to ${rhMessageFor}…`} className="mt-[8px]" rows={6} disabled />
+              <Textarea
+                placeholder={`Write a message to ${rhMessageFor}…`}
+                className="mt-[8px]"
+                rows={6}
+                value={rhMessageDraft}
+                onChange={e => setRhMessageDraft(e.target.value)}
+                disabled={rhMessageSent}
+              />
+              {rhMessageSent && (
+                <div className="rounded-[8px] px-[12px] py-[10px] mt-[8px]" style={{ background: "var(--tag-informative-bg)", color: "var(--tag-informative-fg)" }}>
+                  <p className="text-[13px] font-semibold">Message sent to {rhMessageFor}</p>
+                </div>
+              )}
             </SidePanel>
           </div>
         </div>,
