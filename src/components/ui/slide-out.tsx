@@ -73,6 +73,8 @@ export interface SlideOutProps {
    * still work unchanged.
    */
   onTopButtonClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
+  /** Optional Tooltip content for the top button — explains what it does before the click. Additive/optional; omitted = no Tooltip (unchanged default). */
+  topButtonTooltip?: string
   /** DS prop: close. Show X close button. Default: true */
   showClose?: boolean
 
@@ -132,6 +134,7 @@ export function SlideOut({
   showTopButton = true,
   topButtonIcon,
   onTopButtonClick,
+  topButtonTooltip,
   showClose = true,
   showTabs = true,
   showTab3 = true,
@@ -234,16 +237,19 @@ export function SlideOut({
   )
 
   // ── Icon buttons (topButton + close) ──────────────────────────────────
-  const TopBtn = showTopButton ? (
+  const topBtnButton = showTopButton ? (
     <Button
       variant="tertiary"
       size="sm"
       iconPosition="alone"
       icon={topButtonIcon ?? <Pencil size={14} />}
       onClick={onTopButtonClick}
-      aria-label="Top action"
+      aria-label={topButtonTooltip ?? "Top action"}
     />
   ) : null
+  const TopBtn = topBtnButton && topButtonTooltip ? (
+    <Tooltip content={topButtonTooltip} side="cursor">{topBtnButton}</Tooltip>
+  ) : topBtnButton
 
   const CloseBtn = showClose ? (
     <Button

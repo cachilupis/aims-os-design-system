@@ -29,8 +29,9 @@ export type InformativeCardProps = {
   size?:          InformativeCardSize    // default: "md"
   title:          string
   description?:   string
-  cta?:           { label: string; onClick?: () => void }
-  ctaSecondary?:  { label: string; onClick?: () => void }
+  /** `disabled` is additive/optional — renders the Button disabled (e.g. no permission to act yet). */
+  cta?:           { label: string; onClick?: () => void; disabled?: boolean }
+  ctaSecondary?:  { label: string; onClick?: () => void; disabled?: boolean }
   icon?:          ReactNode              // overrides default state icon
   className?:     string
 }
@@ -102,12 +103,12 @@ function InformativeCard({
       {(ctaSecondary || cta) && (
         <div className="shrink-0 flex items-center gap-[8px]">
           {ctaSecondary && (
-            <Button variant="secondary" size="sm" onClick={ctaSecondary.onClick}>
+            <Button variant="secondary" size="sm" onClick={ctaSecondary.onClick} disabled={ctaSecondary.disabled}>
               {ctaSecondary.label}
             </Button>
           )}
           {cta && (
-            <Button variant="primary" size="sm" onClick={cta.onClick}>
+            <Button variant="primary" size="sm" onClick={cta.onClick} disabled={cta.disabled}>
               {cta.label}
             </Button>
           )}

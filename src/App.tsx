@@ -44,7 +44,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { RecordHeader, RECORD_HEADER_RECOMMENDED_ACTIONS, type RecordHeaderVariant, type UEPRecord, type UCPRecord, type UVPRecord, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo } from "@/components/ui/record-header"
+import { RecordHeader, RECORD_HEADER_RECOMMENDED_ACTIONS, type RecordHeaderEntityType, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent } from "@/components/ui/record-header"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
@@ -32378,6 +32378,27 @@ const sfProv = (syncedAgo: string): FieldProvenance => ({ system: "Salesforce", 
 const nsProv = (syncedAgo: string): FieldProvenance => ({ system: "NetSuite", systemAbbr: "NS", modelVersion: "UCP v1.8", syncedAgo })
 const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba", systemAbbr: "AR", modelVersion: "UVP v1.2", syncedAgo })
 
+// Block 4 (agnosticism) — this demo still shows 3 example entity types (an
+// HR record, a CRM record, a vendor record) to prove the SAME component
+// serves all 3, but RecordHeader itself no longer knows these 3 names.
+// `RhDemoKey` is this DEMO PAGE's own bookkeeping key (App.tsx's problem),
+// not a prop the component reads — RecordHeader only ever sees `name` +
+// `entityType` + `recordFields`, built from these mocks below.
+type RhDemoKey = "uep" | "ucp" | "uvp"
+
+// Entity type icon + label — 100% host-defined (RecordHeaderEntityType).
+// This is exactly the kind of mapping a future host would extend with its
+// own entity types (Patient, Citizen, Student, ...) — RecordHeader itself
+// never enumerates this list.
+const RH_ENTITY_TYPE: Record<RhDemoKey, RecordHeaderEntityType> = {
+  uep: { icon: LucideIcons.User, label: "Employee" },
+  ucp: { icon: LucideIcons.Building2, label: "Customer account" },
+  // DECISION FLAGGED — Truck reads well for THIS demo's vendor (a logistics
+  // company), but "Vendor" as a type isn't always logistics. No DS icon
+  // spec exists yet for vendor-type iconography generically.
+  uvp: { icon: LucideIcons.Truck, label: "Vendor" },
+}
+
 // UEP — the reference variant (brief's own words: "la card de referencia").
 // RECORD fields deliberately follow the brief's literal list (Manager/Access
 // Role/Department/Job Title/Start Date) even though Department and Job
@@ -32389,29 +32410,38 @@ const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba"
 // (defaults true) on Manager/Access Role/Department/Owner/Procurement
 // Owner — those stay clickable, opening Data Provenance. See
 // RecordField.hasDestination's own doc comment in record-header.tsx.
-const RH_UEP: UEPRecord = {
+const RH_UEP = {
   name: "Sarah Chen", role: "Senior Software Engineer", department: "Engineering", location: "Remote — Austin, TX",
-  manager:          { label: "Manager",        icon: LucideIcons.User,        value: "David Kim",                state: "hydrated", provenance: wdProv("2h ago") },
-  accessRole:       { label: "Access Role",     icon: LucideIcons.ShieldCheck, value: "Admin",                    state: "hydrated", provenance: oktaProv("15m ago") },
-  departmentDetail: { label: "Department",      icon: LucideIcons.Building2,   value: "Engineering",              state: "hydrated", provenance: wdProv("2h ago") },
-  jobTitle:         { label: "Job Title",       icon: LucideIcons.Briefcase,   value: "Senior Software Engineer", state: "hydrated", provenance: wdProv("2h ago"), hasDestination: false },
-  startDate:        { label: "Start Date",      icon: LucideIcons.CalendarDays,value: "March 3, 2023",            state: "hydrated", provenance: wdProv("2h ago"), hasDestination: false },
+  manager:          { label: "Manager",        icon: LucideIcons.User,        value: "David Kim",                state: "hydrated", provenance: wdProv("2h ago") } satisfies RecordField,
+  accessRole:       { label: "Access Role",     icon: LucideIcons.ShieldCheck, value: "Admin",                    state: "hydrated", provenance: oktaProv("15m ago") } satisfies RecordField,
+  departmentDetail: { label: "Department",      icon: LucideIcons.Building2,   value: "Engineering",              state: "hydrated", provenance: wdProv("2h ago") } satisfies RecordField,
+  jobTitle:         { label: "Job Title",       icon: LucideIcons.Briefcase,   value: "Senior Software Engineer", state: "hydrated", provenance: wdProv("2h ago"), hasDestination: false } satisfies RecordField,
+  startDate:        { label: "Start Date",      icon: LucideIcons.CalendarDays,value: "March 3, 2023",            state: "hydrated", provenance: wdProv("2h ago"), hasDestination: false } satisfies RecordField,
 }
 
 // UCP (Customer) — EXAMPLE data, not confirmed AIMS OS content.
-const RH_UCP: UCPRecord = {
-  accountName: "Acme Corp", segment: "Enterprise", tier: "Tier 1", accountType: "Direct",
-  owner:       { label: "Owner",        icon: LucideIcons.User,          value: "Jamie Rivera", state: "hydrated", provenance: sfProv("30m ago") },
-  renewalDate: { label: "Renewal Date", icon: LucideIcons.CalendarClock, value: "Sep 2, 2026",  state: "hydrated", provenance: sfProv("30m ago"), hasDestination: false },
-  arr:         { label: "ARR",          icon: LucideIcons.DollarSign,    value: "$220,800",     state: "hydrated", provenance: nsProv("6h ago"), hasDestination: false },
+const RH_UCP = {
+  name: "Acme Corp", segment: "Enterprise", tier: "Tier 1", accountType: "Direct",
+  owner:       { label: "Owner",        icon: LucideIcons.User,          value: "Jamie Rivera", state: "hydrated", provenance: sfProv("30m ago") } satisfies RecordField,
+  renewalDate: { label: "Renewal Date", icon: LucideIcons.CalendarClock, value: "Sep 2, 2026",  state: "hydrated", provenance: sfProv("30m ago"), hasDestination: false } satisfies RecordField,
+  arr:         { label: "ARR",          icon: LucideIcons.DollarSign,    value: "$220,800",     state: "hydrated", provenance: nsProv("6h ago"), hasDestination: false } satisfies RecordField,
 }
 
 // UVP (Vendor) — EXAMPLE data, not confirmed AIMS OS content.
-const RH_UVP: UVPRecord = {
+const RH_UVP = {
   name: "Meridian Logistics", vendorType: "Logistics", contractStatus: "Active", category: "Strategic",
-  procurementOwner: { label: "Procurement Owner", icon: LucideIcons.User,         value: "Alex Torres",   state: "hydrated", provenance: aribaProv("4h ago") },
-  contractEndDate:  { label: "Contract End",      icon: LucideIcons.CalendarDays, value: "Dec 31, 2026",  state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false },
-  spendYtd:         { label: "Spend YTD",         icon: LucideIcons.DollarSign,   value: "$1.2M",         state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false },
+  procurementOwner: { label: "Procurement Owner", icon: LucideIcons.User,         value: "Alex Torres",   state: "hydrated", provenance: aribaProv("4h ago") } satisfies RecordField,
+  contractEndDate:  { label: "Contract End",      icon: LucideIcons.CalendarDays, value: "Dec 31, 2026",  state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false } satisfies RecordField,
+  spendYtd:         { label: "Spend YTD",         icon: LucideIcons.DollarSign,   value: "$1.2M",         state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false } satisfies RecordField,
+}
+
+// Record zone — the RECORD grid is a plain RecordField[] the host builds
+// directly (Block 4: no fixed "employee field" structure inside the
+// component anymore).
+const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
+  uep: [RH_UEP.manager, RH_UEP.accessRole, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate],
+  ucp: [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr],
+  uvp: [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd],
 }
 
 // Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
@@ -32419,14 +32449,12 @@ const RH_UVP: UVPRecord = {
 // rule concretely without redesigning the reference example itself. The
 // masking decision itself is never made here — this mock simply represents
 // what a lower-permission viewer would already have been handed.
-const RH_UEP_MASKED: UEPRecord = {
-  ...RH_UEP,
-  accessRole: { label: "Access Role", icon: LucideIcons.ShieldCheck, value: "Admin", state: "masked", maskedValue: "•••• (restricted)", provenance: oktaProv("15m ago") },
-}
+const RH_UEP_MASKED_ACCESS_ROLE: RecordField = { label: "Access Role", icon: LucideIcons.ShieldCheck, value: "Admin", state: "masked", maskedValue: "•••• (restricted)", provenance: oktaProv("15m ago") }
+const RH_UEP_MASKED_FIELDS: RecordField[] = [RH_UEP.manager, RH_UEP_MASKED_ACCESS_ROLE, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate]
 
-// Assigned AI agent — one per variant, same shape (see AssignedAgent in
+// Assigned AI agent — one per demo entity, same shape (see AssignedAgent in
 // record-header.tsx). onOpenChat is wired inside RecordHeaderPage below.
-const RH_AGENTS: Record<RecordHeaderVariant, { id: string; name: string }> = {
+const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
   uep: { id: "agent-people-sync",  name: "People Sync" },
   ucp: { id: "agent-renewal",      name: "Renewal Copilot" },
   uvp: { id: "agent-procurement",  name: "Procurement Copilot" },
@@ -32455,7 +32483,7 @@ type WorkflowDetail = {
   recentRuns: { date: string; outcome: "success" | "error" }[]
 }
 
-const RH_WORKFLOWS: Record<RecordHeaderVariant, WorkflowDetail> = {
+const RH_WORKFLOWS: Record<RhDemoKey, WorkflowDetail> = {
   uep: {
     name: "Access Recertification", owner: "People Sync", started: "Aug 12, 2026", nextTrigger: "Sep 12, 2026 (monthly)",
     aiSummary: "This workflow re-validates Sarah Chen's access against her current role every 30 days. It's currently paused, awaiting her manager's decision on the flagged Billing repo grant — nothing will change in Okta until that decision lands.",
@@ -32514,7 +32542,7 @@ type AgentDetail = {
   recentActivity: { date: string; label: string }[]
 }
 
-const RH_AGENT_DETAILS: Record<RecordHeaderVariant, AgentDetail> = {
+const RH_AGENT_DETAILS: Record<RhDemoKey, AgentDetail> = {
   uep: {
     agentName: "People Sync",
     sessionSummary: "Reviewed Sarah Chen's access grants against her current role and department after a lateral move into Platform Infra 2 weeks ago.",
@@ -32548,7 +32576,11 @@ const RH_AGENT_DETAILS: Record<RecordHeaderVariant, AgentDetail> = {
   },
 }
 
-const RH_INTERVENTIONS: Partial<Record<RecordHeaderVariant, PendingIntervention & { detail: string; requestedBy: string; impact: string; history: { date: string; label: string }[] }>> = {
+// Extract<PendingIntervention, {count: number}> — the "pending" union
+// member specifically, so this intersection doesn't distribute over the
+// other 5 states (empty/loading/no-permission/error/resolved-elsewhere),
+// none of which have `count`/`severity` to intersect with.
+const RH_INTERVENTIONS: Partial<Record<RhDemoKey, Extract<PendingIntervention, { count: number }> & { detail: string; requestedBy: string; impact: string; history: { date: string; label: string }[] }>> = {
   uep: {
     count: 1, severity: "high",
     description: "Elevated access request needs manager approval before it takes effect.",
@@ -32579,9 +32611,13 @@ const RH_INTERVENTIONS: Partial<Record<RecordHeaderVariant, PendingIntervention 
 // of data the card already cites via each field's badge/Tooltip, not a
 // second, separate source of truth.
 function ProvenanceRow({ field }: { field: RecordField }) {
+  const FieldIcon = field.icon
   return (
-    <div className="flex flex-col gap-[8px] pb-[16px] mb-[16px]" style={{ borderBottom: "0.5px solid var(--table-border)" }}>
-      <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{field.label}</span>
+    <CardContainer size="sm" variant="default" className="mb-[8px]">
+      <div className="flex items-center gap-[6px] mb-[8px]">
+        <FieldIcon size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />
+        <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{field.label}</span>
+      </div>
       <div className="grid grid-cols-[70px_1fr] gap-y-[6px] text-[12px]">
         <span style={{ color: "var(--field-supporting)" }}>Source</span>
         <span style={{ color: "var(--foreground)" }}>{field.provenance.system} · synced {field.provenance.syncedAgo}</span>
@@ -32590,7 +32626,7 @@ function ProvenanceRow({ field }: { field: RecordField }) {
         <span style={{ color: "var(--field-supporting)" }}>Displayed</span>
         <span style={{ color: "var(--foreground)" }}>Here, in this card</span>
       </div>
-    </div>
+    </CardContainer>
   )
 }
 
@@ -32625,14 +32661,159 @@ function HeaderContextMenu({
   )
 }
 
+// ── Block 3 — full edge-case states gallery ─────────────────────────────────
+// Dev-facing coverage: every state RecordHeader can render, each labeled, so
+// dev doesn't have to guess what "loading" or "no permission" looks like.
+// Every instance below is collapsed (not defaultExpanded) except where a
+// caption specifically calls out the collapsed-tags look — expanding is
+// always still available via the disclosure chevron, same as production.
+function RecordHeaderStatesGallery({
+  rhAssignedAgent,
+  rhAgenticSystem,
+}: {
+  rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent
+  rhAgenticSystem: (v: RhDemoKey) => AgenticSystemInfo
+}) {
+  const overflowFields: RecordField[] = [
+    {
+      label: "Job Title", icon: LucideIcons.Briefcase,
+      value: "Principal Staff Software Engineer, Platform Infrastructure & Reliability Engineering",
+      state: "hydrated", provenance: wdProv("2h ago"), hasDestination: false,
+    },
+    { label: "Manager", icon: LucideIcons.User, value: "David Kim", state: "hydrated", provenance: wdProv("2h ago") },
+  ]
+
+  return (
+    <section>
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">States — full coverage, not just the happy path</p>
+      <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[720px]">
+        Every state this component can render, labeled, with realistic mock data — for dev to see the full surface, not just the demo's default "everything is fine" cards above.
+      </p>
+      <div className="grid grid-cols-2 gap-[24px]">
+
+        <div className="col-span-2">
+          {/* col-span-2 — this card needs to render above
+              COLLAPSE_HIDE_TAGS_WIDTH (560px) or the identity tags this
+              example exists to show auto-hide, defeating its own point. */}
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">1 · Collapsed — governance-state Tags visible</p>
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="attention"
+            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={rhAgenticSystem("uep")}
+            intervention={{ count: 1, description: "Elevated access request needs manager approval.", severity: "high", onReview: () => {} }} />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">2 · Your Intervention — empty (genuinely nothing pending)</p>
+          <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} statusDot="success" defaultExpanded
+            assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={rhAgenticSystem("uvp")}
+            intervention={{ status: "empty", message: "No interventions pending — nothing awaiting your review right now." }} />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">3 · Agentic System — empty (freshly imported record)</p>
+          <RecordHeader name="Jordan Ellis" entityType={RH_ENTITY_TYPE.uep} recordFields={[]} statusDot="neutral" defaultExpanded
+            assignedAgent={null}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={{ status: "empty" }} />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">4 · Loading — agent/NBA still computing (Skeleton)</p>
+          <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} statusDot="neutral" defaultExpanded
+            assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={{ status: "loading" }}
+            intervention={{ status: "loading" }} />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">5 · No permission to approve — Review disabled, Escalate offered</p>
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="attention" defaultExpanded
+            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={rhAgenticSystem("uep")}
+            intervention={{
+              status: "no-permission",
+              description: "Sarah's request needs a Tier 2 approver — you're not currently one for the Billing service repo.",
+              onEscalate: () => {},
+            }} />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">6 · Error approving — amber InformativeCard, never a red toast</p>
+          <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} statusDot="neutral" defaultExpanded
+            assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={rhAgenticSystem("ucp")}
+            intervention={{
+              status: "error",
+              message: "The approval didn't go through — the deal desk system timed out. No changes were made.",
+              onRetry: () => {},
+            }} />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">7 · Stale — already resolved by someone else, no Approve button</p>
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="success" defaultExpanded
+            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={rhAgenticSystem("uep")}
+            intervention={{
+              status: "resolved-elsewhere",
+              resolvedBy: "David Kim", resolvedAgo: "12 minutes ago",
+              description: "The Billing service repo access request was already approved.",
+            }} />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">8 · PII masked — same field, 2 entitlement states (Law 4)</p>
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} statusDot="attention" defaultExpanded
+            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={rhAgenticSystem("uep")} />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">
+            9 · Locked — write actions disabled, read-only surfaces stay active
+          </p>
+          {/* DECISION FLAGGED — hypothesis, not explicitly confirmed: see
+              RecordHeaderProps.locked's own doc comment in record-header.tsx.
+              // TODO: confirmar con Michael. */}
+          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="neutral" locked defaultExpanded
+            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+            agenticSystem={rhAgenticSystem("uep")} />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">10 · Overflow — long name + long value, name never truncated</p>
+          <RecordHeader
+            name="Alexandria Christodoulopoulos-Fitzgerald-Whitmore"
+            entityType={RH_ENTITY_TYPE.uep}
+            recordFields={overflowFields}
+            statusDot="neutral" defaultExpanded
+            assignedAgent={rhAssignedAgent("uep", "Alexandria Christodoulopoulos-Fitzgerald-Whitmore")}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
+          />
+        </div>
+
+      </div>
+    </section>
+  )
+}
+
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
-  const [pgVariant, setPgVariant] = useState<RecordHeaderVariant>("uep")
+  const [pgVariant, setPgVariant] = useState<RhDemoKey>("uep")
   const [pgMasked, setPgMasked] = useState(false)
 
-  // Governed SlideOut state — one boolean per flow, reused across variants
-  // (content keyed by whichever variant/record was actually clicked).
-  const [rhOpenVariant, setRhOpenVariant] = useState<RecordHeaderVariant | null>(null)
+  // Governed SlideOut state — one boolean per flow, reused across demo
+  // entities (content keyed by whichever one was actually clicked).
+  const [rhOpenVariant, setRhOpenVariant] = useState<RhDemoKey | null>(null)
   const [rhWorkflowOpen, setRhWorkflowOpen] = useState(false)
   const [rhAgentOpen, setRhAgentOpen] = useState(false)
   const [rhReviewOpen, setRhReviewOpen] = useState(false)
@@ -32652,16 +32833,16 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   // of resolving immediately.
   const [rhConfirmAction, setRhConfirmAction] = useState<"approved" | "dismissed" | null>(null)
 
-  const rhOpenWorkflow = (v: RecordHeaderVariant) => { setRhOpenVariant(v); setRhWorkflowOpen(true) }
-  const rhOpenAgent = (v: RecordHeaderVariant) => { setRhOpenVariant(v); setRhAgentOpen(true) }
-  const rhOpenReview = (v: RecordHeaderVariant) => { setRhOpenVariant(v); setRhReviewOpen(true); setRhReviewResolved(null) }
-  const rhOpenProvenance = (v: RecordHeaderVariant) => { setRhOpenVariant(v); setRhProvenanceOpen(true) }
+  const rhOpenWorkflow = (v: RhDemoKey) => { setRhOpenVariant(v); setRhWorkflowOpen(true) }
+  const rhOpenAgent = (v: RhDemoKey) => { setRhOpenVariant(v); setRhAgentOpen(true) }
+  const rhOpenReview = (v: RhDemoKey) => { setRhOpenVariant(v); setRhReviewOpen(true); setRhReviewResolved(null) }
+  const rhOpenProvenance = (v: RhDemoKey) => { setRhOpenVariant(v); setRhProvenanceOpen(true) }
 
-  const rhAgenticSystem = (v: RecordHeaderVariant): AgenticSystemInfo => ({
+  const rhAgenticSystem = (v: RhDemoKey): AgenticSystemInfo => ({
     activeWorkflow: { name: RH_WORKFLOWS[v].name, onOpen: () => rhOpenWorkflow(v) },
     lastAgent: { name: RH_AGENT_DETAILS[v].agentName, onOpen: () => rhOpenAgent(v) },
   })
-  const rhIntervention = (v: RecordHeaderVariant): PendingIntervention | undefined => {
+  const rhIntervention = (v: RhDemoKey): PendingIntervention | undefined => {
     const src = RH_INTERVENTIONS[v]
     return src ? { count: src.count, severity: src.severity, description: src.description, onReview: () => rhOpenReview(v) } : undefined
   }
@@ -32671,22 +32852,18 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   // the generic SidePanel — same "reuse what exists" rule every overlay
   // demo on this page already follows.
   const [rhChatWith, setRhChatWith] = useState<{ id: string; name: string; recordName: string } | null>(null)
-  const rhAssignedAgent = (v: RecordHeaderVariant, recordName: string) => ({
+  const rhAssignedAgent = (v: RhDemoKey, recordName: string) => ({
     ...RH_AGENTS[v],
     onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
   })
 
-  const pgData = pgVariant === "uep" ? (pgMasked ? RH_UEP_MASKED : RH_UEP) : pgVariant === "ucp" ? RH_UCP : RH_UVP
-  const pgName = pgVariant === "ucp" ? (pgData as UCPRecord).accountName : (pgData as UEPRecord | UVPRecord).name
+  const pgName = pgVariant === "ucp" ? RH_UCP.name : pgVariant === "uvp" ? RH_UVP.name : RH_UEP.name
+  const pgRecordFields = pgVariant === "uep" && pgMasked ? RH_UEP_MASKED_FIELDS : RH_RECORD_FIELDS[pgVariant]
   const openVariant = rhOpenVariant ?? "uep"
   const openWorkflow = RH_WORKFLOWS[openVariant]
   const openAgent = RH_AGENT_DETAILS[openVariant]
   const openIntervention = RH_INTERVENTIONS[openVariant]
-  const openRecordFields = openVariant === "uep"
-    ? [RH_UEP.manager, RH_UEP.accessRole, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate]
-    : openVariant === "ucp"
-    ? [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr]
-    : [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd]
+  const openRecordFields = RH_RECORD_FIELDS[openVariant]
 
   return (
     <div>
@@ -32724,9 +32901,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               collapsed; this is a docs-only override. */}
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">UEP — Employee (reference variant)</p>
-            <RecordHeader variant="uep" data={RH_UEP} statusDot="attention" defaultExpanded
+            <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} statusDot="attention" defaultExpanded
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.uep}
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
               agenticSystem={rhAgenticSystem("uep")}
               intervention={rhIntervention("uep")}
               onProvenanceOpen={() => rhOpenProvenance("uep")} />
@@ -32735,9 +32912,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer (example)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
-            <RecordHeader variant="ucp" data={RH_UCP} statusDot="neutral" defaultExpanded
-              assignedAgent={rhAssignedAgent("ucp", RH_UCP.accountName)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.ucp}
+            <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} statusDot="neutral" defaultExpanded
+              assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
               agenticSystem={rhAgenticSystem("ucp")}
               intervention={rhIntervention("ucp")}
               onProvenanceOpen={() => rhOpenProvenance("ucp")} />
@@ -32746,9 +32923,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor (example)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content. No pending intervention here on purpose — the zone is fully omitted, not shown empty.</p>
-            <RecordHeader variant="uvp" data={RH_UVP} statusDot="success" defaultExpanded
+            <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} statusDot="success" defaultExpanded
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.uvp}
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
               agenticSystem={rhAgenticSystem("uvp")}
               intervention={rhIntervention("uvp")}
               onProvenanceOpen={() => rhOpenProvenance("uvp")} />
@@ -32759,32 +32936,17 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Identical record to UEP above, except <code>accessRole</code> is now the SAME RecordField constructed in its masked state — a lower-permission viewer sees this instead of "Admin." The origin badge still renders (Law 1 applies regardless of masking).
             </p>
-            <RecordHeader variant="uep" data={RH_UEP_MASKED} statusDot="attention" defaultExpanded
-              assignedAgent={rhAssignedAgent("uep", RH_UEP_MASKED.name)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.uep}
+            <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} statusDot="attention" defaultExpanded
+              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+              actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
               agenticSystem={rhAgenticSystem("uep")}
               onProvenanceOpen={() => rhOpenProvenance("uep")} />
           </section>
 
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge cases — no agent, Locked</p>
-            <div className="flex flex-col gap-[24px]">
-              <div>
-                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">No assigned agent — trigger disables with a Tooltip, doesn't disappear</p>
-                <RecordHeader variant="ucp" data={RH_UCP} statusDot="neutral"
-                  assignedAgent={null}
-                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.ucp}
-                  agenticSystem={rhAgenticSystem("ucp")} />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">Locked — contact CTA disabled, agent trigger stays interactive</p>
-                <RecordHeader variant="uep" data={RH_UEP} statusDot="neutral" locked
-                  assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-                  actions={RECORD_HEADER_RECOMMENDED_ACTIONS.uep}
-                  agenticSystem={rhAgenticSystem("uep")} />
-              </div>
-            </div>
-          </section>
+          <RecordHeaderStatesGallery
+            rhAssignedAgent={rhAssignedAgent}
+            rhAgenticSystem={rhAgenticSystem}
+          />
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
@@ -32817,11 +32979,12 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
       {tab === "playground" && (
         <div className="flex flex-col gap-[32px]">
           <RecordHeader
-            variant={pgVariant}
-            data={pgData}
+            name={pgName}
+            entityType={RH_ENTITY_TYPE[pgVariant]}
+            recordFields={pgRecordFields}
             statusDot={pgVariant === "ucp" ? "neutral" : pgVariant === "uvp" ? "success" : "attention"}
             assignedAgent={rhAssignedAgent(pgVariant, pgName)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS[pgVariant]}
+            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem(pgVariant)}
             intervention={rhIntervention(pgVariant)}
             onProvenanceOpen={() => rhOpenProvenance(pgVariant)}
@@ -32905,7 +33068,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Skeleton — Identity + 3 expandable zones, one shape for all 3 variants</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Skeleton — Identity + 3 expandable zones, one shape for any entity type</p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
               <div className="grid grid-cols-[160px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
                 {["Zone", "Content"].map(h => (
@@ -32913,10 +33076,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Identity (fixed)", "Avatar · name + statusDot · contact-type icon + Tooltip (was a text badge) · up to 3 governance-state Tags — assigned agent (purple), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → 1 contact CTA (Message) → \"···\" overflow → disclosure chevron."],
-                ["Agentic System",  "Active Workflow + Last Agent, each a Button variant=\"tertiary\" with a leading icon (Workflow/Bot), recolored to match its identity Tag above (light blue / purple), a Tooltip explaining what opens, and a trailing ChevronRight — never a colored card. Opens a SlideOut per item."],
-                ["Your Intervention (conditional)", "Only rendered when there's a real pending decision. Uses the DS's real InformativeCard (state=\"alert\") — never a hand-rolled container. Heading recolored amber + AlertTriangle icon, matching the identity Tag above. Calm/amber token family always (Law 3), regardless of intervention.severity. Review button → Pending Decisions SlideOut."],
-                ["Record",          "Each field with a real destination (RecordField.hasDestination !== false) is a Button variant=\"tertiary\" row — leading field icon, label/value, origin-system badge (Law 1), trailing ChevronRight — opening Data Provenance directly. A plain descriptive fact (hasDestination: false — e.g. Start Date, a pure date) renders as static text instead: no chevron, not a Button, only its badge + value stay Tooltip-hoverable. The (i) icon next to the RECORD heading opens the same panel (Law 2) for every destination field at once."],
+                ["Identity (fixed)", "Avatar · name + statusDot · entity-type icon AND text (not icon-only — a text label sits beside the icon) · up to 3 governance-state Tags — assigned agent (purple), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE (Block 2): clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → 1 contact CTA (Message) → \"···\" overflow → disclosure chevron."],
+                ["Agentic System",  "Active Workflow + Last Agent, each a CardContainer (size=\"sm\") with a HighlightIcon (size=\"sm\", colored: light blue = workflow, purple = agent) + a NEUTRAL tertiary Button beside it — color lives in the icon, never in the button. Also renders \"empty\" (no workflow/agent yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
+                ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default), empty, loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
+                ["Record",          "Each field with a real destination (RecordField.hasDestination !== false) is a Button variant=\"tertiary\" row — leading field icon, label/value, origin-system badge (Law 1), trailing ChevronRight — opening Data Provenance directly. A plain descriptive fact (hasDestination: false — e.g. a pure date) renders as static text instead: no chevron, not a Button, only its badge + value stay Tooltip-hoverable. The (i) icon next to the RECORD heading opens the same panel (Law 2) for every destination field at once. `recordFields` is a plain array the host builds — no fixed \"employee field\" shape inside the component (Block 4)."],
               ].map(([zone, content], i) => (
                 <div key={zone} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{zone}</div>
@@ -32937,12 +33100,12 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               {[
                 ["\"Ask about {name}\" / \"Ask AI\"", "SidePanel", "Chat with assignedAgent — PLACEHOLDER body only (// TODO: reemplazar con el componente de Chat cuando exista en el repo). No Chat component exists anywhere in src/components/ui/ yet, checked directly. SidePanel (not SlideOut) — docked, no backdrop, page stays visible/usable underneath."],
                 ["Message (contact CTA)", "TODO", "Render only — onAction left as // TODO: confirmar flujo real. Contact-channel destination not confirmed."],
-                ["Identity Tags (agent/workflow/HTL)", "Tooltip", "Hover only, not clickable — \"Assigned agent: {name}\", \"Active workflow: {name}\", or the intervention's own description. Their zone below is where you click through."],
+                ["Identity Tags (agent/workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow/agent → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone's own Button/Review CTA."],
                 ["Active Workflow", "SlideOut", "AI Summary, Details (Started/Next Trigger/Total Runs), Steps (ProcessItem), Recent Runs list. \"···\" menu (View in Agentic Studio) instead of an edit pencil — read-only content. Tooltip on hover explains the destination before clicking."],
                 ["Last Agent", "SlideOut", "AI Summary (session summary), Agent's Latest Finding, Recent Activity list, and a Recommendation modeled to expose an action (actionLabel/onAction). Same \"···\" menu treatment as Active Workflow. Tooltip on hover explains the destination before clicking."],
                 ["RECORD field row (hasDestination !== false)", "SlideOut", "Opens \"Data Provenance\" for the whole RECORD zone — same destination as the (i) icon below, not a separate per-field panel. A no-destination field (hasDestination: false) isn't clickable at all — see the Skeleton table's Record row."],
-                ["Review (Your Intervention)", "SlideOut + ModalDialog", "\"Pending Decisions\" — severity as a compact inline Tag (never full-width), full explanation, Requested-by/Impact, Similar Past Decisions. Approve/Dismiss open a ModalDialog confirmation first — a governed decision is never resolved on one click. No edit pencil or menu; the footer CTAs ARE the action surface."],
-                ["(i) provenance icon", "SlideOut", "\"Data Provenance\" — per RECORD field, Source → Model → Displayed-here, reusing the exact same FieldProvenance object as the field's own badge. Read-only viewer, no menu (no confirmed related action to offer)."],
+                ["Review (Your Intervention)", "SlideOut + ModalDialog", "\"Pending Decisions\" — severity as a compact inline Tag (never full-width), full explanation, Requested-by/Impact, Similar Past Decisions. Approve/Dismiss open a ModalDialog confirmation first — a governed decision is never resolved on one click. Header button (ArrowUpRight, Tooltip-explained) jumps to this record's Data Provenance for context — not a generic edit pencil."],
+                ["(i) provenance icon", "SlideOut", "\"Data Provenance\" — per RECORD field, Source → Model → Displayed-here, reusing the exact same FieldProvenance object as the field's own badge, each wrapped in its own CardContainer. Read-only viewer, no menu (no confirmed related action to offer)."],
                 ["Field origin badge (WD/OK/...)", "Tooltip", "On hover: system + model version + \"Synced X ago.\""],
               ].map(([el, dest, content], i) => (
                 <div key={el} className="grid grid-cols-[160px_100px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
@@ -33006,7 +33169,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["1", "Identity Tags recast as governance-state indicators — assigned agent (purple), active workflow (light blue), pending HTL (amber) — instead of plain identity facts. Color + icon carry down into Agentic System's buttons and Your Intervention's heading, so the collapsed summary visibly correlates with its own expanded detail."],
                 ["2", "\"Ask about {name}\" now opens a SidePanel, not a SlideOut — the user can keep reading the page while chatting."],
                 ["3", "Identity block centers vertically against the avatar once expanded (top-aligned while collapsed, where the tags row makes it 2 lines)."],
-                ["4", "Contact type → icon + Tooltip (User/Building2/Truck), replacing the plain text badge."],
+                ["4", "Contact type → icon + Tooltip (User/Building2/Truck), replacing the plain text badge. (Later revised back to icon + visible text — see \"This refinement 3\" below.)"],
                 ["5", "RecordField.hasDestination — a plain descriptive fact (Start Date, a pure date; ARR, a pure figure) renders as static text, no chevron, not a Button; only fields with somewhere real to go stay clickable."],
                 ["6", "Every SlideOut/SidePanel header drops the generic edit pencil — contextual \"···\" menu where a related action genuinely applies (read-only content), nothing at all where it doesn't (pure viewers, or panels whose real actions are already footer CTAs)."],
                 ["7", "SlideOut content is denser: AI Summary cards (Workflow, Agent), Recent Runs / Recent Activity / Similar Past Decisions list sections, Requested-by/Impact details on Pending Decisions."],
@@ -33023,6 +33186,90 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 3 — visual polish + full state coverage + agnosticism</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Change"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "Contact type reverts to icon + visible text (not icon-only) — a text-body-S label sits beside the icon, both wrapped in one Tooltip."],
+                ["2", "Your Intervention's InformativeCard title is normal sentence case (\"1 action awaiting review\"), not literal ALL CAPS. Size stays \"sm\"."],
+                ["3", "Agentic System restructured: each item is a CardContainer (sm) + HighlightIcon (sm, colored) + a neutral tertiary Button — color lives only in the HighlightIcon now, never in the button text/icon."],
+                ["4", "Verified \"Ask about {name}\" still opens a SidePanel (no regression from the prior revision)."],
+                ["5", "Pending Decisions gets a real header button (ArrowUpRight, not a pencil) with a Tooltip, jumping to this record's Data Provenance for context — replacing the prior no-header-action treatment."],
+                ["6", "Data Provenance's per-field rows now render inside a CardContainer (sm) each, not a plain bordered div."],
+                ["7", "Block 2 — every collapsed identity Tag is clickable: expands the card and scrolls/highlights the zone it summarizes. Never opens a panel directly from the tag."],
+                ["8", "Block 3 — full states gallery added to the Overview tab: 10 labeled examples covering collapsed-tags, empty (both zones), loading, no-permission+Escalate, error, resolved-elsewhere, PII masked, Locked, and name/value overflow. See the States table below."],
+                ["9", "Block 4 — agnosticism pass: RecordHeader no longer knows \"uep/ucp/uvp.\" Props are now name + entityType ({icon,label}) + recordFields (RecordField[]) + zone `labels` (i18n-ready) — see the Agnosticism table below."],
+              ].map(([n, change], i) => (
+                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">States — full coverage (Block 3)</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Every state this component can render, live in the Overview tab's "States" section (not just this table) — dev-facing coverage, not just the happy path.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[170px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["State", "What it looks like"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Collapsed, with Tags", "The 3 governance-state Tags (agent/workflow/HTL) visible, colored + iconed, clickable (Block 2)."],
+                ["Your Intervention — empty", "intervention={{status:\"empty\", message?}} — a calm \"nothing pending\" InformativeCard (state=\"neutral\"), not an absent/broken zone."],
+                ["Agentic System — empty", "agenticSystem={{status:\"empty\"}} — a calm \"no workflow/agent yet\" message, e.g. a freshly imported record."],
+                ["Loading", "status=\"loading\" on either zone — Skeleton rows matching the real content's footprint, no layout jump when data arrives."],
+                ["No permission to approve", "intervention={{status:\"no-permission\", description, onEscalate?}} — Review renders disabled (via InformativeCard's own cta.disabled), Escalate offered as the alternate action."],
+                ["Error approving", "intervention={{status:\"error\", message, onRetry?}} — amber InformativeCard (state=\"alert\"), never a red toast."],
+                ["Resolved elsewhere (stale)", "intervention={{status:\"resolved-elsewhere\", resolvedBy, resolvedAgo, description}} — \"Already resolved by {name} · {time}\", no Approve/Review button."],
+                ["PII masked", "A RecordField in state=\"masked\" — same field, 2 entitlement states (Law 4). See the dedicated Law 4 section above too."],
+                ["Locked", "locked — contact CTA + overflow's write actions disable; agent trigger, Agentic System, and RECORD provenance stay active. // TODO: confirmar con Michael — hypothesis, not explicitly confirmed."],
+                ["Overflow — long name/value", "Name wraps (never truncates — no truncate class on that span). Long RECORD values truncate with a Tooltip carrying the full text; long Agentic System item names do the same."],
+              ].map(([state, desc], i) => (
+                <div key={state} className="grid grid-cols-[170px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{state}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Agnosticism — 5 rules (Block 4)</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              This card serves ANY entity type on the platform, not just HR/CRM shapes. These 5 rules are how that's enforced structurally, not just by convention.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[170px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Rule", "How it's enforced"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Conditional zones", "Agentic System / Your Intervention / Record each render only when the host passes that prop at all — omitting a prop means \"this entity type doesn't use this zone,\" not an empty placeholder. Passing it with an \"empty\"/\"loading\" status still renders the zone in that state — see the States table above."],
+                ["Record = generic grid", "`recordFields: RecordField[]` is a plain array the host builds directly (label + icon + value + provenance + optional hasDestination). No fixed \"employee field\" structure (no more UEPRecord.manager, UCPRecord.renewalDate, ...) lives inside record-header.tsx anymore."],
+                ["Entity type is extensible", "`entityType: { icon: LucideIcon, label: string }` comes straight from the host — there's no closed enum of 3 variants inside the component. A host can pass entityType={{icon: Stethoscope, label: \"Patient\"}} today with zero changes to record-header.tsx."],
+                ["Colors = signal type, never industry", "Purple = AI/agent, light blue = workflow, amber = intervention — encode SIGNAL TYPE only. Nothing in record-header.tsx branches color by entity type; confirmed by construction (no entity-type variable exists anywhere near the color tokens)."],
+                ["Zone labels are i18n-ready", "The `labels` prop ({agenticSystem?, intervention?, record?}) overrides the 3 zone headings — translatable/renamable per host, not hardcoded English copy."],
+              ].map(([rule, how], i) => (
+                <div key={rule} className="grid grid-cols-[170px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{rule}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{how}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">PII / masking — Law 4, prepared not wired</p>
             <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
@@ -33032,10 +33279,13 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Variants — UEP / UCP / UVP, one skeleton</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Example entity types — 3 shown, not a closed set (Block 4)</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              UEP/UCP/UVP are this DEMO PAGE's own naming for 3 example entity types (an HR record, a CRM record, a vendor record), proving one skeleton serves all 3 — RecordHeader itself has no memory of these 3 names (see the Agnosticism table above). A 4th entity type is just another <code>entityType</code> + <code>recordFields</code> pair, no component change required.
+            </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
               <div className="grid grid-cols-[70px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Variant", "Content per zone"].map(h => (
+                {["Example", "Content per zone"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
@@ -33291,12 +33541,14 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         showTabs={false}
         showSearchBar={false}
         showChips={false}
-        showTopButton={false}
         showCta={!rhReviewResolved}
         ctaPrimaryLabel="Approve"
         ctaSecondaryLabel="Dismiss"
         onCtaPrimary={() => setRhConfirmAction("approved")}
         onCtaSecondary={() => setRhConfirmAction("dismissed")}
+        topButtonIcon={<LucideIcons.ArrowUpRight size={14} />}
+        topButtonTooltip="Go to this record's governed data — Data Provenance for the field this request affects"
+        onTopButtonClick={() => { setRhReviewOpen(false); rhOpenProvenance(openVariant) }}
       >
         <div className="p-[16px] flex flex-col gap-[16px]">
           {openIntervention && (
