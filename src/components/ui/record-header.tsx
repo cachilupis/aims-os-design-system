@@ -513,6 +513,31 @@ function RecordHeader({
     return () => ro.disconnect()
   }, [])
 
+  // Collapsed identity tags — measured, not guessed (this correction). The
+  // row can hold up to 3 Tags (agent/workflow/HTL) and wraps at
+  // intermediate widths (narrow enough that 3 don't fit on one line, but
+  // not narrow enough to trip COLLAPSE_HIDE_TAGS_WIDTH's full-hide
+  // fallback) — a fixed max-height tall enough for only 1 line clipped the
+  // wrapped 2nd line's tag almost entirely. Measuring the real content
+  // height via ResizeObserver (same pattern as the width measurements
+  // above) means the collapse animation always reserves exactly the room
+  // the tags actually need, 1 line or 2, without guessing a magic number
+  // or reserving dead space when there's nothing to wrap.
+  const tagsRowRef = useRef<HTMLDivElement>(null)
+  const [tagsRowHeight, setTagsRowHeight] = useState(0)
+  useLayoutEffect(() => {
+    const el = tagsRowRef.current
+    if (!el) { setTagsRowHeight(0); return }
+    const measure = () => setTagsRowHeight(el.scrollHeight)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+    // Re-attach whenever the row's own mount condition (below) can flip —
+    // tagsHidden toggling, or a zone's presence/status changing, mounts or
+    // unmounts the ref target, and a plain [] effect would miss that.
+  }, [tagsHidden, assignedAgent, agenticStatus, interventionStatus])
+
   // AI Assistant CTA — "Ask about {firstName}" communicates this chat is
   // scoped to THIS record, not a generic assistant entry point. Falls back
   // to "Ask AI" (+ Tooltip carrying the same context) when the card is
@@ -521,7 +546,7 @@ function RecordHeader({
   const assistantFirstName = name.trim().split(/\s+/)[0] ?? ""
   const assistantUseFallback = assistantShortened || assistantFirstName.length > ASSISTANT_LABEL_MAX_NAME_LENGTH
   const assistantLabel = assistantUseFallback ? "Ask AI" : `Ask about ${assistantFirstName}`
-  const assistantTooltip = `Pregúntale al asistente con contexto de ${name}`
+  const assistantTooltip = `Ask the assistant with ${name}'s context`
 
   return (
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
@@ -536,7 +561,7 @@ function RecordHeader({
         <div className={cn("flex gap-[12px] flex-wrap", expanded ? "items-center" : "items-start")}>
           <AvatarCircle name={name || entityType.label} sizeKey="lg" avatarStyle={hasName ? "text" : "empty"} />
 
-          <div className="flex-1 min-w-0 flex flex-col gap-[6px]">
+          <div className="flex-1 flex flex-col gap-[6px]">
             <div className="flex items-center gap-[12px] min-w-0">
               {/* Overflow — a long name truncates with an ellipsis instead of
                   wrapping/stretching the row; a Tooltip on hover carries the
@@ -582,14 +607,14 @@ function RecordHeader({
                 data that isn't really there. */}
             <div
               style={{
-                maxHeight: expanded ? 0 : 40,
+                maxHeight: expanded ? 0 : tagsRowHeight,
                 opacity: expanded ? 0 : 1,
                 overflow: "hidden",
                 transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease",
               }}
             >
               {!tagsHidden && (assignedAgent || agenticStatus === "ready" || interventionStatus === "pending") && (
-                <div className="flex items-center gap-[6px] flex-wrap">
+                <div ref={tagsRowRef} className="flex items-center gap-[6px] flex-wrap">
                   {assignedAgent && (
                     <Tooltip content={`Assigned agent: ${assignedAgent.name}`} side="cursor">
                       <button

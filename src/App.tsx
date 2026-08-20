@@ -32381,34 +32381,50 @@ const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba"
 // this still renders through the exact same component with zero changes to
 // record-header.tsx, that's the agnosticism claim demonstrated, not asserted.
 const epicProv = (syncedAgo: string): FieldProvenance => ({ system: "Epic", systemAbbr: "EP", modelVersion: "Chart v4.1", syncedAgo })
-// Civic registry — the government-vertical proof example (this pass).
-// Deliberately a THIRD distinct source system, on top of Epic — no reuse
-// of any Work Surfaces or healthcare system name.
-const civicProv = (syncedAgo: string): FieldProvenance => ({ system: "National Registry", systemAbbr: "NR", modelVersion: "CivicOS v1.1", syncedAgo })
-// Campus SIS — the education-vertical proof example (this pass).
-const eduProv = (syncedAgo: string): FieldProvenance => ({ system: "Campus SIS", systemAbbr: "SIS", modelVersion: "Enrollment v3.0", syncedAgo })
-// Asset registry (CMMS) — the strongest agnosticism proof of all: the
-// entity here isn't a person at all. Confirms nothing in this component
-// (Avatar, name, RECORD grid) assumes a human subject.
-const assetProv = (syncedAgo: string): FieldProvenance => ({ system: "Asset Registry", systemAbbr: "AST", modelVersion: "CMMS v2.4", syncedAgo })
+// Insurance vertical (this correction pass) — a claim genuinely spans 2
+// systems of record at once: the claims core (Guidewire) and the policy
+// admin system (Duck Creek). Modeling both, on the SAME record, is the
+// multi-source provenance proof this pass asks for — not just "a new
+// vertical" but "a vertical where Data Provenance has to hold up across
+// more than one source."
+const gwProv = (syncedAgo: string): FieldProvenance => ({ system: "Guidewire", systemAbbr: "GW", modelVersion: "ClaimsCenter v9.0", syncedAgo })
+const dcProv = (syncedAgo: string): FieldProvenance => ({ system: "Duck Creek", systemAbbr: "DC", modelVersion: "Policy v7.2", syncedAgo })
+// Banking vertical (this correction pass) — 3 systems on one borrower: the
+// credit bureau (Experian), the loan origination system (nCino), and core
+// banking (FIS). This is the audit-trail case the brief calls for: every
+// figure a risk exception decision leans on has to be traceable back to
+// which system actually produced it.
+const experianProv = (syncedAgo: string): FieldProvenance => ({ system: "Experian", systemAbbr: "EXP", modelVersion: "Credit v5.0", syncedAgo })
+const ncinoProv = (syncedAgo: string): FieldProvenance => ({ system: "nCino", systemAbbr: "NC", modelVersion: "LOS v3.4", syncedAgo })
+const fisProv = (syncedAgo: string): FieldProvenance => ({ system: "FIS", systemAbbr: "FIS", modelVersion: "Core v2.1", syncedAgo })
+// Automotive vertical (this correction pass) — AIMS OS's own central
+// vertical, per the brief ("raíces en plataformas automotrices, clientes
+// reales del sector"). A repair order draws from the dealer's DMS (CDK
+// Global), a vehicle-history service (Carfax), and the manufacturer's own
+// warranty system — 3 distinct sources on one record, same as Insurance
+// and Banking above.
+const cdkProv = (syncedAgo: string): FieldProvenance => ({ system: "CDK Global", systemAbbr: "CDK", modelVersion: "DMS v11.2", syncedAgo })
+const carfaxProv = (syncedAgo: string): FieldProvenance => ({ system: "Carfax", systemAbbr: "CFX", modelVersion: "History v4.0", syncedAgo })
+const oemProv = (syncedAgo: string): FieldProvenance => ({ system: "OEM Warranty Portal", systemAbbr: "OEM", modelVersion: "Warranty v2.0", syncedAgo })
 
 // This demo page's own scope note (not a component doc — RecordHeader
 // itself never enumerates entity types): UEP/UCP/UVP are the 3 native
 // Work Surfaces entity shapes this card actually ships for. Patient,
-// Citizen, Student, and Asset exist ONLY to prove agnosticism across
-// genuinely different verticals (healthcare, government, education, and —
-// Asset — a non-person entity entirely) — they are demonstration
-// examples, not additional native types, which is why the Playground
-// groups them separately (see the "Work Surfaces" vs. "Other Markets"
-// CtrlGroups).
+// Claim, Borrower, and Repair Order exist ONLY to prove agnosticism across
+// genuinely different verticals — all 4 chosen for the same profile AIMS
+// OS actually targets: entity + workflow + human intervention + governed
+// multi-source data (healthcare, insurance, banking, and automotive,
+// AIMS OS's own central vertical) — they are demonstration examples, not
+// additional native types, which is why the Playground groups them
+// separately (see the "Work Surfaces" vs. "Other Markets" CtrlGroups).
 // `RhDemoKey` is this DEMO PAGE's own bookkeeping key (App.tsx's problem),
 // not a prop the component reads — RecordHeader only ever sees `name` +
 // `entityType` + `recordFields`, built from these mocks below.
-type RhDemoKey = "uep" | "ucp" | "uvp" | "patient" | "citizen" | "student" | "asset"
+type RhDemoKey = "uep" | "ucp" | "uvp" | "patient" | "claim" | "borrower" | "repairOrder"
 
 // Entity type icon + label — 100% host-defined (RecordHeaderEntityType).
 // This is exactly the kind of mapping a future host would extend with its
-// own entity types (Patient, Citizen, Student, ...) — RecordHeader itself
+// own entity types (Patient, Claim, Borrower, ...) — RecordHeader itself
 // never enumerates this list.
 const RH_ENTITY_TYPE: Record<RhDemoKey, RecordHeaderEntityType> = {
   uep: { icon: LucideIcons.User, label: "Employee" },
@@ -32423,17 +32439,18 @@ const RH_ENTITY_TYPE: Record<RhDemoKey, RecordHeaderEntityType> = {
   // NetSuite/Ariba), different Record fields, different zone labels (see
   // the `labels` prop on this variant's RecordHeader instance).
   patient: { icon: LucideIcons.Stethoscope, label: "Patient" },
-  // Second agnosticism example (this pass) — government, as unlike Patient
-  // as Patient was unlike UEP/UCP/UVP: different icon, different source
-  // system (National Registry), different Record fields.
-  citizen: { icon: LucideIcons.Landmark, label: "Citizen" },
-  // Third agnosticism example (this pass) — education: a fourth distinct
-  // icon/source system (Campus SIS), a fourth distinct Record shape.
-  student: { icon: LucideIcons.GraduationCap, label: "Student" },
-  // Fourth agnosticism example (this pass) — and the strongest proof of
-  // all: a non-person entity. Nothing in this component (Avatar initials,
-  // name, RECORD grid) assumes the subject is human.
-  asset: { icon: LucideIcons.Cpu, label: "Asset" },
+  // Second agnosticism example (this correction pass) — insurance: a
+  // different icon, and — unlike every example before it — a Record whose
+  // fields come from 2 distinct source systems at once (see gwProv/dcProv).
+  claim: { icon: LucideIcons.Umbrella, label: "Insurance Claim" },
+  // Third agnosticism example (this correction pass) — banking: a third
+  // distinct icon, a Record sourced from 3 distinct systems.
+  borrower: { icon: LucideIcons.Landmark, label: "Borrower" },
+  // Fourth agnosticism example (this correction pass) — automotive, AIMS
+  // OS's own central vertical. Also the non-person-entity proof the old
+  // Asset example made: a repair order isn't a person either, and nothing
+  // in this component (Avatar initials, name, RECORD grid) assumes it is.
+  repairOrder: { icon: LucideIcons.Car, label: "Repair Order" },
 }
 
 // UEP — the reference variant (brief's own words: "la card de referencia").
@@ -32485,40 +32502,43 @@ const RH_PATIENT = {
   admissionDate:    { label: "Admission Date",     icon: LucideIcons.CalendarClock, value: "Aug 14, 2026", state: "hydrated", provenance: epicProv("6h ago"), hasDestination: false } satisfies RecordField,
 }
 
-// Citizen (Government) — second agnosticism proof example, EXAMPLE data,
-// not confirmed AIMS OS content. National ID/Residency Status are governed
-// facts with a destination (Data Provenance); Registered Address/ID Expiry
-// are plain descriptive facts — same "hasDestination: false" rule as any
-// other vertical, nothing HR- or healthcare-specific about it either.
-const RH_CITIZEN = {
-  name: "Marcus Webb", office: "Dept. of Civic Services",
-  nationalId:         { label: "National ID",        icon: LucideIcons.IdCard,        value: "GOV-2291-8834",           state: "hydrated", provenance: civicProv("1h ago") } satisfies RecordField,
-  residencyStatus:    { label: "Residency Status",    icon: LucideIcons.ShieldCheck,   value: "Permanent Resident",      state: "hydrated", provenance: civicProv("1h ago") } satisfies RecordField,
-  registeredAddress:  { label: "Registered Address",  icon: LucideIcons.MapPin,        value: "1420 Maple Ave, Unit 3B", state: "hydrated", provenance: civicProv("3h ago"), hasDestination: false } satisfies RecordField,
-  idExpiry:           { label: "ID Expiry",           icon: LucideIcons.CalendarClock, value: "Jun 30, 2028",            state: "hydrated", provenance: civicProv("3h ago"), hasDestination: false } satisfies RecordField,
+// Claim / Policyholder (Insurance) — second agnosticism proof example,
+// EXAMPLE data, not confirmed AIMS OS content. This correction pass's
+// multi-source proof: Claims Adjuster/Claim Amount/Date of Loss come from
+// the claims core (Guidewire); Policy Number comes from the separate
+// policy admin system (Duck Creek) — 2 systems, one record, both cited.
+const RH_CLAIM = {
+  name: "Claim CLM-48821", policyType: "Auto — Comprehensive",
+  claimAdjuster: { label: "Claims Adjuster", icon: LucideIcons.User,          value: "Renee Castillo", state: "hydrated", provenance: gwProv("25m ago") } satisfies RecordField,
+  policyNumber:  { label: "Policy Number",   icon: LucideIcons.FileText,      value: "POL-77-4821",    state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
+  claimAmount:   { label: "Claim Amount",    icon: LucideIcons.DollarSign,    value: "$18,400",        state: "hydrated", provenance: gwProv("25m ago"), hasDestination: false } satisfies RecordField,
+  dateOfLoss:    { label: "Date of Loss",    icon: LucideIcons.CalendarClock, value: "Aug 2, 2026",    state: "hydrated", provenance: gwProv("3h ago"), hasDestination: false } satisfies RecordField,
 }
 
-// Student (Education) — third agnosticism proof example, EXAMPLE data, not
-// confirmed AIMS OS content. Enrollment ID/Advisor are governed facts with
-// a destination; GPA/Expected Graduation are plain descriptive facts.
-const RH_STUDENT = {
-  name: "Priya Anand", program: "B.Sc. Computer Science",
-  enrollmentId:      { label: "Enrollment ID",       icon: LucideIcons.IdCard,        value: "STU-88213",                state: "hydrated", provenance: eduProv("2h ago") } satisfies RecordField,
-  advisor:           { label: "Academic Advisor",    icon: LucideIcons.User,          value: "Prof. Daniel Reyes",       state: "hydrated", provenance: eduProv("2h ago") } satisfies RecordField,
-  gpa:               { label: "GPA",                 icon: LucideIcons.BarChart3,     value: "3.7",                      state: "hydrated", provenance: eduProv("1d ago"), hasDestination: false } satisfies RecordField,
-  expectedGraduation:{ label: "Expected Graduation", icon: LucideIcons.CalendarClock, value: "May 2027",                 state: "hydrated", provenance: eduProv("1d ago"), hasDestination: false } satisfies RecordField,
+// Borrower / Account (Banking) — third agnosticism proof example, EXAMPLE
+// data, not confirmed AIMS OS content. 3 distinct source systems on one
+// record: Experian (credit bureau), nCino (loan origination), FIS (core
+// banking) — the audit-trail case the brief calls for explicitly.
+const RH_BORROWER = {
+  name: "Jordan Ellis", accountType: "Personal Loan Applicant",
+  creditScore:     { label: "Credit Score",      icon: LucideIcons.Gauge,      value: "712",      state: "hydrated", provenance: experianProv("1d ago"), hasDestination: false } satisfies RecordField,
+  loanOfficer:     { label: "Loan Officer",      icon: LucideIcons.User,       value: "Morgan Blake", state: "hydrated", provenance: ncinoProv("2h ago") } satisfies RecordField,
+  accountNumber:   { label: "Account Number",    icon: LucideIcons.CreditCard, value: "····4821", state: "hydrated", provenance: fisProv("30m ago"), hasDestination: false } satisfies RecordField,
+  requestedAmount: { label: "Requested Amount",  icon: LucideIcons.DollarSign, value: "$45,000",  state: "hydrated", provenance: ncinoProv("2h ago"), hasDestination: false } satisfies RecordField,
 }
 
-// Asset (Equipment/IoT) — fourth agnosticism proof example, EXAMPLE data,
-// not confirmed AIMS OS content. The strongest proof of all: this "record"
-// isn't a person. Asset Tag/Owning Team are governed facts with a
-// destination; Location/Last Serviced are plain descriptive facts.
-const RH_ASSET = {
-  name: "Pump Station 12", location: "Building 4 — Utility Room",
-  assetTag:     { label: "Asset Tag",    icon: LucideIcons.Barcode,       value: "AST-4471",              state: "hydrated", provenance: assetProv("10m ago") } satisfies RecordField,
-  owningTeam:   { label: "Owning Team",  icon: LucideIcons.Users,         value: "Facilities Team",       state: "hydrated", provenance: assetProv("10m ago") } satisfies RecordField,
-  assetLocation:{ label: "Location",     icon: LucideIcons.MapPin,        value: "Building 4 — Utility Room", state: "hydrated", provenance: assetProv("6h ago"), hasDestination: false } satisfies RecordField,
-  lastServiced: { label: "Last Serviced",icon: LucideIcons.CalendarClock, value: "Jul 2, 2026",           state: "hydrated", provenance: assetProv("6h ago"), hasDestination: false } satisfies RecordField,
+// Repair Order / Vehicle Service (Automotive) — fourth agnosticism proof
+// example, EXAMPLE data, not confirmed AIMS OS content. AIMS OS's own
+// central vertical (brief's own words) — and, like the old Asset example,
+// a non-person entity: this "record" is an order, not a colleague. 3
+// distinct sources: CDK Global (DMS), Carfax (vehicle history), and the
+// manufacturer's own warranty system.
+const RH_REPAIR_ORDER = {
+  name: "Repair Order #48213", vehicle: "2022 Ford F-150",
+  serviceAdvisor: { label: "Service Advisor",  icon: LucideIcons.User,       value: "Tyler Brooks",         state: "hydrated", provenance: cdkProv("15m ago") } satisfies RecordField,
+  vehicleField:   { label: "Vehicle",          icon: LucideIcons.Car,        value: "2022 Ford F-150",      state: "hydrated", provenance: carfaxProv("1d ago"), hasDestination: false } satisfies RecordField,
+  warrantyStatus: { label: "Warranty Status",  icon: LucideIcons.ShieldCheck,value: "Powertrain — Active",  state: "hydrated", provenance: oemProv("6h ago") } satisfies RecordField,
+  estimatedTotal: { label: "Estimated Total",  icon: LucideIcons.DollarSign, value: "$2,840",               state: "hydrated", provenance: cdkProv("15m ago"), hasDestination: false } satisfies RecordField,
 }
 
 // Record zone — the RECORD grid is a plain RecordField[] the host builds
@@ -32529,9 +32549,9 @@ const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
   ucp: [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr],
   uvp: [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd],
   patient: [RH_PATIENT.primaryPhysician, RH_PATIENT.insurancePlan, RH_PATIENT.bloodType, RH_PATIENT.admissionDate],
-  citizen: [RH_CITIZEN.nationalId, RH_CITIZEN.residencyStatus, RH_CITIZEN.registeredAddress, RH_CITIZEN.idExpiry],
-  student: [RH_STUDENT.enrollmentId, RH_STUDENT.advisor, RH_STUDENT.gpa, RH_STUDENT.expectedGraduation],
-  asset: [RH_ASSET.assetTag, RH_ASSET.owningTeam, RH_ASSET.assetLocation, RH_ASSET.lastServiced],
+  claim: [RH_CLAIM.claimAdjuster, RH_CLAIM.policyNumber, RH_CLAIM.claimAmount, RH_CLAIM.dateOfLoss],
+  borrower: [RH_BORROWER.creditScore, RH_BORROWER.loanOfficer, RH_BORROWER.accountNumber, RH_BORROWER.requestedAmount],
+  repairOrder: [RH_REPAIR_ORDER.serviceAdvisor, RH_REPAIR_ORDER.vehicleField, RH_REPAIR_ORDER.warrantyStatus, RH_REPAIR_ORDER.estimatedTotal],
 }
 
 // Display name per demo key — a lookup instead of a growing ternary chain
@@ -32539,7 +32559,7 @@ const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
 // Markets).
 const RH_NAME: Record<RhDemoKey, string> = {
   uep: RH_UEP.name, ucp: RH_UCP.name, uvp: RH_UVP.name,
-  patient: RH_PATIENT.name, citizen: RH_CITIZEN.name, student: RH_STUDENT.name, asset: RH_ASSET.name,
+  patient: RH_PATIENT.name, claim: RH_CLAIM.name, borrower: RH_BORROWER.name, repairOrder: RH_REPAIR_ORDER.name,
 }
 
 // Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
@@ -32557,9 +32577,9 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
   ucp: { id: "agent-renewal",      name: "Renewal Copilot" },
   uvp: { id: "agent-procurement",  name: "Procurement Copilot" },
   patient: { id: "agent-care-coordinator", name: "Care Coordinator AI" },
-  citizen: { id: "agent-civic-registry", name: "Civic Registry AI" },
-  student: { id: "agent-academic-success", name: "Academic Success AI" },
-  asset: { id: "agent-predictive-maintenance", name: "Predictive Maintenance AI" },
+  claim: { id: "agent-claims-copilot", name: "Claims Copilot AI" },
+  borrower: { id: "agent-underwriting-copilot", name: "Underwriting Copilot" },
+  repairOrder: { id: "agent-service-advisor-copilot", name: "Service Advisor Copilot" },
 }
 
 // ── Demo SlideOut content — realistic mock data for the 4 wired flows ──────
@@ -32646,47 +32666,45 @@ const RH_WORKFLOWS: Record<RhDemoKey, WorkflowDetail> = {
       { date: "Aug 7, 2026", outcome: "success" },
     ],
   },
-  citizen: {
-    name: "Document Verification", owner: "Civic Registry AI", started: "Aug 10, 2026", nextTrigger: "Aug 24, 2026",
-    aiSummary: "Verifies Marcus Webb's residency renewal documents against the National Registry before his Permanent Resident status is reconfirmed — a third vertical, the exact same Agentic System zone.",
-    totalRuns: 4,
+  claim: {
+    name: "Claims Adjudication", owner: "Claims Copilot AI", started: "Aug 2, 2026", nextTrigger: "Pending adjuster review",
+    aiSummary: "Tracks Claim #CLM-48821 from first notice of loss through payout. The calculated payout is above the adjuster's standing authority and is held for supervisor sign-off before funds are released — a third vertical, the exact same Agentic System zone.",
+    totalRuns: 5,
     steps: [
-      { label: "Renewal application received", status: "done", date: "Aug 10, 2026" },
-      { label: "Proof of address cross-checked", status: "done", date: "Aug 11, 2026" },
-      { label: "Biometric re-capture requested", status: "loading" },
-      { label: "Residency status reconfirmed", status: "pending" },
+      { label: "First notice of loss recorded in Guidewire", status: "done", date: "Aug 2, 2026" },
+      { label: "Coverage verified against policy", status: "done", date: "Aug 3, 2026" },
+      { label: "Payout amount awaiting supervisor sign-off", status: "loading" },
+      { label: "Payout released", status: "pending" },
     ],
     recentRuns: [
-      { date: "Feb 10, 2026", outcome: "success" },
+      { date: "Mar 12, 2026", outcome: "success" },
+      { date: "Nov 4, 2025", outcome: "success" },
     ],
   },
-  student: {
-    name: "Financial Aid Renewal", owner: "Academic Success AI", started: "Aug 5, 2026", nextTrigger: "Sep 1, 2026 (per semester)",
-    aiSummary: "Renews Priya Anand's financial aid package for the fall semester — a fourth vertical, the exact same Agentic System zone.",
-    totalRuns: 3,
+  borrower: {
+    name: "Credit Risk Review", owner: "Underwriting Copilot", started: "Aug 10, 2026", nextTrigger: "Pending underwriter review",
+    aiSummary: "Scores Jordan Ellis's loan application against the standard risk model. Debt-to-income is above the automated approval line and is held for underwriter sign-off — a fourth vertical, the exact same Agentic System zone.",
+    totalRuns: 1,
     steps: [
-      { label: "Enrollment status confirmed with registrar", status: "done", date: "Aug 5, 2026" },
-      { label: "Prior-year tax documents requested", status: "done", date: "Aug 6, 2026" },
-      { label: "Awaiting updated tax document", status: "loading" },
-      { label: "Aid package disbursed", status: "pending" },
+      { label: "Credit pulled from Experian", status: "done", date: "Aug 10, 2026" },
+      { label: "Application scored against risk model", status: "done", date: "Aug 10, 2026" },
+      { label: "DTI exception awaiting underwriter review", status: "loading" },
+      { label: "Loan decision issued", status: "pending" },
     ],
-    recentRuns: [
-      { date: "Jan 5, 2026", outcome: "success" },
-    ],
+    recentRuns: [],
   },
-  asset: {
-    name: "Vibration Anomaly Monitoring", owner: "Predictive Maintenance AI", started: "Aug 15, 2026", nextTrigger: "Continuous",
-    aiSummary: "Monitors Pump Station 12's vibration sensor readings for deviations from baseline — the same Agentic System zone, now watching equipment instead of a person.",
-    totalRuns: 212,
+  repairOrder: {
+    name: "Service Workflow", owner: "Service Advisor Copilot", started: "Aug 16, 2026", nextTrigger: "In progress",
+    aiSummary: "Tracks RO #48213 for the 2022 Ford F-150 through diagnostic, repair, and QA. Additional repair scope found mid-service exceeds the customer's pre-authorized budget — held for sign-off before work continues, the same Agentic System zone on AIMS OS's own central vertical.",
+    totalRuns: 1,
     steps: [
-      { label: "Baseline vibration profile established", status: "done", date: "Jan 15, 2026" },
-      { label: "Sensor readings streamed continuously", status: "done" },
-      { label: "Anomaly threshold exceeded", status: "loading", date: "Aug 15, 2026" },
-      { label: "Inspection scheduled", status: "pending" },
+      { label: "Vehicle diagnostic completed", status: "done", date: "Aug 16, 2026" },
+      { label: "Additional worn component found during repair", status: "done", date: "Aug 16, 2026" },
+      { label: "Awaiting customer sign-off on additional repair", status: "loading" },
+      { label: "QA inspection and pickup", status: "pending" },
     ],
     recentRuns: [
-      { date: "Aug 15, 2026", outcome: "error" },
-      { date: "Jul 1, 2026", outcome: "success" },
+      { date: "Feb 3, 2026", outcome: "success" },
     ],
   },
 }
@@ -32743,34 +32761,34 @@ const RH_AGENT_DETAILS: Record<RhDemoKey, AgentDetail> = {
       { date: "Aug 14, 2026", label: "Reconciled admission medication list with Epic" },
     ],
   },
-  citizen: {
-    agentName: "Civic Registry AI",
-    sessionSummary: "Processed Marcus Webb's Permanent Resident renewal, cross-checking submitted documents against the National Registry.",
-    latestFinding: "The proof-of-address document is 4 months past the registry's 90-day freshness window, and the biometric scan on file has expired.",
-    recommendation: { text: "Request an updated proof of address and schedule a biometric re-capture before the renewal can be reconfirmed.", actionLabel: "Request updated documents" },
+  claim: {
+    agentName: "Claims Copilot AI",
+    sessionSummary: "Reviewed Claim #CLM-48821's coverage and loss details against the policy on file.",
+    latestFinding: "The estimated payout of $18,400 exceeds Renee Castillo's $10,000 standing adjuster authority.",
+    recommendation: { text: "Route the payout to a supervisor for sign-off before releasing funds.", actionLabel: "Notify supervisor" },
     recentActivity: [
-      { date: "Aug 11, 2026", label: "Flagged stale proof-of-address document" },
-      { date: "Aug 10, 2026", label: "Cross-checked renewal application against National Registry" },
+      { date: "Aug 3, 2026", label: "Verified coverage against policy POL-77-4821" },
+      { date: "Aug 2, 2026", label: "Logged first notice of loss" },
     ],
   },
-  student: {
-    agentName: "Academic Success AI",
-    sessionSummary: "Reviewed Priya Anand's financial aid renewal against her enrollment status and submitted documents for the fall semester.",
-    latestFinding: "Her prior-year tax document expired under the aid office's freshness window, holding disbursement.",
-    recommendation: { text: "Request an updated tax document directly from Priya before the semester's disbursement deadline.", actionLabel: "Request document" },
+  borrower: {
+    agentName: "Underwriting Copilot",
+    sessionSummary: "Scored Jordan Ellis's loan application against the standard risk model.",
+    latestFinding: "Debt-to-income ratio of 42% is above the 38% automated approval threshold.",
+    recommendation: { text: "Flag the DTI exception to an underwriter before a decision is issued.", actionLabel: "Notify underwriter" },
     recentActivity: [
-      { date: "Aug 6, 2026", label: "Flagged expired tax document" },
-      { date: "Aug 5, 2026", label: "Confirmed enrollment status with registrar" },
+      { date: "Aug 10, 2026", label: "Flagged DTI exception for underwriter review" },
+      { date: "Aug 10, 2026", label: "Pulled credit report from Experian" },
     ],
   },
-  asset: {
-    agentName: "Predictive Maintenance AI",
-    sessionSummary: "Monitored Pump Station 12's vibration sensor readings against its established baseline profile.",
-    latestFinding: "Vibration amplitude is running 3.2x above baseline — a pattern that preceded bearing failure on 2 similar units this year.",
-    recommendation: { text: "Schedule an inspection before the next shift change to avoid unplanned downtime.", actionLabel: "Schedule inspection" },
+  repairOrder: {
+    agentName: "Service Advisor Copilot",
+    sessionSummary: "Tracked RO #48213's diagnostic findings against the customer's pre-authorized repair budget.",
+    latestFinding: "A worn control arm found during diagnostic adds $640 beyond the $2,200 pre-authorized budget.",
+    recommendation: { text: "Get customer sign-off on the additional $640 before continuing the repair.", actionLabel: "Request customer sign-off" },
     recentActivity: [
-      { date: "Aug 15, 2026", label: "Flagged vibration threshold exceeded" },
-      { date: "Aug 1, 2026", label: "Baseline profile recalibrated after routine service" },
+      { date: "Aug 16, 2026", label: "Flagged additional worn component during diagnostic" },
+      { date: "Aug 16, 2026", label: "Completed initial vehicle diagnostic" },
     ],
   },
 }
@@ -32832,40 +32850,50 @@ const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
       ],
     },
   ],
-  // Block 3's real N-item example: Citizen has 2 pending interventions at
-  // once — the most prioritized (higher severity) renders full-size, the
-  // other collapses behind "+1 more."
-  citizen: [
+  // This correction pass's real N-item example: Claim has 2 pending
+  // interventions at once — the most prioritized (higher severity) renders
+  // full-size, the other collapses behind "+1 more."
+  claim: [
     {
-      id: "citizen-biometric-recapture",
+      id: "claim-payout-approval",
       severity: "high",
-      description: "Biometric re-capture required — the fingerprint scan on file expired before renewal could complete.",
-      detail: "Marcus Webb's fingerprint scan on file expired on Jul 30, 2026, 90 days after capture per National Registry policy. His Permanent Resident renewal can't be reconfirmed until a field office re-captures a current scan — no status change has occurred yet.",
-      requestedBy: "Civic Registry AI", impact: "Biometric record · Permanent Resident renewal",
-      history: [],
+      description: "A payout above standard adjuster authority needs supervisor approval before it's released.",
+      detail: "Claims Copilot AI calculated an $18,400 payout for Claim #CLM-48821, above Renee Castillo's $10,000 standing authority. No funds have been released — this is held pending supervisor sign-off.",
+      requestedBy: "Claims Copilot AI", impact: "Payout · $18,400 · Claim #CLM-48821",
+      history: [
+        { date: "Nov 4, 2025", label: "Similar payout on a prior claim — approved by claims supervisor" },
+      ],
     },
     {
-      id: "citizen-address-verification",
+      id: "claim-documentation-missing",
       severity: "medium",
-      description: "Proof of address document needs manual verification before renewal proceeds.",
-      detail: "The proof-of-address document Marcus Webb submitted is a utility bill dated 4 months ago, past the registry's 90-day freshness window. A caseworker needs to manually confirm it still reflects his current address before the renewal can proceed.",
-      requestedBy: "Civic Registry AI", impact: "Address verification · Permanent Resident renewal",
+      description: "Repair estimate documentation is incomplete and needs adjuster follow-up before the payout can close.",
+      detail: "The auto body shop's itemized estimate is missing a required parts-sourcing breakdown per policy terms. Claims Copilot AI flagged it; the payout can't close until Renee Castillo follows up with the shop.",
+      requestedBy: "Claims Copilot AI", impact: "Documentation · Claim #CLM-48821",
       history: [
-        { date: "Feb 2, 2026", label: "Same document type accepted on prior renewal — approved by DMV field office" },
+        { date: "Jun 1, 2025", label: "Same documentation gap on a prior claim — resolved by adjuster follow-up" },
       ],
     },
   ],
-  // No intervention for Student in this example — same "genuinely nothing
-  // pending, zone omitted entirely" case as UVP above, on a 4th vertical.
-  asset: [
+  borrower: [
     {
-      id: "asset-inspection-approval",
-      severity: "high",
-      description: "Emergency inspection needs facilities sign-off before the next shift change.",
-      detail: "Pump Station 12's vibration amplitude is running 3.2x above its established baseline — the same pattern that preceded bearing failure on 2 similar units this year. An inspection is recommended before the next shift change; nothing has been scheduled yet without facilities sign-off.",
-      requestedBy: "Predictive Maintenance AI", impact: "Pump Station 12 · unplanned downtime risk",
+      id: "borrower-dti-exception",
+      severity: "medium",
+      description: "A debt-to-income exception needs underwriter sign-off before a decision is issued.",
+      detail: "Jordan Ellis's application scored a 42% DTI ratio, above the 38% threshold Underwriting Copilot can clear automatically. No decision has been issued — it's held pending underwriter review.",
+      requestedBy: "Underwriting Copilot", impact: "Loan decision · $45,000 requested · DTI 42%",
+      history: [],
+    },
+  ],
+  repairOrder: [
+    {
+      id: "repairOrder-budget-exception",
+      severity: "medium",
+      description: "Additional repair scope exceeds the customer's pre-authorized budget and needs sign-off before work continues.",
+      detail: "Diagnostic on the 2022 Ford F-150 found a worn control arm needing replacement, adding $640 beyond the $2,200 the customer pre-authorized. No further work has started on that item — it's held pending the customer's sign-off.",
+      requestedBy: "Service Advisor Copilot", impact: "Additional repair · $640 · RO #48213",
       history: [
-        { date: "Mar 4, 2026", label: "Similar vibration flag on Pump Station 7 — approved, bearing replaced" },
+        { date: "Feb 3, 2026", label: "Similar mid-service exception — approved by customer over phone" },
       ],
     },
   ],
@@ -33254,9 +33282,9 @@ const RH_MESSAGE_DRAFT: Record<string, string> = {
   [RH_UCP.name]: `Hi team — checking in on the 12% renewal discount currently held for deal-desk sign-off. Happy to jump on a call if that's faster than email.`,
   [RH_UVP.name]: `Hi — your annual requalification review is in progress; the spend-cap overage is with our category manager now. We'll follow up as soon as that clears.`,
   [RH_PATIENT.name]: `Hi Dr. Osei — flagging the Warfarin/Aspirin interaction on Elena's new prescription order. Could you confirm before the next dose is due?`,
-  [RH_CITIZEN.name]: `Hi ${RH_CITIZEN.name.split(" ")[0]} — we still need an updated proof of address and a biometric re-capture to complete your Permanent Resident renewal.`,
-  [RH_STUDENT.name]: `Hi ${RH_STUDENT.name.split(" ")[0]} — your prior-year tax document has expired, which is holding your financial aid disbursement. Could you upload an updated copy before the semester deadline?`,
-  [RH_ASSET.name]: `Flagging ${RH_ASSET.name} for the facilities team — vibration readings are running well above baseline. Recommend scheduling an inspection before the next shift change.`,
+  [RH_CLAIM.name]: `Hi — the payout for your claim is calculated at $18,400 and currently held for supervisor sign-off since it's above standard adjuster authority. We'll follow up as soon as that clears.`,
+  [RH_BORROWER.name]: `Hi ${RH_BORROWER.name.split(" ")[0]} — your loan application is with an underwriter for a quick review of your debt-to-income ratio. We'll have a decision to you shortly.`,
+  [RH_REPAIR_ORDER.name]: `Hi — we found an additional worn part during your F-150's diagnostic that adds $640 beyond your pre-authorized budget. Let us know if it's OK to proceed.`,
 }
 
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
@@ -33447,42 +33475,42 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Second agnosticism example — a government vertical, same component</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Second agnosticism example — an insurance vertical, same component</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. A third distinct entity type (<code>Citizen</code>, <code>Landmark</code> icon), a third distinct RECORD shape (National ID/Residency Status/Registered Address/ID Expiry, sourced from a National Registry — not Workday/Okta/Salesforce/NetSuite/Ariba/Epic), and — this pass's own Block 3 — 2 pending interventions at once: the higher-severity one renders full-size, the other collapses behind "+1 more" (never a carousel). Same skeleton, same colors, zero changes to record-header.tsx.
+              Mock data — not confirmed AIMS OS content. A third distinct entity type (<code>Insurance Claim</code>, <code>Umbrella</code> icon), and this correction pass's own multi-source proof: Claims Adjuster/Claim Amount/Date of Loss come from the claims core (Guidewire), while Policy Number comes from the separate policy admin system (Duck Creek) — 2 sources, one record, both cited via Data Provenance. Also carries 2 pending interventions at once: the higher-severity payout approval renders full-size, the documentation follow-up collapses behind "+1 more" (never a carousel). Same skeleton, same colors, zero changes to record-header.tsx.
             </p>
-            <RecordHeader name={RH_CITIZEN.name} entityType={RH_ENTITY_TYPE.citizen} recordFields={RH_RECORD_FIELDS.citizen} defaultExpanded
-              assignedAgent={rhAssignedAgent("citizen", RH_CITIZEN.name)}
-              actions={rhMessageAction(RH_CITIZEN.name)}
-              agenticSystem={rhAgenticSystem("citizen")}
-              intervention={rhIntervention("citizen")}
-              onProvenanceOpen={() => rhOpenProvenance("citizen")} />
+            <RecordHeader name={RH_CLAIM.name} entityType={RH_ENTITY_TYPE.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
+              assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
+              actions={rhMessageAction(RH_CLAIM.name)}
+              agenticSystem={rhAgenticSystem("claim")}
+              intervention={rhIntervention("claim")}
+              onProvenanceOpen={() => rhOpenProvenance("claim")} />
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Third agnosticism example — an education vertical, same component</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Third agnosticism example — a banking vertical, same component</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. A fourth distinct entity type (<code>Student</code>, <code>GraduationCap</code> icon), a fourth distinct RECORD shape (Enrollment ID/Academic Advisor/GPA/Expected Graduation, sourced from a Campus SIS — not any Work Surfaces or Patient/Citizen system). No intervention pending here on purpose — same "zone fully omitted, not shown empty" case as UVP above, on a 4th vertical.
+              Mock data — not confirmed AIMS OS content. A fourth distinct entity type (<code>Borrower</code>, <code>Landmark</code> icon), a RECORD shape sourced from 3 distinct systems at once — Experian (credit bureau), nCino (loan origination), and FIS (core banking) — the kind of cross-system audit trail a real credit decision needs. A risk exception (debt-to-income above the automated threshold) is held for underwriter sign-off, the same Your Intervention zone as every other vertical.
             </p>
-            <RecordHeader name={RH_STUDENT.name} entityType={RH_ENTITY_TYPE.student} recordFields={RH_RECORD_FIELDS.student} defaultExpanded
-              assignedAgent={rhAssignedAgent("student", RH_STUDENT.name)}
-              actions={rhMessageAction(RH_STUDENT.name)}
-              agenticSystem={rhAgenticSystem("student")}
-              intervention={rhIntervention("student")}
-              onProvenanceOpen={() => rhOpenProvenance("student")} />
+            <RecordHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
+              assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
+              actions={rhMessageAction(RH_BORROWER.name)}
+              agenticSystem={rhAgenticSystem("borrower")}
+              intervention={rhIntervention("borrower")}
+              onProvenanceOpen={() => rhOpenProvenance("borrower")} />
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Fourth agnosticism example — a non-person entity, same component</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Fourth agnosticism example — an automotive vertical, same component</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. The strongest agnosticism proof: this "record" isn't a person at all — it's a piece of equipment (<code>Asset</code>, <code>Cpu</code> icon), monitored by <code>Predictive Maintenance AI</code> instead of assigned to a human colleague. Nothing in the Identity row, Avatar, or RECORD grid assumes a human subject — the initials avatar renders fine from "Pump Station 12" the same way it does from a person's name.
+              Mock data — not confirmed AIMS OS content. AIMS OS's own central vertical (its roots are in automotive dealership platforms) — and, like the old Asset example, a non-person entity: this "record" is a repair order, not a colleague. A distinct entity type (<code>Repair Order</code>, <code>Car</code> icon), a RECORD shape sourced from 3 distinct systems — CDK Global (DMS), Carfax (vehicle history), and an OEM warranty portal — tracking a live diagnostic → repair → QA workflow. Additional repair scope found mid-service exceeds the customer's pre-authorized budget, held for sign-off in Your Intervention.
             </p>
-            <RecordHeader name={RH_ASSET.name} entityType={RH_ENTITY_TYPE.asset} recordFields={RH_RECORD_FIELDS.asset} defaultExpanded
-              assignedAgent={rhAssignedAgent("asset", RH_ASSET.name)}
-              actions={rhMessageAction(RH_ASSET.name)}
-              agenticSystem={rhAgenticSystem("asset")}
-              intervention={rhIntervention("asset")}
-              onProvenanceOpen={() => rhOpenProvenance("asset")} />
+            <RecordHeader name={RH_REPAIR_ORDER.name} entityType={RH_ENTITY_TYPE.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder} defaultExpanded
+              assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
+              actions={rhMessageAction(RH_REPAIR_ORDER.name)}
+              agenticSystem={rhAgenticSystem("repairOrder")}
+              intervention={rhIntervention("repairOrder")}
+              onProvenanceOpen={() => rhOpenProvenance("repairOrder")} />
           </section>
 
           <section>
@@ -33562,7 +33590,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 is purely about what they mean: "Work Surfaces" are this
                 card's 3 native entity shapes; "Other Markets" exist ONLY to
                 prove the same skeleton tolerates genuinely different
-                verticals — including a non-person entity (Asset) — not to
+                verticals — including a non-person entity (Repair Order) — not to
                 suggest AIMS OS ships any of them as additional native
                 types. */}
             <div className="flex flex-col gap-[8px]">
@@ -33582,9 +33610,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 onChange={setPgVariant}
                 options={[
                   { value: "patient", label: "Patient" },
-                  { value: "citizen", label: "Citizen" },
-                  { value: "student", label: "Student" },
-                  { value: "asset", label: "Asset" },
+                  { value: "claim", label: "Claim" },
+                  { value: "borrower", label: "Borrower" },
+                  { value: "repairOrder", label: "Repair Order" },
                 ]}
               />
             </div>
@@ -33829,7 +33857,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["2", "Confirmed Your Intervention's \"empty\" status already renders through the real InformativeCard (state=\"neutral\", CheckCircle2 icon) — not a custom container. Strengthened the default copy (\"No interventions pending — you're all caught up\") so it explicitly reads as completion, not absence, per the empty-states law."],
                 ["3", "Playground's entity-type selector split into 2 labeled CtrlGroups — \"Work Surfaces\" (Employee/Customer/Vendor, the 3 native shapes) and \"Other Markets\" (Patient/Citizen, agnosticism proof only) — reusing the repo's own CtrlGroup segmentation pattern (already used by every other component's Playground on this page) instead of inventing a new selector or hand-rolling another button row."],
                 ["4", "Added Citizen (government) as a second agnosticism example: a third distinct entity type/icon, a third distinct source system (National Registry, not Workday/Okta/Salesforce/NetSuite/Ariba/Epic), a third distinct RECORD shape — same skeleton, zero changes to record-header.tsx. Also the real example of Block 3's N-intervention case (2 pending at once)."],
-                ["5", "Your Intervention's \"pending\" status now models N items (InterventionItem[]), not just 1 — each keeps its own severity and its own Review action. 0 items → \"empty\" (see #2); exactly 1 → shown alone, no counter; N → the most prioritized shown full-size + a \"+N-1 more\" disclosure that reveals the rest. Deliberately a disclosure, not a carousel — urgent decisions must be visible at a glance (how many, that they exist), never hidden behind a swipe. See the States gallery's #14 and the Citizen example above for both a synthetic and a real-content case."],
+                ["5", "Your Intervention's \"pending\" status now models N items (InterventionItem[]), not just 1 — each keeps its own severity and its own Review action. 0 items → \"empty\" (see #2); exactly 1 → shown alone, no counter; N → the most prioritized shown full-size + a \"+N-1 more\" disclosure that reveals the rest. Deliberately a disclosure, not a carousel — urgent decisions must be visible at a glance (how many, that they exist), never hidden behind a swipe. See the States gallery's #14 and the Claim example above (its current N-intervention case, after the Citizen example it originally used was replaced with Insurance in a later correction pass) for both a synthetic and a real-content case."],
               ].map(([n, change], i) => (
                 <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
@@ -33964,7 +33992,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Entity type", "Extensible, never a closed enum — entityType is just { icon, label }, host-defined. Employee/Customer/Vendor are 3 native shapes; Patient/Citizen/Student/Asset (Asset isn't even a person) are proof it takes any vertical with zero code changes here."],
+                ["Entity type", "Extensible, never a closed enum — entityType is just { icon, label }, host-defined. Employee/Customer/Vendor are 3 native shapes; Patient/Claim/Borrower/Repair Order (Repair Order isn't even a person) are proof it takes any vertical with zero code changes here."],
                 ["Zones present", "Agentic System / Your Intervention / Record are each independently OPTIONAL — omitting the prop entirely means \"this entity type doesn't use this zone,\" and it doesn't render, full stop. A record can have 0, 1, 2, or all 3. Never force a zone with fake/empty content just to fill space."],
                 ["Signal types", "Exactly 3 colors with FIXED semantics, never entity-bound: purple = agent, light blue = workflow, amber = HTL/intervention. A new vertical reuses these meanings — it never invents a 4th color or reassigns what a color means."],
                 ["Record field types", "Every field is the SAME shape (RecordField) — there's no separate \"text field\" vs. \"date field\" type. What varies: hasDestination (true/omitted = relational, opens Data Provenance; false = a plain descriptive fact — a pure date, a pure figure, nothing further to show) and state (hydrated vs. masked, Law 4). Icon + provenance are mandatory on every field regardless."],
@@ -34018,8 +34046,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["Customer", "Is the account healthy, and what does it need from us right now?"],
                 ["Employee", "How are they doing, and what do I need to manage on their behalf?"],
                 ["Patient", "What's their status, and what needs clinical attention right now?"],
-                ["Citizen", "What's the status of their case with us, and what's blocking it?"],
-                ["Asset", "Is it operating normally, and what needs facilities' attention right now?"],
+                ["Claim", "Is it covered, what's it worth, and what's blocking payout?"],
+                ["Borrower", "Can they be approved, and what risk needs a human decision?"],
+                ["Repair Order", "What's the repair status, and what needs the customer's sign-off?"],
               ].map(([type, q], i) => (
                 <div key={type} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{type}</div>
@@ -34034,7 +34063,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] font-semibold mb-[8px]" style={{ color: "var(--foreground)" }}>4 — How to add a new entity type (composition only, no code changes here)</p>
             <ol className="flex flex-col gap-[6px] mb-[4px]">
               {[
-                "Define entityType: pick an icon that reads as that vertical at a glance (Stethoscope for Patient, Landmark for Citizen, Cpu for Asset — never reuse an icon that already means something else in this file) and a plain-language label.",
+                "Define entityType: pick an icon that reads as that vertical at a glance (Stethoscope for Patient, Umbrella for Claim, Car for Repair Order — never reuse an icon that already means something else in this file) and a plain-language label.",
                 "Decide which zones this entity type actually has — pass only those props. No agentic layer for this vertical yet? Omit agenticSystem entirely; don't fake an \"empty\" state just to look complete.",
                 "Build recordFields by running every candidate field through the content rule above (step 3) — keep only what answers the central question. Each field needs its own FieldProvenance (Law 1) and a hasDestination call (does it open Data Provenance, or is it a plain fact?).",
                 "Assign signal colors by SIGNAL TYPE, not by vertical — an agent is always purple, a workflow is always light blue, an HTL item is always amber, regardless of what the entity type is.",
