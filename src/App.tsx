@@ -32929,30 +32929,117 @@ const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
 // (same reasoning as InterventionMock) — it needs the SlideOut state in
 // scope, see rhNextBestActions below. UEP carries 2, to demonstrate the N
 // case (the reference brief explicitly calls for supporting more than 1).
-type NbaMock = { id: string; title: string; description: string }
+//
+// This correction pass (call with Edgardo, infra) — an NBA is a TASK with a
+// 3-layer structure, and the task's own detail SlideOut converges with
+// HTL's (see the Pending Decisions SlideOut below — same Section-Title/
+// Details-grid primitives reused here, not reinvented):
+//   Layer 1 — base: common to every task regardless of type. Always
+//     present: title/description (rendered above, in the SlideOut header
+//     and "Why this"), a system-origin signal (this was suggested, not
+//     created manually), who it's assigned to (agent or person), due
+//     date, status, and periodicity when the task recurs.
+//   Layer 2 — type-specific: renders differently per NbaTask["kind"].
+//     Only 3 types are modeled so far (approval / call / email) — this is
+//     a GROWING list as new actions get built (Edgardo), not a fixed set;
+//     `task` is optional and entries without one fall back to a generic
+//     placeholder rather than guessing a 4th type that hasn't been
+//     specified. See "This refinement 9" on the Reference tab.
+//   Layer 3 — dynamic: the runtime inputs the action needs. Meant to
+//     reuse the Workflow Builder node input pattern (date/text/
+//     confirmation) — // TODO: reciclar input de nodos — no such
+//     component exists yet in this repo to import (searched directly;
+//     "Workflow Builder UI" is only named in an estimation table, never
+//     implemented), so this reuses Input styled the same way a node
+//     input would be. Less protagonist than HTL's own dynamic layer per
+//     the brief — one representative example per typed task, not a full
+//     input set.
+type NbaTaskKind = "approval" | "call" | "email"
+
+type NbaTask =
+  | { kind: "approval"; whatChanges: string; context: string }
+  | { kind: "call"; contactName: string; contactRole: string; suggestedNote: string }
+  | { kind: "email"; subject: string; bodyPreview: string }
+
+type NbaDynamicInput = { label: string; kind: "text" | "date"; placeholder: string }
+
+type NbaMock = {
+  id: string
+  title: string
+  description: string
+  // Layer 1 — base, always present
+  assignedTo: string
+  assignedToKind: "agent" | "person"
+  dueDate: string
+  status: "Not started" | "In progress" | "Scheduled"
+  recurrence?: string
+  // Layer 2 — omitted where the type hasn't been modeled yet (see above)
+  task?: NbaTask
+  // Layer 3 — omitted where no runtime input applies
+  dynamicInputs?: NbaDynamicInput[]
+}
 
 const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
   uep: [
-    { id: "uep-nba-1", title: "Review Sarah's stale access before the next cycle", description: "3 permissions haven't been used in 90+ days — trimming them now avoids carrying them into the next recertification." },
-    { id: "uep-nba-2", title: "Suggest the Platform Infra security module", description: "Sarah's role changed 2 weeks ago; the standard onboarding path for her new team includes a security training she hasn't started." },
+    {
+      id: "uep-nba-1", title: "Scope down Sarah's Admin access",
+      description: "Sarah still holds Admin access to 2 repos outside Platform Infra's ownership boundary, granted under her prior team — trimming it now brings her access back in line with her current role.",
+      assignedTo: "David Kim", assignedToKind: "person", dueDate: "Aug 22, 2026", status: "Not started",
+      task: { kind: "approval", whatChanges: "Scope down Sarah Chen's Admin access", context: "2 repos sit outside Platform Infra's ownership boundary, inherited from her prior team — removing them brings her access back in line with her current role." },
+      dynamicInputs: [{ label: "Effective date", kind: "date", placeholder: "When the scoped-down access takes effect" }],
+    },
+    {
+      id: "uep-nba-2", title: "Suggest the Platform Infra security module",
+      description: "Sarah's role changed 2 weeks ago; the standard onboarding path for her new team includes a security training she hasn't started.",
+      assignedTo: "People Sync", assignedToKind: "agent", dueDate: "Sep 1, 2026", status: "Scheduled",
+      recurrence: "Runs with every 30-day access check",
+    },
   ],
   ucp: [
-    { id: "ucp-nba-1", title: "Offer a proactive check-in call", description: "Usage dipped 12% this month with no support tickets filed — a check-in before renewal season could catch friction early." },
+    {
+      id: "ucp-nba-1", title: "Offer a proactive check-in call",
+      description: "Usage dipped 12% this month with no support tickets filed — a check-in before renewal season could catch friction early.",
+      assignedTo: "Renewal Copilot", assignedToKind: "agent", dueDate: "Aug 25, 2026", status: "Not started",
+      task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Acme Corp", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season." },
+      dynamicInputs: [{ label: "Preferred callback window", kind: "text", placeholder: "e.g. Tue–Thu mornings" }],
+    },
   ],
   uvp: [
-    { id: "uvp-nba-1", title: "Flag the insurance renewal 30 days out", description: "Meridian's current certificate expires in 45 days — starting the renewal conversation now avoids a compliance gap at requalification." },
+    {
+      id: "uvp-nba-1", title: "Flag the insurance renewal 30 days out",
+      description: "Meridian's current certificate expires in 45 days — starting the renewal conversation now avoids a compliance gap at requalification.",
+      assignedTo: "Procurement Copilot", assignedToKind: "agent", dueDate: "Aug 24, 2026", status: "Not started",
+      task: { kind: "email", subject: "Insurance certificate renewal — 45 days out", bodyPreview: "Hi Meridian team,\n\nYour current certificate of insurance expires in 45 days. Starting the renewal conversation now avoids a compliance gap when requalification comes up — could you confirm your timeline for the updated certificate?\n\nThanks," },
+      dynamicInputs: [{ label: "CC recipients", kind: "text", placeholder: "Add anyone else who should see this" }],
+    },
   ],
   patient: [
-    { id: "patient-nba-1", title: "Schedule a follow-up coagulation panel", description: "Given the flagged Warfarin/Aspirin interaction, a follow-up panel within 48 hours is recommended before discharge." },
+    {
+      id: "patient-nba-1", title: "Schedule a follow-up coagulation panel",
+      description: "Given the flagged Warfarin/Aspirin interaction, a follow-up panel within 48 hours is recommended before discharge.",
+      assignedTo: "Care Coordinator AI", assignedToKind: "agent", dueDate: "Aug 16, 2026", status: "In progress",
+    },
   ],
   claim: [
-    { id: "claim-nba-1", title: "Request the missing parts invoice now", description: "Closing this documentation gap early could shave 3-5 days off the payout timeline once supervisor sign-off clears." },
+    {
+      id: "claim-nba-1", title: "Request the missing parts invoice now",
+      description: "Closing this documentation gap early could shave 3-5 days off the payout timeline once supervisor sign-off clears.",
+      assignedTo: "Claims Copilot AI", assignedToKind: "agent", dueDate: "Aug 6, 2026", status: "Not started",
+    },
   ],
   borrower: [
-    { id: "borrower-nba-1", title: "Offer a co-signer option", description: "Applicants with a similar debt-to-income profile who added a co-signer saw approval odds increase by roughly 30%." },
+    {
+      id: "borrower-nba-1", title: "Offer a co-signer option",
+      description: "Applicants with a similar debt-to-income profile who added a co-signer saw approval odds increase by roughly 30%.",
+      assignedTo: "Underwriting Copilot", assignedToKind: "agent", dueDate: "Aug 14, 2026", status: "Not started",
+    },
   ],
   repairOrder: [
-    { id: "repairOrder-nba-1", title: "Bundle the cabin air filter while it's in the bay", description: "This vehicle is due for that service within 500 miles — bundling it now saves the customer a second visit." },
+    {
+      id: "repairOrder-nba-1", title: "Bundle the cabin air filter while it's in the bay",
+      description: "This vehicle is due for that service within 500 miles — bundling it now saves the customer a second visit.",
+      assignedTo: "Service Advisor Copilot", assignedToKind: "agent", dueDate: "Aug 18, 2026", status: "In progress",
+    },
   ],
 }
 
@@ -33298,6 +33385,22 @@ function RecordHeaderFlowsSection({
 // one-time fix, so no individual panel can drift out of sync again.
 const PANEL_CONTENT_CLASS = "flex flex-col gap-[16px]"
 
+// NBA Layer 1 (base) — status Tag color + Layer 2 (type-specific) section
+// title, keyed the same way so both stay next to each other.
+const NBA_STATUS_TAG: Record<NbaMock["status"], TagVariant> = {
+  "Not started": "secondary",
+  "In progress": "informative",
+  "Scheduled": "lightBlue",
+}
+const NBA_TASK_LABEL: Record<NbaTaskKind, string> = {
+  approval: "Layer 2 · Type — Approval",
+  call: "Layer 2 · Type — Call",
+  email: "Layer 2 · Type — Email",
+}
+// A thin rule between the 3 layers — deliberately plainer than a Section
+// Title row, since it separates LAYERS, not content sections within one.
+const NbaLayerDivider = () => <div className="h-px" style={{ background: "var(--table-border)" }} />
+
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [pgVariant, setPgVariant] = useState<RhDemoKey>("uep")
@@ -33319,6 +33422,11 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   // Decisions above, since a record can have N NBAs too.
   const [rhNbaOpen, setRhNbaOpen] = useState(false)
   const [rhNbaItemId, setRhNbaItemId] = useState<string | null>(null)
+  // NBA Layer 2 (approval type) — Confirm/Reject result, same "resolved"
+  // pattern as rhReviewResolved above (its own state, since an approval
+  // NBA and Pending Decisions are 2 distinct SlideOuts that can't share
+  // one resolved flag).
+  const [rhNbaApprovalResult, setRhNbaApprovalResult] = useState<"confirmed" | "rejected" | null>(null)
 
   // Contextual "···" menus for read-only SlideOut headers (Workflow / Agent)
   // — replaces the generic edit pencil. Anchored the same way every other
@@ -33377,7 +33485,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     }
   }
 
-  const rhOpenNba = (v: RhDemoKey, itemId: string) => { setRhOpenVariant(v); setRhNbaItemId(itemId); setRhNbaOpen(true) }
+  const rhOpenNba = (v: RhDemoKey, itemId: string) => { setRhOpenVariant(v); setRhNbaItemId(itemId); setRhNbaOpen(true); setRhNbaApprovalResult(null) }
   // Redesign pass — the protagonist block. Real, per-item onOpen (not a
   // shared callback for the whole record), same reasoning as Your
   // Intervention above: each NBA needs its own id in scope for the detail
@@ -33731,7 +33839,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["Identity Tags (agent/workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow/agent → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone itself (a Button, or the HTL item's own diagonal-arrow trigger)."],
                 ["Active Workflow", "SlideOut", "AI Summary, Details (Started/Next Trigger/Total Runs), Steps (ProcessItem), Recent Runs list. \"···\" menu (View in Agentic Studio) instead of an edit pencil — read-only content. Tooltip on hover explains the destination before clicking."],
                 ["Last Agent", "SlideOut", "AI Summary (session summary), Agent's Latest Finding, Recent Activity list, and a Recommendation modeled to expose an action (actionLabel/onAction). Same \"···\" menu treatment as Active Workflow. Tooltip on hover explains the destination before clicking."],
-                ["Next Best Action", "SlideOut", "Redesign pass — opens the NBA's own detail panel (Sparkle icon, dark-purple iconBg). PLACEHOLDER content only: title + \"Why this\" description. // TODO: Prompt 2 — the real base/type/dynamic 3-layer task structure hasn't been specified yet."],
+                ["Next Best Action", "SlideOut", "Redesign pass — opens the NBA's own detail panel (Sparkle icon, dark-purple iconBg). Full 3-layer task structure: base (always present) → type-specific (Approval/Call/Email, a growing set) → dynamic inputs. See \"This refinement 9\" on the Reference tab."],
                 ["HTL item diagonal arrow (Your Intervention)", "New browser tab", "Redesign pass — every pending item's ArrowUpRight trigger (never a labeled \"Review\" button) opens the real HTL view in a NEW TAB, never a same-page overlay — Tooltip always says so (OPEN_HTL_TOOLTIP). This demo has no dedicated HTL/Agentic Studio page yet (checked directly), so it opens a new tab to this same page as a truthful placeholder — // TODO: point at the real destination once one exists. The \"Pending Decisions\" SlideOut + ModalDialog approve/dismiss flow still exists in this demo's code and is real, but is now only reachable from the Flows walkthrough section below, not from a live card's HTL item."],
                 ["\"Show N more\" / \"View all\" (Your Intervention)", "Inline disclosure / new tab", "\"Show N more\" (left) and \"View all\" (right, plain text, no icon — verified against Figma) sit at opposite ends of the row, justify-between. \"Show N more\" reveals up to 3 extra pending items inline, each rendered as a bordered card row (matching Agentic System's own item style, no visible severity badge — verified against Figma) with its own diagonal-arrow trigger; \"View all\" is the separate, always-present escape hatch to the full list, same new-tab treatment as every HTL item."],
                 ["RECORD provenance trigger (Identity row)", "SlideOut", "Opens \"About this record\" — every RECORD field at once, label + value + Source → Model → Synced (redesign pass — renamed from \"Data Provenance\"; the only place these fields are visible at all, since they don't render inline in the card). Read-only viewer, no menu (no confirmed related action to offer). Disabled + Tooltip when onProvenanceOpen isn't wired. Icon-only now (redesign pass) — the visible \"View record details\" text label became aria-label only once it moved beside the name."],
@@ -33963,6 +34071,50 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </div>
             <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
               Content-only correction — no changes to record-header.tsx's structure, HTL, NBA, or layout. Only the example mock data (entity name, entity type label, RECORD fields, and the corresponding workflow/agent/intervention text) changed, for the Insurance and Automotive examples above.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 9 — the Next Best Action detail SlideOut, 3-layer task structure</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
+              <span className="font-semibold text-[var(--field-text)]">An NBA is a TASK, and every task in AIMS OS renders through the same 3-layer structure</span> (call with Edgardo, infra) — the same SlideOut a Pending Decisions task uses, since NBA and HTL task detail converge on one composition rather than each inventing its own.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[100px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Layer", "What it carries"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1 · Base", "Common to every task, regardless of type — always rendered. Title + rationale (\"Why this\"), a system-suggested signal (this was generated, not created manually), who it's assigned to (agent or person), due date, status, and periodicity when the task recurs."],
+                ["2 · Type-specific", "Renders differently per task type. Only 3 types are modeled so far — Approval, Call, Email — and this list GROWS as new actions are built (Edgardo); it's a lookup by kind, not a fixed enum baked into the SlideOut's own layout. A task with no modeled type yet falls back to a plain \"not yet modeled\" notice instead of guessing."],
+                ["3 · Dynamic inputs", "The runtime inputs the action needs, meant to reuse the Workflow Builder node input pattern (date / text / confirmation). Less protagonist than HTL's own dynamic layer — one representative example per typed task, not a full input set. // TODO: reciclar input de nodos — no such component exists in this repo yet (checked directly: \"Workflow Builder UI\" is only named in an effort-estimation table, never implemented), so this reuses Input styled the same way a node input would be."],
+              ].map(([layer, desc]) => (
+                <div key={layer} className="grid grid-cols-[100px_1fr] border-b border-[var(--table-border)] last:border-0">
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{layer}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[110px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Type", "Rendered example"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Approval", "UEP — Sarah Chen's \"Scope down Sarah's Admin access\" NBA. What's changing + its context, Confirm/Reject."],
+                ["Call", "UCP — Acme Corp's \"Offer a proactive check-in call\" NBA. Contact (Jane Doe · VP Operations) + Call button + a suggested talking point."],
+                ["Email", "UVP — Meridian Logistics' \"Flag the insurance renewal 30 days out\" NBA. Subject + body preview (Text Description), Send/Edit."],
+              ].map(([type, ex]) => (
+                <div key={type} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0">
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{type}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{ex}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
+              Scoped to the NBA detail SlideOut only — identity, Agentic System, HTL, the States gallery, the end-to-end flows, and every vertical's own entity examples are unchanged.
             </p>
           </section>
 
@@ -34522,12 +34674,14 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         </div>
       </SlideOut>
 
-      {/* ── Next Best Action detail (redesign pass) — PLACEHOLDER structure
-           only. // TODO: Prompt 2 — the real content is a 3-layer task
-           model (base + type + dynamic) that hasn't been specified yet;
-           this SlideOut only wires the trigger and shows the NBA's own
-           title/description so the interaction is demonstrable, not the
-           real detail composition. */}
+      {/* ── Next Best Action detail (this correction pass) — an NBA is a
+           TASK with 3 layers (call with Edgardo, infra): base (Layer 1,
+           always present) → type-specific (Layer 2, one of a growing set —
+           approval/call/email are the first 3) → dynamic inputs (Layer 3,
+           runtime data the action needs). Converges with HTL's own task
+           SlideOut below (Pending Decisions) — same Section-Title +
+           Details-grid primitives, not a separate visual language. See
+           "This refinement 9" on the Reference tab. */}
       <SlideOut
         open={rhNbaOpen}
         onClose={() => setRhNbaOpen(false)}
@@ -34544,19 +34698,138 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         showCta={false}
         showTopButton={false}
       >
-        <div className="flex flex-col gap-[16px]">
-          <div>
-            <div className="flex items-center h-[32px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Why this</span>
+        {openNba && (
+          <div className={PANEL_CONTENT_CLASS}>
+            {/* ── Layer 1 — base (common to every task, always present) ── */}
+            <div className="flex items-center gap-[6px]">
+              <Tag variant="purple" size="sm" leadingIcon={<LucideIcons.Sparkle size={12} />}>System-suggested</Tag>
             </div>
-            <p className="text-[13px] leading-[1.6] mt-[4px]" style={{ color: "var(--foreground)" }}>{openNba?.description}</p>
+            <div>
+              <div className="flex items-center h-[32px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Why this</span>
+              </div>
+              <p className="text-[13px] leading-[1.6] mt-[4px]" style={{ color: "var(--foreground)" }}>{openNba.description}</p>
+            </div>
+            <div>
+              <div className="flex items-center h-[32px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Details</span>
+              </div>
+              <div className="grid grid-cols-2 gap-[12px] text-[12px] mt-[4px]">
+                <div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Assigned to</p>
+                  <p className="mt-[2px] text-[13px] flex items-center gap-[6px]" style={{ color: "var(--foreground)" }}>
+                    {openNba.assignedToKind === "agent"
+                      ? <LucideIcons.Bot size={14} style={{ color: "var(--field-supporting)" }} />
+                      : <LucideIcons.User size={14} style={{ color: "var(--field-supporting)" }} />}
+                    {openNba.assignedTo}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Due date</p>
+                  <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openNba.dueDate}</p>
+                </div>
+                <div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Status</p>
+                  <div className="mt-[2px]"><Tag variant={NBA_STATUS_TAG[openNba.status]} size="sm">{openNba.status}</Tag></div>
+                </div>
+                {openNba.recurrence && (
+                  <div>
+                    <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Repeats</p>
+                    <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openNba.recurrence}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <NbaLayerDivider />
+
+            {/* ── Layer 2 — type-specific (grows as new task types are
+                 built; only 3 modeled so far) ── */}
+            <div className="flex items-center h-[32px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+                {openNba.task ? NBA_TASK_LABEL[openNba.task.kind] : "Layer 2 · Type — not yet modeled"}
+              </span>
+            </div>
+
+            {openNba.task?.kind === "approval" && (
+              <div className="flex flex-col gap-[12px]">
+                <CardContainer variant="default" size="sm">
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{openNba.task.whatChanges}</p>
+                  <p className="text-[12px] leading-[1.5] mt-[4px]" style={{ color: "var(--field-supporting)" }}>{openNba.task.context}</p>
+                </CardContainer>
+                {rhNbaApprovalResult ? (
+                  <div className="rounded-[8px] px-[12px] py-[10px]" style={{ background: "var(--tag-informative-bg)", color: "var(--tag-informative-fg)" }}>
+                    <p className="text-[13px] font-semibold">{rhNbaApprovalResult === "confirmed" ? "Confirmed" : "Rejected"}</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-[8px]">
+                    <Button variant="primary" size="sm" onClick={() => setRhNbaApprovalResult("confirmed")}>Confirm</Button>
+                    <Button variant="secondary" size="sm" onClick={() => setRhNbaApprovalResult("rejected")}>Reject</Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {openNba.task?.kind === "call" && (
+              <div className="flex flex-col gap-[12px]">
+                <div className="flex items-center justify-between gap-[12px]">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold truncate" style={{ color: "var(--foreground)" }}>{openNba.task.contactName}</p>
+                    <p className="text-[12px] truncate" style={{ color: "var(--field-supporting)" }}>{openNba.task.contactRole}</p>
+                  </div>
+                  <Button variant="primary" size="sm" iconPosition="left" icon={<LucideIcons.Phone size={14} />} className="shrink-0">Call</Button>
+                </div>
+                <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Suggested talking point</p>
+                  <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{openNba.task.suggestedNote}</p>
+                </div>
+              </div>
+            )}
+
+            {openNba.task?.kind === "email" && (
+              <div className="flex flex-col gap-[12px]">
+                <div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Subject</p>
+                  <p className="mt-[2px] text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{openNba.task.subject}</p>
+                </div>
+                <Textarea defaultValue={openNba.task.bodyPreview} readOnly rows={5} supportingText="Preview — Edit opens this for changes before sending" />
+                <div className="flex items-center gap-[8px]">
+                  <Button variant="primary" size="sm">Send</Button>
+                  <Button variant="secondary" size="sm">Edit</Button>
+                </div>
+              </div>
+            )}
+
+            {!openNba.task && (
+              <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                  This action's type hasn't been modeled yet. Approval / Call / Email are the first 3 representative types — the list grows as new actions are built.
+                </p>
+              </div>
+            )}
+
+            {/* ── Layer 3 — dynamic inputs (less protagonist than HTL's own,
+                 per the brief — one representative example per typed task) ── */}
+            {openNba.dynamicInputs && openNba.dynamicInputs.length > 0 && (
+              <>
+                <NbaLayerDivider />
+                <div className="flex items-center h-[32px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Layer 3 · Configurable inputs</span>
+                </div>
+                <div className="flex flex-col gap-[8px]">
+                  {/* TODO: reciclar input de nodos — no reusable Workflow
+                      Builder node-input component exists in this repo yet
+                      (checked directly: "Workflow Builder UI" is only named
+                      in an estimation table, never implemented), so this
+                      reuses Input styled the same way a node input would be. */}
+                  {openNba.dynamicInputs.map((input, i) => (
+                    <Input key={i} type={input.kind === "date" ? "date" : "text"} placeholder={input.placeholder} supportingText="Configurable — set at runtime" />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-          <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
-            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
-              // TODO: Prompt 2 — base task (what/who/when) + task type (informational / decision / action) + dynamic layer (data this specific recommendation is grounded in) still need to be specified before this panel can show the real 3-layer structure.
-            </p>
-          </div>
-        </div>
+        )}
       </SlideOut>
     </div>
   )
