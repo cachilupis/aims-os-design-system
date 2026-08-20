@@ -89,8 +89,10 @@ import { Skeleton } from "@/components/ui/skeleton"
  *     never stretches or wraps the row), entity-type icon +
  *     TEXT (both, not icon-only), up to 3 governance-state Tags (hidden once
  *     expanded), Locked state. Actions: AI agent trigger ("Ask about
- *     {firstName}") → 1 contact CTA (Message) → "···" overflow → disclosure
- *     chevron. Clicking a compressed Tag expands the card and scrolls/
+ *     {firstName}") → optional primary CTA (actions[0], host-provided —
+ *     omitted entirely if the host passes none) → "···" overflow
+ *     (actions[1+]) → disclosure chevron. Clicking a compressed Tag expands
+ *     the card and scrolls/
  *     highlights the zone that Tag summarizes — see Block 2 note below.
  *   AGENTIC SYSTEM (expanded) → each item (Active Workflow / Last Agent) is
  *     a CardContainer (size="sm") with a HighlightIcon (size="sm", colored:
@@ -102,11 +104,14 @@ import { Skeleton } from "@/components/ui/skeleton"
  *     pending (default, N items — most prioritized shown + "+N more"
  *     disclosure, never a carousel) / empty / loading / no-permission (+ Escalate) /
  *     error / resolved-elsewhere. See PendingIntervention's own doc comment.
- *   RECORD (expanded) → each field is its OWN Button variant="tertiary" row
- *     when it has a destination (leading icon + label/value + origin badge
- *     + trailing ChevronRight), or plain static text when it doesn't (Law 1
- *     badge still present, just not clickable). The (i) icon next to the
- *     "RECORD" heading opens Data Provenance for every destination field.
+ *   RECORD (expanded) → fields never render inline (this correction pass —
+ *     previously each field was its own Button variant="tertiary" row when
+ *     it had a destination, or plain static text when it didn't). Now the
+ *     whole zone is a single Button variant="tertiary" ("View record
+ *     details", leading Info icon) that opens the same Data Provenance
+ *     SlideOut (Law 2) for every field at once — disabled + a Tooltip
+ *     explaining why when the host hasn't wired onProvenanceOpen, never
+ *     silently hidden.
  *
  * Block 2 — clicking a compressed identity Tag (this revision): every tag
  *   (agent/workflow/HTL) is a single, consistent interaction — it expands
@@ -134,8 +139,10 @@ import { Skeleton } from "@/components/ui/skeleton"
  *                Block 2's "expand + scroll to zone" tag click behavior.
  *   Agentic System items → CardContainer (sm) + HighlightIcon (sm, colored)
  *                + Button variant="tertiary" (neutral, no color). RECORD
- *                destination rows → Button variant="tertiary", leading
- *                icon, trailing ChevronRight. Never a colored card for
+ *                zone → a single Button variant="tertiary", leading Info
+ *                icon, opening Data Provenance for every field (this
+ *                correction pass — no more per-field rows inline). Never a
+ *                colored card for
  *                metadata, per explicit instruction — HighlightIcon's own
  *                tinted box is the one sanctioned exception (it's a
  *                dedicated colored-icon atom, not a colored metadata card).
@@ -330,17 +337,17 @@ export interface RecordHeaderEntityType {
 
 // ── Zone labels (Block 4 — i18n-ready, never baked in) ─────────────────────
 // Every zone heading can be renamed/translated by the host. Defaults
-// preserve the existing English copy when the host doesn't override.
+// preserve the existing English copy when the host doesn't override. No
+// `record` entry (this correction pass) — RECORD no longer has its own
+// zone heading now that its trigger lives beside the name instead.
 export interface RecordHeaderZoneLabels {
   agenticSystem?: string
   intervention?: string
-  record?: string
 }
 
 const DEFAULT_ZONE_LABELS: Required<RecordHeaderZoneLabels> = {
   agenticSystem: "Agentic System",
   intervention: "Your Intervention",
-  record: "Record",
 }
 
 export interface RecordHeaderProps {
@@ -359,7 +366,7 @@ export interface RecordHeaderProps {
    * never a silently missing button and never a broken one.
    */
   assignedAgent: AssignedAgent | null
-  /** actions[0] = the one contact CTA (Message); actions[1+] = overflow menu items. */
+  /** actions[0] = an optional primary CTA (e.g. contact); actions[1+] = overflow menu items. Omit entirely for no CTA/overflow. */
   actions?: RecordAction[]
   /** Zone: AGENTIC SYSTEM. Omit entirely to skip the zone for this entity type. */
   agenticSystem?: AgenticSystemInfo
@@ -400,11 +407,6 @@ export const RECORD_HEADER_FALLBACKS = {
   interventionEmpty: "No interventions pending — you're all caught up",
 }
 
-// ── Recommended actions ──────────────────────────────────────────────────────
-// One contact action (Message) — not tied to entity type; hosts that need a
-// different action simply pass their own `actions` array.
-export const RECORD_HEADER_RECOMMENDED_ACTIONS: RecordAction[] = [{ label: "Message" }]
-
 // ── Desktop overflow — container-width collapse thresholds ─────────────────
 // Not viewport breakpoints: this card can sit in a narrower panel on an
 // otherwise-desktop screen, so width is measured on the card's own rendered
@@ -417,15 +419,6 @@ export const RECORD_HEADER_RECOMMENDED_ACTIONS: RecordAction[] = [{ label: "Mess
 // their label content adapts.
 const COLLAPSE_HIDE_TAGS_WIDTH = 560
 const COLLAPSE_SHORTEN_ASSISTANT_WIDTH = 480
-// Record grid — 3 columns needs real room for the longest label (e.g.
-// "Procurement Owner") plus its icon; below this width the same
-// container-width measurement drops it to 2 columns so labels never
-// overlap. Was previously Tailwind's `sm:grid-cols-3` (a viewport
-// breakpoint), which stayed at 3 columns even when this card sat in a
-// narrow slot on an otherwise-wide viewport (e.g. the two-up States
-// gallery) — same class of bug the width measurement above already exists
-// to prevent for tags/assistant label.
-const COLLAPSE_RECORD_TO_2COL_WIDTH = 560
 // A long first name can overflow even at full width — this is a length
 // guard, not a replacement for the width measurement above; both apply.
 const ASSISTANT_LABEL_MAX_NAME_LENGTH = 12
@@ -460,7 +453,10 @@ function RecordHeader({
   const hasAgenticSystem = agenticSystem !== undefined
   const hasIntervention = intervention !== undefined
   const hasRecordFields = recordFields.length > 0
-  const hasAnyZone = hasAgenticSystem || hasIntervention || hasRecordFields
+  // RECORD is no longer one of the expandable zones (this correction pass —
+  // its provenance trigger moved up beside the name, always visible). Only
+  // Agentic System/Your Intervention still gate the disclosure chevron.
+  const hasAnyZone = hasAgenticSystem || hasIntervention
 
   // Block 2 — clicking a compressed identity Tag expands the card and
   // scrolls/highlights the zone it summarizes. Never opens a SlideOut
@@ -498,14 +494,12 @@ function RecordHeader({
   const rootRef = useRef<HTMLDivElement>(null)
   const [tagsHidden, setTagsHidden] = useState(false)
   const [assistantShortened, setAssistantShortened] = useState(false)
-  const [recordGridNarrow, setRecordGridNarrow] = useState(false)
   useLayoutEffect(() => {
     const el = rootRef.current
     if (!el) return
     const measure = () => {
       setTagsHidden(el.clientWidth < COLLAPSE_HIDE_TAGS_WIDTH)
       setAssistantShortened(el.clientWidth < COLLAPSE_SHORTEN_ASSISTANT_WIDTH)
-      setRecordGridNarrow(el.clientWidth < COLLAPSE_RECORD_TO_2COL_WIDTH)
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -573,6 +567,30 @@ function RecordHeader({
                   {name}
                 </span>
               </Tooltip>
+              {/* RECORD provenance trigger — lives beside the name now (this
+                  correction pass), not gated behind expand/collapse: an
+                  icon-only Button variant="tertiary", same primitive every
+                  other secondary action in this file uses. Disabled + a
+                  Tooltip explaining why when the host hasn't wired
+                  onProvenanceOpen — never silently hidden (same rule as
+                  assignedAgent === null). */}
+              {hasRecordFields && (
+                <Tooltip
+                  content={onProvenanceOpen ? "View record details — data provenance for every field" : "No provenance view wired for this record yet"}
+                  side="cursor"
+                >
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    iconPosition="alone"
+                    icon={<Info size={14} strokeWidth={1.75} />}
+                    aria-label="View record details"
+                    disabled={!onProvenanceOpen}
+                    onClick={onProvenanceOpen}
+                    className="shrink-0"
+                  />
+                </Tooltip>
+              )}
               {/* Entity type — icon AND text (not icon-only): "icons that
                   communicate," but the label stays legible on its own too. */}
               <Tooltip content={entityType.label} side="cursor">
@@ -780,37 +798,6 @@ function RecordHeader({
                     {zoneLabels.intervention}
                   </span>
                   <InterventionZoneContent state={intervention} />
-                </div>
-              )}
-
-              {hasRecordFields && (
-                <div className="flex flex-col gap-[8px]">
-                  {/* Law 2 — the (i) provenance icon sits directly next to the
-                      RECORD label, not floating unlabeled at the row's far
-                      edge, so it's actually findable. */}
-                  <div className="flex items-center gap-[4px]">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
-                      {zoneLabels.record}
-                    </span>
-                    {onProvenanceOpen && (
-                      <Tooltip content="Data provenance for every field below" side="cursor">
-                        <button
-                          type="button"
-                          aria-label="View data provenance"
-                          onClick={onProvenanceOpen}
-                          className="flex items-center justify-center rounded-full transition-opacity hover:opacity-70 focus-visible:outline-none"
-                          style={{ color: "var(--field-supporting)" }}
-                        >
-                          <Info size={12} strokeWidth={1.75} />
-                        </button>
-                      </Tooltip>
-                    )}
-                  </div>
-                  <div className={cn("grid gap-x-[8px] gap-y-[4px]", recordGridNarrow ? "grid-cols-2" : "grid-cols-3")}>
-                    {recordFields.map((f, i) => (
-                      <RecordFieldCell key={i} field={f} onProvenanceOpen={onProvenanceOpen} />
-                    ))}
-                  </div>
                 </div>
               )}
 
@@ -1062,78 +1049,6 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
         </>
       )}
     </div>
-  )
-}
-
-// ── A single RECORD field row — destination vs no-destination ─────────────
-function RecordFieldCell({ field: f, onProvenanceOpen }: { field: RecordField; onProvenanceOpen?: () => void }) {
-  const FieldIcon = f.icon
-  const valueText = f.state === "masked" ? (f.maskedValue ?? "•••• (restricted)") : f.value
-  const provenanceText = `${f.provenance.system} · ${f.provenance.modelVersion} · Synced ${f.provenance.syncedAgo}`
-  const badge = <Tag variant="secondary" size="sm" className="shrink-0">{f.provenance.systemAbbr}</Tag>
-  const valueSpan = (
-    <span
-      className="block text-[13px] leading-[1.4] truncate max-w-full"
-      style={{ color: f.state === "masked" ? "var(--field-supporting)" : "var(--foreground)", fontStyle: f.state === "masked" ? "italic" : undefined }}
-    >
-      {valueText}
-    </span>
-  )
-
-  // Destination split — only a field with somewhere to go (hasDestination
-  // !== false) is a clickable Button + chevron; a plain descriptive fact
-  // renders as static text. Its origin badge still gets a Tooltip (Law 1
-  // never turns off), and — since the value itself can still truncate — the
-  // value gets its own Tooltip too (overflow: never a dead end).
-  //
-  // Task 3 (Block 1, this pass) — the trailing slot is ALWAYS reserved at
-  // the same 14px width, chevron or not: a destination row ends in a real
-  // ChevronRight, a non-destination row ends in an invisible spacer of the
-  // identical size. Both rows are otherwise the same flex row (icon → label/
-  // value → badge → trailing slot), so the badge column now lands at the
-  // exact same horizontal position on every row regardless of whether that
-  // particular field has a destination — that's the whole fix; there's
-  // nothing to align if the row *shapes* don't match first.
-  if (f.hasDestination === false) {
-    return (
-      <div className="flex items-start gap-[8px] px-[8px] py-[8px] min-w-0">
-        <FieldIcon size={14} strokeWidth={1.75} className="shrink-0 mt-[2px]" style={{ color: "var(--field-supporting)" }} />
-        <div className="flex flex-col items-start gap-[2px] flex-1 min-w-0 text-left">
-          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
-            {f.label}
-          </span>
-          <Tooltip content={valueText} side="cursor" triggerClassName="block min-w-0 w-full">
-            {valueSpan}
-          </Tooltip>
-        </div>
-        <Tooltip content={provenanceText} side="cursor">
-          {badge}
-        </Tooltip>
-        <span aria-hidden className="shrink-0 mt-[2px]" style={{ width: 14, height: 14 }} />
-      </div>
-    )
-  }
-
-  return (
-    <Tooltip content={`${valueText} — ${provenanceText}`} side="cursor" triggerClassName="min-w-0 w-full">
-      <Button
-        variant="tertiary"
-        onClick={onProvenanceOpen}
-        className="h-auto w-full min-w-0 justify-start px-[8px] py-[8px]"
-      >
-        <FieldIcon size={14} strokeWidth={1.75} className="shrink-0 mt-[2px]" style={{ color: "var(--field-supporting)" }} />
-        <div className="flex flex-col items-start gap-[2px] flex-1 min-w-0 text-left">
-          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
-            {f.label}
-          </span>
-          {valueSpan}
-        </div>
-        {/* Field origin badge — Law 1, always renders regardless of masking
-            state (provenance ≠ the value itself). */}
-        {badge}
-        <ChevronRight size={14} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--field-supporting)" }} />
-      </Button>
-    </Tooltip>
   )
 }
 

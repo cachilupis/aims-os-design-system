@@ -44,7 +44,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { RecordHeader, RECORD_HEADER_RECOMMENDED_ACTIONS, type RecordHeaderEntityType, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent, type RecordAction } from "@/components/ui/record-header"
+import { RecordHeader, type RecordHeaderEntityType, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent } from "@/components/ui/record-header"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
@@ -2116,12 +2116,12 @@ const RECORD_HEADER_SPEC = {
     { name: "variant",        type: "Variant",  values: ["uep","ucp","uvp"], default: "required", note: "Selects which of the 3 record shapes `data` must match — see getRecordFields in record-header.tsx." },
     { name: "data",           type: "object",   values: ["UEPRecord | UCPRecord | UVPRecord"], default: "required" },
     { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "AIMS OS is agent-first — every record has one, but the value can be null. Renders an always-present icon-only button (Sparkle, variant=\"main\"); null disables it with a Tooltip. RecordHeader never renders the chat UI itself." },
-    { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as the one contact CTA (Message); actions[1+] land in the \"···\" overflow Menu." },
+    { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as an optional primary CTA; actions[1+] land in the \"···\" overflow Menu. Omitted entirely by this demo since the Message CTA was removed (this correction pass)." },
     { name: "agenticSystem",  type: "object",   values: ["AgenticSystemInfo — { activeWorkflow?: {name,onOpen?}, lastAgent?: {name,onOpen?} }"], default: "undefined", note: "Zone: AGENTIC SYSTEM. Exactly 2 fixed slots, each a Button variant=\"tertiary\" with a leading icon (Workflow/Bot) — never a colored card. Zone omitted entirely if neither slot is set." },
     { name: "intervention",   type: "object",   values: ["PendingIntervention — pending: { items: InterventionItem[] } — each { id, description, severity, onReview }"], default: "undefined", note: "Zone: YOUR INTERVENTION — only rendered when set (a real pending HTL decision). N items: most prioritized shown + \"+N-1 more\" disclosure, never a carousel. Calm/informative styling ALWAYS, regardless of severity — Law 3." },
-    { name: "onProvenanceOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Data Provenance SlideOut for the RECORD zone — the (i) icon next to the RECORD heading (Law 2)." },
+    { name: "onProvenanceOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Data Provenance SlideOut for the RECORD zone — reached through the zone's single \"View record details\" tertiary Button (Law 2). Fields never render inline (this correction pass)." },
     { name: "defaultExpanded", type: "Boolean", values: ["true","false"], default: "false", note: "Uncontrolled initial state for the zones disclosure. Predictable header height when collapsed." },
-    { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "Read-only record. Shows a \"Locked\" Tag next to the type label; disables the contact CTA/overflow (Tooltip explains why); the agent trigger stays fully interactive." },
+    { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "Read-only record. Shows a \"Locked\" Tag next to the type label; disables any contact/write actions passed via `actions` (Tooltip explains why); the agent trigger and RECORD's provenance button stay fully interactive." },
   ],
   sizes: [
     { size: "Card",     dimensions: "100% width, auto height", padding: "16px H / 24px V (CardContainer default)", gap: "16px between rows" },
@@ -32900,13 +32900,17 @@ const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
 }
 
 // Data Provenance (Law 2) — reuses the SAME FieldProvenance objects already
-// attached to each RecordField; this SlideOut is just a fuller 3-layer view
-// of data the card already cites via each field's badge/Tooltip, not a
-// second, separate source of truth.
+// attached to each RecordField. This is now the ONLY place these values are
+// displayed at all (this correction pass — RECORD fields no longer render
+// inline in the card itself), not a fuller view of something the card
+// already showed. Rows sit inside ONE shared border (see the caller below),
+// separated by dividers, not one CardContainer per field — the repo's own
+// "table" convention (see the Reference tab's own tables) unifying a list
+// of like items instead of stacking N separate cards.
 function ProvenanceRow({ field }: { field: RecordField }) {
   const FieldIcon = field.icon
   return (
-    <CardContainer size="sm" variant="default" className="mb-[8px]">
+    <div className="p-[12px] border-b border-[var(--table-border)] last:border-0">
       <div className="flex items-center gap-[6px] mb-[8px]">
         <FieldIcon size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />
         <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{field.label}</span>
@@ -32916,10 +32920,10 @@ function ProvenanceRow({ field }: { field: RecordField }) {
         <span style={{ color: "var(--foreground)" }}>{field.provenance.system} · synced {field.provenance.syncedAgo}</span>
         <span style={{ color: "var(--field-supporting)" }}>Model</span>
         <span style={{ color: "var(--foreground)" }}>{field.provenance.modelVersion}</span>
-        <span style={{ color: "var(--field-supporting)" }}>Displayed</span>
-        <span style={{ color: "var(--foreground)" }}>Here, in this card</span>
+        <span style={{ color: "var(--field-supporting)" }}>Value</span>
+        <span style={{ color: "var(--foreground)" }}>{field.state === "masked" ? (field.maskedValue ?? "•••• (restricted)") : field.value}</span>
       </div>
-    </CardContainer>
+    </div>
   )
 }
 
@@ -32963,11 +32967,9 @@ function HeaderContextMenu({
 function RecordHeaderStatesGallery({
   rhAssignedAgent,
   rhAgenticSystem,
-  rhMessageAction,
 }: {
   rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent
   rhAgenticSystem: (v: RhDemoKey) => AgenticSystemInfo
-  rhMessageAction: (recordName: string) => RecordAction[]
 }) {
   const overflowFields: RecordField[] = [
     {
@@ -32988,10 +32990,10 @@ function RecordHeaderStatesGallery({
         {[
           "Identity — collapsed (#1, tags visible) vs. expanded (everywhere else)",
           "Your Intervention — pending (#1), empty (#2), loading (#4), no-permission (#5), error (#6), resolved-elsewhere (#7): all 6 states",
-          "Your Intervention — N items (Block 3): 1 shows alone, no counter (#1); N shows the most prioritized + \"+N-1 more\" disclosure, never a carousel (#14)",
+          "Your Intervention — N items (Block 3): 1 shows alone, no counter (#1); N shows the most prioritized + \"+N-1 more\" disclosure, never a carousel (#11)",
           "Agentic System — populated (everywhere), empty (#3), loading (#4)",
-          "Record — normal (everywhere), PII masked (#8), overflow (#10)",
-          "Locked (#9) · Message — enabled (most cards), no channel (#11), no permission (#12), PII masked still works (#13), stays active when Locked (#9)",
+          "Record — normal (everywhere), PII masked (#8), overflow (#10) — all reached only through \"View record details\" (this correction pass), never rendered inline",
+          "Locked (#9) — read-only Tag; agent trigger, Agentic System, and RECORD's provenance access stay active regardless",
         ].map(line => (
           <li key={line} className="text-[11px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>· {line}</li>
         ))}
@@ -33007,7 +33009,6 @@ function RecordHeaderStatesGallery({
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">1 · Collapsed — governance-state Tags visible</p>
           <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep}
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")}
             intervention={{ items: [{ id: "gallery-1", description: "Elevated access request needs manager approval.", severity: "high", onReview: () => {} }] }} />
         </div>
@@ -33016,7 +33017,6 @@ function RecordHeaderStatesGallery({
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">2 · Your Intervention — empty (genuinely nothing pending)</p>
           <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
             assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uvp")}
             intervention={{ status: "empty", message: "No interventions pending — nothing awaiting your review right now." }} />
         </div>
@@ -33025,7 +33025,6 @@ function RecordHeaderStatesGallery({
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">3 · Agentic System — empty (freshly imported record)</p>
           <RecordHeader name="Jordan Ellis" entityType={RH_ENTITY_TYPE.uep} recordFields={[]} defaultExpanded
             assignedAgent={null}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={{ status: "empty" }} />
         </div>
 
@@ -33033,7 +33032,6 @@ function RecordHeaderStatesGallery({
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">4 · Loading — agent/NBA still computing (Skeleton)</p>
           <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
             assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={{ status: "loading" }}
             intervention={{ status: "loading" }} />
         </div>
@@ -33042,7 +33040,6 @@ function RecordHeaderStatesGallery({
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">5 · No permission to approve — Review disabled, Escalate offered</p>
           <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")}
             intervention={{
               status: "no-permission",
@@ -33055,7 +33052,6 @@ function RecordHeaderStatesGallery({
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">6 · Error approving — amber InformativeCard, never a red toast</p>
           <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
             assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("ucp")}
             intervention={{
               status: "error",
@@ -33068,7 +33064,6 @@ function RecordHeaderStatesGallery({
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">7 · Stale — already resolved by someone else, no Approve button</p>
           <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")}
             intervention={{
               status: "resolved-elsewhere",
@@ -33081,21 +33076,18 @@ function RecordHeaderStatesGallery({
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">8 · PII masked — same field, 2 entitlement states (Law 4)</p>
           <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")} />
         </div>
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">
-            9 · Locked — write actions disabled, Message stays available (contacting isn't editing)
+            9 · Locked — read-only Tag; agent trigger, Agentic System, and RECORD's "View record details" stay active
           </p>
           {/* DECISION FLAGGED — hypothesis, not explicitly confirmed: see
-              RecordHeaderProps.locked's own doc comment in record-header.tsx,
-              and RecordAction.disableWhenLocked's own doc comment (Block 6).
+              RecordHeaderProps.locked's own doc comment in record-header.tsx.
               // TODO: confirmar con Michael. */}
           <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} locked defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            actions={rhMessageAction(RH_UEP.name)}
             agenticSystem={rhAgenticSystem("uep")} />
         </div>
 
@@ -33107,39 +33099,13 @@ function RecordHeaderStatesGallery({
             recordFields={overflowFields}
             defaultExpanded
             assignedAgent={rhAssignedAgent("uep", "Alexandria Christodoulopoulos-Fitzgerald-Whitmore")}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
           />
         </div>
 
         <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">11 · Message — no contact channel on file, disabled + Tooltip explaining why</p>
-          <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
-            assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
-            actions={[{ label: "Message", disabled: true, disabledTooltip: "No contact channel on file for this vendor" }]}
-            agenticSystem={rhAgenticSystem("uvp")} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">12 · Message — no permission to contact, disabled + Tooltip (never silently hidden)</p>
-          <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
-            assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
-            actions={[{ label: "Message", disabled: true, disabledTooltip: "You don't have permission to contact this account" }]}
-            agenticSystem={rhAgenticSystem("ucp")} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">13 · Message — PII masked field, contacting still works (Law 4 resolves at send-time, not display-time)</p>
-          <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
-            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            actions={rhMessageAction(RH_UEP.name)}
-            agenticSystem={rhAgenticSystem("uep")} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">14 · Your Intervention — 3 pending, most prioritized shown + "+2 more" (Block 3)</p>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">11 · Your Intervention — 3 pending, most prioritized shown + "+2 more" (Block 3)</p>
           <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS}
             agenticSystem={rhAgenticSystem("uep")}
             intervention={{
               items: [
@@ -33271,22 +33237,6 @@ function RecordHeaderFlowsSection({
 // one-time fix, so no individual panel can drift out of sync again.
 const PANEL_CONTENT_CLASS = "flex flex-col gap-[16px]"
 
-// Message composition — coherent per-record draft, keyed by name. This is
-// what makes the Message SidePanel demonstrable (this pass): the Textarea
-// is a real controlled field the viewer can type into, pre-filled with a
-// line that actually reflects that record's own governed content above —
-// never a generic "type here" filler. // TODO: confirmar canales
-// disponibles y componente de composición real cuando exista en el repo.
-const RH_MESSAGE_DRAFT: Record<string, string> = {
-  [RH_UEP.name]: `Hi ${RH_UEP.name.split(" ")[0]} — following up on the Billing repo access request that's awaiting your manager's sign-off. Let me know if there's anything you need from me to help it move.`,
-  [RH_UCP.name]: `Hi team — checking in on the 12% renewal discount currently held for deal-desk sign-off. Happy to jump on a call if that's faster than email.`,
-  [RH_UVP.name]: `Hi — your annual requalification review is in progress; the spend-cap overage is with our category manager now. We'll follow up as soon as that clears.`,
-  [RH_PATIENT.name]: `Hi Dr. Osei — flagging the Warfarin/Aspirin interaction on Elena's new prescription order. Could you confirm before the next dose is due?`,
-  [RH_CLAIM.name]: `Hi — the payout for your claim is calculated at $18,400 and currently held for supervisor sign-off since it's above standard adjuster authority. We'll follow up as soon as that clears.`,
-  [RH_BORROWER.name]: `Hi ${RH_BORROWER.name.split(" ")[0]} — your loan application is with an underwriter for a quick review of your debt-to-income ratio. We'll have a decision to you shortly.`,
-  [RH_REPAIR_ORDER.name]: `Hi — we found an additional worn part during your F-150's diagnostic that adds $640 beyond your pre-authorized budget. Let us know if it's OK to proceed.`,
-}
-
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [pgVariant, setPgVariant] = useState<RhDemoKey>("uep")
@@ -33356,32 +33306,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
   })
 
-  // Block 6 — Message (Type 5 interaction): opens a SidePanel (not a
-  // SlideOut) with the contact's context preloaded, same reasoning as "Ask
-  // about" — the user shouldn't have to leave the record to compose. The
-  // Textarea itself is a real controlled field with a coherent, record-
-  // specific draft (RH_MESSAGE_DRAFT below) — only the channel-resolution/
-  // send pipeline is still a TODO, since no dedicated component for that
-  // exists in the repo yet. // TODO: confirmar canales disponibles y
-  // componente de composición real cuando exista en el repo.
-  const [rhMessageFor, setRhMessageFor] = useState<string | null>(null)
-  // Real controlled field (this pass) — pre-filled from RH_MESSAGE_DRAFT so
-  // the panel opens with a coherent, record-specific draft instead of a
-  // blank/disabled placeholder; the viewer can still edit it freely.
-  const [rhMessageDraft, setRhMessageDraft] = useState("")
-  const [rhMessageSent, setRhMessageSent] = useState(false)
-  const rhMessageAction = (recordName: string): RecordAction[] => [
-    {
-      label: "Message",
-      onClick: () => { setRhMessageFor(recordName); setRhMessageDraft(RH_MESSAGE_DRAFT[recordName] ?? ""); setRhMessageSent(false) },
-      // DECISION FLAGGED — hypothesis, not explicitly confirmed: contacting
-      // a record doesn't modify it, so Message stays available even when
-      // the record is locked (unlike write actions in the overflow menu).
-      // // TODO: confirmar con Michael.
-      disableWhenLocked: false,
-    },
-  ]
-
   const pgName = RH_NAME[pgVariant]
   const pgRecordFields = pgVariant === "uep" && pgMasked ? RH_UEP_MASKED_FIELDS : RH_RECORD_FIELDS[pgVariant]
   const openVariant = rhOpenVariant ?? "uep"
@@ -33432,7 +33356,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">UEP — Employee (reference variant)</p>
             <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-              actions={rhMessageAction(RH_UEP.name)}
               agenticSystem={rhAgenticSystem("uep")}
               intervention={rhIntervention("uep")}
               onProvenanceOpen={() => rhOpenProvenance("uep")} />
@@ -33443,7 +33366,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
             <RecordHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
               assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
-              actions={rhMessageAction(RH_UCP.name)}
               agenticSystem={rhAgenticSystem("ucp")}
               intervention={rhIntervention("ucp")}
               onProvenanceOpen={() => rhOpenProvenance("ucp")} />
@@ -33454,7 +33376,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content. No pending intervention here on purpose — the zone is fully omitted, not shown empty.</p>
             <RecordHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
-              actions={rhMessageAction(RH_UVP.name)}
               agenticSystem={rhAgenticSystem("uvp")}
               intervention={rhIntervention("uvp")}
               onProvenanceOpen={() => rhOpenProvenance("uvp")} />
@@ -33463,15 +33384,14 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Block 3 — agnosticism proof: a healthcare vertical, same component</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. Deliberately picked to be as unlike UEP/UCP/UVP as possible: a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba), and custom zone labels via the <code>labels</code> prop ("Care Workflows" / "Needs Your Attention" / "Patient Chart") to prove the headings are i18n-configurable, not baked-in English. Same colors (purple = agent, light blue = workflow, amber = intervention), same skeleton, zero changes to record-header.tsx.
+              Mock data — not confirmed AIMS OS content. Deliberately picked to be as unlike UEP/UCP/UVP as possible: a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba), and custom zone labels via the <code>labels</code> prop ("Care Workflows" / "Needs Your Attention") to prove the headings are i18n-configurable, not baked-in English. Same colors (purple = agent, light blue = workflow, amber = intervention), same skeleton, zero changes to record-header.tsx.
             </p>
             <RecordHeader name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient} recordFields={RH_RECORD_FIELDS.patient} defaultExpanded
               assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
-              actions={rhMessageAction(RH_PATIENT.name)}
               agenticSystem={rhAgenticSystem("patient")}
               intervention={rhIntervention("patient")}
               onProvenanceOpen={() => rhOpenProvenance("patient")}
-              labels={{ agenticSystem: "Care Workflows", intervention: "Needs Your Attention", record: "Patient Chart" }} />
+              labels={{ agenticSystem: "Care Workflows", intervention: "Needs Your Attention" }} />
           </section>
 
           <section>
@@ -33481,7 +33401,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </p>
             <RecordHeader name={RH_CLAIM.name} entityType={RH_ENTITY_TYPE.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
               assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
-              actions={rhMessageAction(RH_CLAIM.name)}
               agenticSystem={rhAgenticSystem("claim")}
               intervention={rhIntervention("claim")}
               onProvenanceOpen={() => rhOpenProvenance("claim")} />
@@ -33494,7 +33413,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </p>
             <RecordHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
               assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
-              actions={rhMessageAction(RH_BORROWER.name)}
               agenticSystem={rhAgenticSystem("borrower")}
               intervention={rhIntervention("borrower")}
               onProvenanceOpen={() => rhOpenProvenance("borrower")} />
@@ -33507,7 +33425,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </p>
             <RecordHeader name={RH_REPAIR_ORDER.name} entityType={RH_ENTITY_TYPE.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder} defaultExpanded
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
-              actions={rhMessageAction(RH_REPAIR_ORDER.name)}
               agenticSystem={rhAgenticSystem("repairOrder")}
               intervention={rhIntervention("repairOrder")}
               onProvenanceOpen={() => rhOpenProvenance("repairOrder")} />
@@ -33520,7 +33437,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             </p>
             <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-              actions={rhMessageAction(RH_UEP.name)}
               agenticSystem={rhAgenticSystem("uep")}
               onProvenanceOpen={() => rhOpenProvenance("uep")} />
           </section>
@@ -33528,7 +33444,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <RecordHeaderStatesGallery
             rhAssignedAgent={rhAssignedAgent}
             rhAgenticSystem={rhAgenticSystem}
-            rhMessageAction={rhMessageAction}
           />
 
           <RecordHeaderFlowsSection
@@ -33574,11 +33489,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             entityType={RH_ENTITY_TYPE[pgVariant]}
             recordFields={pgRecordFields}
             assignedAgent={rhAssignedAgent(pgVariant, pgName)}
-            actions={rhMessageAction(pgName)}
             agenticSystem={rhAgenticSystem(pgVariant)}
             intervention={rhIntervention(pgVariant)}
             onProvenanceOpen={() => rhOpenProvenance(pgVariant)}
-            labels={pgVariant === "patient" ? { agenticSystem: "Care Workflows", intervention: "Needs Your Attention", record: "Patient Chart" } : undefined}
+            labels={pgVariant === "patient" ? { agenticSystem: "Care Workflows", intervention: "Needs Your Attention" } : undefined}
           />
 
           <div>
@@ -33684,10 +33598,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Identity (fixed)", "Avatar · name (truncates with an ellipsis + Tooltip — never wraps or stretches the row) · entity-type icon AND text (not icon-only — a text label sits beside the icon) · up to 3 governance-state Tags — assigned agent (purple), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE (Block 2): clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → 1 contact CTA (Message) → \"···\" overflow → disclosure chevron."],
+                ["Identity (fixed)", "Avatar · name (truncates with an ellipsis + Tooltip — never wraps or stretches the row) · entity-type icon AND text (not icon-only — a text label sits beside the icon) · up to 3 governance-state Tags — assigned agent (purple), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE (Block 2): clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → optional primary CTA (actions[0], host-provided — this demo currently passes none, the Message CTA having been removed in a correction pass) → \"···\" overflow → disclosure chevron."],
                 ["Agentic System",  "Active Workflow + Last Agent lay out side by side (grid, not stacked — uses the card's width instead of wasting it). Each item is a plain card BORDER (not a nested CardContainer component — this already lives inside the header's own CardContainer, so a second one read as card-in-card) with a HighlightIcon (size=\"sm\", colored: light blue = workflow, purple = agent) + a NEUTRAL tertiary Button beside it — color lives in the icon, never in the button. Also renders \"empty\" (no workflow/agent yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
                 ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default, N items — most prioritized shown + a \"+N-1 more\" disclosure, never a carousel), empty (reads as completion, not absence), loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
-                ["Record",          "Each field with a real destination (RecordField.hasDestination !== false) is a Button variant=\"tertiary\" row — leading field icon, label/value, origin-system badge (Law 1), trailing ChevronRight — opening Data Provenance directly. A plain descriptive fact (hasDestination: false — e.g. a pure date) renders as static text instead: no chevron, not a Button — but it still reserves the identical 14px trailing slot as an invisible spacer, so the origin-badge column lands at the exact same horizontal position on every row regardless of whether that field has a destination. The (i) icon next to the RECORD heading opens the same panel (Law 2) for every destination field at once. `recordFields` is a plain array the host builds — no fixed \"employee field\" shape inside the component (Block 4)."],
+                ["Record",          "Fields never render inline (this correction pass). The whole zone is a single Button variant=\"tertiary\" (\"View record details\", leading Info icon) that opens Data Provenance for every field at once (Law 2) — disabled + a Tooltip explaining why when onProvenanceOpen isn't wired, never silently hidden. `recordFields` is still a plain array the host builds — no fixed \"employee field\" shape inside the component (Block 4); it's just no longer rendered as per-field rows in the collapsed/expanded card itself."],
               ].map(([zone, content], i) => (
                 <div key={zone} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{zone}</div>
@@ -33707,14 +33621,11 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
               {[
                 ["\"Ask about {name}\" / \"Ask AI\"", "SidePanel", "Chat with assignedAgent — PLACEHOLDER body only (// TODO: reemplazar con el componente de Chat cuando exista en el repo). No Chat component exists anywhere in src/components/ui/ yet, checked directly. SidePanel (not SlideOut) — docked, no backdrop, page stays visible/usable underneath."],
-                ["Message (contact CTA)", "SidePanel", "Block 6 — composition SidePanel with the contact's context preloaded. The Textarea is a real controlled field, pre-filled with a draft that reflects this record's own governed content (RH_MESSAGE_DRAFT) — not a disabled filler; Send enables once there's content and shows the same confirmation-banner pattern as Approve/Dismiss. Only the real channel-resolution/send pipeline is still // TODO: confirmar canales disponibles y componente de composición real. Same SidePanel-not-SlideOut reasoning as \"Ask about.\" Disables (with a Tooltip explaining why) for no channel on file or no permission to contact — never silently hidden. Stays enabled when the record is Locked (contacting isn't editing — // TODO: confirmar) and when the record's own PII is masked (Law 4 resolves the real channel at send-time, not display-time)."],
                 ["Identity Tags (agent/workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow/agent → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone's own Button/Review CTA."],
                 ["Active Workflow", "SlideOut", "AI Summary, Details (Started/Next Trigger/Total Runs), Steps (ProcessItem), Recent Runs list. \"···\" menu (View in Agentic Studio) instead of an edit pencil — read-only content. Tooltip on hover explains the destination before clicking."],
                 ["Last Agent", "SlideOut", "AI Summary (session summary), Agent's Latest Finding, Recent Activity list, and a Recommendation modeled to expose an action (actionLabel/onAction). Same \"···\" menu treatment as Active Workflow. Tooltip on hover explains the destination before clicking."],
-                ["RECORD field row (hasDestination !== false)", "SlideOut", "Opens \"Data Provenance\" for the whole RECORD zone — same destination as the (i) icon below, not a separate per-field panel. A no-destination field (hasDestination: false) isn't clickable at all — see the Skeleton table's Record row."],
                 ["Review (Your Intervention)", "SlideOut + ModalDialog", "\"Pending Decisions\" — severity as a compact inline Tag (never full-width), full explanation, Requested-by/Impact, Similar Past Decisions. Approve/Dismiss open a ModalDialog confirmation first — a governed decision is never resolved on one click. Header button (ArrowUpRight, Tooltip-explained) jumps to this record's Data Provenance for context — not a generic edit pencil."],
-                ["(i) provenance icon", "SlideOut", "\"Data Provenance\" — per RECORD field, Source → Model → Displayed-here, reusing the exact same FieldProvenance object as the field's own badge, each wrapped in its own CardContainer. Read-only viewer, no menu (no confirmed related action to offer)."],
-                ["Field origin badge (WD/OK/...)", "Tooltip", "On hover: system + model version + \"Synced X ago.\""],
+                ["\"View record details\" (RECORD zone)", "SlideOut", "Opens \"Data Provenance\" for every RECORD field at once — label, value, and Source → Model → Synced, per field (this correction pass — the only place these fields are visible at all, since they no longer render inline in the card). Read-only viewer, no menu (no confirmed related action to offer). Disabled + Tooltip when onProvenanceOpen isn't wired."],
               ].map(([el, dest, content], i) => (
                 <div key={el} className="grid grid-cols-[160px_100px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{el}</div>
@@ -33888,11 +33799,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["Error approving", "intervention={{status:\"error\", message, onRetry?}} — amber InformativeCard (state=\"alert\"), never a red toast."],
                 ["Resolved elsewhere (stale)", "intervention={{status:\"resolved-elsewhere\", resolvedBy, resolvedAgo, description}} — \"Already resolved by {name} · {time}\", no Approve/Review button."],
                 ["PII masked", "A RecordField in state=\"masked\" — same field, 2 entitlement states (Law 4). See the dedicated Law 4 section above too."],
-                ["Locked", "locked — contact CTA + overflow's write actions disable; agent trigger, Agentic System, and RECORD provenance stay active. // TODO: confirmar con Michael — hypothesis, not explicitly confirmed."],
-                ["Overflow — long name/value", "The identity name truncates with an ellipsis and a Tooltip carrying the full value — it never wraps or stretches the row. Long RECORD values truncate with a Tooltip the same way; long Agentic System item names do too."],
-                ["Message — no channel on file", "actions={[{label:\"Message\", disabled:true, disabledTooltip}]} — disabled + Tooltip, never silently hidden (Block 6)."],
-                ["Message — no permission to contact", "Same disabled+Tooltip mechanism as above, different reason. Disabled ≠ hidden, consistently, for every action in this file."],
-                ["Message — PII masked, still contactable", "Message stays enabled on a record with a masked RecordField — Law 4 resolves the real channel at send-time per entitlements; the CTA itself never depends on what's currently displayed."],
+                ["Locked", "locked — a read-only Tag next to the type label; any contact/write actions passed via `actions` disable (Tooltip explains why, never silently hidden); agent trigger, Agentic System, and RECORD's \"View record details\" button all stay active regardless."],
+                ["Overflow — long name/value", "The identity name truncates with an ellipsis and a Tooltip carrying the full value — it never wraps or stretches the row. Long Agentic System item names truncate with a Tooltip the same way."],
               ].map(([state, desc], i) => (
                 <div key={state} className="grid grid-cols-[170px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{state}</div>
@@ -33905,7 +33813,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Agnosticism — 5 rules (Block 4)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
-              This card serves ANY entity type on the platform, not just HR/CRM shapes. These 5 rules are how that's enforced structurally, not just by convention — proven concretely by the Overview tab's "Block 3 — agnosticism proof" example: a healthcare Patient record (Epic-sourced, custom "Care Workflows"/"Needs Your Attention"/"Patient Chart" zone labels) rendered through the exact same component as UEP/UCP/UVP, zero changes to record-header.tsx.
+              This card serves ANY entity type on the platform, not just HR/CRM shapes. These 5 rules are how that's enforced structurally, not just by convention — proven concretely by the Overview tab's "Block 3 — agnosticism proof" example: a healthcare Patient record (Epic-sourced, custom "Care Workflows"/"Needs Your Attention" zone labels) rendered through the exact same component as UEP/UCP/UVP, zero changes to record-header.tsx.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
               <div className="grid grid-cols-[170px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
@@ -33918,7 +33826,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["Record = generic grid", "`recordFields: RecordField[]` is a plain array the host builds directly (label + icon + value + provenance + optional hasDestination). No fixed \"employee field\" structure (no more UEPRecord.manager, UCPRecord.renewalDate, ...) lives inside record-header.tsx anymore."],
                 ["Entity type is extensible", "`entityType: { icon: LucideIcon, label: string }` comes straight from the host — there's no closed enum of 3 variants inside the component. A host can pass entityType={{icon: Stethoscope, label: \"Patient\"}} today with zero changes to record-header.tsx."],
                 ["Colors = signal type, never industry", "Purple = AI/agent, light blue = workflow, amber = intervention — encode SIGNAL TYPE only. Nothing in record-header.tsx branches color by entity type; confirmed by construction (no entity-type variable exists anywhere near the color tokens)."],
-                ["Zone labels are i18n-ready", "The `labels` prop ({agenticSystem?, intervention?, record?}) overrides the 3 zone headings — translatable/renamable per host, not hardcoded English copy."],
+                ["Zone labels are i18n-ready", "The `labels` prop ({agenticSystem?, intervention?}) overrides the 2 expandable zone headings — translatable/renamable per host, not hardcoded English copy. RECORD no longer has its own heading (this correction pass) — its provenance trigger lives beside the name instead."],
               ].map(([rule, how], i) => (
                 <div key={rule} className="grid grid-cols-[170px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{rule}</div>
@@ -34018,7 +33926,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["assignedAgent", "AssignedAgent | null — { id, name, onOpenChat }. Required as a PROP (every caller must decide), but the VALUE can be null for a record with no agent yet — renders the same button, disabled, with a Tooltip explaining why. Never a silently missing button."],
                 ["intervention", "PendingIntervention | undefined. Omit entirely to skip the zone. \"pending\" status: { items: InterventionItem[] } — each { id, description, severity, onReview }, host-sorted by priority. Other statuses (empty/loading/no-permission/error/resolved-elsewhere) need their own specific fields — see record-header.tsx's own doc comment on the type."],
                 ["agenticSystem", "AgenticSystemInfo | undefined. Omit entirely to skip the zone. { activeWorkflow?: {name, onOpen?}, lastAgent?: {name, onOpen?} } for the ready case, plus \"empty\"/\"loading\" statuses."],
-                ["onProvenanceOpen / locked / labels", "onProvenanceOpen: () => void — opens Data Provenance for the whole RECORD zone (Law 2). locked: boolean — disables write actions, never read-only surfaces. labels: { agenticSystem?, intervention?, record? } — i18n-ready zone heading overrides."],
+                ["onProvenanceOpen / locked / labels", "onProvenanceOpen: () => void — opens Data Provenance for every RECORD field, via the tertiary button beside the name (Law 2). locked: boolean — disables write actions, never read-only surfaces. labels: { agenticSystem?, intervention? } — i18n-ready zone heading overrides for the 2 expandable zones."],
               ].map(([prop, desc], i) => (
                 <div key={prop} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]"><code>{prop}</code></div>
@@ -34117,65 +34025,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         document.body,
       )}
 
-      {/* ── Message (Block 6). Same reasoning as "Ask about" above: a
-           SidePanel, not a SlideOut, so the record stays visible while
-           composing. The Textarea is a real controlled field now (this
-           pass) — typeable, pre-filled with a draft that reflects this
-           record's own governed content (RH_MESSAGE_DRAFT), not a disabled
-           filler. Send enables once there's content and reuses the same
-           confirmation-banner convention as Pending Decisions' Approve/
-           Dismiss below, so both governed flows on this page speak the
-           same visual language. No dedicated channel-resolution/composition
-           component exists in the repo yet, so Send only flips local state
-           — // TODO: confirmar canales disponibles y componente de
-           composición real cuando exista en el repo. */}
-      {rhMessageFor && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[10005] flex justify-end pointer-events-none">
-          <div className="pointer-events-auto h-full">
-            <SidePanel
-              open={Boolean(rhMessageFor)}
-              onClose={() => setRhMessageFor(null)}
-              title={rhMessageFor ?? ""}
-              description="Compose a message"
-              titleIcon={<LucideIcons.MessageSquare size={14} />}
-              titleIconVariant="informative"
-              showCollapsedStrip={false}
-              footer={
-                <div className="flex items-center gap-[8px] w-full">
-                  <Button variant="secondary" size="sm" onClick={() => setRhMessageFor(null)}>Cancel</Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    disabled={rhMessageSent || rhMessageDraft.trim().length === 0}
-                    className="flex-1"
-                    onClick={() => setRhMessageSent(true)}
-                  >
-                    {rhMessageSent ? "Sent" : "Send"}
-                  </Button>
-                </div>
-              }
-            >
-              <div className="flex items-center h-[32px]">
-                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Message</span>
-              </div>
-              <Textarea
-                placeholder={`Write a message to ${rhMessageFor}…`}
-                className="mt-[8px]"
-                rows={6}
-                value={rhMessageDraft}
-                onChange={e => setRhMessageDraft(e.target.value)}
-                disabled={rhMessageSent}
-              />
-              {rhMessageSent && (
-                <div className="rounded-[8px] px-[12px] py-[10px] mt-[8px]" style={{ background: "var(--tag-informative-bg)", color: "var(--tag-informative-fg)" }}>
-                  <p className="text-[13px] font-semibold">Message sent to {rhMessageFor}</p>
-                </div>
-              )}
-            </SidePanel>
-          </div>
-        </div>,
-        document.body,
-      )}
 
       {/* ── Active Workflow detail — read-only, so no generic edit pencil.
            topButton repurposed as a "···" contextual menu (MoreHorizontal)
@@ -34473,7 +34322,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <div className="flex items-center h-[32px]">
             <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Fields</span>
           </div>
-          <div className="mt-[8px]">
+          <div className="mt-[8px] rounded-[8px] border border-[var(--table-border)] overflow-hidden">
             {openRecordFields.filter((f): f is RecordField => Boolean(f)).map((f, i) => <ProvenanceRow key={i} field={f} />)}
           </div>
         </div>
