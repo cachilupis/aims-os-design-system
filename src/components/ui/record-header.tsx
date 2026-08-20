@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from "react"
 import {
-  ChevronDown, ChevronUp, ChevronRight, ArrowUpRight, Sparkle, MoreHorizontal, Lock, Info, Workflow, Bot,
+  ChevronDown, ChevronUp, ChevronRight, ArrowUpRight, Sparkle, MoreHorizontal, Lock, Info, Workflow, User,
   AlertTriangle, CheckCircle2,
   type LucideIcon,
 } from "lucide-react"
@@ -663,11 +663,24 @@ function RecordHeader({
                   {name}
                 </span>
               </Tooltip>
-              {/* RECORD provenance trigger — lives beside the name now (this
-                  correction pass), not gated behind expand/collapse: an
-                  icon-only Button variant="tertiary", same primitive every
-                  other secondary action in this file uses. Disabled + a
-                  Tooltip explaining why when the host hasn't wired
+              {/* Entity type — icon AND text (not icon-only): "icons that
+                  communicate," but the label stays legible on its own too.
+                  Order (this Figma-fidelity pass): name → entity type → the
+                  RECORD provenance trigger, matching the reference design
+                  exactly — was name → trigger → entity type before. */}
+              <Tooltip content={entityType.label} side="cursor">
+                <span className="inline-flex items-center gap-[4px] shrink-0">
+                  <TypeIcon size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />
+                  <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>
+                    {entityType.label}
+                  </span>
+                </span>
+              </Tooltip>
+              {/* RECORD provenance trigger — lives beside the name, after
+                  entity type (Figma order), not gated behind expand/collapse:
+                  an icon-only Button variant="tertiary", same primitive
+                  every other secondary action in this file uses. Disabled +
+                  a Tooltip explaining why when the host hasn't wired
                   onProvenanceOpen — never silently hidden (same rule as
                   assignedAgent === null). */}
               {hasRecordFields && (
@@ -687,16 +700,6 @@ function RecordHeader({
                   />
                 </Tooltip>
               )}
-              {/* Entity type — icon AND text (not icon-only): "icons that
-                  communicate," but the label stays legible on its own too. */}
-              <Tooltip content={entityType.label} side="cursor">
-                <span className="inline-flex items-center gap-[4px] shrink-0">
-                  <TypeIcon size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />
-                  <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>
-                    {entityType.label}
-                  </span>
-                </span>
-              </Tooltip>
               {locked && (
                 <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
                   {RECORD_HEADER_FALLBACKS.lockedTagLabel}
@@ -737,7 +740,7 @@ function RecordHeader({
                         onClick={() => focusZone("agenticSystem")}
                         className="cursor-pointer rounded-[8px]"
                       >
-                        <Tag variant="limeGreen" size="sm" leadingIcon={<Bot size={12} strokeWidth={1.75} />}>
+                        <Tag variant="limeGreen" size="sm" leadingIcon={<User size={12} strokeWidth={1.75} />}>
                           {assignedAgent.name}
                         </Tag>
                       </button>
@@ -939,44 +942,46 @@ function RecordHeader({
 
 // ── Next Best Action block — the protagonist, dark-purple surface ──────────
 // A native `<button>`, not the Button component — the whole block is one
-// clickable target (icon + 2-line text + chevron), same "raw styled
-// element for a custom shape" precedent as the collapsed identity tags
-// above, not a shape any Button variant already covers.
+// clickable target (icon-in-a-box + 2-line text + chevron), same "raw
+// styled element for a custom shape" precedent as the collapsed identity
+// tags above, not a shape any Button variant already covers.
 //
-// Color pairing — CORRECTED from an earlier version of this same pass,
-// which used --color-surface-purple-darker (#2c075c, a fully opaque,
-// non-theme-adapting hex — identical in both light AND dark mode). Every
-// OTHER purple accent surface already in this codebase (Tag's purple
-// variant, HighlightIcon's purple variant, the "AI Summary" card pattern)
-// is a TRANSLUCENT tint over the surrounding surface, not a solid opaque
-// fill — that constant-opaque choice read as far more saturated/"loud"
-// than every neighboring dark-mode surface (all of which are low-opacity
-// overlays on --canvas), which is exactly the "too vibrant" bug a design
-// review caught. --color-surface-purple-lighter actually DOES adapt: a
-// 40%-opacity purple wash over the canvas in dark mode, a solid pale
-// lavender in light mode — paired with --color-text-purple, which adapts
-// the OTHER direction (light lavender text in dark mode, dark purple text
-// in light mode) so it always reads against whichever background that
-// mode produces. Never --color-button-primary-text-default (constant
-// white) paired with a background that no longer stays constant itself.
+// Verified against the actual Figma redesign node (v6rmYKA2zmyXWOahlxLOeI,
+// 19815:101548) via the Figma MCP — pixel-sampled, not guessed:
+//   - Block background #120520 in dark mode is an exact match for
+//     --card-purple-bg (the SAME token the "AI Summary" card pattern
+//     already uses elsewhere in this file) — corrected from 2 earlier
+//     guesses in this same pass (--color-surface-purple-darker, a fully
+//     opaque non-adapting hex; then --color-surface-purple-lighter, still
+//     too saturated/vibrant next to this card's own neutral bg).
+//   - The sparkle sits in its OWN tinted icon box (measured ≈24×24px,
+//     composited color matches --hi-purple-bg over the block background)
+//     — a real HighlightIcon (variant="purple", size="sm"), not a bare
+//     icon floating in the row.
+//   - Title and description are NEUTRAL text (--foreground /
+//     --field-supporting), same as every other card in this file — color
+//     lives ONLY in the icon box + block background, never in the text.
+//     Same principle AgenticSystemItem already follows ("color lives in
+//     the icon, never in the button").
+//   - Trailing chevron is neutral (--field-supporting) too, not purple.
 function NextBestActionBlock({ nba }: { nba: NextBestAction }) {
   return (
     <button
       type="button"
       onClick={nba.onOpen}
-      className="w-full flex items-center gap-[12px] rounded-[8px] p-[12px] text-left transition-opacity hover:opacity-90"
-      style={{ background: "var(--color-surface-purple-lighter)", border: "0.5px solid var(--card-purple-border)" }}
+      className="w-full flex items-center gap-[8px] rounded-[8px] p-[12px] text-left transition-opacity hover:opacity-90"
+      style={{ background: "var(--card-purple-bg)", border: "0.5px solid var(--card-purple-border)" }}
     >
-      <Sparkle size={18} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--color-text-purple)" }} />
+      <HighlightIcon size="sm" variant="purple" icon={<Sparkle size={16} strokeWidth={1.75} />} className="shrink-0" />
       <div className="flex-1 flex flex-col gap-[2px] min-w-0">
-        <span className="block truncate text-[13px] font-semibold" style={{ color: "var(--color-text-purple)" }}>
+        <span className="block truncate text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
           {nba.title}
         </span>
-        <span className="text-[12px] leading-[1.4]" style={{ color: "var(--color-text-purple)", opacity: 0.75 }}>
+        <span className="text-[12px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>
           {nba.description}
         </span>
       </div>
-      <ChevronRight size={16} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--color-text-purple)" }} />
+      <ChevronRight size={16} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--field-supporting)" }} />
     </button>
   )
 }
@@ -1026,7 +1031,7 @@ function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
       )}
       {state.lastAgent && (
         <AgenticSystemItem
-          icon={<Bot size={16} strokeWidth={1.75} />}
+          icon={<Sparkle size={16} strokeWidth={1.75} />}
           iconVariant="lime"
           name={state.lastAgent.name}
           onOpen={state.lastAgent.onOpen}
@@ -1062,7 +1067,7 @@ function AgenticSystemItem({
       className="rounded-[8px] border-[0.5px] p-[12px]"
       style={{ background: "var(--card-default-bg)", borderColor: "var(--card-default-border)" }}
     >
-      <div className="flex items-center gap-[10px]">
+      <div className="flex items-center gap-[8px]">
         <HighlightIcon size="sm" variant={iconVariant} icon={icon} />
         {/* Overflow — long workflow/agent names truncate with their own
             Tooltip carrying the full name, never a silent cutoff. */}
@@ -1071,11 +1076,18 @@ function AgenticSystemItem({
             {name}
           </span>
         </Tooltip>
+        {/* Bare chevron, no "View" label (Figma fidelity pass — the
+            reference design shows only a chevron here, no text). */}
         <Tooltip content={tooltip} side="cursor">
-          <Button variant="tertiary" size="sm" onClick={onOpen} className="shrink-0">
-            View
-            <ChevronRight size={14} strokeWidth={1.75} className="ml-[2px]" style={{ color: "var(--field-supporting)" }} />
-          </Button>
+          <Button
+            variant="tertiary"
+            size="sm"
+            iconPosition="alone"
+            icon={<ChevronRight size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />}
+            aria-label={tooltip}
+            onClick={onOpen}
+            className="shrink-0"
+          />
         </Tooltip>
       </div>
     </div>
@@ -1191,8 +1203,14 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
         description={primary.description}
         trailingIcon={{ icon: <ArrowUpRight size={16} strokeWidth={1.75} />, onClick: primary.onReview, "aria-label": "Open in a new tab", tooltip: OPEN_HTL_TOOLTIP }}
       />
+      {/* Figma fidelity pass — "Show N more" and "View all" sit at OPPOSITE
+          ends of the row (justify-between), not stacked together. "View
+          all" is a plain text tertiary Button, no icon — the new-tab
+          behavior is real on click, it just isn't signaled visually here
+          the way the per-item arrows signal it (verified against the
+          actual Figma node: "View all" renders as bare text). */}
       {rest.length > 0 && (
-        <div className="flex items-center gap-[8px]">
+        <div className="flex items-center justify-between">
           <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
             {showMore ? "Show less" : `Show ${visibleRest.length} more`}
             {showMore
@@ -1203,29 +1221,27 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
             <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
               <Button variant="tertiary" size="sm" onClick={state.onViewAll} className="self-start">
                 View all
-                <ArrowUpRight size={14} strokeWidth={1.75} className="ml-[2px]" />
               </Button>
             </Tooltip>
           )}
         </div>
       )}
+      {/* Figma fidelity pass — the 3 extra items shown here render as the
+          SAME bordered "Action Card" row AgenticSystemItem already uses
+          (border + --card-default-bg), not a compact severity-tag row —
+          the actual Figma node shows plain description text + arrow, no
+          visible severity badge. Severity stays reachable via Tooltip so
+          it isn't lost, just not rendered as a visible chip here. */}
       {showMore && visibleRest.length > 0 && (
-        <div className="flex flex-col gap-[6px]">
+        <div className="flex flex-col gap-[8px]">
           {visibleRest.map(item => (
             <div
               key={item.id}
-              className="flex items-center gap-[8px] px-[8px] py-[6px] rounded-[8px] min-w-0"
-              style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}
+              className="flex items-center gap-[8px] p-[12px] rounded-[8px] min-w-0"
+              style={{ background: "var(--card-default-bg)", border: "0.5px solid var(--card-default-border)" }}
             >
-              <Tag
-                variant={item.severity === "high" ? "alert" : item.severity === "medium" ? "informative" : "secondary"}
-                size="sm"
-                className="shrink-0"
-              >
-                {item.severity.toUpperCase()}
-              </Tag>
-              <Tooltip content={item.description} side="cursor" triggerClassName="flex-1 min-w-0 block">
-                <span className="block truncate text-[12px]" style={{ color: "var(--foreground)" }}>
+              <Tooltip content={`${item.severity.toUpperCase()} — ${item.description}`} side="cursor" triggerClassName="flex-1 min-w-0 block">
+                <span className="block truncate text-[13px] font-medium" style={{ color: "var(--foreground)" }}>
                   {item.description}
                 </span>
               </Tooltip>
