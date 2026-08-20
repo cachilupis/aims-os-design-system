@@ -44,7 +44,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { RecordHeader, type RecordHeaderEntityType, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent } from "@/components/ui/record-header"
+import { RecordHeader, type RecordHeaderEntityType, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent, type NextBestAction } from "@/components/ui/record-header"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
@@ -2117,9 +2117,10 @@ const RECORD_HEADER_SPEC = {
     { name: "data",           type: "object",   values: ["UEPRecord | UCPRecord | UVPRecord"], default: "required" },
     { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "AIMS OS is agent-first — every record has one, but the value can be null. Renders an always-present icon-only button (Sparkle, variant=\"main\"); null disables it with a Tooltip. RecordHeader never renders the chat UI itself." },
     { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as an optional primary CTA; actions[1+] land in the \"···\" overflow Menu. Omitted entirely by this demo since the Message CTA was removed (this correction pass)." },
-    { name: "agenticSystem",  type: "object",   values: ["AgenticSystemInfo — { activeWorkflow?: {name,onOpen?}, lastAgent?: {name,onOpen?} }"], default: "undefined", note: "Zone: AGENTIC SYSTEM. Exactly 2 fixed slots, each a Button variant=\"tertiary\" with a leading icon (Workflow/Bot) — never a colored card. Zone omitted entirely if neither slot is set." },
-    { name: "intervention",   type: "object",   values: ["PendingIntervention — pending: { items: InterventionItem[] } — each { id, description, severity, onReview }"], default: "undefined", note: "Zone: YOUR INTERVENTION — only rendered when set (a real pending HTL decision). N items: most prioritized shown + \"+N-1 more\" disclosure, never a carousel. Calm/informative styling ALWAYS, regardless of severity — Law 3." },
-    { name: "onProvenanceOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Data Provenance SlideOut for the RECORD zone — reached through the zone's single \"View record details\" tertiary Button (Law 2). Fields never render inline (this correction pass)." },
+    { name: "agenticSystem",  type: "object",   values: ["AgenticSystemInfo — { activeWorkflow?: {name,onOpen?}, lastAgent?: {name,onOpen?} }"], default: "undefined", note: "Zone: AGENTIC SYSTEM, no section heading (redesign pass). Exactly 2 fixed slots, each a Button variant=\"tertiary\" with a leading icon (Workflow = light blue, Bot/agent = lime green — was purple) — never a colored card. Zone omitted entirely if neither slot is set." },
+    { name: "intervention",   type: "object",   values: ["PendingIntervention — pending: { items: InterventionItem[], onViewAll? } — each { id, description, severity, onReview }"], default: "undefined", note: "Zone: YOUR INTERVENTION — only rendered when set (a real pending HTL decision). N items: most prioritized shown + \"Show N more\" (caps at 3 extra) + \"View all\". Every item's trigger is a diagonal ArrowUpRight opening the real HTL view in a NEW TAB (redesign pass — was a labeled \"Review\" button). Calm/informative styling ALWAYS, regardless of severity — Law 3." },
+    { name: "nextBestActions", type: "Array", values: ["NextBestAction[] — { id, title, description, onOpen }"], default: "[]", note: "The protagonist block (redesign pass). Always visible, never gated by the disclosure — right under the identity tags collapsed, at the end of the zones expanded. Dark-purple surface, Sparkle icon. Omit/empty array skips it entirely." },
+    { name: "onProvenanceOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens \"About this record\" (renamed from \"Data Provenance\" this redesign pass) for the RECORD zone — reached through the icon-only Button beside the name (moved there this redesign pass; used to be a labeled Button down in a RECORD zone that no longer exists). Fields never render inline." },
     { name: "defaultExpanded", type: "Boolean", values: ["true","false"], default: "false", note: "Uncontrolled initial state for the zones disclosure. Predictable header height when collapsed." },
     { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "Read-only record. Shows a \"Locked\" Tag next to the type label; disables any contact/write actions passed via `actions` (Tooltip explains why); the agent trigger and RECORD's provenance button stay fully interactive." },
   ],
@@ -32899,6 +32900,40 @@ const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
   ],
 }
 
+// Next Best Action (redesign pass) — a proactive AI recommendation,
+// deliberately NOT a restatement of the pending intervention above: HTL is
+// "a decision needs your approval right now"; NBA is "here's something
+// worth doing, unprompted." `onOpen` isn't wired at the mock-data level
+// (same reasoning as InterventionMock) — it needs the SlideOut state in
+// scope, see rhNextBestActions below. UEP carries 2, to demonstrate the N
+// case (the reference brief explicitly calls for supporting more than 1).
+type NbaMock = { id: string; title: string; description: string }
+
+const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
+  uep: [
+    { id: "uep-nba-1", title: "Review Sarah's stale access before the next cycle", description: "3 permissions haven't been used in 90+ days — trimming them now avoids carrying them into the next recertification." },
+    { id: "uep-nba-2", title: "Suggest the Platform Infra security module", description: "Sarah's role changed 2 weeks ago; the standard onboarding path for her new team includes a security training she hasn't started." },
+  ],
+  ucp: [
+    { id: "ucp-nba-1", title: "Offer a proactive check-in call", description: "Usage dipped 12% this month with no support tickets filed — a check-in before renewal season could catch friction early." },
+  ],
+  uvp: [
+    { id: "uvp-nba-1", title: "Flag the insurance renewal 30 days out", description: "Meridian's current certificate expires in 45 days — starting the renewal conversation now avoids a compliance gap at requalification." },
+  ],
+  patient: [
+    { id: "patient-nba-1", title: "Schedule a follow-up coagulation panel", description: "Given the flagged Warfarin/Aspirin interaction, a follow-up panel within 48 hours is recommended before discharge." },
+  ],
+  claim: [
+    { id: "claim-nba-1", title: "Request the missing parts invoice now", description: "Closing this documentation gap early could shave 3-5 days off the payout timeline once supervisor sign-off clears." },
+  ],
+  borrower: [
+    { id: "borrower-nba-1", title: "Offer a co-signer option", description: "Applicants with a similar debt-to-income profile who added a co-signer saw approval odds increase by roughly 30%." },
+  ],
+  repairOrder: [
+    { id: "repairOrder-nba-1", title: "Bundle the cabin air filter while it's in the bay", description: "This vehicle is due for that service within 500 miles — bundling it now saves the customer a second visit." },
+  ],
+}
+
 // Data Provenance (Law 2) — reuses the SAME FieldProvenance objects already
 // attached to each RecordField. This is now the ONLY place these values are
 // displayed at all (this correction pass — RECORD fields no longer render
@@ -32967,9 +33002,11 @@ function HeaderContextMenu({
 function RecordHeaderStatesGallery({
   rhAssignedAgent,
   rhAgenticSystem,
+  rhNextBestActions,
 }: {
   rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent
   rhAgenticSystem: (v: RhDemoKey) => AgenticSystemInfo
+  rhNextBestActions: (v: RhDemoKey) => NextBestAction[]
 }) {
   const overflowFields: RecordField[] = [
     {
@@ -32989,6 +33026,7 @@ function RecordHeaderStatesGallery({
       <ul className="mb-[16px] flex flex-col gap-[2px]">
         {[
           "Identity — collapsed (#1, tags visible) vs. expanded (everywhere else)",
+          "Next Best Action (redesign pass) — N items, collapsed position, right under the tags (#1); see the Overview tab's UEP example (defaultExpanded) for the same block at its expanded position",
           "Your Intervention — pending (#1), empty (#2), loading (#4), no-permission (#5), error (#6), resolved-elsewhere (#7): all 6 states",
           "Your Intervention — N items (Block 3): 1 shows alone, no counter (#1); N shows the most prioritized + \"+N-1 more\" disclosure, never a carousel (#11)",
           "Agentic System — populated (everywhere), empty (#3), loading (#4)",
@@ -33006,11 +33044,12 @@ function RecordHeaderStatesGallery({
       <div className="grid grid-cols-1 gap-[24px]">
 
         <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">1 · Collapsed — governance-state Tags visible</p>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">1 · Collapsed — governance-state Tags + NBA visible (N items, redesign pass)</p>
           <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep}
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             agenticSystem={rhAgenticSystem("uep")}
-            intervention={{ items: [{ id: "gallery-1", description: "Elevated access request needs manager approval.", severity: "high", onReview: () => {} }] }} />
+            intervention={{ items: [{ id: "gallery-1", description: "Elevated access request needs manager approval.", severity: "high", onReview: () => {} }] }}
+            nextBestActions={rhNextBestActions("uep")} />
         </div>
 
         <div>
@@ -33254,6 +33293,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [rhReviewItemId, setRhReviewItemId] = useState<string | null>(null)
   const [rhProvenanceOpen, setRhProvenanceOpen] = useState(false)
   const [rhReviewResolved, setRhReviewResolved] = useState<"approved" | "dismissed" | null>(null)
+  // NBA detail (redesign pass) — same "which one" id pattern as Pending
+  // Decisions above, since a record can have N NBAs too.
+  const [rhNbaOpen, setRhNbaOpen] = useState(false)
+  const [rhNbaItemId, setRhNbaItemId] = useState<string | null>(null)
 
   // Contextual "···" menus for read-only SlideOut headers (Workflow / Agent)
   // — replaces the generic edit pencil. Anchored the same way every other
@@ -33275,14 +33318,29 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   }
   const rhOpenProvenance = (v: RhDemoKey) => { setRhOpenVariant(v); setRhProvenanceOpen(true) }
 
+  // Redesign pass — every HTL item's diagonal-arrow trigger opens a NEW TAB,
+  // never a same-page overlay (record-header.tsx's own OPEN_HTL_TOOLTIP).
+  // No dedicated HTL/Agentic Studio page exists anywhere in this repo yet
+  // (checked directly), so this demo opens a new tab to this SAME page —
+  // truthfully satisfying "new tab, current tab untouched" without
+  // pretending a deep link exists that isn't real. // TODO: once a real
+  // HTL/Agentic Studio destination exists, point this at it — ideally via
+  // a query param this page reads on mount to reopen Pending Decisions for
+  // that exact item, the same way `?page=`/`?proto=` already deep-link
+  // elsewhere in this file, but that page-specific tab/item deep-linking
+  // doesn't exist for ANY DS catalog page today, so it's a real feature to
+  // build, not a one-line fix.
+  const rhOpenHtlNewTab = () => window.open(window.location.href, "_blank")
+
   const rhAgenticSystem = (v: RhDemoKey): AgenticSystemInfo => ({
     activeWorkflow: { name: RH_WORKFLOWS[v].name, onOpen: () => rhOpenWorkflow(v) },
     lastAgent: { name: RH_AGENT_DETAILS[v].agentName, onOpen: () => rhOpenAgent(v) },
   })
   // Block 3 (this pass) — maps this demo's mock array to the real
   // InterventionItem[] shape, one onReview per item (not one shared
-  // callback for the whole record) so each keeps its own individual Review
-  // action per the brief.
+  // callback for the whole record) so each keeps its own individual
+  // trigger. onViewAll (redesign pass) — same new-tab treatment, no
+  // separate "all interventions" list view exists yet either.
   const rhIntervention = (v: RhDemoKey): PendingIntervention | undefined => {
     const src = RH_INTERVENTIONS[v]
     if (!src) return undefined
@@ -33291,10 +33349,24 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         id: item.id,
         description: item.description,
         severity: item.severity,
-        onReview: () => rhOpenReview(v, item.id),
+        onReview: rhOpenHtlNewTab,
       })),
+      onViewAll: rhOpenHtlNewTab,
     }
   }
+
+  const rhOpenNba = (v: RhDemoKey, itemId: string) => { setRhOpenVariant(v); setRhNbaItemId(itemId); setRhNbaOpen(true) }
+  // Redesign pass — the protagonist block. Real, per-item onOpen (not a
+  // shared callback for the whole record), same reasoning as Your
+  // Intervention above: each NBA needs its own id in scope for the detail
+  // SlideOut below to show the right one.
+  const rhNextBestActions = (v: RhDemoKey): NextBestAction[] =>
+    (RH_NBA[v] ?? []).map(nba => ({
+      id: nba.id,
+      title: nba.title,
+      description: nba.description,
+      onOpen: () => rhOpenNba(v, nba.id),
+    }))
 
   // Assigned agent chat — no dedicated "agent chat" component exists yet
   // anywhere in src/components/ui/ (checked directly), so this demo reuses
@@ -33317,6 +33389,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const openIntervention = RH_INTERVENTIONS[openVariant]?.find(item => item.id === rhReviewItemId)
   const openInterventionCount = RH_INTERVENTIONS[openVariant]?.length ?? 0
   const openRecordFields = RH_RECORD_FIELDS[openVariant]
+  // The specific NBA within openVariant's array the viewer clicked — same
+  // "N items, show exactly the one chosen" reasoning as openIntervention.
+  const openNba = RH_NBA[openVariant]?.find(nba => nba.id === rhNbaItemId)
 
   return (
     <div>
@@ -33358,6 +33433,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
               agenticSystem={rhAgenticSystem("uep")}
               intervention={rhIntervention("uep")}
+              nextBestActions={rhNextBestActions("uep")}
               onProvenanceOpen={() => rhOpenProvenance("uep")} />
           </section>
 
@@ -33368,6 +33444,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
               agenticSystem={rhAgenticSystem("ucp")}
               intervention={rhIntervention("ucp")}
+              nextBestActions={rhNextBestActions("ucp")}
               onProvenanceOpen={() => rhOpenProvenance("ucp")} />
           </section>
 
@@ -33378,20 +33455,22 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
               agenticSystem={rhAgenticSystem("uvp")}
               intervention={rhIntervention("uvp")}
+              nextBestActions={rhNextBestActions("uvp")}
               onProvenanceOpen={() => rhOpenProvenance("uvp")} />
           </section>
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Block 3 — agnosticism proof: a healthcare vertical, same component</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. Deliberately picked to be as unlike UEP/UCP/UVP as possible: a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba), and custom zone labels via the <code>labels</code> prop ("Care Workflows" / "Needs Your Attention") to prove the headings are i18n-configurable, not baked-in English. Same colors (purple = agent, light blue = workflow, amber = intervention), same skeleton, zero changes to record-header.tsx.
+              Mock data — not confirmed AIMS OS content. Deliberately picked to be as unlike UEP/UCP/UVP as possible: a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba), and custom zone labels via the <code>labels</code> prop ("Care Workflows" / "Needs Your Attention") to prove the headings are i18n-configurable, not baked-in English. Same colors (lime green = agent, light blue = workflow, amber = intervention — see the redesign pass's own note if you're looking for purple: agent moved off it), same skeleton, zero changes to record-header.tsx.
             </p>
             <RecordHeader name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient} recordFields={RH_RECORD_FIELDS.patient} defaultExpanded
               assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
               agenticSystem={rhAgenticSystem("patient")}
               intervention={rhIntervention("patient")}
+              nextBestActions={rhNextBestActions("patient")}
               onProvenanceOpen={() => rhOpenProvenance("patient")}
-              labels={{ agenticSystem: "Care Workflows", intervention: "Needs Your Attention" }} />
+              labels={{ intervention: "Needs Your Attention" }} />
           </section>
 
           <section>
@@ -33403,6 +33482,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
               agenticSystem={rhAgenticSystem("claim")}
               intervention={rhIntervention("claim")}
+              nextBestActions={rhNextBestActions("claim")}
               onProvenanceOpen={() => rhOpenProvenance("claim")} />
           </section>
 
@@ -33415,6 +33495,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
               agenticSystem={rhAgenticSystem("borrower")}
               intervention={rhIntervention("borrower")}
+              nextBestActions={rhNextBestActions("borrower")}
               onProvenanceOpen={() => rhOpenProvenance("borrower")} />
           </section>
 
@@ -33427,6 +33508,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
               agenticSystem={rhAgenticSystem("repairOrder")}
               intervention={rhIntervention("repairOrder")}
+              nextBestActions={rhNextBestActions("repairOrder")}
               onProvenanceOpen={() => rhOpenProvenance("repairOrder")} />
           </section>
 
@@ -33444,6 +33526,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <RecordHeaderStatesGallery
             rhAssignedAgent={rhAssignedAgent}
             rhAgenticSystem={rhAgenticSystem}
+            rhNextBestActions={rhNextBestActions}
           />
 
           <RecordHeaderFlowsSection
@@ -33491,8 +33574,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             assignedAgent={rhAssignedAgent(pgVariant, pgName)}
             agenticSystem={rhAgenticSystem(pgVariant)}
             intervention={rhIntervention(pgVariant)}
+            nextBestActions={rhNextBestActions(pgVariant)}
             onProvenanceOpen={() => rhOpenProvenance(pgVariant)}
-            labels={pgVariant === "patient" ? { agenticSystem: "Care Workflows", intervention: "Needs Your Attention" } : undefined}
+            labels={pgVariant === "patient" ? { intervention: "Needs Your Attention" } : undefined}
           />
 
           <div>
@@ -33577,7 +33661,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
               {[
                 ["1", "Authority/origin of every field is ALWAYS visible. Every RECORD field carries a FieldProvenance and renders its origin-system badge inline (Tag, wrapped in Tooltip) — there's no code path that renders a value without one."],
-                ["2", "Every governed answer carries provenance reachable WITHOUT leaving the view. The (i) icon sits directly next to the RECORD heading (not floating unlabeled at the row's edge) and opens the Data Provenance SlideOut from right here."],
+                ["2", "Every governed answer carries provenance reachable WITHOUT leaving the view. The (i) icon sits directly beside the name (redesign pass — was next to a RECORD heading that no longer exists) and opens \"About this record\" (renamed from \"Data Provenance\") from right here."],
                 ["3", "HTL items are first-class states with calm, explanatory language — NEVER red errors. Your Intervention always renders in the informative/neutral token family, regardless of intervention.severity — that constancy is the law."],
                 ["4", "PII resolves only at display-time, per viewer entitlements. A hydrated field and a masked field are the SAME RecordField in 2 states — see the PII/masking section below. This component renders whichever state it's given; it never resolves entitlements."],
               ].map(([law, rule], i) => (
@@ -33598,10 +33682,11 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Identity (fixed)", "Avatar · name (truncates with an ellipsis + Tooltip — never wraps or stretches the row) · entity-type icon AND text (not icon-only — a text label sits beside the icon) · up to 3 governance-state Tags — assigned agent (purple), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE (Block 2): clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → optional primary CTA (actions[0], host-provided — this demo currently passes none, the Message CTA having been removed in a correction pass) → \"···\" overflow → disclosure chevron."],
-                ["Agentic System",  "Active Workflow + Last Agent lay out side by side (grid, not stacked — uses the card's width instead of wasting it). Each item is a plain card BORDER (not a nested CardContainer component — this already lives inside the header's own CardContainer, so a second one read as card-in-card) with a HighlightIcon (size=\"sm\", colored: light blue = workflow, purple = agent) + a NEUTRAL tertiary Button beside it — color lives in the icon, never in the button. Also renders \"empty\" (no workflow/agent yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
-                ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default, N items — most prioritized shown + a \"+N-1 more\" disclosure, never a carousel), empty (reads as completion, not absence), loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
-                ["Record",          "Fields never render inline (this correction pass). The whole zone is a single Button variant=\"tertiary\" (\"View record details\", leading Info icon) that opens Data Provenance for every field at once (Law 2) — disabled + a Tooltip explaining why when onProvenanceOpen isn't wired, never silently hidden. `recordFields` is still a plain array the host builds — no fixed \"employee field\" shape inside the component (Block 4); it's just no longer rendered as per-field rows in the collapsed/expanded card itself."],
+                ["Identity (fixed)", "Avatar · name (truncates with an ellipsis + Tooltip — never wraps or stretches the row) · the RECORD provenance trigger (icon-only Button) · entity-type icon AND text (not icon-only — a text label sits beside the icon) — all left-aligned, beside the name (redesign pass) · up to 3 governance-state Tags — assigned agent (lime green), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE (Block 2): clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → optional primary CTA (actions[0], host-provided — this demo currently passes none, the Message CTA having been removed in a correction pass) → \"···\" overflow → disclosure chevron."],
+                ["Next Best Action", "The protagonist block (redesign pass) — always visible, never gated by the disclosure: sits right under the identity tags while collapsed, and at the end of the expanded zones while expanded. A native full-width button, dark-purple surface (--color-surface-purple-lighter, paired with --color-text-purple — both properly theme-adapting, corrected from an earlier constant-opaque pairing that read too vibrant against this dark UI's mostly-translucent surfaces), Sparkle icon + title + description + trailing ChevronRight. Supports N items, each stacked. Omit or pass an empty array to skip it entirely for a record with nothing to recommend right now."],
+                ["Agentic System (no heading)",  "Active Workflow + Last Agent lay out side by side (grid, not stacked — uses the card's width instead of wasting it), no section label above them (redesign pass — was \"Agentic System\" before). Each item is a plain card BORDER (not a nested CardContainer component — this already lives inside the header's own CardContainer, so a second one read as card-in-card) with a HighlightIcon (size=\"sm\", colored: light blue = workflow, lime = agent — was purple before the redesign pass) + a NEUTRAL tertiary Button beside it — color lives in the icon, never in the button. Also renders \"empty\" (no workflow/agent yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
+                ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default, N items — most prioritized triggers a diagonal ArrowUpRight that opens the real HTL view in a NEW TAB, never a same-page overlay, redesign pass; \"Show N more\" caps at 3 extra inline, \"View all\" is the separate always-present escape hatch — see InterventionZoneContent's own doc comment), empty (reads as completion, not absence), loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
+                ["Record",          "Fields never render inline. The trigger is the icon-only Button beside the name (Identity, above — redesign pass moved it there and dropped its visible \"View record details\" text label, keeping it as the aria-label only; it used to be a labeled Button down here) that opens \"About this record\" — Data Provenance for every field at once (Law 2) — disabled + a Tooltip explaining why when onProvenanceOpen isn't wired, never silently hidden. `recordFields` is still a plain array the host builds — no fixed \"employee field\" shape inside the component (Block 4)."],
               ].map(([zone, content], i) => (
                 <div key={zone} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{zone}</div>
@@ -33621,11 +33706,13 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
               {[
                 ["\"Ask about {name}\" / \"Ask AI\"", "SidePanel", "Chat with assignedAgent — PLACEHOLDER body only (// TODO: reemplazar con el componente de Chat cuando exista en el repo). No Chat component exists anywhere in src/components/ui/ yet, checked directly. SidePanel (not SlideOut) — docked, no backdrop, page stays visible/usable underneath."],
-                ["Identity Tags (agent/workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow/agent → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone's own Button/Review CTA."],
+                ["Identity Tags (agent/workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow/agent → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone itself (a Button, or the HTL item's own diagonal-arrow trigger)."],
                 ["Active Workflow", "SlideOut", "AI Summary, Details (Started/Next Trigger/Total Runs), Steps (ProcessItem), Recent Runs list. \"···\" menu (View in Agentic Studio) instead of an edit pencil — read-only content. Tooltip on hover explains the destination before clicking."],
                 ["Last Agent", "SlideOut", "AI Summary (session summary), Agent's Latest Finding, Recent Activity list, and a Recommendation modeled to expose an action (actionLabel/onAction). Same \"···\" menu treatment as Active Workflow. Tooltip on hover explains the destination before clicking."],
-                ["Review (Your Intervention)", "SlideOut + ModalDialog", "\"Pending Decisions\" — severity as a compact inline Tag (never full-width), full explanation, Requested-by/Impact, Similar Past Decisions. Approve/Dismiss open a ModalDialog confirmation first — a governed decision is never resolved on one click. Header button (ArrowUpRight, Tooltip-explained) jumps to this record's Data Provenance for context — not a generic edit pencil."],
-                ["\"View record details\" (RECORD zone)", "SlideOut", "Opens \"Data Provenance\" for every RECORD field at once — label, value, and Source → Model → Synced, per field (this correction pass — the only place these fields are visible at all, since they no longer render inline in the card). Read-only viewer, no menu (no confirmed related action to offer). Disabled + Tooltip when onProvenanceOpen isn't wired."],
+                ["Next Best Action", "SlideOut", "Redesign pass — opens the NBA's own detail panel (Sparkle icon, dark-purple iconBg). PLACEHOLDER content only: title + \"Why this\" description. // TODO: Prompt 2 — the real base/type/dynamic 3-layer task structure hasn't been specified yet."],
+                ["HTL item diagonal arrow (Your Intervention)", "New browser tab", "Redesign pass — every pending item's ArrowUpRight trigger (never a labeled \"Review\" button) opens the real HTL view in a NEW TAB, never a same-page overlay — Tooltip always says so (OPEN_HTL_TOOLTIP). This demo has no dedicated HTL/Agentic Studio page yet (checked directly), so it opens a new tab to this same page as a truthful placeholder — // TODO: point at the real destination once one exists. The \"Pending Decisions\" SlideOut + ModalDialog approve/dismiss flow still exists in this demo's code and is real, but is now only reachable from the Flows walkthrough section below, not from a live card's HTL item."],
+                ["\"Show N more\" / \"View all\" (Your Intervention)", "Inline disclosure / new tab", "Redesign pass — \"Show N more\" reveals up to 3 extra pending items inline (never all of them, never a 4th+ without \"View all\"); \"View all\" is the separate, always-present escape hatch to the full list, same new-tab treatment as every HTL item."],
+                ["RECORD provenance trigger (Identity row)", "SlideOut", "Opens \"About this record\" — every RECORD field at once, label + value + Source → Model → Synced (redesign pass — renamed from \"Data Provenance\"; the only place these fields are visible at all, since they don't render inline in the card). Read-only viewer, no menu (no confirmed related action to offer). Disabled + Tooltip when onProvenanceOpen isn't wired. Icon-only now (redesign pass) — the visible \"View record details\" text label became aria-label only once it moved beside the name."],
               ].map(([el, dest, content], i) => (
                 <div key={el} className="grid grid-cols-[160px_100px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{el}</div>
@@ -33779,6 +33866,29 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 6 — validated visual redesign, 5 changes</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Change"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "Next Best Action is REINTRODUCED — but as a protagonist block, not the pre-governed-card Signal bar this component used to have. Visible right under the identity tags while collapsed, and at the end of the expanded zones while expanded — same block, repositioned, never duplicated, never hidden in either state. Supports N items (nextBestActions prop)."],
+                ["2", "Agentic System lost its section heading — the validated reference design shows Workflow/Agent as plain cards with no label above them. RecordHeaderZoneLabels lost the agenticSystem key as a result (no heading left to translate)."],
+                ["3", "Agent's signal color moved from purple to lime green — Workflow stays light blue, HTL stays amber. A deliberate, validated change to a convention this file previously called \"AIMS OS law\" — purple is no longer a signal color anywhere in this component."],
+                ["4", "Your Intervention's pending items trade their labeled \"Review\" button for a diagonal ArrowUpRight trigger that opens the real HTL view in a NEW TAB — never a same-page overlay, so the viewer never loses their place on this record. \"Show N more\" now caps at 3 extra items inline (was: show all remaining); \"View all\" is a new, separate, always-present escape hatch to the full list (also a new tab). PendingIntervention's \"pending\" variant gained onViewAll."],
+                ["5", "InformativeCard gained an additive `trailingIcon` prop (informative-card.tsx) — an icon-only Button alongside the existing cta/ctaSecondary, default behavior unchanged — needed for #4's arrow trigger, since cta only ever rendered a labeled Button."],
+              ].map(([n, change], i) => (
+                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">States — full coverage (Block 3)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
               Every state this component can render, live in the Overview tab's "States" section (not just this table) — dev-facing coverage, not just the happy path.
@@ -33790,16 +33900,17 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Collapsed, with Tags", "The 3 governance-state Tags (agent/workflow/HTL) visible, colored + iconed, clickable (Block 2)."],
+                ["Collapsed, with Tags + NBA", "The 3 governance-state Tags (agent/workflow/HTL) visible, colored + iconed, clickable (Block 2), plus the Next Best Action block(s) right below them (redesign pass)."],
+                ["Next Best Action — N items", "nextBestActions={NextBestAction[]} — every item stacks, dark-purple surface, always visible (never gated by the disclosure). Collapsed position right under the tags; expanded position at the end of the zones. Omit/empty array skips it entirely."],
                 ["Your Intervention — empty", "intervention={{status:\"empty\", message?}} — a calm \"nothing pending\" InformativeCard (state=\"neutral\"), not an absent/broken zone. Default copy: \"No interventions pending — you're all caught up\" — reads as completion, never as an error."],
-                ["Your Intervention — N pending items", "intervention={{items: InterventionItem[]}} — 1 item shows alone, no counter. N items show the most prioritized (items[0], host-sorted) full-size + a \"+N-1 more\" disclosure (Button variant=\"tertiary\") that reveals the rest, each keeping its own individual Review. Deliberately NOT a carousel — urgent decisions must be visible at a glance."],
+                ["Your Intervention — N pending items", "intervention={{items: InterventionItem[], onViewAll?}} — 1 item shows alone, no counter. N items show the most prioritized (items[0], host-sorted) full-size + \"Show N more\" (caps at 3 extra inline) + \"View all\" (always-present escape hatch). Every item's trigger is a diagonal ArrowUpRight — opens the real HTL view in a NEW TAB, never a same-page overlay (redesign pass — was a labeled \"Review\" button before). Deliberately NOT a carousel — urgent decisions must be visible at a glance."],
                 ["Agentic System — empty", "agenticSystem={{status:\"empty\"}} — a calm \"no workflow/agent yet\" message, e.g. a freshly imported record."],
                 ["Loading", "status=\"loading\" on either zone — Skeleton rows matching the real content's footprint, no layout jump when data arrives."],
-                ["No permission to approve", "intervention={{status:\"no-permission\", description, onEscalate?}} — Review renders disabled (via InformativeCard's own cta.disabled), Escalate offered as the alternate action."],
+                ["No permission to approve", "intervention={{status:\"no-permission\", description, onEscalate?}} — Review renders disabled (via InformativeCard's own cta.disabled), Escalate offered as the alternate action. Unlike the \"pending\" status above, this one keeps its labeled cta buttons — it's a governed decision being blocked, not a link out."],
                 ["Error approving", "intervention={{status:\"error\", message, onRetry?}} — amber InformativeCard (state=\"alert\"), never a red toast."],
                 ["Resolved elsewhere (stale)", "intervention={{status:\"resolved-elsewhere\", resolvedBy, resolvedAgo, description}} — \"Already resolved by {name} · {time}\", no Approve/Review button."],
                 ["PII masked", "A RecordField in state=\"masked\" — same field, 2 entitlement states (Law 4). See the dedicated Law 4 section above too."],
-                ["Locked", "locked — a read-only Tag next to the type label; any contact/write actions passed via `actions` disable (Tooltip explains why, never silently hidden); agent trigger, Agentic System, and RECORD's \"View record details\" button all stay active regardless."],
+                ["Locked", "locked — a read-only Tag next to the type label; any contact/write actions passed via `actions` disable (Tooltip explains why, never silently hidden); agent trigger, Agentic System, and the RECORD provenance trigger all stay active regardless."],
                 ["Overflow — long name/value", "The identity name truncates with an ellipsis and a Tooltip carrying the full value — it never wraps or stretches the row. Long Agentic System item names truncate with a Tooltip the same way."],
               ].map(([state, desc], i) => (
                 <div key={state} className="grid grid-cols-[170px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
@@ -33902,7 +34013,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               {[
                 ["Entity type", "Extensible, never a closed enum — entityType is just { icon, label }, host-defined. Employee/Customer/Vendor are 3 native shapes; Patient/Claim/Borrower/Repair Order (Repair Order isn't even a person) are proof it takes any vertical with zero code changes here."],
                 ["Zones present", "Agentic System / Your Intervention / Record are each independently OPTIONAL — omitting the prop entirely means \"this entity type doesn't use this zone,\" and it doesn't render, full stop. A record can have 0, 1, 2, or all 3. Never force a zone with fake/empty content just to fill space."],
-                ["Signal types", "Exactly 3 colors with FIXED semantics, never entity-bound: purple = agent, light blue = workflow, amber = HTL/intervention. A new vertical reuses these meanings — it never invents a 4th color or reassigns what a color means."],
+                ["Signal types", "Exactly 3 colors with FIXED semantics, never entity-bound: lime green = agent, light blue = workflow, amber = HTL/intervention (agent was purple before a validated redesign pass moved it off that color). A new vertical reuses these meanings — it never invents a 4th color or reassigns what a color means."],
                 ["Record field types", "Every field is the SAME shape (RecordField) — there's no separate \"text field\" vs. \"date field\" type. What varies: hasDestination (true/omitted = relational, opens Data Provenance; false = a plain descriptive fact — a pure date, a pure figure, nothing further to show) and state (hydrated vs. masked, Law 4). Icon + provenance are mandatory on every field regardless."],
                 ["States", "Each zone has its own state union, entirely independent of entity type — pending/empty/loading/no-permission/error/resolved-elsewhere for Your Intervention; ready/empty/loading for Agentic System. See the States gallery above for every one rendered live."],
               ].map(([dim, desc], i) => (
@@ -33924,9 +34035,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["name / entityType", "name: string. entityType: { icon: LucideIcon, label: string } — that's the entire \"what kind of record is this\" contract."],
                 ["recordFields", "RecordField[] — { label, icon, value, state: \"hydrated\"|\"masked\", maskedValue?, provenance: { system, systemAbbr, modelVersion, syncedAgo }, hasDestination? }. Omit or pass [] to skip the RECORD zone entirely."],
                 ["assignedAgent", "AssignedAgent | null — { id, name, onOpenChat }. Required as a PROP (every caller must decide), but the VALUE can be null for a record with no agent yet — renders the same button, disabled, with a Tooltip explaining why. Never a silently missing button."],
-                ["intervention", "PendingIntervention | undefined. Omit entirely to skip the zone. \"pending\" status: { items: InterventionItem[] } — each { id, description, severity, onReview }, host-sorted by priority. Other statuses (empty/loading/no-permission/error/resolved-elsewhere) need their own specific fields — see record-header.tsx's own doc comment on the type."],
-                ["agenticSystem", "AgenticSystemInfo | undefined. Omit entirely to skip the zone. { activeWorkflow?: {name, onOpen?}, lastAgent?: {name, onOpen?} } for the ready case, plus \"empty\"/\"loading\" statuses."],
-                ["onProvenanceOpen / locked / labels", "onProvenanceOpen: () => void — opens Data Provenance for every RECORD field, via the tertiary button beside the name (Law 2). locked: boolean — disables write actions, never read-only surfaces. labels: { agenticSystem?, intervention? } — i18n-ready zone heading overrides for the 2 expandable zones."],
+                ["intervention", "PendingIntervention | undefined. Omit entirely to skip the zone. \"pending\" status: { items: InterventionItem[], onViewAll? } — each item { id, description, severity, onReview }, host-sorted by priority; onReview now fires the item's diagonal-arrow trigger (opens a NEW TAB, redesign pass), not a same-page \"Review\" button. Other statuses (empty/loading/no-permission/error/resolved-elsewhere) need their own specific fields — see record-header.tsx's own doc comment on the type."],
+                ["agenticSystem", "AgenticSystemInfo | undefined. Omit entirely to skip the zone. { activeWorkflow?: {name, onOpen?}, lastAgent?: {name, onOpen?} } for the ready case, plus \"empty\"/\"loading\" statuses. No section heading (redesign pass)."],
+                ["nextBestActions", "NextBestAction[] — { id, title, description, onOpen }. The protagonist block (redesign pass) — default []. Always visible regardless of the disclosure state; omit or pass [] for a record with nothing to recommend."],
+                ["onProvenanceOpen / locked / labels", "onProvenanceOpen: () => void — opens \"About this record\" (was \"Data Provenance\") for every RECORD field, via the icon-only tertiary button beside the name (Law 2, moved there this redesign pass). locked: boolean — disables write actions, never read-only surfaces. labels: { intervention? } — i18n-ready heading override for the one remaining expandable zone with a heading (agenticSystem's own heading was removed this redesign pass, record's was removed earlier)."],
               ].map(([prop, desc], i) => (
                 <div key={prop} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]"><code>{prop}</code></div>
@@ -33974,7 +34086,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 "Define entityType: pick an icon that reads as that vertical at a glance (Stethoscope for Patient, Umbrella for Claim, Car for Repair Order — never reuse an icon that already means something else in this file) and a plain-language label.",
                 "Decide which zones this entity type actually has — pass only those props. No agentic layer for this vertical yet? Omit agenticSystem entirely; don't fake an \"empty\" state just to look complete.",
                 "Build recordFields by running every candidate field through the content rule above (step 3) — keep only what answers the central question. Each field needs its own FieldProvenance (Law 1) and a hasDestination call (does it open Data Provenance, or is it a plain fact?).",
-                "Assign signal colors by SIGNAL TYPE, not by vertical — an agent is always purple, a workflow is always light blue, an HTL item is always amber, regardless of what the entity type is.",
+                "Assign signal colors by SIGNAL TYPE, not by vertical — an agent is always lime green, a workflow is always light blue, an HTL item is always amber, regardless of what the entity type is (agent was purple before a validated redesign pass).",
                 "Override labels only if the domain has better names for the 3 zone headings (e.g. Patient's \"Patient Chart\" instead of \"Record\") — this is optional, defaults are fine for most cases.",
                 "Never edit record-header.tsx. If a case genuinely can't be expressed with the props above, that's a real gap — flag it (// DS-GAP / // TODO) instead of special-casing the component for one entity type.",
               ].map((step, i) => (
@@ -34220,7 +34332,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         onCtaPrimary={() => setRhConfirmAction("approved")}
         onCtaSecondary={() => setRhConfirmAction("dismissed")}
         topButtonIcon={<LucideIcons.ArrowUpRight size={14} />}
-        topButtonTooltip="Go to this record's governed data — Data Provenance for the field this request affects"
+        topButtonTooltip="Go to this record's governed data — About this record, for the field this request affects"
         onTopButtonClick={() => { setRhReviewOpen(false); rhOpenProvenance(openVariant) }}
       >
         <div className={PANEL_CONTENT_CLASS}>
@@ -34299,16 +34411,20 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         ctaSecondary={{ label: "Cancel", onClick: () => setRhConfirmAction(null) }}
       />
 
-      {/* ── Data Provenance (Law 2) — Source → Model → Displayed-here per
-           field. Read-only viewer with no confirmed related action, so no
-           edit pencil AND no invented menu — showTopButton={false}. */}
+      {/* ── About this record (Law 2) — renamed this redesign pass (was
+           "Data Provenance") to match the reference brief's own framing:
+           the (i)/info trigger beside the name opens an overview of the
+           record — manager, access, department, and more — each field
+           still Source → Model → Value, traced. Read-only viewer with no
+           confirmed related action, so no edit pencil AND no invented menu
+           — showTopButton={false}. */}
       <SlideOut
         open={rhProvenanceOpen}
         onClose={() => setRhProvenanceOpen(false)}
         type="with-variants"
         size="m"
-        title="Data Provenance"
-        subtitle="Every RECORD field, traced"
+        title="About this record"
+        subtitle="Manager, access, department, and more — traced"
         iconContent={<LucideIcons.Info size={24} style={{ color: "var(--hi-neutral-icon)" }} />}
         iconBg="var(--hi-neutral-bg)"
         showStatus={false}
@@ -34324,6 +34440,43 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </div>
           <div className="mt-[8px] rounded-[8px] border border-[var(--table-border)] overflow-hidden">
             {openRecordFields.filter((f): f is RecordField => Boolean(f)).map((f, i) => <ProvenanceRow key={i} field={f} />)}
+          </div>
+        </div>
+      </SlideOut>
+
+      {/* ── Next Best Action detail (redesign pass) — PLACEHOLDER structure
+           only. // TODO: Prompt 2 — the real content is a 3-layer task
+           model (base + type + dynamic) that hasn't been specified yet;
+           this SlideOut only wires the trigger and shows the NBA's own
+           title/description so the interaction is demonstrable, not the
+           real detail composition. */}
+      <SlideOut
+        open={rhNbaOpen}
+        onClose={() => setRhNbaOpen(false)}
+        type="with-variants"
+        size="m"
+        title={openNba?.title ?? "Next Best Action"}
+        subtitle="AI-recommended — not a pending decision"
+        iconContent={<LucideIcons.Sparkle size={24} style={{ color: "var(--color-text-purple)" }} />}
+        iconBg="var(--color-surface-purple-lighter)"
+        showStatus={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta={false}
+        showTopButton={false}
+      >
+        <div className="flex flex-col gap-[16px]">
+          <div>
+            <div className="flex items-center h-[32px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Why this</span>
+            </div>
+            <p className="text-[13px] leading-[1.6] mt-[4px]" style={{ color: "var(--foreground)" }}>{openNba?.description}</p>
+          </div>
+          <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+              // TODO: Prompt 2 — base task (what/who/when) + task type (informational / decision / action) + dynamic layer (data this specific recommendation is grounded in) still need to be specified before this panel can show the real 3-layer structure.
+            </p>
           </div>
         </div>
       </SlideOut>

@@ -2,6 +2,7 @@ import { AlertTriangle, AlertCircle, CheckCircle2, Info } from "lucide-react"
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Tooltip } from "@/components/ui/tooltip"
 
 /**
  * Informational Card — AIMS OS Design System
@@ -32,6 +33,14 @@ export type InformativeCardProps = {
   /** `disabled` is additive/optional — renders the Button disabled (e.g. no permission to act yet). */
   cta?:           { label: string; onClick?: () => void; disabled?: boolean }
   ctaSecondary?:  { label: string; onClick?: () => void; disabled?: boolean }
+  /**
+   * A single icon-only trailing action — for a destination that isn't a
+   * labeled decision (e.g. "opens in a new tab"), so it doesn't compete
+   * visually with a real cta/ctaSecondary decision button. In practice used
+   * instead of cta/ctaSecondary, not alongside them, though nothing enforces
+   * that — the caller decides what this card actually needs.
+   */
+  trailingIcon?:  { icon: ReactNode; onClick?: () => void; "aria-label": string; tooltip?: string }
   icon?:          ReactNode              // overrides default state icon
   className?:     string
 }
@@ -58,6 +67,7 @@ function InformativeCard({
   description,
   cta,
   ctaSecondary,
+  trailingIcon,
   icon,
   className,
 }: InformativeCardProps) {
@@ -99,8 +109,10 @@ function InformativeCard({
         )}
       </div>
 
-      {/* Optional CTA pair — secondary left, primary right (matches DS layout) */}
-      {(ctaSecondary || cta) && (
+      {/* Optional CTA pair — secondary left, primary right (matches DS layout) —
+          or a single icon-only trailingIcon action instead, for a destination
+          that isn't a governed decision (e.g. "opens in a new tab"). */}
+      {(ctaSecondary || cta || trailingIcon) && (
         <div className="shrink-0 flex items-center gap-[8px]">
           {ctaSecondary && (
             <Button variant="secondary" size="sm" onClick={ctaSecondary.onClick} disabled={ctaSecondary.disabled}>
@@ -112,6 +124,19 @@ function InformativeCard({
               {cta.label}
             </Button>
           )}
+          {trailingIcon && (() => {
+            const btn = (
+              <Button
+                variant="tertiary"
+                size="sm"
+                iconPosition="alone"
+                icon={trailingIcon.icon}
+                aria-label={trailingIcon["aria-label"]}
+                onClick={trailingIcon.onClick}
+              />
+            )
+            return trailingIcon.tooltip ? <Tooltip content={trailingIcon.tooltip} side="cursor">{btn}</Tooltip> : btn
+          })()}
         </div>
       )}
     </div>

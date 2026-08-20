@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from "react"
 import {
-  ChevronDown, ChevronUp, ChevronRight, Sparkle, MoreHorizontal, Lock, Info, Workflow, Bot,
+  ChevronDown, ChevronUp, ChevronRight, ArrowUpRight, Sparkle, MoreHorizontal, Lock, Info, Workflow, Bot,
   AlertTriangle, CheckCircle2,
   type LucideIcon,
 } from "lucide-react"
@@ -21,7 +21,35 @@ import { Skeleton } from "@/components/ui/skeleton"
  * NOT YET IN FIGMA — this is a new component, not synced from an existing node.
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * AGNOSTICISM PASS (this revision) — the component previously modeled exactly
+ * REDESIGN PASS (this revision) — realigned to a validated visual redesign.
+ * 5 changes, same underlying data model:
+ *   1. The RECORD provenance trigger and entity type were already beside
+ *      the name (left-aligned) from a prior correction pass — unchanged
+ *      here, just confirmed as part of this redesign's own reference.
+ *   2. Next Best Action is REINTRODUCED (`nextBestActions` prop) — but as a
+ *      protagonist block, not the old Signal bar the history note below
+ *      describes. Same block, repositioned: visible right under the
+ *      identity tags while collapsed, and at the end of the expanded zones
+ *      while expanded — never duplicated, never hidden in either state.
+ *   3. Agentic System lost its section heading (the reference design shows
+ *      Workflow/Agent as plain cards, no label above them) and the agent's
+ *      signal color moved from purple to lime green — Workflow stays light
+ *      blue. This is a deliberate, validated change to Law-adjacent color
+ *      convention, not a bug: purple is no longer a signal color in this
+ *      file at all.
+ *   4. Your Intervention's pending items now trigger via a diagonal arrow
+ *      (ArrowUpRight), never a labeled "Review" button — clicking one opens
+ *      the real HTL view in a NEW TAB, never a same-page overlay, so the
+ *      viewer never loses their place on this record. "Show N more" caps
+ *      at 3 extra items inline; "View all" is the separate, always-present
+ *      escape hatch to the full list (also a new tab). See OPEN_HTL_TOOLTIP
+ *      and InterventionZoneContent's own doc comment.
+ *   5. `RecordHeaderZoneLabels` lost `agenticSystem` (no heading left to
+ *      translate) on top of `record` (already gone from the prior pass).
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * AGNOSTICISM PASS (earlier revision) — the component previously modeled exactly
  * 3 closed entity variants (uep/ucp/uvp — Employee/Customer/Vendor), each with
  * its own fixed field-name interface (UEPRecord.manager, UCPRecord.renewalDate,
  * etc.) and an internal switch statement deriving the Identity type icon/label
@@ -44,11 +72,11 @@ import { Skeleton } from "@/components/ui/skeleton"
  *     PendingIntervention below): passing the prop at all (even in an
  *     "empty"/"loading" status) means "render this zone"; omitting it
  *     entirely means "this entity type doesn't use this zone."
- *   - The 3 signal colors (purple = AI/agent, light blue = workflow, amber =
- *     intervention/HTL) encode SIGNAL TYPE, never a vertical — nothing in
- *     this file branches color by entity type. Confirmed by construction:
- *     there's no entity-type variable in scope anywhere near the color
- *     tokens below.
+ *   - The 3 signal colors (lime green = AI/agent, light blue = workflow,
+ *     amber = intervention/HTL — agent was purple before the redesign pass
+ *     above) encode SIGNAL TYPE, never a vertical — nothing in this file
+ *     branches color by entity type. Confirmed by construction: there's no
+ *     entity-type variable in scope anywhere near the color tokens below.
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * ═══════════════════════════════════════════════════════════════════════════
@@ -70,8 +98,10 @@ import { Skeleton } from "@/components/ui/skeleton"
  *     field carries a FieldProvenance and renders its origin-system badge
  *     inline — never a value floating with no traceable source.
  *   Law 2 — Every governed answer carries provenance reachable WITHOUT
- *     leaving the view. The (i) icon next to the RECORD heading opens the
- *     Data Provenance SlideOut from right here — no navigating away first.
+ *     leaving the view. The (i) icon sits directly beside the name
+ *     (redesign pass) and opens the Data Provenance SlideOut (the host may
+ *     title it "About this record") from right here — no navigating away
+ *     first.
  *   Law 3 — HTL (human-in-the-loop) items are first-class states with their
  *     own calm, explanatory language — NEVER rendered as red errors. Every
  *     Your Intervention status (pending/empty/loading/no-permission/error/
@@ -83,32 +113,41 @@ import { Skeleton } from "@/components/ui/skeleton"
  *     2 states — see RecordField's own doc comment. This component renders
  *     whichever state it's given; it never resolves entitlements itself.
  *
- * Structure — Identity (fixed) + 3 expandable zones, one shared skeleton for
- * any entity type — only the zone CONTENT changes, never the skeleton:
+ * Structure — Identity (fixed) + NBA (protagonist, repositionable) + 2
+ * expandable zones, one shared skeleton for any entity type — only the
+ * zone CONTENT changes, never the skeleton:
  *   Identity (always visible) → avatar, name (truncates with a Tooltip —
- *     never stretches or wraps the row), entity-type icon +
- *     TEXT (both, not icon-only), up to 3 governance-state Tags (hidden once
- *     expanded), Locked state. Actions: AI agent trigger ("Ask about
- *     {firstName}") → optional primary CTA (actions[0], host-provided —
- *     omitted entirely if the host passes none) → "···" overflow
- *     (actions[1+]) → disclosure chevron. Clicking a compressed Tag expands
- *     the card and scrolls/
- *     highlights the zone that Tag summarizes — see Block 2 note below.
- *   AGENTIC SYSTEM (expanded) → each item (Active Workflow / Last Agent) is
- *     a CardContainer (size="sm") with a HighlightIcon (size="sm", colored:
- *     light-blue = workflow, purple = agent) + a NEUTRAL tertiary Button —
- *     color lives in the icon, never in the button. Also renders "empty"
- *     (no workflow/agent yet) and "loading" (Skeleton) states.
+ *     never stretches or wraps the row), the RECORD provenance trigger
+ *     (icon-only Button, see below), entity-type icon + TEXT (both, not
+ *     icon-only) — all left-aligned, beside the name — up to 3
+ *     governance-state Tags (hidden once expanded), Locked state. Actions:
+ *     AI agent trigger ("Ask about {firstName}") → optional primary CTA
+ *     (actions[0], host-provided — omitted entirely if the host passes
+ *     none) → "···" overflow (actions[1+]) → disclosure chevron. Clicking a
+ *     compressed Tag expands the card and scrolls/highlights the zone that
+ *     Tag summarizes — see Block 2 note below.
+ *   NEXT BEST ACTION (always visible, not gated by the disclosure — this
+ *     redesign pass) → right under the identity tags while collapsed, at
+ *     the end of the expanded zones while expanded. See NextBestAction's
+ *     own doc comment and NextBestActionBlock.
+ *   AGENTIC SYSTEM (expanded, no section heading — this redesign pass) →
+ *     each item (Active Workflow / Last Agent) is a CardContainer
+ *     (size="sm") with a HighlightIcon (size="sm", colored: light-blue =
+ *     workflow, lime = agent) + a NEUTRAL tertiary Button — color lives in
+ *     the icon, never in the button. Also renders "empty" (no
+ *     workflow/agent yet) and "loading" (Skeleton) states.
  *   YOUR INTERVENTION (expanded, only if `intervention` is set) → renders
  *     one of 6 states through InformativeCard (size="sm", never red):
- *     pending (default, N items — most prioritized shown + "+N more"
- *     disclosure, never a carousel) / empty / loading / no-permission (+ Escalate) /
- *     error / resolved-elsewhere. See PendingIntervention's own doc comment.
- *   RECORD (expanded) → fields never render inline (this correction pass —
- *     previously each field was its own Button variant="tertiary" row when
- *     it had a destination, or plain static text when it didn't). Now the
- *     whole zone is a single Button variant="tertiary" ("View record
- *     details", leading Info icon) that opens the same Data Provenance
+ *     pending (default, N items — most prioritized shown + a diagonal-
+ *     arrow trigger that opens the real HTL view in a NEW TAB, never a
+ *     same-page overlay; "Show N more" caps at 3 extra inline, "View all"
+ *     is the separate always-present escape hatch — this redesign pass,
+ *     see InterventionZoneContent's own doc comment) / empty / loading /
+ *     no-permission (+ Escalate) / error / resolved-elsewhere. See
+ *     PendingIntervention's own doc comment.
+ *   RECORD → no expandable zone at all (moved out in the prior correction
+ *     pass) — its trigger is the icon-only Button beside the name
+ *     (Identity, above), always visible, opening the Data Provenance
  *     SlideOut (Law 2) for every field at once — disabled + a Tooltip
  *     explaining why when the host hasn't wired onProvenanceOpen, never
  *     silently hidden.
@@ -116,10 +155,11 @@ import { Skeleton } from "@/components/ui/skeleton"
  * Block 2 — clicking a compressed identity Tag (this revision): every tag
  *   (agent/workflow/HTL) is a single, consistent interaction — it expands
  *   the card (if collapsed) and scrolls/highlights the zone it summarizes.
- *   It NEVER opens a SlideOut directly from the collapsed tag — the deep
- *   detail is reached from the expanded zone itself (its own Button/Review
- *   CTA), same "expand first, drill in second" flow for every tag, every
- *   time. See `focusZone()` below.
+ *   It NEVER opens a SlideOut/new-tab directly from the collapsed tag —
+ *   the deep detail is reached from the expanded zone itself (its own
+ *   Button, or the HTL item's own diagonal-arrow trigger), same "expand
+ *   first, drill in second" flow for every tag, every time. See
+ *   `focusZone()` below.
  *
  * Composition — reuses existing DS atoms, no custom re-implementations:
  *   Card       → CardContainer (size="default", variant="default") for the
@@ -139,18 +179,29 @@ import { Skeleton } from "@/components/ui/skeleton"
  *                Block 2's "expand + scroll to zone" tag click behavior.
  *   Agentic System items → CardContainer (sm) + HighlightIcon (sm, colored)
  *                + Button variant="tertiary" (neutral, no color). RECORD
- *                zone → a single Button variant="tertiary", leading Info
- *                icon, opening Data Provenance for every field (this
- *                correction pass — no more per-field rows inline). Never a
- *                colored card for
- *                metadata, per explicit instruction — HighlightIcon's own
- *                tinted box is the one sanctioned exception (it's a
- *                dedicated colored-icon atom, not a colored metadata card).
+ *                trigger (beside the name, Identity) → a single icon-only
+ *                Button variant="tertiary", opening Data Provenance for
+ *                every field at once. Never a colored card for metadata,
+ *                per explicit instruction — HighlightIcon's own tinted box
+ *                is the one sanctioned exception (it's a dedicated
+ *                colored-icon atom, not a colored metadata card).
+ *   Next Best Action → a native `<button>` (not the Button component — the
+ *                whole block, icon+text+chevron, is one clickable target,
+ *                same "raw styled element for a custom shape" precedent as
+ *                the collapsed identity tags), dark-purple surface
+ *                (--color-surface-purple-darker, paired with the SAME
+ *                constant-white text token Chip's purple-primary variant
+ *                already uses — see NextBestActionBlock's own doc comment
+ *                for why, never --color-text-purple).
  *   Your Intervention → InformativeCard (size="sm"), title in normal
  *                sentence case (not literal ALL CAPS), state="alert" for
  *                pending/error, state="neutral" for empty/resolved-
  *                elsewhere — never state="error" (red), regardless of
- *                intervention.severity or status.
+ *                intervention.severity or status. Pending items' trigger →
+ *                InformativeCard's new `trailingIcon` prop (this redesign
+ *                pass — an icon-only Button, ArrowUpRight, added
+ *                additively to informative-card.tsx alongside the
+ *                existing cta/ctaSecondary, default behavior unchanged).
  *   Loading states → Skeleton (skeleton.tsx) — no spinner-only dead air;
  *                shapes approximate the real content so layout doesn't jump
  *                when data arrives.
@@ -282,12 +333,28 @@ export interface InterventionItem {
 // Omitting the whole `intervention` prop (undefined) means this entity type
 // has genuinely nothing to show here right now — the zone omits entirely.
 export type PendingIntervention =
-  | { status?: "pending"; items: InterventionItem[] }
+  | { status?: "pending"; items: InterventionItem[]; onViewAll?: () => void }
   | { status: "empty"; message?: string }
   | { status: "loading" }
   | { status: "no-permission"; description: string; onEscalate?: () => void }
   | { status: "error"; message: string; onRetry?: () => void }
   | { status: "resolved-elsewhere"; resolvedBy: string; resolvedAgo: string; description: string }
+
+// ── Next Best Action (reintroduced, this redesign pass — NEW shape, not the
+// pre-governed-card Signal bar the file header's history note describes) ──
+// A protagonist block, not a zone: visible in BOTH collapsed (right under
+// the identity tags) and expanded (at the end, after Your Intervention) —
+// same block, repositioned, never duplicated or hidden. A record can have
+// N of these; each opens its own detail SlideOut (host-owned, same
+// onOpen/onAction delegation as everything else in this file). Detail
+// SlideOut CONTENT (the "base + type + dynamic" 3-layer task structure) is
+// // TODO: Prompt 2 — this pass only wires the trigger and a placeholder.
+export interface NextBestAction {
+  id: string
+  title: string
+  description: string
+  onOpen: () => void
+}
 
 // ── Assigned AI agent (transversal across entity types) ─────────────────────
 // AIMS OS is agent-first: every record has one, regardless of entity type.
@@ -338,15 +405,15 @@ export interface RecordHeaderEntityType {
 // ── Zone labels (Block 4 — i18n-ready, never baked in) ─────────────────────
 // Every zone heading can be renamed/translated by the host. Defaults
 // preserve the existing English copy when the host doesn't override. No
-// `record` entry (this correction pass) — RECORD no longer has its own
-// zone heading now that its trigger lives beside the name instead.
+// `record` entry (RECORD's trigger lives beside the name, no heading) and
+// no `agenticSystem` entry either (this redesign pass — the reference
+// design shows the Workflow/Agent cards with no section title at all).
+// Your Intervention keeps its heading — only these 2 lost theirs.
 export interface RecordHeaderZoneLabels {
-  agenticSystem?: string
   intervention?: string
 }
 
 const DEFAULT_ZONE_LABELS: Required<RecordHeaderZoneLabels> = {
-  agenticSystem: "Agentic System",
   intervention: "Your Intervention",
 }
 
@@ -372,6 +439,13 @@ export interface RecordHeaderProps {
   agenticSystem?: AgenticSystemInfo
   /** Zone: YOUR INTERVENTION. Omit entirely to skip the zone for this entity type. */
   intervention?: PendingIntervention
+  /**
+   * The protagonist block (this redesign pass) — omit or pass an empty
+   * array for a record with genuinely nothing to recommend right now (it
+   * disappears entirely, same "never fake a state" rule as every other
+   * zone). N is supported; each renders its own block, stacked.
+   */
+  nextBestActions?: NextBestAction[]
   /** Opens the Data Provenance SlideOut for the whole RECORD zone (Law 2). */
   onProvenanceOpen?: () => void
   /** Uncontrolled initial state for the zones disclosure. Default: false (collapsed) — predictable header height. */
@@ -424,6 +498,10 @@ const COLLAPSE_SHORTEN_ASSISTANT_WIDTH = 480
 const ASSISTANT_LABEL_MAX_NAME_LENGTH = 12
 // How long the scrolled-to zone stays visually highlighted after a tag click.
 const ZONE_HIGHLIGHT_MS = 1400
+// Every HTL diagonal-arrow trigger carries this same Tooltip copy (this
+// redesign pass) — never a same-page SlideOut/Modal, always a fresh tab, so
+// the viewer never loses their place on this record.
+const OPEN_HTL_TOOLTIP = "Opens in a new tab"
 
 type ZoneKey = "agenticSystem" | "intervention"
 
@@ -437,6 +515,7 @@ function RecordHeader({
   actions = [],
   agenticSystem,
   intervention,
+  nextBestActions = [],
   onProvenanceOpen,
   defaultExpanded = false,
   locked = false,
@@ -447,6 +526,7 @@ function RecordHeader({
   const TypeIcon = entityType.icon
   const zoneLabels = { ...DEFAULT_ZONE_LABELS, ...labels }
   const [primaryAction, ...overflowActions] = actions
+  const hasNBA = nextBestActions.length > 0
 
   const agenticStatus = agenticSystem ? (agenticSystem.status ?? "ready") : undefined
   const interventionStatus = intervention ? (intervention.status ?? "pending") : undefined
@@ -532,6 +612,22 @@ function RecordHeader({
     // unmounts the ref target, and a plain [] effect would miss that.
   }, [tagsHidden, assignedAgent, agenticStatus, interventionStatus])
 
+  // NBA, collapsed position — same measured-height technique as the tags
+  // row above, kept as its own independent ref/state since it lives at a
+  // different DOM level (full card width, not nested in the name column)
+  // and can't share that wrapper's ref.
+  const nbaBlockRef = useRef<HTMLDivElement>(null)
+  const [nbaBlockHeight, setNbaBlockHeight] = useState(0)
+  useLayoutEffect(() => {
+    const el = nbaBlockRef.current
+    if (!el) { setNbaBlockHeight(0); return }
+    const measure = () => setNbaBlockHeight(el.scrollHeight)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [hasNBA])
+
   // AI Assistant CTA — "Ask about {firstName}" communicates this chat is
   // scoped to THIS record, not a generic assistant entry point. Falls back
   // to "Ask AI" (+ Tooltip carrying the same context) when the card is
@@ -614,9 +710,10 @@ function RecordHeader({
                 transition (not a hard unmount) so the collapse is animated,
                 not an abrupt height jump.
                 Tag CONTENT — governance-state indicators: assigned agent
-                (purple, matches Last Agent below), active workflow (light
-                blue, matches Active Workflow below), pending HTL (amber,
-                matches Your Intervention below). Block 2 — every tag is
+                (lime green, matches Last Agent below — this redesign pass;
+                was purple before), active workflow (light blue, matches
+                Active Workflow below), pending HTL (amber, matches Your
+                Intervention below). Block 2 — every tag is
                 clickable: it expands the card and scrolls/highlights the
                 zone it summarizes (never opens a SlideOut directly from
                 here). Each only renders when that signal is actually in its
@@ -640,7 +737,7 @@ function RecordHeader({
                         onClick={() => focusZone("agenticSystem")}
                         className="cursor-pointer rounded-[8px]"
                       >
-                        <Tag variant="purple" size="sm" leadingIcon={<Bot size={12} strokeWidth={1.75} />}>
+                        <Tag variant="limeGreen" size="sm" leadingIcon={<Bot size={12} strokeWidth={1.75} />}>
                           {assignedAgent.name}
                         </Tag>
                       </button>
@@ -763,6 +860,27 @@ function RecordHeader({
           </div>
         </div>
 
+        {/* NBA, collapsed position — full card width (this redesign pass),
+            so it sits as a sibling of the whole identity row rather than
+            nested inside the narrower name column the tags row lives in.
+            Same measured maxHeight+opacity collapse technique as the tags
+            row above, kept as its own independent measurement since it's a
+            different DOM region and can't share that ref. */}
+        {hasNBA && (
+          <div
+            style={{
+              maxHeight: expanded ? 0 : nbaBlockHeight,
+              opacity: expanded ? 0 : 1,
+              overflow: "hidden",
+              transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease",
+            }}
+          >
+            <div ref={nbaBlockRef} className="flex flex-col gap-[8px]">
+              {nextBestActions.map(nba => <NextBestActionBlock key={nba.id} nba={nba} />)}
+            </div>
+          </div>
+        )}
+
         {/* ── Expandable zones — collapsed by default, predictable header height. */}
         {hasAnyZone && (
           <div
@@ -774,15 +892,15 @@ function RecordHeader({
           >
             <div className="pt-[16px] flex flex-col gap-[16px]" style={{ borderTop: "0.5px solid var(--color-border-neutral-lighter)" }}>
 
+              {/* No section heading here (this redesign pass) — the reference
+                  design shows Workflow/Agent as plain context cards, no
+                  "Agentic System" label above them. */}
               {hasAgenticSystem && agenticSystem && (
                 <div
                   ref={agenticSystemZoneRef}
                   className="flex flex-col gap-[8px] rounded-[8px] transition-shadow duration-500"
                   style={{ boxShadow: highlightZone === "agenticSystem" ? "0 0 0 2px var(--primary)" : "0 0 0 0px transparent" }}
                 >
-                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>
-                    {zoneLabels.agenticSystem}
-                  </span>
                   <AgenticSystemZoneContent state={agenticSystem} />
                 </div>
               )}
@@ -801,11 +919,65 @@ function RecordHeader({
                 </div>
               )}
 
+              {/* NBA, expanded position — the SAME block as the collapsed
+                  one below, just repositioned to the end (this redesign
+                  pass). Never duplicated content, never a second copy with
+                  different data — see the file header's NBA note. */}
+              {hasNBA && (
+                <div className="flex flex-col gap-[8px]">
+                  {nextBestActions.map(nba => <NextBestActionBlock key={nba.id} nba={nba} />)}
+                </div>
+              )}
+
             </div>
           </div>
         )}
       </div>
     </CardContainer>
+  )
+}
+
+// ── Next Best Action block — the protagonist, dark-purple surface ──────────
+// A native `<button>`, not the Button component — the whole block is one
+// clickable target (icon + 2-line text + chevron), same "raw styled
+// element for a custom shape" precedent as the collapsed identity tags
+// above, not a shape any Button variant already covers.
+//
+// Color pairing — CORRECTED from an earlier version of this same pass,
+// which used --color-surface-purple-darker (#2c075c, a fully opaque,
+// non-theme-adapting hex — identical in both light AND dark mode). Every
+// OTHER purple accent surface already in this codebase (Tag's purple
+// variant, HighlightIcon's purple variant, the "AI Summary" card pattern)
+// is a TRANSLUCENT tint over the surrounding surface, not a solid opaque
+// fill — that constant-opaque choice read as far more saturated/"loud"
+// than every neighboring dark-mode surface (all of which are low-opacity
+// overlays on --canvas), which is exactly the "too vibrant" bug a design
+// review caught. --color-surface-purple-lighter actually DOES adapt: a
+// 40%-opacity purple wash over the canvas in dark mode, a solid pale
+// lavender in light mode — paired with --color-text-purple, which adapts
+// the OTHER direction (light lavender text in dark mode, dark purple text
+// in light mode) so it always reads against whichever background that
+// mode produces. Never --color-button-primary-text-default (constant
+// white) paired with a background that no longer stays constant itself.
+function NextBestActionBlock({ nba }: { nba: NextBestAction }) {
+  return (
+    <button
+      type="button"
+      onClick={nba.onOpen}
+      className="w-full flex items-center gap-[12px] rounded-[8px] p-[12px] text-left transition-opacity hover:opacity-90"
+      style={{ background: "var(--color-surface-purple-lighter)", border: "0.5px solid var(--card-purple-border)" }}
+    >
+      <Sparkle size={18} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--color-text-purple)" }} />
+      <div className="flex-1 flex flex-col gap-[2px] min-w-0">
+        <span className="block truncate text-[13px] font-semibold" style={{ color: "var(--color-text-purple)" }}>
+          {nba.title}
+        </span>
+        <span className="text-[12px] leading-[1.4]" style={{ color: "var(--color-text-purple)", opacity: 0.75 }}>
+          {nba.description}
+        </span>
+      </div>
+      <ChevronRight size={16} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--color-text-purple)" }} />
+    </button>
   )
 }
 
@@ -855,7 +1027,7 @@ function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
       {state.lastAgent && (
         <AgenticSystemItem
           icon={<Bot size={16} strokeWidth={1.75} />}
-          iconVariant="purple"
+          iconVariant="lime"
           name={state.lastAgent.name}
           onOpen={state.lastAgent.onOpen}
           tooltip={`Open ${state.lastAgent.name}'s latest session — summary, finding, and recommendation`}
@@ -873,7 +1045,7 @@ function AgenticSystemItem({
   tooltip,
 }: {
   icon: React.ReactNode
-  iconVariant: "light-blue" | "purple"
+  iconVariant: "light-blue" | "lime"
   name: string
   onOpen?: () => void
   tooltip: string
@@ -1001,7 +1173,15 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
     )
   }
 
+  // This redesign pass — every HTL item (primary and extras alike) gets the
+  // SAME diagonal-arrow trailing action, never a "Review" label: it opens
+  // the real HTL view in a NEW TAB (never redirects/reloads this page — the
+  // viewer keeps their place on this record), with a Tooltip saying so.
+  // "Show N more" caps at 3 extras inline (never all of them at once — see
+  // OPEN_HTL_TOOLTIP below); "View all" is the separate, always-available
+  // escape hatch to the full list, also a new tab.
   const [primary, ...rest] = state.items
+  const visibleRest = rest.slice(0, 3)
   return (
     <div className="flex flex-col gap-[8px]">
       <InformativeCard
@@ -1009,45 +1189,67 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
         size="sm"
         title={`${state.items.length} ${state.items.length === 1 ? "action" : "actions"} awaiting review`}
         description={primary.description}
-        cta={{ label: "Review", onClick: primary.onReview }}
+        trailingIcon={{ icon: <ArrowUpRight size={16} strokeWidth={1.75} />, onClick: primary.onReview, "aria-label": "Open in a new tab", tooltip: OPEN_HTL_TOOLTIP }}
       />
       {rest.length > 0 && (
-        <>
+        <div className="flex items-center gap-[8px]">
           <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
-            {showMore ? "Show less" : `+${rest.length} more`}
+            {showMore ? "Show less" : `Show ${visibleRest.length} more`}
             {showMore
               ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
               : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
           </Button>
-          {showMore && (
-            <div className="flex flex-col gap-[6px]">
-              {rest.map(item => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-[8px] px-[8px] py-[6px] rounded-[8px] min-w-0"
-                  style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}
-                >
-                  <Tag
-                    variant={item.severity === "high" ? "alert" : item.severity === "medium" ? "informative" : "secondary"}
-                    size="sm"
-                    className="shrink-0"
-                  >
-                    {item.severity.toUpperCase()}
-                  </Tag>
-                  <Tooltip content={item.description} side="cursor" triggerClassName="flex-1 min-w-0 block">
-                    <span className="block truncate text-[12px]" style={{ color: "var(--foreground)" }}>
-                      {item.description}
-                    </span>
-                  </Tooltip>
-                  <Button variant="tertiary" size="sm" onClick={item.onReview} className="shrink-0">
-                    Review
-                  </Button>
-                </div>
-              ))}
-            </div>
+          {state.onViewAll && (
+            <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
+              <Button variant="tertiary" size="sm" onClick={state.onViewAll} className="self-start">
+                View all
+                <ArrowUpRight size={14} strokeWidth={1.75} className="ml-[2px]" />
+              </Button>
+            </Tooltip>
           )}
-        </>
+        </div>
       )}
+      {showMore && visibleRest.length > 0 && (
+        <div className="flex flex-col gap-[6px]">
+          {visibleRest.map(item => (
+            <div
+              key={item.id}
+              className="flex items-center gap-[8px] px-[8px] py-[6px] rounded-[8px] min-w-0"
+              style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}
+            >
+              <Tag
+                variant={item.severity === "high" ? "alert" : item.severity === "medium" ? "informative" : "secondary"}
+                size="sm"
+                className="shrink-0"
+              >
+                {item.severity.toUpperCase()}
+              </Tag>
+              <Tooltip content={item.description} side="cursor" triggerClassName="flex-1 min-w-0 block">
+                <span className="block truncate text-[12px]" style={{ color: "var(--foreground)" }}>
+                  {item.description}
+                </span>
+              </Tooltip>
+              <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  iconPosition="alone"
+                  icon={<ArrowUpRight size={14} strokeWidth={1.75} />}
+                  aria-label="Open in a new tab"
+                  onClick={item.onReview}
+                  className="shrink-0"
+                />
+              </Tooltip>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Items beyond the 3-extra cap are deliberately not rendered here —
+          "View all" above is the only way to reach them. DECISION FLAGGED —
+          hypothesis, not explicitly confirmed: if a host has >4 items total
+          and passes no onViewAll, there's currently no way to reach the
+          rest at all. // TODO: confirmar con Michael — ¿debería onViewAll
+          ser obligatorio cuando items.length > 4? */}
     </div>
   )
 }
