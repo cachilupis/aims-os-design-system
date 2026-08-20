@@ -32440,18 +32440,28 @@ const RH_ENTITY_TYPE: Record<RhDemoKey, RecordHeaderEntityType> = {
   // NetSuite/Ariba), different Record fields, different zone labels (see
   // the `labels` prop on this variant's RecordHeader instance).
   patient: { icon: LucideIcons.Stethoscope, label: "Patient" },
-  // Second agnosticism example (this correction pass) — insurance: a
-  // different icon, and — unlike every example before it — a Record whose
-  // fields come from 2 distinct source systems at once (see gwProv/dcProv).
-  claim: { icon: LucideIcons.Umbrella, label: "Insurance Claim" },
+  // Second agnosticism example (this correction pass) — insurance. The
+  // CONTACT rule (this pass): this card always shows a person or an
+  // account, never a process — a claim isn't a valid entity here any more
+  // than "Access Recertification" is UEP's entity. The contact is the
+  // POLICYHOLDER; their active claim lives as a workflow in Agentic
+  // System instead (see RH_WORKFLOWS.claim). Record still sourced from 2
+  // distinct systems at once (see gwProv/dcProv).
+  claim: { icon: LucideIcons.Umbrella, label: "Policyholder" },
   // Third agnosticism example (this correction pass) — banking: a third
-  // distinct icon, a Record sourced from 3 distinct systems.
+  // distinct icon, a Record sourced from 3 distinct systems. Already
+  // compliant with the CONTACT rule above — Jordan Ellis is a person, and
+  // the credit application is a workflow (RH_WORKFLOWS.borrower), not the
+  // entity.
   borrower: { icon: LucideIcons.Landmark, label: "Borrower" },
   // Fourth agnosticism example (this correction pass) — automotive, AIMS
-  // OS's own central vertical. Also the non-person-entity proof the old
-  // Asset example made: a repair order isn't a person either, and nothing
-  // in this component (Avatar initials, name, RECORD grid) assumes it is.
-  repairOrder: { icon: LucideIcons.Car, label: "Repair Order" },
+  // OS's own central vertical. Same CONTACT rule fix as claim above: a
+  // repair order isn't a valid entity — the contact is the dealership's
+  // SERVICE CUSTOMER; their vehicle's repair order lives as a workflow in
+  // Agentic System instead (see RH_WORKFLOWS.repairOrder). `vehicle`
+  // (below) stays as a stable identity attribute — which car they own —
+  // same role as UCP's `segment`/`tier`, never the entity itself.
+  repairOrder: { icon: LucideIcons.Car, label: "Service Customer" },
 }
 
 // UEP — the reference variant (brief's own words: "la card de referencia").
@@ -32503,17 +32513,23 @@ const RH_PATIENT = {
   admissionDate:    { label: "Admission Date",     icon: LucideIcons.CalendarClock, value: "Aug 14, 2026", state: "hydrated", provenance: epicProv("6h ago"), hasDestination: false } satisfies RecordField,
 }
 
-// Claim / Policyholder (Insurance) — second agnosticism proof example,
-// EXAMPLE data, not confirmed AIMS OS content. This correction pass's
-// multi-source proof: Claims Adjuster/Claim Amount/Date of Loss come from
-// the claims core (Guidewire); Policy Number comes from the separate
-// policy admin system (Duck Creek) — 2 systems, one record, both cited.
+// Policyholder (Insurance) — second agnosticism proof example, EXAMPLE
+// data, not confirmed AIMS OS content. CONTACT rule (this correction
+// pass) — the entity is the PERSON who holds the policy, never the claim
+// itself. Record fields describe the policyholder's own standing
+// relationship with the carrier (policy, coverage, agent, claims
+// history), never the currently-active claim's own transient facts
+// (those — adjuster, payout amount, date of loss — now live on the
+// Claims Adjudication workflow, see RH_WORKFLOWS.claim /
+// RH_INTERVENTIONS.claim). Still 2 distinct source systems on one
+// record: Duck Creek (policy admin) and Guidewire (claims core, for the
+// person's claims HISTORY, not their one open claim).
 const RH_CLAIM = {
-  name: "Claim CLM-48821", policyType: "Auto — Comprehensive",
-  claimAdjuster: { label: "Claims Adjuster", icon: LucideIcons.User,          value: "Renee Castillo", state: "hydrated", provenance: gwProv("25m ago") } satisfies RecordField,
-  policyNumber:  { label: "Policy Number",   icon: LucideIcons.FileText,      value: "POL-77-4821",    state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
-  claimAmount:   { label: "Claim Amount",    icon: LucideIcons.DollarSign,    value: "$18,400",        state: "hydrated", provenance: gwProv("25m ago"), hasDestination: false } satisfies RecordField,
-  dateOfLoss:    { label: "Date of Loss",    icon: LucideIcons.CalendarClock, value: "Aug 2, 2026",    state: "hydrated", provenance: gwProv("3h ago"), hasDestination: false } satisfies RecordField,
+  name: "Diane Ostrowski", policyType: "Auto — Comprehensive",
+  policyNumber:   { label: "Policy Number",   icon: LucideIcons.FileText,      value: "POL-77-4821",                   state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
+  insuranceAgent: { label: "Insurance Agent", icon: LucideIcons.User,          value: "Marcus Feldman",                state: "hydrated", provenance: dcProv("1h ago") } satisfies RecordField,
+  coverageType:   { label: "Coverage Type",   icon: LucideIcons.ShieldCheck,   value: "Comprehensive",                 state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
+  claimsHistory:  { label: "Claims History",  icon: LucideIcons.History,       value: "1 claim in the past 12 months", state: "hydrated", provenance: gwProv("25m ago"), hasDestination: false } satisfies RecordField,
 }
 
 // Borrower / Account (Banking) — third agnosticism proof example, EXAMPLE
@@ -32528,18 +32544,24 @@ const RH_BORROWER = {
   requestedAmount: { label: "Requested Amount",  icon: LucideIcons.DollarSign, value: "$45,000",  state: "hydrated", provenance: ncinoProv("2h ago"), hasDestination: false } satisfies RecordField,
 }
 
-// Repair Order / Vehicle Service (Automotive) — fourth agnosticism proof
-// example, EXAMPLE data, not confirmed AIMS OS content. AIMS OS's own
-// central vertical (brief's own words) — and, like the old Asset example,
-// a non-person entity: this "record" is an order, not a colleague. 3
+// Service Customer (Automotive) — fourth agnosticism proof example,
+// EXAMPLE data, not confirmed AIMS OS content. AIMS OS's own central
+// vertical (brief's own words). CONTACT rule (this correction pass) — the
+// entity is the PERSON who owns the vehicle, never the repair order
+// itself: the old "Repair Order #48213 (non-person entity)" version
+// violated the same rule Claim did. The non-person-entity proof this
+// example used to make is retired along with it — Borrower (a person)
+// already covers that ground redundantly anyway; there's no loss of
+// coverage. The repair order now lives as a workflow in Agentic System
+// (RH_WORKFLOWS.repairOrder), not as this record's identity. Still 3
 // distinct sources: CDK Global (DMS), Carfax (vehicle history), and the
 // manufacturer's own warranty system.
 const RH_REPAIR_ORDER = {
-  name: "Repair Order #48213", vehicle: "2022 Ford F-150",
-  serviceAdvisor: { label: "Service Advisor",  icon: LucideIcons.User,       value: "Tyler Brooks",         state: "hydrated", provenance: cdkProv("15m ago") } satisfies RecordField,
-  vehicleField:   { label: "Vehicle",          icon: LucideIcons.Car,        value: "2022 Ford F-150",      state: "hydrated", provenance: carfaxProv("1d ago"), hasDestination: false } satisfies RecordField,
-  warrantyStatus: { label: "Warranty Status",  icon: LucideIcons.ShieldCheck,value: "Powertrain — Active",  state: "hydrated", provenance: oemProv("6h ago") } satisfies RecordField,
-  estimatedTotal: { label: "Estimated Total",  icon: LucideIcons.DollarSign, value: "$2,840",               state: "hydrated", provenance: cdkProv("15m ago"), hasDestination: false } satisfies RecordField,
+  name: "Devon Marsh", vehicle: "2022 Ford F-150",
+  serviceAdvisor:  { label: "Service Advisor",   icon: LucideIcons.User,          value: "Tyler Brooks",         state: "hydrated", provenance: cdkProv("15m ago") } satisfies RecordField,
+  vehicleField:    { label: "Vehicle",           icon: LucideIcons.Car,           value: "2022 Ford F-150",      state: "hydrated", provenance: carfaxProv("1d ago"), hasDestination: false } satisfies RecordField,
+  warrantyStatus:  { label: "Warranty Status",   icon: LucideIcons.ShieldCheck,   value: "Powertrain — Active",  state: "hydrated", provenance: oemProv("6h ago") } satisfies RecordField,
+  lastServiceDate: { label: "Last Service Date", icon: LucideIcons.CalendarClock, value: "Feb 3, 2026",          state: "hydrated", provenance: cdkProv("6h ago"), hasDestination: false } satisfies RecordField,
 }
 
 // Record zone — the RECORD grid is a plain RecordField[] the host builds
@@ -32550,9 +32572,9 @@ const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
   ucp: [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr],
   uvp: [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd],
   patient: [RH_PATIENT.primaryPhysician, RH_PATIENT.insurancePlan, RH_PATIENT.bloodType, RH_PATIENT.admissionDate],
-  claim: [RH_CLAIM.claimAdjuster, RH_CLAIM.policyNumber, RH_CLAIM.claimAmount, RH_CLAIM.dateOfLoss],
+  claim: [RH_CLAIM.policyNumber, RH_CLAIM.insuranceAgent, RH_CLAIM.coverageType, RH_CLAIM.claimsHistory],
   borrower: [RH_BORROWER.creditScore, RH_BORROWER.loanOfficer, RH_BORROWER.accountNumber, RH_BORROWER.requestedAmount],
-  repairOrder: [RH_REPAIR_ORDER.serviceAdvisor, RH_REPAIR_ORDER.vehicleField, RH_REPAIR_ORDER.warrantyStatus, RH_REPAIR_ORDER.estimatedTotal],
+  repairOrder: [RH_REPAIR_ORDER.serviceAdvisor, RH_REPAIR_ORDER.vehicleField, RH_REPAIR_ORDER.warrantyStatus, RH_REPAIR_ORDER.lastServiceDate],
 }
 
 // Display name per demo key — a lookup instead of a growing ternary chain
@@ -32668,8 +32690,8 @@ const RH_WORKFLOWS: Record<RhDemoKey, WorkflowDetail> = {
     ],
   },
   claim: {
-    name: "Claims Adjudication", owner: "Claims Copilot AI", started: "Aug 2, 2026", nextTrigger: "Pending adjuster review",
-    aiSummary: "Tracks Claim #CLM-48821 from first notice of loss through payout. The calculated payout is above the adjuster's standing authority and is held for supervisor sign-off before funds are released — a third vertical, the exact same Agentic System zone.",
+    name: "Claims Adjudication — CLM-48821", owner: "Claims Copilot AI", started: "Aug 2, 2026", nextTrigger: "Pending adjuster review",
+    aiSummary: "Tracks Diane's open claim (CLM-48821) from first notice of loss through payout. The calculated payout is above the adjuster's standing authority and is held for supervisor sign-off before funds are released — a third vertical, the exact same Agentic System zone, the claim itself living here as a workflow rather than as the record's own identity.",
     totalRuns: 5,
     steps: [
       { label: "First notice of loss recorded in Guidewire", status: "done", date: "Aug 2, 2026" },
@@ -32695,8 +32717,8 @@ const RH_WORKFLOWS: Record<RhDemoKey, WorkflowDetail> = {
     recentRuns: [],
   },
   repairOrder: {
-    name: "Service Workflow", owner: "Service Advisor Copilot", started: "Aug 16, 2026", nextTrigger: "In progress",
-    aiSummary: "Tracks RO #48213 for the 2022 Ford F-150 through diagnostic, repair, and QA. Additional repair scope found mid-service exceeds the customer's pre-authorized budget — held for sign-off before work continues, the same Agentic System zone on AIMS OS's own central vertical.",
+    name: "Service / Repair — RO #48213", owner: "Service Advisor Copilot", started: "Aug 16, 2026", nextTrigger: "In progress",
+    aiSummary: "Tracks Devon's repair order (RO #48213) for the 2022 Ford F-150 through diagnostic, repair, and QA. Additional repair scope found mid-service exceeds the customer's pre-authorized budget — held for sign-off before work continues, the repair order itself living here as a workflow rather than as the record's own identity.",
     totalRuns: 1,
     steps: [
       { label: "Vehicle diagnostic completed", status: "done", date: "Aug 16, 2026" },
@@ -32764,7 +32786,7 @@ const RH_AGENT_DETAILS: Record<RhDemoKey, AgentDetail> = {
   },
   claim: {
     agentName: "Claims Copilot AI",
-    sessionSummary: "Reviewed Claim #CLM-48821's coverage and loss details against the policy on file.",
+    sessionSummary: "Reviewed Diane Ostrowski's claim (CLM-48821) coverage and loss details against the policy on file.",
     latestFinding: "The estimated payout of $18,400 exceeds Renee Castillo's $10,000 standing adjuster authority.",
     recommendation: { text: "Route the payout to a supervisor for sign-off before releasing funds.", actionLabel: "Notify supervisor" },
     recentActivity: [
@@ -32784,7 +32806,7 @@ const RH_AGENT_DETAILS: Record<RhDemoKey, AgentDetail> = {
   },
   repairOrder: {
     agentName: "Service Advisor Copilot",
-    sessionSummary: "Tracked RO #48213's diagnostic findings against the customer's pre-authorized repair budget.",
+    sessionSummary: "Tracked Devon Marsh's repair order (RO #48213) diagnostic findings against the pre-authorized repair budget.",
     latestFinding: "A worn control arm found during diagnostic adds $640 beyond the $2,200 pre-authorized budget.",
     recommendation: { text: "Get customer sign-off on the additional $640 before continuing the repair.", actionLabel: "Request customer sign-off" },
     recentActivity: [
@@ -33476,7 +33498,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Second agnosticism example — an insurance vertical, same component</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. A third distinct entity type (<code>Insurance Claim</code>, <code>Umbrella</code> icon), and this correction pass's own multi-source proof: Claims Adjuster/Claim Amount/Date of Loss come from the claims core (Guidewire), while Policy Number comes from the separate policy admin system (Duck Creek) — 2 sources, one record, both cited via Data Provenance. Also carries 2 pending interventions at once: the higher-severity payout approval renders full-size, the documentation follow-up collapses behind "+1 more" (never a carousel). Same skeleton, same colors, zero changes to record-header.tsx.
+              Mock data — not confirmed AIMS OS content. A third distinct entity type (<code>Policyholder</code>, <code>Umbrella</code> icon) — the CONTACT rule this component enforces: the record's entity is always a person or account, never a process, so it's Diane Ostrowski (the policyholder) and not her open claim. Her claim lives instead as a workflow in Agentic System ("Claims Adjudication"), where the calculated payout is held for supervisor sign-off. RECORD fields describe Diane's own standing relationship with the carrier — policy, coverage, agent, claims history — sourced from 2 systems: Duck Creek (policy admin) and Guidewire (claims core), both cited via Data Provenance. Also carries 2 pending interventions at once: the higher-severity payout approval renders full-size, the documentation follow-up collapses behind "+1 more" (never a carousel). Same skeleton, same colors, zero changes to record-header.tsx.
             </p>
             <RecordHeader name={RH_CLAIM.name} entityType={RH_ENTITY_TYPE.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
               assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
@@ -33502,7 +33524,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Fourth agnosticism example — an automotive vertical, same component</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. AIMS OS's own central vertical (its roots are in automotive dealership platforms) — and, like the old Asset example, a non-person entity: this "record" is a repair order, not a colleague. A distinct entity type (<code>Repair Order</code>, <code>Car</code> icon), a RECORD shape sourced from 3 distinct systems — CDK Global (DMS), Carfax (vehicle history), and an OEM warranty portal — tracking a live diagnostic → repair → QA workflow. Additional repair scope found mid-service exceeds the customer's pre-authorized budget, held for sign-off in Your Intervention.
+              Mock data — not confirmed AIMS OS content. AIMS OS's own central vertical (its roots are in automotive dealership platforms), and the same CONTACT rule proof as the insurance example above: the entity is Devon Marsh, the customer who owns the vehicle (<code>Service Customer</code>, <code>Car</code> icon) — never the repair order itself. The repair order now lives as a workflow in Agentic System ("Service / Repair"), tracking a live diagnostic → repair → QA process where additional scope found mid-service exceeds the customer's pre-authorized budget, held for sign-off in Your Intervention. RECORD fields describe Devon's own standing relationship with the dealership — service advisor, vehicle, warranty status, last service date — sourced from 3 distinct systems: CDK Global (DMS), Carfax (vehicle history), and an OEM warranty portal.
             </p>
             <RecordHeader name={RH_REPAIR_ORDER.name} entityType={RH_ENTITY_TYPE.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder} defaultExpanded
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
@@ -33913,6 +33935,35 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 8 — the CONTACT rule</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
+              <span className="font-semibold text-[var(--field-text)]">This component always renders a CONTACT — a person, or an account/company standing in for one. It never renders a process or an object.</span> A claim, a repair order, a credit application, an incident ticket — none of these are valid entities for this card. They're transient, they resolve, and they have no ongoing relationship with anyone; a contact persists and accumulates history. When a vertical's natural subject looks like a process, the fix is always the same: identify the person or account behind it and put the process where it belongs — as a workflow inside that contact's own Agentic System zone (e.g. "Claims Adjudication," "Service / Repair"), never as the card's own name/type.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[140px_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Vertical", "Entity (name / type)", "Process → now a workflow"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Insurance", "Diane Ostrowski / Policyholder", "Claim CLM-48821 → \"Claims Adjudication\" workflow"],
+                ["Automotive", "Devon Marsh / Service Customer", "Repair order RO #48213 → \"Service / Repair\" workflow"],
+                ["Banking", "Jordan Ellis / Personal Loan Applicant", "Credit application → \"Credit Risk Review\" workflow (already compliant, no change needed)"],
+                ["Healthcare", "Elena Vasquez / Patient", "N/A — a patient was already the entity, not a process"],
+              ].map(([vertical, entity, process], i) => (
+                <div key={vertical} className="grid grid-cols-[140px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{vertical}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{entity}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{process}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
+              Content-only correction — no changes to record-header.tsx's structure, HTL, NBA, or layout. Only the example mock data (entity name, entity type label, RECORD fields, and the corresponding workflow/agent/intervention text) changed, for the Insurance and Automotive examples above.
+            </p>
           </section>
 
           <section>
