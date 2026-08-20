@@ -32605,6 +32605,24 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
   repairOrder: { id: "agent-service-advisor-copilot", name: "Service Advisor Copilot" },
 }
 
+// Correction pass — the assigned agent is conditional per record, not a
+// given for all 7 (assignedAgent is required-but-nullable on the component
+// itself; see AssignedAgent's own doc comment in record-header.tsx). Sarah
+// (Employee) has ONLY a workflow — no agent card. Customer, Insurance, and
+// Automotive keep theirs (explicitly required). At least 2 of the
+// remaining 3 (Vendor, Banking, Healthcare) go without one too — Vendor and
+// Banking here — to prove this is genuinely conditional per record, not a
+// single on/off switch for "internal" vs. "external" verticals.
+const RH_HAS_AGENT: Record<RhDemoKey, boolean> = {
+  uep: false,
+  ucp: true,
+  uvp: false,
+  patient: true,
+  claim: true,
+  borrower: false,
+  repairOrder: true,
+}
+
 // ── Demo SlideOut content — realistic mock data for the 4 wired flows ──────
 // Not exported, not part of the DS component itself — RecordHeader only
 // exposes onOpen/onAction callbacks (see its own file-header Composition
@@ -33113,7 +33131,7 @@ function RecordHeaderStatesGallery({
   rhAgenticSystem,
   rhNextBestActions,
 }: {
-  rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent
+  rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent | null
   rhAgenticSystem: (v: RhDemoKey) => AgenticSystemInfo
   rhNextBestActions: (v: RhDemoKey) => NextBestAction[]
 }) {
@@ -33141,6 +33159,7 @@ function RecordHeaderStatesGallery({
           "Agentic System — populated (everywhere), empty (#3), loading (#4)",
           "Record — normal (everywhere), PII masked (#8), overflow (#10) — all reached only through \"View record details\" (this correction pass), never rendered inline",
           "Locked (#9) — read-only Tag; agent trigger, Agentic System, and RECORD's provenance access stay active regardless",
+          "Assigned agent — present (everywhere except #12) vs. absent (#12, correction pass): the identity trigger disables with a Tooltip (RECORD_HEADER_FALLBACKS.noAgentTooltip) instead of disappearing, and Agentic System renders workflow-only, the zone compacting to one row.",
         ].map(line => (
           <li key={line} className="text-[11px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>· {line}</li>
         ))}
@@ -33264,6 +33283,13 @@ function RecordHeaderStatesGallery({
             }} />
         </div>
 
+        <div>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">12 · No agent assigned — workflow present, agent card absent, zone compacted (correction pass)</p>
+          <RecordHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
+            assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
+            agenticSystem={rhAgenticSystem("borrower")} />
+        </div>
+
       </div>
     </section>
   )
@@ -33287,7 +33313,7 @@ function RecordHeaderFlowsSection({
   rhOpenReview,
   rhOpenAgent,
 }: {
-  rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent
+  rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent | null
   rhAgenticSystem: (v: RhDemoKey) => AgenticSystemInfo
   rhIntervention: (v: RhDemoKey) => PendingIntervention | undefined
   rhOpenReview: (v: RhDemoKey, itemId: string) => void
@@ -33344,15 +33370,19 @@ function RecordHeaderFlowsSection({
         <div>
           <p className="text-[13px] font-semibold mb-[12px]" style={{ color: "var(--foreground)" }}>Flow 2 — Agentic context query</p>
           <div className="flex flex-col gap-0">
-            <ProcessItem number={1} status="done" title="User sees Last Agent" description="Agentic System always shows what last touched this record — a workflow, an agent, or both.">
+            {/* Correction pass — Sarah/UEP is now a "workflow only, no
+                agent" record (see RH_HAS_AGENT), so this walkthrough uses
+                Elena/Patient instead — still has one, still demonstrates
+                the flow end to end. */}
+            <ProcessItem number={1} status="done" title="User sees Last Agent" description="Agentic System always shows what last touched this record — a workflow, an agent, or both (when one is assigned — see State #12 for the alternative).">
               <RecordHeader
-                name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={[]} defaultExpanded
-                assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-                agenticSystem={rhAgenticSystem("uep")}
+                name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient} recordFields={[]} defaultExpanded
+                assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
+                agenticSystem={rhAgenticSystem("patient")}
               />
             </ProcessItem>
             <ProcessItem number={2} status="done" title="Opens the agent's SlideOut" description={`Clicking "Last Agent" above opens the real detail SlideOut — Session Summary, Latest Finding, Recommendation:`}>
-              <Button variant="secondary" size="sm" onClick={() => rhOpenAgent("uep")}>
+              <Button variant="secondary" size="sm" onClick={() => rhOpenAgent("patient")}>
                 Open Last Agent <LucideIcons.ChevronRight size={14} className="ml-[2px]" />
               </Button>
             </ProcessItem>
@@ -33385,21 +33415,25 @@ function RecordHeaderFlowsSection({
 // one-time fix, so no individual panel can drift out of sync again.
 const PANEL_CONTENT_CLASS = "flex flex-col gap-[16px]"
 
-// NBA Layer 1 (base) — status Tag color + Layer 2 (type-specific) section
-// title, keyed the same way so both stay next to each other.
+// NBA status Tag color, plus the type-specific section's own label — both
+// content-facing names ("Approval"/"Call"/"Email"), never the internal
+// "Layer N"/"Capa N" model vocabulary from the doc comments above. That
+// vocabulary is how this file's comments and the Reference tab talk about
+// the structure to a dev; the rendered SlideOut never says "Layer" at all.
 const NBA_STATUS_TAG: Record<NbaMock["status"], TagVariant> = {
   "Not started": "secondary",
   "In progress": "informative",
   "Scheduled": "lightBlue",
 }
 const NBA_TASK_LABEL: Record<NbaTaskKind, string> = {
-  approval: "Layer 2 · Type — Approval",
-  call: "Layer 2 · Type — Call",
-  email: "Layer 2 · Type — Email",
+  approval: "Approval",
+  call: "Call",
+  email: "Email",
 }
-// A thin rule between the 3 layers — deliberately plainer than a Section
-// Title row, since it separates LAYERS, not content sections within one.
-const NbaLayerDivider = () => <div className="h-px" style={{ background: "var(--table-border)" }} />
+// A thin rule between sections — deliberately plainer than a Section Title
+// row, since it separates the base/type/dynamic groupings without naming
+// them as such in the UI.
+const NbaSectionDivider = () => <div className="h-px" style={{ background: "var(--table-border)" }} />
 
 function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
@@ -33462,9 +33496,13 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   // build, not a one-line fix.
   const rhOpenHtlNewTab = () => window.open(window.location.href, "_blank")
 
+  // lastAgent omitted (not just left undefined by accident) for records
+  // with RH_HAS_AGENT[v] === false — Agentic System renders workflow-only,
+  // the zone compacting to a single row (see AgenticSystemZoneContent's
+  // own `{state.lastAgent && ...}` guard in record-header.tsx).
   const rhAgenticSystem = (v: RhDemoKey): AgenticSystemInfo => ({
     activeWorkflow: { name: RH_WORKFLOWS[v].name, onOpen: () => rhOpenWorkflow(v) },
-    lastAgent: { name: RH_AGENT_DETAILS[v].agentName, onOpen: () => rhOpenAgent(v) },
+    ...(RH_HAS_AGENT[v] ? { lastAgent: { name: RH_AGENT_DETAILS[v].agentName, onOpen: () => rhOpenAgent(v) } } : {}),
   })
   // Block 3 (this pass) — maps this demo's mock array to the real
   // InterventionItem[] shape, one onReview per item (not one shared
@@ -33503,10 +33541,16 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   // the generic SidePanel — same "reuse what exists" rule every overlay
   // demo on this page already follows.
   const [rhChatWith, setRhChatWith] = useState<{ id: string; name: string; recordName: string } | null>(null)
-  const rhAssignedAgent = (v: RhDemoKey, recordName: string) => ({
-    ...RH_AGENTS[v],
-    onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
-  })
+  // `null` for RH_HAS_AGENT[v] === false — the identity trigger renders
+  // disabled with RECORD_HEADER_FALLBACKS.noAgentTooltip, never a silently
+  // missing button (record-header.tsx's own AssignedAgent doc comment).
+  const rhAssignedAgent = (v: RhDemoKey, recordName: string): AssignedAgent | null => {
+    if (!RH_HAS_AGENT[v]) return null
+    return {
+      ...RH_AGENTS[v],
+      onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
+    }
+  }
 
   const pgName = RH_NAME[pgVariant]
   const pgRecordFields = pgVariant === "uep" && pgMasked ? RH_UEP_MASKED_FIELDS : RH_RECORD_FIELDS[pgVariant]
@@ -33590,9 +33634,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Block 3 — agnosticism proof: a healthcare vertical, same component</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Healthcare — Patient (agnosticism proof)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. Deliberately picked to be as unlike UEP/UCP/UVP as possible: a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba), and custom zone labels via the <code>labels</code> prop ("Care Workflows" / "Needs Your Attention") to prove the headings are i18n-configurable, not baked-in English. Same colors (lime green = agent, light blue = workflow, amber = intervention — see the redesign pass's own note if you're looking for purple: agent moved off it), same skeleton, zero changes to record-header.tsx.
+              Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the healthcare market: a patient, deliberately picked to be as unlike UEP/UCP/UVP as possible — a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba), and custom zone labels via the <code>labels</code> prop ("Care Workflows" / "Needs Your Attention") to prove the headings are i18n-configurable, not baked-in English. Same colors (lime green = agent, light blue = workflow, amber = intervention — see the redesign pass's own note if you're looking for purple: agent moved off it), same skeleton, zero changes to record-header.tsx.
             </p>
             <RecordHeader name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient} recordFields={RH_RECORD_FIELDS.patient} defaultExpanded
               assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
@@ -33604,9 +33648,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Second agnosticism example — an insurance vertical, same component</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Insurance — Policyholder (agnosticism proof)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. A third distinct entity type (<code>Policyholder</code>, <code>Umbrella</code> icon) — the CONTACT rule this component enforces: the record's entity is always a person or account, never a process, so it's Diane Ostrowski (the policyholder) and not her open claim. Her claim lives instead as a workflow in Agentic System ("Claims Adjudication"), where the calculated payout is held for supervisor sign-off. RECORD fields describe Diane's own standing relationship with the carrier — policy, coverage, agent, claims history — sourced from 2 systems: Duck Creek (policy admin) and Guidewire (claims core), both cited via Data Provenance. Also carries 2 pending interventions at once: the higher-severity payout approval renders full-size, the documentation follow-up collapses behind "+1 more" (never a carousel). Same skeleton, same colors, zero changes to record-header.tsx.
+              Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the insurance market: a policyholder, never the claim itself — the CONTACT rule this component enforces (the record's entity is always a person or account, never a process), so it's Diane Ostrowski and not her open claim. Her claim lives instead as a workflow in Agentic System ("Claims Adjudication"), where the calculated payout is held for supervisor sign-off. RECORD fields describe Diane's own standing relationship with the carrier — policy, coverage, agent, claims history — sourced from 2 systems: Duck Creek (policy admin) and Guidewire (claims core), both cited via Data Provenance. Also carries 2 pending interventions at once: the higher-severity payout approval renders full-size, the documentation follow-up collapses behind "+1 more" (never a carousel). This market can grow more contact types later — the carrier's own customer, an appointed adjuster/vendor firm — without touching this skeleton; only Policyholder is built today. Same skeleton, same colors, zero changes to record-header.tsx.
             </p>
             <RecordHeader name={RH_CLAIM.name} entityType={RH_ENTITY_TYPE.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
               assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
@@ -33617,9 +33661,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Third agnosticism example — a banking vertical, same component</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Banking — Personal Loan Applicant (agnosticism proof)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. A fourth distinct entity type (<code>Borrower</code>, <code>Landmark</code> icon), a RECORD shape sourced from 3 distinct systems at once — Experian (credit bureau), nCino (loan origination), and FIS (core banking) — the kind of cross-system audit trail a real credit decision needs. A risk exception (debt-to-income above the automated threshold) is held for underwriter sign-off, the same Your Intervention zone as every other vertical.
+              Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the banking market: an applicant, never the credit application itself — a fourth distinct entity type (<code>Personal Loan Applicant</code>, <code>Landmark</code> icon), a RECORD shape sourced from 3 distinct systems at once — Experian (credit bureau), nCino (loan origination), and FIS (core banking) — the kind of cross-system audit trail a real credit decision needs. A risk exception (debt-to-income above the automated threshold) is held for underwriter sign-off, the same Your Intervention zone as every other vertical. This market can grow more contact types later — an account holder/customer, a vendor relationship — without touching this skeleton; only the applicant is built today.
             </p>
             <RecordHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
               assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
@@ -33630,9 +33674,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Fourth agnosticism example — an automotive vertical, same component</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Automotive — Service Customer (agnosticism proof)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. AIMS OS's own central vertical (its roots are in automotive dealership platforms), and the same CONTACT rule proof as the insurance example above: the entity is Devon Marsh, the customer who owns the vehicle (<code>Service Customer</code>, <code>Car</code> icon) — never the repair order itself. The repair order now lives as a workflow in Agentic System ("Service / Repair"), tracking a live diagnostic → repair → QA process where additional scope found mid-service exceeds the customer's pre-authorized budget, held for sign-off in Your Intervention. RECORD fields describe Devon's own standing relationship with the dealership — service advisor, vehicle, warranty status, last service date — sourced from 3 distinct systems: CDK Global (DMS), Carfax (vehicle history), and an OEM warranty portal.
+              Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the automotive market: AIMS OS's own central vertical (its roots are in automotive dealership platforms), and the same CONTACT rule proof as the insurance example above — the entity is Devon Marsh, the customer who owns the vehicle (<code>Service Customer</code>, <code>Car</code> icon), never the repair order itself. The repair order now lives as a workflow in Agentic System ("Service / Repair"), tracking a live diagnostic → repair → QA process where additional scope found mid-service exceeds the customer's pre-authorized budget, held for sign-off in Your Intervention. RECORD fields describe Devon's own standing relationship with the dealership — service advisor, vehicle, warranty status, last service date — sourced from 3 distinct systems: CDK Global (DMS), Carfax (vehicle history), and an OEM warranty portal. This market can grow more contact types later — a fleet/vendor account — without touching this skeleton; only the service customer is built today.
             </p>
             <RecordHeader name={RH_REPAIR_ORDER.name} entityType={RH_ENTITY_TYPE.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder} defaultExpanded
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
@@ -34077,7 +34121,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 9 — the Next Best Action detail SlideOut, 3-layer task structure</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
-              <span className="font-semibold text-[var(--field-text)]">An NBA is a TASK, and every task in AIMS OS renders through the same 3-layer structure</span> (call with Edgardo, infra) — the same SlideOut a Pending Decisions task uses, since NBA and HTL task detail converge on one composition rather than each inventing its own.
+              <span className="font-semibold text-[var(--field-text)]">An NBA is a TASK, and every task in AIMS OS renders through the same 3-layer structure</span> (call with Edgardo, infra) — the same SlideOut a Pending Decisions task uses, since NBA and HTL task detail converge on one composition rather than each inventing its own. "Layer"/"Capa" is how this table (and the code comments) name the structure to a dev — the rendered SlideOut itself never shows those words; it shows the action's own content (title, context, preview, buttons, inputs) with a plain divider between groupings.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
               <div className="grid grid-cols-[100px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
@@ -34103,9 +34147,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Approval", "UEP — Sarah Chen's \"Scope down Sarah's Admin access\" NBA. What's changing + its context, Confirm/Reject."],
-                ["Call", "UCP — Acme Corp's \"Offer a proactive check-in call\" NBA. Contact (Jane Doe · VP Operations) + Call button + a suggested talking point."],
-                ["Email", "UVP — Meridian Logistics' \"Flag the insurance renewal 30 days out\" NBA. Subject + body preview (Text Description), Send/Edit."],
+                ["Approval", "UEP — Sarah Chen's \"Scope down Sarah's Admin access\" NBA. What's changing + its context, Confirm/Reject — a human decision, no agent involved."],
+                ["Call", "UCP — Acme Corp's \"Offer a proactive check-in call\" NBA. Contact (Jane Doe · VP Operations) + a suggested talking point, \"Assign call to agent\" / \"Schedule call\" — the agent places the call, never a same-second \"Call now.\""],
+                ["Email", "UVP — Meridian Logistics' \"Flag the insurance renewal 30 days out\" NBA. Subject + body preview (Text Description) drafted by the agent, \"Approve send\" / \"Edit\" — the human governs, doesn't type-and-send."],
               ].map(([type, ex]) => (
                 <div key={type} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0">
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{type}</div>
@@ -34113,6 +34157,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </div>
               ))}
             </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
+              <span className="font-semibold text-[var(--field-text)]">In AIMS OS, the agent acts and the user governs.</span> External actions — calling someone, sending an email — are the agent's to execute, never the viewer's to trigger directly from this card: the CTA is "assign/schedule" or "approve/edit," not "Call now" or "Send." A governed decision (Approval) is the opposite case — the human decides, no agent involved. Same principle as HTL's own Approve/Dismiss (a governed decision always gets an explicit human confirmation), applied here to who's actually doing the acting.
+            </p>
             <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
               Scoped to the NBA detail SlideOut only — identity, Agentic System, HTL, the States gallery, the end-to-end flows, and every vertical's own entity examples are unchanged.
             </p>
@@ -34674,14 +34721,18 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         </div>
       </SlideOut>
 
-      {/* ── Next Best Action detail (this correction pass) — an NBA is a
-           TASK with 3 layers (call with Edgardo, infra): base (Layer 1,
-           always present) → type-specific (Layer 2, one of a growing set —
-           approval/call/email are the first 3) → dynamic inputs (Layer 3,
-           runtime data the action needs). Converges with HTL's own task
-           SlideOut below (Pending Decisions) — same Section-Title +
-           Details-grid primitives, not a separate visual language. See
-           "This refinement 9" on the Reference tab. */}
+      {/* ── Next Best Action detail — an NBA is a TASK with 3 layers (call
+           with Edgardo, infra): base (always present) → type-specific (one
+           of a growing set — approval/call/email are the first 3) →
+           dynamic inputs (runtime data the action needs). That 3-layer
+           model is how this comment and the Reference tab talk about the
+           structure to a dev — the rendered SlideOut below never labels
+           any section "Layer N"/"Capa N" (correction pass); it shows the
+           action's own content with a plain divider between groupings.
+           Converges with HTL's own task SlideOut below (Pending
+           Decisions) — same Section-Title + Details-grid primitives, not
+           a separate visual language. See "This refinement 9" on the
+           Reference tab. */}
       <SlideOut
         open={rhNbaOpen}
         onClose={() => setRhNbaOpen(false)}
@@ -34700,7 +34751,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
       >
         {openNba && (
           <div className={PANEL_CONTENT_CLASS}>
-            {/* ── Layer 1 — base (common to every task, always present) ── */}
+            {/* ── Base (common to every task, always present) ── */}
             <div className="flex items-center gap-[6px]">
               <Tag variant="purple" size="sm" leadingIcon={<LucideIcons.Sparkle size={12} />}>System-suggested</Tag>
             </div>
@@ -34741,15 +34792,19 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             </div>
 
-            <NbaLayerDivider />
+            <NbaSectionDivider />
 
-            {/* ── Layer 2 — type-specific (grows as new task types are
-                 built; only 3 modeled so far) ── */}
-            <div className="flex items-center h-[32px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
-                {openNba.task ? NBA_TASK_LABEL[openNba.task.kind] : "Layer 2 · Type — not yet modeled"}
-              </span>
-            </div>
+            {/* ── Type-specific (grows as new task types are built; only 3
+                 modeled so far) — no header at all when the type hasn't
+                 been modeled yet, since the fallback notice below already
+                 says so. ── */}
+            {openNba.task && (
+              <div className="flex items-center h-[32px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+                  {NBA_TASK_LABEL[openNba.task.kind]}
+                </span>
+              </div>
+            )}
 
             {openNba.task?.kind === "approval" && (
               <div className="flex flex-col gap-[12px]">
@@ -34770,31 +34825,42 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             )}
 
+            {/* Correction pass — in AIMS OS the agent executes external
+                actions (calling, emailing); the human governs, never
+                triggers them directly. "Call" (something the viewer would
+                do themselves right now) is wrong here — the CTA is either
+                assigning the call to the agent or scheduling it, never a
+                same-second "Call now." */}
             {openNba.task?.kind === "call" && (
               <div className="flex flex-col gap-[12px]">
-                <div className="flex items-center justify-between gap-[12px]">
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold truncate" style={{ color: "var(--foreground)" }}>{openNba.task.contactName}</p>
-                    <p className="text-[12px] truncate" style={{ color: "var(--field-supporting)" }}>{openNba.task.contactRole}</p>
-                  </div>
-                  <Button variant="primary" size="sm" iconPosition="left" icon={<LucideIcons.Phone size={14} />} className="shrink-0">Call</Button>
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{openNba.task.contactName}</p>
+                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{openNba.task.contactRole}</p>
                 </div>
                 <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
                   <p className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Suggested talking point</p>
                   <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{openNba.task.suggestedNote}</p>
                 </div>
+                <div className="flex items-center gap-[8px]">
+                  <Button variant="primary" size="sm" iconPosition="left" icon={<LucideIcons.Bot size={14} />}>Assign call to agent</Button>
+                  <Button variant="secondary" size="sm" iconPosition="left" icon={<LucideIcons.CalendarClock size={14} />}>Schedule call</Button>
+                </div>
               </div>
             )}
 
+            {/* Correction pass — same governance split as Call above: the
+                agent drafts (and would send) the email; the human's CTA is
+                approving that send or editing the draft first, never a
+                bare "Send" that reads as the viewer's own action. */}
             {openNba.task?.kind === "email" && (
               <div className="flex flex-col gap-[12px]">
                 <div>
                   <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Subject</p>
                   <p className="mt-[2px] text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{openNba.task.subject}</p>
                 </div>
-                <Textarea defaultValue={openNba.task.bodyPreview} readOnly rows={5} supportingText="Preview — Edit opens this for changes before sending" />
+                <Textarea defaultValue={openNba.task.bodyPreview} readOnly rows={5} supportingText="Drafted by the agent — review before it sends" />
                 <div className="flex items-center gap-[8px]">
-                  <Button variant="primary" size="sm">Send</Button>
+                  <Button variant="primary" size="sm">Approve send</Button>
                   <Button variant="secondary" size="sm">Edit</Button>
                 </div>
               </div>
@@ -34808,13 +34874,13 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             )}
 
-            {/* ── Layer 3 — dynamic inputs (less protagonist than HTL's own,
-                 per the brief — one representative example per typed task) ── */}
+            {/* ── Dynamic inputs (less protagonist than HTL's own, per the
+                 brief — one representative example per typed task) ── */}
             {openNba.dynamicInputs && openNba.dynamicInputs.length > 0 && (
               <>
-                <NbaLayerDivider />
+                <NbaSectionDivider />
                 <div className="flex items-center h-[32px]">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Layer 3 · Configurable inputs</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Configurable inputs</span>
                 </div>
                 <div className="flex flex-col gap-[8px]">
                   {/* TODO: reciclar input de nodos — no reusable Workflow
