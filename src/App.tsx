@@ -33028,7 +33028,10 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       description: "Usage dipped 12% this month with no support tickets filed — the agent can place a check-in call before renewal season to catch friction early.",
       assignedTo: "Renewal Copilot", assignedToKind: "agent", dueDate: "Aug 25, 2026", status: "Not started",
       task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Kestrel Systems", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season.", outcome: "immediate" },
-      dynamicInputs: [{ label: "Call date & time", kind: "text", placeholder: "e.g. Thu, Aug 28 at 10am" }],
+      dynamicInputs: [
+        { label: "Call date & time", kind: "text", placeholder: "e.g. Thu, Aug 28 at 10am" },
+        { label: "Notes for the agent", kind: "text", placeholder: "e.g. Also mention the upcoming product launch" },
+      ],
     },
   ],
   uvp: [
@@ -33037,7 +33040,10 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       description: "Meridian's current certificate expires in 45 days — starting the renewal conversation now avoids a compliance gap at requalification.",
       assignedTo: "Procurement Copilot", assignedToKind: "agent", dueDate: "Aug 24, 2026", status: "Not started",
       task: { kind: "email", subject: "Insurance certificate renewal — 45 days out", bodyPreview: "Hi Meridian team,\n\nYour current certificate of insurance expires in 45 days. Starting the renewal conversation now avoids a compliance gap when requalification comes up — could you confirm your timeline for the updated certificate?\n\nThanks,", outcome: "immediate" },
-      dynamicInputs: [{ label: "CC (optional)", kind: "text", placeholder: "e.g. compliance@meridianlogistics.com" }],
+      dynamicInputs: [
+        { label: "CC (optional)", kind: "text", placeholder: "e.g. compliance@meridianlogistics.com" },
+        { label: "Scheduled send date", kind: "date", placeholder: "When this email goes out" },
+      ],
     },
   ],
   patient: [
@@ -33971,8 +33977,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
               {[
                 ["Approval", "UEP — Sarah Chen's \"Scope down Sarah's Admin access.\" What's changing + its context, Confirm/Reject (footer) — a human decision, no agent involved. Date input (effective date). Closes on \"Confirmed\" / \"Rejected.\""],
-                ["Call", "UCP — Kestrel Systems's \"Assign a proactive check-in call to the agent\" (text input); Healthcare — Elena's \"coagulation panel\" (select: priority); Banking — Jordan's \"Assign a co-signer conversation to the agent\" (select: best time to reach). Contact + a suggested talking point, \"Assign call to agent\" / \"Schedule call\" (footer) — the agent places the call, never a same-second \"Call now.\" All 3 close on \"Done — the agent will carry this out\" (outcome: immediate)."],
-                ["Email", "UVP — Meridian's \"insurance renewal\" (text input, immediate); Employee — Sarah's \"security training\" reminder (text input, immediate); Insurance — Diane's \"missing parts invoice\" (date input, GOVERNED). Subject + body preview (Text Description) drafted by the agent, \"Approve send\" / \"Edit\" (footer) — the human governs, doesn't type-and-send. Closes on \"Done\" for the 2 immediate cases, \"Submitted — held for sign-off before it takes effect\" for Diane's."],
+                ["Call", "UCP — Kestrel Systems's \"Assign a proactive check-in call to the agent\" (2 inputs: call date & time + notes for the agent); Healthcare — Elena's \"coagulation panel\" (select: priority); Banking — Jordan's \"Assign a co-signer conversation to the agent\" (select: best time to reach). Contact + a suggested talking point, \"Assign call to agent\" / \"Schedule call\" (footer) — the agent places the call, never a same-second \"Call now.\" All 3 close on \"Done — the agent will carry this out\" (outcome: immediate)."],
+                ["Email", "UVP — Meridian's \"insurance renewal\" (2 inputs: CC + scheduled send date, immediate); Employee — Sarah's \"security training\" reminder (text input, immediate); Insurance — Diane's \"missing parts invoice\" (date input, GOVERNED). Subject + body preview (Text Description) drafted by the agent, \"Approve send\" / \"Edit\" (footer) — the human governs, doesn't type-and-send. Closes on \"Done\" for the 2 immediate cases, \"Submitted — held for sign-off before it takes effect\" for Diane's."],
                 ["Not yet modeled", "Automotive — Devon's \"bundle the cabin air filter\" — the one example of this fallback; every other NBA in this file carries a real type."],
               ].map(([type, ex]) => (
                 <div key={type} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0">
