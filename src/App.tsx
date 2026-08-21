@@ -33961,7 +33961,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               {[
                 ["1 · Base", "Common to every task, regardless of type — always rendered. Title + rationale (\"Why this\"), a system-suggested signal (this was generated, not created manually), who it's assigned to (agent or person), due date, status, and periodicity when the task recurs."],
                 ["2 · Type-specific", "Renders differently per task type. Only 3 types are modeled so far — Approval, Call, Email — and this list GROWS as new actions are built; it's a lookup by kind, not a fixed enum baked into the SlideOut's own layout. A task with no modeled type yet falls back to a plain \"not yet modeled\" notice instead of guessing — exactly 1 example demonstrates that fallback today, the rest all carry a real type."],
-                ["3 · Dynamic inputs", "The runtime inputs the action needs, meant to reuse the Workflow Builder node input pattern. 3 distinct kinds are represented — date, text, select (via the repo's own Select + Menu/MenuItem pattern) — proving the layer genuinely adapts, not just relabeling the same text field. Less protagonist than HTL's own dynamic layer — one representative example per typed task, not a full input set. Each field's own supportingText names specifically what it configures (\"CC (optional)\", \"Call date & time\", \"Effective date\", ...) — closing pass, replacing one hardcoded \"Set when this task runs\" string that used to repeat under every field regardless of type. `placeholder` still carries the concrete example (\"e.g. Thu, Aug 28 at 10am\"). // TODO: reciclar input de nodos — no such component exists in this repo yet (checked directly: \"Workflow Builder UI\" is only named in an effort-estimation table, never implemented), so this reuses Input/Select styled the same way a node input would be."],
+                ["3 · Dynamic inputs", "The runtime inputs the action needs, meant to reuse the Workflow Builder node input pattern. 3 distinct kinds are represented — date, text, select (via the repo's own Select + Menu/MenuItem pattern) — proving the layer genuinely adapts, not just relabeling the same text field. \"date\" kind renders as a plain DS Input (type=\"text\") with a themed Calendar leftIcon, NOT a native <input type=\"date\"> (closing pass — the native picker's calendar icon is unstyled browser chrome, not a DS token, and looked wrong in dark mode; no DatePicker component exists in this repo yet to replace it with, so this is the composed-from-existing-pieces fix, flagged // DS-GAP for a real one later). Less protagonist than HTL's own dynamic layer — one representative example per typed task, not a full input set. Each field's own supportingText names specifically what it configures (\"CC (optional)\", \"Call date & time\", \"Effective date\", ...) — closing pass, replacing one hardcoded \"Set when this task runs\" string that used to repeat under every field regardless of type. `placeholder` still carries the concrete example (\"e.g. Thu, Aug 28 at 10am\"). // TODO: reciclar input de nodos — no such component exists in this repo yet (checked directly: \"Workflow Builder UI\" is only named in an effort-estimation table, never implemented), so this reuses Input/Select styled the same way a node input would be."],
               ].map(([layer, desc]) => (
                 <div key={layer} className="grid grid-cols-[100px_1fr] border-b border-[var(--table-border)] last:border-0">
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{layer}</div>
@@ -34624,7 +34624,25 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                       to be one hardcoded "Set when this task runs" string
                       repeated under every field regardless of what it
                       configured, which read as generic no matter how
-                      specific the placeholder was. */}
+                      specific the placeholder was.
+
+                      "date" kind — closing pass, investigated directly:
+                      this used to render <Input type="date">, which passes
+                      `type` straight through to a NATIVE <input
+                      type="date">. That native control's calendar-icon
+                      affordance is the browser's own chrome, not a DS
+                      element — it can't be restyled with tokens, which is
+                      exactly why it looked wrong in dark mode. No
+                      DatePicker/Calendar-popover component exists anywhere
+                      in this repo yet (checked directly: no `*date*` file
+                      under src/components/ui/, and filters-slideout.tsx has
+                      the SAME native-input gap, unrelated to this fix). So
+                      "date" kind now renders as a plain DS Input (type=
+                      "text", never "date") with a themed Calendar leftIcon
+                      (uses --field-icon like every other Input icon) —
+                      composed entirely from existing DS pieces, no new
+                      component. // DS-GAP: a real DatePicker would replace
+                      this if one ever gets built. */}
                   {openNba.dynamicInputs.map((input, i) => (
                     input.kind === "select" ? (
                       <div key={i} className="relative">
@@ -34652,7 +34670,13 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                         )}
                       </div>
                     ) : (
-                      <Input key={i} type={input.kind === "date" ? "date" : "text"} placeholder={input.placeholder} supportingText={input.label} />
+                      <Input
+                        key={i}
+                        type="text"
+                        placeholder={input.placeholder}
+                        supportingText={input.label}
+                        leftIcon={input.kind === "date" ? <LucideIcons.Calendar size={16} strokeWidth={1.75} /> : undefined}
+                      />
                     )
                   ))}
                 </div>
