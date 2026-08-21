@@ -32990,7 +32990,8 @@ const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
 //     a GROWING list as new actions get built (Edgardo), not a fixed set;
 //     `task` is optional and entries without one fall back to a generic
 //     placeholder rather than guessing a 4th type that hasn't been
-//     specified. See "This refinement 9" on the Reference tab.
+//     specified. See "Next Best Action — the task model" under the
+//     Reference tab's Panel content section.
 //   Layer 3 — dynamic: the runtime inputs the action needs. Meant to
 //     reuse the Workflow Builder node input pattern (date/text/
 //     confirmation) — // TODO: reciclar input de nodos — no such
@@ -33946,11 +33947,11 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Identity (fixed)", "Avatar · name (truncates with an ellipsis + Tooltip — never wraps or stretches the row) · entity-type icon AND text (not icon-only — a text label sits beside the icon) · the RECORD provenance trigger (icon-only Button) — in that exact order, verified against the Figma redesign node — all left-aligned, beside the name · up to 3 governance-state Tags — assigned agent (lime green), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE (Block 2): clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip) → optional primary CTA (actions[0], host-provided — this demo currently passes none, the Message CTA having been removed in a correction pass) → \"···\" overflow → disclosure chevron."],
-                ["Next Best Action", "The protagonist block — always visible, never gated by the card's OWN expand/collapse disclosure: sits right under the identity tags while collapsed, and at the end of the expanded zones while expanded. A native full-width button, dark-purple surface (--card-purple-bg — verified pixel-for-pixel against the actual Figma redesign node via the Figma MCP; corrected from 2 earlier guesses in this same pass that both read more saturated/vibrant than the reference). Sparkle sits in its own HighlightIcon (variant=\"purple\", size=\"sm\") box, not a bare icon. Title/description/chevron are NEUTRAL text (--foreground / --field-supporting) — color lives only in the icon box and background, same principle as Agentic System's cards. N items (correction pass) use the SAME disclosure pattern as Your Intervention — the most prioritized item always full-size, the rest behind their OWN \"Show N more\" / \"Show less\" toggle, not every item stacked open by default. Omit or pass an empty array to skip it entirely for a record with nothing to recommend right now."],
-                ["Agentic System (no heading)",  "Active Workflow + Last Agent lay out side by side (grid, not stacked — uses the card's width instead of wasting it), no section label above them. Each item is a plain card BORDER (not a nested CardContainer component — this already lives inside the header's own CardContainer, so a second one read as card-in-card) with a HighlightIcon (size=\"sm\", colored: light blue = workflow icon, lime = agent icon — Sparkle, not Bot, verified against Figma) + a bare icon-only chevron Button beside it (no \"View\" text label — verified against Figma) — color lives in the icon, never in the button. Also renders \"empty\" (no workflow/agent yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
-                ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default, N items — most prioritized triggers a diagonal ArrowUpRight that opens the real HTL view in a NEW TAB, never a same-page overlay, redesign pass; \"Show N more\" caps at 3 extra inline, \"View all\" is the separate always-present escape hatch — see InterventionZoneContent's own doc comment), empty (reads as completion, not absence), loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
-                ["Record",          "Fields never render inline. The trigger is the icon-only Button beside the name (Identity, above — redesign pass moved it there and dropped its visible \"View record details\" text label, keeping it as the aria-label only; it used to be a labeled Button down here) that opens \"About this record\" — Data Provenance for every field at once (Law 2) — disabled + a Tooltip explaining why when onProvenanceOpen isn't wired, never silently hidden. `recordFields` is still a plain array the host builds — no fixed \"employee field\" shape inside the component (Block 4)."],
+                ["Identity (fixed)", "Avatar · name (truncates with an ellipsis + Tooltip — never wraps or stretches the row) · entity-type icon AND text (not icon-only — a text label sits beside the icon) · the RECORD provenance trigger (icon-only Button) — in that exact order — all left-aligned, beside the name · up to 3 governance-state Tags — assigned agent (lime green, when the record has one), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE: clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip; disabled + Tooltip when the record has no agent) → optional primary CTA (actions[0], host-provided) → \"···\" overflow → disclosure chevron."],
+                ["Next Best Action", "The protagonist block — always visible, never gated by the card's OWN expand/collapse disclosure: sits right under the identity tags while collapsed, and at the end of the expanded zones while expanded. A native full-width button, dark-purple surface (--card-purple-bg). Sparkle sits in its own HighlightIcon (variant=\"purple\", size=\"sm\") box, not a bare icon. Title/description/chevron are NEUTRAL text (--foreground / --field-supporting) — color lives only in the icon box and background, same principle as Agentic System's cards. N items use the SAME disclosure pattern as Your Intervention: the most prioritized item always full-size, then any revealed extras, then a single \"Show N more\" / \"Show less\" toggle at the bottom of the whole stack — never between the primary and the extras. Omit or pass an empty array to skip it entirely for a record with nothing to recommend right now. See \"Next Best Action — the task model\" under Panel content for the SlideOut this opens."],
+                ["Agentic System (no heading)",  "Active Workflow + Last Agent lay out with flex(1) — 1 present item fills the full row, 2 split evenly (never a 2-column grid that leaves half the row empty when only one is present, e.g. a record with no agent). No section label above them. Each item is a plain card BORDER (not a nested CardContainer component — this already lives inside the header's own CardContainer, so a second one read as card-in-card) with a HighlightIcon (size=\"sm\", colored: light blue = workflow icon, lime = agent icon, Sparkle) + a bare icon-only chevron Button beside it (no \"View\" text label) — color lives in the icon, never in the button. `lastAgent` is entirely omittable — not every entity type has an agent (see States and Example entity types below). Also renders \"empty\" (no workflow/agent yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
+                ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default, N items — most prioritized triggers a diagonal ArrowUpRight that opens the real HTL view in a NEW TAB, never a same-page overlay; \"Show N more\" caps at 3 extra inline, \"View all\" is the separate always-present escape hatch — see InterventionZoneContent's own doc comment), empty (reads as completion, not absence), loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
+                ["Record",          "Fields never render inline. The trigger is the icon-only Button beside the name (Identity, above) that opens \"About this record\" — Data Provenance for every field at once (Law 2) — disabled + a Tooltip explaining why when onProvenanceOpen isn't wired, never silently hidden. Long values truncate with their own Tooltip carrying the full text, whether or not the field has a destination. `recordFields` is still a plain array the host builds — no fixed \"employee field\" shape inside the component."],
               ].map(([zone, content], i) => (
                 <div key={zone} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{zone}</div>
@@ -33973,7 +33974,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["Identity Tags (agent/workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow/agent → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone itself (a Button, or the HTL item's own diagonal-arrow trigger)."],
                 ["Active Workflow", "SlideOut", "AI Summary, status Tag + \"Step N of total\" progress, a surfaced blocker when status is \"blocked,\" Details (Started/Next Milestone/Total Runs), Steps (ProcessItem), Recent Runs list. Footer CTA \"Go to workflow\" (correction pass — replaced the \"···\" menu, one click instead of two)."],
                 ["Last Agent", "SlideOut", "AI Summary (session summary), Agent's Latest Finding, Recent Activity list, and a Recommendation modeled to expose an action (actionLabel/onAction). Same \"···\" menu treatment as Active Workflow. Tooltip on hover explains the destination before clicking."],
-                ["Next Best Action", "SlideOut", "Redesign pass — opens the NBA's own detail panel (Sparkle icon, dark-purple iconBg). Full 3-layer task structure: base (always present) → type-specific (Approval/Call/Email, a growing set) → dynamic inputs. See \"This refinement 9\" on the Reference tab."],
+                ["Next Best Action", "SlideOut", "Opens the NBA's own detail panel (Sparkle icon, dark-purple iconBg). Full 3-layer task structure: base (always present) → type-specific (Approval/Call/Email, a growing set) → dynamic inputs. See \"Next Best Action — the task model\" under Panel content below."],
                 ["HTL item diagonal arrow (Your Intervention)", "New browser tab", "Redesign pass — every pending item's ArrowUpRight trigger (never a labeled \"Review\" button) opens the real HTL view in a NEW TAB, never a same-page overlay — Tooltip always says so (OPEN_HTL_TOOLTIP). This demo has no dedicated HTL/Agentic Studio page yet (checked directly), so it opens a new tab to this same page as a truthful placeholder — // TODO: point at the real destination once one exists. The \"Pending Decisions\" SlideOut + ModalDialog approve/dismiss flow still exists in this demo's code and is real, but is now only reachable from the Flows walkthrough section below, not from a live card's HTL item."],
                 ["\"Show N more\" / \"View all\" (Your Intervention)", "Inline disclosure / new tab", "\"Show N more\" (left) and \"View all\" (right, plain text, no icon — verified against Figma) sit at opposite ends of the row, justify-between. \"Show N more\" reveals up to 3 extra pending items inline, each rendered as a bordered card row (matching Agentic System's own item style, no visible severity badge — verified against Figma) with its own diagonal-arrow trigger; \"View all\" is the separate, always-present escape hatch to the full list, same new-tab treatment as every HTL item."],
                 ["RECORD provenance trigger (Identity row)", "SlideOut", "Opens \"About this record\" — every RECORD field at once, label + value + Source → Model → Synced (redesign pass — renamed from \"Data Provenance\"; the only place these fields are visible at all, since they don't render inline in the card). Read-only viewer, no menu (no confirmed related action to offer). Disabled + Tooltip when onProvenanceOpen isn't wired. Icon-only now (redesign pass) — the visible \"View record details\" text label became aria-label only once it moved beside the name."],
@@ -33989,229 +33990,21 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Panel content — follows "SlideOut/SidePanel — Content"</p>
-            <div className="rounded-md px-[14px] py-[12px] flex flex-col gap-[8px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+            <div className="rounded-md px-[14px] py-[12px] flex flex-col gap-[8px] mb-[16px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                Every panel this card opens (the chat SidePanel, and the Active Workflow / Last Agent / Pending Decisions / Data Provenance SlideOuts) composes its content with the same primitives documented on the "SlideOut/SidePanel — Content" pattern page: a Section Title row (11px semibold uppercase, <code>--field-label</code>, 32px min-height) introduces each content block — never an ad-hoc heading. AI-generated content (Workflow's own summary, Agent's session summary) uses the pattern's real AI Summary card (purple, Sparkles icon) — always first, per its documented content order. Recent Runs / Recent Activity / Similar Past Decisions are List Sections — resolved items get a status Tag, never a badge + button combined. Severity Tags (e.g. Pending Decisions' "HIGH"/"MEDIUM") always render compact/inline, wrapped in their own non-flex container so the parent's <code>flex-col</code> layout can't stretch them full-width.
+                Every panel this card opens (the chat SidePanel, and the Active Workflow / Last Agent / Pending Decisions / Data Provenance / Next Best Action SlideOuts) composes its content with the same primitives documented on the "SlideOut/SidePanel — Content" pattern page: a Section Title row (11px semibold uppercase, <code>--field-label</code>, 32px min-height) introduces each content block — never an ad-hoc heading. AI-generated content (Workflow's own summary, Agent's session summary) uses the pattern's real AI Summary card (purple, Sparkles icon) — always first, per its documented content order. Recent Runs / Recent Activity / Similar Past Decisions are List Sections — resolved items get a status Tag, never a badge + button combined. Severity Tags (e.g. Pending Decisions' "HIGH"/"MEDIUM") always render compact/inline, wrapped in their own non-flex container so the parent's <code>flex-col</code> layout can't stretch them full-width. Every SlideOut/SidePanel this card opens matches the icon + semantic color of the element that opened it — workflow → light blue Workflow icon, agent → lime Bot/Sparkle, intervention → amber AlertTriangle, provenance → neutral Info, Next Best Action → purple Sparkle — instead of a generic default.
               </p>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Header actions are contextual, not a fixed set.</strong> No generic edit pencil anywhere. Active Workflow's one obvious next step ("Go to workflow") is a direct footer CTA (correction pass — was a "···" menu, now the SlideOut's own default bottom-CTA pattern, still marked <code>// TODO</code> pending a real destination). Last Agent keeps a "···" menu (MoreHorizontal) — it has no single obvious destination the way a workflow does, so "View agent in Agentic Studio" stays a secondary, contextual action rather than earning the primary footer slot. A pure viewer with nothing further to do (Data Provenance) or a panel whose real actions already live in its footer CTAs (Pending Decisions, NBA) gets no header action at all. Close is always present.
+                <strong>A panel's primary action lives in its own fixed footer, never loose in the content body.</strong> SlideOut's <code>showCta</code>/<code>ctaPrimaryLabel</code>/<code>ctaSecondaryLabel</code> render a bottom CTA row; <code>showCtaSecondary=false</code> collapses it to a single button for an action with nothing to reject/skip (e.g. the Agent's "Apply recommendation," Active Workflow's "Go to workflow"). A governed decision (Pending Decisions' Approve/Dismiss) never resolves on that first click either — it opens a ModalDialog confirmation first, always. Header actions are contextual, not a fixed set: no generic edit pencil anywhere. Read-only content with one plausible related action (Last Agent's "View agent in Agentic Studio") gets a "···" menu; a pure viewer with nothing further to do (Data Provenance) or a panel whose real action already lives in its footer CTA gets no header action at all. Close is always present.
               </p>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
                 <strong>Every Tooltip in this card is <code>side="cursor"</code></strong> — the only Tooltip mode with real viewport-edge flip (see tooltip.tsx's own header comment); the default fixed sides don't reposition and will clip near an edge.
               </p>
             </div>
-          </section>
 
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement — 7 scoped changes, same skeleton</p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["#", "Change"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1", "Identity Tags hide once the card expands (animated max-height/opacity, not an abrupt height jump) — the facts they summarize reappear in full detail below."],
-                ["2", "AI agent trigger: icon-only → \"Ask about {firstName}\" (falls back to \"Ask AI\" + Tooltip when the card is narrow or the name is long). Opens a panel with a chat PLACEHOLDER — no Chat component exists in the repo yet."],
-                ["3", "Your Intervention now renders with the real InformativeCard component (state=\"alert\"), not a hand-rolled container."],
-                ["4", "Every panel this card opens follows the \"SlideOut/SidePanel — Content\" pattern page: Section Title rows, and severity Tags render compact/inline — never stretched full-width."],
-                ["5", "Every RECORD field now carries a leading icon (RecordField.icon)."],
-                ["6", "Agentic System buttons (Active Workflow, Last Agent) get a Tooltip explaining what opens on click."],
-                ["7", "One learnable \"opens a detail panel\" convention — Button variant=\"tertiary\" + trailing ChevronRight — applied identically to Active Workflow, Last Agent, and every destination RECORD field row."],
-              ].map(([n, change], i) => (
-                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 2 — 10 more scoped changes, same skeleton</p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["#", "Change"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1", "Identity Tags recast as governance-state indicators — assigned agent (purple), active workflow (light blue), pending HTL (amber) — instead of plain identity facts. Color + icon carry down into Agentic System's buttons and Your Intervention's heading, so the collapsed summary visibly correlates with its own expanded detail."],
-                ["2", "\"Ask about {name}\" now opens a SidePanel, not a SlideOut — the user can keep reading the page while chatting."],
-                ["3", "Identity block centers vertically against the avatar once expanded (top-aligned while collapsed, where the tags row makes it 2 lines)."],
-                ["4", "Contact type → icon + Tooltip (User/Building2/Truck), replacing the plain text badge. (Later revised back to icon + visible text — see \"This refinement 3\" below.)"],
-                ["5", "RecordField.hasDestination — a plain descriptive fact (Start Date, a pure date; ARR, a pure figure) renders as static text, no chevron, not a Button; only fields with somewhere real to go stay clickable."],
-                ["6", "Every SlideOut/SidePanel header drops the generic edit pencil — contextual \"···\" menu where a related action genuinely applies (read-only content), nothing at all where it doesn't (pure viewers, or panels whose real actions are already footer CTAs)."],
-                ["7", "SlideOut content is denser: AI Summary cards (Workflow, Agent), Recent Runs / Recent Activity / Similar Past Decisions list sections, Requested-by/Impact details on Pending Decisions."],
-                ["8", "Approve/Dismiss on Pending Decisions open a ModalDialog confirmation instead of resolving on one click — a governed decision, per the agreed interaction logic, is never one-click."],
-                ["9", "Every Tooltip in this card is side=\"cursor\" — flips off a viewport edge instead of clipping."],
-                ["10", "Truncated Record values never dead-end: a destination field's Tooltip includes the full value alongside provenance; a no-destination field's value gets its own Tooltip too."],
-              ].map(([n, change], i) => (
-                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 3 — visual polish + full state coverage + agnosticism</p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["#", "Change"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1", "Contact type reverts to icon + visible text (not icon-only) — a text-body-S label sits beside the icon, both wrapped in one Tooltip."],
-                ["2", "Your Intervention's InformativeCard title is normal sentence case (\"1 action awaiting review\"), not literal ALL CAPS. Size stays \"sm\"."],
-                ["3", "Agentic System restructured: items lay out side by side (grid, not stacked); each item is a plain card BORDER (not a nested CardContainer component, to avoid card-in-card) + HighlightIcon (sm, colored) + a neutral tertiary Button — color lives only in the HighlightIcon now, never in the button text/icon."],
-                ["4", "Record field rows: the trailing slot (chevron or its 14px invisible spacer) is now ALWAYS reserved at the same width, so the origin-badge column aligns across every row, destination or not."],
-                ["5", "Verified \"Ask about {name}\" still opens a SidePanel (no regression from the prior revision)."],
-                ["6", "Pending Decisions gets a real header button (ArrowUpRight, not a pencil) with a Tooltip, jumping to this record's Data Provenance for context — replacing the prior no-header-action treatment."],
-                ["7", "Data Provenance's per-field rows now render inside a CardContainer (sm) each, not a plain bordered div."],
-                ["8", "Block 2 — every collapsed identity Tag is clickable: expands the card and scrolls/highlights the zone it summarizes. Never opens a panel directly from the tag."],
-                ["9", "Block 3 — full states gallery in the Overview tab, now 13 labeled examples: collapsed-tags, empty (both zones), loading, no-permission+Escalate, error, resolved-elsewhere, PII masked, Locked, name/value overflow, and 3 Message states (no channel, no permission, PII-masked-still-works). See the States table below."],
-                ["10", "Block 4 — agnosticism pass: RecordHeader no longer knows \"uep/ucp/uvp.\" Props are now name + entityType ({icon,label}) + recordFields (RecordField[]) + zone `labels` (i18n-ready) — see the Agnosticism table below."],
-                ["11", "Block 5 — every panel's body content dropped its own redundant p-[16px]: the SlideOut/SidePanel primitives already provide the correct 24px horizontal inset (confirmed directly in both source files, and in the canonical \"SlideOut/SidePanel — Content\" pattern page's own live example), so content now aligns flush with the header/footer instead of sitting more indented than them. One shared PANEL_CONTENT_CLASS constant in App.tsx, not patched panel by panel."],
-                ["12", "Block 6 — Message opens a SidePanel (not a SlideOut) with the contact's context preloaded — same reasoning as \"Ask about.\" RecordAction gained `disabled`/`disabledTooltip` (never silently hidden — same rule as assignedAgent === null) and `disableWhenLocked` (defaults true; Message sets it false — contacting isn't editing, // TODO: confirmar)."],
-              ].map(([n, change], i) => (
-                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 4 — 3 targeted corrections</p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["#", "Change"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1", "Removed the decorative statusDot next to the name entirely (prop, type, and render), across every variant. A bare colored dot with no label/tooltip/meaning communicated nothing — pure visual noise. If a glanceable status indicator is wanted here in the future, it needs an explicit meaning and a Tooltip, not a bare color."],
-                ["2", "Identity name now truncates with an ellipsis + Tooltip on hover instead of wrapping/stretching the row — fixes the \"10 · Overflow\" example, which previously broke layout by design (\"never truncate\"). Long RECORD values (e.g. Job Title) already truncated with a Tooltip from a prior pass; unchanged here, same pattern confirmed still correct."],
-                ["3", "Every SlideOut this card opens (Active Workflow, Last Agent, Pending Decisions, Data Provenance) now shows the SAME icon and semantic color as the card element that opened it — workflow → light blue Workflow icon, agent → purple Bot icon, intervention/Review → amber AlertTriangle, provenance → neutral Info — instead of the SlideOut's generic default (purple Sparkles) for all four. Required a small additive `iconBg` prop on SlideOut itself (default unchanged, purple) since the icon container's background was previously hardcoded — see the Slide Out component's own spec."],
-              ].map(([n, change], i) => (
-                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 5 — persistent bug fixes + Playground grouping + N interventions</p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["#", "Change"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1", "Re-verified \"Ask about {name}\" against the reported regression — checked directly in the DOM: it renders SidePanel's own root `<div>` (`--side-panel-bg` tokens, no backdrop, page stays fully interactive underneath), never SlideOut's `<aside>` (which would carry a dimming scrim). The source was already correct; if this still reads as a SlideOut somewhere, it's a stale preview/deploy, not this code — flagging so it isn't re-reported as a fresh bug next round."],
-                ["2", "Confirmed Your Intervention's \"empty\" status already renders through the real InformativeCard (state=\"neutral\", CheckCircle2 icon) — not a custom container. Strengthened the default copy (\"No interventions pending — you're all caught up\") so it explicitly reads as completion, not absence, per the empty-states law."],
-                ["3", "Playground's entity-type selector split into 2 labeled CtrlGroups — \"Work Surfaces\" (Employee/Customer/Vendor, the 3 native shapes) and \"Other Markets\" (Patient/Citizen, agnosticism proof only) — reusing the repo's own CtrlGroup segmentation pattern (already used by every other component's Playground on this page) instead of inventing a new selector or hand-rolling another button row."],
-                ["4", "Added Citizen (government) as a second agnosticism example: a third distinct entity type/icon, a third distinct source system (National Registry, not Workday/Okta/Salesforce/NetSuite/Ariba/Epic), a third distinct RECORD shape — same skeleton, zero changes to record-header.tsx. Also the real example of Block 3's N-intervention case (2 pending at once)."],
-                ["5", "Your Intervention's \"pending\" status now models N items (InterventionItem[]), not just 1 — each keeps its own severity and its own Review action. 0 items → \"empty\" (see #2); exactly 1 → shown alone, no counter; N → the most prioritized shown full-size + a \"+N-1 more\" disclosure that reveals the rest. Deliberately a disclosure, not a carousel — urgent decisions must be visible at a glance (how many, that they exist), never hidden behind a swipe. See the States gallery's #14 and the Claim example above (its current N-intervention case, after the Citizen example it originally used was replaced with Insurance in a later correction pass) for both a synthetic and a real-content case."],
-              ].map(([n, change], i) => (
-                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 6 — validated visual redesign, 5 changes</p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["#", "Change"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1", "Next Best Action is REINTRODUCED — but as a protagonist block, not the pre-governed-card Signal bar this component used to have. Visible right under the identity tags while collapsed, and at the end of the expanded zones while expanded — same block, repositioned, never duplicated, never hidden in either state. Supports N items (nextBestActions prop)."],
-                ["2", "Agentic System lost its section heading — the validated reference design shows Workflow/Agent as plain cards with no label above them. RecordHeaderZoneLabels lost the agenticSystem key as a result (no heading left to translate)."],
-                ["3", "Agent's signal color moved from purple to lime green — Workflow stays light blue, HTL stays amber. A deliberate, validated change to a convention this file previously called \"AIMS OS law\" — purple is no longer a signal color anywhere in this component."],
-                ["4", "Your Intervention's pending items trade their labeled \"Review\" button for a diagonal ArrowUpRight trigger that opens the real HTL view in a NEW TAB — never a same-page overlay, so the viewer never loses their place on this record. \"Show N more\" now caps at 3 extra items inline (was: show all remaining); \"View all\" is a new, separate, always-present escape hatch to the full list (also a new tab). PendingIntervention's \"pending\" variant gained onViewAll."],
-                ["5", "InformativeCard gained an additive `trailingIcon` prop (informative-card.tsx) — an icon-only Button alongside the existing cta/ctaSecondary, default behavior unchanged — needed for #4's arrow trigger, since cta only ever rendered a labeled Button."],
-              ].map(([n, change], i) => (
-                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 7 — Figma fidelity pass, verified via the Figma MCP</p>
+            <p className="text-[12px] font-semibold mb-[8px]" style={{ color: "var(--foreground)" }}>Next Best Action — the task model</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
-              "This refinement 6" above was built from a written brief, not the actual Figma file — read directly this time (v6rmYKA2zmyXWOahlxLOeI, node 19815:101548) via get_metadata + get_screenshot, then pixel-sampled against the render to confirm exact tokens rather than guess. 6 corrections came out of that read:
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["#", "Change"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1", "Identity row order corrected: name → entity type → RECORD provenance trigger. The prior pass had the trigger BEFORE entity type — the Figma node clearly shows entity type immediately after the name, trigger last."],
-                ["2", "Next Best Action's background changed AGAIN — this time to --card-purple-bg (#120520 dark / #f3e9fd light), pixel-matched exactly against the Figma render. The 2 prior guesses in this same redesign (--color-surface-purple-darker, then --color-surface-purple-lighter) were both still more saturated than the reference. The sparkle also moved into an actual HighlightIcon (variant=\"purple\", size=\"sm\") box — composited color matched --hi-purple-bg over the block background almost exactly — instead of a bare floating icon. Title/description/chevron are neutral (--foreground / --field-supporting), not purple-tinted — color lives only in the icon box + background, confirmed by sampling: the text pixels in Figma were gray/white, not purple."],
-                ["3", "Agentic System's chevron Button dropped its \"View\" text label — Figma shows a bare chevron only, no text."],
-                ["4", "Agent's icon glyph is Sparkle, not Bot, in the expanded Agentic System card (matches \"Renewal Copilot\" in Figma) — though the COLLAPSED identity tag for the same signal uses a plain User/person icon in Figma, not Sparkle and not Bot. Reproduced both literally rather than forcing them to match each other."],
-                ["5", "\"Show N more\" and \"View all\" moved to opposite ends of their row (justify-between, was: adjacent) and \"View all\" lost its arrow icon — Figma renders it as bare text."],
-                ["6", "The 3 extra HTL items revealed by \"Show N more\" changed from a compact severity-tag row to a full bordered \"Action Card\" row (same treatment as Agentic System's own items) — Figma shows plain description text + arrow, no visible severity badge. Severity stays reachable via Tooltip, just not rendered as a visible chip."],
-              ].map(([n, change], i) => (
-                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 8 — the CONTACT rule</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
-              <span className="font-semibold text-[var(--field-text)]">This component always renders a CONTACT — a person, or an account/company standing in for one. It never renders a process or an object.</span> A claim, a repair order, a credit application, an incident ticket — none of these are valid entities for this card. They're transient, they resolve, and they have no ongoing relationship with anyone; a contact persists and accumulates history. When a vertical's natural subject looks like a process, the fix is always the same: identify the person or account behind it and put the process where it belongs — as a workflow inside that contact's own Agentic System zone (e.g. "Claims Adjudication," "Service / Repair"), never as the card's own name/type.
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[140px_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Vertical", "Entity (name / type)", "Process → now a workflow"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["Insurance", "Diane Ostrowski / Policyholder", "Claim CLM-48821 → \"Claims Adjudication\" workflow"],
-                ["Automotive", "Devon Marsh / Service Customer", "Repair order RO #48213 → \"Service / Repair\" workflow"],
-                ["Banking", "Jordan Ellis / Personal Loan Applicant", "Credit application → \"Credit Risk Review\" workflow (already compliant, no change needed)"],
-                ["Healthcare", "Elena Vasquez / Patient", "N/A — a patient was already the entity, not a process"],
-              ].map(([vertical, entity, process], i) => (
-                <div key={vertical} className="grid grid-cols-[140px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{vertical}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{entity}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{process}</div>
-                </div>
-              ))}
-            </div>
-            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
-              Content-only correction — no changes to record-header.tsx's structure, HTL, NBA, or layout. Only the example mock data (entity name, entity type label, RECORD fields, and the corresponding workflow/agent/intervention text) changed, for the Insurance and Automotive examples above.
-            </p>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 9 — the Next Best Action detail SlideOut, 3-layer task structure</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
-              <span className="font-semibold text-[var(--field-text)]">An NBA is a TASK, and every task in AIMS OS renders through the same 3-layer structure</span> (call with Edgardo, infra) — the same SlideOut a Pending Decisions task uses, since NBA and HTL task detail converge on one composition rather than each inventing its own. "Layer"/"Capa" is how this table (and the code comments) name the structure to a dev — the rendered SlideOut itself never shows those words; it shows the action's own content (title, context, preview, buttons, inputs) with a plain divider between groupings.
+              <span className="font-semibold text-[var(--field-text)]">An NBA is a TASK, and every task in AIMS OS renders through the same 3-layer structure</span> — the same SlideOut a Pending Decisions task uses, since NBA and HTL task detail converge on one composition rather than each inventing its own. "Layer" is how this table (and the code comments) name the structure to a dev — the rendered SlideOut itself never shows that word; it shows the action's own content (title, context, preview, buttons, inputs) with a plain divider between groupings, and the primary + any revealed extras stack above a single "Show N more"/"Show less" toggle at the very bottom.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
               <div className="grid grid-cols-[100px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
@@ -34221,8 +34014,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
               {[
                 ["1 · Base", "Common to every task, regardless of type — always rendered. Title + rationale (\"Why this\"), a system-suggested signal (this was generated, not created manually), who it's assigned to (agent or person), due date, status, and periodicity when the task recurs."],
-                ["2 · Type-specific", "Renders differently per task type. Only 3 types are modeled so far — Approval, Call, Email — and this list GROWS as new actions are built (Edgardo); it's a lookup by kind, not a fixed enum baked into the SlideOut's own layout. A task with no modeled type yet falls back to a plain \"not yet modeled\" notice instead of guessing."],
-                ["3 · Dynamic inputs", "The runtime inputs the action needs, meant to reuse the Workflow Builder node input pattern. 3 distinct kinds are represented — date (Approval, Claim's follow-up reminder), text (Call's callback window, Employee's \"send copy to,\" Meridian's CC), select (Healthcare's priority, Banking's best-time-to-reach) — proving the layer genuinely adapts, not just relabeling the same text field. Less protagonist than HTL's own dynamic layer — one representative example per typed task, not a full input set. // TODO: reciclar input de nodos — no such component exists in this repo yet (checked directly: \"Workflow Builder UI\" is only named in an effort-estimation table, never implemented), so this reuses Input/Select styled the same way a node input would be."],
+                ["2 · Type-specific", "Renders differently per task type. Only 3 types are modeled so far — Approval, Call, Email — and this list GROWS as new actions are built; it's a lookup by kind, not a fixed enum baked into the SlideOut's own layout. A task with no modeled type yet falls back to a plain \"not yet modeled\" notice instead of guessing — exactly 1 example demonstrates that fallback today, the rest all carry a real type."],
+                ["3 · Dynamic inputs", "The runtime inputs the action needs, meant to reuse the Workflow Builder node input pattern. 3 distinct kinds are represented — date, text, select (via the repo's own Select + Menu/MenuItem pattern) — proving the layer genuinely adapts, not just relabeling the same text field. Less protagonist than HTL's own dynamic layer — one representative example per typed task, not a full input set. // TODO: reciclar input de nodos — no such component exists in this repo yet (checked directly: \"Workflow Builder UI\" is only named in an effort-estimation table, never implemented), so this reuses Input/Select styled the same way a node input would be."],
               ].map(([layer, desc]) => (
                 <div key={layer} className="grid grid-cols-[100px_1fr] border-b border-[var(--table-border)] last:border-0">
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{layer}</div>
@@ -34240,7 +34033,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["Approval", "UEP — Sarah Chen's \"Scope down Sarah's Admin access.\" What's changing + its context, Confirm/Reject (footer) — a human decision, no agent involved. Date input (effective date)."],
                 ["Call", "UCP — Acme's \"proactive check-in call\" (text input); Healthcare — Elena's \"coagulation panel\" (select: priority); Banking — Jordan's \"co-signer option\" (select: best time to reach). Contact + a suggested talking point, \"Assign call to agent\" / \"Schedule call\" (footer) — the agent places the call, never a same-second \"Call now.\""],
                 ["Email", "UVP — Meridian's \"insurance renewal\" (text input); Employee — Sarah's \"security training\" reminder (text input); Insurance — Diane's \"missing parts invoice\" (date input). Subject + body preview (Text Description) drafted by the agent, \"Approve send\" / \"Edit\" (footer) — the human governs, doesn't type-and-send."],
-                ["Not yet modeled", "Automotive — Devon's \"bundle the cabin air filter\" — the ONE remaining example of this fallback (correction pass reduced 5 of 6 to a real type; this is the case that's genuinely valid to show, just not the common one)."],
+                ["Not yet modeled", "Automotive — Devon's \"bundle the cabin air filter\" — the one example of this fallback; every other NBA in this file carries a real type."],
               ].map(([type, ex]) => (
                 <div key={type} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0">
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{type}</div>
@@ -34248,64 +34041,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </div>
               ))}
             </div>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
               <span className="font-semibold text-[var(--field-text)]">In AIMS OS, the agent acts and the user governs.</span> External actions — calling someone, sending an email — are the agent's to execute, never the viewer's to trigger directly from this card: the CTA is "assign/schedule" or "approve/edit," not "Call now" or "Send." A governed decision (Approval) is the opposite case — the human decides, no agent involved. Same principle as HTL's own Approve/Dismiss (a governed decision always gets an explicit human confirmation), applied here to who's actually doing the acting.
-            </p>
-            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
-              Scoped to the NBA detail SlideOut only — identity, Agentic System, HTL, the States gallery, the end-to-end flows, and every vertical's own entity examples are unchanged.
-            </p>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 10 — layout fidelity, N-item NBA disclosure, footer CTAs, Workflow content</p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["#", "Change"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1", "Agentic System's Workflow/Agent items switched from a 2-column grid to flex(1) items — a grid with sm:grid-cols-2 still reserved 2 tracks with only 1 item present (Employee's workflow-only case left half the row empty). 1 item now fills the full row; 2 items still split evenly. AgenticSystemItem gained an additive className prop for this."],
-                ["2", "Multiple Next Best Actions now use the SAME disclosure pattern as Your Intervention — the most prioritized item full-size, the rest behind \"Show N more\" / \"Show less\" (verified against the Figma file's own multi-NBA node) — instead of every item stacking open by default. New NextBestActionZone wraps NextBestActionBlock for this; the block itself is unchanged."],
-                ["3", "Every SlideOut's primary action(s) — NBA Confirm/Reject, Call assign/schedule, Email approve/edit, the Agent's \"Apply recommendation\" — moved to the SlideOut's own fixed footer (showCta/ctaPrimaryLabel/etc.), not a button loose in the content body. SlideOut gained an additive showCtaSecondary prop (default true) for the Agent's single-action case, which has nothing to reject/skip — omitting it beats forcing a placeholder second button just to fill the pair. Pending Decisions already used the footer pattern; it's unchanged."],
-                ["4", "Active Workflow detail refined for what's actually useful when a workflow is impacting this contact — status (Running/Blocked/Completed, a real Tag, not the SlideOut header's fixed-green statusLabel pill), progress (\"Step N of total,\" derived from the same steps array the timeline already renders — not a second field that could drift), a surfaced blocker (InformativeCard, alert state) when status is \"blocked,\" and \"Next Milestone\" (label + optional date) replacing the old nextTrigger string, which conflated a generic status word with an actual milestone. No internal workflow/node configuration shown — that's Agentic Studio's, not this card's."],
-                ["5", "Stale documentation cleanup: the Playground's \"Other Markets\" selector was still labeled by process (\"Claim,\" \"Repair Order\") instead of market (\"Insurance,\" \"Automotive\"); the \"Entity type / Central question\" and \"Example entity types\" reference tables still named Claim/Repair Order as entities with process-centered questions, and the latter still claimed UEP/UVP had an agent tag in purple (both stale — Employee lost its agent this correction pass, Vendor lost its the pass before, and the agent signal color has been lime green since \"This refinement 6\"). All corrected to match current behavior."],
-                ["6", "Access Recertification's workflow owner changed from \"People Sync\" (the same name as Sarah's now-removed agent) to \"IT Access Governance\" — an agent-persona name surviving in workflow metadata after the identity card says \"no agent\" was a real inconsistency, not a stylistic choice. Sarah's second NBA (\"Suggest the Platform Infra security module\") was assigned to People Sync too; reassigned to David Kim (her manager, already used on her first NBA) for the same reason."],
-              ].map(([n, change], i) => (
-                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 11 — investigation, NBA content variety, Show N more position, Workflow footer CTA</p>
-            <div className="rounded-md px-[14px] py-[12px] mb-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Investigated before touching anything (per this pass's own instruction not to blindly repeat a prior fix):</strong> Employee/Sarah was reported as still showing an agent after 3 corrections. Traced every code path — <code>RH_HAS_AGENT.uep</code> is <code>false</code>, gating both <code>assignedAgent</code> (identity trigger renders disabled) and <code>agenticSystem.lastAgent</code> (omitted entirely) — and verified live on the actual PR preview URL: Sarah's card shows only the Access Recertification workflow, full-width, "Ask about Sarah" disabled. No code path renders an agent for Employee. The one stray reference was a closed, off-screen SlideOut's default title prop falling back to <code>RH_AGENT_DETAILS.uep.agentName</code> ("People Sync") before any panel is opened — inert DOM content, never visible, not the reported symptom. Most likely explanation: a stale cache or the production URL instead of this branch's preview (this session hit that exact mix-up once already, earlier in the conversation).
-              </p>
-            </div>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["#", "Change"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["1", "5 of 6 \"type not yet modeled\" NBAs got a real type — Employee's 2nd NBA and Insurance's now Email, Healthcare's and Banking's now Call — leaving exactly 1 fallback example (Automotive), down from a majority. Dynamic inputs now cover 3 distinct kinds (date/text/select, not just date/text) — a new Select-kind input reuses the repo's own Select + Menu/MenuItem pattern (same one the Select component's own Playground uses), proving the layer genuinely adapts per case."],
-                ["2", "\"Show N more\" / \"Show less\" moved from between the primary card and the revealed extras to BELOW all of them — re-checked against the Figma node's own expanded-state frame, which puts the button after the full stack. The earlier position had copied HTL's code layout without re-verifying this pattern's own Figma order specifically."],
-                ["3", "Active Workflow's header \"···\" dropdown (View in Agentic Studio, one hidden click away) replaced with a direct footer CTA (\"Go to workflow\") — the SlideOut's own default bottom-CTA pattern, single-action (showCtaSecondary={false}). Last Agent keeps its \"···\" menu — it has no one obvious destination the way a workflow does."],
-              ].map(([n, change], i) => (
-                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
-                </div>
-              ))}
-            </div>
-            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
-              Not touched this pass (already correct, re-verified only): the NBA slideout's 3-layer structure (Why this / Details / [type] / Configurable inputs + footer CTAs), single-item Agentic System full-width, and Active Workflow's status/progress/blocker/Next Milestone content — all from the prior 2 correction passes, still live on the deployed preview. HTL is explicitly out of scope for this pass.
             </p>
           </section>
 
@@ -34382,6 +34119,30 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
               UEP/UCP/UVP are this DEMO PAGE's own naming for 3 example entity types (an HR record, a CRM record, a vendor record), proving one skeleton serves all 3 — RecordHeader itself has no memory of these 3 names (see the Agnosticism table above). A 4th entity type is just another <code>entityType</code> + <code>recordFields</code> pair, no component change required.
             </p>
+            <div className="rounded-md px-[14px] py-[12px] mb-[16px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>The CONTACT rule.</strong> This component always renders a CONTACT — a person, or an account/company standing in for one. It never renders a process or an object. A claim, a repair order, a credit application, an incident ticket — none of these are valid entities for this card. They're transient, they resolve, and they have no ongoing relationship with anyone; a contact persists and accumulates history. When a vertical's natural subject looks like a process, the fix is always the same: identify the person or account behind it and put the process where it belongs — as a workflow inside that contact's own Agentic System zone — never as the card's own name/type.
+              </p>
+            </div>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[16px]">
+              <div className="grid grid-cols-[140px_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Vertical", "Entity (name / type)", "Process → lives as a workflow"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Insurance", "Diane Ostrowski / Policyholder", "Claim CLM-48821 → \"Claims Adjudication\" workflow"],
+                ["Automotive", "Devon Marsh / Service Customer", "Repair order RO #48213 → \"Service / Repair\" workflow"],
+                ["Banking", "Jordan Ellis / Personal Loan Applicant", "Credit application → \"Credit Risk Review\" workflow"],
+                ["Healthcare", "Elena Vasquez / Patient", "N/A — a patient is already the entity, not a process"],
+              ].map(([vertical, entity, process], i) => (
+                <div key={vertical} className="grid grid-cols-[140px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{vertical}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{entity}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{process}</div>
+                </div>
+              ))}
+            </div>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
               <div className="grid grid-cols-[70px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
                 {["Example", "Content per zone"].map(h => (
@@ -34895,8 +34656,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
            action's own content with a plain divider between groupings.
            Converges with HTL's own task SlideOut below (Pending
            Decisions) — same Section-Title + Details-grid primitives, not
-           a separate visual language. See "This refinement 9" on the
-           Reference tab. */}
+           a separate visual language. See "Next Best Action — the task
+           model" under the Reference tab's Panel content section. */}
       <SlideOut
         open={rhNbaOpen}
         onClose={() => setRhNbaOpen(false)}
