@@ -33717,16 +33717,12 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               onProvenanceOpen={() => rhOpenProvenance("repairOrder")} />
           </section>
 
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Law 4 — PII masking, same field in 2 entitlement states</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Identical record to UEP above, except <code>accessRole</code> is now the SAME RecordField constructed in its masked state — a lower-permission viewer sees this instead of "Admin." The origin badge still renders (Law 1 applies regardless of masking).
-            </p>
-            <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
-              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-              agenticSystem={rhAgenticSystem("uep")}
-              onProvenanceOpen={() => rhOpenProvenance("uep")} />
-          </section>
+          {/* Law 4 — PII masking dedicated Overview example REMOVED (Thom:
+              didn't carry enough standalone value). Law 4 stays documented
+              and demonstrated live elsewhere — the States gallery's own
+              "PII masked" item (#5) and the Reference tab's "PII / masking"
+              section. RH_UEP_MASKED_FIELDS stays in the code; it's still
+              used by that gallery item. */}
 
           <RecordHeaderStatesGallery
             rhAssignedAgent={rhAssignedAgent}
@@ -34017,7 +34013,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["Agentic System — empty", "agenticSystem={{status:\"empty\"}} — a calm \"no workflow yet\" message, e.g. a freshly imported record."],
                 ["Agentic System — N workflows", "agenticSystem={{workflows: WorkflowSummary[], onViewAll?}} — 1 workflow shows alone, no counter. N workflows show the most prioritized (workflows[0], host-sorted) full-size + \"Show N more\"/\"Show less\"/\"View all\" — the SAME disclosure pattern Your Intervention uses (closing pass — one learnable pattern for every zone with N items, not a 3rd bespoke one). See the States gallery's own \"2 workflows\" example."],
                 ["Loading", "status=\"loading\" on either zone — Skeleton rows matching the real content's footprint, no layout jump when data arrives."],
-                ["PII masked", "A RecordField in state=\"masked\" — same field, 2 entitlement states (Law 4). See the dedicated Law 4 section above too."],
+                ["PII masked", "A RecordField in state=\"masked\" — same field, 2 entitlement states (Law 4). See the Reference tab's own \"PII / masking\" section for the full write-up."],
                 ["Locked", "locked — a read-only Tag next to the type label; any contact/write actions passed via `actions` disable (Tooltip explains why, never silently hidden); agent trigger, Agentic System, and the RECORD provenance trigger all stay active regardless."],
                 ["Overflow — long name/value", "The identity name truncates with an ellipsis and a Tooltip carrying the full value — it never wraps or stretches the row. Long Agentic System item names truncate with a Tooltip the same way."],
               ].map(([state, desc], i) => (
@@ -34059,7 +34055,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">PII / masking — Law 4, prepared not wired</p>
             <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                Every <code>RecordField</code> has a <code>state: "hydrated" | "masked"</code> and both a <code>value</code> and an optional <code>maskedValue</code>. RecordHeader renders whichever state the caller passes — it does <strong>not</strong> check entitlements, call a permissions service, or decide anything about who can see what. That resolution happens upstream, per this comment on the type itself: <code>// Ley 4: display-time PII resolution — masking depende de entitlements del backend</code>. The origin badge (Law 1) still renders in both states — provenance isn't PII, so it's never masked. See the Overview tab's dedicated "Law 4" example (masked Access Role) for a live example of the same field in both states — the Playground's own masking toggle was removed (closing pass, didn't carry enough standalone value there).
+                Every <code>RecordField</code> has a <code>state: "hydrated" | "masked"</code> and both a <code>value</code> and an optional <code>maskedValue</code>. RecordHeader renders whichever state the caller passes — it does <strong>not</strong> check entitlements, call a permissions service, or decide anything about who can see what. That resolution happens upstream, per this comment on the type itself: <code>// Ley 4: display-time PII resolution — masking depende de entitlements del backend</code>. The origin badge (Law 1) still renders in both states — provenance isn't PII, so it's never masked. See the States gallery's own "PII masked" example (masked Access Role) for a live example of the same field in both states — the Overview tab's dedicated Law 4 section and the Playground's own masking toggle were both removed (Thom: neither carried enough standalone value beyond that gallery example).
               </p>
             </div>
           </section>
