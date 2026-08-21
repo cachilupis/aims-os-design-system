@@ -32595,38 +32595,27 @@ const RH_UEP_MASKED_FIELDS: RecordField[] = [RH_UEP.manager, RH_UEP_MASKED_ACCES
 
 // Assigned AI agent — one per demo entity, same shape (see AssignedAgent in
 // record-header.tsx). onOpenChat is wired inside RecordHeaderPage below.
+//
+// Closing pass — every entry is now the SAME generic "AI Assistant" persona,
+// not a per-vertical fictional name ("Renewal Copilot," "Claims Copilot AI",
+// ...). A prior pass had 4 of the 7 named after their own Agentic System
+// workflow's owner, so the identity-row Tag + "Ask about {name}" button
+// visibly re-showed the exact persona a since-removed Agentic System "Last
+// Agent" card and the Workflow SlideOut's own subtitle used to name — the
+// bug wasn't the button itself (that's a real, required-but-nullable
+// component feature, see AssignedAgent's own doc comment in
+// record-header.tsx, and it must stay ACTIVE — disabling it was itself a
+// bug from an earlier pass), it was reusing a workflow's own persona for a
+// separate feature. A flat, generic name here is fully decoupled from
+// RH_WORKFLOWS' own `owner` field, so the two can never collide again.
 const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
-  uep: { id: "agent-people-sync",  name: "People Sync" },
-  ucp: { id: "agent-renewal",      name: "Renewal Copilot" },
-  uvp: { id: "agent-procurement",  name: "Procurement Copilot" },
-  patient: { id: "agent-care-coordinator", name: "Care Coordinator AI" },
-  claim: { id: "agent-claims-copilot", name: "Claims Copilot AI" },
-  borrower: { id: "agent-underwriting-copilot", name: "Underwriting Copilot" },
-  repairOrder: { id: "agent-service-advisor-copilot", name: "Service Advisor Copilot" },
-}
-
-// Closing pass — all 7 verticals now go without an assigned agent. A prior
-// pass had 4 of them (Customer/Healthcare/Insurance/Automotive) showing one,
-// via RH_AGENTS names like "Renewal Copilot" / "Claims Copilot AI" — the
-// exact same fictional personas a since-removed Agentic System "Last Agent"
-// card and the Workflow SlideOut's own subtitle used to name. Even after
-// both of those were retired, this identity-row Tag + button kept the same
-// agent identities visibly on screen for those 4 records, reading as the
-// removed feature persisting rather than as its own separate, legitimate
-// one. assignedAgent itself is still real and still required-but-nullable
-// on the component (see AssignedAgent's own doc comment in
-// record-header.tsx) — it's demonstrated live, working, exactly once, in
-// the States gallery (see its own "Assigned agent — one live example" item)
-// rather than across these 7 demo verticals, to keep it clearly decoupled
-// from any of this page's named agent personas.
-const RH_HAS_AGENT: Record<RhDemoKey, boolean> = {
-  uep: false,
-  ucp: false,
-  uvp: false,
-  patient: false,
-  claim: false,
-  borrower: false,
-  repairOrder: false,
+  uep: { id: "agent-assistant-uep", name: "AI Assistant" },
+  ucp: { id: "agent-assistant-ucp", name: "AI Assistant" },
+  uvp: { id: "agent-assistant-uvp", name: "AI Assistant" },
+  patient: { id: "agent-assistant-patient", name: "AI Assistant" },
+  claim: { id: "agent-assistant-claim", name: "AI Assistant" },
+  borrower: { id: "agent-assistant-borrower", name: "AI Assistant" },
+  repairOrder: { id: "agent-assistant-repairOrder", name: "AI Assistant" },
 }
 
 // ── Demo SlideOut content — realistic mock data for the 4 wired flows ──────
@@ -32984,7 +32973,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       assignedTo: "David Kim", assignedToKind: "person", dueDate: "Sep 1, 2026", status: "Scheduled",
       recurrence: "Runs with every 30-day access check",
       task: { kind: "email", subject: "Complete your Platform Infra security training", bodyPreview: "Hi Sarah,\n\nWelcome to Platform Infra! As part of the team's standard onboarding, there's a security training module that isn't showing as started yet — it takes about 45 minutes and covers the access patterns specific to this team.\n\nCould you get to it in the next couple weeks?\n\nThanks,", outcome: "immediate" },
-      dynamicInputs: [{ label: "Send copy to", kind: "text", placeholder: "Add manager or HRBP" }],
+      dynamicInputs: [{ label: "CC (optional)", kind: "text", placeholder: "e.g. Sarah's manager or HR Business Partner" }],
     },
   ],
   ucp: [
@@ -32993,7 +32982,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       description: "Usage dipped 12% this month with no support tickets filed — the agent can place a check-in call before renewal season to catch friction early.",
       assignedTo: "Renewal Copilot", assignedToKind: "agent", dueDate: "Aug 25, 2026", status: "Not started",
       task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Acme Corp", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season.", outcome: "immediate" },
-      dynamicInputs: [{ label: "Preferred callback window", kind: "text", placeholder: "e.g. Tue–Thu mornings" }],
+      dynamicInputs: [{ label: "Call date & time", kind: "text", placeholder: "e.g. Thu, Aug 28 at 10am" }],
     },
   ],
   uvp: [
@@ -33002,7 +32991,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       description: "Meridian's current certificate expires in 45 days — starting the renewal conversation now avoids a compliance gap at requalification.",
       assignedTo: "Procurement Copilot", assignedToKind: "agent", dueDate: "Aug 24, 2026", status: "Not started",
       task: { kind: "email", subject: "Insurance certificate renewal — 45 days out", bodyPreview: "Hi Meridian team,\n\nYour current certificate of insurance expires in 45 days. Starting the renewal conversation now avoids a compliance gap when requalification comes up — could you confirm your timeline for the updated certificate?\n\nThanks,", outcome: "immediate" },
-      dynamicInputs: [{ label: "CC recipients", kind: "text", placeholder: "Add anyone else who should see this" }],
+      dynamicInputs: [{ label: "CC (optional)", kind: "text", placeholder: "e.g. compliance@meridianlogistics.com" }],
     },
   ],
   patient: [
@@ -33119,7 +33108,7 @@ function RecordHeaderStatesGallery({
           "Agentic System — workflow only (everywhere), empty (#3), loading (#4): the zone's own agent card was removed entirely (closing pass) — its value is now fully carried by Next Best Action instead.",
           "Record — normal (everywhere), PII masked (#5), overflow (#7) — all reached only through \"View record details\" (this correction pass), never rendered inline",
           "Locked (#6) — read-only Tag; agent trigger, Agentic System, and RECORD's provenance access stay active regardless",
-          "Assigned agent (identity trigger) — present in exactly 1 place (#9, a deliberately decoupled example) vs. absent everywhere else, including all 7 demo verticals above (closing pass) and the explicit #10: disables with a Tooltip (RECORD_HEADER_FALLBACKS.noAgentTooltip) instead of disappearing.",
+          "Assigned agent (identity trigger) — active everywhere except the explicit #10 (correction pass — a prior pass had disabled it by default on all 7 demo verticals, which was itself a bug): absent renders a Tooltip (RECORD_HEADER_FALLBACKS.noAgentTooltip) instead of disappearing.",
         ].map(line => (
           <li key={line} className="text-[11px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>· {line}</li>
         ))}
@@ -33204,14 +33193,12 @@ function RecordHeaderStatesGallery({
                 { id: "gallery-n-2", description: "A discount above standard approval thresholds needs sign-off.", severity: "medium", onReview: () => {} },
                 { id: "gallery-n-3", description: "Vendor requalification checklist needs a final read-through.", severity: "low", onReview: () => {} },
               ],
+              onViewAll: () => {},
             }} />
         </div>
 
         <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">9 · Assigned agent — one live example (Tag + button, real value)</p>
-          <p className="text-[11px] mb-[8px] max-w-[680px]" style={{ color: "var(--field-supporting)" }}>
-            All 7 demo verticals above go without an assigned agent now (closing pass — see RH_HAS_AGENT's own comment: their old agent identities visibly duplicated names a since-removed Agentic System card and the Workflow SlideOut's own subtitle used to show). The feature itself is untouched and still required-but-nullable on the component — demonstrated here, once, deliberately decoupled from any of this page's named verticals.
-          </p>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">9 · Assigned agent — Tag + active button, opens the chat SidePanel</p>
           <RecordHeader name="Priya Nandakumar" entityType={RH_ENTITY_TYPE.uep} recordFields={[]} defaultExpanded
             assignedAgent={{ id: "agent-demo-example", name: "AI Assistant", onOpenChat: () => {} }} />
         </div>
@@ -33219,7 +33206,7 @@ function RecordHeaderStatesGallery({
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">10 · No agent assigned — identity trigger disabled, not hidden</p>
           <RecordHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
-            assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
+            assignedAgent={null}
             agenticSystem={rhAgenticSystem("borrower")} />
         </div>
 
@@ -33479,11 +33466,12 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   // the generic SidePanel — same "reuse what exists" rule every overlay
   // demo on this page already follows.
   const [rhChatWith, setRhChatWith] = useState<{ id: string; name: string; recordName: string } | null>(null)
-  // `null` for RH_HAS_AGENT[v] === false — the identity trigger renders
-  // disabled with RECORD_HEADER_FALLBACKS.noAgentTooltip, never a silently
-  // missing button (record-header.tsx's own AssignedAgent doc comment).
+  // Always a real agent (closing pass — the disabled-by-default state was
+  // itself a bug, see RH_AGENTS's own comment). The 2 states-gallery items
+  // that specifically demonstrate the null/disabled case (#3's freshly
+  // imported record, #10's explicit "No agent assigned") pass a literal
+  // `null` directly instead of going through this helper.
   const rhAssignedAgent = (v: RhDemoKey, recordName: string): AssignedAgent | null => {
-    if (!RH_HAS_AGENT[v]) return null
     return {
       ...RH_AGENTS[v],
       onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
@@ -33919,7 +33907,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               {[
                 ["1 · Base", "Common to every task, regardless of type — always rendered. Title + rationale (\"Why this\"), a system-suggested signal (this was generated, not created manually), who it's assigned to (agent or person), due date, status, and periodicity when the task recurs."],
                 ["2 · Type-specific", "Renders differently per task type. Only 3 types are modeled so far — Approval, Call, Email — and this list GROWS as new actions are built; it's a lookup by kind, not a fixed enum baked into the SlideOut's own layout. A task with no modeled type yet falls back to a plain \"not yet modeled\" notice instead of guessing — exactly 1 example demonstrates that fallback today, the rest all carry a real type."],
-                ["3 · Dynamic inputs", "The runtime inputs the action needs, meant to reuse the Workflow Builder node input pattern. 3 distinct kinds are represented — date, text, select (via the repo's own Select + Menu/MenuItem pattern) — proving the layer genuinely adapts, not just relabeling the same text field. Less protagonist than HTL's own dynamic layer — one representative example per typed task, not a full input set. // TODO: reciclar input de nodos — no such component exists in this repo yet (checked directly: \"Workflow Builder UI\" is only named in an effort-estimation table, never implemented), so this reuses Input/Select styled the same way a node input would be."],
+                ["3 · Dynamic inputs", "The runtime inputs the action needs, meant to reuse the Workflow Builder node input pattern. 3 distinct kinds are represented — date, text, select (via the repo's own Select + Menu/MenuItem pattern) — proving the layer genuinely adapts, not just relabeling the same text field. Less protagonist than HTL's own dynamic layer — one representative example per typed task, not a full input set. Each field's own supportingText names specifically what it configures (\"CC (optional)\", \"Call date & time\", \"Effective date\", ...) — closing pass, replacing one hardcoded \"Set when this task runs\" string that used to repeat under every field regardless of type. `placeholder` still carries the concrete example (\"e.g. Thu, Aug 28 at 10am\"). // TODO: reciclar input de nodos — no such component exists in this repo yet (checked directly: \"Workflow Builder UI\" is only named in an effort-estimation table, never implemented), so this reuses Input/Select styled the same way a node input would be."],
               ].map(([layer, desc]) => (
                 <div key={layer} className="grid grid-cols-[100px_1fr] border-b border-[var(--table-border)] last:border-0">
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{layer}</div>
@@ -34057,9 +34045,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["UEP", "Contact-type icon: User. Identity tags: Access Recertification (workflow, light blue), 1 pending (HTL, amber) — no agent tag (closing pass — no demo vertical shows one now; see \"Assigned agent\" in the States gallery for the feature's one live example). Intervention: access request approval. Record: Manager/Access Role/Department (destination) + Job Title/Start Date (no destination) (Workday + Okta)."],
-                ["UCP", "Contact-type icon: Building2. Identity tags: Renewal Playbook (workflow, light blue), 1 pending (HTL, amber) — no agent tag (closing pass — this vertical used to show one, \"Renewal Copilot\"; removed for visibly duplicating a since-retired agent identity, see \"Retired features\" below). Intervention: discount approval. Record: Owner (destination) + Renewal Date/ARR (no destination) (Salesforce + NetSuite). Example data, not confirmed."],
-                ["UVP", "Contact-type icon: Truck. Identity tags: Vendor Requalification (workflow, light blue) — no agent tag, no HTL tag, no intervention in this example. Record: Procurement Owner (destination) + Contract End/Spend YTD (no destination) (SAP Ariba). Example data, not confirmed."],
+                ["UEP", "Contact-type icon: User. Identity tags: AI Assistant (agent, lime green), Access Recertification (workflow, light blue), 1 pending (HTL, amber). Intervention: access request approval. Record: Manager/Access Role/Department (destination) + Job Title/Start Date (no destination) (Workday + Okta)."],
+                ["UCP", "Contact-type icon: Building2. Identity tags: AI Assistant (agent, lime green), Renewal Playbook (workflow, light blue), 1 pending (HTL, amber). Intervention: discount approval. Record: Owner (destination) + Renewal Date/ARR (no destination) (Salesforce + NetSuite). Example data, not confirmed."],
+                ["UVP", "Contact-type icon: Truck. Identity tags: AI Assistant (agent, lime green), Vendor Requalification (workflow, light blue) — no HTL tag, no intervention in this example. Record: Procurement Owner (destination) + Contract End/Spend YTD (no destination) (SAP Ariba). Example data, not confirmed."],
               ].map(([v, content], i) => (
                 <div key={v} className="grid grid-cols-[70px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{v}</div>
@@ -34097,6 +34085,14 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Your Intervention's 3 decision-outcome states removed; "YOUR INTERVENTION" heading dropped; zone labels prop removed (closing pass)</p>
                 <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
                   <code>PendingIntervention</code>'s "no-permission", "error", and "resolved-elsewhere" statuses are REMOVED — all 3 modeled an in-card approve/retry/resolve decision (a disabled "Review" button, a "Retry" button, an inline "Already resolved" confirmation) that no longer exists now that every HTL item's only interaction is the diagonal arrow opening the real HTL view in a NEW TAB. That governed decision now lives entirely in the destination the arrow opens, not in this card. Only pending/empty/loading remain. Separately, the "YOUR INTERVENTION" label that used to sit above the HTL card is also gone, matching the Figma design and Agentic System's own heading-free treatment — and since that heading was the only thing <code>RecordHeaderZoneLabels</code>/the <code>labels</code> prop ever customized, that prop is removed too (nothing left to translate). Also fixed in this pass: the Workflow detail SlideOut's subtitle used to read "Owner · [agent name]" (e.g. "Owner · Renewal Copilot") for every workflow whose owner happens to be an AI agent — a second place an agent identity was leaking back into this component after point 1 removed it from the zone card itself. It now reads "Workflow · Started [date]" instead. All of this is recoverable from git history if a future case needs it back.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px] mt-[8px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
+              <div>
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Correction — assignedAgent re-enabled on all 7 demo verticals (the disabled state was itself a bug)</p>
+                <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                  The pass above ("assignedAgent... removed for visibly duplicating a since-retired agent identity") went one step too far: it disabled the "Ask about {"{name}"}" identity trigger on all 7 demo verticals, via <code>RH_HAS_AGENT</code> gating every one to <code>false</code>. That trigger is a real, required-but-nullable component feature (see <code>AssignedAgent</code>'s own doc comment in record-header.tsx) — AIMS OS is agent-first, and disabling it by default was itself a bug, not a fix. The actual defect was never the button — it was 4 of the 7 verticals reusing their own Agentic System workflow's fictional owner name ("Renewal Copilot," "Claims Copilot AI," ...) as the identity-level agent too, so the same persona visibly duplicated across 2 unrelated features. Fixed properly now: every <code>RH_AGENTS</code> entry is the SAME generic "AI Assistant" persona, fully decoupled from any <code>RH_WORKFLOWS</code> owner name, and the trigger is active everywhere again — opens the chat <code>SidePanel</code> (never SlideOut) with a structured placeholder body (<code>{"// TODO: reemplazar con componente de Chat cuando exista en el repo"}</code>), contextual to whichever record it was opened from. The States gallery's #10 still demonstrates the disabled/null case explicitly, by design, not as a leftover bug.
                 </p>
               </div>
             </div>
@@ -34546,7 +34542,16 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                       (checked directly: "Workflow Builder UI" is only named
                       in an estimation table, never implemented), so this
                       reuses Input/Select styled the same way a node input
-                      would be. */}
+                      would be. `input.label` renders as supportingText below
+                      the field — desktop never gets a floating label (see
+                      CLAUDE.md's Input/Textarea rule) — so it's the ONLY
+                      place naming what this specific field is ("CC
+                      (optional)", "Call date & time", ...); `placeholder`
+                      carries the concrete example. Closing pass — this used
+                      to be one hardcoded "Set when this task runs" string
+                      repeated under every field regardless of what it
+                      configured, which read as generic no matter how
+                      specific the placeholder was. */}
                   {openNba.dynamicInputs.map((input, i) => (
                     input.kind === "select" ? (
                       <div key={i} className="relative">
@@ -34556,7 +34561,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                           open={rhNbaSelectOpenIdx === i}
                           onClick={() => setRhNbaSelectOpenIdx(prev => (prev === i ? null : i))}
                           onClear={() => setRhNbaSelectValues(prev => { const next = { ...prev }; delete next[i]; return next })}
-                          supportingText="Set when this task runs"
+                          supportingText={input.label}
                         />
                         {rhNbaSelectOpenIdx === i && (
                           <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[50]">
@@ -34574,7 +34579,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                         )}
                       </div>
                     ) : (
-                      <Input key={i} type={input.kind === "date" ? "date" : "text"} placeholder={input.placeholder} supportingText="Set when this task runs" />
+                      <Input key={i} type={input.kind === "date" ? "date" : "text"} placeholder={input.placeholder} supportingText={input.label} />
                     )
                   ))}
                 </div>
