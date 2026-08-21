@@ -878,8 +878,8 @@ function RecordHeader({
               transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease",
             }}
           >
-            <div ref={nbaBlockRef} className="flex flex-col gap-[8px]">
-              {nextBestActions.map(nba => <NextBestActionBlock key={nba.id} nba={nba} />)}
+            <div ref={nbaBlockRef}>
+              <NextBestActionZone items={nextBestActions} />
             </div>
           </div>
         )}
@@ -926,11 +926,7 @@ function RecordHeader({
                   one below, just repositioned to the end (this redesign
                   pass). Never duplicated content, never a second copy with
                   different data — see the file header's NBA note. */}
-              {hasNBA && (
-                <div className="flex flex-col gap-[8px]">
-                  {nextBestActions.map(nba => <NextBestActionBlock key={nba.id} nba={nba} />)}
-                </div>
-              )}
+              {hasNBA && <NextBestActionZone items={nextBestActions} />}
 
             </div>
           </div>
@@ -964,6 +960,38 @@ function RecordHeader({
 //     Same principle AgenticSystemItem already follows ("color lives in
 //     the icon, never in the button").
 //   - Trailing chevron is neutral (--field-supporting) too, not purple.
+//
+// Correction pass — N items use the SAME disclosure pattern as Your
+// Intervention (InterventionZoneContent below): the most prioritized item
+// always renders full-size, the rest collapse behind "Show N more" /
+// "Show less" instead of all stacking open at once (verified against the
+// Figma file's own multi-NBA node — the revealed extras render as the SAME
+// full NextBestActionBlock, not HTL's compact bordered row, since NBA
+// items carry a title+description HTL's single-line items don't). Caps
+// at 3 revealed extras like HTL does, for the same reason — if this ever
+// needs a "View all" escape hatch beyond that, it isn't built yet (not
+// requested), same "flag rather than silently truncate" rule HTL follows.
+function NextBestActionZone({ items }: { items: NextBestAction[] }) {
+  const [showMore, setShowMore] = useState(false)
+  if (items.length === 0) return null
+  const [primary, ...rest] = items
+  const visibleRest = rest.slice(0, 3)
+  return (
+    <div className="flex flex-col gap-[8px]">
+      <NextBestActionBlock nba={primary} />
+      {visibleRest.length > 0 && (
+        <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
+          {showMore ? "Show less" : `Show ${visibleRest.length} more`}
+          {showMore
+            ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
+            : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
+        </Button>
+      )}
+      {showMore && visibleRest.map(nba => <NextBestActionBlock key={nba.id} nba={nba} />)}
+    </div>
+  )
+}
+
 function NextBestActionBlock({ nba }: { nba: NextBestAction }) {
   return (
     <button
@@ -1014,12 +1042,14 @@ function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
     )
   }
 
+  // Correction pass — flex, not a 2-column grid: a grid with sm:grid-cols-2
+  // still reserves 2 equal tracks even when only 1 item renders (Employee
+  // is workflow-only per Thom's rule: "solo workflows por ahora" — no
+  // agent), leaving the second track empty instead of letting the lone
+  // item fill the row. flex-1 on each item means 1 item = full width, 2
+  // items = even split, with no per-count branching needed.
   return (
-    // Task 1 (Block 1, this pass) — Active Workflow + Last Agent lay out
-    // side by side on any width that can fit them (grid, not a flex-col
-    // stack), so the zone actually uses the card's available width instead
-    // of wasting it on 2 stacked full-width rows.
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-[8px]">
+    <div className="flex flex-col sm:flex-row gap-[8px]">
       {state.activeWorkflow && (
         <AgenticSystemItem
           icon={<Workflow size={16} strokeWidth={1.75} />}
@@ -1027,6 +1057,7 @@ function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
           name={state.activeWorkflow.name}
           onOpen={state.activeWorkflow.onOpen}
           tooltip={`Open "${state.activeWorkflow.name}" — steps, timeline, and who's running it`}
+          className="flex-1"
         />
       )}
       {state.lastAgent && (
@@ -1036,6 +1067,7 @@ function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
           name={state.lastAgent.name}
           onOpen={state.lastAgent.onOpen}
           tooltip={`Open ${state.lastAgent.name}'s latest session — summary, finding, and recommendation`}
+          className="flex-1"
         />
       )}
     </div>
@@ -1048,12 +1080,14 @@ function AgenticSystemItem({
   name,
   onOpen,
   tooltip,
+  className,
 }: {
   icon: React.ReactNode
   iconVariant: "light-blue" | "lime"
   name: string
   onOpen?: () => void
   tooltip: string
+  className?: string
 }) {
   return (
     // Task 2 (Block 1, this pass) — a plain card BORDER, not the
@@ -1064,7 +1098,7 @@ function AgenticSystemItem({
     // hardcoded), just not the component itself. Color still lives only in
     // HighlightIcon; this border is neutral.
     <div
-      className="rounded-[8px] border-[0.5px] p-[12px]"
+      className={cn("rounded-[8px] border-[0.5px] p-[12px] min-w-0", className)}
       style={{ background: "var(--card-default-bg)", borderColor: "var(--card-default-border)" }}
     >
       <div className="flex items-center gap-[8px]">

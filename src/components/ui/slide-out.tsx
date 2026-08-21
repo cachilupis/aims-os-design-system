@@ -113,6 +113,13 @@ export interface SlideOutProps {
   // ── CTA footer (with-variants only) ──────────────────────────────────────
   /** DS prop: cta. Show bottom action buttons. Default: true */
   showCta?: boolean
+  /**
+   * Additive — a footer with a single action (nothing to reject/skip,
+   * e.g. a read-only recommendation's own "Apply") omits the secondary
+   * button instead of forcing a placeholder one just to fill the pair.
+   * Default: true (unchanged 2-button footer).
+   */
+  showCtaSecondary?: boolean
   ctaPrimaryLabel?: string
   ctaSecondaryLabel?: string
   onCtaPrimary?: () => void
@@ -157,6 +164,7 @@ export function SlideOut({
   onChipChange,
   children,
   showCta = true,
+  showCtaSecondary = true,
   ctaPrimaryLabel = "Button",
   ctaSecondaryLabel = "Button",
   onCtaPrimary,
@@ -525,13 +533,15 @@ export function SlideOut({
       {/* ── CTA footer — DS Button component for correct hover states ─────── */}
       {isWithVariants && showCta && (
         <div className="flex gap-[8px] items-center justify-end shrink-0 w-full">
-          <Button
-            variant="secondary"
-            size={isM ? "default" : "sm"}
-            onClick={onCtaSecondary}
-          >
-            {ctaSecondaryLabel}
-          </Button>
+          {showCtaSecondary && (
+            <Button
+              variant="secondary"
+              size={isM ? "default" : "sm"}
+              onClick={onCtaSecondary}
+            >
+              {ctaSecondaryLabel}
+            </Button>
+          )}
           <Button
             variant="primary"
             size={isM ? "default" : "sm"}
