@@ -338,6 +338,12 @@ export interface InterventionItem {
   description: string
   severity: "high" | "medium" | "low"
   onReview: () => void
+  /** Short category label ("Access", "Compliance", ...) — what area this
+   *  intervention is about, at a glance. One word or two, never a sentence.
+   *  Rendered as a neutral Tag beside the item's own text, never a signal
+   *  color (amber/red already mean severity elsewhere in this zone). Omit
+   *  when the host has no category to give. */
+  contextTag?: string
 }
 
 // ── Your Intervention (Zone: YOUR INTERVENTION, conditional) ───────────────
@@ -381,6 +387,11 @@ export interface NextBestAction {
   title: string
   description: string
   onOpen: () => void
+  /** Short category label ("Renewal", "Coverage", ...) — what area this
+   *  action is about, at a glance. Same convention as InterventionItem's
+   *  own contextTag (neutral Tag, never a signal color — purple already
+   *  means "agent" on this card). Omit when the host has no category. */
+  contextTag?: string
 }
 
 // ── Assigned AI agent (transversal across entity types) ─────────────────────
@@ -442,6 +453,17 @@ export interface RecordHeaderProps {
   name: string
   /** What kind of record this is — icon + label, entirely host-defined. */
   entityType: RecordHeaderEntityType
+  /**
+   * A visible, temporary status on the CONTACT itself — "On Leave · Returns
+   * Mar 15," a maternity/parental leave, anything that changes how the
+   * viewer should read this record right now without being an error or a
+   * governance state (those are Your Intervention's job). Renders as a
+   * single Tag right beside entityType, always visible (same row, never
+   * gated by the zones disclosure). Neutral/amber only — never `error`
+   * (red): this is a state, not a problem. Omit entirely when the contact
+   * has nothing like this to show — most records, most of the time.
+   */
+  statusTag?: { label: string; icon?: LucideIcon }
   /** Zone: RECORD. Each field already carries provenance (Law 1) and a
    *  masking state (Law 4) — see RecordField's own doc comment. Omit or
    *  pass an empty array to skip the RECORD zone for this entity type. */
@@ -528,6 +550,7 @@ type ZoneKey = "agenticSystem" | "intervention"
 function RecordHeader({
   name,
   entityType,
+  statusTag,
   recordFields = [],
   assignedAgent,
   actions = [],
@@ -692,6 +715,20 @@ function RecordHeader({
                   </span>
                 </span>
               </Tooltip>
+              {/* Contact status — beside entityType, per its own doc comment.
+                  Neutral Tag, never a signal color: a temporary state (on
+                  leave, parental/medical leave, ...), not an error and not a
+                  governance state. */}
+              {statusTag && (
+                <Tag
+                  variant="neutral"
+                  size="sm"
+                  leadingIcon={statusTag.icon ? <statusTag.icon size={12} strokeWidth={1.75} /> : undefined}
+                  className="shrink-0"
+                >
+                  {statusTag.label}
+                </Tag>
+              )}
               {/* RECORD provenance trigger — lives beside the name, after
                   entity type (Figma order), not gated behind expand/collapse:
                   an icon-only Button variant="tertiary", same primitive
@@ -1025,9 +1062,18 @@ function NextBestActionBlock({ nba }: { nba: NextBestAction }) {
     >
       <HighlightIcon size="sm" variant="purple" icon={<Sparkle size={16} strokeWidth={1.75} />} className="shrink-0" />
       <div className="flex-1 flex flex-col gap-[2px] min-w-0">
-        <span className="block truncate text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
-          {nba.title}
-        </span>
+        <div className="flex items-center gap-[6px] min-w-0">
+          <span className="flex-1 truncate text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
+            {nba.title}
+          </span>
+          {/* One context Tag per NBA — what area this action is about, at a
+              glance ("Renewal", "Coverage", ...). Neutral, never a signal
+              color — purple already means "agent" on this card. Same
+              convention as Your Intervention's own contextTag. */}
+          {nba.contextTag && (
+            <Tag variant="neutral" size="sm" className="shrink-0">{nba.contextTag}</Tag>
+          )}
+        </div>
         <span className="text-[12px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>
           {nba.description}
         </span>
@@ -1254,9 +1300,17 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
       >
         <HighlightIcon size="sm" variant="alert" icon={<AlertTriangle size={16} strokeWidth={1.75} />} className="shrink-0" />
         <div className="flex-1 min-w-0">
-          <span className="block text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
-            {state.items.length} {state.items.length === 1 ? "action" : "actions"} awaiting review
-          </span>
+          <div className="flex items-center gap-[6px] min-w-0">
+            <span className="flex-1 truncate text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
+              {state.items.length} {state.items.length === 1 ? "action" : "actions"} awaiting review
+            </span>
+            {/* One context Tag per intervention — same convention as Next
+                Best Action's own contextTag. Neutral, never a signal color:
+                amber here already means "needs review" (Law 3). */}
+            {primary.contextTag && (
+              <Tag variant="neutral" size="sm" className="shrink-0">{primary.contextTag}</Tag>
+            )}
+          </div>
           <Tooltip content={primary.description} side="cursor" triggerClassName="block min-w-0">
             <span className="block truncate text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>
               {primary.description}
@@ -1294,6 +1348,9 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
                   {item.description}
                 </span>
               </Tooltip>
+              {item.contextTag && (
+                <Tag variant="neutral" size="sm" className="shrink-0">{item.contextTag}</Tag>
+              )}
               <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
                 <Button
                   variant="tertiary"
