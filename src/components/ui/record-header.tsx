@@ -46,6 +46,9 @@ import { Skeleton } from "@/components/ui/skeleton"
  *      and InterventionZoneContent's own doc comment.
  *   5. `RecordHeaderZoneLabels` lost `agenticSystem` (no heading left to
  *      translate) on top of `record` (already gone from the prior pass).
+ *      Closing pass, later still: `intervention` — its last remaining
+ *      entry — also lost its heading, so the whole `labels` prop/type is
+ *      now gone; there was nothing left for a host to translate.
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * ═══════════════════════════════════════════════════════════════════════════
@@ -104,10 +107,8 @@ import { Skeleton } from "@/components/ui/skeleton"
  *     first.
  *   Law 3 — HTL (human-in-the-loop) items are first-class states with their
  *     own calm, explanatory language — NEVER rendered as red errors. Every
- *     Your Intervention status (pending/empty/loading/no-permission/error/
- *     resolved-elsewhere) renders through InformativeCard's calm token
- *     families — "error" (red) is never used, even for the "error" status
- *     (that uses "alert"/amber, per explicit instruction).
+ *     Your Intervention status (pending/empty/loading) renders calmly —
+ *     "error" (red) is never used anywhere in this zone.
  *   Law 4 — PII resolves only at display-time, per viewer entitlements. A
  *     hydrated (real) field and a masked field are the SAME RecordField in
  *     2 states — see RecordField's own doc comment. This component renders
@@ -131,20 +132,21 @@ import { Skeleton } from "@/components/ui/skeleton"
  *     the end of the expanded zones while expanded. See NextBestAction's
  *     own doc comment and NextBestActionBlock.
  *   AGENTIC SYSTEM (expanded, no section heading — this redesign pass) →
- *     each item (Active Workflow / Last Agent) is a CardContainer
- *     (size="sm") with a HighlightIcon (size="sm", colored: light-blue =
- *     workflow, lime = agent) + a NEUTRAL tertiary Button — color lives in
- *     the icon, never in the button. Also renders "empty" (no
- *     workflow/agent yet) and "loading" (Skeleton) states.
- *   YOUR INTERVENTION (expanded, only if `intervention` is set) → renders
- *     one of 6 states through InformativeCard (size="sm", never red):
- *     pending (default, N items — most prioritized shown + a diagonal-
- *     arrow trigger that opens the real HTL view in a NEW TAB, never a
- *     same-page overlay; "Show N more" caps at 3 extra inline, "View all"
- *     is the separate always-present escape hatch — this redesign pass,
- *     see InterventionZoneContent's own doc comment) / empty / loading /
- *     no-permission (+ Escalate) / error / resolved-elsewhere. See
- *     PendingIntervention's own doc comment.
+ *     the Active Workflow item is a CardContainer (size="sm") with a
+ *     HighlightIcon (size="sm", light-blue) + a NEUTRAL tertiary Button —
+ *     color lives in the icon, never in the button. Also renders "empty"
+ *     (no workflow yet) and "loading" (Skeleton) states. No agent card here
+ *     — see AgenticSystemInfo's own doc comment for why.
+ *   YOUR INTERVENTION (expanded, only if `intervention` is set, no section
+ *     heading — closing pass, matching Agentic System's own plain-card
+ *     treatment) → renders one of 3 states, never red: pending (default,
+ *     N items — most prioritized shown + a diagonal-arrow trigger that
+ *     opens the real HTL view in a NEW TAB, never a same-page overlay;
+ *     "Show N more" caps at 3 extra inline, revealed BELOW the primary
+ *     item, with "View all" as the separate always-present escape hatch
+ *     positioned after every item — see InterventionZoneContent's own doc
+ *     comment) / empty / loading. See PendingIntervention's own doc
+ *     comment.
  *   RECORD → no expandable zone at all (moved out in the prior correction
  *     pass) — its trigger is the icon-only Button beside the name
  *     (Identity, above), always visible, opening the Data Provenance
@@ -317,37 +319,30 @@ export interface InterventionItem {
 
 // ── Your Intervention (Zone: YOUR INTERVENTION, conditional) ───────────────
 // A first-class HTL state (Law 3) — a discriminated union covering every
-// state this revision's edge-case gallery calls for, all rendered through
-// InformativeCard's calm token families (never the red "error" state):
+// state HTL can genuinely be in, never the red "error" state:
 //   status omitted or "pending" → `items: InterventionItem[]` (Block 3).
-//     The first item renders full-size and prioritized (severity feeds the
-//     Pending Decisions SlideOut's own display only — it does NOT change
-//     this card's visual treatment, which stays alert/amber regardless,
-//     that constancy IS Law 3); items[1:] collapse behind a "+N more"
-//     disclosure — see InterventionZoneContent's own doc comment for why
-//     that's a disclosure and NOT a carousel. Exactly 1 item renders with
-//     no counter at all — the counter only exists once there's something
-//     to count.
+//     The first item renders full-size and prioritized; items[1:] collapse
+//     behind a "+N more" disclosure — see InterventionZoneContent's own doc
+//     comment for why that's a disclosure and NOT a carousel. Exactly 1
+//     item renders with no counter at all — the counter only exists once
+//     there's something to count.
 //   "empty"             → genuinely nothing pending right now — a calm
 //     completion message, not an absent/broken zone.
 //   "loading"           → the NBA engine is still computing — Skeleton.
-//   "no-permission"     → this viewer can't approve; Review renders
-//     disabled (with a Tooltip explaining why) and, when `onEscalate` is
-//     given, an "Escalate" alternate action appears alongside it.
-//   "error"             → the last approve/dismiss attempt failed — amber
-//     InformativeCard (state="alert"), NEVER a red toast.
-//   "resolved-elsewhere"→ stale state: someone else already resolved this
-//     since the viewer last saw it — "Already resolved by {resolvedBy} ·
-//     {resolvedAgo}", no Approve/Review button (there's nothing left to do).
+// Closing pass — dropped "no-permission" / "error" / "resolved-elsewhere":
+// all 3 modeled an in-card approve/dismiss decision (a disabled "Review"
+// button, a "Retry" button, a resolved-inline confirmation) that no longer
+// exists now that every HTL item's only interaction is the diagonal arrow
+// opening the real HTL view in a NEW TAB — there is nothing left in this
+// card to approve, retry, or resolve. That governed decision now lives
+// entirely in the destination the arrow opens, not here. Recoverable from
+// git history if a future case needs this content model back.
 // Omitting the whole `intervention` prop (undefined) means this entity type
 // has genuinely nothing to show here right now — the zone omits entirely.
 export type PendingIntervention =
   | { status?: "pending"; items: InterventionItem[]; onViewAll?: () => void }
   | { status: "empty"; message?: string }
   | { status: "loading" }
-  | { status: "no-permission"; description: string; onEscalate?: () => void }
-  | { status: "error"; message: string; onRetry?: () => void }
-  | { status: "resolved-elsewhere"; resolvedBy: string; resolvedAgo: string; description: string }
 
 // ── Next Best Action (reintroduced, this redesign pass — NEW shape, not the
 // pre-governed-card Signal bar the file header's history note describes) ──
@@ -411,21 +406,6 @@ export interface RecordHeaderEntityType {
   label: string
 }
 
-// ── Zone labels (Block 4 — i18n-ready, never baked in) ─────────────────────
-// Every zone heading can be renamed/translated by the host. Defaults
-// preserve the existing English copy when the host doesn't override. No
-// `record` entry (RECORD's trigger lives beside the name, no heading) and
-// no `agenticSystem` entry either (this redesign pass — the reference
-// design shows the Workflow/Agent cards with no section title at all).
-// Your Intervention keeps its heading — only these 2 lost theirs.
-export interface RecordHeaderZoneLabels {
-  intervention?: string
-}
-
-const DEFAULT_ZONE_LABELS: Required<RecordHeaderZoneLabels> = {
-  intervention: "Your Intervention",
-}
-
 export interface RecordHeaderProps {
   /** The record's display name — e.g. a person's name or an account name. */
   name: string
@@ -471,8 +451,6 @@ export interface RecordHeaderProps {
    * debería restringir también estas superficies de solo lectura.
    */
   locked?: boolean
-  /** i18n-ready zone headings — see RecordHeaderZoneLabels's own doc comment. */
-  labels?: RecordHeaderZoneLabels
   className?: string
 }
 
@@ -528,12 +506,10 @@ function RecordHeader({
   onProvenanceOpen,
   defaultExpanded = false,
   locked = false,
-  labels,
   className,
 }: RecordHeaderProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const TypeIcon = entityType.icon
-  const zoneLabels = { ...DEFAULT_ZONE_LABELS, ...labels }
   const [primaryAction, ...overflowActions] = actions
   const hasNBA = nextBestActions.length > 0
 
@@ -917,16 +893,15 @@ function RecordHeader({
                 </div>
               )}
 
+              {/* No section heading here (closing pass) — the Figma design
+                  dropped "YOUR INTERVENTION" from above the HTL card,
+                  matching Agentic System's own plain-card treatment above. */}
               {hasIntervention && intervention && (
                 <div
                   ref={interventionZoneRef}
                   className="flex flex-col gap-[8px] rounded-[8px] transition-shadow duration-500"
                   style={{ boxShadow: highlightZone === "intervention" ? "0 0 0 2px var(--primary)" : "0 0 0 0px transparent" }}
                 >
-                  <span className="flex items-center gap-[4px] text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--tag-alert-fg)" }}>
-                    <AlertTriangle size={11} strokeWidth={1.75} />
-                    {zoneLabels.intervention}
-                  </span>
                   <InterventionZoneContent state={intervention} />
                 </div>
               )}
@@ -1168,43 +1143,6 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
     )
   }
 
-  if (state.status === "no-permission") {
-    return (
-      <InformativeCard
-        state="alert"
-        size="sm"
-        title="Review restricted — you don't have permission to approve this"
-        description={state.description}
-        cta={{ label: "Review", onClick: () => {}, disabled: true }}
-        ctaSecondary={state.onEscalate ? { label: "Escalate", onClick: state.onEscalate } : undefined}
-      />
-    )
-  }
-
-  if (state.status === "error") {
-    return (
-      <InformativeCard
-        state="alert"
-        size="sm"
-        title="Couldn't approve — something went wrong"
-        description={state.message}
-        cta={state.onRetry ? { label: "Retry", onClick: state.onRetry } : undefined}
-      />
-    )
-  }
-
-  if (state.status === "resolved-elsewhere") {
-    return (
-      <InformativeCard
-        state="neutral"
-        size="sm"
-        icon={<CheckCircle2 className="w-[24px] h-[24px]" />}
-        title={`Already resolved by ${state.resolvedBy} · ${state.resolvedAgo}`}
-        description={state.description}
-      />
-    )
-  }
-
   // "pending" (status omitted or explicitly "pending") — Block 3: N items,
   // most-prioritized first (see InterventionItem's own doc comment on sort
   // expectations). A "pending" status with an empty items array is a
@@ -1268,29 +1206,6 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
           />
         </Tooltip>
       </div>
-      {/* Figma fidelity pass — "Show N more" and "View all" sit at OPPOSITE
-          ends of the row (justify-between), not stacked together. "View
-          all" is a plain text tertiary Button, no icon — the new-tab
-          behavior is real on click, it just isn't signaled visually here
-          the way the per-item arrows signal it (verified against the
-          actual Figma node: "View all" renders as bare text). */}
-      {rest.length > 0 && (
-        <div className="flex items-center justify-between">
-          <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
-            {showMore ? "Show less" : `Show ${visibleRest.length} more`}
-            {showMore
-              ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
-              : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
-          </Button>
-          {state.onViewAll && (
-            <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
-              <Button variant="tertiary" size="sm" onClick={state.onViewAll} className="self-start">
-                View all
-              </Button>
-            </Tooltip>
-          )}
-        </div>
-      )}
       {/* Figma fidelity pass — the 3 extra items shown here render as the
           SAME bordered "Action Card" row AgenticSystemItem already uses
           (border + --card-default-bg), not a compact severity-tag row —
@@ -1325,12 +1240,39 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
           ))}
         </div>
       )}
-      {/* Items beyond the 3-extra cap are deliberately not rendered here —
-          "View all" above is the only way to reach them. DECISION FLAGGED —
-          hypothesis, not explicitly confirmed: if a host has >4 items total
-          and passes no onViewAll, there's currently no way to reach the
-          rest at all. // TODO: confirmar con Michael — ¿debería onViewAll
-          ser obligatorio cuando items.length > 4? */}
+      {/* Button position — BELOW every item, not between the primary and
+          the extras (closing pass, unifying with NextBestActionZone's own
+          layout — re-checked against the Figma node's expanded-state frame,
+          same reasoning as that zone's own "Button position" note). "Show
+          N more"/"Show less" and "View all" sit at OPPOSITE ends of the row
+          (justify-between), not stacked together. "View all" is a plain
+          text tertiary Button, no icon — the new-tab behavior is real on
+          click, it just isn't signaled visually here the way the per-item
+          arrows signal it (verified against the actual Figma node: "View
+          all" renders as bare text). Items beyond the 3-extra cap are
+          deliberately not rendered here — "View all" is the only way to
+          reach them. DECISION FLAGGED — hypothesis, not explicitly
+          confirmed: if a host has >4 items total and passes no onViewAll,
+          there's currently no way to reach the rest at all. // TODO:
+          confirmar con Michael — ¿debería onViewAll ser obligatorio cuando
+          items.length > 4? */}
+      {rest.length > 0 && (
+        <div className="flex items-center justify-between">
+          <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
+            {showMore ? "Show less" : `Show ${visibleRest.length} more`}
+            {showMore
+              ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
+              : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
+          </Button>
+          {state.onViewAll && (
+            <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
+              <Button variant="tertiary" size="sm" onClick={state.onViewAll} className="self-start">
+                View all
+              </Button>
+            </Tooltip>
+          )}
+        </div>
+      )}
     </div>
   )
 }
