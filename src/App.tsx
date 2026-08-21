@@ -33007,7 +33007,12 @@ type NbaTask =
   | { kind: "call"; contactName: string; contactRole: string; suggestedNote: string }
   | { kind: "email"; subject: string; bodyPreview: string }
 
-type NbaDynamicInput = { label: string; kind: "text" | "date"; placeholder: string }
+// Correction pass — 3 distinct input kinds, proving the dynamic layer
+// genuinely adapts per case rather than always being a text field: date
+// (approval/claim), text (call/email follow-ups), select (a bounded
+// choice — clinical priority, best time to reach). `options` only applies
+// to "select".
+type NbaDynamicInput = { label: string; kind: "text" | "date" | "select"; placeholder: string; options?: string[] }
 
 type NbaMock = {
   id: string
@@ -33039,6 +33044,8 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       description: "Sarah's role changed 2 weeks ago; the standard onboarding path for her new team includes a security training she hasn't started.",
       assignedTo: "David Kim", assignedToKind: "person", dueDate: "Sep 1, 2026", status: "Scheduled",
       recurrence: "Runs with every 30-day access check",
+      task: { kind: "email", subject: "Complete your Platform Infra security training", bodyPreview: "Hi Sarah,\n\nWelcome to Platform Infra! As part of the team's standard onboarding, there's a security training module that isn't showing as started yet — it takes about 45 minutes and covers the access patterns specific to this team.\n\nCould you get to it in the next couple weeks?\n\nThanks," },
+      dynamicInputs: [{ label: "Send copy to", kind: "text", placeholder: "Add manager or HRBP" }],
     },
   ],
   ucp: [
@@ -33064,6 +33071,8 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       id: "patient-nba-1", title: "Schedule a follow-up coagulation panel",
       description: "Given the flagged Warfarin/Aspirin interaction, a follow-up panel within 48 hours is recommended before discharge.",
       assignedTo: "Care Coordinator AI", assignedToKind: "agent", dueDate: "Aug 16, 2026", status: "In progress",
+      task: { kind: "call", contactName: "Inpatient Lab Services", contactRole: "4B-112 · Internal Medicine", suggestedNote: "Schedule a follow-up coagulation panel for Elena Vasquez within 48 hours, per the flagged Warfarin/Aspirin interaction — before the next dose if possible." },
+      dynamicInputs: [{ label: "Priority", kind: "select", placeholder: "Select a priority", options: ["Routine", "Urgent", "STAT"] }],
     },
   ],
   claim: [
@@ -33071,6 +33080,8 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       id: "claim-nba-1", title: "Request the missing parts invoice now",
       description: "Closing this documentation gap early could shave 3-5 days off the payout timeline once supervisor sign-off clears.",
       assignedTo: "Claims Copilot AI", assignedToKind: "agent", dueDate: "Aug 6, 2026", status: "Not started",
+      task: { kind: "email", subject: "Missing parts invoice — Claim CLM-48821", bodyPreview: "Hi team,\n\nWe're finishing adjudication on Claim CLM-48821 and the itemized parts-sourcing breakdown from your last estimate is still missing. Could you send that over so we can close out the payout?\n\nThanks," },
+      dynamicInputs: [{ label: "Follow-up reminder", kind: "date", placeholder: "If no response by this date" }],
     },
   ],
   borrower: [
@@ -33078,9 +33089,16 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       id: "borrower-nba-1", title: "Offer a co-signer option",
       description: "Applicants with a similar debt-to-income profile who added a co-signer saw approval odds increase by roughly 30%.",
       assignedTo: "Underwriting Copilot", assignedToKind: "agent", dueDate: "Aug 14, 2026", status: "Not started",
+      task: { kind: "call", contactName: "Jordan Ellis", contactRole: "Personal Loan Applicant", suggestedNote: "DTI is above the automated approval line — applicants with a similar profile who added a co-signer saw approval odds increase by roughly 30%. Worth raising as an option before the underwriter review." },
+      dynamicInputs: [{ label: "Best time to reach", kind: "select", placeholder: "Select a time of day", options: ["Morning", "Afternoon", "Evening"] }],
     },
   ],
   repairOrder: [
+    // Correction pass — deliberately the ONE remaining "type not yet
+    // modeled" example (every other NBA now has a real type: approval,
+    // call, or email) — a service upsell offer doesn't cleanly map to any
+    // of the 3 built so far, which is exactly the case this fallback
+    // exists to demonstrate: valid to show, just not the common case.
     {
       id: "repairOrder-nba-1", title: "Bundle the cabin air filter while it's in the bay",
       description: "This vehicle is due for that service within 500 miles — bundling it now saves the customer a second visit.",
@@ -33501,12 +33519,18 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   // NBA and Pending Decisions are 2 distinct SlideOuts that can't share
   // one resolved flag).
   const [rhNbaApprovalResult, setRhNbaApprovalResult] = useState<"confirmed" | "rejected" | null>(null)
+  // NBA Layer 3 (dynamic inputs) — the "select" kind's own open/value
+  // state, same Select+Menu pattern the repo's own Select Playground
+  // already uses. At most 1 select input per task, so one shared pair
+  // (keyed by input index, in case that ever changes) is enough.
+  const [rhNbaSelectOpenIdx, setRhNbaSelectOpenIdx] = useState<number | null>(null)
+  const [rhNbaSelectValues, setRhNbaSelectValues] = useState<Record<number, string>>({})
 
-  // Contextual "···" menus for read-only SlideOut headers (Workflow / Agent)
-  // — replaces the generic edit pencil. Anchored the same way every other
-  // overflow menu on this page already is: capture the trigger's rect on
-  // click, dismiss on backdrop click. See HeaderContextMenu below.
-  const [rhWorkflowMenuAnchor, setRhWorkflowMenuAnchor] = useState<{ left: number; top: number } | null>(null)
+  // Contextual "···" menu for the Last Agent SlideOut header — replaces the
+  // generic edit pencil. Anchored the same way every other overflow menu on
+  // this page already is: capture the trigger's rect on click, dismiss on
+  // backdrop click. See HeaderContextMenu below. Active Workflow's own menu
+  // (correction pass) was replaced by a direct footer CTA — see its SlideOut.
   const [rhAgentMenuAnchor, setRhAgentMenuAnchor] = useState<{ left: number; top: number } | null>(null)
 
   // Governed decisions require explicit confirmation, never one-click (per
@@ -33563,7 +33587,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     }
   }
 
-  const rhOpenNba = (v: RhDemoKey, itemId: string) => { setRhOpenVariant(v); setRhNbaItemId(itemId); setRhNbaOpen(true); setRhNbaApprovalResult(null) }
+  const rhOpenNba = (v: RhDemoKey, itemId: string) => {
+    setRhOpenVariant(v); setRhNbaItemId(itemId); setRhNbaOpen(true); setRhNbaApprovalResult(null)
+    setRhNbaSelectOpenIdx(null); setRhNbaSelectValues({})
+  }
   // Redesign pass — the protagonist block. Real, per-item onOpen (not a
   // shared callback for the whole record), same reasoning as Your
   // Intervention above: each NBA needs its own id in scope for the detail
@@ -33944,7 +33971,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               {[
                 ["\"Ask about {name}\" / \"Ask AI\"", "SidePanel", "Chat with assignedAgent — PLACEHOLDER body only (// TODO: reemplazar con el componente de Chat cuando exista en el repo). No Chat component exists anywhere in src/components/ui/ yet, checked directly. SidePanel (not SlideOut) — docked, no backdrop, page stays visible/usable underneath."],
                 ["Identity Tags (agent/workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow/agent → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone itself (a Button, or the HTL item's own diagonal-arrow trigger)."],
-                ["Active Workflow", "SlideOut", "AI Summary, Details (Started/Next Trigger/Total Runs), Steps (ProcessItem), Recent Runs list. \"···\" menu (View in Agentic Studio) instead of an edit pencil — read-only content. Tooltip on hover explains the destination before clicking."],
+                ["Active Workflow", "SlideOut", "AI Summary, status Tag + \"Step N of total\" progress, a surfaced blocker when status is \"blocked,\" Details (Started/Next Milestone/Total Runs), Steps (ProcessItem), Recent Runs list. Footer CTA \"Go to workflow\" (correction pass — replaced the \"···\" menu, one click instead of two)."],
                 ["Last Agent", "SlideOut", "AI Summary (session summary), Agent's Latest Finding, Recent Activity list, and a Recommendation modeled to expose an action (actionLabel/onAction). Same \"···\" menu treatment as Active Workflow. Tooltip on hover explains the destination before clicking."],
                 ["Next Best Action", "SlideOut", "Redesign pass — opens the NBA's own detail panel (Sparkle icon, dark-purple iconBg). Full 3-layer task structure: base (always present) → type-specific (Approval/Call/Email, a growing set) → dynamic inputs. See \"This refinement 9\" on the Reference tab."],
                 ["HTL item diagonal arrow (Your Intervention)", "New browser tab", "Redesign pass — every pending item's ArrowUpRight trigger (never a labeled \"Review\" button) opens the real HTL view in a NEW TAB, never a same-page overlay — Tooltip always says so (OPEN_HTL_TOOLTIP). This demo has no dedicated HTL/Agentic Studio page yet (checked directly), so it opens a new tab to this same page as a truthful placeholder — // TODO: point at the real destination once one exists. The \"Pending Decisions\" SlideOut + ModalDialog approve/dismiss flow still exists in this demo's code and is real, but is now only reachable from the Flows walkthrough section below, not from a live card's HTL item."],
@@ -33967,7 +33994,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 Every panel this card opens (the chat SidePanel, and the Active Workflow / Last Agent / Pending Decisions / Data Provenance SlideOuts) composes its content with the same primitives documented on the "SlideOut/SidePanel — Content" pattern page: a Section Title row (11px semibold uppercase, <code>--field-label</code>, 32px min-height) introduces each content block — never an ad-hoc heading. AI-generated content (Workflow's own summary, Agent's session summary) uses the pattern's real AI Summary card (purple, Sparkles icon) — always first, per its documented content order. Recent Runs / Recent Activity / Similar Past Decisions are List Sections — resolved items get a status Tag, never a badge + button combined. Severity Tags (e.g. Pending Decisions' "HIGH"/"MEDIUM") always render compact/inline, wrapped in their own non-flex container so the parent's <code>flex-col</code> layout can't stretch them full-width.
               </p>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Header actions are contextual, not a fixed set.</strong> No generic edit pencil anywhere — read-only content (Active Workflow, Last Agent) gets a "···" menu (MoreHorizontal) with actions that actually apply to that content ("View in Agentic Studio," marked <code>// TODO</code> pending a real destination); a pure viewer with nothing further to do (Data Provenance) or a panel whose real actions already live in its footer CTAs (Pending Decisions) gets no header action at all. Close is always present.
+                <strong>Header actions are contextual, not a fixed set.</strong> No generic edit pencil anywhere. Active Workflow's one obvious next step ("Go to workflow") is a direct footer CTA (correction pass — was a "···" menu, now the SlideOut's own default bottom-CTA pattern, still marked <code>// TODO</code> pending a real destination). Last Agent keeps a "···" menu (MoreHorizontal) — it has no single obvious destination the way a workflow does, so "View agent in Agentic Studio" stays a secondary, contextual action rather than earning the primary footer slot. A pure viewer with nothing further to do (Data Provenance) or a panel whose real actions already live in its footer CTAs (Pending Decisions, NBA) gets no header action at all. Close is always present.
               </p>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
                 <strong>Every Tooltip in this card is <code>side="cursor"</code></strong> — the only Tooltip mode with real viewport-edge flip (see tooltip.tsx's own header comment); the default fixed sides don't reposition and will clip near an edge.
@@ -34195,7 +34222,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               {[
                 ["1 · Base", "Common to every task, regardless of type — always rendered. Title + rationale (\"Why this\"), a system-suggested signal (this was generated, not created manually), who it's assigned to (agent or person), due date, status, and periodicity when the task recurs."],
                 ["2 · Type-specific", "Renders differently per task type. Only 3 types are modeled so far — Approval, Call, Email — and this list GROWS as new actions are built (Edgardo); it's a lookup by kind, not a fixed enum baked into the SlideOut's own layout. A task with no modeled type yet falls back to a plain \"not yet modeled\" notice instead of guessing."],
-                ["3 · Dynamic inputs", "The runtime inputs the action needs, meant to reuse the Workflow Builder node input pattern (date / text / confirmation). Less protagonist than HTL's own dynamic layer — one representative example per typed task, not a full input set. // TODO: reciclar input de nodos — no such component exists in this repo yet (checked directly: \"Workflow Builder UI\" is only named in an effort-estimation table, never implemented), so this reuses Input styled the same way a node input would be."],
+                ["3 · Dynamic inputs", "The runtime inputs the action needs, meant to reuse the Workflow Builder node input pattern. 3 distinct kinds are represented — date (Approval, Claim's follow-up reminder), text (Call's callback window, Employee's \"send copy to,\" Meridian's CC), select (Healthcare's priority, Banking's best-time-to-reach) — proving the layer genuinely adapts, not just relabeling the same text field. Less protagonist than HTL's own dynamic layer — one representative example per typed task, not a full input set. // TODO: reciclar input de nodos — no such component exists in this repo yet (checked directly: \"Workflow Builder UI\" is only named in an effort-estimation table, never implemented), so this reuses Input/Select styled the same way a node input would be."],
               ].map(([layer, desc]) => (
                 <div key={layer} className="grid grid-cols-[100px_1fr] border-b border-[var(--table-border)] last:border-0">
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{layer}</div>
@@ -34210,9 +34237,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Approval", "UEP — Sarah Chen's \"Scope down Sarah's Admin access\" NBA. What's changing + its context, Confirm/Reject — a human decision, no agent involved."],
-                ["Call", "UCP — Acme Corp's \"Offer a proactive check-in call\" NBA. Contact (Jane Doe · VP Operations) + a suggested talking point, \"Assign call to agent\" / \"Schedule call\" — the agent places the call, never a same-second \"Call now.\""],
-                ["Email", "UVP — Meridian Logistics' \"Flag the insurance renewal 30 days out\" NBA. Subject + body preview (Text Description) drafted by the agent, \"Approve send\" / \"Edit\" — the human governs, doesn't type-and-send."],
+                ["Approval", "UEP — Sarah Chen's \"Scope down Sarah's Admin access.\" What's changing + its context, Confirm/Reject (footer) — a human decision, no agent involved. Date input (effective date)."],
+                ["Call", "UCP — Acme's \"proactive check-in call\" (text input); Healthcare — Elena's \"coagulation panel\" (select: priority); Banking — Jordan's \"co-signer option\" (select: best time to reach). Contact + a suggested talking point, \"Assign call to agent\" / \"Schedule call\" (footer) — the agent places the call, never a same-second \"Call now.\""],
+                ["Email", "UVP — Meridian's \"insurance renewal\" (text input); Employee — Sarah's \"security training\" reminder (text input); Insurance — Diane's \"missing parts invoice\" (date input). Subject + body preview (Text Description) drafted by the agent, \"Approve send\" / \"Edit\" (footer) — the human governs, doesn't type-and-send."],
+                ["Not yet modeled", "Automotive — Devon's \"bundle the cabin air filter\" — the ONE remaining example of this fallback (correction pass reduced 5 of 6 to a real type; this is the case that's genuinely valid to show, just not the common one)."],
               ].map(([type, ex]) => (
                 <div key={type} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0">
                   <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{type}</div>
@@ -34250,6 +34278,35 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">This refinement 11 — investigation, NBA content variety, Show N more position, Workflow footer CTA</p>
+            <div className="rounded-md px-[14px] py-[12px] mb-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>Investigated before touching anything (per this pass's own instruction not to blindly repeat a prior fix):</strong> Employee/Sarah was reported as still showing an agent after 3 corrections. Traced every code path — <code>RH_HAS_AGENT.uep</code> is <code>false</code>, gating both <code>assignedAgent</code> (identity trigger renders disabled) and <code>agenticSystem.lastAgent</code> (omitted entirely) — and verified live on the actual PR preview URL: Sarah's card shows only the Access Recertification workflow, full-width, "Ask about Sarah" disabled. No code path renders an agent for Employee. The one stray reference was a closed, off-screen SlideOut's default title prop falling back to <code>RH_AGENT_DETAILS.uep.agentName</code> ("People Sync") before any panel is opened — inert DOM content, never visible, not the reported symptom. Most likely explanation: a stale cache or the production URL instead of this branch's preview (this session hit that exact mix-up once already, earlier in the conversation).
+              </p>
+            </div>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[24px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Change"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "5 of 6 \"type not yet modeled\" NBAs got a real type — Employee's 2nd NBA and Insurance's now Email, Healthcare's and Banking's now Call — leaving exactly 1 fallback example (Automotive), down from a majority. Dynamic inputs now cover 3 distinct kinds (date/text/select, not just date/text) — a new Select-kind input reuses the repo's own Select + Menu/MenuItem pattern (same one the Select component's own Playground uses), proving the layer genuinely adapts per case."],
+                ["2", "\"Show N more\" / \"Show less\" moved from between the primary card and the revealed extras to BELOW all of them — re-checked against the Figma node's own expanded-state frame, which puts the button after the full stack. The earlier position had copied HTL's code layout without re-verifying this pattern's own Figma order specifically."],
+                ["3", "Active Workflow's header \"···\" dropdown (View in Agentic Studio, one hidden click away) replaced with a direct footer CTA (\"Go to workflow\") — the SlideOut's own default bottom-CTA pattern, single-action (showCtaSecondary={false}). Last Agent keeps its \"···\" menu — it has no one obvious destination the way a workflow does."],
+              ].map(([n, change], i) => (
+                <div key={n} className="grid grid-cols-[24px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{change}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
+              Not touched this pass (already correct, re-verified only): the NBA slideout's 3-layer structure (Why this / Details / [type] / Configurable inputs + footer CTAs), single-item Agentic System full-width, and Active Workflow's status/progress/blocker/Next Milestone content — all from the prior 2 correction passes, still live on the deployed preview. HTL is explicitly out of scope for this pass.
+            </p>
           </section>
 
           <section>
@@ -34502,13 +34559,16 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
       )}
 
 
-      {/* ── Active Workflow detail — read-only, so no generic edit pencil.
-           topButton repurposed as a "···" contextual menu (MoreHorizontal)
-           instead — the one related action that plausibly applies to a
-           workflow you're only viewing. */}
+      {/* ── Active Workflow detail — read-only content, but "go look at the
+           real workflow" is a genuine, single, always-relevant next step —
+           correction pass replaces the "···" dropdown (View in Agentic
+           Studio, one hidden click away) with a direct footer CTA, the
+           SlideOut's own default bottom-CTA pattern, so it's one click
+           instead of two. Single-action footer (showCtaSecondary={false}),
+           same reasoning as the Agent SlideOut's "Apply recommendation". */}
       <SlideOut
         open={rhWorkflowOpen}
-        onClose={() => { setRhWorkflowOpen(false); setRhWorkflowMenuAnchor(null) }}
+        onClose={() => setRhWorkflowOpen(false)}
         type="with-variants"
         size="m"
         title={openWorkflow.name}
@@ -34519,12 +34579,12 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         showTabs={false}
         showSearchBar={false}
         showChips={false}
-        showCta={false}
-        topButtonIcon={<LucideIcons.MoreHorizontal size={14} />}
-        onTopButtonClick={e => {
-          const rect = e.currentTarget.getBoundingClientRect()
-          setRhWorkflowMenuAnchor(prev => (prev ? null : { left: rect.right - 220, top: rect.bottom + 4 }))
-        }}
+        showCta
+        showCtaSecondary={false}
+        ctaPrimaryLabel="Go to workflow"
+        // TODO: confirmar navegación real a Agentic Studio — no destination exists yet.
+        onCtaPrimary={() => setRhWorkflowOpen(false)}
+        showTopButton={false}
       >
         <div className={PANEL_CONTENT_CLASS}>
           {/* AI Summary — always first, per the Content pattern's documented
@@ -34603,18 +34663,14 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </div>
         </div>
       </SlideOut>
-      <HeaderContextMenu
-        anchor={rhWorkflowMenuAnchor}
-        onDismiss={() => setRhWorkflowMenuAnchor(null)}
-        items={[
-          // TODO: confirmar navegación real a Agentic Studio
-          { label: "View in Agentic Studio", onClick: () => {} },
-        ]}
-      />
 
-      {/* ── Last Agent detail — read-only, same header-menu treatment as
-           Active Workflow above. Recommendation exposes a real action, not
-           just text. */}
+      {/* ── Last Agent detail — read-only, its own "···" menu (correction
+           pass keeps this one — the Workflow SlideOut above now uses a
+           footer CTA instead, but the Agent panel has no single obvious
+           "go to X" destination the way a workflow does; "View agent in
+           Agentic Studio" stays as the contextual, secondary action it
+           actually is). Recommendation exposes a real action, not just
+           text. */}
       <SlideOut
         open={rhAgentOpen}
         onClose={() => { setRhAgentOpen(false); setRhAgentMenuAnchor(null) }}
@@ -34993,9 +35049,37 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                       Builder node-input component exists in this repo yet
                       (checked directly: "Workflow Builder UI" is only named
                       in an estimation table, never implemented), so this
-                      reuses Input styled the same way a node input would be. */}
+                      reuses Input/Select styled the same way a node input
+                      would be. */}
                   {openNba.dynamicInputs.map((input, i) => (
-                    <Input key={i} type={input.kind === "date" ? "date" : "text"} placeholder={input.placeholder} supportingText="Configurable — set at runtime" />
+                    input.kind === "select" ? (
+                      <div key={i} className="relative">
+                        <Select
+                          placeholder={input.placeholder}
+                          value={rhNbaSelectValues[i]}
+                          open={rhNbaSelectOpenIdx === i}
+                          onClick={() => setRhNbaSelectOpenIdx(prev => (prev === i ? null : i))}
+                          onClear={() => setRhNbaSelectValues(prev => { const next = { ...prev }; delete next[i]; return next })}
+                          supportingText="Configurable — set at runtime"
+                        />
+                        {rhNbaSelectOpenIdx === i && (
+                          <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[50]">
+                            <Menu className="w-full">
+                              {(input.options ?? []).map(opt => (
+                                <MenuItem
+                                  key={opt}
+                                  label={opt}
+                                  state={opt === rhNbaSelectValues[i] ? "focus" : "default"}
+                                  onClick={() => { setRhNbaSelectValues(prev => ({ ...prev, [i]: opt })); setRhNbaSelectOpenIdx(null) }}
+                                />
+                              ))}
+                            </Menu>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Input key={i} type={input.kind === "date" ? "date" : "text"} placeholder={input.placeholder} supportingText="Configurable — set at runtime" />
+                    )
                   ))}
                 </div>
               </>

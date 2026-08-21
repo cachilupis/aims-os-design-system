@@ -971,6 +971,13 @@ function RecordHeader({
 // at 3 revealed extras like HTL does, for the same reason — if this ever
 // needs a "View all" escape hatch beyond that, it isn't built yet (not
 // requested), same "flag rather than silently truncate" rule HTL follows.
+//
+// Button position — BELOW every card, not between the primary and the
+// extras. Re-checked against the Figma node's own expanded-state frame
+// (its "Show less" sits at the bottom of the whole stack, after all 3
+// NBA cards) — an earlier pass had copied HTL's own code layout (button
+// row before the revealed extras) instead of re-verifying this specific
+// pattern's actual Figma order, which put "Show less" in the middle.
 function NextBestActionZone({ items }: { items: NextBestAction[] }) {
   const [showMore, setShowMore] = useState(false)
   if (items.length === 0) return null
@@ -979,6 +986,7 @@ function NextBestActionZone({ items }: { items: NextBestAction[] }) {
   return (
     <div className="flex flex-col gap-[8px]">
       <NextBestActionBlock nba={primary} />
+      {showMore && visibleRest.map(nba => <NextBestActionBlock key={nba.id} nba={nba} />)}
       {visibleRest.length > 0 && (
         <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
           {showMore ? "Show less" : `Show ${visibleRest.length} more`}
@@ -987,7 +995,6 @@ function NextBestActionZone({ items }: { items: NextBestAction[] }) {
             : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
         </Button>
       )}
-      {showMore && visibleRest.map(nba => <NextBestActionBlock key={nba.id} nba={nba} />)}
     </div>
   )
 }
