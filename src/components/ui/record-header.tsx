@@ -271,24 +271,33 @@ export interface RecordField {
 }
 
 // ── Agentic System (Zone: AGENTIC SYSTEM) ───────────────────────────────────
-// A discriminated union, not just the 2 fixed slots — covers the full state
-// coverage this revision adds:
-//   status omitted or "ready" → normal rendering, both slots independently
-//     optional (a record can have a workflow but no agent, or vice versa).
-//   status "empty"  → this entity type uses the zone, but genuinely has
-//     neither a workflow nor an agent right now (e.g. a freshly imported
-//     record) — renders a calm "nothing yet" message, not a broken gap.
-//   status "loading" → the agent/workflow is still resolving — Skeleton
-//     rows, same footprint as the real content so layout doesn't jump.
+// A discriminated union covering the full state coverage this component
+// supports:
+//   status omitted or "ready" → normal rendering, activeWorkflow optional
+//     (status can be "ready" with nothing in it yet, though "empty" below
+//     is the real way to express that).
+//   status "empty"  → this entity type uses the zone, but genuinely has no
+//     workflow right now (e.g. a freshly imported record) — renders a calm
+//     "nothing yet" message, not a broken gap.
+//   status "loading" → the workflow is still resolving — Skeleton rows,
+//     same footprint as the real content so layout doesn't jump.
 // Omitting the whole `agenticSystem` prop (undefined) still means "this
 // entity type doesn't use this zone at all" — the zone doesn't render,
 // full stop (Block 4's conditional-zone rule).
+//
+// Product decision (closing pass) — `lastAgent` is REMOVED. Agentic System
+// showed a second "Last Agent" card (session summary/finding/
+// recommendation) alongside the workflow; that value — where a
+// suggestion came from, and what to do about it — is now fully carried by
+// Next Best Action itself (its own "System-suggested" signal + "Assigned
+// to" field), so a separate agent card here was redundant with it, not
+// complementary. This also retires the recurring "Employee still shows an
+// agent" report at the root: there is no more agent slot in this zone for
+// any vertical to show. // TODO: descartado — valor absorbido en NBA. The
+// "Last Agent" SlideOut this used to open is gone from the demo too (see
+// App.tsx) — recoverable from git history if a future case needs it back.
 export type AgenticSystemInfo =
-  | {
-      status?: "ready"
-      activeWorkflow?: { name: string; onOpen?: () => void }
-      lastAgent?: { name: string; onOpen?: () => void }
-    }
+  | { status?: "ready"; activeWorkflow?: { name: string; onOpen?: () => void } }
   | { status: "loading" }
   | { status: "empty"; message?: string }
 
@@ -1049,14 +1058,11 @@ function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
     )
   }
 
-  // Correction pass — flex, not a 2-column grid: a grid with sm:grid-cols-2
-  // still reserves 2 equal tracks even when only 1 item renders (Employee
-  // is workflow-only per Thom's rule: "solo workflows por ahora" — no
-  // agent), leaving the second track empty instead of letting the lone
-  // item fill the row. flex-1 on each item means 1 item = full width, 2
-  // items = even split, with no per-count branching needed.
+  // Agent removed from this zone (closing pass) — a workflow is the only
+  // thing left to show here, so it always renders full-width. No flex/grid
+  // multi-item logic needed anymore now that there's never more than 1.
   return (
-    <div className="flex flex-col sm:flex-row gap-[8px]">
+    <div className="flex flex-col gap-[8px]">
       {state.activeWorkflow && (
         <AgenticSystemItem
           icon={<Workflow size={16} strokeWidth={1.75} />}
@@ -1064,17 +1070,6 @@ function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
           name={state.activeWorkflow.name}
           onOpen={state.activeWorkflow.onOpen}
           tooltip={`Open "${state.activeWorkflow.name}" — steps, timeline, and who's running it`}
-          className="flex-1"
-        />
-      )}
-      {state.lastAgent && (
-        <AgenticSystemItem
-          icon={<Sparkle size={16} strokeWidth={1.75} />}
-          iconVariant="lime"
-          name={state.lastAgent.name}
-          onOpen={state.lastAgent.onOpen}
-          tooltip={`Open ${state.lastAgent.name}'s latest session — summary, finding, and recommendation`}
-          className="flex-1"
         />
       )}
     </div>
@@ -1090,7 +1085,7 @@ function AgenticSystemItem({
   className,
 }: {
   icon: React.ReactNode
-  iconVariant: "light-blue" | "lime"
+  iconVariant: "light-blue"
   name: string
   onOpen?: () => void
   tooltip: string
@@ -1226,24 +1221,53 @@ function InterventionZoneContent({ state }: { state: PendingIntervention }) {
     )
   }
 
-  // This redesign pass — every HTL item (primary and extras alike) gets the
-  // SAME diagonal-arrow trailing action, never a "Review" label: it opens
-  // the real HTL view in a NEW TAB (never redirects/reloads this page — the
-  // viewer keeps their place on this record), with a Tooltip saying so.
-  // "Show N more" caps at 3 extras inline (never all of them at once — see
-  // OPEN_HTL_TOOLTIP below); "View all" is the separate, always-available
-  // escape hatch to the full list, also a new tab.
+  // Every HTL item (primary and extras alike) gets the SAME diagonal-arrow
+  // trailing action, never a "Review" label, never a same-page overlay: it
+  // ALWAYS opens the real HTL view in a NEW TAB — no exceptions, no
+  // slideout anywhere in this zone (a same-page overlay for a governed
+  // decision was a real contradiction fixed in the closing pass; the
+  // viewer keeps their place on this record either way), with a Tooltip
+  // saying so. "Show N more" caps at 3 extras inline (never all of them at
+  // once — see OPEN_HTL_TOOLTIP below); "View all" is the separate,
+  // always-available escape hatch to the full list, also a new tab.
   const [primary, ...rest] = state.items
   const visibleRest = rest.slice(0, 3)
   return (
     <div className="flex flex-col gap-[8px]">
-      <InformativeCard
-        state="alert"
-        size="sm"
-        title={`${state.items.length} ${state.items.length === 1 ? "action" : "actions"} awaiting review`}
-        description={primary.description}
-        trailingIcon={{ icon: <ArrowUpRight size={16} strokeWidth={1.75} />, onClick: primary.onReview, "aria-label": "Open in a new tab", tooltip: OPEN_HTL_TOOLTIP }}
-      />
+      {/* Figma fidelity (closing pass) — the primary item is the SAME
+          bordered "Action Card" pattern as Agentic System's own item and
+          the revealed extras below, not InformativeCard's tinted surface
+          (the actual Figma HTL card is a neutral border + HighlightIcon,
+          confirmed directly against the file's own node). Calmer too —
+          Law 3 wants HTL never alarming, and a neutral card with one
+          amber icon reads calmer than a fully amber-tinted surface. */}
+      <div
+        className="flex items-start gap-[8px] p-[12px] rounded-[8px] min-w-0"
+        style={{ background: "var(--card-default-bg)", border: "0.5px solid var(--card-default-border)" }}
+      >
+        <HighlightIcon size="sm" variant="alert" icon={<AlertTriangle size={16} strokeWidth={1.75} />} className="shrink-0" />
+        <div className="flex-1 min-w-0">
+          <span className="block text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
+            {state.items.length} {state.items.length === 1 ? "action" : "actions"} awaiting review
+          </span>
+          <Tooltip content={primary.description} side="cursor" triggerClassName="block min-w-0">
+            <span className="block truncate text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>
+              {primary.description}
+            </span>
+          </Tooltip>
+        </div>
+        <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
+          <Button
+            variant="tertiary"
+            size="sm"
+            iconPosition="alone"
+            icon={<ArrowUpRight size={16} strokeWidth={1.75} />}
+            aria-label="Open in a new tab"
+            onClick={primary.onReview}
+            className="shrink-0"
+          />
+        </Tooltip>
+      </div>
       {/* Figma fidelity pass — "Show N more" and "View all" sit at OPPOSITE
           ends of the row (justify-between), not stacked together. "View
           all" is a plain text tertiary Button, no icon — the new-tab

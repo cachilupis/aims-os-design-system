@@ -2117,7 +2117,7 @@ const RECORD_HEADER_SPEC = {
     { name: "data",           type: "object",   values: ["UEPRecord | UCPRecord | UVPRecord"], default: "required" },
     { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "AIMS OS is agent-first as a default, but not every record has one — Employee is workflow-only by policy (\"solo workflows por ahora\"), same as Vendor and Banking in this file's own examples. Renders an always-present icon-only button (Sparkle, variant=\"main\"); null disables it with a Tooltip. RecordHeader never renders the chat UI itself." },
     { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as an optional primary CTA; actions[1+] land in the \"···\" overflow Menu. Omitted entirely by this demo since the Message CTA was removed (this correction pass)." },
-    { name: "agenticSystem",  type: "object",   values: ["AgenticSystemInfo — { activeWorkflow?: {name,onOpen?}, lastAgent?: {name,onOpen?} }"], default: "undefined", note: "Zone: AGENTIC SYSTEM, no section heading (redesign pass). Exactly 2 fixed slots, each a Button variant=\"tertiary\" with a leading icon (Workflow = light blue, Bot/agent = lime green — was purple) — never a colored card. Zone omitted entirely if neither slot is set." },
+    { name: "agenticSystem",  type: "object",   values: ["AgenticSystemInfo — { activeWorkflow?: {name,onOpen?} }"], default: "undefined", note: "Zone: AGENTIC SYSTEM, no section heading, workflow only (closing pass — the zone's own agent card was removed; that value is now fully carried by Next Best Action). A bordered card with a light-blue Workflow HighlightIcon + a bare icon-only chevron Button, always full-width. Zone omitted entirely if activeWorkflow isn't set (outside \"empty\"/\"loading\" statuses)." },
     { name: "intervention",   type: "object",   values: ["PendingIntervention — pending: { items: InterventionItem[], onViewAll? } — each { id, description, severity, onReview }"], default: "undefined", note: "Zone: YOUR INTERVENTION — only rendered when set (a real pending HTL decision). N items: most prioritized shown + \"Show N more\" (caps at 3 extra) + \"View all\". Every item's trigger is a diagonal ArrowUpRight opening the real HTL view in a NEW TAB (redesign pass — was a labeled \"Review\" button). Calm/informative styling ALWAYS, regardless of severity — Law 3." },
     { name: "nextBestActions", type: "Array", values: ["NextBestAction[] — { id, title, description, onOpen }"], default: "[]", note: "The protagonist block (redesign pass). Always visible, never gated by the disclosure — right under the identity tags collapsed, at the end of the zones expanded. Dark-purple surface, Sparkle icon. Omit/empty array skips it entirely." },
     { name: "onProvenanceOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens \"About this record\" (renamed from \"Data Provenance\" this redesign pass) for the RECORD zone — reached through the icon-only Button beside the name (moved there this redesign pass; used to be a labeled Button down in a RECORD zone that no longer exists). Fields never render inline." },
@@ -32778,97 +32778,24 @@ const RH_WORKFLOWS: Record<RhDemoKey, WorkflowDetail> = {
   },
 }
 
-type AgentDetail = {
-  agentName: string
-  sessionSummary: string
-  latestFinding: string
-  recommendation: { text: string; actionLabel?: string }
-  /** List Section — recent agent activity, same "denser content" goal as
-   *  the workflow's Recent Runs. */
-  recentActivity: { date: string; label: string }[]
-}
+// AgentDetail / RH_AGENT_DETAILS — REMOVED (closing pass). Backed the "Last
+// Agent" SlideOut (session summary/finding/recommendation), which is gone
+// along with the Agentic System agent card it opened from — see
+// AgenticSystemInfo's own doc comment in record-header.tsx for why.
+// Recoverable from git history if a future case needs this content model
+// back. // TODO: descartado — valor absorbido en NBA.
 
-const RH_AGENT_DETAILS: Record<RhDemoKey, AgentDetail> = {
-  uep: {
-    agentName: "People Sync",
-    sessionSummary: "Reviewed Sarah Chen's access grants against her current role and department after a lateral move into Platform Infra 2 weeks ago.",
-    latestFinding: "Sarah still holds Admin access to 2 repos outside Platform Infra's ownership boundary, granted under her prior team.",
-    recommendation: { text: "Scope Admin access down to Platform Infra's own repos; keep read access to the other 2 for continuity.", actionLabel: "Apply recommendation" },
-    recentActivity: [
-      { date: "Aug 13, 2026", label: "Flagged Billing repo grant for manager review" },
-      { date: "Jul 30, 2026", label: "Reconciled role change with Workday" },
-      { date: "Jul 16, 2026", label: "Ran scheduled 30-day access check — no findings" },
-    ],
-  },
-  ucp: {
-    agentName: "Renewal Copilot",
-    sessionSummary: "Monitored Acme Corp's product usage and support signals in the 90 days leading up to renewal.",
-    latestFinding: "Seat utilization dropped 18% after the Q2 reorg, and 2 support tickets cite the reporting module as a blocker.",
-    recommendation: { text: "Offer a seat-count true-down at renewal paired with a reporting-module walkthrough, rather than a flat renewal.", actionLabel: "Draft renewal proposal" },
-    recentActivity: [
-      { date: "Aug 1, 2026", label: "Flagged renewal risk to CSM" },
-      { date: "Jul 20, 2026", label: "Linked 2 support tickets to churn risk" },
-    ],
-  },
-  uvp: {
-    agentName: "Procurement Copilot",
-    sessionSummary: "Cross-checked Meridian Logistics' certifications and spend pattern ahead of its annual requalification window.",
-    latestFinding: "Insurance certificate renewed on time, but YTD spend is trending 22% above the contracted cap.",
-    recommendation: { text: "Flag the spend overage to the category manager before requalification is approved.", actionLabel: "Notify category manager" },
-    recentActivity: [
-      { date: "Jul 14, 2026", label: "Verified renewed insurance certificate" },
-      { date: "Jun 30, 2026", label: "Requested updated compliance documents" },
-    ],
-  },
-  patient: {
-    agentName: "Care Coordinator AI",
-    sessionSummary: "Reviewed Elena Vasquez's medication list against 2 new prescriptions ordered during this admission.",
-    latestFinding: "The new prescription for Warfarin has a known interaction with an existing Aspirin regimen already on file.",
-    recommendation: { text: "Flag the Warfarin/Aspirin interaction to the attending physician before the next dose is administered.", actionLabel: "Notify attending physician" },
-    recentActivity: [
-      { date: "Aug 14, 2026", label: "Flagged Warfarin/Aspirin interaction for physician review" },
-      { date: "Aug 14, 2026", label: "Reconciled admission medication list with Epic" },
-    ],
-  },
-  claim: {
-    agentName: "Claims Copilot AI",
-    sessionSummary: "Reviewed Diane Ostrowski's claim (CLM-48821) coverage and loss details against the policy on file.",
-    latestFinding: "The estimated payout of $18,400 exceeds Renee Castillo's $10,000 standing adjuster authority.",
-    recommendation: { text: "Route the payout to a supervisor for sign-off before releasing funds.", actionLabel: "Notify supervisor" },
-    recentActivity: [
-      { date: "Aug 3, 2026", label: "Verified coverage against policy POL-77-4821" },
-      { date: "Aug 2, 2026", label: "Logged first notice of loss" },
-    ],
-  },
-  borrower: {
-    agentName: "Underwriting Copilot",
-    sessionSummary: "Scored Jordan Ellis's loan application against the standard risk model.",
-    latestFinding: "Debt-to-income ratio of 42% is above the 38% automated approval threshold.",
-    recommendation: { text: "Flag the DTI exception to an underwriter before a decision is issued.", actionLabel: "Notify underwriter" },
-    recentActivity: [
-      { date: "Aug 10, 2026", label: "Flagged DTI exception for underwriter review" },
-      { date: "Aug 10, 2026", label: "Pulled credit report from Experian" },
-    ],
-  },
-  repairOrder: {
-    agentName: "Service Advisor Copilot",
-    sessionSummary: "Tracked Devon Marsh's repair order (RO #48213) diagnostic findings against the pre-authorized repair budget.",
-    latestFinding: "A worn control arm found during diagnostic adds $640 beyond the $2,200 pre-authorized budget.",
-    recommendation: { text: "Get customer sign-off on the additional $640 before continuing the repair.", actionLabel: "Request customer sign-off" },
-    recentActivity: [
-      { date: "Aug 16, 2026", label: "Flagged additional worn component during diagnostic" },
-      { date: "Aug 16, 2026", label: "Completed initial vehicle diagnostic" },
-    ],
-  },
-}
-
-// Block 3 (this pass) — Your Intervention can carry N items per record now,
-// not just 1 (see InterventionItem in record-header.tsx). Each entry here
-// carries its own Pending Decisions detail (detail/requestedBy/impact/
-// history) — `onReview` isn't wired per-item at the mock-data level since
-// it needs the item's own id in scope (see rhIntervention/rhOpenReview
-// below, which build the real InterventionItem[] and attach onReview per
-// item).
+// Your Intervention can carry N items per record (see InterventionItem in
+// record-header.tsx). `onReview` isn't wired per-item at the mock-data
+// level since it needs the item's own id in scope (see rhIntervention
+// below, which builds the real InterventionItem[] and attaches onReview
+// per item — always rhOpenHtlNewTab, HTL never opens a slideout).
+// detail/requestedBy/impact/history used to feed a "Pending Decisions"
+// SlideOut that lived on THIS page; that SlideOut is gone (closing pass —
+// HTL always opens in a new tab, no exceptions), so these 4 fields are
+// currently unused by any UI here. Left in place as realistic context for
+// whatever the real HTL destination ends up rendering — not dead in the
+// sense of "delete," just not wired to this demo anymore.
 type InterventionMock = {
   id: string
   description: string
@@ -32976,10 +32903,9 @@ const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
 // scope, see rhNextBestActions below. UEP carries 2, to demonstrate the N
 // case (the reference brief explicitly calls for supporting more than 1).
 //
-// This correction pass (call with Edgardo, infra) — an NBA is a TASK with a
-// 3-layer structure, and the task's own detail SlideOut converges with
-// HTL's (see the Pending Decisions SlideOut below — same Section-Title/
-// Details-grid primitives reused here, not reinvented):
+// An NBA is a TASK with a 3-layer structure (call with Edgardo, infra),
+// and the task's own detail SlideOut converges with HTL's — same
+// Section-Title/Details-grid primitives, not reinvented:
 //   Layer 1 — base: common to every task regardless of type. Always
 //     present: title/description (rendered above, in the SlideOut header
 //     and "Why this"), a system-origin signal (this was suggested, not
@@ -33003,10 +32929,16 @@ const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
 //     input set.
 type NbaTaskKind = "approval" | "call" | "email"
 
+// `outcome` on Call/Email — the 2 closures Edgardo defined for an executed
+// task: "immediate" resolves right away (no further gate); "governed"
+// still routes through a sign-off before it actually takes effect, same
+// spirit as an HTL item, just scoped to this one task instead of the
+// whole record. Approval doesn't need this field — Confirm/Reject IS the
+// governance step, there's no further gate after it.
 type NbaTask =
   | { kind: "approval"; whatChanges: string; context: string }
-  | { kind: "call"; contactName: string; contactRole: string; suggestedNote: string }
-  | { kind: "email"; subject: string; bodyPreview: string }
+  | { kind: "call"; contactName: string; contactRole: string; suggestedNote: string; outcome: "immediate" | "governed" }
+  | { kind: "email"; subject: string; bodyPreview: string; outcome: "immediate" | "governed" }
 
 // Correction pass — 3 distinct input kinds, proving the dynamic layer
 // genuinely adapts per case rather than always being a text field: date
@@ -33045,16 +32977,16 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       description: "Sarah's role changed 2 weeks ago; the standard onboarding path for her new team includes a security training she hasn't started.",
       assignedTo: "David Kim", assignedToKind: "person", dueDate: "Sep 1, 2026", status: "Scheduled",
       recurrence: "Runs with every 30-day access check",
-      task: { kind: "email", subject: "Complete your Platform Infra security training", bodyPreview: "Hi Sarah,\n\nWelcome to Platform Infra! As part of the team's standard onboarding, there's a security training module that isn't showing as started yet — it takes about 45 minutes and covers the access patterns specific to this team.\n\nCould you get to it in the next couple weeks?\n\nThanks," },
+      task: { kind: "email", subject: "Complete your Platform Infra security training", bodyPreview: "Hi Sarah,\n\nWelcome to Platform Infra! As part of the team's standard onboarding, there's a security training module that isn't showing as started yet — it takes about 45 minutes and covers the access patterns specific to this team.\n\nCould you get to it in the next couple weeks?\n\nThanks,", outcome: "immediate" },
       dynamicInputs: [{ label: "Send copy to", kind: "text", placeholder: "Add manager or HRBP" }],
     },
   ],
   ucp: [
     {
-      id: "ucp-nba-1", title: "Offer a proactive check-in call",
-      description: "Usage dipped 12% this month with no support tickets filed — a check-in before renewal season could catch friction early.",
+      id: "ucp-nba-1", title: "Assign a proactive check-in call to the agent",
+      description: "Usage dipped 12% this month with no support tickets filed — the agent can place a check-in call before renewal season to catch friction early.",
       assignedTo: "Renewal Copilot", assignedToKind: "agent", dueDate: "Aug 25, 2026", status: "Not started",
-      task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Acme Corp", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season." },
+      task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Acme Corp", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season.", outcome: "immediate" },
       dynamicInputs: [{ label: "Preferred callback window", kind: "text", placeholder: "e.g. Tue–Thu mornings" }],
     },
   ],
@@ -33063,7 +32995,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       id: "uvp-nba-1", title: "Flag the insurance renewal 30 days out",
       description: "Meridian's current certificate expires in 45 days — starting the renewal conversation now avoids a compliance gap at requalification.",
       assignedTo: "Procurement Copilot", assignedToKind: "agent", dueDate: "Aug 24, 2026", status: "Not started",
-      task: { kind: "email", subject: "Insurance certificate renewal — 45 days out", bodyPreview: "Hi Meridian team,\n\nYour current certificate of insurance expires in 45 days. Starting the renewal conversation now avoids a compliance gap when requalification comes up — could you confirm your timeline for the updated certificate?\n\nThanks," },
+      task: { kind: "email", subject: "Insurance certificate renewal — 45 days out", bodyPreview: "Hi Meridian team,\n\nYour current certificate of insurance expires in 45 days. Starting the renewal conversation now avoids a compliance gap when requalification comes up — could you confirm your timeline for the updated certificate?\n\nThanks,", outcome: "immediate" },
       dynamicInputs: [{ label: "CC recipients", kind: "text", placeholder: "Add anyone else who should see this" }],
     },
   ],
@@ -33072,7 +33004,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       id: "patient-nba-1", title: "Schedule a follow-up coagulation panel",
       description: "Given the flagged Warfarin/Aspirin interaction, a follow-up panel within 48 hours is recommended before discharge.",
       assignedTo: "Care Coordinator AI", assignedToKind: "agent", dueDate: "Aug 16, 2026", status: "In progress",
-      task: { kind: "call", contactName: "Inpatient Lab Services", contactRole: "4B-112 · Internal Medicine", suggestedNote: "Schedule a follow-up coagulation panel for Elena Vasquez within 48 hours, per the flagged Warfarin/Aspirin interaction — before the next dose if possible." },
+      task: { kind: "call", contactName: "Inpatient Lab Services", contactRole: "4B-112 · Internal Medicine", suggestedNote: "Schedule a follow-up coagulation panel for Elena Vasquez within 48 hours, per the flagged Warfarin/Aspirin interaction — before the next dose if possible.", outcome: "immediate" },
       dynamicInputs: [{ label: "Priority", kind: "select", placeholder: "Select a priority", options: ["Routine", "Urgent", "STAT"] }],
     },
   ],
@@ -33081,16 +33013,16 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       id: "claim-nba-1", title: "Request the missing parts invoice now",
       description: "Closing this documentation gap early could shave 3-5 days off the payout timeline once supervisor sign-off clears.",
       assignedTo: "Claims Copilot AI", assignedToKind: "agent", dueDate: "Aug 6, 2026", status: "Not started",
-      task: { kind: "email", subject: "Missing parts invoice — Claim CLM-48821", bodyPreview: "Hi team,\n\nWe're finishing adjudication on Claim CLM-48821 and the itemized parts-sourcing breakdown from your last estimate is still missing. Could you send that over so we can close out the payout?\n\nThanks," },
+      task: { kind: "email", subject: "Missing parts invoice — Claim CLM-48821", bodyPreview: "Hi team,\n\nWe're finishing adjudication on Claim CLM-48821 and the itemized parts-sourcing breakdown from your last estimate is still missing. Could you send that over so we can close out the payout?\n\nThanks,", outcome: "governed" },
       dynamicInputs: [{ label: "Follow-up reminder", kind: "date", placeholder: "If no response by this date" }],
     },
   ],
   borrower: [
     {
-      id: "borrower-nba-1", title: "Offer a co-signer option",
-      description: "Applicants with a similar debt-to-income profile who added a co-signer saw approval odds increase by roughly 30%.",
+      id: "borrower-nba-1", title: "Assign a co-signer conversation to the agent",
+      description: "Applicants with a similar debt-to-income profile who added a co-signer saw approval odds increase by roughly 30% — the agent can raise it with Jordan directly.",
       assignedTo: "Underwriting Copilot", assignedToKind: "agent", dueDate: "Aug 14, 2026", status: "Not started",
-      task: { kind: "call", contactName: "Jordan Ellis", contactRole: "Personal Loan Applicant", suggestedNote: "DTI is above the automated approval line — applicants with a similar profile who added a co-signer saw approval odds increase by roughly 30%. Worth raising as an option before the underwriter review." },
+      task: { kind: "call", contactName: "Jordan Ellis", contactRole: "Personal Loan Applicant", suggestedNote: "DTI is above the automated approval line — applicants with a similar profile who added a co-signer saw approval odds increase by roughly 30%. Worth raising as an option before the underwriter review.", outcome: "immediate" },
       dynamicInputs: [{ label: "Best time to reach", kind: "select", placeholder: "Select a time of day", options: ["Morning", "Afternoon", "Evening"] }],
     },
   ],
@@ -33136,36 +33068,11 @@ function ProvenanceRow({ field }: { field: RecordField }) {
   )
 }
 
-// Contextual "···" menu for a SlideOut header — replaces the generic edit
-// pencil for read-only content that still has a plausible related action
-// (e.g. "View in Agentic Studio"). Anchored via a rect captured on the
-// trigger's click (slide-out.tsx's onTopButtonClick forwards the native
-// event for exactly this), same dismiss-on-backdrop-click pattern as every
-// other overflow menu on this page (see record-header.tsx's own
-// ActionOverflowMenu). z-index above SlideOut's own portal (z-[10010]).
-function HeaderContextMenu({
-  anchor,
-  onDismiss,
-  items,
-}: {
-  anchor: { left: number; top: number } | null
-  onDismiss: () => void
-  items: { label: string; onClick: () => void }[]
-}) {
-  if (!anchor) return null
-  return (
-    <>
-      <div className="fixed inset-0" style={{ zIndex: 10020 }} onClick={onDismiss} />
-      <div style={{ position: "fixed", left: anchor.left, top: anchor.top, zIndex: 10021 }}>
-        <Menu className="w-[220px]">
-          {items.map((it, i) => (
-            <MenuItem key={i} size="sm" label={it.label} onClick={() => { it.onClick(); onDismiss() }} />
-          ))}
-        </Menu>
-      </div>
-    </>
-  )
-}
+// HeaderContextMenu — REMOVED (closing pass). Backed the "···" menus on
+// Active Workflow (now a direct footer CTA) and Last Agent (now gone
+// entirely — see AgenticSystemInfo's doc comment in record-header.tsx).
+// No SlideOut on this page needs a header overflow menu anymore.
+// Recoverable from git history if a future case needs this pattern back.
 
 // ── Block 3 — full edge-case states gallery ─────────────────────────────────
 // Dev-facing coverage: every state RecordHeader can render, each labeled, so
@@ -33203,10 +33110,10 @@ function RecordHeaderStatesGallery({
           "Next Best Action (redesign pass) — N items, collapsed position, right under the tags (#1); see the Overview tab's UEP example (defaultExpanded) for the same block at its expanded position",
           "Your Intervention — pending (#1), empty (#2), loading (#4), no-permission (#5), error (#6), resolved-elsewhere (#7): all 6 states",
           "Your Intervention — N items (Block 3): 1 shows alone, no counter (#1); N shows the most prioritized + \"+N-1 more\" disclosure, never a carousel (#11)",
-          "Agentic System — populated (everywhere), empty (#3), loading (#4)",
+          "Agentic System — workflow only (everywhere), empty (#3), loading (#4): the zone's own agent card was removed entirely (closing pass) — its value is now fully carried by Next Best Action instead.",
           "Record — normal (everywhere), PII masked (#8), overflow (#10) — all reached only through \"View record details\" (this correction pass), never rendered inline",
           "Locked (#9) — read-only Tag; agent trigger, Agentic System, and RECORD's provenance access stay active regardless",
-          "Assigned agent — present (everywhere except #12) vs. absent (#12, correction pass): the identity trigger disables with a Tooltip (RECORD_HEADER_FALLBACKS.noAgentTooltip) instead of disappearing, and Agentic System renders workflow-only, the zone compacting to one row.",
+          "Assigned agent (identity trigger) — present (everywhere except #12) vs. absent (#12): disables with a Tooltip (RECORD_HEADER_FALLBACKS.noAgentTooltip) instead of disappearing.",
         ].map(line => (
           <li key={line} className="text-[11px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>· {line}</li>
         ))}
@@ -33331,7 +33238,7 @@ function RecordHeaderStatesGallery({
         </div>
 
         <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">12 · No agent assigned — workflow present, agent card absent, zone compacted (correction pass)</p>
+          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">12 · No agent assigned — identity trigger disabled, not hidden</p>
           <RecordHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
             assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
             agenticSystem={rhAgenticSystem("borrower")} />
@@ -33355,22 +33262,22 @@ function RecordHeaderStatesGallery({
 // a glance.
 function RecordHeaderFlowsSection({
   rhAssignedAgent,
-  rhAgenticSystem,
   rhIntervention,
-  rhOpenReview,
-  rhOpenAgent,
+  rhOpenHtlNewTab,
+  rhNextBestActions,
+  rhOpenNba,
 }: {
   rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent | null
-  rhAgenticSystem: (v: RhDemoKey) => AgenticSystemInfo
   rhIntervention: (v: RhDemoKey) => PendingIntervention | undefined
-  rhOpenReview: (v: RhDemoKey, itemId: string) => void
-  rhOpenAgent: (v: RhDemoKey) => void
+  rhOpenHtlNewTab: () => void
+  rhNextBestActions: (v: RhDemoKey) => NextBestAction[]
+  rhOpenNba: (v: RhDemoKey, itemId: string) => void
 }) {
   return (
     <section>
       <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">End-to-end flows — 2 complete walkthroughs</p>
       <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[720px]">
-        Not loose states — 2 full walkthroughs, so dev can see how the card behaves start to finish. Every step below is a real rendered piece of this page (a focused RecordHeader instance or a button that opens the actual SlideOut/ModalDialog used elsewhere on this page), stacked so the whole flow is visible at once — no multi-step wizard to click through.
+        Not loose states — 2 full walkthroughs, so dev can see how the card behaves start to finish. Every step below is a real rendered piece of this page (a focused RecordHeader instance or a button that opens the actual SlideOut used elsewhere on this page), stacked so the whole flow is visible at once — no multi-step wizard to click through.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[32px]">
@@ -33386,60 +33293,45 @@ function RecordHeaderFlowsSection({
                 intervention={rhIntervention("ucp")}
               />
             </ProcessItem>
-            <ProcessItem number={2} status="done" title="User opens Review" description={`Clicking "Review" on the card above opens the real Pending Decisions SlideOut — try it:`}>
-              <Button variant="secondary" size="sm" onClick={() => rhOpenReview("ucp", "ucp-discount-approval")}>
-                Open Review <LucideIcons.ChevronRight size={14} className="ml-[2px]" />
+            <ProcessItem number={2} status="done" showLine={false} title="Diagonal arrow → new tab, always" description="Clicking the arrow on the card above ALWAYS opens the real HTL view in a new tab — never a slideout, never a same-page redirect, no exceptions. Try it:">
+              <Button variant="secondary" size="sm" onClick={rhOpenHtlNewTab}>
+                Open in new tab <LucideIcons.ArrowUpRight size={14} className="ml-[2px]" />
               </Button>
-            </ProcessItem>
-            <ProcessItem number={3} status="done" title="Approve" description="Approve/Dismiss inside that SlideOut always opens a ModalDialog confirmation first (see the SlideOut above) — a governed decision is never resolved on one click.">
-              <p className="text-[12px] text-[var(--field-supporting)]">Confirming resolves it — see the "Approved"/"Dismissed" banner appear inside the same SlideOut.</p>
-            </ProcessItem>
-            <ProcessItem number={4} status="pending" showLine={false} title="Two possible outcomes" description="What happens after Approve depends on the decision's own risk profile — this card doesn't decide which; the host does.">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-[8px]">
-                <InformativeCard
-                  state="success"
-                  size="sm"
-                  title="(a) Immediate execution"
-                  description={'Approved automatically — access granted right away. Demonstrated live above: Approve → confirm → the SlideOut shows "Approved."'}
-                />
-                <InformativeCard
-                  state="informative"
-                  size="sm"
-                  title="(b) Escalated to The Council"
-                  description={"High-impact or ambiguous decisions route to The Council — a multi-party review body — before they take effect; the record reads \"Awaiting Council review\" until that concludes. // TODO: model as a real PendingIntervention status once Council integration exists."}
-                />
-              </div>
             </ProcessItem>
           </div>
         </div>
 
-        {/* ── Flow 2 — Agentic context query ───────────────────────────── */}
+        {/* ── Flow 2 — Next Best Action execution ──────────────────────── */}
         <div>
-          <p className="text-[13px] font-semibold mb-[12px]" style={{ color: "var(--foreground)" }}>Flow 2 — Agentic context query</p>
+          <p className="text-[13px] font-semibold mb-[12px]" style={{ color: "var(--foreground)" }}>Flow 2 — Next Best Action execution</p>
           <div className="flex flex-col gap-0">
-            {/* Correction pass — Sarah/UEP is now a "workflow only, no
-                agent" record (see RH_HAS_AGENT), so this walkthrough uses
-                Elena/Patient instead — still has one, still demonstrates
-                the flow end to end. */}
-            <ProcessItem number={1} status="done" title="User sees Last Agent" description="Agentic System always shows what last touched this record — a workflow, an agent, or both (when one is assigned — see State #12 for the alternative).">
+            <ProcessItem number={1} status="done" title="Task arrives" description="A Next Best Action is always visible, right under the identity tags — the agent suggesting a task to hand off or a decision to make.">
               <RecordHeader
-                name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient} recordFields={[]} defaultExpanded
-                assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
-                agenticSystem={rhAgenticSystem("patient")}
+                name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={[]} defaultExpanded
+                assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
+                nextBestActions={rhNextBestActions("ucp")}
               />
             </ProcessItem>
-            <ProcessItem number={2} status="done" title="Opens the agent's SlideOut" description={`Clicking "Last Agent" above opens the real detail SlideOut — Session Summary, Latest Finding, Recommendation:`}>
-              <Button variant="secondary" size="sm" onClick={() => rhOpenAgent("patient")}>
-                Open Last Agent <LucideIcons.ChevronRight size={14} className="ml-[2px]" />
+            <ProcessItem number={2} status="done" title="User opens the task" description={`Clicking the task above opens its real 3-layer detail SlideOut — try it:`}>
+              <Button variant="secondary" size="sm" onClick={() => rhOpenNba("ucp", "ucp-nba-1")}>
+                Open task <LucideIcons.ChevronRight size={14} className="ml-[2px]" />
               </Button>
             </ProcessItem>
-            <ProcessItem number={3} status="pending" showLine={false} title="Recommendation → governed action (optional)" description="The Recommendation section's own action button is where a real integration would create a new decision — not a dead end.">
-              <InformativeCard
-                state="informative"
-                size="sm"
-                title="If applied"
-                description={'Clicking "Apply recommendation" inside the SlideOut above would create a new pending intervention on this same record — looping straight back into Flow 1\'s exact pattern. // TODO: wire the recommendation action to create a real governed intervention once that pipeline exists.'}
-              />
+            <ProcessItem number={3} status="pending" showLine={false} title="Two possible outcomes" description="Taking the task's action resolves one of 2 ways, per that task's own outcome — this card doesn't decide which; the host does.">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-[8px]">
+                <InformativeCard
+                  state="success"
+                  size="sm"
+                  title="(a) Executed"
+                  description={'No further gate — done as soon as the action is taken. Demonstrated live above: "Assign call to agent" → the SlideOut shows "Done."'}
+                />
+                <InformativeCard
+                  state="informative"
+                  size="sm"
+                  title="(b) In review"
+                  description={"Held for sign-off before it actually happens — e.g. Insurance's email NBA (Diane Ostrowski). Same SlideOut, same footer CTA, a different task-level outcome."}
+                />
+              </div>
             </ProcessItem>
           </div>
         </div>
@@ -33477,6 +33369,23 @@ const NBA_TASK_LABEL: Record<NbaTaskKind, string> = {
   call: "Call",
   email: "Email",
 }
+// Playground's NBA-type selector points at one real, already-authored NBA
+// per type — never invented content just for the control.
+const PG_NBA_TYPE_SOURCE: Record<"approval" | "call" | "email" | "not-modeled", { v: RhDemoKey; id: string }> = {
+  approval: { v: "uep", id: "uep-nba-1" },
+  call: { v: "ucp", id: "ucp-nba-1" },
+  email: { v: "uvp", id: "uvp-nba-1" },
+  "not-modeled": { v: "repairOrder", id: "repairOrder-nba-1" },
+}
+// Closing pass — the closure banner shown once a Call/Email task's action
+// is taken, keyed by the task's own `outcome`. "executed" needs no further
+// gate; "in-review" still routes through governance before it actually
+// happens — the 2 outcomes Edgardo defined, applied per-task rather than
+// per-record (an HTL item works the same way at the record level).
+const NBA_RESULT_COPY: Record<"executed" | "in-review", { title: string; state: "success" | "informative" }> = {
+  executed: { title: "Done — the agent will carry this out", state: "success" },
+  "in-review": { title: "Submitted — held for sign-off before it takes effect", state: "informative" },
+}
 // Active Workflow detail (correction pass) — status Tag color + label,
 // same idea as NBA_STATUS_TAG above.
 const WORKFLOW_STATUS_LABEL: Record<WorkflowDetail["status"], string> = {
@@ -33498,28 +33407,33 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [pgVariant, setPgVariant] = useState<RhDemoKey>("uep")
   const [pgMasked, setPgMasked] = useState(false)
+  // Closing pass — Playground's own NBA-type selector, decoupled from
+  // pgVariant: picks which of the 3 modeled types (+ the 1 "not yet
+  // modeled" example) shows on the live card below, by pointing at one
+  // real NBA already authored in RH_NBA rather than inventing new content
+  // just for this control.
+  const [pgNbaType, setPgNbaType] = useState<"approval" | "call" | "email" | "not-modeled">("approval")
 
   // Governed SlideOut state — one boolean per flow, reused across demo
   // entities (content keyed by whichever one was actually clicked).
+  // Last Agent and Pending Decisions are both gone (closing pass) —
+  // Agentic System's own agent card was removed (see AgenticSystemInfo's
+  // doc comment in record-header.tsx) and HTL never opens a slideout,
+  // full stop (see rhOpenHtlNewTab below) — so neither has state here
+  // anymore.
   const [rhOpenVariant, setRhOpenVariant] = useState<RhDemoKey | null>(null)
   const [rhWorkflowOpen, setRhWorkflowOpen] = useState(false)
-  const [rhAgentOpen, setRhAgentOpen] = useState(false)
-  const [rhReviewOpen, setRhReviewOpen] = useState(false)
-  // Block 3 (this pass) — a record can have N pending interventions, so
-  // "which one is open in Pending Decisions" needs its own id, not just
-  // "which record."
-  const [rhReviewItemId, setRhReviewItemId] = useState<string | null>(null)
   const [rhProvenanceOpen, setRhProvenanceOpen] = useState(false)
-  const [rhReviewResolved, setRhReviewResolved] = useState<"approved" | "dismissed" | null>(null)
-  // NBA detail (redesign pass) — same "which one" id pattern as Pending
-  // Decisions above, since a record can have N NBAs too.
+  // NBA detail — "which one" id pattern, since a record can have N NBAs.
   const [rhNbaOpen, setRhNbaOpen] = useState(false)
   const [rhNbaItemId, setRhNbaItemId] = useState<string | null>(null)
-  // NBA Layer 2 (approval type) — Confirm/Reject result, same "resolved"
-  // pattern as rhReviewResolved above (its own state, since an approval
-  // NBA and Pending Decisions are 2 distinct SlideOuts that can't share
-  // one resolved flag).
-  const [rhNbaApprovalResult, setRhNbaApprovalResult] = useState<"confirmed" | "rejected" | null>(null)
+  // NBA Layer 2 — the outcome of taking the task's action, whatever type it
+  // is (Confirm/Reject for Approval; Assign/Schedule for Call; Approve
+  // send for Email). Modeled as the 2 outcomes Edgardo defined: "executed"
+  // resolves immediately (no further gate), "in-review" means it still
+  // goes through governance before it actually takes effect — see
+  // NBA_OUTCOME_COPY below for the exact copy per case.
+  const [rhNbaResult, setRhNbaResult] = useState<{ kind: "confirmed" | "rejected" | "executed" | "in-review" } | null>(null)
   // NBA Layer 3 (dynamic inputs) — the "select" kind's own open/value
   // state, same Select+Menu pattern the repo's own Select Playground
   // already uses. At most 1 select input per task, so one shared pair
@@ -33527,47 +33441,24 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [rhNbaSelectOpenIdx, setRhNbaSelectOpenIdx] = useState<number | null>(null)
   const [rhNbaSelectValues, setRhNbaSelectValues] = useState<Record<number, string>>({})
 
-  // Contextual "···" menu for the Last Agent SlideOut header — replaces the
-  // generic edit pencil. Anchored the same way every other overflow menu on
-  // this page already is: capture the trigger's rect on click, dismiss on
-  // backdrop click. See HeaderContextMenu below. Active Workflow's own menu
-  // (correction pass) was replaced by a direct footer CTA — see its SlideOut.
-  const [rhAgentMenuAnchor, setRhAgentMenuAnchor] = useState<{ left: number; top: number } | null>(null)
-
-  // Governed decisions require explicit confirmation, never one-click (per
-  // the agreed interaction logic: deciding something governed ≠ navigating
-  // or viewing provenance). Approve/Dismiss open this confirmation instead
-  // of resolving immediately.
-  const [rhConfirmAction, setRhConfirmAction] = useState<"approved" | "dismissed" | null>(null)
-
   const rhOpenWorkflow = (v: RhDemoKey) => { setRhOpenVariant(v); setRhWorkflowOpen(true) }
-  const rhOpenAgent = (v: RhDemoKey) => { setRhOpenVariant(v); setRhAgentOpen(true) }
-  const rhOpenReview = (v: RhDemoKey, itemId: string) => {
-    setRhOpenVariant(v); setRhReviewItemId(itemId); setRhReviewOpen(true); setRhReviewResolved(null)
-  }
   const rhOpenProvenance = (v: RhDemoKey) => { setRhOpenVariant(v); setRhProvenanceOpen(true) }
 
-  // Redesign pass — every HTL item's diagonal-arrow trigger opens a NEW TAB,
-  // never a same-page overlay (record-header.tsx's own OPEN_HTL_TOOLTIP).
-  // No dedicated HTL/Agentic Studio page exists anywhere in this repo yet
-  // (checked directly), so this demo opens a new tab to this SAME page —
-  // truthfully satisfying "new tab, current tab untouched" without
-  // pretending a deep link exists that isn't real. // TODO: once a real
-  // HTL/Agentic Studio destination exists, point this at it — ideally via
-  // a query param this page reads on mount to reopen Pending Decisions for
-  // that exact item, the same way `?page=`/`?proto=` already deep-link
-  // elsewhere in this file, but that page-specific tab/item deep-linking
-  // doesn't exist for ANY DS catalog page today, so it's a real feature to
-  // build, not a one-line fix.
+  // HTL ALWAYS opens in a new tab — never a slideout, never a same-page
+  // redirect, no exceptions (closing pass fixed a real contradiction: an
+  // earlier "Pending Decisions" SlideOut + ModalDialog approve/dismiss
+  // flow used to be reachable from the End-to-end Flows walkthrough,
+  // which contradicted this rule even though no live card ever opened it
+  // that way). No dedicated HTL/Agentic Studio page exists anywhere in
+  // this repo yet (checked directly), so this demo opens a new tab to
+  // this SAME page — truthfully satisfying "new tab, current tab
+  // untouched" without pretending a deep link exists that isn't real.
+  // // TODO: once a real HTL/Agentic Studio destination exists, point
+  // this at it.
   const rhOpenHtlNewTab = () => window.open(window.location.href, "_blank")
 
-  // lastAgent omitted (not just left undefined by accident) for records
-  // with RH_HAS_AGENT[v] === false — Agentic System renders workflow-only,
-  // the zone compacting to a single row (see AgenticSystemZoneContent's
-  // own `{state.lastAgent && ...}` guard in record-header.tsx).
   const rhAgenticSystem = (v: RhDemoKey): AgenticSystemInfo => ({
     activeWorkflow: { name: RH_WORKFLOWS[v].name, onOpen: () => rhOpenWorkflow(v) },
-    ...(RH_HAS_AGENT[v] ? { lastAgent: { name: RH_AGENT_DETAILS[v].agentName, onOpen: () => rhOpenAgent(v) } } : {}),
   })
   // Block 3 (this pass) — maps this demo's mock array to the real
   // InterventionItem[] shape, one onReview per item (not one shared
@@ -33589,7 +33480,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   }
 
   const rhOpenNba = (v: RhDemoKey, itemId: string) => {
-    setRhOpenVariant(v); setRhNbaItemId(itemId); setRhNbaOpen(true); setRhNbaApprovalResult(null)
+    setRhOpenVariant(v); setRhNbaItemId(itemId); setRhNbaOpen(true); setRhNbaResult(null)
     setRhNbaSelectOpenIdx(null); setRhNbaSelectValues({})
   }
   // Redesign pass — the protagonist block. Real, per-item onOpen (not a
@@ -33622,6 +33513,15 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
   const pgName = RH_NAME[pgVariant]
   const pgRecordFields = pgVariant === "uep" && pgMasked ? RH_UEP_MASKED_FIELDS : RH_RECORD_FIELDS[pgVariant]
+  // Playground's NBA-type selector — decoupled from pgVariant on purpose,
+  // so switching types doesn't require also switching to whichever
+  // vertical happens to carry that type.
+  const pgNbaSource = PG_NBA_TYPE_SOURCE[pgNbaType]
+  const pgNbaMock = RH_NBA[pgNbaSource.v].find(n => n.id === pgNbaSource.id)!
+  const pgNextBestActions: NextBestAction[] = [{
+    id: pgNbaMock.id, title: pgNbaMock.title, description: pgNbaMock.description,
+    onOpen: () => rhOpenNba(pgNbaSource.v, pgNbaMock.id),
+  }]
   const openVariant = rhOpenVariant ?? "uep"
   const openWorkflow = RH_WORKFLOWS[openVariant]
   // Correction pass — "progress" as a glanceable fact (step N of total),
@@ -33631,28 +33531,33 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   // workflow finished its last run.
   const openWorkflowCurrentStep = openWorkflow.steps.findIndex(s => s.status !== "done")
   const openWorkflowStepNum = openWorkflowCurrentStep === -1 ? openWorkflow.steps.length : openWorkflowCurrentStep + 1
-  const openAgent = RH_AGENT_DETAILS[openVariant]
-  // The specific item within openVariant's intervention array that Review
-  // was clicked on (Block 3 — a record can have N, Pending Decisions shows
-  // exactly the one the viewer chose).
-  const openIntervention = RH_INTERVENTIONS[openVariant]?.find(item => item.id === rhReviewItemId)
-  const openInterventionCount = RH_INTERVENTIONS[openVariant]?.length ?? 0
   const openRecordFields = RH_RECORD_FIELDS[openVariant]
-  // The specific NBA within openVariant's array the viewer clicked — same
-  // "N items, show exactly the one chosen" reasoning as openIntervention.
+  // The specific NBA within openVariant's array the viewer clicked — a
+  // record can have N NBAs, this shows exactly the one chosen.
   const openNba = RH_NBA[openVariant]?.find(nba => nba.id === rhNbaItemId)
-  // Correction pass — the NBA SlideOut's primary action, WHATEVER it is
-  // for this task's type, lives in the SlideOut's own fixed footer (see
-  // SlideOut's showCta/showCtaSecondary props), never as a button loose
-  // in the content body. Computed once here instead of 3 near-duplicate
-  // showCta blocks inline on the SlideOut below.
-  const nbaFooterCta = !openNba?.task
+  // The NBA SlideOut's primary action, WHATEVER it is for this task's
+  // type, lives in the SlideOut's own fixed footer (see SlideOut's
+  // showCta/showCtaSecondary props), never as a button loose in the
+  // content body. Computed once here instead of 3 near-duplicate showCta
+  // blocks inline on the SlideOut below. Call/Email resolve straight to
+  // the task's own `outcome` (executed vs. in-review — see
+  // NBA_RESULT_COPY); Approval keeps its own Confirm/Reject, since a
+  // human decision IS the governance step, not a further gate after it.
+  const openTask = openNba?.task
+  const nbaFooterCta = !openTask
     ? { show: false as const }
-    : openNba.task.kind === "approval"
-    ? { show: !rhNbaApprovalResult, primary: "Confirm", secondary: "Reject", onPrimary: () => setRhNbaApprovalResult("confirmed"), onSecondary: () => setRhNbaApprovalResult("rejected") }
-    : openNba.task.kind === "call"
-    ? { show: true, primary: "Assign call to agent", secondary: "Schedule call", onPrimary: undefined, onSecondary: undefined }
-    : { show: true, primary: "Approve send", secondary: "Edit", onPrimary: undefined, onSecondary: undefined }
+    : openTask.kind === "approval"
+    ? { show: !rhNbaResult, primary: "Confirm", secondary: "Reject", onPrimary: () => setRhNbaResult({ kind: "confirmed" }), onSecondary: () => setRhNbaResult({ kind: "rejected" }) }
+    : openTask.kind === "call"
+    ? { show: !rhNbaResult, primary: "Assign call to agent", secondary: "Schedule call", onPrimary: () => setRhNbaResult({ kind: openTask.outcome === "governed" ? "in-review" : "executed" }), onSecondary: () => setRhNbaResult({ kind: "executed" }) }
+    : { show: !rhNbaResult, primary: "Approve send", secondary: "Edit", onPrimary: () => setRhNbaResult({ kind: openTask.outcome === "governed" ? "in-review" : "executed" }), onSecondary: undefined }
+  // A clear closure once the action is taken, whatever type the task is —
+  // Confirmed/Rejected for Approval (its own decision language), or the
+  // executed/in-review outcome copy for Call and Email (NBA_RESULT_COPY).
+  const nbaResultDisplay = !rhNbaResult ? null
+    : rhNbaResult.kind === "confirmed" ? { title: "Confirmed", state: "success" as const }
+    : rhNbaResult.kind === "rejected" ? { title: "Rejected", state: "neutral" as const }
+    : NBA_RESULT_COPY[rhNbaResult.kind]
 
   return (
     <div>
@@ -33792,10 +33697,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
           <RecordHeaderFlowsSection
             rhAssignedAgent={rhAssignedAgent}
-            rhAgenticSystem={rhAgenticSystem}
             rhIntervention={rhIntervention}
-            rhOpenReview={rhOpenReview}
-            rhOpenAgent={rhOpenAgent}
+            rhOpenHtlNewTab={rhOpenHtlNewTab}
+            rhNextBestActions={rhNextBestActions}
+            rhOpenNba={rhOpenNba}
           />
 
           <section>
@@ -33835,7 +33740,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             assignedAgent={rhAssignedAgent(pgVariant, pgName)}
             agenticSystem={rhAgenticSystem(pgVariant)}
             intervention={rhIntervention(pgVariant)}
-            nextBestActions={rhNextBestActions(pgVariant)}
+            nextBestActions={pgNextBestActions}
             onProvenanceOpen={() => rhOpenProvenance(pgVariant)}
             labels={pgVariant === "patient" ? { intervention: "Needs Your Attention" } : undefined}
           />
@@ -33880,7 +33785,30 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               />
             </div>
             <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
-              Click the chevron on the Identity row to expand/collapse Agentic System / Your Intervention / Record — real disclosure state, not a mock. Click Active Workflow, Last Agent, Review, or the (i) icon next to RECORD to open the real SlideOuts.
+              Click the chevron on the Identity row to expand/collapse Agentic System / Your Intervention / Record — real disclosure state, not a mock. Click Active Workflow, the Next Best Action block, or the (i) icon next to RECORD to open the real SlideOuts.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Next Best Action — type</p>
+            {/* Closing pass — a dedicated control so dev can compare the 3
+                modeled types (+ the 1 "not yet modeled" fallback) live,
+                independent of which vertical is selected above — each
+                option points at one real, already-authored NBA rather
+                than fabricating new content for this control. */}
+            <CtrlGroup<"approval" | "call" | "email" | "not-modeled">
+              label="Type"
+              value={pgNbaType}
+              onChange={setPgNbaType}
+              options={[
+                { value: "approval", label: "Approval" },
+                { value: "call", label: "Call" },
+                { value: "email", label: "Email" },
+                { value: "not-modeled", label: "Not yet modeled" },
+              ]}
+            />
+            <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
+              Decoupled from the vertical selector above on purpose — swaps ONLY the Next Best Action block, so you can compare types without also switching entity type. Click the task to open its real 3-layer detail SlideOut.
             </p>
           </div>
 
@@ -33949,8 +33877,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               {[
                 ["Identity (fixed)", "Avatar · name (truncates with an ellipsis + Tooltip — never wraps or stretches the row) · entity-type icon AND text (not icon-only — a text label sits beside the icon) · the RECORD provenance trigger (icon-only Button) — in that exact order — all left-aligned, beside the name · up to 3 governance-state Tags — assigned agent (lime green, when the record has one), active workflow (light blue), pending HTL (amber) — hidden once the card expands, animated, and each CLICKABLE: clicking one expands the card and scrolls/highlights the zone it summarizes, never opens a panel directly from the collapsed tag. Vertically centered against the avatar once expanded; top-aligned while collapsed (2-line block). Locked state. Actions: AI agent trigger (\"Ask about {firstName}\", falls back to \"Ask AI\" + Tooltip; disabled + Tooltip when the record has no agent) → optional primary CTA (actions[0], host-provided) → \"···\" overflow → disclosure chevron."],
                 ["Next Best Action", "The protagonist block — always visible, never gated by the card's OWN expand/collapse disclosure: sits right under the identity tags while collapsed, and at the end of the expanded zones while expanded. A native full-width button, dark-purple surface (--card-purple-bg). Sparkle sits in its own HighlightIcon (variant=\"purple\", size=\"sm\") box, not a bare icon. Title/description/chevron are NEUTRAL text (--foreground / --field-supporting) — color lives only in the icon box and background, same principle as Agentic System's cards. N items use the SAME disclosure pattern as Your Intervention: the most prioritized item always full-size, then any revealed extras, then a single \"Show N more\" / \"Show less\" toggle at the bottom of the whole stack — never between the primary and the extras. Omit or pass an empty array to skip it entirely for a record with nothing to recommend right now. See \"Next Best Action — the task model\" under Panel content for the SlideOut this opens."],
-                ["Agentic System (no heading)",  "Active Workflow + Last Agent lay out with flex(1) — 1 present item fills the full row, 2 split evenly (never a 2-column grid that leaves half the row empty when only one is present, e.g. a record with no agent). No section label above them. Each item is a plain card BORDER (not a nested CardContainer component — this already lives inside the header's own CardContainer, so a second one read as card-in-card) with a HighlightIcon (size=\"sm\", colored: light blue = workflow icon, lime = agent icon, Sparkle) + a bare icon-only chevron Button beside it (no \"View\" text label) — color lives in the icon, never in the button. `lastAgent` is entirely omittable — not every entity type has an agent (see States and Example entity types below). Also renders \"empty\" (no workflow/agent yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
-                ["Your Intervention (conditional)", "Renders one of 6 states through InformativeCard (size=\"sm\", title in normal sentence case — not literal ALL CAPS): pending (default, N items — most prioritized triggers a diagonal ArrowUpRight that opens the real HTL view in a NEW TAB, never a same-page overlay; \"Show N more\" caps at 3 extra inline, \"View all\" is the separate always-present escape hatch — see InterventionZoneContent's own doc comment), empty (reads as completion, not absence), loading, no-permission (+ optional Escalate action), error, resolved-elsewhere. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
+                ["Agentic System (no heading)",  "Workflow only (closing pass — the zone's own agent card was removed; a suggestion's origin and its actionable are already carried by Next Best Action, so a second card repeating that here was redundant, not complementary — see \"Agent removed from Agentic System\" below). Active Workflow always renders full-width — flex(1), not a 2-column grid, so there's never an empty second track. A plain card BORDER (not a nested CardContainer — this already lives inside the header's own CardContainer, so a second one read as card-in-card) with a HighlightIcon (size=\"sm\", light blue, Workflow glyph) + a bare icon-only chevron Button (no \"View\" text label) — color lives in the icon, never in the button. Also renders \"empty\" (no workflow yet — a calm message, not a broken gap) and \"loading\" (Skeleton rows) states — see the States table below."],
+                ["Your Intervention (conditional)", "6 possible states, title in normal sentence case — not literal ALL CAPS. \"pending\" (the default, N items) uses the Figma HTL card, NOT InformativeCard (closing pass — a neutral bordered card + one amber HighlightIcon, calmer than a fully amber-tinted surface, same visual language as Agentic System's own item): most prioritized triggers a diagonal ArrowUpRight that opens the real HTL view in a NEW TAB, never a same-page overlay; \"Show N more\" caps at 3 extra inline (same card, no icon on the extras — matches Figma), \"View all\" is the separate always-present escape hatch. The other 5 states (empty, loading, no-permission + optional Escalate, error, resolved-elsewhere) still use InformativeCard — no Figma reference exists for those edge states specifically. Never state=\"error\" (red) in any of them — Law 3's amber/neutral calm token families cover every case. Heading recolored amber + AlertTriangle icon, matching the identity Tag above."],
                 ["Record",          "Fields never render inline. The trigger is the icon-only Button beside the name (Identity, above) that opens \"About this record\" — Data Provenance for every field at once (Law 2) — disabled + a Tooltip explaining why when onProvenanceOpen isn't wired, never silently hidden. Long values truncate with their own Tooltip carrying the full text, whether or not the field has a destination. `recordFields` is still a plain array the host builds — no fixed \"employee field\" shape inside the component."],
               ].map(([zone, content], i) => (
                 <div key={zone} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
@@ -33971,11 +33899,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
               {[
                 ["\"Ask about {name}\" / \"Ask AI\"", "SidePanel", "Chat with assignedAgent — PLACEHOLDER body only (// TODO: reemplazar con el componente de Chat cuando exista en el repo). No Chat component exists anywhere in src/components/ui/ yet, checked directly. SidePanel (not SlideOut) — docked, no backdrop, page stays visible/usable underneath."],
-                ["Identity Tags (agent/workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow/agent → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone itself (a Button, or the HTL item's own diagonal-arrow trigger)."],
-                ["Active Workflow", "SlideOut", "AI Summary, status Tag + \"Step N of total\" progress, a surfaced blocker when status is \"blocked,\" Details (Started/Next Milestone/Total Runs), Steps (ProcessItem), Recent Runs list. Footer CTA \"Go to workflow\" (correction pass — replaced the \"···\" menu, one click instead of two)."],
-                ["Last Agent", "SlideOut", "AI Summary (session summary), Agent's Latest Finding, Recent Activity list, and a Recommendation modeled to expose an action (actionLabel/onAction). Same \"···\" menu treatment as Active Workflow. Tooltip on hover explains the destination before clicking."],
-                ["Next Best Action", "SlideOut", "Opens the NBA's own detail panel (Sparkle icon, dark-purple iconBg). Full 3-layer task structure: base (always present) → type-specific (Approval/Call/Email, a growing set) → dynamic inputs. See \"Next Best Action — the task model\" under Panel content below."],
-                ["HTL item diagonal arrow (Your Intervention)", "New browser tab", "Redesign pass — every pending item's ArrowUpRight trigger (never a labeled \"Review\" button) opens the real HTL view in a NEW TAB, never a same-page overlay — Tooltip always says so (OPEN_HTL_TOOLTIP). This demo has no dedicated HTL/Agentic Studio page yet (checked directly), so it opens a new tab to this same page as a truthful placeholder — // TODO: point at the real destination once one exists. The \"Pending Decisions\" SlideOut + ModalDialog approve/dismiss flow still exists in this demo's code and is real, but is now only reachable from the Flows walkthrough section below, not from a live card's HTL item."],
+                ["Identity Tags (workflow/HTL)", "Expand + scroll", "Block 2 — one consistent behavior for every tag: expands the card (if collapsed) and scrolls/highlights the zone it summarizes (workflow → Agentic System, HTL → Your Intervention). NEVER opens a panel directly — the deep detail is one step further in, inside the expanded zone itself (a Button, or the HTL item's own diagonal-arrow trigger)."],
+                ["Active Workflow", "SlideOut", "AI Summary, status Tag + \"Step N of total\" progress, a surfaced blocker when status is \"blocked,\" Details (Started/Next Milestone/Total Runs), Steps (ProcessItem), Recent Runs list. Footer CTA \"Go to workflow\" — replaced a \"···\" menu, one click instead of two."],
+                ["Next Best Action", "SlideOut", "Opens the NBA's own detail panel (Sparkle icon, dark-purple iconBg). Full 3-layer task structure: base (always present) → type-specific (Approval/Call/Email, a growing set) → dynamic inputs, closing on a clear confirmation (Confirmed/Rejected, or Executed/In review). See \"Next Best Action — the task model\" under Panel content below."],
+                ["HTL item diagonal arrow (Your Intervention)", "New browser tab", "ALWAYS a new tab — never a slideout, never a same-page redirect, no exceptions (a same-page \"Pending Decisions\" SlideOut used to be reachable from the End-to-end Flows walkthrough; that contradiction is fixed — see Flow 1). Every pending item's ArrowUpRight trigger (never a labeled \"Review\" button) opens the real HTL view, with a Tooltip always saying so (OPEN_HTL_TOOLTIP: \"Opens in a new tab\"). This demo has no dedicated HTL/Agentic Studio page yet (checked directly), so it opens a new tab to this same page as a truthful placeholder — // TODO: point at the real destination once one exists."],
                 ["\"Show N more\" / \"View all\" (Your Intervention)", "Inline disclosure / new tab", "\"Show N more\" (left) and \"View all\" (right, plain text, no icon — verified against Figma) sit at opposite ends of the row, justify-between. \"Show N more\" reveals up to 3 extra pending items inline, each rendered as a bordered card row (matching Agentic System's own item style, no visible severity badge — verified against Figma) with its own diagonal-arrow trigger; \"View all\" is the separate, always-present escape hatch to the full list, same new-tab treatment as every HTL item."],
                 ["RECORD provenance trigger (Identity row)", "SlideOut", "Opens \"About this record\" — every RECORD field at once, label + value + Source → Model → Synced (redesign pass — renamed from \"Data Provenance\"; the only place these fields are visible at all, since they don't render inline in the card). Read-only viewer, no menu (no confirmed related action to offer). Disabled + Tooltip when onProvenanceOpen isn't wired. Icon-only now (redesign pass) — the visible \"View record details\" text label became aria-label only once it moved beside the name."],
               ].map(([el, dest, content], i) => (
@@ -33992,10 +33919,10 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Panel content — follows "SlideOut/SidePanel — Content"</p>
             <div className="rounded-md px-[14px] py-[12px] flex flex-col gap-[8px] mb-[16px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                Every panel this card opens (the chat SidePanel, and the Active Workflow / Last Agent / Pending Decisions / Data Provenance / Next Best Action SlideOuts) composes its content with the same primitives documented on the "SlideOut/SidePanel — Content" pattern page: a Section Title row (11px semibold uppercase, <code>--field-label</code>, 32px min-height) introduces each content block — never an ad-hoc heading. AI-generated content (Workflow's own summary, Agent's session summary) uses the pattern's real AI Summary card (purple, Sparkles icon) — always first, per its documented content order. Recent Runs / Recent Activity / Similar Past Decisions are List Sections — resolved items get a status Tag, never a badge + button combined. Severity Tags (e.g. Pending Decisions' "HIGH"/"MEDIUM") always render compact/inline, wrapped in their own non-flex container so the parent's <code>flex-col</code> layout can't stretch them full-width. Every SlideOut/SidePanel this card opens matches the icon + semantic color of the element that opened it — workflow → light blue Workflow icon, agent → lime Bot/Sparkle, intervention → amber AlertTriangle, provenance → neutral Info, Next Best Action → purple Sparkle — instead of a generic default.
+                Every panel this card opens (the chat SidePanel, and the Active Workflow / Data Provenance / Next Best Action SlideOuts) composes its content with the same primitives documented on the "SlideOut/SidePanel — Content" pattern page: a Section Title row (11px semibold uppercase, <code>--field-label</code>, 32px min-height) introduces each content block — never an ad-hoc heading. AI-generated content (Workflow's own summary) uses the pattern's real AI Summary card (purple, Sparkles icon) — always first, per its documented content order. Recent Runs are a List Section — resolved items get a status Tag, never a badge + button combined. Every SlideOut/SidePanel this card opens matches the icon + semantic color of the element that opened it — workflow → light blue Workflow icon, intervention → amber AlertTriangle, provenance → neutral Info, Next Best Action → purple Sparkle — instead of a generic default.
               </p>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>A panel's primary action lives in its own fixed footer, never loose in the content body.</strong> SlideOut's <code>showCta</code>/<code>ctaPrimaryLabel</code>/<code>ctaSecondaryLabel</code> render a bottom CTA row; <code>showCtaSecondary=false</code> collapses it to a single button for an action with nothing to reject/skip (e.g. the Agent's "Apply recommendation," Active Workflow's "Go to workflow"). A governed decision (Pending Decisions' Approve/Dismiss) never resolves on that first click either — it opens a ModalDialog confirmation first, always. Header actions are contextual, not a fixed set: no generic edit pencil anywhere. Read-only content with one plausible related action (Last Agent's "View agent in Agentic Studio") gets a "···" menu; a pure viewer with nothing further to do (Data Provenance) or a panel whose real action already lives in its footer CTA gets no header action at all. Close is always present.
+                <strong>A panel's primary action lives in its own fixed footer, never loose in the content body.</strong> SlideOut's <code>showCta</code>/<code>ctaPrimaryLabel</code>/<code>ctaSecondaryLabel</code> render a bottom CTA row; <code>showCtaSecondary=false</code> collapses it to a single button for an action with nothing to reject/skip (e.g. Active Workflow's "Go to workflow," or an NBA Call/Email task, which resolves to its own outcome rather than a reject path). HTL is a governed decision handled entirely on the destination page now (HTL always opens in a new tab, never a slideout — see the closing pass's fix to a real contradiction where an on-page "Pending Decisions" SlideOut used to exist for this). Header actions are contextual, not a fixed set: no generic edit pencil anywhere. A pure viewer with nothing further to do (Data Provenance) or a panel whose real action already lives in its footer CTA (Active Workflow, Next Best Action) gets no header action at all. Close is always present.
               </p>
               <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
                 <strong>Every Tooltip in this card is <code>side="cursor"</code></strong> — the only Tooltip mode with real viewport-edge flip (see tooltip.tsx's own header comment); the default fixed sides don't reposition and will clip near an edge.
@@ -34004,7 +33931,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
             <p className="text-[12px] font-semibold mb-[8px]" style={{ color: "var(--foreground)" }}>Next Best Action — the task model</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
-              <span className="font-semibold text-[var(--field-text)]">An NBA is a TASK, and every task in AIMS OS renders through the same 3-layer structure</span> — the same SlideOut a Pending Decisions task uses, since NBA and HTL task detail converge on one composition rather than each inventing its own. "Layer" is how this table (and the code comments) name the structure to a dev — the rendered SlideOut itself never shows that word; it shows the action's own content (title, context, preview, buttons, inputs) with a plain divider between groupings, and the primary + any revealed extras stack above a single "Show N more"/"Show less" toggle at the very bottom.
+              <span className="font-semibold text-[var(--field-text)]">An NBA is a TASK, and every task in AIMS OS renders through the same 3-layer structure.</span> "Layer" is how this table (and the code comments) name the structure to a dev — the rendered SlideOut itself never shows that word; it shows the action's own content (title, context, preview, buttons, inputs) with a plain divider between groupings, and the primary + any revealed extras stack above a single "Show N more"/"Show less" toggle at the very bottom. Closes on a clear confirmation once the action is taken — never silence — see the "4th layer, informally" note below the tables.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
               <div className="grid grid-cols-[100px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
@@ -34030,9 +33957,9 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ))}
               </div>
               {[
-                ["Approval", "UEP — Sarah Chen's \"Scope down Sarah's Admin access.\" What's changing + its context, Confirm/Reject (footer) — a human decision, no agent involved. Date input (effective date)."],
-                ["Call", "UCP — Acme's \"proactive check-in call\" (text input); Healthcare — Elena's \"coagulation panel\" (select: priority); Banking — Jordan's \"co-signer option\" (select: best time to reach). Contact + a suggested talking point, \"Assign call to agent\" / \"Schedule call\" (footer) — the agent places the call, never a same-second \"Call now.\""],
-                ["Email", "UVP — Meridian's \"insurance renewal\" (text input); Employee — Sarah's \"security training\" reminder (text input); Insurance — Diane's \"missing parts invoice\" (date input). Subject + body preview (Text Description) drafted by the agent, \"Approve send\" / \"Edit\" (footer) — the human governs, doesn't type-and-send."],
+                ["Approval", "UEP — Sarah Chen's \"Scope down Sarah's Admin access.\" What's changing + its context, Confirm/Reject (footer) — a human decision, no agent involved. Date input (effective date). Closes on \"Confirmed\" / \"Rejected.\""],
+                ["Call", "UCP — Acme's \"Assign a proactive check-in call to the agent\" (text input); Healthcare — Elena's \"coagulation panel\" (select: priority); Banking — Jordan's \"Assign a co-signer conversation to the agent\" (select: best time to reach). Contact + a suggested talking point, \"Assign call to agent\" / \"Schedule call\" (footer) — the agent places the call, never a same-second \"Call now.\" All 3 close on \"Done — the agent will carry this out\" (outcome: immediate)."],
+                ["Email", "UVP — Meridian's \"insurance renewal\" (text input, immediate); Employee — Sarah's \"security training\" reminder (text input, immediate); Insurance — Diane's \"missing parts invoice\" (date input, GOVERNED). Subject + body preview (Text Description) drafted by the agent, \"Approve send\" / \"Edit\" (footer) — the human governs, doesn't type-and-send. Closes on \"Done\" for the 2 immediate cases, \"Submitted — held for sign-off before it takes effect\" for Diane's."],
                 ["Not yet modeled", "Automotive — Devon's \"bundle the cabin air filter\" — the one example of this fallback; every other NBA in this file carries a real type."],
               ].map(([type, ex]) => (
                 <div key={type} className="grid grid-cols-[110px_1fr] border-b border-[var(--table-border)] last:border-0">
@@ -34041,8 +33968,14 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 </div>
               ))}
             </div>
-            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
               <span className="font-semibold text-[var(--field-text)]">In AIMS OS, the agent acts and the user governs.</span> External actions — calling someone, sending an email — are the agent's to execute, never the viewer's to trigger directly from this card: the CTA is "assign/schedule" or "approve/edit," not "Call now" or "Send." A governed decision (Approval) is the opposite case — the human decides, no agent involved. Same principle as HTL's own Approve/Dismiss (a governed decision always gets an explicit human confirmation), applied here to who's actually doing the acting.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
+              <span className="font-semibold text-[var(--field-text)]">A 4th layer, informally: closure.</span> Taking the task's action was previously a dead end — no feedback that anything happened. Every task now closes on an explicit result once its footer CTA is used: Approval reads "Confirmed"/"Rejected"; Call and Email resolve to whichever of the 2 outcomes the task itself defines — "executed" (done, no further gate) or "in review" (held for sign-off before it actually happens), the 2 closures Edgardo defined. The footer CTA disappears once resolved; the result renders as an InformativeCard (success for executed, informative for in-review) in its place.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
+              The Playground has its own "Next Best Action — type" selector (Approval / Call / Email / Not yet modeled), decoupled from the vertical selector, so a dev can flip between all 4 types live on the same card without also switching entity type — each option points at one of the real NBAs above, not invented content.
             </p>
           </section>
 
@@ -34062,7 +33995,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["Next Best Action — N items", "nextBestActions={NextBestAction[]} — dark-purple surface, always visible regardless of the card's OWN expand/collapse state (never gated by it). The most prioritized item renders full-size; N items beyond that collapse behind \"Show N more\" / \"Show less\" (correction pass — same pattern as Your Intervention). Collapsed position right under the tags; expanded position at the end of the zones. Omit/empty array skips it entirely."],
                 ["Your Intervention — empty", "intervention={{status:\"empty\", message?}} — a calm \"nothing pending\" InformativeCard (state=\"neutral\"), not an absent/broken zone. Default copy: \"No interventions pending — you're all caught up\" — reads as completion, never as an error."],
                 ["Your Intervention — N pending items", "intervention={{items: InterventionItem[], onViewAll?}} — 1 item shows alone, no counter. N items show the most prioritized (items[0], host-sorted) full-size + \"Show N more\" (caps at 3 extra inline) + \"View all\" (always-present escape hatch). Every item's trigger is a diagonal ArrowUpRight — opens the real HTL view in a NEW TAB, never a same-page overlay (redesign pass — was a labeled \"Review\" button before). Deliberately NOT a carousel — urgent decisions must be visible at a glance."],
-                ["Agentic System — empty", "agenticSystem={{status:\"empty\"}} — a calm \"no workflow/agent yet\" message, e.g. a freshly imported record."],
+                ["Agentic System — empty", "agenticSystem={{status:\"empty\"}} — a calm \"no workflow yet\" message, e.g. a freshly imported record."],
                 ["Loading", "status=\"loading\" on either zone — Skeleton rows matching the real content's footprint, no layout jump when data arrives."],
                 ["No permission to approve", "intervention={{status:\"no-permission\", description, onEscalate?}} — Review renders disabled (via InformativeCard's own cta.disabled), Escalate offered as the alternate action. Unlike the \"pending\" status above, this one keeps its labeled cta buttons — it's a governed decision being blocked, not a link out."],
                 ["Error approving", "intervention={{status:\"error\", message, onRetry?}} — amber InformativeCard (state=\"alert\"), never a red toast."],
@@ -34168,10 +34101,18 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Signal retired — a flagged decision, not silent scope creep</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Retired features — flagged decisions, not silent scope creep</p>
+            <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px] mb-[8px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
+              <div>
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Agent removed from Agentic System (closing pass, explicit product decision)</p>
+                <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
+                  Agentic System used to show 2 items side by side: Active Workflow and Last Agent (a session summary/finding/recommendation card). Last Agent is REMOVED — its value, where a suggestion comes from and what to do about it, is already carried by Next Best Action itself (its own "System-suggested" signal + "Assigned to" field), so a separate agent card here duplicated that rather than adding to it. This also retires the recurring "Employee still shows an agent" report at the root: there's no agent slot left in this zone for any vertical to show, full stop — not a per-record toggle anymore. <code>AgenticSystemInfo.lastAgent</code>, the "Last Agent" SlideOut, and its own "···" header menu are all gone from the code. <code>{"// TODO: descartado — valor absorbido en NBA"}</code> marks the spot in record-header.tsx. Recoverable from git history if a future case needs this content model back.
+                </p>
+              </div>
+            </div>
             <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
               <div>
-                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>DECISION FLAGGED — inferred, not explicitly instructed</p>
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Signal bar / statusDot (inferred, not explicitly instructed)</p>
                 <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
                   Earlier revisions of this component had an always-visible NextBestAction "Signal" bar (severity color, actionLabel, loading/error states). This governed-card brief's skeleton is Identity + 3 expandable zones, full stop, with no Signal row in it — Your Intervention (expandable, HTL-specific, substantive) is the one place that detail now lives. An interim revision also added a decorative <code>statusDot</code> next to the name for an at-a-glance read; that was removed in a later correction pass — a bare colored dot with no label or Tooltip communicated nothing and was pure visual noise, not a lighter version of Signal. If a glanceable indicator is wanted here again, it needs an explicit meaning and a Tooltip. Both the Signal bar and the statusDot are fully recoverable from git history — flagging the call for review rather than silently deleting without a trace.
                 </p>
@@ -34218,7 +34159,7 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 ["recordFields", "RecordField[] — { label, icon, value, state: \"hydrated\"|\"masked\", maskedValue?, provenance: { system, systemAbbr, modelVersion, syncedAgo }, hasDestination? }. Omit or pass [] to skip the RECORD zone entirely."],
                 ["assignedAgent", "AssignedAgent | null — { id, name, onOpenChat }. Required as a PROP (every caller must decide), but the VALUE can be null for a record with no agent yet — renders the same button, disabled, with a Tooltip explaining why. Never a silently missing button."],
                 ["intervention", "PendingIntervention | undefined. Omit entirely to skip the zone. \"pending\" status: { items: InterventionItem[], onViewAll? } — each item { id, description, severity, onReview }, host-sorted by priority; onReview now fires the item's diagonal-arrow trigger (opens a NEW TAB, redesign pass), not a same-page \"Review\" button. Other statuses (empty/loading/no-permission/error/resolved-elsewhere) need their own specific fields — see record-header.tsx's own doc comment on the type."],
-                ["agenticSystem", "AgenticSystemInfo | undefined. Omit entirely to skip the zone. { activeWorkflow?: {name, onOpen?}, lastAgent?: {name, onOpen?} } for the ready case, plus \"empty\"/\"loading\" statuses. No section heading (redesign pass). Items lay out with flex(1), not a fixed 2-column grid (correction pass) — 1 present item fills the row, 2 split evenly; a record with no agent (lastAgent omitted) never leaves half the row empty."],
+                ["agenticSystem", "AgenticSystemInfo | undefined. Omit entirely to skip the zone. { activeWorkflow?: {name, onOpen?} } for the ready case, plus \"empty\"/\"loading\" statuses. No section heading, workflow only — the zone's own agent slot was removed entirely (closing pass; see \"Retired features\" above), its value fully carried by nextBestActions instead. Renders full-width (flex(1))."],
                 ["nextBestActions", "NextBestAction[] — { id, title, description, onOpen }. The protagonist block (redesign pass) — default []. Always visible regardless of the disclosure state; omit or pass [] for a record with nothing to recommend."],
                 ["onProvenanceOpen / locked / labels", "onProvenanceOpen: () => void — opens \"About this record\" (was \"Data Provenance\") for every RECORD field, via the icon-only tertiary button beside the name (Law 2, moved there this redesign pass). locked: boolean — disables write actions, never read-only surfaces. labels: { intervention? } — i18n-ready heading override for the one remaining expandable zone with a heading (agenticSystem's own heading was removed this redesign pass, record's was removed earlier)."],
               ].map(([prop, desc], i) => (
@@ -34425,194 +34366,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         </div>
       </SlideOut>
 
-      {/* ── Last Agent detail — read-only, its own "···" menu (correction
-           pass keeps this one — the Workflow SlideOut above now uses a
-           footer CTA instead, but the Agent panel has no single obvious
-           "go to X" destination the way a workflow does; "View agent in
-           Agentic Studio" stays as the contextual, secondary action it
-           actually is). Recommendation exposes a real action, not just
-           text. */}
-      <SlideOut
-        open={rhAgentOpen}
-        onClose={() => { setRhAgentOpen(false); setRhAgentMenuAnchor(null) }}
-        type="with-variants"
-        size="m"
-        title={openAgent.agentName}
-        subtitle="Latest session"
-        iconContent={<LucideIcons.Bot size={24} style={{ color: "var(--hi-purple-icon)" }} />}
-        iconBg="var(--hi-purple-bg)"
-        showStatus={false}
-        showTabs={false}
-        showSearchBar={false}
-        showChips={false}
-        showCta={!!openAgent.recommendation.actionLabel}
-        showCtaSecondary={false}
-        ctaPrimaryLabel={openAgent.recommendation.actionLabel}
-        onCtaPrimary={() => setRhAgentOpen(false)}
-        topButtonIcon={<LucideIcons.MoreHorizontal size={14} />}
-        onTopButtonClick={e => {
-          const rect = e.currentTarget.getBoundingClientRect()
-          setRhAgentMenuAnchor(prev => (prev ? null : { left: rect.right - 220, top: rect.bottom + 4 }))
-        }}
-      >
-        <div className={PANEL_CONTENT_CLASS}>
-          {/* AI Summary — was a plain gray Section, now the real AI Summary
-              card (this refinement): the session summary IS AI-generated
-              content, so it gets the pattern's own AI Summary treatment,
-              not an ad-hoc paragraph. */}
-          <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]" style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
-            <div className="flex items-center gap-[6px]">
-              <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
-              <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
-            </div>
-            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{openAgent.sessionSummary}</p>
-          </div>
-          <div>
-            <div className="flex items-center h-[32px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Agent's Latest Finding</span>
-            </div>
-            <p className="text-[13px] leading-[1.6] mt-[4px]" style={{ color: "var(--foreground)" }}>{openAgent.latestFinding}</p>
-          </div>
-          {/* List Section — recent activity, denser real content. */}
-          <div>
-            <div className="flex items-center h-[32px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Recent Activity</span>
-            </div>
-            <div className="flex flex-col gap-[8px]">
-              {openAgent.recentActivity.map((a, i) => (
-                <div key={i} className="flex items-start gap-[10px] px-[12px] py-[10px] rounded-[8px]" style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
-                  <span className="text-[11px] shrink-0 mt-[2px] w-[70px]" style={{ color: "var(--field-supporting)" }}>{a.date}</span>
-                  <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{a.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center h-[32px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Recommendation</span>
-            </div>
-            {/* Correction pass — the action itself moved to the SlideOut's
-                own fixed footer CTA (below), not a button loose in the
-                middle of the content — same "SlideOut/SidePanel — Content"
-                pattern every other governed action on this page follows. */}
-            <div className="rounded-[8px] px-[12px] py-[10px] mt-[4px]" style={{ background: "var(--tag-purple-bg)", border: "0.5px solid var(--tag-purple-bd)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--tag-purple-fg)" }}>{openAgent.recommendation.text}</p>
-            </div>
-          </div>
-        </div>
-      </SlideOut>
-      <HeaderContextMenu
-        anchor={rhAgentMenuAnchor}
-        onDismiss={() => setRhAgentMenuAnchor(null)}
-        items={[
-          // TODO: confirmar navegación real a Agentic Studio
-          { label: "View agent in Agentic Studio", onClick: () => {} },
-        ]}
-      />
-
-      {/* ── Pending Decisions (Your Intervention → Review). This IS the
-           action surface (footer CTAs), so no separate edit pencil or menu —
-           showTopButton={false}. Approve/Dismiss open a confirmation step
-           instead of resolving on one click — a governed decision, per the
-           agreed interaction logic, always gets an explicit confirmation. */}
-      <SlideOut
-        open={rhReviewOpen}
-        onClose={() => setRhReviewOpen(false)}
-        type="with-variants"
-        size="m"
-        title="Pending Decisions"
-        subtitle={openInterventionCount > 0 ? `${openInterventionCount} ${openInterventionCount === 1 ? "item" : "items"} awaiting review` : ""}
-        iconContent={<LucideIcons.AlertTriangle size={24} style={{ color: "var(--ic-alert-icon)" }} />}
-        iconBg="var(--ic-alert-bg)"
-        showStatus={false}
-        showTabs={false}
-        showSearchBar={false}
-        showChips={false}
-        showCta={!rhReviewResolved}
-        ctaPrimaryLabel="Approve"
-        ctaSecondaryLabel="Dismiss"
-        onCtaPrimary={() => setRhConfirmAction("approved")}
-        onCtaSecondary={() => setRhConfirmAction("dismissed")}
-        topButtonIcon={<LucideIcons.ArrowUpRight size={14} />}
-        topButtonTooltip="Go to this record's governed data — About this record, for the field this request affects"
-        onTopButtonClick={() => { setRhReviewOpen(false); rhOpenProvenance(openVariant) }}
-      >
-        <div className={PANEL_CONTENT_CLASS}>
-          {openIntervention && (
-            <>
-              <div>
-                <div className="flex items-center h-[32px]">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Decision</span>
-                </div>
-                {/* Wrapped in a non-flex div so the Tag can't be stretched full-width by
-                    the parent's flex-col cross-axis — severity Tags stay compact/inline. */}
-                <Tag variant={openIntervention.severity === "high" ? "alert" : openIntervention.severity === "medium" ? "informative" : "secondary"} size="sm" className="mt-[4px]">
-                  {openIntervention.severity.toUpperCase()}
-                </Tag>
-              </div>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                {openIntervention.detail}
-              </p>
-              <div>
-                <div className="flex items-center h-[32px]">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Details</span>
-                </div>
-                <div className="grid grid-cols-2 gap-[12px] text-[12px] mt-[4px]">
-                  <div>
-                    <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Requested by</p>
-                    <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openIntervention?.requestedBy}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Impact</p>
-                    <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openIntervention?.impact}</p>
-                  </div>
-                </div>
-              </div>
-              {openIntervention && openIntervention.history.length > 0 && (
-                <div>
-                  <div className="flex items-center h-[32px]">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Similar Past Decisions</span>
-                  </div>
-                  <div className="flex flex-col gap-[8px]">
-                    {openIntervention.history.map((h, i) => (
-                      <div key={i} className="flex items-start gap-[10px] px-[12px] py-[10px] rounded-[8px]" style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
-                        <span className="text-[11px] shrink-0 mt-[2px] w-[70px]" style={{ color: "var(--field-supporting)" }}>{h.date}</span>
-                        <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{h.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {rhReviewResolved && (
-                <div className="rounded-[8px] px-[12px] py-[10px]" style={{ background: "var(--tag-informative-bg)", color: "var(--tag-informative-fg)" }}>
-                  <p className="text-[13px] font-semibold">{rhReviewResolved === "approved" ? "Approved" : "Dismissed"}</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </SlideOut>
-
-      {/* Governed-decision confirmation — Approve/Dismiss never resolve on
-          one click (see the SlideOut's onCtaPrimary/onCtaSecondary above). */}
-      <ModalDialog
-        isOpen={rhConfirmAction !== null}
-        onClose={() => setRhConfirmAction(null)}
-        variant="confirmation"
-        tone={rhConfirmAction === "approved" ? "success" : "default"}
-        title={rhConfirmAction === "approved" ? "Approve this request?" : "Dismiss this request?"}
-        description={
-          rhConfirmAction === "approved"
-            ? "This grants what was requested and is recorded against this record — it can't be silently undone."
-            : "This closes the request without granting it. The requester will need to submit a new one if this was in error."
-        }
-        ctaPrimary={{
-          label: rhConfirmAction === "approved" ? "Approve" : "Dismiss",
-          onClick: () => { setRhReviewResolved(rhConfirmAction); setRhConfirmAction(null) },
-        }}
-        ctaSecondary={{ label: "Cancel", onClick: () => setRhConfirmAction(null) }}
-      />
-
       {/* ── About this record (Law 2) — renamed this redesign pass (was
            "Data Provenance") to match the reference brief's own framing:
            the (i)/info trigger beside the name opens an overview of the
@@ -34741,14 +34494,6 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{openNba.task.whatChanges}</p>
                   <p className="text-[12px] leading-[1.5] mt-[4px]" style={{ color: "var(--field-supporting)" }}>{openNba.task.context}</p>
                 </CardContainer>
-                {/* Confirm/Reject moved to the SlideOut's own fixed footer
-                    (see nbaFooterCta above) — this banner is the only
-                    thing that still renders here once resolved. */}
-                {rhNbaApprovalResult && (
-                  <div className="rounded-[8px] px-[12px] py-[10px]" style={{ background: "var(--tag-informative-bg)", color: "var(--tag-informative-fg)" }}>
-                    <p className="text-[13px] font-semibold">{rhNbaApprovalResult === "confirmed" ? "Confirmed" : "Rejected"}</p>
-                  </div>
-                )}
               </div>
             )}
 
@@ -34795,6 +34540,15 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   This action's type hasn't been modeled yet. Approval / Call / Email are the first 3 representative types — the list grows as new actions are built.
                 </p>
               </div>
+            )}
+
+            {/* Closing pass — a clear closure after the action is taken,
+                never silence. Confirmed/Rejected for Approval; for Call/
+                Email, the task's own `outcome` decides which of Edgardo's
+                2 closures shows — executed (done, no further gate) or
+                in-review (held for sign-off before it actually happens). */}
+            {nbaResultDisplay && (
+              <InformativeCard size="sm" state={nbaResultDisplay.state} title={nbaResultDisplay.title} />
             )}
 
             {/* ── Dynamic inputs (less protagonist than HTL's own, per the
