@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from "react"
 import {
-  ChevronDown, ChevronUp, ChevronRight, ArrowUpRight, Sparkle, MoreHorizontal, Lock, Info, Workflow, User,
+  ChevronDown, ChevronUp, ChevronRight, ArrowUpRight, Sparkle, MoreHorizontal, Lock, Info, Workflow,
   AlertTriangle, CheckCircle2,
   type LucideIcon,
 } from "lucide-react"
@@ -75,11 +75,15 @@ import { Skeleton } from "@/components/ui/skeleton"
  *     PendingIntervention below): passing the prop at all (even in an
  *     "empty"/"loading" status) means "render this zone"; omitting it
  *     entirely means "this entity type doesn't use this zone."
- *   - The 3 signal colors (lime green = AI/agent, light blue = workflow,
- *     amber = intervention/HTL — agent was purple before the redesign pass
- *     above) encode SIGNAL TYPE, never a vertical — nothing in this file
- *     branches color by entity type. Confirmed by construction: there's no
- *     entity-type variable in scope anywhere near the color tokens below.
+ *   - The 2 remaining signal colors (light blue = workflow, amber =
+ *     intervention/HTL) encode SIGNAL TYPE, never a vertical — nothing in
+ *     this file branches color by entity type. Confirmed by construction:
+ *     there's no entity-type variable in scope anywhere near the color
+ *     tokens below. Agent had its own lime-green signal color at one point
+ *     (itself moved off purple by the redesign pass above) — closing pass,
+ *     later still: the lime identity Tag it lived on is retired too (see
+ *     AssignedAgent's own doc comment), so lime is no longer a live signal
+ *     color anywhere in this file, only in this historical note.
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * ═══════════════════════════════════════════════════════════════════════════
@@ -120,23 +124,27 @@ import { Skeleton } from "@/components/ui/skeleton"
  *   Identity (always visible) → avatar, name (truncates with a Tooltip —
  *     never stretches or wraps the row), the RECORD provenance trigger
  *     (icon-only Button, see below), entity-type icon + TEXT (both, not
- *     icon-only) — all left-aligned, beside the name — up to 3
- *     governance-state Tags (hidden once expanded), Locked state. Actions:
- *     AI agent trigger ("Ask about {firstName}") → optional primary CTA
- *     (actions[0], host-provided — omitted entirely if the host passes
- *     none) → "···" overflow (actions[1+]) → disclosure chevron. Clicking a
- *     compressed Tag expands the card and scrolls/highlights the zone that
- *     Tag summarizes — see Block 2 note below.
+ *     icon-only) — all left-aligned, beside the name — up to 2
+ *     governance-state Tags (hidden once expanded: workflow, HTL — no
+ *     assigned-agent tag, closing pass; see Block 2 note below for why),
+ *     Locked state. Actions: AI agent trigger ("Ask about {firstName}") →
+ *     optional primary CTA (actions[0], host-provided — omitted entirely if
+ *     the host passes none) → "···" overflow (actions[1+]) → disclosure
+ *     chevron. Clicking a compressed Tag expands the card and scrolls/
+ *     highlights the zone that Tag summarizes.
  *   NEXT BEST ACTION (always visible, not gated by the disclosure — this
  *     redesign pass) → right under the identity tags while collapsed, at
  *     the end of the expanded zones while expanded. See NextBestAction's
  *     own doc comment and NextBestActionBlock.
  *   AGENTIC SYSTEM (expanded, no section heading — this redesign pass) →
- *     the Active Workflow item is a CardContainer (size="sm") with a
- *     HighlightIcon (size="sm", light-blue) + a NEUTRAL tertiary Button —
- *     color lives in the icon, never in the button. Also renders "empty"
- *     (no workflow yet) and "loading" (Skeleton) states. No agent card here
- *     — see AgenticSystemInfo's own doc comment for why.
+ *     N workflows, most prioritized (workflows[0]) full-size + the same
+ *     "Show N more"/"Show less"/"View all" disclosure Your Intervention
+ *     and Next Best Action use (closing pass — one learnable pattern for
+ *     every zone, not 3 bespoke ones). Each item is a CardContainer
+ *     (size="sm") with a HighlightIcon (size="sm", light-blue) + a NEUTRAL
+ *     tertiary Button — color lives in the icon, never in the button. Also
+ *     renders "empty" (no workflow yet) and "loading" (Skeleton) states. No
+ *     agent card here — see AgenticSystemInfo's own doc comment for why.
  *   YOUR INTERVENTION (expanded, only if `intervention` is set, no section
  *     heading — closing pass, matching Agentic System's own plain-card
  *     treatment) → renders one of 3 states, never red: pending (default,
@@ -272,12 +280,27 @@ export interface RecordField {
   hasDestination?: boolean
 }
 
+// ── A single active workflow (Zone: AGENTIC SYSTEM, "ready" status) ────────
+// Closing pass — a record can be impacted by N workflows at once, not just
+// 1 (same Block 3 reasoning as InterventionItem above). Each keeps its own
+// onOpen — opening one never affects the others.
+export interface WorkflowSummary {
+  id: string
+  name: string
+  onOpen?: () => void
+}
+
 // ── Agentic System (Zone: AGENTIC SYSTEM) ───────────────────────────────────
 // A discriminated union covering the full state coverage this component
 // supports:
-//   status omitted or "ready" → normal rendering, activeWorkflow optional
-//     (status can be "ready" with nothing in it yet, though "empty" below
-//     is the real way to express that).
+//   status omitted or "ready" → normal rendering, `workflows: WorkflowSummary[]`
+//     (status can be "ready" with an empty array, though "empty" below is
+//     the real way to express "genuinely nothing"). The most prioritized
+//     workflow (workflows[0], host-sorted) renders full-size; workflows[1:]
+//     collapse behind the SAME "Show N more" / "Show less" / "View all"
+//     disclosure Your Intervention and Next Best Action already use — one
+//     learnable pattern for every zone with N items, not a 3rd bespoke one.
+//     See AgenticSystemZoneContent's own doc comment for the exact layout.
 //   status "empty"  → this entity type uses the zone, but genuinely has no
 //     workflow right now (e.g. a freshly imported record) — renders a calm
 //     "nothing yet" message, not a broken gap.
@@ -299,7 +322,7 @@ export interface RecordField {
 // "Last Agent" SlideOut this used to open is gone from the demo too (see
 // App.tsx) — recoverable from git history if a future case needs it back.
 export type AgenticSystemInfo =
-  | { status?: "ready"; activeWorkflow?: { name: string; onOpen?: () => void } }
+  | { status?: "ready"; workflows: WorkflowSummary[]; onViewAll?: () => void }
   | { status: "loading" }
   | { status: "empty"; message?: string }
 
@@ -362,6 +385,14 @@ export interface NextBestAction {
 
 // ── Assigned AI agent (transversal across entity types) ─────────────────────
 // AIMS OS is agent-first: every record has one, regardless of entity type.
+// Closing pass — the collapsed identity row used to also carry a lime-green
+// Tag echoing this same value ("Renewal Copilot," etc.) alongside the "Ask
+// about {name}" button below. That Tag is REMOVED: it was pure redundancy
+// with the button, which is already this record's one persistent, always-
+// visible agent signal — unlike the workflow/HTL tags, which each
+// summarize a genuinely DIFFERENT zone the button doesn't cover. The
+// button/trigger itself is untouched and must stay ACTIVE whenever this is
+// non-null (disabling it by default was itself a bug from an earlier pass).
 export interface AssignedAgent {
   id: string
   name: string
@@ -573,7 +604,7 @@ function RecordHeader({
   }, [])
 
   // Collapsed identity tags — measured, not guessed (this correction). The
-  // row can hold up to 3 Tags (agent/workflow/HTL) and wraps at
+  // row can hold up to 2 Tags (workflow/HTL) and wraps at
   // intermediate widths (narrow enough that 3 don't fit on one line, but
   // not narrow enough to trip COLLAPSE_HIDE_TAGS_WIDTH's full-hide
   // fallback) — a fixed max-height tall enough for only 1 line clipped the
@@ -595,7 +626,7 @@ function RecordHeader({
     // Re-attach whenever the row's own mount condition (below) can flip —
     // tagsHidden toggling, or a zone's presence/status changing, mounts or
     // unmounts the ref target, and a plain [] effect would miss that.
-  }, [tagsHidden, assignedAgent, agenticStatus, interventionStatus])
+  }, [tagsHidden, agenticStatus, interventionStatus])
 
   // NBA, collapsed position — same measured-height technique as the tags
   // row above, kept as its own independent ref/state since it lives at a
@@ -628,7 +659,7 @@ function RecordHeader({
       <div ref={rootRef} className="flex flex-col gap-[16px]">
 
         {/* ── Identity row (always visible, fixed) — avatar + name +
-            entity-type icon+text + up to 3 governance-state Tags + action row.
+            entity-type icon+text + up to 2 governance-state Tags + action row.
             Cross-axis alignment is conditional: items-start while collapsed
             (the tags row underneath makes this a 2-line block), items-center
             once expanded (name row is the only line left, so it should sit
@@ -697,17 +728,22 @@ function RecordHeader({
                 keeping both visible is pure redundancy. max-height
                 transition (not a hard unmount) so the collapse is animated,
                 not an abrupt height jump.
-                Tag CONTENT — governance-state indicators: assigned agent
-                (lime green, matches Last Agent below — this redesign pass;
-                was purple before), active workflow (light blue, matches
-                Active Workflow below), pending HTL (amber, matches Your
-                Intervention below). Block 2 — every tag is
-                clickable: it expands the card and scrolls/highlights the
-                zone it summarizes (never opens a SlideOut directly from
-                here). Each only renders when that signal is actually in its
-                "there's something to summarize" state — no tag for an
-                empty/loading/error zone, nothing pretending to summarize
-                data that isn't really there. */}
+                Tag CONTENT — governance-state indicators: active workflow
+                (light blue, matches Active Workflow below), pending HTL
+                (amber, matches Your Intervention below). Closing pass — no
+                assigned-agent tag here anymore: the identity row's own
+                "Ask about {name}" button is already this record's one
+                persistent, always-visible agent signal, so a second lime
+                tag repeating "there's an agent" was pure redundancy, not a
+                complementary summary (unlike the workflow/HTL tags, which
+                each summarize a DIFFERENT zone the button doesn't cover).
+                Block 2 — every remaining tag is clickable: it expands the
+                card and scrolls/highlights the zone it summarizes (never
+                opens a SlideOut directly from here). Each only renders when
+                that signal is actually in its "there's something to
+                summarize" state — no tag for an empty/loading/error zone,
+                nothing pretending to summarize data that isn't really
+                there. */}
             <div
               style={{
                 maxHeight: expanded ? 0 : tagsRowHeight,
@@ -716,30 +752,26 @@ function RecordHeader({
                 transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease",
               }}
             >
-              {!tagsHidden && (assignedAgent || agenticStatus === "ready" || interventionStatus === "pending") && (
+              {!tagsHidden && (agenticStatus === "ready" || interventionStatus === "pending") && (
                 <div ref={tagsRowRef} className="flex items-center gap-[6px] flex-wrap">
-                  {assignedAgent && (
-                    <Tooltip content={`Assigned agent: ${assignedAgent.name}`} side="cursor">
-                      <button
-                        type="button"
-                        onClick={() => focusZone("agenticSystem")}
-                        className="cursor-pointer rounded-[8px]"
-                      >
-                        <Tag variant="limeGreen" size="sm" leadingIcon={<User size={12} strokeWidth={1.75} />}>
-                          {assignedAgent.name}
-                        </Tag>
-                      </button>
-                    </Tooltip>
-                  )}
-                  {agenticStatus === "ready" && agenticSystem && "activeWorkflow" in agenticSystem && agenticSystem.activeWorkflow && (
-                    <Tooltip content={`Active workflow: ${agenticSystem.activeWorkflow.name}`} side="cursor">
+                  {agenticStatus === "ready" && agenticSystem && "workflows" in agenticSystem && agenticSystem.workflows.length > 0 && (
+                    <Tooltip
+                      content={
+                        agenticSystem.workflows.length === 1
+                          ? `Active workflow: ${agenticSystem.workflows[0].name}`
+                          : `${agenticSystem.workflows.length} active workflows`
+                      }
+                      side="cursor"
+                    >
                       <button
                         type="button"
                         onClick={() => focusZone("agenticSystem")}
                         className="cursor-pointer rounded-[8px]"
                       >
                         <Tag variant="lightBlue" size="sm" leadingIcon={<Workflow size={12} strokeWidth={1.75} />}>
-                          {agenticSystem.activeWorkflow.name}
+                          {agenticSystem.workflows.length === 1
+                            ? agenticSystem.workflows[0].name
+                            : `${agenticSystem.workflows.length} workflows`}
                         </Tag>
                       </button>
                     </Tooltip>
@@ -1009,7 +1041,17 @@ function NextBestActionBlock({ nba }: { nba: NextBestAction }) {
 // Task 3 (Block 1) — restructured as CardContainer(sm) + HighlightIcon(sm,
 // colored) + a NEUTRAL tertiary Button beside it. Color lives in the icon,
 // never in the button — this is the whole point of the change.
+//
+// Closing pass — N workflows use the SAME disclosure pattern as Your
+// Intervention and Next Best Action: workflows[0] always renders full-size;
+// workflows[1:] collapse behind "Show N more" / "Show less", capped at 3
+// revealed extras (never all of them at once). Button position — BELOW
+// every item, not between the primary and the extras — "Show N more"/
+// "Show less" and "View all" sit at OPPOSITE ends of that row
+// (justify-between), never stacked. One learnable disclosure pattern for
+// every zone in this card, not 3 bespoke ones.
 function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
+  const [showMore, setShowMore] = useState(false)
   // Narrow on `state.status` directly (not a copied local) — TS control-flow
   // narrowing for a discriminated union only tracks the actual property
   // access expression, not a variable derived from it.
@@ -1033,19 +1075,46 @@ function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
     )
   }
 
-  // Agent removed from this zone (closing pass) — a workflow is the only
-  // thing left to show here, so it always renders full-width. No flex/grid
-  // multi-item logic needed anymore now that there's never more than 1.
+  // "ready" with an empty array is the caller's way of saying "nothing to
+  // show yet" without going through the "empty" status — render nothing,
+  // same as before this pass (never an empty bordered shell).
+  if (state.workflows.length === 0) return null
+
+  const [primary, ...rest] = state.workflows
+  const visibleRest = rest.slice(0, 3)
   return (
     <div className="flex flex-col gap-[8px]">
-      {state.activeWorkflow && (
+      <AgenticSystemItem
+        icon={<Workflow size={16} strokeWidth={1.75} />}
+        iconVariant="light-blue"
+        name={primary.name}
+        onOpen={primary.onOpen}
+        tooltip={`Open "${primary.name}" — steps, timeline, and who's running it`}
+      />
+      {showMore && visibleRest.map(wf => (
         <AgenticSystemItem
+          key={wf.id}
           icon={<Workflow size={16} strokeWidth={1.75} />}
           iconVariant="light-blue"
-          name={state.activeWorkflow.name}
-          onOpen={state.activeWorkflow.onOpen}
-          tooltip={`Open "${state.activeWorkflow.name}" — steps, timeline, and who's running it`}
+          name={wf.name}
+          onOpen={wf.onOpen}
+          tooltip={`Open "${wf.name}" — steps, timeline, and who's running it`}
         />
+      ))}
+      {rest.length > 0 && (
+        <div className="flex items-center justify-between">
+          <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
+            {showMore ? "Show less" : `Show ${visibleRest.length} more`}
+            {showMore
+              ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
+              : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
+          </Button>
+          {state.onViewAll && (
+            <Button variant="tertiary" size="sm" onClick={state.onViewAll} className="self-start">
+              View all
+            </Button>
+          )}
+        </div>
       )}
     </div>
   )
