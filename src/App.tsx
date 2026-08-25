@@ -79,7 +79,7 @@ import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-create" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
 type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -202,6 +202,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   // Patterns — behavioral guides for PMs and engineers
   { id: "patterns-guardrails",  label: "Guardrails",         group: "Patterns", description: "Consolidated rules for AI-generated views · Tokens · Headers · Buttons · 3-dot menu · Sidebar sub-nav · SlideOut composition" },
   { id: "patterns-forms",       label: "Forms",              group: "Patterns", description: "Form composition: when to use wizard vs modal vs slideout · field spacing 16px / section gap 24px · validate on blur · Next disabled while required fields are empty" },
+  { id: "patterns-create",      label: "Create",             group: "Patterns", description: "Scaffold — content pending Fase 0 (docs/patterns/create.md). Which surface/component to use for a Create flow, by flow type." },
   { id: "patterns-slideout",    label: "SlideOut / SidePanel",   group: "Patterns", description: "SlideOut vs SidePanel: when to use each · Shell anatomy · 4 header variants · real examples for detail view, form, and node config · content types · tabs · footer · guardrails" },
   { id: "patterns-panel-content", label: "SlideOut/SidePanel — Content", group: "Patterns", description: "Content vocabulary for panels — AI Summary (8 variants) · Insights (HighlightCard grid) · List Sections · Form fields: Input, Textarea, Select, Toggle · Section Headers" },
   { id: "patterns-list-view",  label: "List View Layout",  group: "Patterns", description: "Mandatory stack: Topbar + Sidebar + EntityList + Pagination · AppBackground always · Side Panel for details · Filters as the single source of truth for the dataset" },
@@ -15904,6 +15905,93 @@ const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>
             </div>
           </PatternCard>
 
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternCreatePage ─────────────────────────────────────────────────────────
+// Scaffold only (Package B of the Patterns: Create handoff) — structure
+// mirrors PatternFormsPage exactly (same header block, same 4 hand-rolled
+// tabs: When to Use / Anatomy / Examples / Rules) on purpose, so the later
+// content pass (Package D) drops straight into an already-registered,
+// already-building page. Real content is frozen outside the repo first
+// (Fase 0 → docs/patterns/create.md) — see docs/patterns/create-audit.md
+// for the audit that feeds that decision. Every tab below is a placeholder.
+function PatternCreatePage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+
+  return (
+    <div>
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Create</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          Which surface or component to use for a Create flow, by flow type — scaffold only, content pending Fase 0.
+        </p>
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {([
+          { id: "when-to-use", label: "When to Use" },
+          { id: "anatomy",     label: "Anatomy"     },
+          { id: "examples",    label: "Examples"    },
+          { id: "rules",       label: "Rules"       },
+        ] as { id: string; label: string }[]).map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold transition-colors"
+            style={{ color: tab === t.id ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── When to Use ───────────────────────────────────────────────────── */}
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Content pending</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[640px]">
+              // DS-GAP: this tab is a scaffold placeholder. Real content (which surface — full-page, ModalDialog, SlideOut, or SidePanel — to use for a Create flow, and why) is frozen first as docs/patterns/create.md (Fase 0, a product decision made outside this repo), then ported here in Package D of the Patterns: Create handoff.
+            </p>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Anatomy ───────────────────────────────────────────────────────── */}
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Content pending</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[640px]">
+              // DS-GAP: this tab is a scaffold placeholder — pending Package D.
+            </p>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Examples ──────────────────────────────────────────────────────── */}
+      {tab === "examples" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Content pending</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[640px]">
+              // DS-GAP: this tab is a scaffold placeholder — pending Package F (a real screen per flow type in src/screens/, once the cascade + this tab's content exist).
+            </p>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Rules ─────────────────────────────────────────────────────────── */}
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Content pending</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[640px]">
+              // DS-GAP: this tab is a scaffold placeholder — pending Package D.
+            </p>
+          </PatternCard>
         </div>
       )}
     </div>
@@ -39915,6 +40003,7 @@ export default function App() {
           {active === "patterns-widget-canvas" && <PatternWidgetCanvasPage />}
           {active === "patterns-guardrails"   && <PatternGuardrailsPage />}
           {active === "patterns-forms"        && <PatternFormsPage />}
+          {active === "patterns-create"       && <PatternCreatePage />}
           {active === "patterns-panel-content" && <PatternPanelContentPage />}
           {active === "patterns-slideout"     && <PatternSlideOutPage />}
           {active === "widget-father"         && <WidgetFatherPage />}
