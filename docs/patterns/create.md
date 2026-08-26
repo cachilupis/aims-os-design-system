@@ -9,6 +9,7 @@
 > v0.3 — cascade rewritten as an explicit sequence; the two-stage flow named instead of falling through to the default.
 > v0.4 — third create mode added (from a source / catalogue); §2b defines the jobs a modal holds in Create.
 > v0.5 — contextual vs standalone split added as steps 4 and 5; a modal is now a first-class create form container. Reconciliation mapped against the seven findings in `create-audit.md`.
+> v0.6 — `SlideOut type="default"` corrected to `type="full-slot"` throughout — `"default"` was never a real value on the component (checked directly against `slide-out.tsx`: the only two are `"with-variants"` and `"full-slot"`).
 
 ---
 
@@ -107,7 +108,7 @@ This also satisfies NN/g's constraint that a modal must not host a decision requ
 | 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | **Dedicated view** | → 2 |
 | 2 | Does the flow branch, or does it have three or more stages? | **Dedicated view + `Stepper` + `StepperNavFooter`** | → 3 |
 | 3 | Can the object be created from a single field, *and* is a list of the same object type visible on screen? | **Inline create row** ⚠️ `DS-GAP` | → 4 |
-| 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | **`SlideOut type="default"`** | → 5 |
+| 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | **`SlideOut type="full-slot"`** | → 5 |
 | 5 | More than five fields? | **Dedicated view** | **`ModalDialog variant="content"`** |
 
 ### Steps 4 and 5 — contextual versus standalone
@@ -119,7 +120,7 @@ This is the split that decides between a panel and a modal, and it is the one mo
 | Test | The new object hangs off something on screen | Nothing on screen is its parent |
 | Examples | A note on a record · a vehicle inside a customer profile · a task in a project | A new entity from its own list view · a user in Admin · an API key |
 | Why | The background is what the user is drawing from. Covering it is a defect regardless of the form's size. | The background contributes nothing. A centred, focused dialog is the better container. |
-| Surface | `SlideOut type="default"` | `ModalDialog variant="content"` |
+| Surface | `SlideOut type="full-slot"` | `ModalDialog variant="content"` |
 
 **Why the five-field threshold lives here and nowhere else.** A `SlideOut` grows — 350px → 450px → half screen → full screen — so no volume rule is needed on the contextual side. A modal does not grow: it is capped at 900px and can only scroll. The design system's existing rule — *"don't open a ModalDialog for forms with more than 5 fields — the user needs room"* — was written about modals, and step 5 is the only place it applies. Used anywhere else, it is a number borrowed from a problem it was not measuring.
 
@@ -251,7 +252,7 @@ Cases 1a and 1b resolve differently on purpose: the surface follows the entry po
 | --- | --- |
 | Dedicated view | Exists — `ScreenLayout` + `Header` composition |
 | Dedicated view + Stepper | Exists — `Stepper` + `StepperNavFooter` |
-| `SlideOut` | Exists. A create panel uses `type="default"` — no entity header, no filters layout. This closes an open gap: no existing source stated which `type` a create flow should use. |
+| `SlideOut` | Exists. A create panel uses `type="full-slot"` — no entity header, no filters layout. This closes an open gap: no existing source stated which `type` a create flow should use. |
 | `ModalDialog variant="confirmation"` | Exists |
 | `ModalDialog variant="content"` — catalogue slot, 900px max-width | Exists. The `slot` prop already accepts arbitrary content; the catalogue itself is composed inside it. |
 | **Inline create row** | **Does not exist → build in `experimental/`** |
@@ -315,7 +316,7 @@ The audit in `docs/patterns/create-audit.md` found seven conflicts across four s
 | C4 — three separately maintained copies of "modal vs SlideOut" | §2b becomes the single statement for Create. The other copies get pointers. |
 | C5 — no rule covers 6–8 field, single-step, non-destructive forms | Step 5. Standalone and over five fields is a dedicated view. |
 | C6 — no source separates create from edit | This document. Create is now its own axis. |
-| C7 — no stated `SlideOut.type` for a create flow | §8. `type="default"`. |
+| C7 — no stated `SlideOut.type` for a create flow | §8. `type="full-slot"`. |
 
 **Not yet audited.** `patterns-slideout` and `patterns-panel-content` were outside the audit's scope but are likely to restate surface rules. They need the same pass before this rule ships.
 
