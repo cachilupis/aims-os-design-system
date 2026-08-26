@@ -31,10 +31,19 @@ interface PermNode {
   children?: PermNode[]
 }
 
+type MfaMethod = "totp" | "sms" | "email"
+
+interface MfaSession {
+  id: string; device: string; browser: string; location: string
+  lastActive: string; current: boolean
+}
+
 interface Member {
   id: string; name: string; email: string; role: MemberRole
   status: MemberStatus; lastActive: string | null; joinedAt: string
   initials: string; avatarColor: string; department?: string; title?: string
+  mfaEnabled: boolean; mfaMethod?: MfaMethod; mfaEnrolledAt?: string
+  sessions?: MfaSession[]
 }
 
 interface Role {
@@ -55,18 +64,35 @@ type DetailView =
 // ─── Members fixture ──────────────────────────────────────────────────────────
 
 const MEMBERS: Member[] = [
-  { id: "tg",  name: "Thomas Gonzalez",  email: "thomas.gonzalez@aimsos.ai",   role: "Super Admin",   status: "active",    lastActive: "2026-08-26T09:10:00Z", joinedAt: "2025-01-15T00:00:00Z", initials: "TG", avatarColor: "var(--badge-info)",       title: "Platform Owner",       department: "AIMS OS"           },
-  { id: "mg",  name: "Maria García",     email: "maria.garcia@avance.com",     role: "Tenant Admin",  status: "active",    lastActive: "2026-08-26T08:45:00Z", joinedAt: "2025-03-02T00:00:00Z", initials: "MG", avatarColor: "var(--badge-success)",    title: "IT Director",           department: "IT"                },
-  { id: "es",  name: "Eduardo Suárez",   email: "eduardo.suarez@avance.com",   role: "Member",        status: "active",    lastActive: "2026-08-25T17:30:00Z", joinedAt: "2025-04-10T00:00:00Z", initials: "ES", avatarColor: "var(--badge-alert)",      title: "Data Analyst",          department: "Analytics"         },
-  { id: "sb",  name: "Sarah Brown",      email: "sarah.brown@avance.com",      role: "Member",        status: "active",    lastActive: "2026-08-25T14:00:00Z", joinedAt: "2025-05-18T00:00:00Z", initials: "SB", avatarColor: "var(--badge-error)",      title: "Risk Manager",          department: "Risk & Compliance" },
-  { id: "dp",  name: "Diana Pérez",      email: "diana.perez@avance.com",      role: "Member",        status: "active",    lastActive: "2026-08-24T11:20:00Z", joinedAt: "2025-06-01T00:00:00Z", initials: "DP", avatarColor: "var(--badge-info)",       title: "Operations Lead",       department: "Operations"        },
-  { id: "jp",  name: "James Park",       email: "james.park@avance.com",       role: "Billing Admin", status: "active",    lastActive: "2026-08-23T09:00:00Z", joinedAt: "2025-07-07T00:00:00Z", initials: "JP", avatarColor: "var(--badge-success)",    title: "Finance Manager",       department: "Finance"           },
-  { id: "at",  name: "Ana Torres",       email: "ana.torres@avance.com",       role: "Viewer",        status: "active",    lastActive: "2026-08-22T16:45:00Z", joinedAt: "2025-08-01T00:00:00Z", initials: "AT", avatarColor: "var(--badge-alert)",      title: "Business Analyst",      department: "Analytics"         },
-  { id: "lr",  name: "Leo Ramírez",      email: "leo.ramirez@avance.com",      role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-20T00:00:00Z", initials: "LR", avatarColor: "var(--muted-foreground)", title: "Data Engineer",         department: "Engineering"       },
-  { id: "cn",  name: "Clara Nakamura",   email: "clara.nakamura@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-21T00:00:00Z", initials: "CN", avatarColor: "var(--muted-foreground)", title: "Product Manager",       department: "Product"           },
-  { id: "rv",  name: "Roberto Vargas",   email: "roberto.vargas@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-22T00:00:00Z", initials: "RV", avatarColor: "var(--muted-foreground)", title: "Solutions Architect",   department: "Engineering"       },
-  { id: "fw",  name: "Fiona Walsh",      email: "fiona.walsh@avance.com",      role: "Viewer",        status: "suspended", lastActive: "2026-07-14T10:00:00Z", joinedAt: "2025-09-10T00:00:00Z", initials: "FW", avatarColor: "var(--muted-foreground)", title: "Analyst",               department: "Risk & Compliance" },
-  { id: "ms",  name: "Marcus Silva",     email: "marcus.silva@avance.com",     role: "Member",        status: "suspended", lastActive: "2026-06-30T08:00:00Z", joinedAt: "2025-10-01T00:00:00Z", initials: "MS", avatarColor: "var(--muted-foreground)", title: "Data Scientist",        department: "Analytics"         },
+  { id: "tg",  name: "Thomas Gonzalez",  email: "thomas.gonzalez@aimsos.ai",   role: "Super Admin",   status: "active",    lastActive: "2026-08-26T09:10:00Z", joinedAt: "2025-01-15T00:00:00Z", initials: "TG", avatarColor: "var(--badge-info)",       title: "Platform Owner",       department: "AIMS OS",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-01-15T00:00:00Z", sessions: [
+    { id: "s1", device: "MacBook Pro",    browser: "Chrome 125",  location: "San Francisco, CA", lastActive: "2026-08-26T09:10:00Z", current: true  },
+    { id: "s2", device: "iPhone 15 Pro",  browser: "Safari 17",   location: "San Francisco, CA", lastActive: "2026-08-25T21:00:00Z", current: false },
+  ]},
+  { id: "mg",  name: "Maria García",     email: "maria.garcia@avance.com",     role: "Tenant Admin",  status: "active",    lastActive: "2026-08-26T08:45:00Z", joinedAt: "2025-03-02T00:00:00Z", initials: "MG", avatarColor: "var(--badge-success)",    title: "IT Director",           department: "IT",               mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-03-02T00:00:00Z", sessions: [
+    { id: "s3", device: "Windows PC",     browser: "Edge 124",    location: "Mexico City, MX",   lastActive: "2026-08-26T08:45:00Z", current: true  },
+  ]},
+  { id: "es",  name: "Eduardo Suárez",   email: "eduardo.suarez@avance.com",   role: "Member",        status: "active",    lastActive: "2026-08-25T17:30:00Z", joinedAt: "2025-04-10T00:00:00Z", initials: "ES", avatarColor: "var(--badge-alert)",      title: "Data Analyst",          department: "Analytics",        mfaEnabled: true,  mfaMethod: "sms",   mfaEnrolledAt: "2025-04-12T00:00:00Z", sessions: [
+    { id: "s4", device: "MacBook Air",    browser: "Firefox 127", location: "Monterrey, MX",     lastActive: "2026-08-25T17:30:00Z", current: true  },
+    { id: "s5", device: "iPad Pro",       browser: "Safari 17",   location: "Monterrey, MX",     lastActive: "2026-08-24T10:00:00Z", current: false },
+    { id: "s6", device: "Windows Laptop", browser: "Chrome 125",  location: "Guadalajara, MX",   lastActive: "2026-08-20T09:00:00Z", current: false },
+  ]},
+  { id: "sb",  name: "Sarah Brown",      email: "sarah.brown@avance.com",      role: "Member",        status: "active",    lastActive: "2026-08-25T14:00:00Z", joinedAt: "2025-05-18T00:00:00Z", initials: "SB", avatarColor: "var(--badge-error)",      title: "Risk Manager",          department: "Risk & Compliance", mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined, sessions: [
+    { id: "s7", device: "MacBook Pro",    browser: "Chrome 125",  location: "New York, NY",      lastActive: "2026-08-25T14:00:00Z", current: true  },
+  ]},
+  { id: "dp",  name: "Diana Pérez",      email: "diana.perez@avance.com",      role: "Member",        status: "active",    lastActive: "2026-08-24T11:20:00Z", joinedAt: "2025-06-01T00:00:00Z", initials: "DP", avatarColor: "var(--badge-info)",       title: "Operations Lead",       department: "Operations",       mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined, sessions: [
+    { id: "s8", device: "Windows PC",     browser: "Chrome 125",  location: "Mexico City, MX",   lastActive: "2026-08-24T11:20:00Z", current: true  },
+  ]},
+  { id: "jp",  name: "James Park",       email: "james.park@avance.com",       role: "Billing Admin", status: "active",    lastActive: "2026-08-23T09:00:00Z", joinedAt: "2025-07-07T00:00:00Z", initials: "JP", avatarColor: "var(--badge-success)",    title: "Finance Manager",       department: "Finance",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-07-08T00:00:00Z", sessions: [
+    { id: "s9", device: "MacBook Pro",    browser: "Safari 17",   location: "Chicago, IL",       lastActive: "2026-08-23T09:00:00Z", current: true  },
+  ]},
+  { id: "at",  name: "Ana Torres",       email: "ana.torres@avance.com",       role: "Viewer",        status: "active",    lastActive: "2026-08-22T16:45:00Z", joinedAt: "2025-08-01T00:00:00Z", initials: "AT", avatarColor: "var(--badge-alert)",      title: "Business Analyst",      department: "Analytics",        mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined, sessions: [
+    { id: "s10", device: "Windows Laptop", browser: "Edge 124",  location: "Guadalajara, MX",   lastActive: "2026-08-22T16:45:00Z", current: true  },
+  ]},
+  { id: "lr",  name: "Leo Ramírez",      email: "leo.ramirez@avance.com",      role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-20T00:00:00Z", initials: "LR", avatarColor: "var(--muted-foreground)", title: "Data Engineer",         department: "Engineering",      mfaEnabled: false, sessions: [] },
+  { id: "cn",  name: "Clara Nakamura",   email: "clara.nakamura@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-21T00:00:00Z", initials: "CN", avatarColor: "var(--muted-foreground)", title: "Product Manager",       department: "Product",          mfaEnabled: false, sessions: [] },
+  { id: "rv",  name: "Roberto Vargas",   email: "roberto.vargas@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-22T00:00:00Z", initials: "RV", avatarColor: "var(--muted-foreground)", title: "Solutions Architect",   department: "Engineering",      mfaEnabled: false, sessions: [] },
+  { id: "fw",  name: "Fiona Walsh",      email: "fiona.walsh@avance.com",      role: "Viewer",        status: "suspended", lastActive: "2026-07-14T10:00:00Z", joinedAt: "2025-09-10T00:00:00Z", initials: "FW", avatarColor: "var(--muted-foreground)", title: "Analyst",               department: "Risk & Compliance", mfaEnabled: true,  mfaMethod: "sms",   mfaEnrolledAt: "2025-09-15T00:00:00Z", sessions: [] },
+  { id: "ms",  name: "Marcus Silva",     email: "marcus.silva@avance.com",     role: "Member",        status: "suspended", lastActive: "2026-06-30T08:00:00Z", joinedAt: "2025-10-01T00:00:00Z", initials: "MS", avatarColor: "var(--muted-foreground)", title: "Data Scientist",        department: "Analytics",        mfaEnabled: false, sessions: [] },
 ]
 
 // ─── Permission tree fixture ──────────────────────────────────────────────────
@@ -569,18 +595,227 @@ function ActivityPanel({ log = ACTIVITY_LOG }: { log?: typeof ACTIVITY_LOG }) {
   )
 }
 
+// ─── Security / MFA panel ────────────────────────────────────────────────────
+
+const MFA_METHOD_LABEL: Record<MfaMethod, string> = {
+  totp:  "Authenticator app (TOTP)",
+  sms:   "SMS text message",
+  email: "Email one-time code",
+}
+const MFA_METHOD_ICON: Record<MfaMethod, React.ReactNode> = {
+  totp:  <Icons.Smartphone size={15} />,
+  sms:   <Icons.MessageSquare size={15} />,
+  email: <Icons.Mail size={15} />,
+}
+
+function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Member) => void }) {
+  const [sessions, setSessions] = useState<MfaSession[]>(member.sessions ?? [])
+  const [confirmReset, setConfirmReset] = useState(false)
+
+  function revokeSession(id: string) {
+    setSessions(s => s.filter(x => x.id !== id))
+  }
+  function revokeAllOthers() {
+    setSessions(s => s.filter(x => x.current))
+  }
+
+  const isInvited = member.status === "invited"
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* MFA status card */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--surface)" }}>
+        <div style={{
+          padding: "12px 20px", borderBottom: "1px solid var(--border)",
+          background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Icons.ShieldCheck size={15} color={member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)"} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>
+              Multi-Factor Authentication
+            </span>
+          </div>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 5,
+            padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700,
+            background: member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 15%, transparent)" : "color-mix(in srgb, var(--badge-alert) 15%, transparent)",
+            color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
+            border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 35%, transparent)" : "color-mix(in srgb, var(--badge-alert) 35%, transparent)"}`,
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor" }} />
+            {member.mfaEnabled ? "Enabled" : "Not enabled"}
+          </div>
+        </div>
+
+        {member.mfaEnabled && member.mfaMethod ? (
+          <div style={{ padding: "16px 20px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <InfoRow
+                icon={MFA_METHOD_ICON[member.mfaMethod]}
+                label="Method"
+                value={MFA_METHOD_LABEL[member.mfaMethod]}
+              />
+              {member.mfaEnrolledAt && (
+                <InfoRow
+                  icon={<Icons.CalendarCheck size={14} />}
+                  label="Enrolled"
+                  value={formatDate(member.mfaEnrolledAt)}
+                />
+              )}
+            </div>
+
+            {!isInvited && (
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
+                {!confirmReset ? (
+                  <button
+                    onClick={() => setConfirmReset(true)}
+                    style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface-raised)", color: "var(--foreground)", cursor: "pointer" }}
+                  >
+                    Reset MFA enrollment
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 12, color: "var(--badge-error)", fontWeight: 600 }}>
+                      Remove their MFA device? They'll re-enroll on next login.
+                    </span>
+                    <button
+                      onClick={() => { onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined }); setConfirmReset(false) }}
+                      style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "1px solid var(--badge-error)", color: "var(--badge-error)", background: "transparent", cursor: "pointer" }}
+                    >
+                      Yes, reset
+                    </button>
+                    <button
+                      onClick={() => setConfirmReset(false)}
+                      style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "1px solid var(--border)", color: "var(--muted-foreground)", background: "transparent", cursor: "pointer" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ padding: "16px 20px" }}>
+            {isInvited ? (
+              <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>
+                MFA setup is not available for pending invitations. The member will be prompted to enroll when they accept the invitation.
+              </p>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: "0 0 4px", lineHeight: 1.5 }}>
+                    This member has not enrolled a second factor.
+                  </p>
+                  <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: 0, opacity: 0.7 }}>
+                    Send an enrollment reminder or require MFA for their role.
+                  </p>
+                </div>
+                <button
+                  onClick={() => alert(`Enrollment email sent to ${member.email}`)}
+                  style={{ fontSize: 12, fontWeight: 600, padding: "8px 14px", borderRadius: 8, border: "1px solid var(--primary)", color: "var(--primary)", background: "transparent", cursor: "pointer", flexShrink: 0, marginLeft: 16 }}
+                >
+                  Send reminder
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Active sessions */}
+      {!isInvited && (
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--surface)" }}>
+          <div style={{
+            padding: "12px 20px", borderBottom: "1px solid var(--border)",
+            background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Icons.Monitor size={15} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Active sessions</span>
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
+                background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)",
+              }}>{sessions.length}</span>
+            </div>
+            {sessions.filter(s => !s.current).length > 0 && (
+              <button
+                onClick={revokeAllOthers}
+                style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", border: "none", background: "none", cursor: "pointer" }}
+              >
+                Revoke all other sessions
+              </button>
+            )}
+          </div>
+
+          {sessions.length === 0 ? (
+            <div style={{ padding: "32px 20px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
+              No active sessions
+            </div>
+          ) : sessions.map((s, i) => (
+            <div
+              key={s.id}
+              style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: i < sessions.length - 1 ? "1px solid var(--border)" : "none" }}
+            >
+              <div style={{
+                width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                background: "var(--surface-raised)", border: "1px solid var(--border)",
+                display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)",
+              }}>
+                {s.device.toLowerCase().includes("iphone") || s.device.toLowerCase().includes("ipad")
+                  ? <Icons.Smartphone size={16} />
+                  : s.device.toLowerCase().includes("macbook") || s.device.toLowerCase().includes("laptop")
+                    ? <Icons.Laptop size={16} />
+                    : <Icons.Monitor size={16} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{s.device}</span>
+                  {s.current && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
+                      background: "color-mix(in srgb, var(--badge-success) 15%, transparent)",
+                      color: "var(--badge-success)", border: "1px solid color-mix(in srgb, var(--badge-success) 30%, transparent)",
+                      textTransform: "uppercase", letterSpacing: "0.04em",
+                    }}>Current</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+                  {s.browser} · {s.location} · {formatRelative(s.lastActive)}
+                </div>
+              </div>
+              {!s.current && (
+                <button
+                  onClick={() => revokeSession(s.id)}
+                  style={{ fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", color: "var(--muted-foreground)", background: "transparent", cursor: "pointer", flexShrink: 0 }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--badge-error)"; e.currentTarget.style.color = "var(--badge-error)" }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--muted-foreground)" }}
+                >
+                  Revoke
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Member detail page ───────────────────────────────────────────────────────
 
 const ROLE_OPTIONS: MemberRole[] = ["Super Admin", "Tenant Admin", "Billing Admin", "Member", "Viewer"]
 
 function MemberDetailPage({
-  member, onBack, onRoleChange, onToggleSuspend, onRemove,
+  member, onBack, onRoleChange, onToggleSuspend, onRemove, onUpdate,
 }: {
   member: Member
   onBack: () => void
   onRoleChange: (id: string, role: MemberRole) => void
   onToggleSuspend: (id: string) => void
   onRemove: (id: string) => void
+  onUpdate: (m: Member) => void
 }) {
   const [activeTab, setActiveTab] = useState(0)
   const [confirmRemove, setConfirmRemove] = useState(false)
@@ -739,10 +974,11 @@ function MemberDetailPage({
 
         {/* Right: tabs */}
         <div>
-          <DetailTabs tabs={["Permissions", "Activity"]} active={activeTab} onChange={setActiveTab} />
+          <DetailTabs tabs={["Permissions", "Activity", "Security"]} active={activeTab} onChange={setActiveTab} />
           <div style={{ marginTop: 20 }}>
             {activeTab === 0 && <PermissionsPanel />}
             {activeTab === 1 && <ActivityPanel />}
+            {activeTab === 2 && <SecurityPanel member={member} onUpdate={onUpdate} />}
           </div>
         </div>
       </div>
@@ -1224,6 +1460,25 @@ function MemberRow({ member, onSelect }: { member: Member; onSelect: (m: Member)
         )}
       </div>
 
+      {/* MFA badge */}
+      <div
+        title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
+        style={{
+          display: "flex", alignItems: "center", gap: 4,
+          padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 600, flexShrink: 0,
+          background: member.mfaEnabled
+            ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
+            : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
+          color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
+          border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
+        }}
+      >
+        {member.mfaEnabled
+          ? <Icons.ShieldCheck size={11} />
+          : <Icons.ShieldAlert size={11} />}
+        MFA
+      </div>
+
       <div style={{
         padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
         background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
@@ -1441,6 +1696,10 @@ export function PeopleAccessMembersScreen() {
   function handleRemove(id: string) {
     setMembers(ms => ms.filter(m => m.id !== id))
   }
+  function handleMemberUpdate(updated: Member) {
+    setMembers(ms => ms.map(m => m.id === updated.id ? updated : m))
+    setDetailView(d => d?.type === "member" && d.member.id === updated.id ? { type: "member", member: updated } : d)
+  }
 
   // Detail pages
   if (detailView?.type === "member") {
@@ -1451,6 +1710,7 @@ export function PeopleAccessMembersScreen() {
         onRoleChange={handleRoleChange}
         onToggleSuspend={handleToggleSuspend}
         onRemove={handleRemove}
+        onUpdate={handleMemberUpdate}
       />
     )
   }
@@ -1544,6 +1804,7 @@ export function PeopleAccessMembersScreen() {
             }}>
               <span style={{ flex: 1 }}>Member</span>
               <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
+              <span style={{ minWidth: 60, textAlign: "center" }}>MFA</span>
               <span style={{ minWidth: 76, textAlign: "center" }}>Status</span>
               <span style={{ width: 15 }} />
             </div>
