@@ -83,6 +83,7 @@ import { AdminAuditLogScreen }              from "./screens/AdminAuditLog"
 import { AdminSecurityScreen }             from "./screens/AdminSecurity"
 import { AdminOverviewScreen }            from "./screens/AdminOverview"
 import { AdminIntegrationsScreen }        from "./screens/AdminIntegrations"
+import { AdminBillingScreen }            from "./screens/AdminBilling"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -156,6 +157,7 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-admin-security",          label: "Admin — Security",             description: "Security posture score, MFA policy (Off/Recommended/Required), SSO/SAML config, session timeout + device binding, IP allowlist management, and recent security alerts panel", author: "Thomas", component: AdminSecurityScreen },
   { id: "proto-admin-overview",          label: "Admin — Overview",             description: "Admin console home: 4 KPI tiles (members, integrations, AI workers, security score), recent activity feed with category badges, quick-actions grid, system status with latency, and monthly usage bars", author: "Thomas", component: AdminOverviewScreen },
   { id: "proto-admin-integrations",      label: "Admin — Integrations",         description: "Connected integrations split-view with Operate panel (overview, sync history, credentials tabs), integration catalog with 16 items filterable by category, error badges, and re-auth flow", author: "Thomas", component: AdminIntegrationsScreen },
+  { id: "proto-admin-billing",           label: "Admin — Billing",              description: "Enterprise billing: plan card ($12,400/mo, 50 seats), usage bars for tokens/workers/models/sandboxes, invoice history table with download, payment method, monthly cost breakdown, and seat allocation grid", author: "Thomas", component: AdminBillingScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
