@@ -278,13 +278,9 @@ The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs ba
 <Header title="Meridian" backButton={true} breadcrumbs={[...]} />
 ```
 
-### Overlays
-- **`ModalDialog`** — user MUST stop (destructive action, confirmation, critical form)
-- **`SlideOut`** — user can continue browsing (details, filters, context)
-- Rule: can the user ignore it? → SlideOut. Must they respond? → Modal.
-- Only 1 Modal + 1 SlideOut active at a time.
-
 ### Panel overlays — PM component selection guide
+
+The general `ModalDialog` vs. `SlideOut` question — and the multi-step-form case specifically — are now answered by the Create pattern section below, not here: `ModalDialog` when the user can't ignore the task and keep working, `SlideOut` when they can; a multi-step **create** flow follows Create's own staged-flows table (2 stages, no branching → `SlideOut`; 3+ or any branching → dedicated view + `Stepper`). This section covers the rest of panel selection — which is still `SlideOut` vs. `SidePanel`, a distinct axis that belongs to **Configure**, not Create (a `SidePanel` never appears in a Create flow — see the Create pattern's Gate 0).
 
 **Which panel component to use:**
 
@@ -293,7 +289,6 @@ The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs ba
 | Entity detail preview from a list (Eye button) | `SlideOut` | Overlay on top of the list — user browses back quickly |
 | Node / item configuration within a canvas or builder | `SidePanel` | Inline with the canvas — no backdrop, user sees context while editing |
 | Filters panel (full filter set) | `SlideOut` type `"filters"` | Standard pattern, always overlays list |
-| Step-by-step guided form (multi-step) | `SlideOut` | Focused flow, backdrop keeps user on task |
 
 **SlideOut — which `type` variant to use:**
 
@@ -439,6 +434,8 @@ Steps 4–5, stated as one rule: **contextual** (the new object hangs off someth
 | Any branching, at any stage count | Dedicated view + `Stepper` + `StepperNavFooter` |
 
 `StepperNavFooter` is a page-level component — it never appears inside a `SlideOut`.
+
+**General overlay stacking rule (applies everywhere, not just Create):** only 1 `ModalDialog` + 1 `SlideOut` active at a time.
 
 ### Confirmation modals — standard composition
 Use `variant="confirmation"` (the default) on `ModalDialog`. Always set `tone` to match the severity of the action:
@@ -751,7 +748,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 - Showing two secondary buttons side by side — order is always primary → secondary → tertiary.
 - Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead (except `RecordHeader`'s AI agent trigger — see Button hierarchy rules).
 - Adding a filter chip before Apply is clicked.
-- Opening a Modal for non-destructive/non-blocking content — use SlideOut instead.
+- Opening a Modal for content the user can safely ignore and keep working in the background — use SlideOut instead. Destructiveness is NOT the test: a catalogue picker and the Create-with-AI chat are both non-destructive and still correctly Modal, because the user can't ignore either one either (see the Create pattern's "when Create uses a modal" test).
 - Showing a loading indicator for operations under 300ms.
 - Showing two loading indicators on the same view simultaneously.
 

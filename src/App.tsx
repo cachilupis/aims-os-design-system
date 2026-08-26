@@ -79,7 +79,7 @@ import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-create" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-create" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
 type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -207,7 +207,6 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "patterns-panel-content", label: "SlideOut/SidePanel — Content", group: "Patterns", description: "Content vocabulary for panels — AI Summary (8 variants) · Insights (HighlightCard grid) · List Sections · Form fields: Input, Textarea, Select, Toggle · Section Headers" },
   { id: "patterns-list-view",  label: "List View Layout",  group: "Patterns", description: "Mandatory stack: Topbar + Sidebar + EntityList + Pagination · AppBackground always · Side Panel for details · Filters as the single source of truth for the dataset" },
   { id: "patterns-filter",     label: "Filter System",     group: "Patterns", description: "3 layers: Visible Filters → All Filters button → Slideout (full) → Chips (optional) · draft/applied state · Apply resets pagination" },
-  { id: "patterns-overlay",    label: "Overlay Decision",  group: "Patterns", description: "Modal when the user must stop and decide · Slide-out when they can keep exploring · only 1 of each type active at a time" },
   { id: "patterns-header",     label: "Header Sticky",     group: "Patterns", description: "Scroll > 16px → COMPRESSED (60px) · hover 0–24px idle 800ms → filters visible (130px) · 200ms ease-in-out transition" },
   { id: "patterns-nav-depth",  label: "Navigation Depth",  group: "Patterns", description: "Up to 4 layers: Tabs (where?) + SwitchTab (how?) + Filters (what?) + Chips (which quick filter?) · in the max-depth edge case, SwitchTab sits left of Filters (12px gap) to save vertical space · use only when each layer adds real differentiation" },
   { id: "patterns-loading",    label: "Loading States",    group: "Patterns", description: "Spinner → unknown duration · Progress Bar → known progress (%) · Skeleton → known layout · <300ms show nothing · only 1 indicator per view" },
@@ -11789,261 +11788,6 @@ SECTION_LOGIC
   )
 }
 
-// ── PatternOverlayPage ────────────────────────────────────────────────────────
-
-function PatternOverlayPage() {
-  const [tab, setTab] = useState<string>("when-to-use")
-  const [modalOpen, setModalOpen] = useState(false)
-  const [slideoutOpen, setSlideoutOpen] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-
-  return (
-    <div>
-      <div className="flex flex-col gap-[4px] mb-[28px]">
-        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
-        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Overlay Decision</h1>
-        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
-          Choose between Modal and Slide-out based on the level of interruption required. The wrong choice breaks user flow or under-communicates urgency.
-        </p>
-      </div>
-
-      <PatternTabRow tab={tab} setTab={setTab} />
-
-      {tab === "when-to-use" && (
-        <div className="flex flex-col gap-[24px]">
-          <div className="grid grid-cols-2 gap-[16px]">
-            <PatternCard>
-              <SectionLabel>Modal — Blocking</SectionLabel>
-              <AlertBanner state="error" title="Requires user attention before continuing" className="mb-[4px]" />
-              <div className="flex flex-col gap-[6px]">
-                {["Destructive or irreversible actions (delete, remove)", "Critical confirmations that cannot be ignored", "Forms requiring focused completion (multi-step)", "Actions where background interaction must be disabled"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]"><span style={{ color: "var(--color-surface-success-default)" }}>✓</span><span className="text-[13px] text-[var(--foreground)]">{u}</span></div>
-                ))}
-              </div>
-            </PatternCard>
-            <PatternCard>
-              <SectionLabel>Slide-out — Non-blocking</SectionLabel>
-              <AlertBanner state="success" title="User can continue exploring in background" className="mb-[4px]" />
-              <div className="flex flex-col gap-[6px]">
-                {["Entity detail views (user can switch between records)", "Filter configuration panels", "Secondary actions (comments, history, settings)", "Progressive exploration — no decision required"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]"><span style={{ color: "var(--color-surface-success-default)" }}>✓</span><span className="text-[13px] text-[var(--foreground)]">{u}</span></div>
-                ))}
-              </div>
-            </PatternCard>
-          </div>
-          <PatternCard>
-            <SectionLabel>Quick Decision Rule</SectionLabel>
-            <div className="flex flex-col gap-[12px]">
-              <div className="flex items-center gap-[12px] p-[16px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
-                <span className="text-[28px]">❓</span>
-                <div>
-                  <p className="text-[15px] font-semibold text-[var(--foreground)]">Can the user safely ignore this and keep working?</p>
-                  <div className="flex gap-[16px] mt-[6px]">
-                    <span className="text-[13px]"><span style={{ color: "var(--color-surface-error-default)", fontWeight: 700 }}>NO</span> → Modal</span>
-                    <span className="text-[13px]"><span style={{ color: "var(--color-surface-success-default)", fontWeight: 700 }}>YES</span> → Slide-out</span>
-                  </div>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
-                  <thead><tr style={{ borderBottom: "1px solid var(--table-border)" }}>{["Property", "Modal", "Slide-out"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}</tr></thead>
-                  <tbody>
-                    {[
-                      ["Background interaction", "Disabled", "Allowed"],
-                      ["Focus trap", "Yes", "No"],
-                      ["Dismiss without action", "Requires explicit action", "Close button / ESC / click outside"],
-                      ["Priority", "High — blocking", "Medium — contextual"],
-                      ["Max active simultaneously", "1", "1"],
-                      ["Can open on top of other", "Yes, over Slide-out", "No, not over Modal"],
-                    ].map(([prop, modal, slideout]) => (
-                      <tr key={prop} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
-                        <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{prop}</td>
-                        <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{modal}</td>
-                        <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{slideout}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </PatternCard>
-          <PatternCard>
-            <SectionLabel>Do / Don't</SectionLabel>
-            <div className="grid grid-cols-2 gap-[12px]">
-              {[
-                { type: "do",   text: "Escalate to a confirmation Modal when the user tries to close a Slide-out that has unsaved changes." },
-                { type: "dont", text: "Don't open a Slide-out on top of an active Modal — Modal always wins the stacking order, never the reverse." },
-                { type: "do",   text: "Let a Modal open on top of an active Slide-out when a blocking decision interrupts the flow mid-task." },
-                { type: "dont", text: "Don't let a Slide-out close silently when it holds unsaved changes — always confirm first via Modal." },
-                { type: "do",   text: "Keep exactly one Modal and one Slide-out open at a time — never stack two of the same overlay type." },
-                { type: "dont", text: "Don't use Modal for progressive or exploratory content the user can safely ignore — that's what Slide-out is for." },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
-                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
-                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
-                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
-                </div>
-              ))}
-            </div>
-          </PatternCard>
-        </div>
-      )}
-
-      {tab === "anatomy" && (
-        <div className="flex flex-col gap-[24px]">
-          <div className="grid grid-cols-2 gap-[16px]">
-            <PatternCard>
-              <SectionLabel>Modal — Blocking Overlay</SectionLabel>
-              <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
-                Interrupts the workflow. Background interaction is disabled. User must explicitly confirm or cancel.
-              </p>
-              <div className="flex flex-col gap-[6px] mb-[16px]">
-                {["Destructive or irreversible actions", "Critical confirmations", "Multi-step forms requiring focus", "Error states that block flow"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]">
-                    <span style={{ color: "var(--color-surface-error-default)", fontWeight: 700 }}>✕</span>
-                    <span className="text-[13px] text-[var(--foreground)]">{u}</span>
-                  </div>
-                ))}
-              </div>
-              <Button size="sm" onClick={() => setModalOpen(true)}>
-                <LucideIcons.Play size={12} />
-                Try Modal
-              </Button>
-            </PatternCard>
-            <PatternCard>
-              <SectionLabel>Slide-out — Non-blocking Panel</SectionLabel>
-              <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
-                Appears from the right without interrupting. User can still interact with content behind it.
-              </p>
-              <div className="flex flex-col gap-[6px] mb-[16px]">
-                {["Entity detail views", "Filter configuration", "Comments, history, settings", "Progressive exploration — no decision required"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]">
-                    <span style={{ color: "var(--color-surface-success-default)", fontWeight: 700 }}>✓</span>
-                    <span className="text-[13px] text-[var(--foreground)]">{u}</span>
-                  </div>
-                ))}
-              </div>
-              <Button size="sm" variant="secondary" onClick={() => setSlideoutOpen(true)}>
-                <LucideIcons.Play size={12} />
-                Try Slide-out
-              </Button>
-            </PatternCard>
-          </div>
-
-          <PatternCard>
-            <SectionLabel>Escalation Pattern — Slide-out → Modal</SectionLabel>
-            <div className="flex gap-[8px] items-center mb-[14px]">
-              <div className="flex-1 p-[10px] rounded-[6px] text-[13px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
-                User edits inside Slide-out with unsaved changes
-              </div>
-              <span className="text-[18px]" style={{ color: "var(--primary)" }}>→</span>
-              <div className="flex-1 p-[10px] rounded-[6px] text-[13px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
-                User tries to close Slide-out
-              </div>
-              <span className="text-[18px]" style={{ color: "var(--primary)" }}>→</span>
-              <div className="flex-1 p-[10px] rounded-[6px] text-[13px] font-semibold" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)", color: "var(--primary)" }}>
-                Confirmation Modal appears on top
-              </div>
-            </div>
-            <Button size="sm" variant="secondary" onClick={() => setConfirmOpen(true)}>
-              <LucideIcons.Play size={12} />
-              Try escalation pattern
-            </Button>
-          </PatternCard>
-
-          {/* Real ModalDialog — delete confirmation */}
-          <ModalDialog
-            isOpen={modalOpen}
-            onClose={() => setModalOpen(false)}
-            variant="confirmation"
-            tone="error"
-            title="Delete workspace member?"
-            description="Sarah Chen will immediately lose access to all workspace resources. This action cannot be undone."
-            ctaPrimary={{ label: "Delete member", destructive: true, onClick: () => setModalOpen(false) }}
-            ctaSecondary={{ label: "Cancel", onClick: () => setModalOpen(false) }}
-          />
-
-          {/* Real ModalDialog — escalation confirmation */}
-          <ModalDialog
-            isOpen={confirmOpen}
-            onClose={() => setConfirmOpen(false)}
-            variant="confirmation"
-            tone="alert"
-            title="Discard unsaved changes?"
-            description="You have unsaved changes in this panel. Closing will discard them permanently."
-            ctaPrimary={{ label: "Discard changes", onClick: () => setConfirmOpen(false) }}
-            ctaSecondary={{ label: "Keep editing", onClick: () => setConfirmOpen(false) }}
-          />
-
-          {/* Real SlideOut — member details */}
-          <SlideOut
-            open={slideoutOpen}
-            onClose={() => setSlideoutOpen(false)}
-            title="Sarah Chen"
-            subtitle="Admin · Platform Team"
-            type="with-variants"
-            size="m"
-          />
-
-        </div>
-      )}
-
-      {tab === "rules" && (
-        <div className="flex flex-col gap-[24px]">
-          <PatternCard>
-            <SectionLabel>Technical Spec (from Figma)</SectionLabel>
-            <PatternRules code={`MODAL_SLIDEOUT_PATTERN
-
-MODAL
-  blocking                = true
-  background_interaction  = disabled
-  focus_trap              = required
-
-  USE when:
-    action_requires_confirmation == true
-    action_is_destructive        == true
-    user_must_complete_flow      == true
-    interaction_complexity == high AND requires_focus == true
-
-SLIDE_OUT
-  blocking                = false
-  background_interaction  = allowed
-  focus_trap              = not required (unless specified)
-
-  USE when:
-    user_views_details              == true
-    interaction_priority            == secondary
-    content_is_contextual           == true
-    interaction_can_be_interrupted  == true
-
-DECISION_LOGIC
-  IF blocking_interaction_required == true → USE MODAL
-  ELSE IF contextual AND non_blocking → USE SLIDE_OUT
-
-STACKING_RULES
-  max simultaneous MODAL    = 1
-  max simultaneous SLIDE_OUT = 1
-  Modal CAN appear on top of Slide-out
-  Slide-out CANNOT open on top of Modal
-
-DISMISS_RULES
-  MODAL:     requires explicit CTA or close action
-  SLIDE_OUT: Close button / ESC / click outside (if non-critical)
-
-UNSAVED_STATE_RULE
-  IF slide_out has unsaved changes AND user attempts close
-  → trigger CONFIRMATION MODAL before closing
-
-ESC_BEHAVIOR
-  MODAL:     closes if safe (no unsaved data); else show confirmation
-  SLIDE_OUT: closes by default; if unsaved → show confirmation modal`} />
-          </PatternCard>
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── PatternHeaderPage ─────────────────────────────────────────────────────────
 
 function PatternHeaderPage() {
@@ -15250,35 +14994,10 @@ function PatternFormsPage() {
         <div className="flex flex-col gap-[24px]">
 
           <PatternCard>
-            <SectionLabel>Form Context Decision Table</SectionLabel>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
-                    {["Situation", "Form context", "Container"].map(h => (
-                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ["Dedicated page — create or edit a single record", "Full-page form", "ScreenLayout · Header CTAs"],
-                    ["Multi-step process (3+ steps, 8+ total fields)", "Full-page wizard", "ScreenLayout + StepperNavFooter"],
-                    ["Destructive or must-stop action requiring input", "Blocking form", "ModalDialog"],
-                    ["Contextual create / edit (user can continue later)", "Side panel form", "SlideOut"],
-                    ["Quick single-field inline edit", "Inline edit", "Input (no container)"],
-                  ].map(([sit, ctx, comp]) => (
-                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
-                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
-                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ctx}</td>
-                      <td className="px-[12px] py-[10px]">
-                        <span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{comp}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SectionLabel>Which container for which situation?</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[640px]">
+              Surface selection — full-page, wizard, ModalDialog, or SlideOut — now lives entirely in the <strong className="text-[var(--foreground)]">Create</strong> pattern page (see "Patterns" in the sidebar), including the exact cascade for a Create flow and when a form belongs in a modal versus a panel. This page covers everything else about composing a form once its container is already chosen: field and section spacing, validation, and CTA placement, below.
+            </p>
           </PatternCard>
 
           <PatternCard>
@@ -15997,7 +15716,7 @@ function PatternCreatePage() {
                 </thead>
                 <tbody>
                   {[
-                    ["Any standard create affordance", "Manual", "Run the cascade — see Anatomy"],
+                    ["Any standard create affordance", "Manual", "Run the cascade below"],
                     ["A \"Create with AI\" affordance", "Assisted", "ModalDialog hosting the chat component → success ModalDialog"],
                     ["Browse a catalogue — templates, marketplace, presets, starting points", "From a source", "ModalDialog variant=\"content\" for the selection → then the cascade, pre-filled"],
                   ].map(([trig, mode, surf]) => (
@@ -16016,31 +15735,6 @@ function PatternCreatePage() {
             </div>
           </PatternCard>
 
-          <PatternCard>
-            <SectionLabel>Do / Don't</SectionLabel>
-            <div className="grid grid-cols-2 gap-[12px]">
-              {[
-                { type: "do",   text: "Run the cascade top to bottom and stop at the first \"yes\" — never treat two steps as equally applicable." },
-                { type: "dont", text: "Don't open a ModalDialog for a form whose fields depend on the background it's covering — use SlideOut, regardless of field count." },
-                { type: "do",   text: "Treat \"can the user ignore this and keep working?\" as the real test between ModalDialog and SlideOut." },
-                { type: "dont", text: "Don't put StepperNavFooter inside a SlideOut — it's a page-level component, reserved for 3+ stages or any branching." },
-                { type: "do",   text: "Let a two-stage, non-branching create stay in a SlideOut, optionally with a lightweight step indicator." },
-                { type: "dont", text: "Don't add a global \"+\" affordance to the Topbar — Create is always contextual in v1, entered from a list Header, an EmptyState CTA, or a widget-level action." },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
-                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
-                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
-                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
-                </div>
-              ))}
-            </div>
-          </PatternCard>
-        </div>
-      )}
-
-      {/* ── Anatomy ───────────────────────────────────────────────────────── */}
-      {tab === "anatomy" && (
-        <div className="flex flex-col gap-[24px]">
           <PatternCard>
             <SectionLabel>The cascade — manual create</SectionLabel>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">A sequence, not a lookup table. Start at step 1. On a yes, stop and take that surface. On a no, move to the next step.</p>
@@ -16185,6 +15879,31 @@ function PatternCreatePage() {
             </div>
           </PatternCard>
 
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Run the cascade top to bottom and stop at the first \"yes\" — never treat two steps as equally applicable." },
+                { type: "dont", text: "Don't open a ModalDialog for a form whose fields depend on the background it's covering — use SlideOut, regardless of field count." },
+                { type: "do",   text: "Treat \"can the user ignore this and keep working?\" as the real test between ModalDialog and SlideOut." },
+                { type: "dont", text: "Don't put StepperNavFooter inside a SlideOut — it's a page-level component, reserved for 3+ stages or any branching." },
+                { type: "do",   text: "Let a two-stage, non-branching create stay in a SlideOut, optionally with a lightweight step indicator." },
+                { type: "dont", text: "Don't add a global \"+\" affordance to the Topbar — Create is always contextual in v1, entered from a list Header, an EmptyState CTA, or a widget-level action." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Anatomy ───────────────────────────────────────────────────────── */}
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
           <PatternCard>
             <SectionLabel>After create — confirmation and landing</SectionLabel>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[6px]">Both are independent of the container chosen above — never merged into the cascade.</p>
@@ -40385,7 +40104,6 @@ export default function App() {
           {active === "stepper-nav-footer"  && <StepperNavFooterPage   openSpec={setSpecModal} />}
           {active === "patterns-list-view"  && <PatternListViewPage />}
           {active === "patterns-filter"     && <PatternFilterPage />}
-          {active === "patterns-overlay"    && <PatternOverlayPage />}
           {active === "patterns-header"     && <PatternHeaderPage />}
           {active === "patterns-nav-depth"  && <PatternNavDepthPage />}
           {active === "patterns-loading"    && <PatternLoadingPage />}
