@@ -15004,8 +15004,8 @@ function PatternFormsPage() {
             <SectionLabel>Do / Don't</SectionLabel>
             <div className="grid grid-cols-2 gap-[12px]">
               {[
-                { type: "do",   text: "Use StepperNavFooter for wizards with 3+ steps — distributes cognitive load and keeps each step focused." },
-                { type: "dont", text: "Don't open a ModalDialog for forms with more than 5 fields — the user needs room. Use SlideOut instead." },
+                { type: "do",   text: "Use StepperNavFooter for wizards — see the Create pattern page's own staged-flows table for exactly which stage/branching shape earns it, rather than a flat step count repeated here." },
+                { type: "dont", text: "Don't apply \"more than 5 fields → SlideOut\" to a Create flow — it's wrong in both directions: a standalone create over 5 fields goes to a dedicated view, and a contextual create goes to SlideOut regardless of field count. See the Create pattern page's own cascade." },
                 { type: "do",   text: "Group related fields into named sections with a 24px gap between groups and a 4px gap between the section label and the first field." },
                 { type: "dont", text: "Don't show validation errors on each keystroke — validate on blur. Clear errors immediately once the field becomes valid." },
                 { type: "do",   text: "Disable Next/Submit when any required field is empty. This pattern is mandatory for all multi-step forms." },
@@ -15636,8 +15636,365 @@ const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>
 // derived from docs/patterns/create.md, the single source of truth for this
 // pattern; keep the two in sync when the rule changes. The audit that fed
 // that rule lives in docs/patterns/create-audit.md.
+
+// ── Create playground — the cascade as a real decision procedure ───────────
+// This is a direct transcription of create.md §§2–5, not a reinterpretation:
+// Gate 0 → Gate 1 → the 5-step manual cascade → confirmation → landing.
+// "Browse a catalogue" always models the "fields remain" branch (create.md's
+// own stress-test case 6b) — the "source fully defines the object" branch
+// (case 6, no cascade at all) isn't exposed as a toggle here since none of
+// the 9 requested controls represent it; it would need a 10th control this
+// playground doesn't have.
+type PgCreateTrigger = "standard" | "ai" | "catalogue" | "direct" | "chat"
+type PgCreateStages = "1" | "2" | "3+"
+type PgCreateFieldCount = "<=5" | ">5"
+
+type PgCreateInputs = {
+  trigger: PgCreateTrigger
+  ownsWorkspace: boolean
+  stages: PgCreateStages
+  branches: boolean
+  singleField: boolean
+  listOnScreen: boolean
+  attaches: boolean
+  fieldCount: PgCreateFieldCount
+  reversible: boolean
+}
+
+type PgCreateStep = { n: string; question: string; answer: "yes" | "no" | "n/a"; resolved: boolean }
+
+type PgCreateSurface = "inline-row" | "slideout" | "modal-content" | "dedicated" | "dedicated-stepper" | "chat-modal" | "rejected"
+
+type PgCreateResult = {
+  gate0: "pass" | "reject"
+  gate0Note: string
+  gate1: "manual" | "assisted" | "source" | "n/a"
+  gate1Note: string
+  steps: PgCreateStep[]
+  surface: PgCreateSurface
+  twoStageNote: boolean
+  confirmation: string
+  landing: string
+}
+
+function computeCreatePlaygroundResult(i: PgCreateInputs): PgCreateResult {
+  // Gate 0 — does the pattern apply at all?
+  if (i.trigger === "direct") {
+    return {
+      gate0: "reject", gate0Note: "Dropping the node onto the canvas already created it — this is Configure, not Create. The SidePanel that opens afterward configures the node that already exists.",
+      gate1: "n/a", gate1Note: "", steps: [], surface: "rejected", twoStageNote: false,
+      confirmation: "N/A — the pattern does not apply.", landing: "N/A — the pattern does not apply.",
+    }
+  }
+  if (i.trigger === "chat") {
+    return {
+      gate0: "reject", gate0Note: "The chat is already the container — there is no surface to choose.",
+      gate1: "n/a", gate1Note: "", steps: [], surface: "rejected", twoStageNote: false,
+      confirmation: "N/A — the pattern does not apply.", landing: "N/A — the pattern does not apply.",
+    }
+  }
+
+  // Gate 1 — which create mode?
+  if (i.trigger === "ai") {
+    return {
+      gate0: "pass", gate0Note: "",
+      gate1: "assisted", gate1Note: "A \"Create with AI\" affordance — the object is defined through conversation, not form fields. The chat component exists in Figma but isn't implemented in this repo yet.",
+      steps: [], surface: "chat-modal", twoStageNote: false,
+      confirmation: "Always ends in a success ModalDialog — two exits: view the object, or create another.",
+      landing: "Success modal → view the object, or create another.",
+    }
+  }
+
+  const gate1: PgCreateResult["gate1"] = i.trigger === "catalogue" ? "source" : "manual"
+  const gate1Note = i.trigger === "catalogue"
+    ? "Browsing a catalogue — the ModalDialog catalogue picker is a selection surface only, never the form itself. Fields remain after selection, so the cascade below runs pre-filled with the source's values."
+    : "A standard create affordance — run the cascade below."
+
+  // The cascade — a sequence, stop at the first "yes"
+  const steps: PgCreateStep[] = []
+  let surface: PgCreateSurface = "dedicated"
+  let resolvedAt = -1
+
+  const s1 = i.ownsWorkspace
+  steps.push({ n: "1", question: "Does the object type declare a workspace of its own — a builder, canvas, or editor?", answer: s1 ? "yes" : "no", resolved: s1 })
+  if (s1) { surface = "dedicated"; resolvedAt = 1 }
+
+  const s2 = i.branches || i.stages === "3+"
+  steps.push({ n: "2", question: "Does the flow branch, or does it have 3+ stages?", answer: resolvedAt === -1 ? (s2 ? "yes" : "no") : "n/a", resolved: resolvedAt === -1 && s2 })
+  if (resolvedAt === -1 && s2) { surface = "dedicated-stepper"; resolvedAt = 2 }
+
+  const s3 = i.singleField && i.listOnScreen
+  steps.push({ n: "3", question: "Creatable from a single field, AND is a list of the same type visible on screen?", answer: resolvedAt === -1 ? (s3 ? "yes" : "no") : "n/a", resolved: resolvedAt === -1 && s3 })
+  if (resolvedAt === -1 && s3) { surface = "inline-row"; resolvedAt = 3 }
+
+  const s4 = i.attaches
+  steps.push({ n: "4", question: "Does the new object attach to something visible on screen?", answer: resolvedAt === -1 ? (s4 ? "yes" : "no") : "n/a", resolved: resolvedAt === -1 && s4 })
+  if (resolvedAt === -1 && s4) { surface = "slideout"; resolvedAt = 4 }
+
+  const s5 = i.fieldCount === ">5"
+  steps.push({ n: "5", question: "More than 5 fields?", answer: resolvedAt === -1 ? (s5 ? "yes" : "no") : "n/a", resolved: resolvedAt === -1 })
+  if (resolvedAt === -1) { surface = s5 ? "dedicated" : "modal-content"; resolvedAt = 5 }
+
+  const twoStageNote = surface === "slideout" && i.stages === "2" && !i.branches
+
+  const confirmation = i.reversible
+    ? "None — the user can undo this themselves (delete or archive, no external effect). Save directly."
+    : "ModalDialog variant=\"confirmation\" before saving — the creation can't be undone, has tenant-wide scope, or triggers effects outside the tenant."
+
+  const LANDING: Record<PgCreateSurface, string> = {
+    "inline-row": "Stays in place. The new row appears in the list, ready to create the next one.",
+    "slideout": "Closes. The user returns to where they were; the new object appears in context.",
+    "dedicated": "Navigates to the created object.",
+    "dedicated-stepper": "Navigates to the created object.",
+    "modal-content": "Not stated by create.md's own landing table (§5 covers only Inline create row, SlideOut, Dedicated view, and Assisted create) — flagged here rather than invented.",
+    "chat-modal": "Success modal → view the object, or create another.",
+    "rejected": "N/A — the pattern does not apply.",
+  }
+
+  return { gate0: "pass", gate0Note: "", gate1, gate1Note, steps, surface, twoStageNote, confirmation, landing: LANDING[surface] }
+}
+
+const PG_CREATE_PRESETS: { label: string; values: PgCreateInputs }[] = [
+  { label: "1a · Note, list visible on screen", values: { trigger: "standard", ownsWorkspace: false, stages: "1", branches: false, singleField: true,  listOnScreen: true,  attaches: true,  fieldCount: "<=5", reversible: true  } },
+  { label: "1b · Note, no list on screen",      values: { trigger: "standard", ownsWorkspace: false, stages: "1", branches: false, singleField: true,  listOnScreen: false, attaches: true,  fieldCount: "<=5", reversible: true  } },
+  { label: "2 · Entity from its own list view, 4 fields", values: { trigger: "standard", ownsWorkspace: false, stages: "1", branches: false, singleField: false, listOnScreen: false, attaches: false, fieldCount: "<=5", reversible: true } },
+  { label: "3 · Governance policy",             values: { trigger: "standard", ownsWorkspace: false, stages: "3+", branches: false, singleField: false, listOnScreen: false, attaches: false, fieldCount: ">5",  reversible: false } },
+  { label: "4 · Workflow (owns a workspace)",   values: { trigger: "standard", ownsWorkspace: true,  stages: "1", branches: false, singleField: false, listOnScreen: false, attaches: false, fieldCount: "<=5", reversible: true  } },
+  { label: "6b · Template from marketplace, fields remain", values: { trigger: "catalogue", ownsWorkspace: false, stages: "1", branches: false, singleField: false, listOnScreen: false, attaches: true, fieldCount: "<=5", reversible: true } },
+  { label: "7 · Create with AI",                values: { trigger: "ai",       ownsWorkspace: false, stages: "1", branches: false, singleField: false, listOnScreen: false, attaches: false, fieldCount: "<=5", reversible: true  } },
+  { label: "5 (control) · Add a node to the canvas", values: { trigger: "direct", ownsWorkspace: false, stages: "1", branches: false, singleField: false, listOnScreen: false, attaches: false, fieldCount: "<=5", reversible: true } },
+]
+
+// Local Select wiring — Select is a trigger-only field (see select.tsx's own
+// header comment); the dropdown is a separate Menu/MenuItem list the caller
+// positions and opens/closes itself. Same recipe already used for the NBA
+// dynamic-inputs Select in record-header.tsx's own demo data.
+function PgCreateSelect({ id, label, value, options, openId, setOpenId, onChange }: {
+  id: string
+  label: string
+  value: string
+  options: { label: string; value: string }[]
+  openId: string | null
+  setOpenId: (id: string | null) => void
+  onChange: (v: string) => void
+}) {
+  const selected = options.find(o => o.value === value)
+  return (
+    <div className="flex flex-col gap-[4px]">
+      <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{label}</span>
+      <div className="relative">
+        <Select
+          size="sm"
+          value={selected?.label}
+          placeholder="Select…"
+          open={openId === id}
+          onClick={() => setOpenId(openId === id ? null : id)}
+        />
+        {openId === id && (
+          <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[50]">
+            <Menu className="w-full">
+              {options.map(opt => (
+                <MenuItem key={opt.value} label={opt.label} state={opt.value === value ? "focus" : "default"}
+                  onClick={() => { onChange(opt.value); setOpenId(null) }} />
+              ))}
+            </Menu>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PgCreateToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-[12px] py-[2px]">
+      <span className="text-[12px] text-[var(--foreground)]">{label}</span>
+      <Toggle size="sm" checked={checked} onChange={onChange} />
+    </div>
+  )
+}
+
+function PgCreatePathRow({ label, verdict, note, highlighted }: { label: string; verdict: string; note?: string; highlighted?: boolean }) {
+  const variant = verdict === "yes" || verdict === "pass" ? "success" : verdict === "n/a" ? "secondary" : "neutral"
+  return (
+    <div className="flex items-start gap-[8px] p-[8px] rounded-[6px]" style={highlighted ? { background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" } : { border: "0.5px solid transparent" }}>
+      <Tag variant={variant} size="sm" className="shrink-0 mt-[1px]">{verdict.toUpperCase()}</Tag>
+      <div className="flex-1 min-w-0">
+        <span className="text-[12px] font-medium" style={{ color: "var(--foreground)" }}>{label}</span>
+        {note && <span className="block text-[11px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>{note}</span>}
+      </div>
+    </div>
+  )
+}
+
 function PatternCreatePage() {
   const [tab, setTab] = useState<string>("when-to-use")
+
+  // ── Create playground state ────────────────────────────────────────────
+  const [pgCreateOpen, setPgCreateOpen] = useState(false)
+  const [pgCreateOpenSelect, setPgCreateOpenSelect] = useState<string | null>(null)
+  const [pgTrigger, setPgTrigger] = useState<PgCreateTrigger>("standard")
+  const [pgOwnsWorkspace, setPgOwnsWorkspace] = useState(false)
+  const [pgStages, setPgStages] = useState<PgCreateStages>("1")
+  const [pgBranches, setPgBranches] = useState(false)
+  const [pgSingleField, setPgSingleField] = useState(false)
+  const [pgListOnScreen, setPgListOnScreen] = useState(false)
+  const [pgAttaches, setPgAttaches] = useState(false)
+  const [pgFieldCount, setPgFieldCount] = useState<PgCreateFieldCount>("<=5")
+  const [pgReversible, setPgReversible] = useState(true)
+
+  const pgCreateResult = computeCreatePlaygroundResult({
+    trigger: pgTrigger, ownsWorkspace: pgOwnsWorkspace, stages: pgStages, branches: pgBranches,
+    singleField: pgSingleField, listOnScreen: pgListOnScreen, attaches: pgAttaches,
+    fieldCount: pgFieldCount, reversible: pgReversible,
+  })
+
+  const applyPgCreatePreset = (values: PgCreateInputs) => {
+    setPgTrigger(values.trigger); setPgOwnsWorkspace(values.ownsWorkspace); setPgStages(values.stages)
+    setPgBranches(values.branches); setPgSingleField(values.singleField); setPgListOnScreen(values.listOnScreen)
+    setPgAttaches(values.attaches); setPgFieldCount(values.fieldCount); setPgReversible(values.reversible)
+    setPgCreateOpenSelect(null)
+  }
+
+  const pgCreateControls = (
+    <div className="flex flex-col gap-[16px]">
+      <PgCreateSelect id="trigger" label="Trigger" value={pgTrigger} openId={pgCreateOpenSelect} setOpenId={setPgCreateOpenSelect}
+        onChange={v => setPgTrigger(v as PgCreateTrigger)}
+        options={[
+          { label: "Standard create", value: "standard" },
+          { label: "Create with AI", value: "ai" },
+          { label: "Browse a catalogue", value: "catalogue" },
+          { label: "Direct manipulation (drag onto canvas)", value: "direct" },
+          { label: "Inside an agent conversation", value: "chat" },
+        ]} />
+      <PgCreateToggleRow label="Object declares its own workspace" checked={pgOwnsWorkspace} onChange={setPgOwnsWorkspace} />
+      <PgCreateSelect id="stages" label="Stages" value={pgStages} openId={pgCreateOpenSelect} setOpenId={setPgCreateOpenSelect}
+        onChange={v => setPgStages(v as PgCreateStages)}
+        options={[{ label: "1", value: "1" }, { label: "2", value: "2" }, { label: "3+", value: "3+" }]} />
+      <PgCreateToggleRow label="Flow branches" checked={pgBranches} onChange={setPgBranches} />
+      <PgCreateToggleRow label="Creatable from a single field" checked={pgSingleField} onChange={setPgSingleField} />
+      <PgCreateToggleRow label="A list of the same type is on screen" checked={pgListOnScreen} onChange={setPgListOnScreen} />
+      <PgCreateToggleRow label="Attaches to something on screen" checked={pgAttaches} onChange={setPgAttaches} />
+      <PgCreateSelect id="fieldCount" label="Field count" value={pgFieldCount} openId={pgCreateOpenSelect} setOpenId={setPgCreateOpenSelect}
+        onChange={v => setPgFieldCount(v as PgCreateFieldCount)}
+        options={[{ label: "5 or fewer", value: "<=5" }, { label: "More than 5", value: ">5" }]} />
+      <PgCreateToggleRow label="Reversible by the user" checked={pgReversible} onChange={setPgReversible} />
+
+      <div className="pt-[8px] mt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+        <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Presets — create.md §7</span>
+        <div className="flex flex-col gap-[4px]">
+          {PG_CREATE_PRESETS.map(p => (
+            <button key={p.label} onClick={() => applyPgCreatePreset(p.values)}
+              className="text-left px-[8px] py-[6px] rounded-[6px] text-[11px] transition-colors hover:bg-[var(--color-surface-neutral-subtle)]"
+              style={{ color: "var(--field-supporting)", border: "0.5px solid var(--field-border)" }}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+
+  const pgCreatePreview = (
+    <div className="flex flex-col gap-[16px]">
+      <div>
+        <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Resolved surface</span>
+        {pgCreateResult.surface === "rejected" && (
+          <InformativeCard state="alert" size="sm" title="Rejected — Gate 0" description={pgCreateResult.gate0Note} />
+        )}
+        {(pgCreateResult.surface === "inline-row" || pgCreateResult.surface === "chat-modal") && (
+          <InformativeCard
+            state="informative" size="sm"
+            title={pgCreateResult.surface === "inline-row" ? "Inline create row — not yet built" : "Create-with-AI chat — not yet built"}
+            description={
+              pgCreateResult.surface === "inline-row"
+                ? "The cascade resolves here, but no component renders this yet — it needs building in experimental/. This view arrives once that component exists."
+                : "The chat component exists in the Figma Design System but isn't implemented in this repo. This view arrives once that component ships."
+            }
+          />
+        )}
+        {pgCreateResult.surface === "slideout" && (
+          <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)", height: 320 }}>
+            {/* create.md itself says SlideOut type="default" (§3, §8) — the real
+                component's SlideOutType union is only "with-variants" | "full-slot"
+                (checked directly in slide-out.tsx). "full-slot" is the actual prop
+                that renders generic content with no entity header, which is what
+                "default" was describing. Not fixed here — that's a create.md
+                wording gap, out of this task's scope; flagging for whoever next
+                syncs create.md against the component. */}
+            <SlideOut open onClose={() => {}} previewMode type="full-slot" size="s" showScrollbar={false}>
+              <div className="flex flex-col gap-[16px] h-full">
+                <div>
+                  <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New item</span>
+                  <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Attaches to the record you were already looking at.</p>
+                </div>
+                <Input placeholder="Name" />
+                <Textarea placeholder="Description" />
+                {pgCreateResult.twoStageNote && (
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>2-stage flow — a lightweight step indicator would sit here, not a full Stepper.</span>
+                )}
+                <div className="flex-1" />
+                <div className="flex justify-end gap-[8px]">
+                  <Button variant="secondary" size="sm">Cancel</Button>
+                  <Button variant="primary" size="sm">Create</Button>
+                </div>
+              </div>
+            </SlideOut>
+          </div>
+        )}
+        {pgCreateResult.surface === "modal-content" && (
+          <div className="rounded-[8px] overflow-hidden flex items-center justify-center" style={{ border: "0.5px solid var(--field-border)", background: "var(--canvas)", padding: 16 }}>
+            <ModalDialog
+              isOpen onClose={() => {}} embedded
+              variant="content"
+              title="New item"
+              description="A standalone object — nothing on screen is its parent."
+              slot={<div className="flex flex-col gap-[12px]"><Input placeholder="Name" /><Input placeholder="Description" /></div>}
+              ctaPrimary={{ label: "Create" }}
+              ctaSecondary={{ label: "Cancel" }}
+            />
+          </div>
+        )}
+        {(pgCreateResult.surface === "dedicated" || pgCreateResult.surface === "dedicated-stepper") && (
+          <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
+            <Header title="New item" backButton size="size-m" primaryAction={<Button variant="main" size="sm">Create</Button>} />
+            <div className="flex flex-col gap-[12px] p-[16px]">
+              {pgCreateResult.surface === "dedicated-stepper" && (
+                <Stepper steps={[
+                  { label: "Details", state: "active" },
+                  { label: "Configure", state: "default" },
+                  { label: "Review", state: "default" },
+                ]} className="mb-[4px]" />
+              )}
+              <Input placeholder="Name" />
+              <Input placeholder="Description" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Path</span>
+        <div className="flex flex-col gap-[2px]">
+          <PgCreatePathRow label="Gate 0 — does the pattern apply?" verdict={pgCreateResult.gate0 === "pass" ? "pass" : "reject"} note={pgCreateResult.gate0Note || undefined} highlighted={pgCreateResult.gate0 === "reject"} />
+          {pgCreateResult.gate0 === "pass" && (
+            <PgCreatePathRow label="Gate 1 — which create mode?" verdict={pgCreateResult.gate1} note={pgCreateResult.gate1Note} highlighted={pgCreateResult.gate1 !== "manual" && pgCreateResult.gate1 !== "source"} />
+          )}
+          {pgCreateResult.steps.map(s => (
+            <PgCreatePathRow key={s.n} label={`Step ${s.n} — ${s.question}`} verdict={s.answer} highlighted={s.resolved} />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Confirmation &amp; landing</span>
+        <div className="flex flex-col gap-[8px]">
+          <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}><strong className="text-[var(--foreground)]">Confirmation:</strong> {pgCreateResult.confirmation}</p>
+          <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}><strong className="text-[var(--foreground)]">Lands on:</strong> {pgCreateResult.landing}</p>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div>
@@ -16025,6 +16382,14 @@ function PatternCreatePage() {
           </PatternCard>
 
           <PatternCard>
+            <SectionLabel>Try it — the cascade as a live decision procedure</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[640px]">
+              Set the 9 inputs the cascade actually reads, or load one of the stress-test cases below, and watch Gate 0, Gate 1, and steps 1–5 resolve live — rendered with the real DS components each surface uses.
+            </p>
+            <Button variant="primary" size="sm" onClick={() => setPgCreateOpen(true)}>Open playground</Button>
+          </PatternCard>
+
+          <PatternCard>
             <SectionLabel>Component inventory</SectionLabel>
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
@@ -16104,6 +16469,14 @@ LANDING (derived from container, not a separate decision)
           </PatternCard>
         </div>
       )}
+
+      <PlaygroundModal
+        isOpen={pgCreateOpen}
+        onClose={() => setPgCreateOpen(false)}
+        title="Create — cascade playground"
+        controls={pgCreateControls}
+        preview={pgCreatePreview}
+      />
     </div>
   )
 }
