@@ -5,7 +5,6 @@ import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { Input }        from "@/components/ui/input"
 import { SwitchTab }    from "@/components/ui/switch-tab"
-import { SlideOut }     from "@/components/ui/slide-out"
 import type { SidebarItem } from "@/components/ui/sidebar"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -37,6 +36,21 @@ interface Member {
   status: MemberStatus; lastActive: string | null; joinedAt: string
   initials: string; avatarColor: string; department?: string; title?: string
 }
+
+interface Role {
+  id: string; label: string; system: boolean; color: string; desc: string; memberIds: string[]
+}
+
+interface Group {
+  id: string; name: string; color: string; desc: string; memberIds: string[]
+  studios: string[]
+}
+
+type DetailView =
+  | { type: "member"; member: Member }
+  | { type: "role";   role: Role }
+  | { type: "group";  group: Group }
+  | null
 
 // ─── Members fixture ──────────────────────────────────────────────────────────
 
@@ -83,10 +97,10 @@ const PERM_TREE: Record<string, PermNode[]> = {
   ],
   datastudio: [
     { id:"ds-models", label:"Data Models", code:"datastudio.models", desc:"Browse and manage entity schemas and data model definitions", state:"g-inh", role:"Data Steward", scope:"Tenant", locked:true, children:[
-      { id:"ds-models-view",      label:"View models",      desc:"Read data model definitions, entities, and attributes",                            code:"datastudio.models.view",      state:"g-inh", scope:"Tenant", locked:true },
-      { id:"ds-models-author",    label:"Author models",    desc:"Create and edit data model drafts",                                               code:"datastudio.models.author",    state:"g-inh", scope:"Tenant", locked:true },
-      { id:"ds-models-publish",   label:"Publish models",   desc:"Promote a model from Draft to Published state",                                   code:"datastudio.models.publish",   state:"" },
-      { id:"ds-models-deprecate", label:"Deprecate models", desc:"Mark a published model as deprecated so consumers can migrate",                   code:"datastudio.models.deprecate", state:"" },
+      { id:"ds-models-view",      label:"View models",      desc:"Read data model definitions, entities, and attributes",    code:"datastudio.models.view",      state:"g-inh", scope:"Tenant", locked:true },
+      { id:"ds-models-author",    label:"Author models",    desc:"Create and edit data model drafts",                        code:"datastudio.models.author",    state:"g-inh", scope:"Tenant", locked:true },
+      { id:"ds-models-publish",   label:"Publish models",   desc:"Promote a model from Draft to Published state",            code:"datastudio.models.publish",   state:"" },
+      { id:"ds-models-deprecate", label:"Deprecate models", desc:"Mark a published model as deprecated",                    code:"datastudio.models.deprecate", state:"" },
     ]},
     { id:"ds-lineage", label:"Lineage", code:"datastudio.lineage", desc:"Explore how data flows between entities and sources", state:"g-direct", scope:"Tenant", children:[
       { id:"ds-lineage-view",  label:"View lineage graph",  desc:"See the full dependency graph for data models and pipelines", code:"datastudio.lineage.view",  state:"g-direct", scope:"Tenant" },
@@ -115,8 +129,8 @@ const PERM_TREE: Record<string, PermNode[]> = {
       { id:"ag-net-manage", label:"Manage networks", desc:"Create and edit agentic network topologies",                   code:"agentic.networks.manage", state:"" },
     ]},
     { id:"ag-workflows", label:"Workflows", code:"agentic.workflows", desc:"Define and run multi-step automated task sequences", state:"", children:[
-      { id:"ag-wf-view",   label:"View workflows",   desc:"Browse workflow definitions and their execution logs",    code:"agentic.workflows.view",   state:"" },
-      { id:"ag-wf-manage", label:"Manage workflows", desc:"Create, edit, and delete workflow step configurations",   code:"agentic.workflows.manage", state:"" },
+      { id:"ag-wf-view",   label:"View workflows",   desc:"Browse workflow definitions and their execution logs",  code:"agentic.workflows.view",   state:"" },
+      { id:"ag-wf-manage", label:"Manage workflows", desc:"Create, edit, and delete workflow step configurations", code:"agentic.workflows.manage", state:"" },
     ]},
   ],
   admin: [
@@ -131,13 +145,78 @@ const PERM_TREE: Record<string, PermNode[]> = {
       { id:"adm-roles-manage", label:"Manage roles", desc:"Create custom roles and modify the permissions they grant",         code:"admin.roles.manage", state:"" },
     ]},
     { id:"adm-integrations", label:"Integrations", code:"admin.integrations", desc:"Connect external services and manage third-party credentials", state:"", children:[
-      { id:"adm-int-view",   label:"View integrations",       desc:"List configured third-party integrations and their status", code:"admin.integrations.view",   state:"" },
-      { id:"adm-int-manage", label:"Manage integrations",     desc:"Add, configure, or remove integration connections",         code:"admin.integrations.manage", state:"" },
+      { id:"adm-int-view",   label:"View integrations",   desc:"List configured third-party integrations and their status", code:"admin.integrations.view",   state:"" },
+      { id:"adm-int-manage", label:"Manage integrations", desc:"Add, configure, or remove integration connections",         code:"admin.integrations.manage", state:"" },
     ]},
     { id:"adm-audit", label:"Audit & Compliance", code:"admin.audit", desc:"Review and export a tamper-evident log of platform activity", state:"", children:[
-      { id:"adm-audit-view",   label:"View audit log",    desc:"Read the chronological log of admin and user actions",   code:"admin.audit.view",   state:"" },
-      { id:"adm-audit-export", label:"Export audit log",  desc:"Download a copy of the audit trail as CSV or JSON",       code:"admin.audit.export", state:"" },
+      { id:"adm-audit-view",   label:"View audit log",   desc:"Read the chronological log of admin and user actions", code:"admin.audit.view",   state:"" },
+      { id:"adm-audit-export", label:"Export audit log", desc:"Download a copy of the audit trail as CSV or JSON",    code:"admin.audit.export", state:"" },
     ]},
+  ],
+}
+
+// ─── Roles fixture ────────────────────────────────────────────────────────────
+
+const ROLES: Role[] = [
+  { id: "workspace-admin",    label: "Workspace Admin",    system: true,  color: "#6366f1", desc: "Full control over workspace settings, members, studios, and billing",                     memberIds: ["tg", "mg", "es"] },
+  { id: "developer",          label: "Developer",          system: true,  color: "#10b981", desc: "Build and deploy integrations, agents, and custom workflows",                            memberIds: ["es", "sb", "dp"] },
+  { id: "viewer",             label: "Viewer",             system: true,  color: "#64748b", desc: "Read-only access across all non-sensitive studio content",                               memberIds: ["at", "fw"] },
+  { id: "agent-builder",      label: "Agent Builder",      system: false, color: "#f97316", desc: "Create and manage AI workers, agentic networks, and workflow definitions",              memberIds: ["sb", "dp"] },
+  { id: "data-steward",       label: "Data Steward",       system: false, color: "#8b5cf6", desc: "Manage model definitions, governance policies, and data lineage graphs",                memberIds: ["mg"] },
+  { id: "compliance-auditor", label: "Compliance Auditor", system: false, color: "#0ea5e9", desc: "Read-only access to audit logs, governance events, data lineage, and access settings", memberIds: [] },
+]
+
+const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number; agentic: number; admin: number; total: number }> = {
+  "workspace-admin":    { governance: 6, datastudio: 5, agentic: 7, admin: 10, total: 28 },
+  "developer":          { governance: 0, datastudio: 4, agentic: 6, admin: 2,  total: 11 },
+  "viewer":             { governance: 2, datastudio: 2, agentic: 1, admin: 2,  total: 8  },
+  "agent-builder":      { governance: 0, datastudio: 0, agentic: 7, admin: 0,  total: 7  },
+  "data-steward":       { governance: 3, datastudio: 3, agentic: 0, admin: 1,  total: 7  },
+  "compliance-auditor": { governance: 2, datastudio: 2, agentic: 1, admin: 3,  total: 8  },
+}
+
+// ─── Groups fixture ───────────────────────────────────────────────────────────
+
+const GROUPS: Group[] = [
+  { id: "engineering",  name: "Engineering",          color: "#10b981", desc: "Platform and product engineers building integrations and workflows.",    memberIds: ["es", "dp"],         studios: ["agentic", "datastudio", "governance"] },
+  { id: "ai-ops",       name: "AI Ops",               color: "#06b6d4", desc: "Responsible for deploying and monitoring AI workers in production.",      memberIds: ["sb", "dp"],         studios: ["agentic"] },
+  { id: "data-team",    name: "Data Team",             color: "#8b5cf6", desc: "Data engineers and stewards managing model governance and lineage.",     memberIds: ["mg"],               studios: ["datastudio", "governance"] },
+  { id: "leadership",   name: "Leadership",            color: "#f97316", desc: "Executives and directors with read access across all studios.",           memberIds: ["tg", "mg", "es"],   studios: ["agentic", "governance", "datastudio"] },
+  { id: "compliance",   name: "Compliance & Audit",   color: "#0ea5e9", desc: "Read-only access to audit logs and governance events.",                   memberIds: [],                   studios: ["governance"] },
+  { id: "external",     name: "External Consultants", color: "#84cc16", desc: "Limited scoped access for contracted third-party consultants.",            memberIds: [],                   studios: [] },
+]
+
+const STUDIO_META: Record<string, { label: string; color: string }> = {
+  governance: { label: "Governance",  color: "#10b981" },
+  datastudio:  { label: "Data Studio", color: "#8b5cf6" },
+  agentic:    { label: "Agentic",     color: "#06b6d4" },
+  admin:      { label: "Admin",       color: "#6366f1" },
+}
+
+const GROUP_ACTIVITY: Record<string, Array<{ type: string; msg: string; time: string }>> = {
+  engineering: [
+    { type: "role",   msg: "Eduardo Suárez added to this group",         time: "Aug 9, 2026"  },
+    { type: "edit",   msg: "Studio access updated — removed \"admin\"",  time: "Aug 3, 2026"  },
+    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Mar 1, 2025"  },
+  ],
+  "ai-ops": [
+    { type: "role",   msg: "Diana Pérez added to this group",            time: "Aug 10, 2026" },
+    { type: "edit",   msg: "Studio access updated — added \"helix\"",    time: "Aug 5, 2026"  },
+    { type: "create", msg: "Group created by Maria García",              time: "Jun 15, 2025" },
+  ],
+  "data-team": [
+    { type: "role",   msg: "Maria García added to this group",           time: "Aug 5, 2026"  },
+    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Apr 2, 2025"  },
+  ],
+  leadership: [
+    { type: "edit",   msg: "Eduardo Suárez added to this group",         time: "Aug 1, 2026"  },
+    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jan 15, 2025" },
+  ],
+  compliance: [
+    { type: "create", msg: "Group created by Maria García",              time: "May 10, 2025" },
+  ],
+  external: [
+    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jul 22, 2025" },
   ],
 }
 
@@ -175,6 +254,50 @@ function formatRelative(iso: string): string {
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
+
+// ─── Shared UI atoms ──────────────────────────────────────────────────────────
+
+function BackBreadcrumb({ label, onBack }: { label: string; onBack: () => void }) {
+  return (
+    <button
+      onClick={onBack}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)",
+        background: "none", border: "none", cursor: "pointer",
+        padding: "4px 0", marginBottom: 4,
+        transition: "color 0.1s",
+      }}
+      onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
+      onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+    >
+      <Icons.ChevronLeft size={14} />
+      People & Access / <span style={{ color: "var(--foreground)", fontWeight: 600 }}>{label}</span>
+    </button>
+  )
+}
+
+function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number; onChange: (i: number) => void }) {
+  return (
+    <div style={{ display: "flex", borderBottom: "1px solid var(--border)", marginBottom: 0 }}>
+      {tabs.map((t, i) => (
+        <button
+          key={t}
+          onClick={() => onChange(i)}
+          style={{
+            padding: "10px 20px", fontSize: 13, fontWeight: 600,
+            border: "none", background: "none", cursor: "pointer",
+            color: active === i ? "var(--foreground)" : "var(--muted-foreground)",
+            borderBottom: active === i ? "2px solid var(--primary)" : "2px solid transparent",
+            marginBottom: -1, transition: "color 0.15s",
+          }}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 // ─── Permission state icon ────────────────────────────────────────────────────
@@ -220,8 +343,6 @@ function PermIcon({ state }: { state: PermState }) {
   )
 }
 
-// ─── Permission tree node ─────────────────────────────────────────────────────
-
 function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
   const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
   const hasChildren = (node.children?.length ?? 0) > 0
@@ -233,7 +354,7 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
         onClick={() => hasChildren && setExpanded(e => !e)}
         style={{
           display: "flex", alignItems: "center", gap: 8,
-          padding: `7px 14px 7px ${14 + depth * 20}px`,
+          padding: `8px 16px 8px ${16 + depth * 20}px`,
           borderBottom: "1px solid var(--border)",
           cursor: hasChildren ? "pointer" : "default",
           background: "transparent",
@@ -241,7 +362,6 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
         onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
       >
-        {/* Expand toggle */}
         <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {hasChildren
             ? expanded
@@ -249,14 +369,10 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
               : <Icons.ChevronRight size={12} color="var(--muted-foreground)" />
             : null}
         </div>
-
         <PermIcon state={node.state} />
-
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
-              {node.label}
-            </span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{node.label}</span>
             {node.role && (
               <span style={{
                 fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
@@ -267,7 +383,7 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
               </span>
             )}
             {node.scope && (
-              <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>· {node.scope}</span>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
             )}
           </div>
           {depth === 0 && hasChildren && (
@@ -276,12 +392,10 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
             </div>
           )}
         </div>
-
         {node.locked && (
           <Icons.Lock size={11} color="var(--muted-foreground)" style={{ flexShrink: 0, opacity: 0.5 }} />
         )}
       </div>
-
       {expanded && hasChildren && node.children!.map(child => (
         <PermTreeNode key={child.id} node={child} depth={depth + 1} />
       ))}
@@ -289,7 +403,7 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
   )
 }
 
-// ─── Permissions tab ──────────────────────────────────────────────────────────
+// ─── Permissions panel ────────────────────────────────────────────────────────
 
 const STUDIO_TABS = [
   { id: "governance", label: "Governance" },
@@ -298,7 +412,7 @@ const STUDIO_TABS = [
   { id: "admin",      label: "Admin" },
 ]
 
-function PermissionsTab() {
+function PermissionsPanel() {
   const [studio, setStudio] = useState("governance")
   const [filter, setFilter] = useState("")
   const nodes = PERM_TREE[studio] ?? []
@@ -324,15 +438,15 @@ function PermissionsTab() {
     : nodes
 
   return (
-    <div>
+    <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
       {/* Studio tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", marginBottom: 0 }}>
+      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
         {STUDIO_TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setStudio(t.id)}
             style={{
-              flex: 1, padding: "8px 4px", fontSize: 11, fontWeight: 600,
+              flex: 1, padding: "10px 4px", fontSize: 12, fontWeight: 600,
               border: "none", background: "none", cursor: "pointer",
               color: studio === t.id ? "var(--primary)" : "var(--muted-foreground)",
               borderBottom: studio === t.id ? "2px solid var(--primary)" : "2px solid transparent",
@@ -347,7 +461,7 @@ function PermissionsTab() {
       {/* Summary + search */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "10px 14px", borderBottom: "1px solid var(--border)",
+        padding: "10px 16px", borderBottom: "1px solid var(--border)",
         background: "var(--surface-raised)",
       }}>
         <div style={{ flex: 1, position: "relative" }}>
@@ -360,13 +474,13 @@ function PermissionsTab() {
             onChange={e => setFilter(e.target.value)}
             placeholder="Filter permissions…"
             style={{
-              width: "100%", paddingLeft: 28, paddingRight: 8, paddingTop: 5, paddingBottom: 5,
-              fontSize: 12, border: "1px solid var(--border)", borderRadius: 6,
+              width: "100%", paddingLeft: 28, paddingRight: 8, paddingTop: 6, paddingBottom: 6,
+              fontSize: 13, border: "1px solid var(--border)", borderRadius: 6,
               background: "var(--surface)", color: "var(--foreground)", outline: "none",
             }}
           />
         </div>
-        <div style={{ fontSize: 11, color: "var(--muted-foreground)", flexShrink: 0 }}>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)", flexShrink: 0 }}>
           <span style={{ fontWeight: 700, color: "var(--primary)" }}>{grantedCount}</span>
           <span> / {totalCount} granted</span>
         </div>
@@ -374,9 +488,8 @@ function PermissionsTab() {
 
       {/* Legend */}
       <div style={{
-        display: "flex", gap: 12, padding: "8px 14px",
-        borderBottom: "1px solid var(--border)",
-        background: "var(--surface-raised)",
+        display: "flex", gap: 16, padding: "8px 16px",
+        borderBottom: "1px solid var(--border)", background: "var(--surface-raised)",
       }}>
         {[
           { state: "g-direct" as PermState, label: "Direct" },
@@ -386,7 +499,7 @@ function PermissionsTab() {
         ].map(l => (
           <div key={l.state} style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <PermIcon state={l.state} />
-            <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>{l.label}</span>
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l.label}</span>
           </div>
         ))}
       </div>
@@ -394,7 +507,7 @@ function PermissionsTab() {
       {/* Tree */}
       <div>
         {filteredNodes.length === 0 ? (
-          <div style={{ padding: "32px 14px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 12 }}>
+          <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
             No permissions match "{filter}"
           </div>
         ) : (
@@ -405,7 +518,7 @@ function PermissionsTab() {
   )
 }
 
-// ─── Activity tab ─────────────────────────────────────────────────────────────
+// ─── Activity panel ───────────────────────────────────────────────────────────
 
 const ACTIVITY_LOG = [
   { msg: "Signed in from Chrome on macOS",          time: "2 hours ago",          type: "auth"  },
@@ -419,35 +532,36 @@ const ACTIVITY_LOG = [
 ]
 
 const ACTIVITY_ICON: Record<string, React.ReactNode> = {
-  auth:  <Icons.LogIn size={13} />,
-  edit:  <Icons.FileEdit size={13} />,
-  group: <Icons.Users size={13} />,
-  role:  <Icons.ShieldCheck size={13} />,
-  check: <Icons.CheckCircle size={13} />,
+  auth:  <Icons.LogIn size={14} />,
+  edit:  <Icons.FileEdit size={14} />,
+  group: <Icons.Users size={14} />,
+  role:  <Icons.ShieldCheck size={14} />,
+  check: <Icons.CheckCircle size={14} />,
 }
 
-function ActivityTab() {
+function ActivityPanel({ log = ACTIVITY_LOG }: { log?: typeof ACTIVITY_LOG }) {
   return (
-    <div style={{ padding: "4px 0" }}>
-      {ACTIVITY_LOG.map((ev, i) => (
+    <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+      {log.map((ev, i) => (
         <div
           key={i}
           style={{
-            display: "flex", gap: 12, padding: "10px 16px",
-            borderBottom: "1px solid var(--border)", alignItems: "flex-start",
+            display: "flex", gap: 14, padding: "14px 20px",
+            borderBottom: i < log.length - 1 ? "1px solid var(--border)" : "none",
+            alignItems: "flex-start",
           }}
         >
           <div style={{
-            width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+            width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
             background: "var(--surface-raised)", border: "1px solid var(--border)",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "var(--muted-foreground)",
           }}>
-            {ACTIVITY_ICON[ev.type]}
+            {ACTIVITY_ICON[ev.type] ?? <Icons.Circle size={14} />}
           </div>
           <div>
-            <div style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.4 }}>{ev.msg}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{ev.time}</div>
+            <div style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.4 }}>{ev.msg}</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 3 }}>{ev.time}</div>
           </div>
         </div>
       ))}
@@ -455,15 +569,15 @@ function ActivityTab() {
   )
 }
 
-// ─── Member SlideOut ──────────────────────────────────────────────────────────
+// ─── Member detail page ───────────────────────────────────────────────────────
 
 const ROLE_OPTIONS: MemberRole[] = ["Super Admin", "Tenant Admin", "Billing Admin", "Member", "Viewer"]
 
-function MemberDetail({
-  member, onClose, onRoleChange, onToggleSuspend, onRemove,
+function MemberDetailPage({
+  member, onBack, onRoleChange, onToggleSuspend, onRemove,
 }: {
   member: Member
-  onClose: () => void
+  onBack: () => void
   onRoleChange: (id: string, role: MemberRole) => void
   onToggleSuspend: (id: string) => void
   onRemove: (id: string) => void
@@ -475,47 +589,52 @@ function MemberDetail({
   const isInvited = member.status === "invited"
 
   return (
-    <SlideOut
-      open
-      onClose={onClose}
-      size="m"
-      title={member.name}
-      subtitle=""
-      showIcon={false}
-      showStatus={false}
-      showTopButton={false}
-      showChips={false}
-      showCta={false}
-      showTabs
-      tabLabels={["Profile", "Permissions", "Activity"]}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      header={() => (
+        <Header
+          size="compress"
+          title={member.name}
+          description={`${member.title ?? ""}${member.title && member.department ? " · " : ""}${member.department ?? ""}`}
+        />
+      )}
     >
-      {/* ── TAB 0: Profile ── */}
-      {activeTab === 0 && (
-        <>
-          {/* Identity block */}
+      <BackBreadcrumb label={member.name} onBack={onBack} />
+
+      {/* Two-column layout */}
+      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, marginTop: 16, alignItems: "start" }}>
+
+        {/* Left: identity card */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--surface)" }}>
+          {/* Avatar + name */}
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-            padding: "20px 24px 16px", borderBottom: "1px solid var(--border)",
+            padding: "28px 24px 20px", borderBottom: "1px solid var(--border)",
+            background: "var(--surface-raised)",
           }}>
             <div style={{
-              width: 56, height: 56, borderRadius: "50%",
+              width: 64, height: 64, borderRadius: "50%",
               background: isActive ? member.avatarColor : "var(--muted)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 18, fontWeight: 700,
+              fontSize: 22, fontWeight: 700,
               color: isActive ? "#fff" : "var(--muted-foreground)",
               opacity: member.status === "suspended" ? 0.6 : 1,
             }}>
               {member.initials}
             </div>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 3 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
                 {member.name}
               </div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 8 }}>
-                {member.title && <span>{member.title} · </span>}{member.department}
-              </div>
+              {(member.title || member.department) && (
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 10 }}>
+                  {member.title}{member.title && member.department ? " · " : ""}{member.department}
+                </div>
+              )}
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 5,
                 padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
@@ -527,8 +646,8 @@ function MemberDetail({
             </div>
           </div>
 
-          {/* Info rows */}
-          <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Info fields */}
+          <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <InfoRow icon={<Icons.Mail size={14} />}     label="Email"       value={member.email} />
             <InfoRow icon={<Icons.Calendar size={14} />} label="Joined"      value={formatDate(member.joinedAt)} />
             {member.lastActive && (
@@ -559,7 +678,7 @@ function MemberDetail({
           </div>
 
           {/* Actions */}
-          <div style={{ margin: "0 24px 24px", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ margin: "0 16px 16px", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
             <div style={{
               padding: "8px 14px",
               fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em",
@@ -572,7 +691,7 @@ function MemberDetail({
                 icon={isActive ? <Icons.UserX size={14} /> : <Icons.UserCheck size={14} />}
                 label={isActive ? "Suspend access" : "Reactivate account"}
                 desc={isActive ? "Block login and API access immediately" : "Restore login access for this member"}
-                onClick={() => { onToggleSuspend(member.id); onClose() }}
+                onClick={() => { onToggleSuspend(member.id); onBack() }}
               />
             )}
             {isInvited && (
@@ -592,16 +711,16 @@ function MemberDetail({
                 onClick={() => setConfirmRemove(true)}
               />
             ) : (
-              <div style={{ padding: "12px 14px", background: "color-mix(in srgb, var(--badge-error) 8%, transparent)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", marginBottom: 6 }}>
+              <div style={{ padding: "14px", background: "color-mix(in srgb, var(--badge-error) 8%, transparent)" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--badge-error)", marginBottom: 6 }}>
                   Remove {member.name}?
                 </div>
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 10 }}>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
                   They will lose all access immediately. This cannot be undone.
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button
-                    onClick={() => { onRemove(member.id); onClose() }}
+                    onClick={() => { onRemove(member.id); onBack() }}
                     style={{ flex: 1, padding: "7px 0", border: "1px solid var(--badge-error)", borderRadius: 7, fontSize: 12, fontWeight: 600, color: "var(--badge-error)", background: "none", cursor: "pointer" }}
                   >
                     Yes, remove
@@ -616,15 +735,18 @@ function MemberDetail({
               </div>
             )}
           </div>
-        </>
-      )}
+        </div>
 
-      {/* ── TAB 1: Permissions ── */}
-      {activeTab === 1 && <PermissionsTab />}
-
-      {/* ── TAB 2: Activity ── */}
-      {activeTab === 2 && <ActivityTab />}
-    </SlideOut>
+        {/* Right: tabs */}
+        <div>
+          <DetailTabs tabs={["Permissions", "Activity"]} active={activeTab} onChange={setActiveTab} />
+          <div style={{ marginTop: 20 }}>
+            {activeTab === 0 && <PermissionsPanel />}
+            {activeTab === 1 && <ActivityPanel />}
+          </div>
+        </div>
+      </div>
+    </ScreenLayout>
   )
 }
 
@@ -662,6 +784,389 @@ function DangerRow({ icon, label, desc, destructive, onClick }: {
         <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{desc}</div>
       </div>
     </button>
+  )
+}
+
+// ─── Role detail page ─────────────────────────────────────────────────────────
+
+function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
+  const [activeTab, setActiveTab] = useState(0)
+  const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
+  const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
+
+  return (
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      header={() => (
+        <Header
+          size="compress"
+          title={role.label}
+          description={role.desc}
+          primaryAction={!role.system ? (
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button variant="secondary" size="sm">Edit role</Button>
+              <Button variant="secondary" size="sm">Delete role</Button>
+            </div>
+          ) : undefined}
+        />
+      )}
+    >
+      <BackBreadcrumb label={role.label} onBack={onBack} />
+
+      {/* Color accent + identity row */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 14, marginTop: 16, marginBottom: 24,
+        padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
+        background: "var(--surface)", borderLeft: `4px solid ${role.color}`,
+      }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+              background: role.system ? "var(--surface-raised)" : `${role.color}22`,
+              color: role.system ? "var(--muted-foreground)" : role.color,
+              border: `1px solid ${role.system ? "var(--border)" : role.color + "55"}`,
+              textTransform: "uppercase", letterSpacing: "0.06em",
+            }}>
+              {role.system ? "System" : "Custom"}
+            </span>
+          </div>
+          <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{role.desc}</p>
+        </div>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{members.length}</div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{perms.total}</div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>permissions</div>
+          </div>
+        </div>
+      </div>
+
+      <DetailTabs tabs={["Overview", "Members", "Permissions"]} active={activeTab} onChange={setActiveTab} />
+
+      <div style={{ marginTop: 20 }}>
+        {/* Overview */}
+        {activeTab === 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+            {([
+              { label: "Governance",  value: perms.governance, color: "#8b5cf6" },
+              { label: "Data Studio", value: perms.datastudio, color: "#10b981" },
+              { label: "Agentic",     value: perms.agentic,    color: "#f97316" },
+              { label: "Admin",       value: perms.admin,      color: "#6366f1" },
+            ] as const).map(s => (
+              <div key={s.label} style={{
+                padding: "20px 24px", borderRadius: 12,
+                background: "var(--surface)", border: "1px solid var(--border)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)" }}>{s.label}</span>
+                </div>
+                <div style={{ fontSize: 32, fontWeight: 700, color: s.value > 0 ? "var(--foreground)" : "var(--muted-foreground)", opacity: s.value > 0 ? 1 : 0.4, lineHeight: 1 }}>
+                  {s.value}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4 }}>
+                  permission{s.value !== 1 ? "s" : ""}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Members */}
+        {activeTab === 1 && (
+          <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{
+              padding: "12px 20px", borderBottom: "1px solid var(--border)",
+              background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+                <b style={{ color: "var(--foreground)" }}>{members.length}</b> member{members.length !== 1 ? "s" : ""} assigned this role
+              </span>
+              {!role.system && (
+                <button style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
+                  + Assign members
+                </button>
+              )}
+            </div>
+            {members.length === 0 ? (
+              <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
+                <Icons.Users size={28} style={{ opacity: 0.3, marginBottom: 10 }} />
+                <div style={{ fontSize: 14, fontWeight: 500 }}>No members assigned</div>
+                <div style={{ fontSize: 13, marginTop: 4 }}>Assign members to grant them this role's permissions</div>
+              </div>
+            ) : members.map(m => (
+              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",
+                }}>{m.initials}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status] }}>
+                  {STATUS_LABEL[m.status]}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Permissions */}
+        {activeTab === 2 && <PermissionsPanel />}
+      </div>
+    </ScreenLayout>
+  )
+}
+
+// ─── Group detail page ────────────────────────────────────────────────────────
+
+const ACTIVITY_TYPE_ICON_GROUP: Record<string, React.ReactNode> = {
+  role:   <Icons.UserPlus size={14} />,
+  edit:   <Icons.Settings size={14} />,
+  create: <Icons.PlusCircle size={14} />,
+  remove: <Icons.UserMinus size={14} />,
+}
+
+function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack: () => void }) {
+  const [activeTab, setActiveTab] = useState(0)
+  const [group, setGroup] = useState(initialGroup)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const groupMembers = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
+  const log = GROUP_ACTIVITY[group.id] ?? []
+  const allStudios = ["governance", "datastudio", "agentic", "admin"]
+
+  function toggleStudio(s: string) {
+    setGroup(g => ({
+      ...g,
+      studios: g.studios.includes(s)
+        ? g.studios.filter(x => x !== s)
+        : [...g.studios, s],
+    }))
+  }
+
+  function removeMember(id: string) {
+    setGroup(g => ({ ...g, memberIds: g.memberIds.filter(x => x !== id) }))
+  }
+
+  return (
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      header={() => (
+        <Header
+          size="compress"
+          title={group.name}
+          description={group.desc}
+          primaryAction={
+            <Button variant="primary" size="sm">
+              <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
+              Add member
+            </Button>
+          }
+        />
+      )}
+    >
+      <BackBreadcrumb label={group.name} onBack={onBack} />
+
+      {/* Group identity bar */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 16, marginTop: 16, marginBottom: 24,
+        padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
+        background: "var(--surface)", borderLeft: `4px solid ${group.color}`,
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {group.studios.length === 0 ? (
+              <span style={{ fontSize: 12, color: "var(--muted-foreground)", opacity: 0.6 }}>No studios</span>
+            ) : group.studios.map(s => {
+              const meta = STUDIO_META[s]
+              return (
+                <span key={s} style={{
+                  fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
+                  background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
+                }}>
+                  {meta.label}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 24, flexShrink: 0 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{groupMembers.length}</div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{group.studios.length}</div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>studios</div>
+          </div>
+        </div>
+      </div>
+
+      <DetailTabs tabs={["Members", "Settings", "Activity"]} active={activeTab} onChange={setActiveTab} />
+
+      <div style={{ marginTop: 20 }}>
+        {/* Members */}
+        {activeTab === 0 && (
+          <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{
+              padding: "12px 20px", borderBottom: "1px solid var(--border)",
+              background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+                <b style={{ color: "var(--foreground)" }}>{groupMembers.length}</b> member{groupMembers.length !== 1 ? "s" : ""}
+              </span>
+              <button style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
+                + Add member
+              </button>
+            </div>
+            {groupMembers.length === 0 ? (
+              <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
+                <Icons.Users size={28} style={{ opacity: 0.3, marginBottom: 10 }} />
+                <div style={{ fontSize: 14, fontWeight: 500 }}>No members yet</div>
+                <div style={{ fontSize: 13, marginTop: 4 }}>Add members to this group to grant them shared access</div>
+              </div>
+            ) : groupMembers.map(m => (
+              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",
+                }}>{m.initials}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{m.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {m.title}{m.title && m.department ? " · " : ""}{m.department}
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status], flexShrink: 0 }}>
+                  {STATUS_LABEL[m.status]}
+                </div>
+                <button
+                  onClick={() => removeMember(m.id)}
+                  title="Remove from group"
+                  style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6 }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+                >
+                  <Icons.X size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Settings */}
+        {activeTab === 1 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Studio access */}
+            <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "20px 24px", background: "var(--surface)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 14 }}>
+                Studio access
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {allStudios.map(s => {
+                  const meta = STUDIO_META[s]
+                  const active = group.studios.includes(s)
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => toggleStudio(s)}
+                      style={{
+                        padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        border: `1px solid ${active ? meta.color : "var(--border)"}`,
+                        background: active ? `${meta.color}1a` : "transparent",
+                        color: active ? meta.color : "var(--muted-foreground)",
+                        display: "flex", alignItems: "center", gap: 8, transition: "all 0.15s",
+                      }}
+                    >
+                      {active
+                        ? <Icons.Check size={12} strokeWidth={2.5} />
+                        : <div style={{ width: 8, height: 8, borderRadius: "50%", background: `${meta.color}66` }} />}
+                      {meta.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Danger zone */}
+            <div style={{ border: "1px solid color-mix(in srgb, var(--badge-error) 30%, transparent)", borderRadius: 12, padding: "20px 24px", background: "color-mix(in srgb, var(--badge-error) 5%, transparent)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--badge-error)", marginBottom: 8 }}>
+                Danger zone
+              </div>
+              <div style={{ fontSize: 13, color: "var(--muted-foreground)", marginBottom: 16 }}>
+                Deleting this group removes it permanently. Members are not removed from the workspace.
+              </div>
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "var(--badge-error)", background: "transparent", cursor: "pointer" }}
+                >
+                  Delete group
+                </button>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--badge-error)", marginBottom: 10 }}>Are you sure? This cannot be undone.</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={onBack} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "#fff", background: "var(--badge-error)", cursor: "pointer" }}>
+                      Delete
+                    </button>
+                    <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Activity */}
+        {activeTab === 2 && (
+          log.length === 0 ? (
+            <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)", border: "1px solid var(--border)", borderRadius: 12 }}>
+              No activity yet
+            </div>
+          ) : (
+            <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+              {log.map((ev, i) => (
+                <div key={i} style={{ display: "flex", gap: 14, padding: "14px 20px", borderBottom: i < log.length - 1 ? "1px solid var(--border)" : "none", alignItems: "flex-start" }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                    background: "var(--surface-raised)", border: "1px solid var(--border)",
+                    display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)",
+                  }}>
+                    {ACTIVITY_TYPE_ICON_GROUP[ev.type] ?? <Icons.Circle size={14} />}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.4 }}>{ev.msg}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 3 }}>{ev.time}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+    </ScreenLayout>
   )
 }
 
@@ -734,257 +1239,83 @@ function MemberRow({ member, onSelect }: { member: Member; onSelect: (m: Member)
   )
 }
 
-// ─── Groups data ──────────────────────────────────────────────────────────────
+// ─── Role card ────────────────────────────────────────────────────────────────
 
-interface Group {
-  id: string; name: string; color: string; desc: string; memberIds: string[]
-  studios: string[]
-}
-
-const GROUPS: Group[] = [
-  { id: "engineering",  name: "Engineering",          color: "#10b981", desc: "Platform and product engineers building integrations and workflows.",    memberIds: ["es", "dp"],         studios: ["agentic", "datastudio", "governance"] },
-  { id: "ai-ops",       name: "AI Ops",               color: "#06b6d4", desc: "Responsible for deploying and monitoring AI workers in production.",      memberIds: ["sb", "dp"],         studios: ["agentic"] },
-  { id: "data-team",    name: "Data Team",             color: "#8b5cf6", desc: "Data engineers and stewards managing model governance and lineage.",     memberIds: ["mg"],               studios: ["datastudio", "governance"] },
-  { id: "leadership",   name: "Leadership",            color: "#f97316", desc: "Executives and directors with read access across all studios.",           memberIds: ["tg", "mg", "es"],   studios: ["agentic", "governance", "datastudio"] },
-  { id: "compliance",   name: "Compliance & Audit",   color: "#0ea5e9", desc: "Read-only access to audit logs and governance events.",                   memberIds: [],                   studios: ["governance"] },
-  { id: "external",     name: "External Consultants", color: "#84cc16", desc: "Limited scoped access for contracted third-party consultants.",            memberIds: [],                   studios: [] },
-]
-
-const STUDIO_META: Record<string, { label: string; color: string }> = {
-  governance: { label: "Governance",  color: "#10b981" },
-  datastudio:  { label: "Data Studio", color: "#8b5cf6" },
-  agentic:    { label: "Agentic",     color: "#06b6d4" },
-  admin:      { label: "Admin",       color: "#6366f1" },
-}
-
-const GROUP_ACTIVITY: Record<string, Array<{ type: string; msg: string; time: string }>> = {
-  engineering: [
-    { type: "role",   msg: "Eduardo Suárez added to this group",         time: "Aug 9, 2026"  },
-    { type: "edit",   msg: "Studio access updated — removed \"admin\"",  time: "Aug 3, 2026"  },
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Mar 1, 2025"  },
-  ],
-  "ai-ops": [
-    { type: "role",   msg: "Diana Pérez added to this group",            time: "Aug 10, 2026" },
-    { type: "edit",   msg: "Studio access updated — added \"helix\"",    time: "Aug 5, 2026"  },
-    { type: "create", msg: "Group created by Maria García",              time: "Jun 15, 2025" },
-  ],
-  "data-team": [
-    { type: "role",   msg: "Maria García added to this group",           time: "Aug 5, 2026"  },
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Apr 2, 2025"  },
-  ],
-  leadership: [
-    { type: "edit",   msg: "Eduardo Suárez added to this group",         time: "Aug 1, 2026"  },
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jan 15, 2025" },
-  ],
-  compliance: [
-    { type: "create", msg: "Group created by Maria García",              time: "May 10, 2025" },
-  ],
-  external: [
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jul 22, 2025" },
-  ],
-}
-
-const ACTIVITY_TYPE_ICON_GROUP: Record<string, React.ReactNode> = {
-  role:   <Icons.UserPlus size={13} />,
-  edit:   <Icons.Settings size={13} />,
-  create: <Icons.PlusCircle size={13} />,
-  remove: <Icons.UserMinus size={13} />,
-}
-
-// ─── Group detail slide-out ───────────────────────────────────────────────────
-
-function GroupDetail({ group: initialGroup, onClose }: { group: Group; onClose: () => void }) {
-  const [activeTab, setActiveTab] = useState(0)
-  const [group, setGroup]         = useState(initialGroup)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const groupMembers = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
-  const log = GROUP_ACTIVITY[group.id] ?? []
-
-  const allStudios = ["governance", "datastudio", "agentic", "admin"]
-
-  function toggleStudio(s: string) {
-    setGroup(g => ({
-      ...g,
-      studios: g.studios.includes(s)
-        ? g.studios.filter(x => x !== s)
-        : [...g.studios, s],
-    }))
-  }
-
-  function removeMember(id: string) {
-    setGroup(g => ({ ...g, memberIds: g.memberIds.filter(x => x !== id) }))
-  }
+function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void }) {
+  const [hovered, setHovered] = useState(false)
+  const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
+  const visible = members.slice(0, 5)
+  const overflow = members.length - visible.length
 
   return (
-    <SlideOut
-      open
-      onClose={onClose}
-      size="m"
-      title={group.name}
-      subtitle=""
-      showIcon={false}
-      showStatus={false}
-      showTopButton={false}
-      showChips={false}
-      showCta={false}
-      showTabs
-      tabLabels={["Members", "Settings", "Activity"]}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
+    <div
+      onClick={() => onSelect(role)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
+        background: hovered ? "var(--accent)" : "var(--surface)",
+        cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
+        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",
+      }}
     >
-      {/* Color accent */}
-      <div style={{ height: 5, background: group.color }} />
-
-      {/* Description */}
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
-        <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{group.desc}</p>
-      </div>
-
-      {/* ── TAB 0: Members ── */}
-      {activeTab === 0 && (
-        <div>
-          <div style={{
-            padding: "10px 16px", borderBottom: "1px solid var(--border)",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            background: "var(--surface-raised)",
+      <div style={{ height: 5, background: role.color }} />
+      <div style={{ padding: "14px 16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
+          <span style={{
+            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
+            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
+            color: role.system ? "var(--muted-foreground)" : role.color,
+            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
+            textTransform: "uppercase", letterSpacing: "0.06em",
           }}>
-            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-              <b style={{ color: "var(--foreground)" }}>{groupMembers.length}</b> member{groupMembers.length !== 1 ? "s" : ""}
-            </span>
-            <button style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
-              + Add member
-            </button>
-          </div>
-          {groupMembers.length === 0 ? (
-            <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--muted-foreground)" }}>
-              <Icons.Users size={24} style={{ opacity: 0.3, marginBottom: 8 }} />
-              <div style={{ fontSize: 13, fontWeight: 500 }}>No members yet</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Add members to this group to grant them shared access</div>
-            </div>
-          ) : groupMembers.map(m => (
-            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid var(--border)" }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",
-              }}>{m.initials}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{m.name}</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {m.title} · {m.department}
-                </div>
-              </div>
-              <div style={{
-                fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100,
-                background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status], flexShrink: 0,
-              }}>
-                {STATUS_LABEL[m.status]}
-              </div>
-              <button
-                onClick={() => removeMember(m.id)}
-                title="Remove from group"
-                style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, flexShrink: 0, borderRadius: 4 }}
-                onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
-                onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-              >
-                <Icons.X size={14} />
-              </button>
-            </div>
-          ))}
+            {role.system ? "System" : "Custom"}
+          </span>
         </div>
-      )}
-
-      {/* ── TAB 1: Settings ── */}
-      {activeTab === 1 && (
-        <div style={{ padding: "16px" }}>
-          {/* Studio access */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-              Studio access
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {allStudios.map(s => {
-                const meta = STUDIO_META[s]
-                const active = group.studios.includes(s)
-                return (
-                  <button
-                    key={s}
-                    onClick={() => toggleStudio(s)}
-                    style={{
-                      padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                      border: `1px solid ${active ? meta.color : "var(--border)"}`,
-                      background: active ? `${meta.color}1a` : "transparent",
-                      color: active ? meta.color : "var(--muted-foreground)",
-                      display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s",
-                    }}
-                  >
-                    {active
-                      ? <Icons.Check size={10} strokeWidth={2.5} />
-                      : <div style={{ width: 8, height: 8, borderRadius: "50%", background: `${meta.color}66` }} />}
-                    {meta.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Danger zone */}
-          <div style={{ border: "1px solid color-mix(in srgb, var(--badge-error) 30%, transparent)", borderRadius: 10, padding: 14, background: "color-mix(in srgb, var(--badge-error) 5%, transparent)" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--badge-error)", marginBottom: 8 }}>
-              Danger zone
-            </div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
-              Deleting this group removes it permanently. Members are not removed from the workspace.
-            </div>
-            {!confirmDelete ? (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 7, border: "1px solid var(--badge-error)", color: "var(--badge-error)", background: "transparent", cursor: "pointer" }}
-              >
-                Delete group
-              </button>
-            ) : (
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", marginBottom: 8 }}>Are you sure? This cannot be undone.</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={onClose} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 7, border: "1px solid var(--badge-error)", color: "#fff", background: "var(--badge-error)", cursor: "pointer" }}>
-                    Delete
-                  </button>
-                  <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 7, border: "1px solid var(--border)", color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
+        <p style={{
+          fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.45, margin: "0 0 14px",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {role.desc}
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {visible.map((m, i) => (
+              <div key={m.id} title={m.name} style={{
+                width: 24, height: 24, borderRadius: "50%",
+                background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                border: "2px solid var(--surface)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 9, fontWeight: 700, color: "#fff",
+                marginLeft: i > 0 ? -6 : 0, flexShrink: 0, position: "relative",
+                zIndex: visible.length - i,
+              }}>{m.initials}</div>
+            ))}
+            {overflow > 0 && (
+              <div style={{
+                width: 24, height: 24, borderRadius: "50%",
+                background: "var(--surface-raised)", border: "2px solid var(--surface)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 9, fontWeight: 700, color: "var(--muted-foreground)",
+                marginLeft: -6, flexShrink: 0,
+              }}>+{overflow}</div>
             )}
           </div>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+            {members.length} member{members.length !== 1 ? "s" : ""}
+          </span>
+          <div style={{ marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => onSelect(role)}
+              style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}
+            >
+              {role.system ? "View" : "Edit"}
+            </button>
+          </div>
         </div>
-      )}
-
-      {/* ── TAB 2: Activity ── */}
-      {activeTab === 2 && (
-        <div style={{ padding: "4px 0" }}>
-          {log.length === 0 ? (
-            <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 12 }}>No activity yet</div>
-          ) : log.map((ev, i) => (
-            <div key={i} style={{ display: "flex", gap: 12, padding: "10px 16px", borderBottom: "1px solid var(--border)", alignItems: "flex-start" }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                background: "var(--surface-raised)", border: "1px solid var(--border)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "var(--muted-foreground)",
-              }}>
-                {ACTIVITY_TYPE_ICON_GROUP[ev.type] ?? <Icons.Circle size={13} />}
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.4 }}>{ev.msg}</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{ev.time}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </SlideOut>
+      </div>
+    </div>
   )
 }
 
@@ -1017,8 +1348,6 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
         }}>
           {group.desc}
         </p>
-
-        {/* Studio chips */}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12, minHeight: 22 }}>
           {group.studios.length === 0 ? (
             <span style={{ fontSize: 11, color: "var(--muted-foreground)", opacity: 0.5 }}>No studios</span>
@@ -1027,34 +1356,25 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
             return (
               <span key={s} style={{
                 fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                background: `${meta.color}1a`, color: meta.color,
-                border: `1px solid ${meta.color}44`,
+                background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
               }}>
                 {meta.label}
               </span>
             )
           })}
         </div>
-
-        {/* Footer: avatars + member count */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             {visible.map((m, i) => (
-              <div
-                key={m.id}
-                title={m.name}
-                style={{
-                  width: 24, height: 24, borderRadius: "50%",
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  border: "2px solid var(--surface)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 9, fontWeight: 700, color: "#fff",
-                  marginLeft: i > 0 ? -6 : 0, flexShrink: 0,
-                  position: "relative", zIndex: visible.length - i,
-                }}
-              >
-                {m.initials}
-              </div>
+              <div key={m.id} title={m.name} style={{
+                width: 24, height: 24, borderRadius: "50%",
+                background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                border: "2px solid var(--surface)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 9, fontWeight: 700, color: "#fff",
+                marginLeft: i > 0 ? -6 : 0, flexShrink: 0,
+                position: "relative", zIndex: visible.length - i,
+              }}>{m.initials}</div>
             ))}
             {overflow > 0 && (
               <div style={{
@@ -1063,9 +1383,7 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 9, fontWeight: 700, color: "var(--muted-foreground)",
                 marginLeft: -6, flexShrink: 0,
-              }}>
-                +{overflow}
-              </div>
+              }}>+{overflow}</div>
             )}
           </div>
           <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
@@ -1085,354 +1403,6 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
   )
 }
 
-// ─── Groups view ──────────────────────────────────────────────────────────────
-
-function GroupsView() {
-  const [selected, setSelected] = useState<Group | null>(null)
-
-  return (
-    <>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-        {GROUPS.map(g => <GroupCard key={g.id} group={g} onSelect={setSelected} />)}
-      </div>
-      {selected && <GroupDetail group={selected} onClose={() => setSelected(null)} />}
-    </>
-  )
-}
-
-// ─── Roles data ───────────────────────────────────────────────────────────────
-
-interface Role {
-  id: string; label: string; system: boolean; color: string; desc: string; memberIds: string[]
-}
-
-const ROLES: Role[] = [
-  { id: "workspace-admin",    label: "Workspace Admin",    system: true,  color: "#6366f1", desc: "Full control over workspace settings, members, studios, and billing",                     memberIds: ["tg", "mg", "es"] },
-  { id: "developer",          label: "Developer",          system: true,  color: "#10b981", desc: "Build and deploy integrations, agents, and custom workflows",                            memberIds: ["es", "sb", "dp"] },
-  { id: "viewer",             label: "Viewer",             system: true,  color: "#64748b", desc: "Read-only access across all non-sensitive studio content",                               memberIds: ["at", "fw"] },
-  { id: "agent-builder",      label: "Agent Builder",      system: false, color: "#f97316", desc: "Create and manage AI workers, agentic networks, and workflow definitions",              memberIds: ["sb", "dp"] },
-  { id: "data-steward",       label: "Data Steward",       system: false, color: "#8b5cf6", desc: "Manage model definitions, governance policies, and data lineage graphs",                memberIds: ["mg"] },
-  { id: "compliance-auditor", label: "Compliance Auditor", system: false, color: "#0ea5e9", desc: "Read-only access to audit logs, governance events, data lineage, and access settings", memberIds: [] },
-]
-
-const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number; agentic: number; admin: number; total: number }> = {
-  "workspace-admin":    { governance: 6, datastudio: 5, agentic: 7, admin: 10, total: 28 },
-  "developer":          { governance: 0, datastudio: 4, agentic: 6, admin: 2,  total: 11 },
-  "viewer":             { governance: 2, datastudio: 2, agentic: 1, admin: 2,  total: 8  },
-  "agent-builder":      { governance: 0, datastudio: 0, agentic: 7, admin: 0,  total: 7  },
-  "data-steward":       { governance: 3, datastudio: 3, agentic: 0, admin: 1,  total: 7  },
-  "compliance-auditor": { governance: 2, datastudio: 2, agentic: 1, admin: 3,  total: 8  },
-}
-
-// ─── Role detail slide-out ────────────────────────────────────────────────────
-
-function RoleDetail({ role, onClose }: { role: Role; onClose: () => void }) {
-  const [activeTab, setActiveTab] = useState(0)
-  const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
-  const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
-
-  return (
-    <SlideOut
-      open
-      onClose={onClose}
-      size="m"
-      title={role.label}
-      subtitle=""
-      showIcon={false}
-      showStatus={false}
-      showTopButton={false}
-      showChips={false}
-      showCta={false}
-      showTabs
-      tabLabels={["Overview", "Members", "Permissions"]}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-    >
-      {/* ── TAB 0: Overview ── */}
-      {activeTab === 0 && (
-        <>
-          {/* Color accent + identity */}
-          <div style={{ height: 6, background: role.color }} />
-          <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-                background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-                color: role.system ? "var(--muted-foreground)" : role.color,
-                border: `1px solid ${role.system ? "var(--border)" : role.color + "55"}`,
-                textTransform: "uppercase", letterSpacing: "0.06em",
-              }}>
-                {role.system ? "System" : "Custom"}
-              </span>
-            </div>
-            <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.5, margin: 0 }}>{role.desc}</p>
-          </div>
-
-          {/* Perm summary cards */}
-          <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-              Permission coverage
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {([
-                { label: "Governance",   value: perms.governance,  color: "#8b5cf6" },
-                { label: "Data Studio",  value: perms.datastudio,  color: "#10b981" },
-                { label: "Agentic",      value: perms.agentic,     color: "#f97316" },
-                { label: "Admin",        value: perms.admin,       color: "#6366f1" },
-              ] as const).map(s => (
-                <div key={s.label} style={{
-                  padding: "10px 12px", borderRadius: 8,
-                  background: "var(--surface-raised)", border: "1px solid var(--border)",
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color }} />
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}>{s.label}</span>
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: s.value > 0 ? "var(--foreground)" : "var(--muted-foreground)", opacity: s.value > 0 ? 1 : 0.4 }}>
-                    {s.value}
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>permission{s.value !== 1 ? "s" : ""}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Total permissions</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{perms.total}</span>
-            </div>
-          </div>
-
-          {/* Actions */}
-          {!role.system && (
-            <div style={{ padding: "16px 24px", display: "flex", gap: 8 }}>
-              <button style={{
-                flex: 1, padding: "8px 0", border: "1px solid var(--border)", borderRadius: 8,
-                fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "var(--surface)",
-                cursor: "pointer",
-              }}>
-                Edit role
-              </button>
-              <button style={{
-                flex: 1, padding: "8px 0", border: "1px solid var(--badge-error)", borderRadius: 8,
-                fontSize: 12, fontWeight: 600, color: "var(--badge-error)", background: "transparent",
-                cursor: "pointer",
-              }}>
-                Delete role
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ── TAB 1: Members ── */}
-      {activeTab === 1 && (
-        <div>
-          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-              <b style={{ color: "var(--foreground)" }}>{members.length}</b> member{members.length !== 1 ? "s" : ""} assigned this role
-            </span>
-            {!role.system && (
-              <button style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
-                + Assign members
-              </button>
-            )}
-          </div>
-          {members.length === 0 ? (
-            <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--muted-foreground)" }}>
-              <Icons.Users size={24} style={{ opacity: 0.3, marginBottom: 8 }} />
-              <div style={{ fontSize: 13, fontWeight: 500 }}>No members assigned</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Assign members to grant them this role's permissions</div>
-            </div>
-          ) : members.map(m => (
-            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid var(--border)" }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",
-              }}>{m.initials}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
-              </div>
-              <div style={{
-                fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100,
-                background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
-              }}>
-                {STATUS_LABEL[m.status]}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── TAB 2: Permissions ── */}
-      {activeTab === 2 && <PermissionsTab />}
-    </SlideOut>
-  )
-}
-
-// ─── Role card ────────────────────────────────────────────────────────────────
-
-function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void }) {
-  const [hovered, setHovered] = useState(false)
-  const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
-  const visible = members.slice(0, 5)
-  const overflow = members.length - visible.length
-
-  return (
-    <div
-      onClick={() => onSelect(role)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
-        background: hovered ? "var(--accent)" : "var(--surface)",
-        cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
-        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",
-      }}
-    >
-      {/* Color accent bar */}
-      <div style={{ height: 5, background: role.color }} />
-
-      <div style={{ padding: "14px 16px" }}>
-        {/* Name + badge */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-            color: role.system ? "var(--muted-foreground)" : role.color,
-            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
-            textTransform: "uppercase", letterSpacing: "0.06em",
-          }}>
-            {role.system ? "System" : "Custom"}
-          </span>
-        </div>
-
-        {/* Description */}
-        <p style={{
-          fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.45, margin: "0 0 14px",
-          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-        }}>
-          {role.desc}
-        </p>
-
-        {/* Footer: avatars + actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {/* Overlapping avatars */}
-          <div style={{ display: "flex", alignItems: "center" }}>
-            {visible.map((m, i) => (
-              <div
-                key={m.id}
-                title={m.name}
-                style={{
-                  width: 24, height: 24, borderRadius: "50%",
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  border: "2px solid var(--surface)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 9, fontWeight: 700, color: "#fff",
-                  marginLeft: i > 0 ? -6 : 0, flexShrink: 0, position: "relative",
-                  zIndex: visible.length - i,
-                }}
-              >
-                {m.initials}
-              </div>
-            ))}
-            {overflow > 0 && (
-              <div style={{
-                width: 24, height: 24, borderRadius: "50%",
-                background: "var(--surface-raised)", border: "2px solid var(--surface)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 9, fontWeight: 700, color: "var(--muted-foreground)",
-                marginLeft: -6, flexShrink: 0,
-              }}>
-                +{overflow}
-              </div>
-            )}
-          </div>
-          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-            {members.length} member{members.length !== 1 ? "s" : ""}
-          </span>
-
-          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
-            {role.system ? (
-              <button
-                onClick={() => onSelect(role)}
-                style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}
-              >
-                View
-              </button>
-            ) : (
-              <>
-                <button style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}>
-                  Edit
-                </button>
-                <button style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--badge-error)", background: "transparent", color: "var(--badge-error)", cursor: "pointer" }}>
-                  Delete
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Roles view ───────────────────────────────────────────────────────────────
-
-function RolesView() {
-  const [selected, setSelected] = useState<Role | null>(null)
-  const systemRoles = ROLES.filter(r => r.system)
-  const customRoles = ROLES.filter(r => !r.system)
-
-  return (
-    <>
-      {/* System roles */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{
-          fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em",
-          color: "var(--muted-foreground)", marginBottom: 10,
-        }}>
-          System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {systemRoles.length}</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-          {systemRoles.map(r => <RoleCard key={r.id} role={r} onSelect={setSelected} />)}
-        </div>
-      </div>
-
-      {/* Custom roles */}
-      <div>
-        <div style={{
-          fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em",
-          color: "var(--muted-foreground)", marginBottom: 10,
-        }}>
-          Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {customRoles.length}</span>
-        </div>
-        {customRoles.length === 0 ? (
-          <div style={{
-            border: "1.5px dashed var(--border)", borderRadius: 12, padding: "36px 24px",
-            textAlign: "center", color: "var(--muted-foreground)",
-          }}>
-            <Icons.ShieldPlus size={24} style={{ opacity: 0.3, marginBottom: 8 }} />
-            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>No custom roles yet</div>
-            <div style={{ fontSize: 12 }}>Create a role to bundle specific permissions and assign them to members</div>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-            {customRoles.map(r => <RoleCard key={r.id} role={r} onSelect={setSelected} />)}
-          </div>
-        )}
-      </div>
-
-      {selected && (
-        <RoleDetail role={selected} onClose={() => setSelected(null)} />
-      )}
-    </>
-  )
-}
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PeopleAccessMembersScreen() {
@@ -1440,7 +1410,7 @@ export function PeopleAccessMembersScreen() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [query, setQuery]               = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
-  const [selected, setSelected]         = useState<Member | null>(null)
+  const [detailView, setDetailView]     = useState<DetailView>(null)
 
   const counts = useMemo(() => ({
     all:       members.length,
@@ -1463,7 +1433,7 @@ export function PeopleAccessMembersScreen() {
 
   function handleRoleChange(id: string, role: MemberRole) {
     setMembers(ms => ms.map(m => m.id === id ? { ...m, role } : m))
-    setSelected(s => s?.id === id ? { ...s, role } : s)
+    setDetailView(d => d?.type === "member" && d.member.id === id ? { ...d, member: { ...d.member, role } } : d)
   }
   function handleToggleSuspend(id: string) {
     setMembers(ms => ms.map(m => m.id === id ? { ...m, status: m.status === "suspended" ? "active" : "suspended" } : m))
@@ -1472,129 +1442,169 @@ export function PeopleAccessMembersScreen() {
     setMembers(ms => ms.filter(m => m.id !== id))
   }
 
+  // Detail pages
+  if (detailView?.type === "member") {
+    return (
+      <MemberDetailPage
+        member={detailView.member}
+        onBack={() => setDetailView(null)}
+        onRoleChange={handleRoleChange}
+        onToggleSuspend={handleToggleSuspend}
+        onRemove={handleRemove}
+      />
+    )
+  }
+  if (detailView?.type === "role") {
+    return <RoleDetailPage role={detailView.role} onBack={() => setDetailView(null)} />
+  }
+  if (detailView?.type === "group") {
+    return <GroupDetailPage group={detailView.group} onBack={() => setDetailView(null)} />
+  }
+
+  // List screen
   return (
-    <>
-      <ScreenLayout
-        workspaceName="Avance Financial"
-        userName="Thomas Gonzalez"
-        userEmail="thomas.gonzalez@aimsos.ai"
-        sidebarItems={SIDEBAR}
-        activeSidebarId="people"
-        header={(isScrolled) => (
-          <Header
-            size={isScrolled ? "compress" : "size-l"}
-            title="People & Access"
-            description={
-              mainTab === "members" ? `${counts.all} members · Avance Financial workspace`
-              : mainTab === "roles"  ? `${ROLES.length} roles · ${ROLES.filter(r => !r.system).length} custom`
-              : `${GROUPS.length} groups · manage shared access across the workspace`
-            }
-            primaryAction={
-              mainTab === "members" ? (
-                <Button variant="primary" size="sm">
-                  <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
-                  Invite member
-                </Button>
-              ) : mainTab === "roles" ? (
-                <Button variant="primary" size="sm">
-                  <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
-                  New role
-                </Button>
-              ) : (
-                <Button variant="primary" size="sm">
-                  <Icons.FolderPlus size={14} style={{ marginRight: 4 }} />
-                  New group
-                </Button>
-              )
-            }
-          />
-        )}
-      >
-        {/* Main tab switcher: Members | Roles */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-          <SwitchTab
-            items={[
-              { id: "members", label: `Members (${counts.all})` },
-              { id: "roles",   label: `Roles (${ROLES.length})`  },
-              { id: "groups",  label: `Groups (${GROUPS.length})` },
-            ]}
-            value={mainTab}
-            onChange={v => setMainTab(v as "members" | "roles" | "groups")}
-            size="s"
-          />
-
-          {/* Member sub-filters — only on Members tab */}
-          {mainTab === "members" && (
-            <>
-              <SwitchTab
-                items={[
-                  { id: "all",       label: `All (${counts.all})`             },
-                  { id: "active",    label: `Active (${counts.active})`       },
-                  { id: "invited",   label: `Invited (${counts.invited})`     },
-                  { id: "suspended", label: `Suspended (${counts.suspended})` },
-                ]}
-                value={statusFilter}
-                onChange={setStatusFilter}
-                size="s"
-              />
-              <div style={{ marginLeft: "auto", width: 240 }}>
-                <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search members…" />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Members view */}
-        {mainTab === "members" && (
-          <>
-            <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden" }}>
-              <div style={{
-                padding: "10px 20px 10px 68px", display: "flex", alignItems: "center", gap: 14,
-                background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
-                fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)",
-                textTransform: "uppercase", letterSpacing: "0.07em",
-              }}>
-                <span style={{ flex: 1 }}>Member</span>
-                <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
-                <span style={{ minWidth: 76, textAlign: "center" }}>Status</span>
-                <span style={{ width: 15 }} />
-              </div>
-
-              {filtered.length === 0 ? (
-                <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
-                  <Icons.SearchX size={28} style={{ marginBottom: 10, opacity: 0.35 }} />
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>No members match</div>
-                  <div style={{ fontSize: 12, marginTop: 4 }}>Try a different filter or search term</div>
-                </div>
-              ) : (
-                filtered.map(m => <MemberRow key={m.id} member={m} onSelect={setSelected} />)
-              )}
-            </div>
-
-            {filtered.length > 0 && (
-              <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted-foreground)", textAlign: "right" }}>
-                Showing {filtered.length} of {members.length} members
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Roles view */}
-        {mainTab === "roles" && <RolesView />}
-
-        {/* Groups view */}
-        {mainTab === "groups" && <GroupsView />}
-      </ScreenLayout>
-
-      {selected && mainTab === "members" && (
-        <MemberDetail
-          member={selected}
-          onClose={() => setSelected(null)}
-          onRoleChange={handleRoleChange}
-          onToggleSuspend={handleToggleSuspend}
-          onRemove={handleRemove}
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      header={(isScrolled) => (
+        <Header
+          size={isScrolled ? "compress" : "size-l"}
+          title="People & Access"
+          description={
+            mainTab === "members" ? `${counts.all} members · Avance Financial workspace`
+            : mainTab === "roles"  ? `${ROLES.length} roles · ${ROLES.filter(r => !r.system).length} custom`
+            : `${GROUPS.length} groups · manage shared access across the workspace`
+          }
+          primaryAction={
+            mainTab === "members" ? (
+              <Button variant="primary" size="sm">
+                <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
+                Invite member
+              </Button>
+            ) : mainTab === "roles" ? (
+              <Button variant="primary" size="sm">
+                <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
+                New role
+              </Button>
+            ) : (
+              <Button variant="primary" size="sm">
+                <Icons.FolderPlus size={14} style={{ marginRight: 4 }} />
+                New group
+              </Button>
+            )
+          }
         />
       )}
-    </>
+    >
+      {/* Main tab switcher */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <SwitchTab
+          items={[
+            { id: "members", label: `Members (${counts.all})` },
+            { id: "roles",   label: `Roles (${ROLES.length})`  },
+            { id: "groups",  label: `Groups (${GROUPS.length})` },
+          ]}
+          value={mainTab}
+          onChange={v => setMainTab(v as "members" | "roles" | "groups")}
+          size="s"
+        />
+
+        {mainTab === "members" && (
+          <>
+            <SwitchTab
+              items={[
+                { id: "all",       label: `All (${counts.all})`             },
+                { id: "active",    label: `Active (${counts.active})`       },
+                { id: "invited",   label: `Invited (${counts.invited})`     },
+                { id: "suspended", label: `Suspended (${counts.suspended})` },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              size="s"
+            />
+            <div style={{ marginLeft: "auto", width: 240 }}>
+              <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search members…" />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Members view */}
+      {mainTab === "members" && (
+        <>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden" }}>
+            <div style={{
+              padding: "10px 20px 10px 68px", display: "flex", alignItems: "center", gap: 14,
+              background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
+              fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)",
+              textTransform: "uppercase", letterSpacing: "0.07em",
+            }}>
+              <span style={{ flex: 1 }}>Member</span>
+              <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
+              <span style={{ minWidth: 76, textAlign: "center" }}>Status</span>
+              <span style={{ width: 15 }} />
+            </div>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
+                <Icons.SearchX size={28} style={{ marginBottom: 10, opacity: 0.35 }} />
+                <div style={{ fontSize: 14, fontWeight: 500 }}>No members match</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>Try a different filter or search term</div>
+              </div>
+            ) : (
+              filtered.map(m => (
+                <MemberRow
+                  key={m.id}
+                  member={m}
+                  onSelect={member => setDetailView({ type: "member", member })}
+                />
+              ))
+            )}
+          </div>
+          {filtered.length > 0 && (
+            <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted-foreground)", textAlign: "right" }}>
+              Showing {filtered.length} of {members.length} members
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Roles view */}
+      {mainTab === "roles" && (
+        <>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+              System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {ROLES.filter(r => r.system).length}</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+              {ROLES.filter(r => r.system).map(r => (
+                <RoleCard key={r.id} role={r} onSelect={role => setDetailView({ type: "role", role })} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+              Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {ROLES.filter(r => !r.system).length}</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+              {ROLES.filter(r => !r.system).map(r => (
+                <RoleCard key={r.id} role={r} onSelect={role => setDetailView({ type: "role", role })} />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Groups view */}
+      {mainTab === "groups" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+          {GROUPS.map(g => (
+            <GroupCard key={g.id} group={g} onSelect={group => setDetailView({ type: "group", group })} />
+          ))}
+        </div>
+      )}
+    </ScreenLayout>
   )
 }
