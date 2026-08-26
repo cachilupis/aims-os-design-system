@@ -3510,7 +3510,7 @@ function CtrlGroup<T extends string>({ label, options, value, onChange }: {
         {options.map(o => (
           <button key={o.value} onClick={() => onChange(o.value)}
             className={["px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors",
-              value === o.value ? "bg-[#2173ff] text-white" : "bg-[var(--ctrl-inactive-bg)] border border-[var(--field-border)] text-[var(--field-label)] hover:border-[var(--field-border-hover)]",
+              value === o.value ? "bg-[var(--primary)] text-white" : "bg-[var(--ctrl-inactive-bg)] border border-[var(--field-border)] text-[var(--field-label)] hover:border-[var(--field-border-hover)]",
             ].join(" ")}>
             {o.label}
           </button>
@@ -15765,55 +15765,6 @@ const PG_CREATE_PRESETS: { label: string; values: PgCreateInputs }[] = [
   { label: "5 (control) · Add a node to the canvas", values: { trigger: "direct", ownsWorkspace: false, stages: "1", branches: false, singleField: false, listOnScreen: false, attaches: false, fieldCount: "<=5", reversible: true } },
 ]
 
-// Local Select wiring — Select is a trigger-only field (see select.tsx's own
-// header comment); the dropdown is a separate Menu/MenuItem list the caller
-// positions and opens/closes itself. Same recipe already used for the NBA
-// dynamic-inputs Select in record-header.tsx's own demo data.
-function PgCreateSelect({ id, label, value, options, openId, setOpenId, onChange }: {
-  id: string
-  label: string
-  value: string
-  options: { label: string; value: string }[]
-  openId: string | null
-  setOpenId: (id: string | null) => void
-  onChange: (v: string) => void
-}) {
-  const selected = options.find(o => o.value === value)
-  return (
-    <div className="flex flex-col gap-[4px]">
-      <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{label}</span>
-      <div className="relative">
-        <Select
-          size="sm"
-          value={selected?.label}
-          placeholder="Select…"
-          open={openId === id}
-          onClick={() => setOpenId(openId === id ? null : id)}
-        />
-        {openId === id && (
-          <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[50]">
-            <Menu className="w-full">
-              {options.map(opt => (
-                <MenuItem key={opt.value} label={opt.label} state={opt.value === value ? "focus" : "default"}
-                  onClick={() => { onChange(opt.value); setOpenId(null) }} />
-              ))}
-            </Menu>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function PgCreateToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between gap-[12px] py-[2px]">
-      <span className="text-[12px] text-[var(--foreground)]">{label}</span>
-      <Toggle size="sm" checked={checked} onChange={onChange} />
-    </div>
-  )
-}
-
 function PgCreatePathRow({ label, verdict, note, highlighted }: { label: string; verdict: string; note?: string; highlighted?: boolean }) {
   const variant = verdict === "yes" || verdict === "pass" ? "success" : verdict === "n/a" ? "secondary" : "neutral"
   return (
@@ -15827,7 +15778,7 @@ function PgCreatePathRow({ label, verdict, note, highlighted }: { label: string;
   )
 }
 
-// ── "See it in context" — full-screen realistic staging for the 7 stress-test
+// ── "Launch preview" — full-screen realistic staging for the 7 stress-test
 // cases (create.md §7). Each case is hand-authored, not derived from the raw
 // toggles — see PG_CONTEXT_CASE_BY_PRESET_LABEL in PatternCreatePage for how a
 // case is matched. The two surfaces that don't exist yet (inline create row,
@@ -16161,8 +16112,6 @@ function PatternCreatePage() {
   const [tab, setTab] = useState<string>("when-to-use")
 
   // ── Create playground state ────────────────────────────────────────────
-  const [pgCreateOpen, setPgCreateOpen] = useState(false)
-  const [pgCreateOpenSelect, setPgCreateOpenSelect] = useState<string | null>(null)
   const [pgTrigger, setPgTrigger] = useState<PgCreateTrigger>("standard")
   const [pgOwnsWorkspace, setPgOwnsWorkspace] = useState(false)
   const [pgStages, setPgStages] = useState<PgCreateStages>("1")
@@ -16180,7 +16129,7 @@ function PatternCreatePage() {
     fieldCount: pgFieldCount, reversible: pgReversible,
   })
 
-  // "See it in context" only covers the 7 hand-authored stress-test cases —
+  // "Launch preview" only covers the 7 hand-authored stress-test cases —
   // it's null (button disabled) when the toggles don't exactly match one.
   const pgActivePreset = PG_CREATE_PRESETS.find(p =>
     p.values.trigger === pgTrigger && p.values.ownsWorkspace === pgOwnsWorkspace && p.values.stages === pgStages &&
@@ -16193,92 +16142,7 @@ function PatternCreatePage() {
     setPgTrigger(values.trigger); setPgOwnsWorkspace(values.ownsWorkspace); setPgStages(values.stages)
     setPgBranches(values.branches); setPgSingleField(values.singleField); setPgListOnScreen(values.listOnScreen)
     setPgAttaches(values.attaches); setPgFieldCount(values.fieldCount); setPgReversible(values.reversible)
-    setPgCreateOpenSelect(null)
   }
-
-  const pgCreateControls = (
-    <div className="flex flex-col gap-[16px]">
-      <PgCreateSelect id="trigger" label="Trigger" value={pgTrigger} openId={pgCreateOpenSelect} setOpenId={setPgCreateOpenSelect}
-        onChange={v => setPgTrigger(v as PgCreateTrigger)}
-        options={[
-          { label: "Standard create", value: "standard" },
-          { label: "Create with AI", value: "ai" },
-          { label: "Browse a catalogue", value: "catalogue" },
-          { label: "Direct manipulation (drag onto canvas)", value: "direct" },
-          { label: "Inside an agent conversation", value: "chat" },
-        ]} />
-      <PgCreateToggleRow label="Object declares its own workspace" checked={pgOwnsWorkspace} onChange={setPgOwnsWorkspace} />
-      <PgCreateSelect id="stages" label="Stages" value={pgStages} openId={pgCreateOpenSelect} setOpenId={setPgCreateOpenSelect}
-        onChange={v => setPgStages(v as PgCreateStages)}
-        options={[{ label: "1", value: "1" }, { label: "2", value: "2" }, { label: "3+", value: "3+" }]} />
-      <PgCreateToggleRow label="Flow branches" checked={pgBranches} onChange={setPgBranches} />
-      <PgCreateToggleRow label="Creatable from a single field" checked={pgSingleField} onChange={setPgSingleField} />
-      <PgCreateToggleRow label="A list of the same type is on screen" checked={pgListOnScreen} onChange={setPgListOnScreen} />
-      <PgCreateToggleRow label="Attaches to something on screen" checked={pgAttaches} onChange={setPgAttaches} />
-      <PgCreateSelect id="fieldCount" label="Field count" value={pgFieldCount} openId={pgCreateOpenSelect} setOpenId={setPgCreateOpenSelect}
-        onChange={v => setPgFieldCount(v as PgCreateFieldCount)}
-        options={[{ label: "5 or fewer", value: "<=5" }, { label: "More than 5", value: ">5" }]} />
-      <PgCreateToggleRow label="Reversible by the user" checked={pgReversible} onChange={setPgReversible} />
-
-      <div className="pt-[8px] mt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
-        <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Presets — create.md §7</span>
-        <div className="flex flex-col gap-[4px]">
-          {PG_CREATE_PRESETS.map(p => (
-            <button key={p.label} onClick={() => applyPgCreatePreset(p.values)}
-              className="text-left px-[8px] py-[6px] rounded-[6px] text-[11px] transition-colors hover:bg-[var(--color-surface-neutral-subtle)]"
-              style={{ color: "var(--field-supporting)", border: "0.5px solid var(--field-border)" }}>
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-
-  const pgCreatePreview = (
-    <div className="flex flex-col gap-[16px]">
-      <div>
-        <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Resolved surface</span>
-        <p className="text-[11px] mb-[8px]" style={{ color: "var(--field-supporting)" }}>
-          A preview embedded in this modal has no background of its own — and this pattern is entirely about the relationship between the surface and what's behind it. See the decision here; see the surface staged for real below.
-        </p>
-        <div className="flex items-center justify-between gap-[12px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--color-surface-neutral-subtle)" }}>
-          <span className="text-[13px] font-mono font-semibold" style={{ color: pgCreateResult.surface === "rejected" ? "var(--color-status-error-default)" : "var(--primary)" }}>
-            {PG_SURFACE_LABEL[pgCreateResult.surface]}
-          </span>
-          <Button variant="secondary" size="sm" disabled={!pgActiveCase} onClick={() => pgActiveCase && setPgContextCase(pgActiveCase)}>
-            See it in context
-          </Button>
-        </div>
-        {!pgActiveCase && (
-          <p className="text-[11px] mt-[6px]" style={{ color: "var(--field-supporting)" }}>
-            "See it in context" is staged for the 7 stress-test cases below — load one from the presets list to see it with real background context.
-          </p>
-        )}
-      </div>
-
-      <div>
-        <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Path</span>
-        <div className="flex flex-col gap-[2px]">
-          <PgCreatePathRow label="Gate 0 — does the pattern apply?" verdict={pgCreateResult.gate0 === "pass" ? "pass" : "reject"} note={pgCreateResult.gate0Note || undefined} highlighted={pgCreateResult.gate0 === "reject"} />
-          {pgCreateResult.gate0 === "pass" && (
-            <PgCreatePathRow label="Gate 1 — which create mode?" verdict={pgCreateResult.gate1} note={pgCreateResult.gate1Note} highlighted={pgCreateResult.gate1 !== "manual" && pgCreateResult.gate1 !== "source"} />
-          )}
-          {pgCreateResult.steps.map(s => (
-            <PgCreatePathRow key={s.n} label={`Step ${s.n} — ${s.question}`} verdict={s.answer} highlighted={s.resolved} />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Confirmation &amp; landing</span>
-        <div className="flex flex-col gap-[8px]">
-          <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}><strong className="text-[var(--foreground)]">Confirmation:</strong> {pgCreateResult.confirmation}</p>
-          <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}><strong className="text-[var(--foreground)]">Lands on:</strong> {pgCreateResult.landing}</p>
-        </div>
-      </div>
-    </div>
-  )
 
   return (
     <div>
@@ -16309,6 +16173,7 @@ function PatternCreatePage() {
           { id: "when-to-use", label: "When to Use" },
           { id: "anatomy",     label: "Anatomy"     },
           { id: "examples",    label: "Examples"    },
+          { id: "playground",  label: "Playground"  },
           { id: "rules",       label: "Rules"       },
         ] as { id: string; label: string }[]).map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -16682,9 +16547,9 @@ function PatternCreatePage() {
           <PatternCard>
             <SectionLabel>Try it — the cascade as a live decision procedure</SectionLabel>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[640px]">
-              Set the 9 inputs the cascade actually reads, or load one of the stress-test cases below, and watch Gate 0, Gate 1, and steps 1–5 resolve live — rendered with the real DS components each surface uses.
+              Set the 9 inputs the cascade actually reads, or load one of the stress-test cases, and watch Gate 0, Gate 1, and steps 1–5 resolve live — rendered with the real DS components each surface uses.
             </p>
-            <Button variant="primary" size="sm" onClick={() => setPgCreateOpen(true)}>Open playground</Button>
+            <Button variant="primary" size="sm" onClick={() => setTab("playground")}>Go to Playground</Button>
           </PatternCard>
 
           <PatternCard>
@@ -16719,6 +16584,91 @@ function PatternCreatePage() {
               The cascade never selects a popover: step 3 covers the single-field case, step 5's default covers 2–5 fields, and SlideOut size="m" opens at 350px — approximately the width a popover would have. Building one would produce a component no screen imports, which fails the repo's zero-import check.
             </p>
           </PatternCard>
+        </div>
+      )}
+
+      {/* ── Playground ────────────────────────────────────────────────────── */}
+      {tab === "playground" && (
+        <div className="flex flex-col gap-[32px]">
+          <div className="rounded-md border border-[var(--field-border)] p-[20px] flex flex-col gap-[16px]">
+            <CtrlGroup label="Trigger" value={pgTrigger} onChange={setPgTrigger} options={[
+              { label: "Standard create", value: "standard" },
+              { label: "Create with AI", value: "ai" },
+              { label: "Browse a catalogue", value: "catalogue" },
+              { label: "Direct manipulation", value: "direct" },
+              { label: "Inside an agent conversation", value: "chat" },
+            ]} />
+            <CtrlToggle label="Object declares its own workspace" value={pgOwnsWorkspace} onChange={setPgOwnsWorkspace} />
+            <CtrlGroup label="Stages" value={pgStages} onChange={setPgStages} options={[
+              { label: "1", value: "1" }, { label: "2", value: "2" }, { label: "3+", value: "3+" },
+            ]} />
+            <CtrlToggle label="Flow branches" value={pgBranches} onChange={setPgBranches} />
+            <CtrlToggle label="Creatable from a single field" value={pgSingleField} onChange={setPgSingleField} />
+            <CtrlToggle label="A list of the same type is on screen" value={pgListOnScreen} onChange={setPgListOnScreen} />
+            <CtrlToggle label="Attaches to something on screen" value={pgAttaches} onChange={setPgAttaches} />
+            <CtrlGroup label="Field count" value={pgFieldCount} onChange={setPgFieldCount} options={[
+              { label: "5 or fewer", value: "<=5" }, { label: "More than 5", value: ">5" },
+            ]} />
+            <CtrlToggle label="Reversible by the user" value={pgReversible} onChange={setPgReversible} />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between gap-[16px] mb-[16px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Result</h2>
+              <Button variant="primary" size="sm" disabled={!pgActiveCase} onClick={() => pgActiveCase && setPgContextCase(pgActiveCase)}>
+                Launch preview
+              </Button>
+            </div>
+            <div className="flex flex-col gap-[16px]">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Path</span>
+                <div className="flex flex-col gap-[2px]">
+                  <PgCreatePathRow label="Gate 0 — does the pattern apply?" verdict={pgCreateResult.gate0 === "pass" ? "pass" : "reject"} note={pgCreateResult.gate0Note || undefined} highlighted={pgCreateResult.gate0 === "reject"} />
+                  {pgCreateResult.gate0 === "pass" && (
+                    <PgCreatePathRow label="Gate 1 — which create mode?" verdict={pgCreateResult.gate1} note={pgCreateResult.gate1Note} highlighted={pgCreateResult.gate1 !== "manual" && pgCreateResult.gate1 !== "source"} />
+                  )}
+                  {pgCreateResult.steps.map(s => (
+                    <PgCreatePathRow key={s.n} label={`Step ${s.n} — ${s.question}`} verdict={s.answer} highlighted={s.resolved} />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Resolved surface</span>
+                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--color-surface-neutral-subtle)" }}>
+                  <span className="text-[13px] font-mono font-semibold" style={{ color: pgCreateResult.surface === "rejected" ? "var(--color-status-error-default)" : "var(--primary)" }}>
+                    {PG_SURFACE_LABEL[pgCreateResult.surface]}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Confirmation &amp; landing</span>
+                <div className="flex flex-col gap-[8px]">
+                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}><strong className="text-[var(--foreground)]">Confirmation:</strong> {pgCreateResult.confirmation}</p>
+                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}><strong className="text-[var(--foreground)]">Lands on:</strong> {pgCreateResult.landing}</p>
+                </div>
+              </div>
+            </div>
+            {!pgActiveCase && (
+              <p className="text-[11px] mt-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Launch preview is staged for the 7 stress-test cases below — load one from the presets to see it with real background context.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Presets — create.md §7</span>
+            <div className="flex flex-wrap gap-[8px]">
+              {PG_CREATE_PRESETS.map(p => (
+                <button key={p.label} onClick={() => applyPgCreatePreset(p.values)}
+                  className="px-[10px] py-[6px] rounded-[6px] text-[11px] font-medium transition-colors hover:bg-[var(--color-surface-neutral-subtle)]"
+                  style={{ color: "var(--field-supporting)", border: "0.5px solid var(--field-border)" }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -16767,14 +16717,6 @@ LANDING (derived from container, not a separate decision)
           </PatternCard>
         </div>
       )}
-
-      <PlaygroundModal
-        isOpen={pgCreateOpen}
-        onClose={() => setPgCreateOpen(false)}
-        title="Create — cascade playground"
-        controls={pgCreateControls}
-        preview={pgCreatePreview}
-      />
     </div>
   )
 }
