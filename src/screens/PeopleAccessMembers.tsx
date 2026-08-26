@@ -734,6 +734,372 @@ function MemberRow({ member, onSelect }: { member: Member; onSelect: (m: Member)
   )
 }
 
+// ─── Groups data ──────────────────────────────────────────────────────────────
+
+interface Group {
+  id: string; name: string; color: string; desc: string; memberIds: string[]
+  studios: string[]
+}
+
+const GROUPS: Group[] = [
+  { id: "engineering",  name: "Engineering",          color: "#10b981", desc: "Platform and product engineers building integrations and workflows.",    memberIds: ["es", "dp"],         studios: ["agentic", "datastudio", "governance"] },
+  { id: "ai-ops",       name: "AI Ops",               color: "#06b6d4", desc: "Responsible for deploying and monitoring AI workers in production.",      memberIds: ["sb", "dp"],         studios: ["agentic"] },
+  { id: "data-team",    name: "Data Team",             color: "#8b5cf6", desc: "Data engineers and stewards managing model governance and lineage.",     memberIds: ["mg"],               studios: ["datastudio", "governance"] },
+  { id: "leadership",   name: "Leadership",            color: "#f97316", desc: "Executives and directors with read access across all studios.",           memberIds: ["tg", "mg", "es"],   studios: ["agentic", "governance", "datastudio"] },
+  { id: "compliance",   name: "Compliance & Audit",   color: "#0ea5e9", desc: "Read-only access to audit logs and governance events.",                   memberIds: [],                   studios: ["governance"] },
+  { id: "external",     name: "External Consultants", color: "#84cc16", desc: "Limited scoped access for contracted third-party consultants.",            memberIds: [],                   studios: [] },
+]
+
+const STUDIO_META: Record<string, { label: string; color: string }> = {
+  governance: { label: "Governance",  color: "#10b981" },
+  datastudio:  { label: "Data Studio", color: "#8b5cf6" },
+  agentic:    { label: "Agentic",     color: "#06b6d4" },
+  admin:      { label: "Admin",       color: "#6366f1" },
+}
+
+const GROUP_ACTIVITY: Record<string, Array<{ type: string; msg: string; time: string }>> = {
+  engineering: [
+    { type: "role",   msg: "Eduardo Suárez added to this group",         time: "Aug 9, 2026"  },
+    { type: "edit",   msg: "Studio access updated — removed \"admin\"",  time: "Aug 3, 2026"  },
+    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Mar 1, 2025"  },
+  ],
+  "ai-ops": [
+    { type: "role",   msg: "Diana Pérez added to this group",            time: "Aug 10, 2026" },
+    { type: "edit",   msg: "Studio access updated — added \"helix\"",    time: "Aug 5, 2026"  },
+    { type: "create", msg: "Group created by Maria García",              time: "Jun 15, 2025" },
+  ],
+  "data-team": [
+    { type: "role",   msg: "Maria García added to this group",           time: "Aug 5, 2026"  },
+    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Apr 2, 2025"  },
+  ],
+  leadership: [
+    { type: "edit",   msg: "Eduardo Suárez added to this group",         time: "Aug 1, 2026"  },
+    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jan 15, 2025" },
+  ],
+  compliance: [
+    { type: "create", msg: "Group created by Maria García",              time: "May 10, 2025" },
+  ],
+  external: [
+    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jul 22, 2025" },
+  ],
+}
+
+const ACTIVITY_TYPE_ICON_GROUP: Record<string, React.ReactNode> = {
+  role:   <Icons.UserPlus size={13} />,
+  edit:   <Icons.Settings size={13} />,
+  create: <Icons.PlusCircle size={13} />,
+  remove: <Icons.UserMinus size={13} />,
+}
+
+// ─── Group detail slide-out ───────────────────────────────────────────────────
+
+function GroupDetail({ group: initialGroup, onClose }: { group: Group; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState(0)
+  const [group, setGroup]         = useState(initialGroup)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const groupMembers = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
+  const log = GROUP_ACTIVITY[group.id] ?? []
+
+  const allStudios = ["governance", "datastudio", "agentic", "admin"]
+
+  function toggleStudio(s: string) {
+    setGroup(g => ({
+      ...g,
+      studios: g.studios.includes(s)
+        ? g.studios.filter(x => x !== s)
+        : [...g.studios, s],
+    }))
+  }
+
+  function removeMember(id: string) {
+    setGroup(g => ({ ...g, memberIds: g.memberIds.filter(x => x !== id) }))
+  }
+
+  return (
+    <SlideOut
+      open
+      onClose={onClose}
+      size="m"
+      title={group.name}
+      subtitle=""
+      showIcon={false}
+      showStatus={false}
+      showTopButton={false}
+      showChips={false}
+      showCta={false}
+      showTabs
+      tabLabels={["Members", "Settings", "Activity"]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+    >
+      {/* Color accent */}
+      <div style={{ height: 5, background: group.color }} />
+
+      {/* Description */}
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
+        <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{group.desc}</p>
+      </div>
+
+      {/* ── TAB 0: Members ── */}
+      {activeTab === 0 && (
+        <div>
+          <div style={{
+            padding: "10px 16px", borderBottom: "1px solid var(--border)",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "var(--surface-raised)",
+          }}>
+            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+              <b style={{ color: "var(--foreground)" }}>{groupMembers.length}</b> member{groupMembers.length !== 1 ? "s" : ""}
+            </span>
+            <button style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
+              + Add member
+            </button>
+          </div>
+          {groupMembers.length === 0 ? (
+            <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--muted-foreground)" }}>
+              <Icons.Users size={24} style={{ opacity: 0.3, marginBottom: 8 }} />
+              <div style={{ fontSize: 13, fontWeight: 500 }}>No members yet</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Add members to this group to grant them shared access</div>
+            </div>
+          ) : groupMembers.map(m => (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid var(--border)" }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",
+              }}>{m.initials}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{m.name}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {m.title} · {m.department}
+                </div>
+              </div>
+              <div style={{
+                fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100,
+                background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status], flexShrink: 0,
+              }}>
+                {STATUS_LABEL[m.status]}
+              </div>
+              <button
+                onClick={() => removeMember(m.id)}
+                title="Remove from group"
+                style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, flexShrink: 0, borderRadius: 4 }}
+                onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
+                onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+              >
+                <Icons.X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── TAB 1: Settings ── */}
+      {activeTab === 1 && (
+        <div style={{ padding: "16px" }}>
+          {/* Studio access */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+              Studio access
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {allStudios.map(s => {
+                const meta = STUDIO_META[s]
+                const active = group.studios.includes(s)
+                return (
+                  <button
+                    key={s}
+                    onClick={() => toggleStudio(s)}
+                    style={{
+                      padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      border: `1px solid ${active ? meta.color : "var(--border)"}`,
+                      background: active ? `${meta.color}1a` : "transparent",
+                      color: active ? meta.color : "var(--muted-foreground)",
+                      display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s",
+                    }}
+                  >
+                    {active
+                      ? <Icons.Check size={10} strokeWidth={2.5} />
+                      : <div style={{ width: 8, height: 8, borderRadius: "50%", background: `${meta.color}66` }} />}
+                    {meta.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Danger zone */}
+          <div style={{ border: "1px solid color-mix(in srgb, var(--badge-error) 30%, transparent)", borderRadius: 10, padding: 14, background: "color-mix(in srgb, var(--badge-error) 5%, transparent)" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--badge-error)", marginBottom: 8 }}>
+              Danger zone
+            </div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
+              Deleting this group removes it permanently. Members are not removed from the workspace.
+            </div>
+            {!confirmDelete ? (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 7, border: "1px solid var(--badge-error)", color: "var(--badge-error)", background: "transparent", cursor: "pointer" }}
+              >
+                Delete group
+              </button>
+            ) : (
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", marginBottom: 8 }}>Are you sure? This cannot be undone.</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={onClose} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 7, border: "1px solid var(--badge-error)", color: "#fff", background: "var(--badge-error)", cursor: "pointer" }}>
+                    Delete
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 7, border: "1px solid var(--border)", color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 2: Activity ── */}
+      {activeTab === 2 && (
+        <div style={{ padding: "4px 0" }}>
+          {log.length === 0 ? (
+            <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 12 }}>No activity yet</div>
+          ) : log.map((ev, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, padding: "10px 16px", borderBottom: "1px solid var(--border)", alignItems: "flex-start" }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                background: "var(--surface-raised)", border: "1px solid var(--border)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "var(--muted-foreground)",
+              }}>
+                {ACTIVITY_TYPE_ICON_GROUP[ev.type] ?? <Icons.Circle size={13} />}
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.4 }}>{ev.msg}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{ev.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </SlideOut>
+  )
+}
+
+// ─── Group card ───────────────────────────────────────────────────────────────
+
+function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => void }) {
+  const [hovered, setHovered] = useState(false)
+  const members = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
+  const visible = members.slice(0, 5)
+  const overflow = members.length - visible.length
+
+  return (
+    <div
+      onClick={() => onSelect(group)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
+        background: hovered ? "var(--accent)" : "var(--surface)",
+        cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
+        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",
+      }}
+    >
+      <div style={{ height: 5, background: group.color }} />
+      <div style={{ padding: "14px 16px" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
+        <p style={{
+          fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.45, margin: "0 0 12px",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {group.desc}
+        </p>
+
+        {/* Studio chips */}
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12, minHeight: 22 }}>
+          {group.studios.length === 0 ? (
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)", opacity: 0.5 }}>No studios</span>
+          ) : group.studios.map(s => {
+            const meta = STUDIO_META[s]
+            return (
+              <span key={s} style={{
+                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                background: `${meta.color}1a`, color: meta.color,
+                border: `1px solid ${meta.color}44`,
+              }}>
+                {meta.label}
+              </span>
+            )
+          })}
+        </div>
+
+        {/* Footer: avatars + member count */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {visible.map((m, i) => (
+              <div
+                key={m.id}
+                title={m.name}
+                style={{
+                  width: 24, height: 24, borderRadius: "50%",
+                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                  border: "2px solid var(--surface)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 9, fontWeight: 700, color: "#fff",
+                  marginLeft: i > 0 ? -6 : 0, flexShrink: 0,
+                  position: "relative", zIndex: visible.length - i,
+                }}
+              >
+                {m.initials}
+              </div>
+            ))}
+            {overflow > 0 && (
+              <div style={{
+                width: 24, height: 24, borderRadius: "50%",
+                background: "var(--surface-raised)", border: "2px solid var(--surface)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 9, fontWeight: 700, color: "var(--muted-foreground)",
+                marginLeft: -6, flexShrink: 0,
+              }}>
+                +{overflow}
+              </div>
+            )}
+          </div>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+            {members.length} member{members.length !== 1 ? "s" : ""}
+          </span>
+          <div style={{ marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => onSelect(group)}
+              style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}
+            >
+              Manage
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Groups view ──────────────────────────────────────────────────────────────
+
+function GroupsView() {
+  const [selected, setSelected] = useState<Group | null>(null)
+
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+        {GROUPS.map(g => <GroupCard key={g.id} group={g} onSelect={setSelected} />)}
+      </div>
+      {selected && <GroupDetail group={selected} onClose={() => setSelected(null)} />}
+    </>
+  )
+}
+
 // ─── Roles data ───────────────────────────────────────────────────────────────
 
 interface Role {
@@ -1070,7 +1436,7 @@ function RolesView() {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PeopleAccessMembersScreen() {
-  const [mainTab, setMainTab]           = useState<"members" | "roles">("members")
+  const [mainTab, setMainTab]           = useState<"members" | "roles" | "groups">("members")
   const [statusFilter, setStatusFilter] = useState("all")
   const [query, setQuery]               = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
@@ -1118,19 +1484,26 @@ export function PeopleAccessMembersScreen() {
           <Header
             size={isScrolled ? "compress" : "size-l"}
             title="People & Access"
-            description={mainTab === "members"
-              ? `${counts.all} members · Avance Financial workspace`
-              : `${ROLES.length} roles · ${ROLES.filter(r => !r.system).length} custom`}
+            description={
+              mainTab === "members" ? `${counts.all} members · Avance Financial workspace`
+              : mainTab === "roles"  ? `${ROLES.length} roles · ${ROLES.filter(r => !r.system).length} custom`
+              : `${GROUPS.length} groups · manage shared access across the workspace`
+            }
             primaryAction={
               mainTab === "members" ? (
                 <Button variant="primary" size="sm">
                   <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
                   Invite member
                 </Button>
-              ) : (
+              ) : mainTab === "roles" ? (
                 <Button variant="primary" size="sm">
                   <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
                   New role
+                </Button>
+              ) : (
+                <Button variant="primary" size="sm">
+                  <Icons.FolderPlus size={14} style={{ marginRight: 4 }} />
+                  New group
                 </Button>
               )
             }
@@ -1143,9 +1516,10 @@ export function PeopleAccessMembersScreen() {
             items={[
               { id: "members", label: `Members (${counts.all})` },
               { id: "roles",   label: `Roles (${ROLES.length})`  },
+              { id: "groups",  label: `Groups (${GROUPS.length})` },
             ]}
             value={mainTab}
-            onChange={v => setMainTab(v as "members" | "roles")}
+            onChange={v => setMainTab(v as "members" | "roles" | "groups")}
             size="s"
           />
 
@@ -1207,6 +1581,9 @@ export function PeopleAccessMembersScreen() {
 
         {/* Roles view */}
         {mainTab === "roles" && <RolesView />}
+
+        {/* Groups view */}
+        {mainTab === "groups" && <GroupsView />}
       </ScreenLayout>
 
       {selected && mainTab === "members" && (
