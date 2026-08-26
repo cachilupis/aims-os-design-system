@@ -288,15 +288,14 @@ The general `ModalDialog` vs. `SlideOut` question — and the multi-step-form ca
 |---|---|---|
 | Entity detail preview from a list (Eye button) | `SlideOut` | Overlay on top of the list — user browses back quickly |
 | Node / item configuration within a canvas or builder | `SidePanel` | Inline with the canvas — no backdrop, user sees context while editing |
-| Filters panel (full filter set) | `SlideOut` type `"filters"` | Standard pattern, always overlays list |
+| Filters panel (full filter set) | `FiltersSlideout` | Its own dedicated component (checked directly — it doesn't wrap `SlideOut`), always overlays list |
 
-**SlideOut — which `type` variant to use:**
+**SlideOut — which `type` to use.** Only 2 values exist on the real component (checked directly against `slide-out.tsx` — `"filters"` and `"default"` are NOT valid `SlideOutType` values; filters use the separate `FiltersSlideout` component above instead):
 
-| Use case | `type` prop | When to add `showTabs` |
+| Use case | `type` prop | Notes |
 |---|---|---|
-| Entity preview (name, status, key metrics, AI summary, recent runs) | `"with-variants"` | Yes, when content splits into Overview / History / Config |
-| Filter set (full filter controls) | `"filters"` | No — filters panel has its own layout |
-| Generic content / form without entity header | `"default"` | Only if content naturally separates into sections |
+| Entity preview (name, status, key metrics, AI summary, recent runs) | `"with-variants"` | Add `showTabs` when content splits into Overview / History / Config |
+| Generic content — a form, a Create flow, anything without an entity header | `"full-slot"` | No built-in header, tabs, chips, or CTA footer — compose them yourself inside `children` |
 
 **SlideOut — mandatory props for `type="with-variants"` (entity detail):**
 
@@ -419,10 +418,10 @@ The test that decides it: **can the user ignore this and keep working in the bac
 | 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | Dedicated view | → 2 |
 | 2 | Does the flow branch, or does it have 3+ stages? | Dedicated view + `Stepper` + `StepperNavFooter` | → 3 |
 | 3 | Can the object be created from a single field, AND is a list of the same object type visible on screen? | Inline create row — `DS-GAP`, does not exist in this repo yet | → 4 |
-| 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | `SlideOut type="default"` | → 5 |
+| 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | `SlideOut type="full-slot"` | → 5 |
 | 5 | More than 5 fields? | Dedicated view | `ModalDialog variant="content"` |
 
-Steps 4–5, stated as one rule: **contextual** (the new object hangs off something on screen) → `SlideOut type="default"`. **Standalone** (nothing on screen is its parent) → `ModalDialog variant="content"` at 5 fields or fewer, dedicated view above that. The 5-field threshold applies ONLY here (standalone, modal-bound) — never to a `SlideOut`, which grows with its content instead.
+Steps 4–5, stated as one rule: **contextual** (the new object hangs off something on screen) → `SlideOut type="full-slot"`. **Standalone** (nothing on screen is its parent) → `ModalDialog variant="content"` at 5 fields or fewer, dedicated view above that. The 5-field threshold applies ONLY here (standalone, modal-bound) — never to a `SlideOut`, which grows with its content instead.
 
 **Staged flows — where the line sits.**
 

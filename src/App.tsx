@@ -15827,6 +15827,336 @@ function PgCreatePathRow({ label, verdict, note, highlighted }: { label: string;
   )
 }
 
+// ── "See it in context" — full-screen realistic staging for the 7 stress-test
+// cases (create.md §7). Each case is hand-authored, not derived from the raw
+// toggles — see PG_CONTEXT_CASE_BY_PRESET_LABEL in PatternCreatePage for how a
+// case is matched. The two surfaces that don't exist yet (inline create row,
+// Create-with-AI chat) show their explanatory InformativeCard positioned
+// exactly where the real surface would sit — only "1a" needs this among the 7.
+
+type PgContextCaseId = "1a" | "1b" | "2" | "3" | "4" | "6b" | "control"
+
+const PG_CONTEXT_CASE_BY_PRESET_LABEL: Record<string, PgContextCaseId> = {
+  "1a · Note, list visible on screen": "1a",
+  "1b · Note, no list on screen": "1b",
+  "2 · Entity from its own list view, 4 fields": "2",
+  "3 · Governance policy": "3",
+  "4 · Workflow (owns a workspace)": "4",
+  "6b · Template from marketplace, fields remain": "6b",
+  "5 (control) · Add a node to the canvas": "control",
+}
+
+const PG_SURFACE_LABEL: Record<PgCreateSurface, string> = {
+  rejected:           "Rejected — Gate 0",
+  "inline-row":        "Inline create row — not yet built",
+  "chat-modal":        "Create-with-AI chat — not yet built",
+  slideout:            "SlideOut type=\"full-slot\"",
+  "modal-content":     "ModalDialog variant=\"content\"",
+  dedicated:           "Dedicated view",
+  "dedicated-stepper": "Dedicated view + Stepper",
+}
+
+const PG_CTX_TOPBAR_ACTIONS: TopbarAction[] = [
+  { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
+  { icon: <LucideIcons.Bell size={16} />, label: "Notifications" },
+  { icon: <LucideIcons.Settings size={16} />, label: "Settings" },
+]
+
+const PG_CTX_WORKERS: EntityListItemData[] = [
+  { id: "w1", title: "Data Sync Worker", iconVariant: "info", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Active", variant: "success" }, timestamp: "Ran 12m ago" },
+  { id: "w2", title: "Invoice Reconciliation Worker", iconVariant: "purple", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Active", variant: "success" }, timestamp: "Ran 1h ago" },
+  { id: "w3", title: "Lead Enrichment Worker", iconVariant: "neutral", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Paused", variant: "neutral" }, timestamp: "Ran 2d ago" },
+]
+
+const PG_CTX_AUTOMATIONS: EntityListItemData[] = [
+  { id: "a1", title: "New lead → CRM sync", iconVariant: "info", iconName: "Zap", state: { label: "Active", variant: "success" }, timestamp: "Last run 8m ago" },
+  { id: "a2", title: "Invoice overdue reminder", iconVariant: "yellow", iconName: "Zap", state: { label: "Active", variant: "success" }, timestamp: "Last run 3h ago" },
+  { id: "a3", title: "Weekly digest email", iconVariant: "neutral", iconName: "Zap", state: { label: "Draft", variant: "neutral" }, timestamp: "Never run" },
+]
+
+const PG_CTX_TEMPLATES: { id: string; name: string; desc: string }[] = [
+  { id: "t1", name: "Lead follow-up", desc: "Sends a follow-up email 24h after a new lead is created." },
+  { id: "t2", name: "Invoice reminder", desc: "Notifies the account owner when an invoice is 7 days overdue." },
+  { id: "t3", name: "Weekly digest", desc: "Compiles workspace activity into a Friday summary email." },
+  { id: "t4", name: "Blank automation", desc: "Start from scratch — no pre-filled fields." },
+]
+
+const PG_CTX_CANVAS_NODES: { id: string; label: string; icon: LucideIcon; x: number; y: number }[] = [
+  { id: "n1", label: "Trigger — New lead", icon: LucideIcons.Zap, x: 40, y: 60 },
+  { id: "n2", label: "Filter — Score > 70", icon: LucideIcons.Filter, x: 300, y: 60 },
+  { id: "n3", label: "Send email", icon: LucideIcons.Mail, x: 560, y: 60 },
+]
+
+function PgNoteRow({ author, time, text }: { author: string; time: string; text: string }) {
+  return (
+    <div className="rounded-[8px] p-[10px]" style={{ border: "0.5px solid var(--field-border)" }}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{author}</span>
+        <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{time}</span>
+      </div>
+      <p className="text-[11px] mt-[3px]" style={{ color: "var(--field-supporting)" }}>{text}</p>
+    </div>
+  )
+}
+
+function PgRunRow({ status, time }: { status: "success" | "error"; time: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-[8px] p-[10px]" style={{ border: "0.5px solid var(--field-border)" }}>
+      <div className="flex items-center gap-[6px]">
+        <Tag variant={status === "success" ? "success" : "error"} size="sm">{status === "success" ? "Success" : "Failed"}</Tag>
+      </div>
+      <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{time}</span>
+    </div>
+  )
+}
+
+function PgCreateCanvas({ banner }: { banner?: React.ReactNode }) {
+  return (
+    <div className="flex-1 relative overflow-hidden" style={{ background: "var(--canvas)", backgroundImage: "radial-gradient(var(--field-border) 1px, transparent 1px)", backgroundSize: "20px 20px" }}>
+      {PG_CTX_CANVAS_NODES.map(n => (
+        <div key={n.id} className="absolute rounded-[10px] px-[14px] py-[10px] flex items-center gap-[8px]"
+          style={{ left: n.x, top: n.y, background: "var(--surface)", border: "0.5px solid var(--field-border)" }}>
+          <n.icon size={14} style={{ color: "var(--primary)" }} />
+          <span className="text-[12px] font-medium" style={{ color: "var(--foreground)" }}>{n.label}</span>
+        </div>
+      ))}
+      {banner && <div className="absolute" style={{ left: 24, bottom: 24, width: 380 }}>{banner}</div>}
+    </div>
+  )
+}
+
+// Shared shell — Topbar + Sidebar, matching forms-create-page-example.tsx's
+// own composition exactly. `overlay` renders after the row so ModalDialog/
+// SlideOut (both position:fixed, SlideOut also portal-based) stack correctly
+// regardless of nesting — confirmed against modal-dialog.tsx / slide-out.tsx.
+function PgCreateContextShell({ sidebarId, overlay, children }: { sidebarId: string; overlay?: React.ReactNode; children: React.ReactNode }) {
+  const [activeSidebar, setActiveSidebar] = useState(sidebarId)
+  return (
+    <div className="flex flex-col h-full">
+      <AppBackground />
+      <Topbar workspaceName="Ops Team" companyName="AIMS OS" actions={PG_CTX_TOPBAR_ACTIONS} />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId={activeSidebar} onItemClick={setActiveSidebar} />
+        {children}
+      </div>
+      {overlay}
+    </div>
+  )
+}
+
+function PgCreateContextPreview({ caseId, onClose }: { caseId: PgContextCaseId; onClose: () => void }) {
+  const [sixBStep, setSixBStep] = useState<1 | 2>(1)
+
+  switch (caseId) {
+    case "1a":
+      return (
+        <PgCreateContextShell sidebarId="agents">
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <Header title="Data Sync Worker" description="Worker · Active" backButton size="size-l"
+              primaryAction={<Button variant="primary" size="sm">Run now</Button>}
+              secondaryAction={<Button variant="secondary" size="sm" onClick={onClose}>Close</Button>} />
+            <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+              <div className="grid grid-cols-[1fr_330px] gap-[20px] items-start max-w-[1040px]">
+                <div className="rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
+                  <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Syncs contact records between the CRM and the billing system every 15 minutes.</p>
+                </div>
+                <WidgetFather title="Notes" widthClass="narrow" showMenu>
+                  <div className="flex flex-col gap-[8px]">
+                    <PgNoteRow author="Priya S." time="2h ago" text="Bumped the retry limit to 5 after last week's timeout." />
+                    <PgNoteRow author="Marcus T." time="1d ago" text="Confirmed field mapping matches the new billing schema." />
+                    <InformativeCard state="informative" size="sm" title="Inline create row — not yet built"
+                      description="Step 3 resolves here — a single-field note, with the notes list already on screen. No component renders this yet; it needs building in experimental/." />
+                  </div>
+                </WidgetFather>
+              </div>
+            </div>
+          </main>
+        </PgCreateContextShell>
+      )
+
+    case "1b":
+      return (
+        <PgCreateContextShell sidebarId="agents"
+          overlay={
+            <SlideOut open onClose={onClose} type="full-slot" size="s" showScrollbar={false}>
+              <div className="flex flex-col gap-[16px] h-full">
+                <div>
+                  <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
+                  <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Attaches to Data Sync Worker.</p>
+                </div>
+                <Textarea placeholder="Write a note…" />
+                <div className="flex-1" />
+                <div className="flex justify-end gap-[8px]">
+                  <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+                  <Button variant="primary" size="sm" onClick={onClose}>Create</Button>
+                </div>
+              </div>
+            </SlideOut>
+          }>
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <Header title="Data Sync Worker" description="Worker · Active" backButton size="size-l"
+              primaryAction={<Button variant="primary" size="sm">Run now</Button>}
+              secondaryAction={<Button variant="secondary" size="sm" onClick={onClose}>Close</Button>} />
+            <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+              <div className="grid grid-cols-[1fr_330px] gap-[20px] items-start max-w-[1040px]">
+                <div className="rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
+                  <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Syncs contact records between the CRM and the billing system every 15 minutes.</p>
+                </div>
+                <WidgetFather title="Recent Runs" widthClass="narrow" showRefresh showMenu>
+                  <div className="flex flex-col gap-[8px]">
+                    <PgRunRow status="success" time="12m ago" />
+                    <PgRunRow status="success" time="27m ago" />
+                    <PgRunRow status="error" time="42m ago" />
+                  </div>
+                </WidgetFather>
+              </div>
+            </div>
+          </main>
+        </PgCreateContextShell>
+      )
+
+    case "2":
+      return (
+        <PgCreateContextShell sidebarId="agents"
+          overlay={
+            <ModalDialog isOpen onClose={onClose} variant="content"
+              title="New Worker" description="A standalone object — nothing on screen is its parent."
+              slot={
+                <div className="flex flex-col gap-[12px]">
+                  <Input placeholder="Worker name" />
+                  <Select placeholder="Role" />
+                  <Select placeholder="Model" />
+                  <Input placeholder="Assigned team" />
+                </div>
+              }
+              ctaPrimary={{ label: "Create", onClick: onClose }}
+              ctaSecondary={{ label: "Cancel", onClick: onClose }}
+            />
+          }>
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <Header title="Workers" description="12 active" size="size-l"
+              primaryAction={<Button variant="primary" size="sm">New worker</Button>} />
+            <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+              <div className="max-w-[820px] flex flex-col gap-[10px]">
+                {PG_CTX_WORKERS.map(w => (
+                  <CardContainer key={w.id} size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[w]} />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+          </main>
+        </PgCreateContextShell>
+      )
+
+    case "3":
+      return (
+        <PgCreateContextShell sidebarId="knowledge">
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l"
+              primaryAction={<Button variant="primary" size="sm">Continue</Button>}
+              secondaryAction={<Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>} />
+            <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+              <div className="max-w-[680px] flex flex-col gap-[24px]">
+                <Stepper steps={[
+                  { label: "Scope", state: "completed" },
+                  { label: "Rules", state: "active" },
+                  { label: "Approvals", state: "default" },
+                  { label: "Review", state: "default" },
+                ]} />
+                <div className="flex flex-col gap-[16px]">
+                  <Input placeholder="Policy name" />
+                  <Textarea placeholder="Describe what this policy enforces" />
+                </div>
+              </div>
+            </div>
+          </main>
+        </PgCreateContextShell>
+      )
+
+    case "4":
+      return (
+        <PgCreateContextShell sidebarId="automations">
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <Header title="Weekly Digest Workflow" description="Workflow · Draft" backButton size="size-m"
+              primaryAction={<Button variant="primary" size="sm">Publish</Button>}
+              secondaryAction={<Button variant="secondary" size="sm" onClick={onClose}>Close</Button>} />
+            <PgCreateCanvas />
+          </main>
+        </PgCreateContextShell>
+      )
+
+    case "6b": {
+      const overlay = sixBStep === 1 ? (
+        <ModalDialog isOpen onClose={onClose} variant="content"
+          title="Choose a template" description="Templates fully or partially define the new automation."
+          slot={
+            <div className="grid grid-cols-2 gap-[12px]">
+              {PG_CTX_TEMPLATES.map(t => (
+                <div key={t.id} className="rounded-[10px] p-[14px] flex flex-col gap-[6px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                  <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{t.name}</span>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{t.desc}</p>
+                  <Button variant="secondary" size="sm" onClick={() => setSixBStep(2)}>Use template</Button>
+                </div>
+              ))}
+            </div>
+          }
+          ctaSecondary={{ label: "Cancel", onClick: onClose }}
+        />
+      ) : (
+        <SlideOut open onClose={onClose} type="full-slot" size="s" showScrollbar={false}>
+          <div className="flex flex-col gap-[16px] h-full">
+            <div>
+              <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New automation</span>
+              <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Pre-filled from "Lead follow-up" — fields remain.</p>
+            </div>
+            <Input defaultValue="Lead follow-up" />
+            <Textarea defaultValue="Sends a follow-up email 24h after a new lead is created." />
+            <div className="flex-1" />
+            <div className="flex justify-end gap-[8px]">
+              <Button variant="secondary" size="sm" onClick={() => setSixBStep(1)}>Back</Button>
+              <Button variant="primary" size="sm" onClick={onClose}>Create</Button>
+            </div>
+          </div>
+        </SlideOut>
+      )
+      return (
+        <PgCreateContextShell sidebarId="automations" overlay={overlay}>
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <Header title="Automations" description="8 active" size="size-l"
+              primaryAction={<Button variant="primary" size="sm">New automation</Button>} />
+            <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+              <div className="max-w-[820px] flex flex-col gap-[10px]">
+                {PG_CTX_AUTOMATIONS.map(a => (
+                  <CardContainer key={a.id} size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[a]} />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+          </main>
+        </PgCreateContextShell>
+      )
+    }
+
+    case "control":
+      return (
+        <PgCreateContextShell sidebarId="automations">
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <Header title="Weekly Digest Workflow" description="Workflow · Draft" backButton size="size-m"
+              secondaryAction={<Button variant="secondary" size="sm" onClick={onClose}>Close</Button>} />
+            <PgCreateCanvas banner={
+              <InformativeCard state="alert" size="sm" title="Gate 0 — this pattern doesn't apply"
+                description="Dragging a node from the library onto the canvas already created it. The SidePanel that opens afterward configures the node — that's Configure, not Create." />
+            } />
+          </main>
+        </PgCreateContextShell>
+      )
+  }
+}
+
 function PatternCreatePage() {
   const [tab, setTab] = useState<string>("when-to-use")
 
@@ -15842,12 +16172,22 @@ function PatternCreatePage() {
   const [pgAttaches, setPgAttaches] = useState(false)
   const [pgFieldCount, setPgFieldCount] = useState<PgCreateFieldCount>("<=5")
   const [pgReversible, setPgReversible] = useState(true)
+  const [pgContextCase, setPgContextCase] = useState<PgContextCaseId | null>(null)
 
   const pgCreateResult = computeCreatePlaygroundResult({
     trigger: pgTrigger, ownsWorkspace: pgOwnsWorkspace, stages: pgStages, branches: pgBranches,
     singleField: pgSingleField, listOnScreen: pgListOnScreen, attaches: pgAttaches,
     fieldCount: pgFieldCount, reversible: pgReversible,
   })
+
+  // "See it in context" only covers the 7 hand-authored stress-test cases —
+  // it's null (button disabled) when the toggles don't exactly match one.
+  const pgActivePreset = PG_CREATE_PRESETS.find(p =>
+    p.values.trigger === pgTrigger && p.values.ownsWorkspace === pgOwnsWorkspace && p.values.stages === pgStages &&
+    p.values.branches === pgBranches && p.values.singleField === pgSingleField && p.values.listOnScreen === pgListOnScreen &&
+    p.values.attaches === pgAttaches && p.values.fieldCount === pgFieldCount && p.values.reversible === pgReversible
+  )
+  const pgActiveCase = pgActivePreset ? PG_CONTEXT_CASE_BY_PRESET_LABEL[pgActivePreset.label] ?? null : null
 
   const applyPgCreatePreset = (values: PgCreateInputs) => {
     setPgTrigger(values.trigger); setPgOwnsWorkspace(values.ownsWorkspace); setPgStages(values.stages)
@@ -15899,77 +16239,21 @@ function PatternCreatePage() {
     <div className="flex flex-col gap-[16px]">
       <div>
         <span className="text-[11px] font-semibold uppercase tracking-wide mb-[8px] block" style={{ color: "var(--field-label)" }}>Resolved surface</span>
-        {pgCreateResult.surface === "rejected" && (
-          <InformativeCard state="alert" size="sm" title="Rejected — Gate 0" description={pgCreateResult.gate0Note} />
-        )}
-        {(pgCreateResult.surface === "inline-row" || pgCreateResult.surface === "chat-modal") && (
-          <InformativeCard
-            state="informative" size="sm"
-            title={pgCreateResult.surface === "inline-row" ? "Inline create row — not yet built" : "Create-with-AI chat — not yet built"}
-            description={
-              pgCreateResult.surface === "inline-row"
-                ? "The cascade resolves here, but no component renders this yet — it needs building in experimental/. This view arrives once that component exists."
-                : "The chat component exists in the Figma Design System but isn't implemented in this repo. This view arrives once that component ships."
-            }
-          />
-        )}
-        {pgCreateResult.surface === "slideout" && (
-          <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)", height: 320 }}>
-            {/* create.md itself says SlideOut type="default" (§3, §8) — the real
-                component's SlideOutType union is only "with-variants" | "full-slot"
-                (checked directly in slide-out.tsx). "full-slot" is the actual prop
-                that renders generic content with no entity header, which is what
-                "default" was describing. Not fixed here — that's a create.md
-                wording gap, out of this task's scope; flagging for whoever next
-                syncs create.md against the component. */}
-            <SlideOut open onClose={() => {}} previewMode type="full-slot" size="s" showScrollbar={false}>
-              <div className="flex flex-col gap-[16px] h-full">
-                <div>
-                  <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New item</span>
-                  <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Attaches to the record you were already looking at.</p>
-                </div>
-                <Input placeholder="Name" />
-                <Textarea placeholder="Description" />
-                {pgCreateResult.twoStageNote && (
-                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>2-stage flow — a lightweight step indicator would sit here, not a full Stepper.</span>
-                )}
-                <div className="flex-1" />
-                <div className="flex justify-end gap-[8px]">
-                  <Button variant="secondary" size="sm">Cancel</Button>
-                  <Button variant="primary" size="sm">Create</Button>
-                </div>
-              </div>
-            </SlideOut>
-          </div>
-        )}
-        {pgCreateResult.surface === "modal-content" && (
-          <div className="rounded-[8px] overflow-hidden flex items-center justify-center" style={{ border: "0.5px solid var(--field-border)", background: "var(--canvas)", padding: 16 }}>
-            <ModalDialog
-              isOpen onClose={() => {}} embedded
-              variant="content"
-              title="New item"
-              description="A standalone object — nothing on screen is its parent."
-              slot={<div className="flex flex-col gap-[12px]"><Input placeholder="Name" /><Input placeholder="Description" /></div>}
-              ctaPrimary={{ label: "Create" }}
-              ctaSecondary={{ label: "Cancel" }}
-            />
-          </div>
-        )}
-        {(pgCreateResult.surface === "dedicated" || pgCreateResult.surface === "dedicated-stepper") && (
-          <div className="rounded-[8px] overflow-hidden" style={{ border: "0.5px solid var(--field-border)" }}>
-            <Header title="New item" backButton size="size-m" primaryAction={<Button variant="main" size="sm">Create</Button>} />
-            <div className="flex flex-col gap-[12px] p-[16px]">
-              {pgCreateResult.surface === "dedicated-stepper" && (
-                <Stepper steps={[
-                  { label: "Details", state: "active" },
-                  { label: "Configure", state: "default" },
-                  { label: "Review", state: "default" },
-                ]} className="mb-[4px]" />
-              )}
-              <Input placeholder="Name" />
-              <Input placeholder="Description" />
-            </div>
-          </div>
+        <p className="text-[11px] mb-[8px]" style={{ color: "var(--field-supporting)" }}>
+          A preview embedded in this modal has no background of its own — and this pattern is entirely about the relationship between the surface and what's behind it. See the decision here; see the surface staged for real below.
+        </p>
+        <div className="flex items-center justify-between gap-[12px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--color-surface-neutral-subtle)" }}>
+          <span className="text-[13px] font-mono font-semibold" style={{ color: pgCreateResult.surface === "rejected" ? "var(--color-status-error-default)" : "var(--primary)" }}>
+            {PG_SURFACE_LABEL[pgCreateResult.surface]}
+          </span>
+          <Button variant="secondary" size="sm" disabled={!pgActiveCase} onClick={() => pgActiveCase && setPgContextCase(pgActiveCase)}>
+            See it in context
+          </Button>
+        </div>
+        {!pgActiveCase && (
+          <p className="text-[11px] mt-[6px]" style={{ color: "var(--field-supporting)" }}>
+            "See it in context" is staged for the 7 stress-test cases below — load one from the presets list to see it with real background context.
+          </p>
         )}
       </div>
 
@@ -15998,6 +16282,20 @@ function PatternCreatePage() {
 
   return (
     <div>
+      {pgContextCase && (
+        <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+          <AppBackground />
+          <button
+            onClick={() => setPgContextCase(null)}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} /> Close Preview
+          </button>
+          <PgCreateContextPreview caseId={pgContextCase} onClose={() => setPgContextCase(null)} />
+        </div>
+      )}
+
       <div className="flex flex-col gap-[4px] mb-[28px]">
         <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
         <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Create</h1>
@@ -16107,7 +16405,7 @@ function PatternCreatePage() {
                     ["1", "Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation?", "Dedicated view", "→ 2"],
                     ["2", "Does the flow branch, or does it have 3+ stages?", "Dedicated view + Stepper + StepperNavFooter", "→ 3"],
                     ["3", "Can the object be created from a single field, AND is a list of the same object type visible on screen?", "Inline create row", "→ 4"],
-                    ["4", "Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at?", "SlideOut type=\"default\"", "→ 5"],
+                    ["4", "Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at?", "SlideOut type=\"full-slot\"", "→ 5"],
                     ["5", "More than 5 fields?", "Dedicated view", "ModalDialog variant=\"content\""],
                   ].map(([step, test, yes, no]) => (
                     <tr key={step} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
@@ -16137,7 +16435,7 @@ function PatternCreatePage() {
                   {[
                     ["Test", "The new object hangs off something on screen", "Nothing on screen is its parent"],
                     ["Examples", "A note on a record · a vehicle inside a customer profile · a task in a project", "A new entity from its own list view · a user in Admin · an API key"],
-                    ["Surface", "SlideOut type=\"default\"", "ModalDialog variant=\"content\" (≤5 fields) · dedicated view (6+)"],
+                    ["Surface", "SlideOut type=\"full-slot\"", "ModalDialog variant=\"content\" (≤5 fields) · dedicated view (6+)"],
                   ].map(([label, ctx, standalone]) => (
                     <tr key={label} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
                       <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">{label}</td>
@@ -16402,7 +16700,7 @@ function PatternCreatePage() {
                   {[
                     ["Dedicated view", "Exists — ScreenLayout + Header composition"],
                     ["Dedicated view + Stepper", "Exists — Stepper + StepperNavFooter"],
-                    ["SlideOut", "Exists. A create panel uses type=\"default\" — no entity header, no filters layout."],
+                    ["SlideOut", "Exists. A create panel uses type=\"full-slot\" — no entity header, no filters layout."],
                     ["ModalDialog variant=\"confirmation\"", "Exists"],
                     ["ModalDialog variant=\"content\" — catalogue slot, 900px max-width", "Exists. The slot prop already accepts arbitrary content."],
                     ["Inline create row", "Does not exist yet — needs building in experimental/"],
@@ -16446,7 +16744,7 @@ CASCADE (manual create — stop at first YES)
   STEP 2  flow.branches OR flow.stages >= 3     → Dedicated view + Stepper + StepperNavFooter
   STEP 3  object_type.single_field_createable
             AND list_of_same_type_on_screen     → Inline create row
-  STEP 4  new_object.attaches_to_visible_thing  → SlideOut type="default"
+  STEP 4  new_object.attaches_to_visible_thing  → SlideOut type="full-slot"
   STEP 5  field_count > 5                       → Dedicated view
           ELSE                                  → ModalDialog variant="content"
 
