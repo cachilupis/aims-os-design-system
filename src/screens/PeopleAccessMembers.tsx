@@ -734,9 +734,343 @@ function MemberRow({ member, onSelect }: { member: Member; onSelect: (m: Member)
   )
 }
 
+// ─── Roles data ───────────────────────────────────────────────────────────────
+
+interface Role {
+  id: string; label: string; system: boolean; color: string; desc: string; memberIds: string[]
+}
+
+const ROLES: Role[] = [
+  { id: "workspace-admin",    label: "Workspace Admin",    system: true,  color: "#6366f1", desc: "Full control over workspace settings, members, studios, and billing",                     memberIds: ["tg", "mg", "es"] },
+  { id: "developer",          label: "Developer",          system: true,  color: "#10b981", desc: "Build and deploy integrations, agents, and custom workflows",                            memberIds: ["es", "sb", "dp"] },
+  { id: "viewer",             label: "Viewer",             system: true,  color: "#64748b", desc: "Read-only access across all non-sensitive studio content",                               memberIds: ["at", "fw"] },
+  { id: "agent-builder",      label: "Agent Builder",      system: false, color: "#f97316", desc: "Create and manage AI workers, agentic networks, and workflow definitions",              memberIds: ["sb", "dp"] },
+  { id: "data-steward",       label: "Data Steward",       system: false, color: "#8b5cf6", desc: "Manage model definitions, governance policies, and data lineage graphs",                memberIds: ["mg"] },
+  { id: "compliance-auditor", label: "Compliance Auditor", system: false, color: "#0ea5e9", desc: "Read-only access to audit logs, governance events, data lineage, and access settings", memberIds: [] },
+]
+
+const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number; agentic: number; admin: number; total: number }> = {
+  "workspace-admin":    { governance: 6, datastudio: 5, agentic: 7, admin: 10, total: 28 },
+  "developer":          { governance: 0, datastudio: 4, agentic: 6, admin: 2,  total: 11 },
+  "viewer":             { governance: 2, datastudio: 2, agentic: 1, admin: 2,  total: 8  },
+  "agent-builder":      { governance: 0, datastudio: 0, agentic: 7, admin: 0,  total: 7  },
+  "data-steward":       { governance: 3, datastudio: 3, agentic: 0, admin: 1,  total: 7  },
+  "compliance-auditor": { governance: 2, datastudio: 2, agentic: 1, admin: 3,  total: 8  },
+}
+
+// ─── Role detail slide-out ────────────────────────────────────────────────────
+
+function RoleDetail({ role, onClose }: { role: Role; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState(0)
+  const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
+  const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
+
+  return (
+    <SlideOut
+      open
+      onClose={onClose}
+      size="m"
+      title={role.label}
+      subtitle=""
+      showIcon={false}
+      showStatus={false}
+      showTopButton={false}
+      showChips={false}
+      showCta={false}
+      showTabs
+      tabLabels={["Overview", "Members", "Permissions"]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+    >
+      {/* ── TAB 0: Overview ── */}
+      {activeTab === 0 && (
+        <>
+          {/* Color accent + identity */}
+          <div style={{ height: 6, background: role.color }} />
+          <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                background: role.system ? "var(--surface-raised)" : `${role.color}22`,
+                color: role.system ? "var(--muted-foreground)" : role.color,
+                border: `1px solid ${role.system ? "var(--border)" : role.color + "55"}`,
+                textTransform: "uppercase", letterSpacing: "0.06em",
+              }}>
+                {role.system ? "System" : "Custom"}
+              </span>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.5, margin: 0 }}>{role.desc}</p>
+          </div>
+
+          {/* Perm summary cards */}
+          <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+              Permission coverage
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {([
+                { label: "Governance",   value: perms.governance,  color: "#8b5cf6" },
+                { label: "Data Studio",  value: perms.datastudio,  color: "#10b981" },
+                { label: "Agentic",      value: perms.agentic,     color: "#f97316" },
+                { label: "Admin",        value: perms.admin,       color: "#6366f1" },
+              ] as const).map(s => (
+                <div key={s.label} style={{
+                  padding: "10px 12px", borderRadius: 8,
+                  background: "var(--surface-raised)", border: "1px solid var(--border)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}>{s.label}</span>
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: s.value > 0 ? "var(--foreground)" : "var(--muted-foreground)", opacity: s.value > 0 ? 1 : 0.4 }}>
+                    {s.value}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>permission{s.value !== 1 ? "s" : ""}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Total permissions</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{perms.total}</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          {!role.system && (
+            <div style={{ padding: "16px 24px", display: "flex", gap: 8 }}>
+              <button style={{
+                flex: 1, padding: "8px 0", border: "1px solid var(--border)", borderRadius: 8,
+                fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "var(--surface)",
+                cursor: "pointer",
+              }}>
+                Edit role
+              </button>
+              <button style={{
+                flex: 1, padding: "8px 0", border: "1px solid var(--badge-error)", borderRadius: 8,
+                fontSize: 12, fontWeight: 600, color: "var(--badge-error)", background: "transparent",
+                cursor: "pointer",
+              }}>
+                Delete role
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── TAB 1: Members ── */}
+      {activeTab === 1 && (
+        <div>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+              <b style={{ color: "var(--foreground)" }}>{members.length}</b> member{members.length !== 1 ? "s" : ""} assigned this role
+            </span>
+            {!role.system && (
+              <button style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
+                + Assign members
+              </button>
+            )}
+          </div>
+          {members.length === 0 ? (
+            <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--muted-foreground)" }}>
+              <Icons.Users size={24} style={{ opacity: 0.3, marginBottom: 8 }} />
+              <div style={{ fontSize: 13, fontWeight: 500 }}>No members assigned</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Assign members to grant them this role's permissions</div>
+            </div>
+          ) : members.map(m => (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid var(--border)" }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",
+              }}>{m.initials}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+              </div>
+              <div style={{
+                fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100,
+                background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
+              }}>
+                {STATUS_LABEL[m.status]}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── TAB 2: Permissions ── */}
+      {activeTab === 2 && <PermissionsTab />}
+    </SlideOut>
+  )
+}
+
+// ─── Role card ────────────────────────────────────────────────────────────────
+
+function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void }) {
+  const [hovered, setHovered] = useState(false)
+  const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
+  const visible = members.slice(0, 5)
+  const overflow = members.length - visible.length
+
+  return (
+    <div
+      onClick={() => onSelect(role)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
+        background: hovered ? "var(--accent)" : "var(--surface)",
+        cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
+        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",
+      }}
+    >
+      {/* Color accent bar */}
+      <div style={{ height: 5, background: role.color }} />
+
+      <div style={{ padding: "14px 16px" }}>
+        {/* Name + badge */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
+          <span style={{
+            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
+            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
+            color: role.system ? "var(--muted-foreground)" : role.color,
+            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
+            textTransform: "uppercase", letterSpacing: "0.06em",
+          }}>
+            {role.system ? "System" : "Custom"}
+          </span>
+        </div>
+
+        {/* Description */}
+        <p style={{
+          fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.45, margin: "0 0 14px",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {role.desc}
+        </p>
+
+        {/* Footer: avatars + actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Overlapping avatars */}
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {visible.map((m, i) => (
+              <div
+                key={m.id}
+                title={m.name}
+                style={{
+                  width: 24, height: 24, borderRadius: "50%",
+                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                  border: "2px solid var(--surface)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 9, fontWeight: 700, color: "#fff",
+                  marginLeft: i > 0 ? -6 : 0, flexShrink: 0, position: "relative",
+                  zIndex: visible.length - i,
+                }}
+              >
+                {m.initials}
+              </div>
+            ))}
+            {overflow > 0 && (
+              <div style={{
+                width: 24, height: 24, borderRadius: "50%",
+                background: "var(--surface-raised)", border: "2px solid var(--surface)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 9, fontWeight: 700, color: "var(--muted-foreground)",
+                marginLeft: -6, flexShrink: 0,
+              }}>
+                +{overflow}
+              </div>
+            )}
+          </div>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+            {members.length} member{members.length !== 1 ? "s" : ""}
+          </span>
+
+          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
+            {role.system ? (
+              <button
+                onClick={() => onSelect(role)}
+                style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}
+              >
+                View
+              </button>
+            ) : (
+              <>
+                <button style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}>
+                  Edit
+                </button>
+                <button style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--badge-error)", background: "transparent", color: "var(--badge-error)", cursor: "pointer" }}>
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Roles view ───────────────────────────────────────────────────────────────
+
+function RolesView() {
+  const [selected, setSelected] = useState<Role | null>(null)
+  const systemRoles = ROLES.filter(r => r.system)
+  const customRoles = ROLES.filter(r => !r.system)
+
+  return (
+    <>
+      {/* System roles */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{
+          fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em",
+          color: "var(--muted-foreground)", marginBottom: 10,
+        }}>
+          System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {systemRoles.length}</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+          {systemRoles.map(r => <RoleCard key={r.id} role={r} onSelect={setSelected} />)}
+        </div>
+      </div>
+
+      {/* Custom roles */}
+      <div>
+        <div style={{
+          fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em",
+          color: "var(--muted-foreground)", marginBottom: 10,
+        }}>
+          Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {customRoles.length}</span>
+        </div>
+        {customRoles.length === 0 ? (
+          <div style={{
+            border: "1.5px dashed var(--border)", borderRadius: 12, padding: "36px 24px",
+            textAlign: "center", color: "var(--muted-foreground)",
+          }}>
+            <Icons.ShieldPlus size={24} style={{ opacity: 0.3, marginBottom: 8 }} />
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>No custom roles yet</div>
+            <div style={{ fontSize: 12 }}>Create a role to bundle specific permissions and assign them to members</div>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+            {customRoles.map(r => <RoleCard key={r.id} role={r} onSelect={setSelected} />)}
+          </div>
+        )}
+      </div>
+
+      {selected && (
+        <RoleDetail role={selected} onClose={() => setSelected(null)} />
+      )}
+    </>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PeopleAccessMembersScreen() {
+  const [mainTab, setMainTab]           = useState<"members" | "roles">("members")
   const [statusFilter, setStatusFilter] = useState("all")
   const [query, setQuery]               = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
@@ -784,65 +1118,98 @@ export function PeopleAccessMembersScreen() {
           <Header
             size={isScrolled ? "compress" : "size-l"}
             title="People & Access"
-            description={`${counts.all} members · Avance Financial workspace`}
+            description={mainTab === "members"
+              ? `${counts.all} members · Avance Financial workspace`
+              : `${ROLES.length} roles · ${ROLES.filter(r => !r.system).length} custom`}
             primaryAction={
-              <Button variant="primary" size="sm">
-                <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
-                Invite member
-              </Button>
+              mainTab === "members" ? (
+                <Button variant="primary" size="sm">
+                  <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
+                  Invite member
+                </Button>
+              ) : (
+                <Button variant="primary" size="sm">
+                  <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
+                  New role
+                </Button>
+              )
             }
           />
         )}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        {/* Main tab switcher: Members | Roles */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
           <SwitchTab
             items={[
-              { id: "all",       label: `All (${counts.all})`             },
-              { id: "active",    label: `Active (${counts.active})`       },
-              { id: "invited",   label: `Invited (${counts.invited})`     },
-              { id: "suspended", label: `Suspended (${counts.suspended})` },
+              { id: "members", label: `Members (${counts.all})` },
+              { id: "roles",   label: `Roles (${ROLES.length})`  },
             ]}
-            value={statusFilter}
-            onChange={setStatusFilter}
+            value={mainTab}
+            onChange={v => setMainTab(v as "members" | "roles")}
             size="s"
           />
-          <div style={{ marginLeft: "auto", width: 240 }}>
-            <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search members…" />
-          </div>
-        </div>
 
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden" }}>
-          <div style={{
-            padding: "10px 20px 10px 68px", display: "flex", alignItems: "center", gap: 14,
-            background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
-            fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)",
-            textTransform: "uppercase", letterSpacing: "0.07em",
-          }}>
-            <span style={{ flex: 1 }}>Member</span>
-            <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
-            <span style={{ minWidth: 76, textAlign: "center" }}>Status</span>
-            <span style={{ width: 15 }} />
-          </div>
-
-          {filtered.length === 0 ? (
-            <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
-              <Icons.SearchX size={28} style={{ marginBottom: 10, opacity: 0.35 }} />
-              <div style={{ fontSize: 14, fontWeight: 500 }}>No members match</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Try a different filter or search term</div>
-            </div>
-          ) : (
-            filtered.map(m => <MemberRow key={m.id} member={m} onSelect={setSelected} />)
+          {/* Member sub-filters — only on Members tab */}
+          {mainTab === "members" && (
+            <>
+              <SwitchTab
+                items={[
+                  { id: "all",       label: `All (${counts.all})`             },
+                  { id: "active",    label: `Active (${counts.active})`       },
+                  { id: "invited",   label: `Invited (${counts.invited})`     },
+                  { id: "suspended", label: `Suspended (${counts.suspended})` },
+                ]}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                size="s"
+              />
+              <div style={{ marginLeft: "auto", width: 240 }}>
+                <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search members…" />
+              </div>
+            </>
           )}
         </div>
 
-        {filtered.length > 0 && (
-          <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted-foreground)", textAlign: "right" }}>
-            Showing {filtered.length} of {members.length} members
-          </div>
+        {/* Members view */}
+        {mainTab === "members" && (
+          <>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden" }}>
+              <div style={{
+                padding: "10px 20px 10px 68px", display: "flex", alignItems: "center", gap: 14,
+                background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
+                fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)",
+                textTransform: "uppercase", letterSpacing: "0.07em",
+              }}>
+                <span style={{ flex: 1 }}>Member</span>
+                <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
+                <span style={{ minWidth: 76, textAlign: "center" }}>Status</span>
+                <span style={{ width: 15 }} />
+              </div>
+
+              {filtered.length === 0 ? (
+                <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
+                  <Icons.SearchX size={28} style={{ marginBottom: 10, opacity: 0.35 }} />
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>No members match</div>
+                  <div style={{ fontSize: 12, marginTop: 4 }}>Try a different filter or search term</div>
+                </div>
+              ) : (
+                filtered.map(m => <MemberRow key={m.id} member={m} onSelect={setSelected} />)
+              )}
+            </div>
+
+            {filtered.length > 0 && (
+              <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted-foreground)", textAlign: "right" }}>
+                Showing {filtered.length} of {members.length} members
+              </div>
+            )}
+          </>
         )}
+
+        {/* Roles view */}
+        {mainTab === "roles" && <RolesView />}
       </ScreenLayout>
 
-      {selected && (
+      {selected && mainTab === "members" && (
         <MemberDetail
           member={selected}
           onClose={() => setSelected(null)}
