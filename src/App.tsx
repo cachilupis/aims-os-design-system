@@ -80,6 +80,7 @@ import { ChatWorkflowConfigScreen }           from "./screens/chat-workflow-conf
 import { WorkflowsListScreen }               from "./screens/workflows-list"
 import { PeopleAccessMembersScreen }         from "./screens/PeopleAccessMembers"
 import { AdminAuditLogScreen }              from "./screens/AdminAuditLog"
+import { AdminSecurityScreen }             from "./screens/AdminSecurity"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -150,6 +151,7 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", component: WorkflowsListScreen },
   { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", component: PeopleAccessMembersScreen },
   { id: "proto-admin-audit-log",         label: "Admin — Audit Log",            description: "Workspace-level audit log: 50 events across 7 categories (Auth, Access, Members, Content, Agents, Integrations, Settings), right-panel event detail, filter by category/result/actor, search, and pagination", author: "Thomas", component: AdminAuditLogScreen },
+  { id: "proto-admin-security",          label: "Admin — Security",             description: "Security posture score, MFA policy (Off/Recommended/Required), SSO/SAML config, session timeout + device binding, IP allowlist management, and recent security alerts panel", author: "Thomas", component: AdminSecurityScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
