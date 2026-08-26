@@ -374,6 +374,72 @@ Structure content top-to-bottom in this order:
 
 **Quick decision:** Is the panel overlapping a browsable list? → `SlideOut`. Is it embedded alongside a canvas or builder where the user edits something in context? → `SidePanel`.
 
+### Create pattern — surface selection
+
+Full rule, reasoning, and open questions live in `docs/patterns/create.md`. This section is the enforceable subset — tables and hard rules only.
+
+**Create** brings a new object into existence. **Configure** edits the properties of something that already exists. This pattern governs Create only, never Configure.
+
+**Gate 0 — does this pattern apply at all?**
+
+| Condition | Why it is excluded | What governs it instead |
+| --- | --- | --- |
+| The object is created by direct manipulation — drag, drop, draw | Dropping the node onto the canvas already created it | Configure pattern (`SidePanel`) |
+| The object is created inside an ongoing agent conversation | The chat is the container; there is no surface to choose | Chat surface |
+| The action edits properties of an existing object | Nothing new comes into existence | Configure pattern |
+
+**Gate 1 — which create mode?** The mode is decided by the affordance the user activates — never inferred.
+
+| Trigger | Mode | Surface |
+| --- | --- | --- |
+| Any standard create affordance | Manual | Run the cascade below |
+| A `Create with AI` affordance | Assisted | `ModalDialog` hosting the chat component → success `ModalDialog`. The chat component is `DS-GAP` — not implemented in this repo yet. |
+| Browse a catalogue — templates, marketplace, presets, starting points | From a source | `ModalDialog variant="content"` for the selection → then the cascade below, pre-filled |
+
+**When Create uses a modal.** `ModalDialog` is not excluded from Create — it has 3 jobs and 1 prohibition:
+
+| Job | Variant | Example |
+| --- | --- | --- |
+| Fill in a standalone create, 5 fields or fewer | `content` | A new entity from its own list view · a user in Admin |
+| Choose from a catalogue | `content` | Pick a template from the marketplace |
+| Converse with an agent | `content` | `Create with AI` |
+| Confirm before an irreversible save | `confirmation` | Publishing a tenant-wide policy |
+
+**Prohibition:** a modal never holds a form whose fields depend on what the modal is covering — if the user has to remember, compare against, or navigate the background to complete it, the surface is `SlideOut`, however few fields it has.
+
+The test that decides it: **can the user ignore this and keep working in the background?**
+
+| Task | Can it be ignored? | Surface |
+| --- | --- | --- |
+| Filling in fields that relate to what is on screen | Yes | `SlideOut` |
+| Filling in fields for a standalone object, 5 or fewer | No | `ModalDialog variant="content"` |
+| Choosing from a catalogue | No | `ModalDialog variant="content"` |
+| Conversing with an agent | No | `ModalDialog variant="content"` |
+| Confirming | No | `ModalDialog variant="confirmation"` |
+
+**The cascade — manual create.** A sequence, not a lookup table: start at step 1, stop at the first "yes."
+
+| Step | Test | Yes | No |
+| --- | --- | --- | --- |
+| 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | Dedicated view | → 2 |
+| 2 | Does the flow branch, or does it have 3+ stages? | Dedicated view + `Stepper` + `StepperNavFooter` | → 3 |
+| 3 | Can the object be created from a single field, AND is a list of the same object type visible on screen? | Inline create row — `DS-GAP`, does not exist in this repo yet | → 4 |
+| 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | `SlideOut type="default"` | → 5 |
+| 5 | More than 5 fields? | Dedicated view | `ModalDialog variant="content"` |
+
+Steps 4–5, stated as one rule: **contextual** (the new object hangs off something on screen) → `SlideOut type="default"`. **Standalone** (nothing on screen is its parent) → `ModalDialog variant="content"` at 5 fields or fewer, dedicated view above that. The 5-field threshold applies ONLY here (standalone, modal-bound) — never to a `SlideOut`, which grows with its content instead.
+
+**Staged flows — where the line sits.**
+
+| Shape of the flow | Surface |
+| --- | --- |
+| One stage | `SlideOut` |
+| Two stages, no branching | `SlideOut`, optionally with a lightweight step indicator |
+| Three or more stages | Dedicated view + `Stepper` + `StepperNavFooter` |
+| Any branching, at any stage count | Dedicated view + `Stepper` + `StepperNavFooter` |
+
+`StepperNavFooter` is a page-level component — it never appears inside a `SlideOut`.
+
 ### Confirmation modals — standard composition
 Use `variant="confirmation"` (the default) on `ModalDialog`. Always set `tone` to match the severity of the action:
 
