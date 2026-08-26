@@ -81,6 +81,7 @@ import { WorkflowsListScreen }               from "./screens/workflows-list"
 import { PeopleAccessMembersScreen }         from "./screens/PeopleAccessMembers"
 import { AdminAuditLogScreen }              from "./screens/AdminAuditLog"
 import { AdminSecurityScreen }             from "./screens/AdminSecurity"
+import { AdminOverviewScreen }            from "./screens/AdminOverview"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", component: PeopleAccessMembersScreen },
   { id: "proto-admin-audit-log",         label: "Admin — Audit Log",            description: "Workspace-level audit log: 50 events across 7 categories (Auth, Access, Members, Content, Agents, Integrations, Settings), right-panel event detail, filter by category/result/actor, search, and pagination", author: "Thomas", component: AdminAuditLogScreen },
   { id: "proto-admin-security",          label: "Admin — Security",             description: "Security posture score, MFA policy (Off/Recommended/Required), SSO/SAML config, session timeout + device binding, IP allowlist management, and recent security alerts panel", author: "Thomas", component: AdminSecurityScreen },
+  { id: "proto-admin-overview",          label: "Admin — Overview",             description: "Admin console home: 4 KPI tiles (members, integrations, AI workers, security score), recent activity feed with category badges, quick-actions grid, system status with latency, and monthly usage bars", author: "Thomas", component: AdminOverviewScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
