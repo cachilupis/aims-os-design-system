@@ -5,7 +5,8 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { Input }        from "@/components/ui/input"
-import { SwitchTab }    from "@/components/ui/switch-tab"
+import { Tabs }         from "@/components/ui/tabs"
+import { Chip }         from "@/components/ui/chip"
 import { SlideOut }     from "@/components/ui/slide-out"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -2326,46 +2327,39 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       )}
     >
       {/* Main tab switcher */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <SwitchTab
+      <div style={{ marginBottom: 20 }}>
+        <Tabs
           items={[
             { id: "members", label: `Members (${counts.all})` },
             { id: "roles",   label: `Roles (${ROLES.length})`  },
             { id: "groups",  label: `Groups (${GROUPS.length})` },
           ]}
-          value={mainTab}
+          activeId={mainTab}
           onChange={v => setMainTab(v as "members" | "roles" | "groups")}
           size="s"
         />
 
         {mainTab === "members" && (
-          <>
-            <div style={{ display: "flex", gap: 6 }}>
-              {([
-                { id: "all",       label: `All (${counts.all})`             },
-                { id: "active",    label: `Active (${counts.active})`       },
-                { id: "invited",   label: `Invited (${counts.invited})`     },
-                { id: "suspended", label: `Suspended (${counts.suspended})` },
-              ] as const).map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setStatusFilter(f.id)}
-                  style={{
-                    fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
-                    cursor: "pointer", border: "1px solid",
-                    background: statusFilter === f.id ? "var(--primary)" : "transparent",
-                    color: statusFilter === f.id ? "var(--primary-foreground)" : "var(--muted-foreground)",
-                    borderColor: statusFilter === f.id ? "var(--primary)" : "var(--border)",
-                  }}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
+            {([
+              { id: "all",       label: `All (${counts.all})`             },
+              { id: "active",    label: `Active (${counts.active})`       },
+              { id: "invited",   label: `Invited (${counts.invited})`     },
+              { id: "suspended", label: `Suspended (${counts.suspended})` },
+            ] as const).map(f => (
+              <Chip
+                key={f.id}
+                size="s"
+                variant={statusFilter === f.id ? "primary" : "secondary"}
+                onClick={() => setStatusFilter(f.id)}
+              >
+                {f.label}
+              </Chip>
+            ))}
             <div style={{ marginLeft: "auto", width: 240 }}>
               <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search members…" />
             </div>
-          </>
+          </div>
         )}
       </div>
 
