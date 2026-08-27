@@ -39836,6 +39836,11 @@ export default function App() {
     // drops any part of the URL it isn't explicitly given, so the hash must
     // be re-appended every time or it's lost before the target page can read it.
     const hash = window.location.hash
+    const params = new URLSearchParams(window.location.search)
+    // Guard: React StrictMode double-invokes mount effects. Without this, the
+    // URL sync fires with the initial active="home" and clobbers a ?proto= deep-link
+    // before the deep-link effect's second invocation can read it.
+    if (active === "home" && params.get("proto")) return
     const isProto = PROTOTYPE_PAGES.some(p => p.id === active)
     if (isProto) {
       window.history.replaceState(null, "", `?proto=${active}${hash}`)
@@ -39844,7 +39849,7 @@ export default function App() {
       // usePageTab in src/lib/use-page-tab.ts, or HomePage's hand-rolled
       // equivalent) so a page's Overview/Playground/Reference deep-link
       // survives sidebar navigation instead of always resetting to Overview.
-      const currentTab = new URLSearchParams(window.location.search).get("tab")
+      const currentTab = params.get("tab")
       const tabSuffix  = currentTab ? `&tab=${currentTab}` : ""
       window.history.replaceState(null, "", `?page=${active}${tabSuffix}${hash}`)
     }
