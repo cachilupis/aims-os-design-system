@@ -1,21 +1,12 @@
 import { useState } from "react"
+import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
 import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
-import type { SidebarItem } from "@/components/ui/sidebar"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-const SIDEBAR: SidebarItem[] = [
-  { id: "overview",     label: "Overview",        icon: "LayoutDashboard" },
-  { id: "people",       label: "People & Access", icon: "Users"           },
-  { id: "studios",      label: "Studios",         icon: "Box"             },
-  { id: "integrations", label: "Integrations",    icon: "Plug"            },
-  { id: "security",     label: "Security",        icon: "Shield"          },
-  { id: "audit",        label: "Audit Log",       icon: "ClipboardList"   },
-  { id: "billing",      label: "Billing",         icon: "CreditCard"      },
-]
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
