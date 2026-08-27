@@ -172,57 +172,114 @@ function ActivityFeed() {
   )
 }
 
-// ─── Quick actions ────────────────────────────────────────────────────────────
+// ─── Needs attention ──────────────────────────────────────────────────────────
 
-interface QuickAction {
-  icon: React.ReactNode; label: string; desc: string; accent: string
+interface AttentionItem {
+  icon: React.ReactNode
+  severity: "error" | "warning" | "info"
+  title: string
+  desc: string
+  cta: string
 }
 
-const QUICK_ACTIONS: QuickAction[] = [
-  { icon: <Icons.UserPlus size={16} />,    label: "Invite member",        desc: "Add someone to the workspace",    accent: "#6366f1" },
-  { icon: <Icons.Plug size={16} />,        label: "Add integration",      desc: "Connect a data source or tool",   accent: "#0ea5e9" },
-  { icon: <Icons.Shield size={16} />,      label: "Review security",      desc: "Check your security posture",     accent: "#10b981" },
-  { icon: <Icons.ClipboardList size={16}/>,label: "View audit log",       desc: "See all workspace events",        accent: "#8b5cf6" },
-  { icon: <Icons.Bot size={16} />,         label: "Deploy AI worker",     desc: "Launch a new agentic workflow",   accent: "#06b6d4" },
-  { icon: <Icons.FileText size={16} />,    label: "Request data export",  desc: "Download workspace data archive", accent: "#f97316" },
+const ATTENTION_ITEMS: AttentionItem[] = [
+  {
+    icon: <Icons.Plug size={14} />,
+    severity: "error",
+    title: "Salesforce CRM disconnected",
+    desc: "OAuth token expired — data sync paused since 08:00",
+    cta: "Re-authenticate",
+  },
+  {
+    icon: <Icons.ShieldAlert size={14} />,
+    severity: "warning",
+    title: "10 members without MFA",
+    desc: "Your security policy requires MFA for all active members",
+    cta: "Review",
+  },
+  {
+    icon: <Icons.ShieldOff size={14} />,
+    severity: "warning",
+    title: "Security score: 50 / 100",
+    desc: "2 of 4 security checks are failing",
+    cta: "See checks",
+  },
+  {
+    icon: <Icons.CreditCard size={14} />,
+    severity: "info",
+    title: "AI tokens at 42% of limit",
+    desc: "4.2M of 10M tokens used — 8 days left in billing cycle",
+    cta: "View usage",
+  },
 ]
 
-function QuickActions() {
+const ATTENTION_META = {
+  error:   { color: "var(--badge-error)",   dot: "#ef4444" },
+  warning: { color: "var(--badge-alert)",   dot: "#f97316" },
+  info:    { color: "var(--badge-info)",    dot: "#6366f1" },
+}
+
+function NeedsAttention() {
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+  const visible = ATTENTION_ITEMS.filter(a => !dismissed.has(a.title))
+
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden" }}>
-      <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Quick actions</div>
+      <div style={{
+        padding: "14px 18px", borderBottom: "1px solid var(--border)",
+        background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Needs attention</div>
+        {visible.length > 0 && (
+          <span style={{
+            fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 100,
+            background: "var(--badge-error)15", color: "var(--badge-error)",
+          }}>{visible.length}</span>
+        )}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
-        {QUICK_ACTIONS.map((a, i) => {
-          const isLastRow = i >= QUICK_ACTIONS.length - 2
-          const isRight = i % 2 === 1
+      {visible.length === 0 ? (
+        <div style={{ padding: "28px 18px", textAlign: "center" }}>
+          <Icons.CheckCircle size={22} style={{ color: "var(--badge-success)", margin: "0 auto 8px" }} />
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>All clear</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>No pending items right now</div>
+        </div>
+      ) : (
+        visible.map((item, i) => {
+          const meta = ATTENTION_META[item.severity]
           return (
-            <button key={a.label} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
-              background: "none", border: "none", cursor: "pointer", textAlign: "left",
-              borderBottom: isLastRow ? "none" : "1px solid var(--border)",
-              borderRight: isRight ? "none" : "1px solid var(--border)",
-              transition: "background 0.1s",
-            }}
-              onMouseEnter={e => (e.currentTarget.style.background = "var(--accent)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "none")}
-            >
+            <div key={item.title} style={{
+              display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 18px",
+              borderBottom: i < visible.length - 1 ? "1px solid var(--border)" : "none",
+            }}>
               <div style={{
-                width: 30, height: 30, borderRadius: 7, flexShrink: 0,
-                background: `${a.accent}15`, color: a.accent,
-                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                background: `${meta.dot}15`, color: meta.color,
+                display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1,
               }}>
-                {a.icon}
+                {item.icon}
               </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{a.label}</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{a.desc}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", marginBottom: 1 }}>{item.title}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.4 }}>{item.desc}</div>
+                <button style={{
+                  marginTop: 6, fontSize: 11, fontWeight: 700, color: meta.color,
+                  background: "none", border: "none", padding: 0, cursor: "pointer",
+                }}>
+                  {item.cta} →
+                </button>
               </div>
-            </button>
+              <button
+                onClick={() => setDismissed(s => new Set([...s, item.title]))}
+                style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 2, flexShrink: 0 }}
+                onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
+                onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+              >
+                <Icons.X size={12} />
+              </button>
+            </div>
           )
-        })}
-      </div>
+        })
+      )}
     </div>
   )
 }
@@ -400,7 +457,7 @@ export function AdminOverviewScreen({ onNavigate }: { onNavigate?: (id: string) 
         {/* Right — actions + status + usage */}
         <div>
           <div style={{ marginBottom: 16 }}>
-            <QuickActions />
+            <NeedsAttention />
           </div>
           <div style={{ marginBottom: 16 }}>
             <SystemStatus />
