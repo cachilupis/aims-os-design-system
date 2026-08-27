@@ -16,6 +16,16 @@ type AuthType = "OAuth 2.0" | "API Key" | "Service Account" | "SAML" | "Basic Au
 
 interface SyncRun { ts: string; duration: string; records: string; status: "success" | "failure" | "warning" }
 
+interface Guardrails {
+  piiFields: string[]
+  allowedDownstream: string[]
+  blockedDownstream: string[]
+  accessLevel: "Read only" | "Read + Write" | "Write only"
+  retentionDays: number
+  schemaVersion: string
+  fieldExclusions: string[]
+}
+
 interface Integration {
   id: string; name: string; category: string; icon: string
   status: IntegrationStatus; authType: AuthType
@@ -23,8 +33,11 @@ interface Integration {
   lastSync: string; nextSync: string
   syncFrequency: string; records: string
   description: string; website: string
+  dataScope: string[]
+  oauthScopes?: string[]
   errorMsg?: string
   history: SyncRun[]
+  guardrails: Guardrails
 }
 
 interface CatalogItem {
@@ -46,78 +59,158 @@ const INITIAL_CONNECTED: Integration[] = [
     id: "salesforce", name: "Salesforce CRM", category: "CRM", icon: "Building2",
     status: "error", authType: "OAuth 2.0",
     connectedBy: "Thomas Gonzalez", connectedAt: "Aug 25, 2026",
-    lastSync: "Aug 20, 08:00", nextSync: "—", syncFrequency: "Every 4 hours",
-    records: "0 (sync paused)", description: "Customer relationship management — contacts, opportunities, accounts, and activities.",
+    lastSync: "Aug 20 · 08:00", nextSync: "—", syncFrequency: "Every 4 hours",
+    records: "0 (sync paused)",
+    description: "Customer relationship management — contacts, opportunities, accounts, and activities.",
     website: "salesforce.com",
     errorMsg: "OAuth token expired. Re-authentication required to resume syncing.",
+    dataScope: ["Contacts", "Accounts", "Opportunities", "Activities", "Leads", "Cases"],
+    oauthScopes: ["read_opportunities", "read_accounts", "read_contacts", "read_leads", "read_cases", "offline_access"],
     history: [
-      { ts: "Aug 20 · 08:00", duration: "—",    records: "0",     status: "failure" },
+      { ts: "Aug 20 · 08:00", duration: "—",     records: "0",     status: "failure" },
       { ts: "Aug 20 · 04:00", duration: "2m 14s", records: "1,240", status: "success" },
       { ts: "Aug 20 · 00:00", duration: "2m 08s", records: "1,218", status: "success" },
+      { ts: "Aug 19 · 20:00", duration: "2m 01s", records: "1,195", status: "success" },
+      { ts: "Aug 19 · 16:00", duration: "1m 58s", records: "1,182", status: "success" },
     ],
+    guardrails: {
+      piiFields: ["Email", "Phone", "MobilePhone", "SSN__c"],
+      allowedDownstream: ["Sales Copilot", "Revenue Forecasting Agent"],
+      blockedDownstream: ["Public Reporting", "External APIs"],
+      accessLevel: "Read only",
+      retentionDays: 90,
+      schemaVersion: "v2.4.1",
+      fieldExclusions: ["Description", "Internal_Notes__c", "Compensation__c"],
+    },
   },
   {
     id: "databricks", name: "Databricks", category: "Data Platform", icon: "Layers",
     status: "active", authType: "Service Account",
     connectedBy: "Thomas Gonzalez", connectedAt: "Aug 25, 2026",
     lastSync: "Aug 26 · 09:30", nextSync: "Aug 26 · 13:30", syncFrequency: "Every 4 hours",
-    records: "2,341 records", description: "Unified analytics platform — Delta Lake, notebooks, and ML workflows.",
+    records: "2,341 records",
+    description: "Unified analytics platform — Delta Lake, notebooks, and ML workflow outputs for model feature stores.",
     website: "databricks.com",
+    dataScope: ["sales_delta", "ml_features", "notebook_outputs", "experiment_runs"],
     history: [
       { ts: "Aug 26 · 09:30", duration: "18s",   records: "2,341", status: "success" },
       { ts: "Aug 26 · 05:30", duration: "21s",   records: "2,289", status: "success" },
       { ts: "Aug 26 · 01:30", duration: "19s",   records: "2,310", status: "success" },
+      { ts: "Aug 25 · 21:30", duration: "17s",   records: "2,278", status: "success" },
+      { ts: "Aug 25 · 17:30", duration: "22s",   records: "2,261", status: "warning" },
     ],
+    guardrails: {
+      piiFields: [],
+      allowedDownstream: ["Data Studio Models", "Analytics Workers", "ML Pipeline Agent"],
+      blockedDownstream: ["Finance Copilot"],
+      accessLevel: "Read + Write",
+      retentionDays: 365,
+      schemaVersion: "v1.8.0",
+      fieldExclusions: [],
+    },
   },
   {
     id: "snowflake", name: "Snowflake", category: "Data Warehouse", icon: "Database",
     status: "active", authType: "Service Account",
     connectedBy: "Maria García", connectedAt: "Jul 15, 2026",
     lastSync: "Aug 26 · 08:00", nextSync: "Aug 26 · 12:00", syncFrequency: "Every 4 hours",
-    records: "14,820 records", description: "Cloud data warehouse for structured and semi-structured data.",
+    records: "14,820 records",
+    description: "Cloud data warehouse for structured and semi-structured data across FINANCE, MARKETING, and OPS schemas.",
     website: "snowflake.com",
+    dataScope: ["FINANCE.DWH", "MARKETING.EVENTS", "OPS.LOGS", "SHARED.REFERENCE"],
     history: [
       { ts: "Aug 26 · 08:00", duration: "1m 32s", records: "14,820", status: "success" },
       { ts: "Aug 26 · 04:00", duration: "1m 28s", records: "14,711", status: "success" },
       { ts: "Aug 26 · 00:00", duration: "1m 35s", records: "14,690", status: "warning" },
+      { ts: "Aug 25 · 20:00", duration: "1m 30s", records: "14,655", status: "success" },
+      { ts: "Aug 25 · 16:00", duration: "1m 27s", records: "14,622", status: "success" },
     ],
+    guardrails: {
+      piiFields: ["CUSTOMER_EMAIL", "CUSTOMER_PHONE", "TAX_ID"],
+      allowedDownstream: ["Finance Copilot", "Reporting Worker", "Data Studio Models"],
+      blockedDownstream: ["Sales Copilot", "External APIs"],
+      accessLevel: "Read only",
+      retentionDays: 180,
+      schemaVersion: "v3.1.2",
+      fieldExclusions: ["CUSTOMER_EMAIL", "CUSTOMER_PHONE", "SALARY", "BENEFIT_DETAILS"],
+    },
   },
   {
     id: "sap", name: "SAP S/4HANA", category: "ERP", icon: "Factory",
     status: "active", authType: "Basic Auth",
     connectedBy: "Eduardo Suárez", connectedAt: "Jun 01, 2026",
     lastSync: "Aug 26 · 06:00", nextSync: "Aug 27 · 06:00", syncFrequency: "Daily",
-    records: "38,410 records", description: "Enterprise resource planning — GL, AR/AP, procurement, and inventory.",
+    records: "38,410 records",
+    description: "Enterprise resource planning — General Ledger, AR/AP, procurement, and inventory management.",
     website: "sap.com",
+    dataScope: ["GL Accounts", "AR / AP Transactions", "Purchase Orders", "Inventory", "Cost Centers"],
     history: [
       { ts: "Aug 26 · 06:00", duration: "4m 11s", records: "38,410", status: "success" },
       { ts: "Aug 25 · 06:00", duration: "4m 05s", records: "38,201", status: "success" },
       { ts: "Aug 24 · 06:00", duration: "3m 58s", records: "38,100", status: "success" },
+      { ts: "Aug 23 · 06:00", duration: "4m 02s", records: "37,988", status: "success" },
+      { ts: "Aug 22 · 06:00", duration: "3m 51s", records: "37,854", status: "success" },
     ],
+    guardrails: {
+      piiFields: ["VENDOR_CONTACT", "EMPLOYEE_ID", "BANK_ACCOUNT"],
+      allowedDownstream: ["Finance Copilot", "Procurement Agent", "Audit Worker"],
+      blockedDownstream: ["Sales Copilot", "Marketing Analytics"],
+      accessLevel: "Read only",
+      retentionDays: 730,
+      schemaVersion: "v1.2.0",
+      fieldExclusions: ["VENDOR_CONTACT", "EMPLOYEE_ID", "BANK_ACCOUNT", "PAYMENT_TERMS_OVERRIDE"],
+    },
   },
   {
     id: "bigquery", name: "Google BigQuery", category: "Data Warehouse", icon: "BarChart2",
     status: "paused", authType: "Service Account",
     connectedBy: "Maria García", connectedAt: "May 10, 2026",
     lastSync: "Aug 15 · 12:00", nextSync: "—", syncFrequency: "Every 6 hours (paused)",
-    records: "—", description: "Serverless, multicloud data warehouse for analytics at scale.",
+    records: "—",
+    description: "Serverless, multicloud data warehouse for Google Analytics 4 events, ad conversions, and session data.",
     website: "cloud.google.com/bigquery",
+    dataScope: ["analytics.events", "analytics.sessions", "ads.conversions", "ads.campaigns"],
     history: [
       { ts: "Aug 15 · 12:00", duration: "3m 02s", records: "22,140", status: "success" },
       { ts: "Aug 15 · 06:00", duration: "3m 10s", records: "22,090", status: "success" },
+      { ts: "Aug 15 · 00:00", duration: "3m 05s", records: "22,010", status: "success" },
+      { ts: "Aug 14 · 18:00", duration: "2m 58s", records: "21,980", status: "success" },
     ],
+    guardrails: {
+      piiFields: ["user_id", "ip_address", "user_pseudo_id"],
+      allowedDownstream: ["Marketing Analytics", "Campaign Performance Worker"],
+      blockedDownstream: ["Finance Copilot", "Sales Copilot", "Audit Worker"],
+      accessLevel: "Read only",
+      retentionDays: 60,
+      schemaVersion: "v2.0.0",
+      fieldExclusions: ["user_id", "ip_address", "geo_city", "geo_region"],
+    },
   },
   {
     id: "teams", name: "Microsoft Teams", category: "Collaboration", icon: "MessageSquare",
     status: "active", authType: "OAuth 2.0",
     connectedBy: "Thomas Gonzalez", connectedAt: "Aug 10, 2026",
     lastSync: "Aug 26 · 09:00", nextSync: "Aug 26 · 10:00", syncFrequency: "Hourly",
-    records: "Webhook only", description: "Team chat and collaboration — AIMS-OS sends alerts and HITL notifications.",
+    records: "Webhook only",
+    description: "Team chat and collaboration — AIMS-OS sends HITL alerts, agent escalations, and system notifications.",
     website: "teams.microsoft.com",
+    dataScope: ["Webhook delivery only — no data ingest"],
+    oauthScopes: ["ChannelMessage.Send", "Chat.Create", "TeamsActivity.Send", "Group.ReadWrite.All"],
     history: [
       { ts: "Aug 26 · 09:00", duration: "< 1s", records: "3 webhooks", status: "success" },
       { ts: "Aug 26 · 08:00", duration: "< 1s", records: "1 webhook",  status: "success" },
+      { ts: "Aug 26 · 07:00", duration: "< 1s", records: "2 webhooks", status: "success" },
+      { ts: "Aug 26 · 06:00", duration: "< 1s", records: "0 webhooks", status: "success" },
     ],
+    guardrails: {
+      piiFields: [],
+      allowedDownstream: ["HITL Notification Engine", "Alert Dispatcher", "Escalation Worker"],
+      blockedDownstream: ["Data Studio Models", "External APIs"],
+      accessLevel: "Write only",
+      retentionDays: 30,
+      schemaVersion: "v1.0.0",
+      fieldExclusions: [],
+    },
   },
 ]
 
@@ -143,6 +236,33 @@ const CATALOG: CatalogItem[] = [
 const CATALOG_CATEGORIES = ["All", "CRM", "Data Warehouse", "Database", "Storage", "Analytics", "Collaboration", "Project Mgmt", "Knowledge Base", "Developer Tools", "Data Transform", "Support", "Payments", "Email"]
 
 // ─── Operate panel ────────────────────────────────────────────────────────────
+
+function MetaRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", gap: 12, padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
+      <span style={{ width: 130, flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", paddingTop: 1 }}>{label}</span>
+      <span style={{ fontSize: 13, color: "var(--foreground)", flex: 1 }}>{value}</span>
+    </div>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 8, marginTop: 20 }}>{children}</div>
+  )
+}
+
+function Pill({ children, color }: { children: React.ReactNode; color?: string }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 600,
+      padding: "2px 8px", borderRadius: 20, marginRight: 4, marginBottom: 4,
+      background: color ? `${color}18` : "var(--surface-raised)",
+      color: color ?? "var(--muted-foreground)",
+      border: `1px solid ${color ? `${color}30` : "var(--border)"}`,
+    }}>{children}</span>
+  )
+}
 
 function OperatePanel({ integration, onAction }: {
   integration: Integration
@@ -191,9 +311,10 @@ function OperatePanel({ integration, onAction }: {
       <div style={{ padding: "0 20px", borderBottom: "1px solid var(--border)" }}>
         <Tabs
           items={[
-            { id: "overview", label: "Overview"    },
-            { id: "history",  label: "Sync history" },
-            { id: "creds",    label: "Credentials"  },
+            { id: "overview",    label: "Overview"    },
+            { id: "history",     label: "Sync history" },
+            { id: "guardrails",  label: "Guardrails"  },
+            { id: "creds",       label: "Credentials" },
           ]}
           activeId={activeTab}
           onChange={setActiveTab}
@@ -203,24 +324,32 @@ function OperatePanel({ integration, onAction }: {
 
       {/* Panel body */}
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+
+        {/* ── OVERVIEW ── */}
         {activeTab === "overview" && (
           <>
-            {[
-              ["Authentication",    integration.authType],
-              ["Connected by",     integration.connectedBy],
-              ["Connected on",     integration.connectedAt],
-              ["Sync frequency",   integration.syncFrequency],
-              ["Last sync",        integration.lastSync],
-              ["Next sync",        integration.nextSync],
-              ["Records synced",   integration.records],
-            ].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", gap: 12, padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
-                <span style={{ width: 130, flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", paddingTop: 1 }}>{k}</span>
-                <span style={{ fontSize: 13, color: "var(--foreground)" }}>{v}</span>
-              </div>
-            ))}
+            {/* Description */}
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6, marginBottom: 4, paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
+              {integration.description}
+            </div>
 
-            <div style={{ marginTop: 20 }}>
+            <MetaRow label="Authentication" value={integration.authType} />
+            <MetaRow label="Connected by"  value={integration.connectedBy} />
+            <MetaRow label="Connected on"  value={integration.connectedAt} />
+            <MetaRow label="Sync frequency" value={integration.syncFrequency} />
+            <MetaRow label="Last sync"     value={integration.lastSync} />
+            <MetaRow label="Next sync"     value={integration.nextSync} />
+            <MetaRow label="Records synced" value={integration.records} />
+            <MetaRow label="Website"       value={
+              <span style={{ color: "var(--primary)" }}>{integration.website}</span>
+            } />
+
+            <SectionLabel>Data scope</SectionLabel>
+            <div style={{ paddingBottom: 4 }}>
+              {integration.dataScope.map(s => <Pill key={s}>{s}</Pill>)}
+            </div>
+
+            <div style={{ marginTop: 24 }}>
               {confirmDisconnect ? (
                 <div style={{ padding: "14px", borderRadius: 8, background: "var(--badge-error)08", border: "1px solid var(--badge-error)30" }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>
@@ -231,8 +360,7 @@ function OperatePanel({ integration, onAction }: {
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <Button
-                      variant="main"
-                      size="sm"
+                      variant="main" size="sm"
                       style={{ background: "var(--badge-error)", border: "none" }}
                       onClick={() => onAction(integration.id, "disconnect")}
                     >
@@ -243,8 +371,7 @@ function OperatePanel({ integration, onAction }: {
                 </div>
               ) : (
                 <Button
-                  variant="secondary"
-                  size="sm"
+                  variant="secondary" size="sm"
                   style={{ color: "var(--badge-error)", borderColor: "var(--badge-error)40" }}
                   onClick={() => setConfirmDisconnect(true)}
                 >
@@ -256,17 +383,17 @@ function OperatePanel({ integration, onAction }: {
           </>
         )}
 
+        {/* ── SYNC HISTORY ── */}
         {activeTab === "history" && (
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Sync runs</div>
+            <SectionLabel>Sync runs</SectionLabel>
             {integration.history.map((run, i) => {
               const c = run.status === "success" ? "var(--badge-success)" : run.status === "failure" ? "var(--badge-error)" : "var(--badge-alert)"
               return (
-                <div key={i} style={{
-                  padding: "10px 0", borderBottom: "1px solid var(--border)",
-                  display: "flex", alignItems: "center", gap: 10,
-                }}>
-                  <div style={{ color: c }}>{run.status === "success" ? <Icons.CheckCircle size={14} /> : run.status === "failure" ? <Icons.XCircle size={14} /> : <Icons.AlertTriangle size={14} />}</div>
+                <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ color: c }}>
+                    {run.status === "success" ? <Icons.CheckCircle size={14} /> : run.status === "failure" ? <Icons.XCircle size={14} /> : <Icons.AlertTriangle size={14} />}
+                  </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{run.ts}</div>
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{run.records} · {run.duration}</div>
@@ -280,16 +407,100 @@ function OperatePanel({ integration, onAction }: {
           </div>
         )}
 
+        {/* ── GUARDRAILS ── */}
+        {activeTab === "guardrails" && (() => {
+          const g = integration.guardrails
+          return (
+            <div>
+              {/* Access level */}
+              <div style={{ padding: "12px 14px", borderRadius: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 3 }}>Access level</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{g.accessLevel}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 3 }}>Schema version</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{g.schemaVersion}</div>
+                </div>
+              </div>
+
+              {/* Retention */}
+              <MetaRow label="Data retention" value={`${g.retentionDays} days`} />
+
+              {/* PII fields */}
+              <SectionLabel>PII fields masked</SectionLabel>
+              {g.piiFields.length === 0 ? (
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>No PII fields detected for this integration.</div>
+              ) : (
+                <div>{g.piiFields.map(f => <Pill key={f} color="var(--badge-error)">{f}</Pill>)}</div>
+              )}
+
+              {/* Field exclusions */}
+              <SectionLabel>Excluded fields</SectionLabel>
+              {g.fieldExclusions.length === 0 ? (
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>No field exclusions configured.</div>
+              ) : (
+                <div>{g.fieldExclusions.map(f => <Pill key={f} color="var(--badge-alert)">{f}</Pill>)}</div>
+              )}
+
+              {/* Allowed downstream */}
+              <SectionLabel>Allowed downstream consumers</SectionLabel>
+              <div>{g.allowedDownstream.map(d => <Pill key={d} color="var(--badge-success)">{d}</Pill>)}</div>
+
+              {/* Blocked downstream */}
+              <SectionLabel>Blocked downstream consumers</SectionLabel>
+              {g.blockedDownstream.length === 0 ? (
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>No downstream blocks configured.</div>
+              ) : (
+                <div>{g.blockedDownstream.map(d => <Pill key={d} color="var(--badge-error)">{d}</Pill>)}</div>
+              )}
+
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
+                  Guardrails are managed in <span style={{ color: "var(--primary)", fontWeight: 600 }}>Governance Studio</span>. Changes take effect on the next sync run.
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* ── CREDENTIALS ── */}
         {activeTab === "creds" && (
           <div>
-            <div style={{ padding: "12px 14px", borderRadius: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 6 }}>Authentication</div>
+            <div style={{ padding: "12px 14px", borderRadius: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 6 }}>Authentication method</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{integration.authType}</div>
               <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 {integration.status === "error" ? "Token expired — rotation required" : "Credentials valid · Last rotated Aug 25, 2026"}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+
+            {integration.oauthScopes && integration.oauthScopes.length > 0 && (
+              <>
+                <SectionLabel>Granted OAuth scopes</SectionLabel>
+                <div style={{ marginBottom: 16 }}>
+                  {integration.oauthScopes.map(s => <Pill key={s}>{s}</Pill>)}
+                </div>
+              </>
+            )}
+
+            {integration.authType === "Service Account" && (
+              <>
+                <MetaRow label="Key type" value="JSON service account" />
+                <MetaRow label="Key ID"   value={<span style={{ fontFamily: "monospace", fontSize: 12 }}>sa-{integration.id}-prod-8f3a</span>} />
+                <MetaRow label="Expires"  value="Never (manual rotation)" />
+              </>
+            )}
+
+            {integration.authType === "Basic Auth" && (
+              <>
+                <MetaRow label="Username" value={<span style={{ fontFamily: "monospace", fontSize: 12 }}>aims_sync_user</span>} />
+                <MetaRow label="Password" value="••••••••••••" />
+                <MetaRow label="Expires"  value="Sep 01, 2027" />
+              </>
+            )}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
               <Button
                 variant={integration.status === "error" ? "main" : "secondary"}
                 size="sm"
@@ -300,10 +511,11 @@ function OperatePanel({ integration, onAction }: {
               >
                 {rotatingCreds ? "Rotating…" : integration.status === "error" ? "Re-authenticate" : "Rotate credentials"}
               </Button>
-              <Button variant="secondary" size="sm">View scopes</Button>
+              <Button variant="secondary" size="sm">Download audit log</Button>
             </div>
           </div>
         )}
+
       </div>
     </>
   )
@@ -852,9 +1064,9 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       </div>
 
       {tab === "connected" && (
-        <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", minHeight: 360 }}>
           {/* Left list */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", borderRight: selected ? "1px solid var(--border)" : "none" }}>
             {/* Toolbar: search + status filter */}
             <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
               <div style={{ position: "relative", marginBottom: 10 }}>
@@ -909,18 +1121,30 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
               ))
             )}
           </div>
+
+          {/* Right: inline detail panel */}
+          {selected && (
+            <div style={{ width: 380, flexShrink: 0, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+              {/* Panel header */}
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.3 }}>{selected.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 3 }}>
+                    {selected.category} · <span style={{ color: STATUS_META[selected.status].color }}>{STATUS_META[selected.status].label}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelected(null)}
+                  style={{ flexShrink: 0, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}
+                >
+                  <Icons.X size={14} />
+                </button>
+              </div>
+              <OperatePanel integration={selected} onAction={handleAction} />
+            </div>
+          )}
         </div>
       )}
-
-      <SlideOut
-        type="full-slot"
-        open={selected !== null && tab === "connected"}
-        onClose={() => setSelected(null)}
-        title={selected?.name ?? ""}
-        subtitle={selected ? `${selected.category} · ${STATUS_META[selected.status].label}` : ""}
-      >
-        {selected && <OperatePanel integration={selected} onAction={handleAction} />}
-      </SlideOut>
 
       {tab === "catalog" && (
         <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
