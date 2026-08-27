@@ -30,7 +30,8 @@ interface Integration {
 }
 
 interface CatalogItem {
-  id: string; name: string; category: string; icon: string; description: string; popular?: boolean
+  id: string; name: string; category: string; icon: string; description: string
+  authType: string; popular?: boolean
 }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -123,23 +124,25 @@ const CONNECTED: Integration[] = [
 ]
 
 const CATALOG: CatalogItem[] = [
-  { id: "hubspot",    name: "HubSpot",        category: "CRM",              icon: "Megaphone", description: "Inbound marketing and sales CRM.", popular: true },
-  { id: "jira",       name: "Jira",           category: "Project Mgmt",     icon: "Kanban", description: "Issue and project tracking for dev teams." },
-  { id: "slack",      name: "Slack",          category: "Collaboration",    icon: "MessageCircle", description: "Team messaging and workflow automation.", popular: true },
-  { id: "notion",     name: "Notion",         category: "Knowledge Base",   icon: "BookOpen", description: "Docs, wikis, and databases in one tool." },
-  { id: "postgres",   name: "PostgreSQL",     category: "Database",         icon: "Database", description: "Open-source relational database.", popular: true },
-  { id: "mysql",      name: "MySQL",          category: "Database",         icon: "Database", description: "World's most popular open-source database." },
-  { id: "mongo",      name: "MongoDB",        category: "Database",         icon: "Database", description: "Document database for modern apps." },
-  { id: "s3",         name: "AWS S3",         category: "Storage",          icon: "HardDrive",    description: "Object storage for any type of data.", popular: true },
-  { id: "azure",      name: "Azure Blob",     category: "Storage",          icon: "Cloud", description: "Massively scalable cloud object storage." },
-  { id: "tableau",    name: "Tableau",        category: "Analytics",        icon: "BarChart", description: "Visual analytics and business intelligence." },
-  { id: "powerbi",    name: "Power BI",       category: "Analytics",        icon: "PieChart",     description: "Microsoft business analytics service." },
-  { id: "dbt",        name: "dbt",            category: "Data Transform",   icon: "GitBranch", description: "Data transformation for analytics engineering." },
-  { id: "github",     name: "GitHub",         category: "Developer Tools",  icon: "GitBranch", description: "Code hosting, CI/CD, and collaboration." },
-  { id: "zendesk",    name: "Zendesk",        category: "Support",          icon: "Headphones", description: "Customer support ticketing platform." },
-  { id: "stripe",     name: "Stripe",         category: "Payments",         icon: "CreditCard", description: "Payment processing and financial infrastructure." },
-  { id: "sendgrid",   name: "SendGrid",       category: "Email",            icon: "Mail", description: "Email delivery and marketing platform." },
+  { id: "hubspot",    name: "HubSpot",        category: "CRM",              icon: "Megaphone",     authType: "OAuth 2.0",       description: "Inbound marketing, sales CRM, and pipeline management.", popular: true },
+  { id: "jira",       name: "Jira",           category: "Project Mgmt",     icon: "Kanban",        authType: "OAuth 2.0",       description: "Issue and project tracking for engineering and product teams." },
+  { id: "slack",      name: "Slack",          category: "Collaboration",    icon: "MessageCircle", authType: "OAuth 2.0",       description: "Team messaging and workflow automation via webhooks.", popular: true },
+  { id: "notion",     name: "Notion",         category: "Knowledge Base",   icon: "BookOpen",      authType: "API Key",         description: "Docs, wikis, and databases unified in one workspace." },
+  { id: "postgres",   name: "PostgreSQL",     category: "Database",         icon: "Database",      authType: "Service Account", description: "Open-source relational database for structured data.", popular: true },
+  { id: "mysql",      name: "MySQL",          category: "Database",         icon: "Database",      authType: "Service Account", description: "World's most widely deployed open-source database." },
+  { id: "mongo",      name: "MongoDB",        category: "Database",         icon: "Database",      authType: "Service Account", description: "Document database designed for modern application data." },
+  { id: "s3",         name: "AWS S3",         category: "Storage",          icon: "HardDrive",     authType: "Service Account", description: "Scalable object storage for any volume of unstructured data.", popular: true },
+  { id: "azure",      name: "Azure Blob",     category: "Storage",          icon: "Cloud",         authType: "Service Account", description: "Massively scalable cloud object storage from Microsoft." },
+  { id: "tableau",    name: "Tableau",        category: "Analytics",        icon: "BarChart",      authType: "API Key",         description: "Visual analytics and interactive business intelligence dashboards." },
+  { id: "powerbi",    name: "Power BI",       category: "Analytics",        icon: "PieChart",      authType: "OAuth 2.0",       description: "Microsoft business analytics and reporting service." },
+  { id: "dbt",        name: "dbt",            category: "Data Transform",   icon: "GitBranch",     authType: "API Key",         description: "SQL-based data transformation for analytics engineering." },
+  { id: "github",     name: "GitHub",         category: "Developer Tools",  icon: "GitBranch",     authType: "OAuth 2.0",       description: "Code hosting, CI/CD pipelines, and team collaboration." },
+  { id: "zendesk",    name: "Zendesk",        category: "Support",          icon: "Headphones",    authType: "OAuth 2.0",       description: "Customer support ticketing, macros, and SLA management." },
+  { id: "stripe",     name: "Stripe",         category: "Payments",         icon: "CreditCard",    authType: "API Key",         description: "Payment processing, subscriptions, and financial reporting." },
+  { id: "sendgrid",   name: "SendGrid",       category: "Email",            icon: "Mail",          authType: "API Key",         description: "Transactional email delivery and marketing campaigns." },
 ]
+
+const CATALOG_CATEGORIES = ["All", "CRM", "Data Warehouse", "Database", "Storage", "Analytics", "Collaboration", "Project Mgmt", "Knowledge Base", "Developer Tools", "Data Transform", "Support", "Payments", "Email"]
 
 // ─── Operate panel ────────────────────────────────────────────────────────────
 
@@ -312,101 +315,282 @@ function IntegrationRow({ integration, selected, onClick }: {
   )
 }
 
-// ─── Catalog grid ─────────────────────────────────────────────────────────────
+// ─── Catalog detail panel ─────────────────────────────────────────────────────
 
-const CAT_FILTERS = ["All", "CRM", "Data Warehouse", "Database", "Storage", "Analytics", "Collaboration", "Developer Tools"]
+function CatalogDetailPanel({ item, connected, onConnect }: {
+  item: CatalogItem; connected: boolean; onConnect: () => void
+}) {
+  const [step, setStep] = useState<"info" | "config" | "done">("info")
+  const [apiKey, setApiKey] = useState("")
 
-function CatalogView({ onConnect }: { onConnect?: (id: string) => void }) {
+  const IC = Icons[item.icon as keyof typeof Icons] as React.ElementType
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "8px 12px", fontSize: 13, borderRadius: 8,
+    border: "1px solid var(--border)", background: "var(--surface)",
+    color: "var(--foreground)", outline: "none",
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto" }}>
+      {/* Header identity */}
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", gap: 14, alignItems: "center" }}>
+        <div style={{ width: 44, height: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, background: "var(--surface-raised)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+          {IC ? <IC size={22} /> : null}
+        </div>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>{item.name}</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>
+            {item.category} · {item.authType}
+          </div>
+        </div>
+        {connected && (
+          <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 100, background: "var(--badge-success)18", color: "var(--badge-success)", border: "1px solid var(--badge-success)30" }}>
+            Connected
+          </span>
+        )}
+      </div>
+
+      <div style={{ flex: 1, padding: "16px 20px" }}>
+        {step === "info" && (
+          <>
+            <div style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.6, marginBottom: 20 }}>{item.description}</div>
+
+            {[
+              ["Category",         item.category],
+              ["Authentication",   item.authType],
+              ["Sync direction",   "Read + Write"],
+              ["Setup time",       "~5 minutes"],
+            ].map(([k, v]) => (
+              <div key={k} style={{ display: "flex", gap: 12, padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
+                <span style={{ width: 130, flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", paddingTop: 1 }}>{k}</span>
+                <span style={{ fontSize: 13, color: "var(--foreground)" }}>{v}</span>
+              </div>
+            ))}
+
+            <div style={{ marginTop: 20 }}>
+              {connected
+                ? <Button variant="secondary" size="sm" style={{ color: "var(--badge-error)", borderColor: "var(--badge-error)40" }}>
+                    <Icons.Unplug size={13} style={{ marginRight: 4 }} />
+                    Disconnect
+                  </Button>
+                : <Button variant="main" size="sm" onClick={() => setStep("config")}>
+                    Connect {item.name}
+                  </Button>
+              }
+            </div>
+          </>
+        )}
+
+        {step === "config" && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>Connect {item.name}</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 20, lineHeight: 1.5 }}>
+              {item.authType === "OAuth 2.0"
+                ? "You'll be redirected to authorize AIMS-OS to access your account."
+                : `Provide your ${item.authType} credentials to establish the connection.`}
+            </div>
+
+            {item.authType !== "OAuth 2.0" && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>
+                  {item.authType === "API Key" ? "API key" : "Service account JSON"}
+                </div>
+                <input
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                  placeholder={item.authType === "API Key" ? "sk-…" : "Paste service account credentials"}
+                  style={inputStyle}
+                />
+              </div>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>Sync frequency</div>
+              <select style={{ ...inputStyle }}>
+                <option>Every hour</option>
+                <option>Every 4 hours</option>
+                <option>Daily</option>
+                <option>Weekly</option>
+              </select>
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button variant="main" size="sm" onClick={() => { onConnect(); setStep("done") }}>
+                {item.authType === "OAuth 2.0" ? "Authorize with " + item.name : "Connect"}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setStep("info")}>Cancel</Button>
+            </div>
+          </>
+        )}
+
+        {step === "done" && (
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--badge-success)18", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <Icons.CheckCircle size={24} style={{ color: "var(--badge-success)" }} />
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{item.name} connected</div>
+            <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>First sync will run within the next few minutes.</div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Catalog / Marketplace ────────────────────────────────────────────────────
+
+function CatalogView() {
   const [catFilter, setCatFilter] = useState("All")
-  const [catQuery, setCatQuery] = useState("")
+  const [catQuery, setCatQuery]   = useState("")
+  const [selected, setSelected]   = useState<CatalogItem | null>(null)
   const [connected, setConnected] = useState<Set<string>>(new Set(CONNECTED.map(c => c.id)))
 
   const filtered = CATALOG.filter(c =>
     (catFilter === "All" || c.category === catFilter) &&
-    (c.name.toLowerCase().includes(catQuery.toLowerCase()) || c.category.toLowerCase().includes(catQuery.toLowerCase()))
+    (c.name.toLowerCase().includes(catQuery.toLowerCase()) ||
+     c.category.toLowerCase().includes(catQuery.toLowerCase()))
   )
 
+  const popular = CATALOG.filter(c => c.popular && (catFilter === "All" || c.category === catFilter) && c.name.toLowerCase().includes(catQuery.toLowerCase()))
+
+  const IntIcon = ({ icon }: { icon: string }) => {
+    const IC = Icons[icon as keyof typeof Icons] as React.ElementType
+    return IC ? <IC size={18} /> : null
+  }
+
   return (
-    <div style={{ padding: "0 20px 20px" }}>
-      {/* Search + category filter */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 16, paddingTop: 20 }}>
-        <div style={{ position: "relative", flex: 1 }}>
+    <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
+      {/* Category sidebar */}
+      <div style={{ width: 160, flexShrink: 0, borderRight: "1px solid var(--border)", padding: "16px 0" }}>
+        {CATALOG_CATEGORIES.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setCatFilter(cat)}
+            style={{
+              display: "block", width: "100%", textAlign: "left",
+              padding: "6px 16px", fontSize: 12, fontWeight: catFilter === cat ? 700 : 500,
+              color: catFilter === cat ? "var(--primary)" : "var(--muted-foreground)",
+              background: catFilter === cat ? "var(--primary)10" : "none",
+              border: "none", cursor: "pointer", borderRadius: 0,
+              borderLeft: catFilter === cat ? "2px solid var(--primary)" : "2px solid transparent",
+            }}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex: 1, minWidth: 0, padding: "16px 20px", overflowY: "auto" }}>
+        {/* Search */}
+        <div style={{ position: "relative", marginBottom: 20 }}>
           <Icons.Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)", pointerEvents: "none" }} />
           <input
             value={catQuery}
             onChange={e => setCatQuery(e.target.value)}
             placeholder="Search integrations…"
             style={{
-              width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
+              width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8,
               fontSize: 13, border: "1px solid var(--border)", borderRadius: 8,
               background: "var(--surface)", color: "var(--foreground)", outline: "none",
             }}
           />
         </div>
-        <select
-          value={catFilter}
-          onChange={e => setCatFilter(e.target.value)}
-          style={{
-            padding: "7px 10px", fontSize: 12, borderRadius: 7, cursor: "pointer",
-            border: "1px solid var(--border)", background: "var(--surface)",
-            color: "var(--foreground)", outline: "none",
-          }}
-        >
-          {CAT_FILTERS.map(f => <option key={f}>{f}</option>)}
-        </select>
-      </div>
 
-      {/* Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-        {filtered.map(item => {
-          return (
-            <div key={item.id} style={{
-              padding: "16px", border: "1px solid var(--border)", borderRadius: 10,
-              background: "var(--surface-raised)",
-              display: "flex", flexDirection: "column", gap: 8,
-            }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                <div style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
-                  {(() => { const IC = Icons[item.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={18} /> : null })()}
-                </div>
-                {item.popular && (
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 3,
-                    background: "var(--primary)18", color: "var(--primary)",
-                    textTransform: "uppercase", letterSpacing: "0.06em",
-                  }}>
-                    Popular
-                  </span>
-                )}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{item.name}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>{item.category}</div>
-              </div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.4, flex: 1 }}>{item.description}</div>
-              <Button
-                variant="secondary"
-                size="sm"
-                style={{ marginTop: 4, width: "100%", opacity: connected.has(item.id) ? 0.45 : 1, cursor: connected.has(item.id) ? "default" : "pointer" }}
-                onClick={() => {
-                  if (!connected.has(item.id)) {
-                    setConnected(prev => new Set([...prev, item.id]))
-                    onConnect?.(item.id)
-                  }
-                }}
-              >
-                {connected.has(item.id) ? "✓ Connected" : "Connect"}
-              </Button>
+        {/* Popular row */}
+        {popular.length > 0 && catQuery === "" && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Popular</div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {popular.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => setSelected(item)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+                    border: "1px solid var(--border)", borderRadius: 8, cursor: "pointer",
+                    background: "var(--surface-raised)", color: "var(--foreground)",
+                  }}
+                >
+                  <div style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)" }}>
+                    <IntIcon icon={item.icon} />
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{item.name}</span>
+                  {connected.has(item.id) && <Icons.CheckCircle size={12} style={{ color: "var(--badge-success)" }} />}
+                </button>
+              ))}
             </div>
-          )
-        })}
-        {filtered.length === 0 && (
-          <div style={{ gridColumn: "1 / -1", padding: "40px 0", textAlign: "center", color: "var(--muted-foreground)" }}>
-            <Icons.SearchX size={24} style={{ marginBottom: 8, opacity: 0.3 }} />
-            <div style={{ fontSize: 13 }}>No integrations match "{catQuery}"</div>
           </div>
         )}
+
+        {/* Grid */}
+        {filtered.length === 0
+          ? (
+            <div style={{ padding: "60px 0", textAlign: "center", color: "var(--muted-foreground)" }}>
+              <Icons.SearchX size={24} style={{ marginBottom: 8, opacity: 0.3 }} />
+              <div style={{ fontSize: 13 }}>No integrations match "{catQuery}"</div>
+            </div>
+          )
+          : (
+            <>
+              {catQuery === "" && popular.length > 0 && (
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>All</div>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                {filtered.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelected(item)}
+                    style={{
+                      padding: "14px", border: "1px solid var(--border)", borderRadius: 10,
+                      background: "var(--surface-raised)", cursor: "pointer", textAlign: "left",
+                      display: "flex", flexDirection: "column", gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                      <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 7, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+                        <IntIcon icon={item.icon} />
+                      </div>
+                      {connected.has(item.id) && (
+                        <Icons.CheckCircle size={13} style={{ color: "var(--badge-success)" }} />
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{item.name}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>{item.category}</div>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.4 }}>{item.description}</div>
+                    <div style={{
+                      marginTop: 4, fontSize: 11, fontWeight: 600, padding: "4px 0",
+                      color: connected.has(item.id) ? "var(--badge-success)" : "var(--primary)",
+                    }}>
+                      {connected.has(item.id) ? "Connected" : "Connect →"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )
+        }
       </div>
+
+      {/* Catalog detail SlideOut */}
+      <SlideOut
+        type="full-slot"
+        open={selected !== null}
+        onClose={() => setSelected(null)}
+        title={selected?.name ?? ""}
+        subtitle={selected?.category ?? ""}
+      >
+        {selected && (
+          <CatalogDetailPanel
+            item={selected}
+            connected={connected.has(selected.id)}
+            onConnect={() => setConnected(prev => new Set([...prev, selected.id]))}
+          />
+        )}
+      </SlideOut>
     </div>
   )
 }
@@ -508,6 +692,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       )}
 
       <SlideOut
+        type="full-slot"
         open={selected !== null}
         onClose={() => setSelected(null)}
         title={selected?.name ?? ""}
@@ -517,10 +702,10 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       </SlideOut>
 
       {tab === "catalog" && (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden" }}>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Integration catalog</div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Browse and connect available integrations.</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Browse and connect {CATALOG.length} available integrations.</div>
           </div>
           <CatalogView />
         </div>
