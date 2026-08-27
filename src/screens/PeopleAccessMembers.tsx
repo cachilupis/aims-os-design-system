@@ -2340,17 +2340,28 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
 
         {mainTab === "members" && (
           <>
-            <SwitchTab
-              items={[
+            <div style={{ display: "flex", gap: 6 }}>
+              {([
                 { id: "all",       label: `All (${counts.all})`             },
                 { id: "active",    label: `Active (${counts.active})`       },
                 { id: "invited",   label: `Invited (${counts.invited})`     },
                 { id: "suspended", label: `Suspended (${counts.suspended})` },
-              ]}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              size="s"
-            />
+              ] as const).map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setStatusFilter(f.id)}
+                  style={{
+                    fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
+                    cursor: "pointer", border: "1px solid",
+                    background: statusFilter === f.id ? "var(--primary)" : "transparent",
+                    color: statusFilter === f.id ? "var(--primary-foreground)" : "var(--muted-foreground)",
+                    borderColor: statusFilter === f.id ? "var(--primary)" : "var(--border)",
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
             <div style={{ marginLeft: "auto", width: 240 }}>
               <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search members…" />
             </div>
