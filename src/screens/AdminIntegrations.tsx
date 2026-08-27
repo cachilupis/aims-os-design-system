@@ -42,7 +42,7 @@ const STATUS_META: Record<IntegrationStatus, { label: string; color: string; ico
 
 const CONNECTED: Integration[] = [
   {
-    id: "salesforce", name: "Salesforce CRM", category: "CRM", icon: "☁️",
+    id: "salesforce", name: "Salesforce CRM", category: "CRM", icon: "Building2",
     status: "error", authType: "OAuth 2.0",
     connectedBy: "Thomas Gonzalez", connectedAt: "Aug 25, 2026",
     lastSync: "Aug 20, 08:00", nextSync: "—", syncFrequency: "Every 4 hours",
@@ -56,7 +56,7 @@ const CONNECTED: Integration[] = [
     ],
   },
   {
-    id: "databricks", name: "Databricks", category: "Data Platform", icon: "🧱",
+    id: "databricks", name: "Databricks", category: "Data Platform", icon: "Layers",
     status: "active", authType: "Service Account",
     connectedBy: "Thomas Gonzalez", connectedAt: "Aug 25, 2026",
     lastSync: "Aug 26 · 09:30", nextSync: "Aug 26 · 13:30", syncFrequency: "Every 4 hours",
@@ -69,7 +69,7 @@ const CONNECTED: Integration[] = [
     ],
   },
   {
-    id: "snowflake", name: "Snowflake", category: "Data Warehouse", icon: "❄️",
+    id: "snowflake", name: "Snowflake", category: "Data Warehouse", icon: "Database",
     status: "active", authType: "Service Account",
     connectedBy: "Maria García", connectedAt: "Jul 15, 2026",
     lastSync: "Aug 26 · 08:00", nextSync: "Aug 26 · 12:00", syncFrequency: "Every 4 hours",
@@ -82,7 +82,7 @@ const CONNECTED: Integration[] = [
     ],
   },
   {
-    id: "sap", name: "SAP S/4HANA", category: "ERP", icon: "🏭",
+    id: "sap", name: "SAP S/4HANA", category: "ERP", icon: "Factory",
     status: "active", authType: "Basic Auth",
     connectedBy: "Eduardo Suárez", connectedAt: "Jun 01, 2026",
     lastSync: "Aug 26 · 06:00", nextSync: "Aug 27 · 06:00", syncFrequency: "Daily",
@@ -95,7 +95,7 @@ const CONNECTED: Integration[] = [
     ],
   },
   {
-    id: "bigquery", name: "Google BigQuery", category: "Data Warehouse", icon: "📊",
+    id: "bigquery", name: "Google BigQuery", category: "Data Warehouse", icon: "BarChart2",
     status: "paused", authType: "Service Account",
     connectedBy: "Maria García", connectedAt: "May 10, 2026",
     lastSync: "Aug 15 · 12:00", nextSync: "—", syncFrequency: "Every 6 hours (paused)",
@@ -107,7 +107,7 @@ const CONNECTED: Integration[] = [
     ],
   },
   {
-    id: "teams", name: "Microsoft Teams", category: "Collaboration", icon: "💬",
+    id: "teams", name: "Microsoft Teams", category: "Collaboration", icon: "MessageSquare",
     status: "active", authType: "OAuth 2.0",
     connectedBy: "Thomas Gonzalez", connectedAt: "Aug 10, 2026",
     lastSync: "Aug 26 · 09:00", nextSync: "Aug 26 · 10:00", syncFrequency: "Hourly",
@@ -121,22 +121,22 @@ const CONNECTED: Integration[] = [
 ]
 
 const CATALOG: CatalogItem[] = [
-  { id: "hubspot",    name: "HubSpot",        category: "CRM",              icon: "🟠", description: "Inbound marketing and sales CRM.", popular: true },
-  { id: "jira",       name: "Jira",           category: "Project Mgmt",     icon: "🔵", description: "Issue and project tracking for dev teams." },
-  { id: "slack",      name: "Slack",          category: "Collaboration",    icon: "💬", description: "Team messaging and workflow automation.", popular: true },
-  { id: "notion",     name: "Notion",         category: "Knowledge Base",   icon: "⬛", description: "Docs, wikis, and databases in one tool." },
-  { id: "postgres",   name: "PostgreSQL",     category: "Database",         icon: "🐘", description: "Open-source relational database.", popular: true },
-  { id: "mysql",      name: "MySQL",          category: "Database",         icon: "🐬", description: "World's most popular open-source database." },
-  { id: "mongo",      name: "MongoDB",        category: "Database",         icon: "🍃", description: "Document database for modern apps." },
-  { id: "s3",         name: "AWS S3",         category: "Storage",          icon: "🪣", description: "Object storage for any type of data.", popular: true },
-  { id: "azure",      name: "Azure Blob",     category: "Storage",          icon: "☁️", description: "Massively scalable cloud object storage." },
-  { id: "tableau",    name: "Tableau",        category: "Analytics",        icon: "📈", description: "Visual analytics and business intelligence." },
-  { id: "powerbi",    name: "Power BI",       category: "Analytics",        icon: "📊", description: "Microsoft business analytics service." },
-  { id: "dbt",        name: "dbt",            category: "Data Transform",   icon: "🔄", description: "Data transformation for analytics engineering." },
-  { id: "github",     name: "GitHub",         category: "Developer Tools",  icon: "🐙", description: "Code hosting, CI/CD, and collaboration." },
-  { id: "zendesk",    name: "Zendesk",        category: "Support",          icon: "🎫", description: "Customer support ticketing platform." },
-  { id: "stripe",     name: "Stripe",         category: "Payments",         icon: "💳", description: "Payment processing and financial infrastructure." },
-  { id: "sendgrid",   name: "SendGrid",       category: "Email",            icon: "📧", description: "Email delivery and marketing platform." },
+  { id: "hubspot",    name: "HubSpot",        category: "CRM",              icon: "Megaphone", description: "Inbound marketing and sales CRM.", popular: true },
+  { id: "jira",       name: "Jira",           category: "Project Mgmt",     icon: "Kanban", description: "Issue and project tracking for dev teams." },
+  { id: "slack",      name: "Slack",          category: "Collaboration",    icon: "MessageCircle", description: "Team messaging and workflow automation.", popular: true },
+  { id: "notion",     name: "Notion",         category: "Knowledge Base",   icon: "BookOpen", description: "Docs, wikis, and databases in one tool." },
+  { id: "postgres",   name: "PostgreSQL",     category: "Database",         icon: "Database", description: "Open-source relational database.", popular: true },
+  { id: "mysql",      name: "MySQL",          category: "Database",         icon: "Database", description: "World's most popular open-source database." },
+  { id: "mongo",      name: "MongoDB",        category: "Database",         icon: "Database", description: "Document database for modern apps." },
+  { id: "s3",         name: "AWS S3",         category: "Storage",          icon: "HardDrive",    description: "Object storage for any type of data.", popular: true },
+  { id: "azure",      name: "Azure Blob",     category: "Storage",          icon: "Cloud", description: "Massively scalable cloud object storage." },
+  { id: "tableau",    name: "Tableau",        category: "Analytics",        icon: "BarChart", description: "Visual analytics and business intelligence." },
+  { id: "powerbi",    name: "Power BI",       category: "Analytics",        icon: "PieChart",     description: "Microsoft business analytics service." },
+  { id: "dbt",        name: "dbt",            category: "Data Transform",   icon: "GitBranch", description: "Data transformation for analytics engineering." },
+  { id: "github",     name: "GitHub",         category: "Developer Tools",  icon: "GitBranch", description: "Code hosting, CI/CD, and collaboration." },
+  { id: "zendesk",    name: "Zendesk",        category: "Support",          icon: "Headphones", description: "Customer support ticketing platform." },
+  { id: "stripe",     name: "Stripe",         category: "Payments",         icon: "CreditCard", description: "Payment processing and financial infrastructure." },
+  { id: "sendgrid",   name: "SendGrid",       category: "Email",            icon: "Mail", description: "Email delivery and marketing platform." },
 ]
 
 // ─── Operate panel ────────────────────────────────────────────────────────────
@@ -158,7 +158,9 @@ function OperatePanel({ integration, onClose }: { integration: Integration; onCl
         background: "var(--surface-raised)",
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <div style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>{integration.icon}</div>
+          <div style={{ width: 36, height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+            {(() => { const IC = Icons[integration.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={20} /> : null })()}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>{integration.name}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
@@ -325,7 +327,9 @@ function IntegrationRow({ integration, selected, onClick }: {
         transition: "background 0.1s",
       }}
     >
-      <div style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>{integration.icon}</div>
+      <div style={{ width: 34, height: 34, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+        {(() => { const IC = Icons[integration.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={18} /> : null })()}
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 2 }}>
           {integration.name}
@@ -405,7 +409,9 @@ function CatalogView({ onConnect }: { onConnect?: (id: string) => void }) {
               display: "flex", flexDirection: "column", gap: 8,
             }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 26, lineHeight: 1 }}>{item.icon}</div>
+                <div style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+                  {(() => { const IC = Icons[item.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={18} /> : null })()}
+                </div>
                 {item.popular && (
                   <span style={{
                     fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 3,
