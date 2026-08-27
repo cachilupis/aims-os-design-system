@@ -394,7 +394,7 @@ function EventDetailPanel({ event, onClose }: { event: AuditEvent; onClose: () =
 
 const PAGE_SIZE = 20
 
-export function AdminAuditLogScreen() {
+export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [resultFilter, setResultFilter]     = useState("all")
   const [actorFilter, setActorFilter]       = useState("all")
@@ -444,6 +444,7 @@ export function AdminAuditLogScreen() {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="audit"
+      onSidebarItemClick={onNavigate}
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}

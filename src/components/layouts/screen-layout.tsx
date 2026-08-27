@@ -99,6 +99,8 @@ export interface ScreenLayoutProps {
   sidebarItems: SidebarItem[]
   /** ID of the active sidebar item */
   activeSidebarId?: string
+  /** Called when a sidebar item is clicked — use to implement inter-screen navigation */
+  onSidebarItemClick?: (id: string) => void
   /**
    * Header render prop — receives isScrolled (true when content scrollTop > 16px).
    * Use it to switch between Header size="size-l" (default) and size="compress".
@@ -140,6 +142,7 @@ export function ScreenLayout({
   bgVariant = "default",
   sidebarItems,
   activeSidebarId,
+  onSidebarItemClick,
   header,
   children,
   pagination,
@@ -173,6 +176,7 @@ export function ScreenLayout({
           items={sidebarItems}
           activeId={activeSidebarId}
           defaultCollapsed={true}
+          onItemClick={onSidebarItemClick}
         />
 
         {/* Main column */}

@@ -379,7 +379,7 @@ function StudioCard({ studio, selected, onClick }: {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export function AdminStudiosScreen() {
+export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [selected, setSelected] = useState<Studio | null>(STUDIOS[0])
 
   return (
@@ -389,6 +389,7 @@ export function AdminStudiosScreen() {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="studios"
+      onSidebarItemClick={onNavigate}
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}

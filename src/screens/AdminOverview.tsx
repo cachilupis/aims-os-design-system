@@ -336,7 +336,7 @@ function UsageCard() {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export function AdminOverviewScreen() {
+export function AdminOverviewScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [alerts, setAlerts] = useState<AlertBanner[]>(INITIAL_ALERTS)
   const dismissAlert = useCallback((id: string) => setAlerts(a => a.filter(x => x.id !== id)), [])
 
@@ -347,6 +347,7 @@ export function AdminOverviewScreen() {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="overview"
+      onSidebarItemClick={onNavigate}
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}

@@ -1846,7 +1846,7 @@ function InviteModal({ onClose, onSend }: {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export function PeopleAccessMembersScreen() {
+export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [mainTab, setMainTab]           = useState<"members" | "roles" | "groups">("members")
   const [statusFilter, setStatusFilter] = useState("all")
   const [query, setQuery]               = useState("")
@@ -1916,6 +1916,7 @@ export function PeopleAccessMembersScreen() {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
+      onSidebarItemClick={onNavigate}
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}
