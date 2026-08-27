@@ -236,6 +236,7 @@ function buildRecordHeaderData(profile: UniversalProfile): {
       lastContact:    "Aug 22, 2026",
       openTickets:    3,
       adoptionLevel:  "High",
+      industry:       "Financial Services",
       primaryContact: "Sandra Torres",
     }
     return { variant: "customer", data }
@@ -630,6 +631,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
           { label: "Export",  variant: "secondary", onClick: () => {} },
           { label: profile.type === "company" ? "Contact account" : "Message", variant: "primary", onClick: () => {} },
         ]}
+        assignedAgent={{ id: "agent-1", name: "AIMS Assistant", onOpenChat: () => {} }}
         className="mb-[16px]"
       />
 

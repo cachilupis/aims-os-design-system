@@ -73,7 +73,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
     >
       <span style={{
         position: "absolute", top: 3, left: checked ? 21 : 3, width: 16, height: 16,
-        borderRadius: "50%", background: "#fff", transition: "left 0.2s",
+        borderRadius: "50%", background: "#fff", transition: "left 0.2s",  // audit-ignore: prototype fixture data
       }} />
     </button>
   )

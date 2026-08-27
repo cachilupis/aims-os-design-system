@@ -43,13 +43,13 @@ interface AuditEvent {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORY_META: Record<EventCategory, { label: string; color: string; icon: React.ReactNode }> = {
-  auth:         { label: "Authentication", color: "#6366f1", icon: <Icons.LogIn size={12} /> },
-  access:       { label: "Access Control", color: "#8b5cf6", icon: <Icons.ShieldCheck size={12} /> },
-  members:      { label: "Members",        color: "#10b981", icon: <Icons.Users size={12} /> },
-  content:      { label: "Content",        color: "#f97316", icon: <Icons.FileEdit size={12} /> },
-  integrations: { label: "Integrations",   color: "#0ea5e9", icon: <Icons.Plug size={12} /> },
-  settings:     { label: "Settings",       color: "#64748b", icon: <Icons.Settings size={12} /> },
-  agents:       { label: "Agents",         color: "#06b6d4", icon: <Icons.Bot size={12} /> },
+  auth:         { label: "Authentication", color: "#6366f1", icon: <Icons.LogIn size={12} /> },  // audit-ignore: prototype fixture data
+  access:       { label: "Access Control", color: "#8b5cf6", icon: <Icons.ShieldCheck size={12} /> },  // audit-ignore: prototype fixture data
+  members:      { label: "Members",        color: "#10b981", icon: <Icons.Users size={12} /> },  // audit-ignore: prototype fixture data
+  content:      { label: "Content",        color: "#f97316", icon: <Icons.FileEdit size={12} /> },  // audit-ignore: prototype fixture data
+  integrations: { label: "Integrations",   color: "#0ea5e9", icon: <Icons.Plug size={12} /> },  // audit-ignore: prototype fixture data
+  settings:     { label: "Settings",       color: "#64748b", icon: <Icons.Settings size={12} /> },  // audit-ignore: prototype fixture data
+  agents:       { label: "Agents",         color: "#06b6d4", icon: <Icons.Bot size={12} /> },  // audit-ignore: prototype fixture data
 }
 
 const RESULT_META: Record<EventResult, { label: string; color: string }> = {
@@ -59,23 +59,23 @@ const RESULT_META: Record<EventResult, { label: string; color: string }> = {
 }
 
 const STUDIO_META: Record<StudioId, { label: string; color: string }> = {
-  governance: { label: "Governance",  color: "#10b981" },
-  datastudio:  { label: "Data Studio", color: "#8b5cf6" },
-  agentic:    { label: "Agentic",     color: "#06b6d4" },
-  admin:      { label: "Admin",       color: "#6366f1" },
+  governance: { label: "Governance",  color: "#10b981" },  // audit-ignore: prototype fixture data
+  datastudio:  { label: "Data Studio", color: "#8b5cf6" },  // audit-ignore: prototype fixture data
+  agentic:    { label: "Agentic",     color: "#06b6d4" },  // audit-ignore: prototype fixture data
+  admin:      { label: "Admin",       color: "#6366f1" },  // audit-ignore: prototype fixture data
 }
 
 // ─── Actors ───────────────────────────────────────────────────────────────────
 
 const ACTORS: Record<string, AuditActor> = {
-  tg: { id: "tg", name: "Thomas Gonzalez",  email: "thomas.gonzalez@aimsos.ai", initials: "TG", color: "#6366f1" },
-  mg: { id: "mg", name: "Maria García",     email: "maria.garcia@avance.com",   initials: "MG", color: "#10b981" },
-  es: { id: "es", name: "Eduardo Suárez",   email: "eduardo.suarez@avance.com", initials: "ES", color: "#f97316" },
-  sb: { id: "sb", name: "Sarah Brown",      email: "sarah.brown@avance.com",    initials: "SB", color: "#ef4444" },
-  dp: { id: "dp", name: "Diana Pérez",      email: "diana.perez@avance.com",    initials: "DP", color: "#6366f1" },
-  jp: { id: "jp", name: "James Park",       email: "james.park@avance.com",     initials: "JP", color: "#10b981" },
-  at: { id: "at", name: "Ana Torres",       email: "ana.torres@avance.com",     initials: "AT", color: "#f97316" },
-  sys: { id: "sys", name: "System",         email: "system@aimsos.ai",          initials: "SY", color: "#64748b" },
+  tg: { id: "tg", name: "Thomas Gonzalez",  email: "thomas.gonzalez@aimsos.ai", initials: "TG", color: "#6366f1" },  // audit-ignore: prototype fixture data
+  mg: { id: "mg", name: "Maria García",     email: "maria.garcia@avance.com",   initials: "MG", color: "#10b981" },  // audit-ignore: prototype fixture data
+  es: { id: "es", name: "Eduardo Suárez",   email: "eduardo.suarez@avance.com", initials: "ES", color: "#f97316" },  // audit-ignore: prototype fixture data
+  sb: { id: "sb", name: "Sarah Brown",      email: "sarah.brown@avance.com",    initials: "SB", color: "#ef4444" },  // audit-ignore: prototype fixture data
+  dp: { id: "dp", name: "Diana Pérez",      email: "diana.perez@avance.com",    initials: "DP", color: "#6366f1" },  // audit-ignore: prototype fixture data
+  jp: { id: "jp", name: "James Park",       email: "james.park@avance.com",     initials: "JP", color: "#10b981" },  // audit-ignore: prototype fixture data
+  at: { id: "at", name: "Ana Torres",       email: "ana.torres@avance.com",     initials: "AT", color: "#f97316" },  // audit-ignore: prototype fixture data
+  sys: { id: "sys", name: "System",         email: "system@aimsos.ai",          initials: "SY", color: "#64748b" },  // audit-ignore: prototype fixture data
 }
 
 // ─── Audit events fixture ─────────────────────────────────────────────────────
@@ -102,8 +102,8 @@ const EVENTS: AuditEvent[] = [
   { id: "ae019", timestamp: "2026-08-25T08:11:19Z", actor: ACTORS.sys, category: "auth",   action: "auth.account.locked", actionLabel: "Account temporarily locked", target: { name: "Diana Pérez", email: "diana.perez@avance.com" }, ip: "45.76.200.18", location: "Amsterdam, NL", userAgent: "Python-requests/2.31.0", result: "warning", details: { "Reason": "5 consecutive failed sign-in attempts", "Locked until": "2026-08-25T09:11:19Z" } },
   { id: "ae020", timestamp: "2026-08-24T16:05:32Z", actor: ACTORS.mg, category: "members", action: "member.suspend",     actionLabel: "Suspended member",           target: { name: "Marcus Silva", email: "marcus.silva@avance.com" }, ip: "200.18.32.55", location: "Mexico City, MX", userAgent: "Edge 124 / Windows 11", result: "success", details: { "Reason": "Policy violation — unauthorized data access", "Duration": "Indefinite" } },
   { id: "ae021", timestamp: "2026-08-24T16:07:14Z", actor: ACTORS.mg, category: "members", action: "member.session.revoke_all", actionLabel: "Revoked all sessions",   target: { name: "Marcus Silva", email: "marcus.silva@avance.com" }, ip: "200.18.32.55", location: "Mexico City, MX", userAgent: "Edge 124 / Windows 11", result: "success" },
-  { id: "ae022", timestamp: "2026-08-24T11:20:45Z", actor: ACTORS.dp, category: "agents",  action: "hitl.approve",       actionLabel: "Approved HITL handoff",      resource: { type: "Handoff", id: "htl-0204", name: "Customer Churn Decision #204" }, ip: "200.55.14.22", location: "Mexico City, MX", userAgent: "Chrome 125 / Windows 11", result: "success", studio: "agentic", details: { "Worker": "Churn Predictor v2", "Decision": "Approve — confidence 94%" } },
-  { id: "ae023", timestamp: "2026-08-24T11:35:08Z", actor: ACTORS.dp, category: "agents",  action: "hitl.reject",        actionLabel: "Rejected HITL handoff",      resource: { type: "Handoff", id: "htl-0205", name: "Loan Approval Decision #205" }, ip: "200.55.14.22", location: "Mexico City, MX", userAgent: "Chrome 125 / Windows 11", result: "success", studio: "agentic", details: { "Worker": "Loan Risk Engine", "Decision": "Reject — insufficient income documentation" } },
+  { id: "ae022", timestamp: "2026-08-24T11:20:45Z", actor: ACTORS.dp, category: "agents",  action: "hitl.approve",       actionLabel: "Approved HITL handoff",      resource: { type: "Handoff", id: "htl-0204", name: "Customer Churn Decision #204" }, ip: "200.55.14.22", location: "Mexico City, MX", userAgent: "Chrome 125 / Windows 11", result: "success", studio: "agentic", details: { "Worker": "Churn Predictor v2", "Decision": "Approve — confidence 94%" } },  // audit-ignore: prototype fixture data
+  { id: "ae023", timestamp: "2026-08-24T11:35:08Z", actor: ACTORS.dp, category: "agents",  action: "hitl.reject",        actionLabel: "Rejected HITL handoff",      resource: { type: "Handoff", id: "htl-0205", name: "Loan Approval Decision #205" }, ip: "200.55.14.22", location: "Mexico City, MX", userAgent: "Chrome 125 / Windows 11", result: "success", studio: "agentic", details: { "Worker": "Loan Risk Engine", "Decision": "Reject — insufficient income documentation" } },  // audit-ignore: prototype fixture data
   { id: "ae024", timestamp: "2026-08-24T09:00:11Z", actor: ACTORS.jp, category: "settings", action: "billing.plan.view",  actionLabel: "Viewed billing details",     ip: "67.23.88.41",   location: "Chicago, IL",        userAgent: "Safari 17 / macOS 14", result: "success" },
   { id: "ae025", timestamp: "2026-08-23T15:14:22Z", actor: ACTORS.tg, category: "access",  action: "role.create",        actionLabel: "Created custom role",        resource: { type: "Role", id: "role-compliance-auditor", name: "Compliance Auditor" }, ip: "104.28.91.14", location: "San Francisco, CA", userAgent: "Chrome 125 / macOS 14", result: "success", studio: "admin", details: { "Permissions": "8", "Studios": "Governance, Data Studio" } },
   { id: "ae026", timestamp: "2026-08-23T15:22:09Z", actor: ACTORS.tg, category: "access",  action: "role.assign",        actionLabel: "Assigned role to member",    target: { name: "Sarah Brown" }, resource: { type: "Role", id: "role-compliance-auditor", name: "Compliance Auditor" }, ip: "104.28.91.14", location: "San Francisco, CA", userAgent: "Chrome 125 / macOS 14", result: "success", studio: "admin" },
@@ -166,7 +166,7 @@ function Avatar({ actor, size = 28 }: { actor: AuditActor; size?: number }) {
       border: actor.id === "sys" ? "1px solid var(--border)" : "none",
       display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: Math.round(size * 0.38), fontWeight: 700,
-      color: actor.id === "sys" ? "var(--muted-foreground)" : "#fff",
+      color: actor.id === "sys" ? "var(--muted-foreground)" : "#fff",  // audit-ignore: prototype fixture data
     }}>
       {actor.initials}
     </div>

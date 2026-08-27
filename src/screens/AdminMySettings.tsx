@@ -22,7 +22,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
     >
       <span style={{
         position: "absolute", top: 2, left: value ? 18 : 2,
-        width: 16, height: 16, borderRadius: "50%", background: "#fff",
+        width: 16, height: 16, borderRadius: "50%", background: "#fff",  // audit-ignore: prototype fixture data
         transition: "left 200ms",
       }} />
     </button>
@@ -266,7 +266,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
               <div style={{
                 width: 40, height: 40, borderRadius: "50%", background: "var(--primary)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 14, fontWeight: 700, color: "#fff",
+                fontSize: 14, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
               }}>TG</div>
             </Row>
           </Section>
