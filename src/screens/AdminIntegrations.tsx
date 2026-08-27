@@ -364,9 +364,10 @@ function IntegrationRow({ integration, selected, onClick }: {
 
 const CAT_FILTERS = ["All", "CRM", "Data Warehouse", "Database", "Storage", "Analytics", "Collaboration", "Developer Tools"]
 
-function CatalogView() {
+function CatalogView({ onConnect }: { onConnect?: (id: string) => void }) {
   const [catFilter, setCatFilter] = useState("All")
   const [catQuery, setCatQuery] = useState("")
+  const [connected, setConnected] = useState<Set<string>>(new Set(CONNECTED.map(c => c.id)))
 
   const filtered = CATALOG.filter(c =>
     (catFilter === "All" || c.category === catFilter) &&
@@ -406,7 +407,6 @@ function CatalogView() {
       {/* Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
         {filtered.map(item => {
-          const alreadyConnected = CONNECTED.some(c => c.id === item.id)
           return (
             <div key={item.id} style={{
               padding: "16px", border: "1px solid var(--border)", borderRadius: 10,
@@ -431,11 +431,17 @@ function CatalogView() {
               </div>
               <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.4, flex: 1 }}>{item.description}</div>
               <Button
-                variant={alreadyConnected ? "secondary" : "secondary"}
+                variant="secondary"
                 size="sm"
-                style={{ marginTop: 4, width: "100%", opacity: alreadyConnected ? 0.5 : 1 }}
+                style={{ marginTop: 4, width: "100%", opacity: connected.has(item.id) ? 0.45 : 1, cursor: connected.has(item.id) ? "default" : "pointer" }}
+                onClick={() => {
+                  if (!connected.has(item.id)) {
+                    setConnected(prev => new Set([...prev, item.id]))
+                    onConnect?.(item.id)
+                  }
+                }}
               >
-                {alreadyConnected ? "Connected" : "Connect"}
+                {connected.has(item.id) ? "✓ Connected" : "Connect"}
               </Button>
             </div>
           )
