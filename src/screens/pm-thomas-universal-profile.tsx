@@ -237,6 +237,7 @@ function buildRecordHeaderData(profile: UniversalProfile): {
       openTickets:    3,
       adoptionLevel:  "High",
       primaryContact: "Sandra Torres",
+      industry:       "Financial Services",
     }
     return { variant: "customer", data }
   }
@@ -626,6 +627,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
         variant={rhVariant}
         data={rhData}
         signal={signal}
+        assignedAgent={{ id: "agent-1", name: "AIMS Assistant", onOpenChat: () => {} }}
         actions={[
           { label: "Export",  variant: "secondary", onClick: () => {} },
           { label: profile.type === "company" ? "Contact account" : "Message", variant: "primary", onClick: () => {} },
