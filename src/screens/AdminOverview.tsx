@@ -241,7 +241,7 @@ function NeedsAttention() {
         <div style={{ padding: "28px 18px", textAlign: "center" }}>
           <Icons.CheckCircle size={22} style={{ color: "var(--badge-success)", margin: "0 auto 8px" }} />
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>All clear</div>
-          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>No pending items right now</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>No pending items</div>
         </div>
       ) : (
         visible.map((item, i) => {
@@ -373,13 +373,13 @@ function UsageCard() {
         <Button variant="secondary" size="sm">View billing</Button>
       </div>
       <div style={{ padding: "16px 18px 4px" }}>
-        <UsageBar label="AI output tokens"    used={4_180_000} total={10_000_000} unit="tokens" color={"#6366f1" /* audit-ignore: prototype fixture data */} />
+        <UsageBar label="AI tokens"           used={4_180_000} total={10_000_000} unit="tokens" color={"#6366f1" /* audit-ignore: prototype fixture data */} />
 
         <UsageBar label="Active AI workers"   used={7}          total={20}          unit="workers" color={"#06b6d4" /* audit-ignore: prototype fixture data */} />
 
         <UsageBar label="Data Studio models"  used={14}         total={50}          unit="models"  color={"#8b5cf6" /* audit-ignore: prototype fixture data */} />
 
-        <UsageBar label="Governance sandboxes" used={3}         total={10}          unit="sandboxes" color={"#10b981" /* audit-ignore: prototype fixture data */} />
+        <UsageBar label="Sandboxes"            used={3}         total={10}          unit="sandboxes" color={"#10b981" /* audit-ignore: prototype fixture data */} />
 
       </div>
     </div>

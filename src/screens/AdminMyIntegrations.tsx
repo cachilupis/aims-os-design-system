@@ -144,7 +144,7 @@ function RequestCard({
             <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{req.description}</div>
           </div>
           <div style={{ marginBottom: req.reviewerNote ? 12 : 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>My justification</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Your justification</div>
             <div style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5, padding: "8px 10px", background: "var(--surface)", borderRadius: 6, border: "1px solid var(--border)" }}>
               {req.justification}
             </div>

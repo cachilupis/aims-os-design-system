@@ -34,7 +34,7 @@ const STUDIOS: Studio[] = [
     name: "Governance Studio",
     icon: "Layers",
     accentColor: "#10b981",  // audit-ignore: prototype fixture data
-    description: "Sandbox/Truth plane model, domain sections, knowledge bindings, promotion packets, and resolution requests.",
+    description: "Manages AI content authoring, domain governance, and promotion workflows.",
     status: "active",
     membersWithAccess: 28,
     totalMembers: 50,
@@ -110,7 +110,7 @@ const STUDIOS: Studio[] = [
     name: "Agentic Studio",
     icon: "Bot",
     accentColor: "#06b6d4",  // audit-ignore: prototype fixture data
-    description: "AI worker management, agentic network composition, Human-in-the-Loop handoffs, and run observability.",
+    description: "Manages AI workers, multi-agent workflows, human review handoffs, and run history.",
     status: "active",
     membersWithAccess: 22,
     totalMembers: 50,
@@ -233,7 +233,7 @@ function StudioPanel({ studio }: { studio: Studio }) {
             ))}
 
             {/* Roles */}
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", margin: "20px 0 8px" }}>Role-based access</div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", margin: "20px 0 8px" }}>Roles</div>
             {studio.roles.map((r, i) => (
               <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < studio.roles.length - 1 ? "1px solid var(--border)" : "none" }}>
                 <span style={{ flex: 1, fontSize: 13, color: "var(--foreground)" }}>{r.name}</span>
@@ -379,9 +379,9 @@ export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) =
             background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-              3 Studios
+              Studios
             </span>
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>All active</span>
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{STUDIOS.filter(s => s.status === "active").length} of {STUDIOS.length} active</span>
           </div>
           {STUDIOS.map(studio => (
             <StudioCard

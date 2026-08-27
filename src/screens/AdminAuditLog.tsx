@@ -310,13 +310,7 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: EVENTS.length }
-    EVENTS.forEach(e => { counts[e.category] = (counts[e.category] ?? 0) + 1 })
-    return counts
-  }, [])
-
-  const failureCount = EVENTS.filter(e => e.result === "failure").length
+const failureCount = EVENTS.filter(e => e.result === "failure").length
   const warningCount = EVENTS.filter(e => e.result === "warning").length
 
   function handleRowClick(e: AuditEvent) {
@@ -368,14 +362,14 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
       <div style={{ borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
         <Tabs
           items={[
-            { id: "all",          label: `All (${categoryCounts.all ?? 0})`          },
-            { id: "auth",         label: `Auth (${categoryCounts.auth ?? 0})`         },
-            { id: "access",       label: `Access (${categoryCounts.access ?? 0})`     },
-            { id: "members",      label: `Members (${categoryCounts.members ?? 0})`   },
-            { id: "content",      label: `Content (${categoryCounts.content ?? 0})`   },
-            { id: "agents",       label: `Agents (${categoryCounts.agents ?? 0})`     },
-            { id: "integrations", label: `Integrations (${categoryCounts.integrations ?? 0})` },
-            { id: "settings",     label: `Settings (${categoryCounts.settings ?? 0})` },
+            { id: "all",          label: "All"            },
+            { id: "auth",         label: "Authentication" },
+            { id: "access",       label: "Access control" },
+            { id: "members",      label: "Members"        },
+            { id: "content",      label: "Content"        },
+            { id: "agents",       label: "AI agents"      },
+            { id: "integrations", label: "Integrations"   },
+            { id: "settings",     label: "Settings"       },
           ]}
           activeId={categoryFilter}
           onChange={v => { setCategoryFilter(v); setPage(1) }}

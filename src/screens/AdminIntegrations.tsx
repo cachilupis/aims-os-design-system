@@ -190,7 +190,7 @@ function OperatePanel({ integration }: { integration: Integration }) {
         {activeTab === "overview" && (
           <>
             {[
-              ["Auth type",        integration.authType],
+              ["Authentication",    integration.authType],
               ["Connected by",     integration.connectedBy],
               ["Connected on",     integration.connectedAt],
               ["Sync frequency",   integration.syncFrequency],
@@ -206,7 +206,7 @@ function OperatePanel({ integration }: { integration: Integration }) {
             <div style={{ marginTop: 20 }}>
               <Button variant="secondary" size="sm" style={{ color: "var(--badge-error)", borderColor: "var(--badge-error)40" }}>
                 <Icons.Unplug size={13} style={{ marginRight: 4 }} />
-                Disconnect integration
+                Disconnect
               </Button>
             </div>
           </>
@@ -214,7 +214,7 @@ function OperatePanel({ integration }: { integration: Integration }) {
 
         {activeTab === "history" && (
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Recent sync runs</div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Sync runs</div>
             {integration.history.map((run, i) => {
               const c = run.status === "success" ? "var(--badge-success)" : run.status === "failure" ? "var(--badge-error)" : "var(--badge-alert)"
               return (
@@ -464,8 +464,8 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       <div style={{ marginBottom: 16 }}>
         <SwitchTab
           items={[
-            { id: "connected", label: `Connected (${CONNECTED.length})` },
-            { id: "catalog",   label: `Catalog (${CATALOG.length}+)`    },
+            { id: "connected", label: "Connected" },
+            { id: "catalog",   label: "Catalog"   },
           ]}
           value={tab}
           onChange={v => { setTab(v); if (v === "catalog") setSelected(null) }}
@@ -520,7 +520,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
         <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Integration catalog</div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Connect data sources, tools, and services to your workspace.</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Browse and connect available integrations.</div>
           </div>
           <CatalogView />
         </div>
