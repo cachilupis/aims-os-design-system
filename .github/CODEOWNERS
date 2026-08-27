@@ -1,6 +1,5 @@
 # DS core — requires @cachilupis review before merge
 /src/components/       @cachilupis
-/src/App.tsx           @cachilupis
 /src/index.css         @cachilupis
 /src/lib/              @cachilupis
 /tailwind.config.*     @cachilupis
