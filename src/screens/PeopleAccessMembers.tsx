@@ -1658,6 +1658,192 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
   )
 }
 
+// ─── Invite modal ─────────────────────────────────────────────────────────────
+
+const ALL_ROLES: MemberRole[] = ["Super Admin", "Tenant Admin", "Member", "Viewer", "Billing Admin"]
+
+function InviteModal({ onClose, onSend }: {
+  onClose: () => void
+  onSend: (emails: string[], role: MemberRole) => void
+}) {
+  const [emailInput, setEmailInput] = useState("")
+  const [emails, setEmails]         = useState<string[]>([])
+  const [role, setRole]             = useState<MemberRole>("Member")
+  const [note, setNote]             = useState("")
+
+  function addEmail() {
+    const trimmed = emailInput.trim().toLowerCase()
+    if (trimmed && !emails.includes(trimmed)) setEmails(e => [...e, trimmed])
+    setEmailInput("")
+  }
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addEmail() }
+    if (e.key === "Backspace" && !emailInput && emails.length) setEmails(e => e.slice(0, -1))
+  }
+
+  function submit() {
+    const all = emailInput.trim() ? [...emails, emailInput.trim()] : emails
+    if (all.length === 0) return
+    onSend(all, role)
+    onClose()
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{
+        width: 520, background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+      }}>
+        {/* Header */}
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+            background: "color-mix(in srgb, var(--primary) 15%, transparent)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "var(--primary)",
+          }}>
+            <Icons.UserPlus size={17} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Invite to Avance Financial</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
+              Invitations are sent by email and expire after 7 days
+            </div>
+          </div>
+          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6 }}
+            onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+          >
+            <Icons.X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* Email chips input */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
+              Email addresses
+            </label>
+            <div style={{
+              minHeight: 44, border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px",
+              display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center",
+              background: "var(--surface-raised)", cursor: "text",
+            }} onClick={e => (e.currentTarget.querySelector("input") as HTMLInputElement)?.focus()}>
+              {emails.map(em => (
+                <span key={em} style={{
+                  display: "flex", alignItems: "center", gap: 4,
+                  padding: "2px 8px 2px 10px", borderRadius: 100,
+                  background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+                  fontSize: 12, color: "var(--primary)", fontWeight: 500,
+                }}>
+                  {em}
+                  <button
+                    onClick={ev => { ev.stopPropagation(); setEmails(e => e.filter(x => x !== em)) }}
+                    style={{ border: "none", background: "none", cursor: "pointer", color: "var(--primary)", padding: 0, lineHeight: 1 }}
+                  >
+                    <Icons.X size={11} />
+                  </button>
+                </span>
+              ))}
+              <input
+                value={emailInput}
+                onChange={e => setEmailInput(e.target.value)}
+                onKeyDown={handleKey}
+                onBlur={addEmail}
+                placeholder={emails.length === 0 ? "name@company.com, another@company.com" : "Add another…"}
+                style={{
+                  flex: 1, minWidth: 180, border: "none", outline: "none", background: "transparent",
+                  fontSize: 13, color: "var(--foreground)",
+                }}
+              />
+            </div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5 }}>
+              Press Enter or comma to add multiple addresses
+            </div>
+          </div>
+
+          {/* Role */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
+              Role
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {ALL_ROLES.map(r => (
+                <button
+                  key={r}
+                  onClick={() => setRole(r)}
+                  style={{
+                    padding: "10px 14px", border: `1px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
+                    borderRadius: 8, background: role === r ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "var(--surface-raised)",
+                    cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8,
+                  }}
+                >
+                  <div style={{
+                    width: 14, height: 14, borderRadius: "50%", flexShrink: 0, border: `2px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
+                    background: role === r ? "var(--primary)" : "transparent",
+                  }} />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: role === r ? "var(--primary)" : "var(--foreground)" }}>{r}</div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1 }}>
+                      {r === "Super Admin" ? "Full platform access" : r === "Tenant Admin" ? "Manage members & settings" : r === "Member" ? "Access assigned studios" : r === "Viewer" ? "Read-only access" : "Billing & seats only"}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Optional note */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
+              Personal note <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>(optional)</span>
+            </label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="Welcome to AIMS-OS! We're excited to have you…"
+              rows={3}
+              style={{
+                width: "100%", border: "1px solid var(--border)", borderRadius: 8,
+                padding: "10px 12px", background: "var(--surface-raised)", color: "var(--foreground)",
+                fontSize: 13, resize: "none", outline: "none", boxSizing: "border-box",
+                fontFamily: "inherit",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: "14px 24px", borderTop: "1px solid var(--border)",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          background: "var(--surface-raised)",
+        }}>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+            {emails.length + (emailInput.trim() ? 1 : 0)} recipient{(emails.length + (emailInput.trim() ? 1 : 0)) !== 1 ? "s" : ""}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+            <Button
+              variant="main"
+              size="sm"
+              onClick={submit}
+            >
+              Send {emails.length + (emailInput.trim() ? 1 : 0) > 1 ? `${emails.length + (emailInput.trim() ? 1 : 0)} invitations` : "invitation"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PeopleAccessMembersScreen() {
@@ -1666,6 +1852,7 @@ export function PeopleAccessMembersScreen() {
   const [query, setQuery]               = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
   const [detailView, setDetailView]     = useState<DetailView>(null)
+  const [showInvite, setShowInvite]     = useState(false)
 
   const counts = useMemo(() => ({
     all:       members.length,
@@ -1740,7 +1927,7 @@ export function PeopleAccessMembersScreen() {
           }
           primaryAction={
             mainTab === "members" ? (
-              <Button variant="primary" size="sm">
+              <Button variant="main" size="sm" onClick={() => setShowInvite(true)}>
                 <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
                 Invite member
               </Button>
@@ -1865,6 +2052,28 @@ export function PeopleAccessMembersScreen() {
             <GroupCard key={g.id} group={g} onSelect={group => setDetailView({ type: "group", group })} />
           ))}
         </div>
+      )}
+
+      {/* Invite modal */}
+      {showInvite && (
+        <InviteModal
+          onClose={() => setShowInvite(false)}
+          onSend={(emails, role) => {
+            const newMembers: Member[] = emails.map((email, i) => ({
+              id: `new-${Date.now()}-${i}`,
+              name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+              email,
+              role,
+              status: "invited",
+              lastActive: null,
+              joinedAt: new Date().toISOString(),
+              initials: email.slice(0, 2).toUpperCase(),
+              avatarColor: "var(--muted)",
+              mfaEnabled: false,
+            }))
+            setMembers(ms => [...ms, ...newMembers])
+          }}
+        />
       )}
     </ScreenLayout>
   )
