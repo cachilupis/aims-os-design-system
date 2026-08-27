@@ -6,6 +6,7 @@ import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { Input }        from "@/components/ui/input"
 import { SwitchTab }    from "@/components/ui/switch-tab"
+import { SlideOut }     from "@/components/ui/slide-out"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -1835,6 +1836,390 @@ function InviteModal({ onClose, onSend }: {
   )
 }
 
+// ─── Preview slide-out contents ──────────────────────────────────────────────
+
+function PreviewTabBar({ tabs, active, onChange }: { tabs: string[]; active: number; onChange: (i: number) => void }) {
+  return (
+    <div style={{ display: "flex", borderBottom: "1px solid var(--border)", marginBottom: 20 }}>
+      {tabs.map((t, i) => (
+        <button
+          key={t}
+          onClick={() => onChange(i)}
+          style={{
+            padding: "9px 16px", fontSize: 12, fontWeight: 600,
+            border: "none", background: "none", cursor: "pointer",
+            color: active === i ? "var(--foreground)" : "var(--muted-foreground)",
+            borderBottom: active === i ? "2px solid var(--primary)" : "2px solid transparent",
+            marginBottom: -1, transition: "color 0.15s",
+          }}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function MemberPreview({
+  member, onViewFull, onRoleChange, onToggleSuspend,
+}: {
+  member: Member
+  onViewFull: () => void
+  onRoleChange: (id: string, role: MemberRole) => void
+  onToggleSuspend: (id: string) => void
+}) {
+  const [tab, setTab] = useState(0)
+  const statusColor = STATUS_COLOR[member.status]
+  const isActive  = member.status === "active"
+  const isInvited = member.status === "invited"
+
+  const permSummary = useMemo(() => {
+    return Object.entries(PERM_TREE).map(([studio, nodes]) => {
+      const total   = nodes.reduce((n, nd) => n + 1 + (nd.children?.length ?? 0), 0)
+      const granted = nodes.reduce((n, nd) => {
+        let c = nd.state !== "" ? 1 : 0
+        nd.children?.forEach(ch => { if (ch.state !== "") c++ })
+        return n + c
+      }, 0)
+      return { studio, granted, total }
+    })
+  }, [])
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "6px 10px", fontSize: 12,
+    border: "1px solid var(--border)", borderRadius: 7,
+    background: "var(--surface)", color: "var(--foreground)", outline: "none",
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Identity header */}
+      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
+            background: isActive ? member.avatarColor : "var(--muted)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 17, fontWeight: 700,
+            color: isActive ? "#fff" : "var(--muted-foreground)",
+            opacity: member.status === "suspended" ? 0.55 : 1,
+          }}>
+            {member.initials}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 2 }}>{member.name}</div>
+            {(member.title || member.department) && (
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {member.title}{member.title && member.department ? " · " : ""}{member.department}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100, background: `${ROLE_COLOR[member.role]}22`, color: ROLE_COLOR[member.role], border: `1px solid ${ROLE_COLOR[member.role]}44` }}>
+                {member.role}
+              </span>
+              <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100, background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44` }}>
+                {STATUS_LABEL[member.status]}
+              </span>
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={onViewFull}
+          style={{
+            width: "100%", padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
+            border: "1px solid var(--border)", borderRadius: 8,
+            background: "var(--surface-raised)", color: "var(--foreground)",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+          }}
+        >
+          <Icons.ExternalLink size={12} />
+          View full profile
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ padding: "0 20px" }}>
+        <PreviewTabBar tabs={["Overview", "Permissions", "Actions"]} active={tab} onChange={setTab} />
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+
+        {/* Overview */}
+        {tab === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <InfoRow icon={<Icons.Mail size={13} />} label="Email" value={member.email} />
+            <InfoRow icon={<Icons.Calendar size={13} />} label="Joined" value={formatDate(member.joinedAt)} />
+            {member.lastActive && (
+              <InfoRow icon={<Icons.Clock size={13} />} label="Last active" value={formatRelative(member.lastActive)} />
+            )}
+            {isInvited && (
+              <InfoRow icon={<Icons.Send size={13} />} label="Invite sent" value={formatRelative(member.joinedAt)} />
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 4 }}>
+              <div style={{ color: "var(--muted-foreground)" }}><Icons.ShieldCheck size={13} /></div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 3 }}>MFA</div>
+                <div style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100,
+                  background: member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 12%, transparent)" : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
+                  color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
+                  border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
+                }}>
+                  {member.mfaEnabled ? <Icons.ShieldCheck size={10} /> : <Icons.ShieldAlert size={10} />}
+                  {member.mfaEnabled ? (member.mfaMethod ? `Enabled · ${MFA_METHOD_LABEL[member.mfaMethod]}` : "Enabled") : "Not enabled"}
+                </div>
+              </div>
+            </div>
+            {!isInvited && (member.sessions?.length ?? 0) > 0 && (
+              <InfoRow
+                icon={<Icons.Monitor size={13} />}
+                label="Active sessions"
+                value={`${member.sessions!.length} session${member.sessions!.length !== 1 ? "s" : ""}`}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Permissions summary */}
+        {tab === 1 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4, lineHeight: 1.4 }}>
+              Effective permissions across all studios. <span style={{ fontStyle: "italic" }}>Inherited via role.</span>
+            </div>
+            {permSummary.map(({ studio, granted, total }) => {
+              const meta = STUDIO_META[studio]
+              if (!meta) return null
+              const pct = total > 0 ? (granted / total) * 100 : 0
+              return (
+                <div key={studio} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</span>
+                    </div>
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                      <span style={{ fontWeight: 700, color: granted > 0 ? "var(--primary)" : "var(--muted-foreground)" }}>{granted}</span> / {total}
+                    </span>
+                  </div>
+                  <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: pct > 0 ? "var(--primary)" : "transparent", borderRadius: 2, transition: "width 0.3s" }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Actions */}
+        {tab === 2 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {!isInvited && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>Change role</div>
+                <select
+                  value={member.role}
+                  onChange={e => onRoleChange(member.id, e.target.value as MemberRole)}
+                  style={{ width: "100%", padding: "8px 10px", fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none", cursor: "pointer" }}
+                >
+                  {(["Super Admin", "Tenant Admin", "Billing Admin", "Member", "Viewer"] as MemberRole[]).map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {isInvited ? (
+              <button
+                onClick={() => alert(`Invite resent to ${member.email}`)}
+                style={{ ...inputStyle, cursor: "pointer", textAlign: "left" }}
+              >
+                Resend invite
+              </button>
+            ) : (
+              <button
+                onClick={() => onToggleSuspend(member.id)}
+                style={{
+                  width: "100%", padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  borderRadius: 7, border: "1px solid var(--border)", textAlign: "left",
+                  background: "transparent",
+                  color: isActive ? "var(--badge-alert)" : "var(--badge-success)",
+                }}
+              >
+                {isActive ? "Suspend access" : "Reactivate account"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void }) {
+  const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
+  const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Identity header */}
+      <div style={{ height: 4, background: role.color }} />
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
+          <span style={{
+            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
+            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
+            color: role.system ? "var(--muted-foreground)" : role.color,
+            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
+            textTransform: "uppercase", letterSpacing: "0.06em",
+          }}>
+            {role.system ? "System" : "Custom"}
+          </span>
+        </div>
+        <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, margin: "0 0 12px" }}>{role.desc}</p>
+        <button
+          onClick={onViewFull}
+          style={{
+            width: "100%", padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
+            border: "1px solid var(--border)", borderRadius: 8,
+            background: "var(--surface-raised)", color: "var(--foreground)",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+          }}
+        >
+          <Icons.ExternalLink size={12} />
+          {role.system ? "View role" : "Edit role"}
+        </button>
+      </div>
+
+      {/* Permission stats */}
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+          Permissions · <span style={{ color: "var(--primary)" }}>{perms.total}</span> total
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {([
+            { label: "Governance",  value: perms.governance, color: "#8b5cf6" },
+            { label: "Data Studio", value: perms.datastudio, color: "#10b981" },
+            { label: "Agentic",     value: perms.agentic,    color: "#f97316" },
+            { label: "Admin",       value: perms.admin,      color: "#6366f1" },
+          ] as const).map(s => (
+            <div key={s.label} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color }} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)" }}>{s.label}</span>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: s.value > 0 ? "var(--foreground)" : "var(--muted-foreground)", opacity: s.value > 0 ? 1 : 0.35 }}>
+                {s.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Members */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+          Members · {members.length}
+        </div>
+        {members.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
+            No members assigned to this role
+          </div>
+        ) : members.map(m => (
+          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+              background: m.status === "active" ? m.avatarColor : "var(--muted)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 10, fontWeight: 700, color: "#fff",
+            }}>{m.initials}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => void }) {
+  const members = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Identity header */}
+      <div style={{ height: 4, background: group.color }} />
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
+        <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, margin: "0 0 10px" }}>{group.desc}</p>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
+          {group.studios.length === 0 ? (
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)", opacity: 0.5 }}>No studio access</span>
+          ) : group.studios.map(s => {
+            const meta = STUDIO_META[s]
+            return (
+              <span key={s} style={{
+                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
+              }}>
+                {meta.label}
+              </span>
+            )
+          })}
+        </div>
+        <button
+          onClick={onViewFull}
+          style={{
+            width: "100%", padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
+            border: "1px solid var(--border)", borderRadius: 8,
+            background: "var(--surface-raised)", color: "var(--foreground)",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+          }}
+        >
+          <Icons.ExternalLink size={12} />
+          Manage group
+        </button>
+      </div>
+
+      {/* Members */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+          Members · {members.length}
+        </div>
+        {members.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
+            No members in this group yet
+          </div>
+        ) : members.map(m => (
+          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+              background: m.status === "active" ? m.avatarColor : "var(--muted)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 10, fontWeight: 700, color: "#fff",
+            }}>{m.initials}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {m.title}{m.title && m.department ? " · " : ""}{m.department}
+              </div>
+            </div>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
+              background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status], border: `1px solid ${STATUS_COLOR[m.status]}44`,
+            }}>
+              {STATUS_LABEL[m.status]}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
@@ -1843,6 +2228,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [query, setQuery]               = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
   const [detailView, setDetailView]     = useState<DetailView>(null)
+  const [previewItem, setPreviewItem]   = useState<DetailView>(null)
   const [showInvite, setShowInvite]     = useState(false)
 
   const counts = useMemo(() => ({
@@ -1998,7 +2384,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
                 <MemberRow
                   key={m.id}
                   member={m}
-                  onSelect={member => setDetailView({ type: "member", member })}
+                  onSelect={member => setPreviewItem({ type: "member", member })}
                 />
               ))
             )}
@@ -2020,7 +2406,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
               {ROLES.filter(r => r.system).map(r => (
-                <RoleCard key={r.id} role={r} onSelect={role => setDetailView({ type: "role", role })} />
+                <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
               ))}
             </div>
           </div>
@@ -2030,7 +2416,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
               {ROLES.filter(r => !r.system).map(r => (
-                <RoleCard key={r.id} role={r} onSelect={role => setDetailView({ type: "role", role })} />
+                <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
               ))}
             </div>
           </div>
@@ -2041,10 +2427,48 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       {mainTab === "groups" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
           {GROUPS.map(g => (
-            <GroupCard key={g.id} group={g} onSelect={group => setDetailView({ type: "group", group })} />
+            <GroupCard key={g.id} group={g} onSelect={group => setPreviewItem({ type: "group", group })} />
           ))}
         </div>
       )}
+
+      {/* Preview slide-out */}
+      <SlideOut
+        open={previewItem !== null}
+        onClose={() => setPreviewItem(null)}
+        type="full-slot"
+        size="m"
+        showClose
+        showIcon={false}
+        showStatus={false}
+        showTopButton={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta={false}
+        resizable={false}
+      >
+        {previewItem?.type === "member" && (
+          <MemberPreview
+            member={previewItem.member}
+            onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
+            onRoleChange={handleRoleChange}
+            onToggleSuspend={id => { handleToggleSuspend(id); setPreviewItem(null) }}
+          />
+        )}
+        {previewItem?.type === "role" && (
+          <RolePreview
+            role={previewItem.role}
+            onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
+          />
+        )}
+        {previewItem?.type === "group" && (
+          <GroupPreview
+            group={previewItem.group}
+            onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
+          />
+        )}
+      </SlideOut>
 
       {/* Invite modal */}
       {showInvite && (
