@@ -43,7 +43,7 @@ const URGENCY_META = {
 const REQUESTS: IntegrationRequest[] = [
   {
     id: "r1",
-    name: "Looker", category: "Analytics", icon: "📊",
+    name: "Looker", category: "Analytics", icon: "BarChart2",
     description: "Business intelligence and data exploration platform by Google.",
     justification: "The Risk & Compliance team needs Looker connected to pull regulatory reporting dashboards directly into Governance Studio without manual exports.",
     requestedAt: "Aug 24, 2026", updatedAt: "Aug 25, 2026",
@@ -54,7 +54,7 @@ const REQUESTS: IntegrationRequest[] = [
   },
   {
     id: "r2",
-    name: "Zendesk", category: "Support", icon: "🎫",
+    name: "Zendesk", category: "Support", icon: "Headphones",
     description: "Customer support and ticketing platform.",
     justification: "Needed so the AI worker monitoring customer escalations can pull open ticket context in real time to improve triage accuracy.",
     requestedAt: "Aug 20, 2026", updatedAt: "Aug 20, 2026",
@@ -63,7 +63,7 @@ const REQUESTS: IntegrationRequest[] = [
   },
   {
     id: "r3",
-    name: "Stripe", category: "Payments", icon: "💳",
+    name: "Stripe", category: "Payments", icon: "CreditCard",
     description: "Payment processing and financial infrastructure.",
     justification: "The billing reconciliation model requires Stripe charge and refund events to validate monthly revenue vs. the SAP ERP GL entries.",
     requestedAt: "Aug 12, 2026", updatedAt: "Aug 18, 2026",
@@ -74,7 +74,7 @@ const REQUESTS: IntegrationRequest[] = [
   },
   {
     id: "r4",
-    name: "GitHub", category: "Developer Tools", icon: "🐱",
+    name: "GitHub", category: "Developer Tools", icon: "GitBranch",
     description: "Code hosting, CI/CD, and collaboration.",
     justification: "The engineering team wants AIMS-OS workers to monitor PR reviews and flag code that touches regulated data models — requires read access to repos.",
     requestedAt: "Jul 30, 2026", updatedAt: "Aug 02, 2026",
@@ -110,7 +110,9 @@ function RequestCard({
         style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: "14px 16px" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: 24, lineHeight: 1 }}>{req.icon}</div>
+          <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)", flexShrink: 0 }}>
+            {(() => { const IC = Icons[req.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={16} /> : null })()}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{req.name}</span>
@@ -211,7 +213,7 @@ function NewRequestForm({ onSubmit, onCancel }: { onSubmit: (r: IntegrationReque
   function submit() {
     if (!name.trim() || !justification.trim()) return
     onSubmit({
-      id: `r${Date.now()}`, name: name.trim(), category, icon: "🔌",
+      id: `r${Date.now()}`, name: name.trim(), category, icon: "Plug",
       description: `Requested integration: ${name.trim()}.`,
       justification: justification.trim(),
       requestedAt: "Today", updatedAt: "Today",

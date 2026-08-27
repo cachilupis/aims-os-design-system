@@ -31,7 +31,7 @@ const STUDIOS: Studio[] = [
   {
     id: "governance",
     name: "Governance Studio",
-    icon: "🏛️",
+    icon: "Layers",
     accentColor: "#10b981",  // audit-ignore: prototype fixture data
     description: "Sandbox/Truth plane model, domain sections, knowledge bindings, promotion packets, and resolution requests.",
     status: "active",
@@ -69,7 +69,7 @@ const STUDIOS: Studio[] = [
   {
     id: "datastudio",
     name: "Data Studio",
-    icon: "🔬",
+    icon: "FlaskConical",
     accentColor: "#8b5cf6",  // audit-ignore: prototype fixture data
     description: "Data modeling, lineage tracking, entity management, and governed schema publication.",
     status: "active",
@@ -107,7 +107,7 @@ const STUDIOS: Studio[] = [
   {
     id: "agentic",
     name: "Agentic Studio",
-    icon: "🤖",
+    icon: "Bot",
     accentColor: "#06b6d4",  // audit-ignore: prototype fixture data
     description: "AI worker management, agentic network composition, Human-in-the-Loop handoffs, and run observability.",
     status: "active",
@@ -189,7 +189,9 @@ function StudioPanel({ studio, onClose }: { studio: Studio; onClose: () => void 
       {/* Header */}
       <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <span style={{ fontSize: 26, lineHeight: 1 }}>{studio.icon}</span>
+          <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)", flexShrink: 0 }}>
+            {(() => { const IC = Icons[studio.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={18} /> : null })()}
+          </span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>{studio.name}</div>
             <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2, lineHeight: 1.4 }}>{studio.description}</div>
@@ -321,9 +323,9 @@ function StudioCard({ studio, selected, onClick }: {
         <div style={{
           width: 44, height: 44, borderRadius: 11, flexShrink: 0,
           background: `${studio.accentColor}18`, border: `1px solid ${studio.accentColor}30`,
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
+          display: "flex", alignItems: "center", justifyContent: "center", color: studio.accentColor,
         }}>
-          {studio.icon}
+          {(() => { const IC = Icons[studio.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={22} /> : null })()}
         </div>
 
         {/* Info */}

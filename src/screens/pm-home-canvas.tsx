@@ -259,7 +259,7 @@ function MyWorkContent() {
                   <div className="flex items-center gap-[4px] flex-wrap mb-[2px]">
                     <Tag variant="neutral" size="sm">{item.studio}</Tag>
                     <Tag variant="neutral" size="sm">{item.type}</Tag>
-                    {item.crit && <Tag variant="error" size="sm">⚡ Critical</Tag>}
+                    {item.crit && <Tag variant="error" size="sm">Critical</Tag>}
                     <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--field-supporting)", whiteSpace: "nowrap" }}>{item.time}</span>
                   </div>
                   <p style={{ margin: "2px 0", fontSize: 12, fontWeight: 600, color: "var(--foreground)", lineHeight: 1.35 }}>{item.title}</p>
