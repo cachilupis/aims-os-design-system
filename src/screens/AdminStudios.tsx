@@ -4,7 +4,7 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
-import { SwitchTab }    from "@/components/ui/switch-tab"
+import { Tabs }         from "@/components/ui/tabs"
 import { SlideOut }    from "@/components/ui/slide-out"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -195,13 +195,13 @@ function StudioPanel({ studio }: { studio: Studio }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: "10px 20px 0", borderBottom: "1px solid var(--border)" }}>
-        <SwitchTab
+      <div style={{ padding: "0 20px", borderBottom: "1px solid var(--border)" }}>
+        <Tabs
           items={[
             { id: "access",   label: "Access"   },
             { id: "settings", label: "Settings" },
           ]}
-          value={tab}
+          activeId={tab}
           onChange={setTab}
           size="s"
         />

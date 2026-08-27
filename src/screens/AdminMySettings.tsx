@@ -4,7 +4,7 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
-import { SwitchTab }     from "@/components/ui/switch-tab"
+import { Tabs }          from "@/components/ui/tabs"
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
@@ -207,15 +207,15 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
       )}
     >
       {/* Tabs */}
-      <div style={{ marginBottom: 20 }}>
-        <SwitchTab
+      <div style={{ borderBottom: "1px solid var(--border)", marginBottom: 20 }}>
+        <Tabs
           items={[
             { id: "profile",       label: "Profile"        },
             { id: "notifications", label: "Notifications"  },
             { id: "tokens",        label: "API Tokens"     },
             { id: "sessions",      label: "Sessions"       },
           ]}
-          value={tab}
+          activeId={tab}
           onChange={setTab}
           size="s"
         />
