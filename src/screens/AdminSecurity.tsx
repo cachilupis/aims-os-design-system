@@ -341,12 +341,21 @@ function SessionSection({ timeout, onTimeout, lock, onLock }: {
 
 interface IpRule { id: string; cidr: string; label: string; enabled: boolean }
 
-function IpAllowlistSection({ rules, onToggleRule, onRemove }: {
+function IpAllowlistSection({ rules, onToggleRule, onRemove, onAdd }: {
   rules: IpRule[]; onToggleRule: (id: string) => void; onRemove: (id: string) => void
+  onAdd: (rule: IpRule) => void
 }) {
-  const [input, setInput] = useState("")
-  const [labelInput, setLabelInput] = useState("")
+  const [cidr, setCidr]   = useState("")
+  const [label, setLabel] = useState("")
   const activeCount = rules.filter(r => r.enabled).length
+
+  function handleAdd() {
+    const trimmedCidr = cidr.trim()
+    if (!trimmedCidr) return
+    onAdd({ id: `ip-${Date.now()}`, cidr: trimmedCidr, label: label.trim() || "Custom range", enabled: true })
+    setCidr("")
+    setLabel("")
+  }
 
   return (
     <SectionCard
@@ -354,7 +363,7 @@ function IpAllowlistSection({ rules, onToggleRule, onRemove }: {
       description="Restrict workspace access to specific IP ranges. When active, unlisted IPs are blocked."
       badge={activeCount > 0 ? <StatusBadge ok label={`${activeCount} rules active`} /> : undefined}
     >
-      {rules.map((rule, i) => (
+      {rules.map(rule => (
         <div key={rule.id} style={{
           display: "flex", alignItems: "center", gap: 10,
           padding: "11px 0", borderBottom: "1px solid var(--border)",
@@ -378,8 +387,9 @@ function IpAllowlistSection({ rules, onToggleRule, onRemove }: {
       {/* Add rule */}
       <div style={{ display: "flex", gap: 8, padding: "12px 0" }}>
         <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
+          value={cidr}
+          onChange={e => setCidr(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleAdd()}
           placeholder="CIDR range (e.g. 192.168.1.0/24)"
           style={{
             flex: 2, padding: "7px 10px", fontSize: 12, borderRadius: 7,
@@ -388,8 +398,9 @@ function IpAllowlistSection({ rules, onToggleRule, onRemove }: {
           }}
         />
         <input
-          value={labelInput}
-          onChange={e => setLabelInput(e.target.value)}
+          value={label}
+          onChange={e => setLabel(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleAdd()}
           placeholder="Label (e.g. HQ Mexico City)"
           style={{
             flex: 1, padding: "7px 10px", fontSize: 12, borderRadius: 7,
@@ -397,10 +408,7 @@ function IpAllowlistSection({ rules, onToggleRule, onRemove }: {
             color: "var(--foreground)", outline: "none",
           }}
         />
-        <Button
-          variant="secondary" size="sm"
-          onClick={() => { setInput(""); setLabelInput("") }}
-        >
+        <Button variant="secondary" size="sm" onClick={handleAdd}>
           Add rule
         </Button>
       </div>
@@ -496,6 +504,9 @@ export function AdminSecurityScreen() {
   function removeIpRule(id: string) {
     setIpRules(rules => rules.filter(r => r.id !== id))
   }
+  function addIpRule(rule: IpRule) {
+    setIpRules(rules => [...rules, rule])
+  }
 
   return (
     <ScreenLayout
@@ -532,7 +543,7 @@ export function AdminSecurityScreen() {
           <MfaSection    policy={mfaPolicy} onChange={setMfaPolicy} />
           <SsoSection    enabled={ssoEnabled} onToggle={() => setSsoEnabled(v => !v)} />
           <SessionSection timeout={sessionTimeout} onTimeout={setSessionTimeout} lock={sessionLock} onLock={() => setSessionLock(v => !v)} />
-          <IpAllowlistSection rules={ipRules} onToggleRule={toggleIpRule} onRemove={removeIpRule} />
+          <IpAllowlistSection rules={ipRules} onToggleRule={toggleIpRule} onRemove={removeIpRule} onAdd={addIpRule} />
         </div>
 
         {/* Right column */}
