@@ -5,6 +5,7 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { SwitchTab }    from "@/components/ui/switch-tab"
+import { SlideOut }    from "@/components/ui/slide-out"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -163,7 +164,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
 
 // ─── Operate panel ────────────────────────────────────────────────────────────
 
-function StudioPanel({ studio, onClose }: { studio: Studio; onClose: () => void }) {
+function StudioPanel({ studio }: { studio: Studio }) {
   const [tab, setTab]       = useState("access")
   const [groups, setGroups] = useState<GroupAccess[]>(studio.groups)
   const [toggles, setToggles] = useState<StudioToggle[]>(studio.settings)
@@ -182,37 +183,15 @@ function StudioPanel({ studio, onClose }: { studio: Studio; onClose: () => void 
   }
 
   return (
-    <div style={{
-      width: 400, flexShrink: 0, borderLeft: "1px solid var(--border)",
-      background: "var(--surface)", display: "flex", flexDirection: "column", overflow: "hidden",
-    }}>
-      {/* Header */}
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)", flexShrink: 0 }}>
-            {(() => { const IC = Icons[studio.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={18} /> : null })()}
-          </span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>{studio.name}</div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2, lineHeight: 1.4 }}>{studio.description}</div>
+    <>
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, padding: "12px 20px", borderBottom: "1px solid var(--border)" }}>
+        {studio.stats.map(s => (
+          <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", textAlign: "center" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: studio.accentColor }}>{s.value}</div>
+            <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1 }}>{s.label}</div>
           </div>
-          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6 }}
-            onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <Icons.X size={16} />
-          </button>
-        </div>
-
-        {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginTop: 14 }}>
-          {studio.stats.map(s => (
-            <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", textAlign: "center" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: studio.accentColor }}>{s.value}</div>
-              <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
 
       {/* Tabs */}
@@ -293,7 +272,7 @@ function StudioPanel({ studio, onClose }: { studio: Studio; onClose: () => void 
           </>
         )}
       </div>
-    </div>
+    </>
   )
 }
 
@@ -414,15 +393,16 @@ export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) =
           ))}
         </div>
 
-        {/* Detail panel */}
-        {selected && (
-          <StudioPanel
-            key={selected.id}
-            studio={selected}
-            onClose={() => setSelected(null)}
-          />
-        )}
       </div>
+
+      <SlideOut
+        open={selected !== null}
+        onClose={() => setSelected(null)}
+        title={selected?.name ?? ""}
+        subtitle={selected?.description ?? ""}
+      >
+        {selected && <StudioPanel key={selected.id} studio={selected} />}
+      </SlideOut>
     </ScreenLayout>
   )
 }

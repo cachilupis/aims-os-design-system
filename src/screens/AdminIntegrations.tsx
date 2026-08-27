@@ -5,6 +5,7 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { SwitchTab }    from "@/components/ui/switch-tab"
+import { SlideOut }    from "@/components/ui/slide-out"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -141,77 +142,32 @@ const CATALOG: CatalogItem[] = [
 
 // ─── Operate panel ────────────────────────────────────────────────────────────
 
-function OperatePanel({ integration, onClose }: { integration: Integration; onClose: () => void }) {
+function OperatePanel({ integration }: { integration: Integration }) {
   const [activeTab, setActiveTab] = useState("overview")
-  const statusMeta = STATUS_META[integration.status]
   const [rotatingCreds, setRotatingCreds] = useState(false)
 
   return (
-    <div style={{
-      width: 380, flexShrink: 0, borderLeft: "1px solid var(--border)",
-      background: "var(--surface)", display: "flex", flexDirection: "column",
-      height: "100%", overflow: "hidden",
-    }}>
-      {/* Panel header */}
-      <div style={{
-        padding: "16px 20px", borderBottom: "1px solid var(--border)",
-        background: "var(--surface-raised)",
-      }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <div style={{ width: 36, height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
-            {(() => { const IC = Icons[integration.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={20} /> : null })()}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>{integration.name}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-                background: "var(--surface)", border: "1px solid var(--border)",
-                color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em",
-              }}>
-                {integration.category}
-              </span>
-              <span style={{
-                display: "inline-flex", alignItems: "center", gap: 3,
-                fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 100,
-                background: `${statusMeta.color}18`, color: statusMeta.color,
-                border: `1px solid ${statusMeta.color}30`,
-              }}>
-                {statusMeta.icon} {statusMeta.label}
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6 }}
-            onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <Icons.X size={16} />
-          </button>
+    <>
+      {integration.errorMsg && (
+        <div style={{
+          margin: "12px 20px 0", padding: "8px 12px", borderRadius: 8,
+          background: "var(--badge-error)10", border: "1px solid var(--badge-error)30",
+          fontSize: 12, color: "var(--badge-error)", lineHeight: 1.4,
+          display: "flex", gap: 8, alignItems: "flex-start",
+        }}>
+          <Icons.AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+          {integration.errorMsg}
         </div>
+      )}
 
-        {integration.errorMsg && (
-          <div style={{
-            marginTop: 12, padding: "8px 12px", borderRadius: 8,
-            background: "var(--badge-error)10", border: "1px solid var(--badge-error)30",
-            fontSize: 12, color: "var(--badge-error)", lineHeight: 1.4,
-            display: "flex", gap: 8, alignItems: "flex-start",
-          }}>
-            <Icons.AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-            {integration.errorMsg}
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          {integration.status === "error"
-            ? <Button variant="main" size="sm" style={{ flex: 1 }}>Re-authenticate</Button>
-            : integration.status === "paused"
-              ? <Button variant="main" size="sm" style={{ flex: 1 }}>Resume sync</Button>
-              : <Button variant="secondary" size="sm" style={{ flex: 1 }}>Sync now</Button>
-          }
-          <Button variant="secondary" size="sm">Settings</Button>
-        </div>
+      <div style={{ display: "flex", gap: 8, padding: "12px 20px", borderBottom: "1px solid var(--border)" }}>
+        {integration.status === "error"
+          ? <Button variant="main" size="sm" style={{ flex: 1 }}>Re-authenticate</Button>
+          : integration.status === "paused"
+            ? <Button variant="main" size="sm" style={{ flex: 1 }}>Resume sync</Button>
+            : <Button variant="secondary" size="sm" style={{ flex: 1 }}>Sync now</Button>
+        }
+        <Button variant="secondary" size="sm">Settings</Button>
       </div>
 
       {/* Tabs */}
@@ -301,7 +257,7 @@ function OperatePanel({ integration, onClose }: { integration: Integration; onCl
           </div>
         )}
       </div>
-    </div>
+    </>
   )
 }
 
@@ -547,12 +503,17 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
             ))}
           </div>
 
-          {/* Operate panel */}
-          {selected && (
-            <OperatePanel integration={selected} onClose={() => setSelected(null)} />
-          )}
         </div>
       )}
+
+      <SlideOut
+        open={selected !== null}
+        onClose={() => setSelected(null)}
+        title={selected?.name ?? ""}
+        subtitle={selected ? `${selected.category} · ${STATUS_META[selected.status].label}` : ""}
+      >
+        {selected && <OperatePanel integration={selected} />}
+      </SlideOut>
 
       {tab === "catalog" && (
         <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden" }}>

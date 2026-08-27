@@ -5,6 +5,7 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { SwitchTab }    from "@/components/ui/switch-tab"
+import { SlideOut }    from "@/components/ui/slide-out"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -273,114 +274,6 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
   )
 }
 
-function EventDetailPanel({ event, onClose }: { event: AuditEvent; onClose: () => void }) {
-  const { date, time } = formatTs(event.timestamp)
-  const cat = CATEGORY_META[event.category]
-  const res = RESULT_META[event.result]
-
-  return (
-    <div style={{
-      width: 380, flexShrink: 0, borderLeft: "1px solid var(--border)",
-      background: "var(--surface)", display: "flex", flexDirection: "column",
-      height: "100%", overflow: "hidden",
-    }}>
-      {/* Panel header */}
-      <div style={{
-        padding: "16px 20px", borderBottom: "1px solid var(--border)",
-        background: "var(--surface-raised)", display: "flex", alignItems: "flex-start", gap: 10,
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 3,
-              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-              background: `${cat.color}1a`, color: cat.color, border: `1px solid ${cat.color}33`,
-              textTransform: "uppercase", letterSpacing: "0.05em",
-            }}>
-              {cat.icon} {cat.label}
-            </span>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-              background: `${res.color}15`, color: res.color, border: `1px solid ${res.color}30`,
-            }}>
-              {res.label}
-            </span>
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", marginBottom: 2 }}>
-            {event.actionLabel}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-            {date} at {time}
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, flexShrink: 0, borderRadius: 6 }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-        >
-          <Icons.X size={16} />
-        </button>
-      </div>
-
-      {/* Panel body */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-
-        {/* Actor */}
-        <div style={{ paddingTop: 16, paddingBottom: 4 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Actor</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface-raised)", borderRadius: 8, border: "1px solid var(--border)" }}>
-            <Avatar actor={event.actor} size={32} />
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{event.actor.name}</div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{event.actor.email}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Event details */}
-        <div style={{ marginTop: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Event details</div>
-          <DetailRow label="Event ID"  value={event.id} mono />
-          <DetailRow label="Action"    value={event.action} mono />
-          <DetailRow label="Timestamp" value={`${date} ${time} UTC`} />
-          {event.target && (
-            <DetailRow label="Target" value={event.target.email ? `${event.target.name} (${event.target.email})` : event.target.name} />
-          )}
-          {event.resource && (
-            <>
-              <DetailRow label="Resource type" value={event.resource.type} />
-              <DetailRow label="Resource name" value={event.resource.name} />
-              <DetailRow label="Resource ID"   value={event.resource.id} mono />
-            </>
-          )}
-          {event.studio && (
-            <DetailRow label="Studio" value={STUDIO_META[event.studio].label} />
-          )}
-        </div>
-
-        {/* Metadata */}
-        {event.details && Object.keys(event.details).length > 0 && (
-          <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Metadata</div>
-            {Object.entries(event.details).map(([k, v]) => (
-              <DetailRow key={k} label={k} value={v} />
-            ))}
-          </div>
-        )}
-
-        {/* Network */}
-        <div style={{ marginTop: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Network</div>
-          <DetailRow label="IP address" value={event.ip} mono />
-          <DetailRow label="Location"   value={event.location} />
-          <DetailRow label="User agent" value={event.userAgent} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 20
@@ -615,11 +508,95 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
           )}
         </div>
 
-        {/* Detail panel */}
-        {selected && (
-          <EventDetailPanel event={selected} onClose={() => setSelected(null)} />
-        )}
       </div>
+
+      {/* Detail slide-out */}
+      {(() => {
+        const cat = selected ? CATEGORY_META[selected.category] : null
+        const res = selected ? RESULT_META[selected.result] : null
+        const { date, time } = selected ? formatTs(selected.timestamp) : { date: "", time: "" }
+        return (
+          <SlideOut
+            open={selected !== null}
+            onClose={() => setSelected(null)}
+            title={selected?.actionLabel ?? ""}
+            subtitle={selected && cat && res ? `${cat.label} · ${res.label} · ${date} at ${time}` : ""}
+          >
+            {selected && cat && res && (
+              <div style={{ padding: "0 20px 20px" }}>
+                {/* Badges */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, paddingTop: 4 }}>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 3,
+                    fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                    background: `${cat.color}1a`, color: cat.color, border: `1px solid ${cat.color}33`,
+                    textTransform: "uppercase", letterSpacing: "0.05em",
+                  }}>
+                    {cat.icon} {cat.label}
+                  </span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                    background: `${res.color}15`, color: res.color, border: `1px solid ${res.color}30`,
+                  }}>
+                    {res.label}
+                  </span>
+                </div>
+
+                {/* Actor */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Actor</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface-raised)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <Avatar actor={selected.actor} size={32} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{selected.actor.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{selected.actor.email}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event details */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Event details</div>
+                  <DetailRow label="Event ID"  value={selected.id} mono />
+                  <DetailRow label="Action"    value={selected.action} mono />
+                  <DetailRow label="Timestamp" value={`${date} ${time} UTC`} />
+                  {selected.target && (
+                    <DetailRow label="Target" value={selected.target.email ? `${selected.target.name} (${selected.target.email})` : selected.target.name} />
+                  )}
+                  {selected.resource && (
+                    <>
+                      <DetailRow label="Resource type" value={selected.resource.type} />
+                      <DetailRow label="Resource name" value={selected.resource.name} />
+                      <DetailRow label="Resource ID"   value={selected.resource.id} mono />
+                    </>
+                  )}
+                  {selected.studio && (
+                    <DetailRow label="Studio" value={STUDIO_META[selected.studio].label} />
+                  )}
+                </div>
+
+                {/* Metadata */}
+                {selected.details && Object.keys(selected.details).length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Metadata</div>
+                    {Object.entries(selected.details).map(([k, v]) => (
+                      <DetailRow key={k} label={k} value={v} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Network */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Network</div>
+                  <DetailRow label="IP address" value={selected.ip} mono />
+                  <DetailRow label="Location"   value={selected.location} />
+                  <DetailRow label="User agent" value={selected.userAgent} />
+                </div>
+              </div>
+            )}
+          </SlideOut>
+        )
+      })()}
     </ScreenLayout>
   )
 }
