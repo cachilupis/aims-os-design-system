@@ -196,30 +196,51 @@ export function Sidebar({
   onCollapseChange,
   className = "",
 }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed)
+  const [pinned, setPinned]   = useState(!defaultCollapsed)
+  const [hovered, setHovered] = useState(false)
+  const leaveTimer            = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // collapsed = not pinned AND not hover-expanded
+  const collapsed = !pinned && !hovered
 
   const prevDefault = useRef(defaultCollapsed)
   useEffect(() => {
     if (prevDefault.current !== defaultCollapsed) {
-      setCollapsed(defaultCollapsed)
+      setPinned(!defaultCollapsed)
       prevDefault.current = defaultCollapsed
     }
   }, [defaultCollapsed])
 
   const toggle = () => {
-    const next = !collapsed
-    setCollapsed(next)
-    onCollapseChange?.(next)
+    const next = !pinned
+    setPinned(next)
+    onCollapseChange?.(!next)
   }
+
+  function handleMouseEnter() {
+    if (leaveTimer.current) clearTimeout(leaveTimer.current)
+    setHovered(true)
+  }
+  function handleMouseLeave() {
+    leaveTimer.current = setTimeout(() => setHovered(false), 120)
+  }
+
+  // When hover-expanded (not pinned), keep physical footprint at 56px
+  // but let the visual panel overflow so content doesn't shift
+  const isHoverExpanded = hovered && !pinned
 
   return (
     <div
       className={`flex flex-col shrink-0 h-full ${className}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       style={{
-        width: collapsed ? 56 : 250,
+        width: pinned ? 250 : 56,
         padding: 8,
-        overflow: "hidden",
+        overflow: isHoverExpanded ? "visible" : "hidden",
         transition: "width 280ms cubic-bezier(0.4, 0, 0.2, 1)",
+        position: "relative",
+        zIndex: isHoverExpanded ? 100 : undefined,
       }}
     >
       <div
@@ -232,6 +253,7 @@ export function Sidebar({
           height: "100%",
           alignItems: collapsed ? "center" : "stretch",
           transition: "border-radius 280ms cubic-bezier(0.4, 0, 0.2, 1)",
+          width: collapsed ? undefined : 234,
         }}
       >
         {/* Toggle row — always at top, always visible */}
