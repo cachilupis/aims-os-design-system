@@ -2227,6 +2227,8 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
 export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [mainTab, setMainTab]           = useState<"members" | "roles" | "groups">("members")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [roleFilter, setRoleFilter]     = useState<"all" | "system" | "custom">("all")
+  const [groupFilter, setGroupFilter]   = useState<"all" | "with-members" | "empty">("all")
   const [query, setQuery]               = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
   const [detailView, setDetailView]     = useState<DetailView>(null)
@@ -2404,39 +2406,89 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       )}
 
       {/* Roles view */}
-      {mainTab === "roles" && (
-        <>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-              System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {ROLES.filter(r => r.system).length}</span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-              {ROLES.filter(r => r.system).map(r => (
-                <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
+      {mainTab === "roles" && (() => {
+        const filteredRoles = ROLES.filter(r =>
+          roleFilter === "all" ? true : roleFilter === "system" ? r.system : !r.system
+        )
+        const systemRoles = filteredRoles.filter(r => r.system)
+        const customRoles = filteredRoles.filter(r => !r.system)
+        return (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
+              {([
+                { id: "all",    label: `All (${ROLES.length})`                          },
+                { id: "system", label: `System (${ROLES.filter(r => r.system).length})` },
+                { id: "custom", label: `Custom (${ROLES.filter(r => !r.system).length})` },
+              ] as const).map(f => (
+                <Chip
+                  key={f.id}
+                  size="s"
+                  variant={roleFilter === f.id ? "primary" : "secondary"}
+                  onClick={() => setRoleFilter(f.id)}
+                >
+                  {f.label}
+                </Chip>
               ))}
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-              Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {ROLES.filter(r => !r.system).length}</span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-              {ROLES.filter(r => !r.system).map(r => (
-                <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+            {systemRoles.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+                  System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {systemRoles.length}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                  {systemRoles.map(r => (
+                    <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {customRoles.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+                  Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {customRoles.length}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                  {customRoles.map(r => (
+                    <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )
+      })()}
 
       {/* Groups view */}
-      {mainTab === "groups" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-          {GROUPS.map(g => (
-            <GroupCard key={g.id} group={g} onSelect={group => setPreviewItem({ type: "group", group })} />
-          ))}
-        </div>
-      )}
+      {mainTab === "groups" && (() => {
+        const filteredGroups = GROUPS.filter(g =>
+          groupFilter === "all" ? true : groupFilter === "with-members" ? g.memberIds.length > 0 : g.memberIds.length === 0
+        )
+        return (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
+              {([
+                { id: "all",          label: `All (${GROUPS.length})`                                       },
+                { id: "with-members", label: `Has members (${GROUPS.filter(g => g.memberIds.length > 0).length})` },
+                { id: "empty",        label: `Empty (${GROUPS.filter(g => g.memberIds.length === 0).length})` },
+              ] as const).map(f => (
+                <Chip
+                  key={f.id}
+                  size="s"
+                  variant={groupFilter === f.id ? "primary" : "secondary"}
+                  onClick={() => setGroupFilter(f.id)}
+                >
+                  {f.label}
+                </Chip>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+              {filteredGroups.map(g => (
+                <GroupCard key={g.id} group={g} onSelect={group => setPreviewItem({ type: "group", group })} />
+              ))}
+            </div>
+          </>
+        )
+      })()}
 
       {/* Preview slide-out */}
       <SlideOut
