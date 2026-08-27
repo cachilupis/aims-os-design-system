@@ -15778,23 +15778,19 @@ function PgCreatePathRow({ label, verdict, note, highlighted }: { label: string;
   )
 }
 
-// ── "Launch preview" — full-screen realistic staging for the 7 stress-test
-// cases (create.md §7). Each case is hand-authored, not derived from the raw
-// toggles — see PG_CONTEXT_CASE_BY_PRESET_LABEL in PatternCreatePage for how a
-// case is matched. The two surfaces that don't exist yet (inline create row,
-// Create-with-AI chat) show their explanatory InformativeCard positioned
-// exactly where the real surface would sit — only "1a" needs this among the 7.
+// ── "Launch preview" — full-screen realistic staging, one scene per resolved
+// surface (create.md §7). The scene is picked by the actual decision the
+// cascade returns — computeCreatePlaygroundResult's `surface`, overridden to
+// "catalogue" when gate1 is "source" — never by matching a preset, so every
+// combination of the 9 inputs always resolves to exactly one of the 8 scenes.
+// The two surfaces that don't exist yet (inline create row, Create-with-AI
+// chat) show their explanatory InformativeCard positioned exactly where the
+// real surface would sit.
 
-type PgContextCaseId = "1a" | "1b" | "2" | "3" | "4" | "6b" | "control"
+type PgContextCaseId = PgCreateSurface | "catalogue"
 
-const PG_CONTEXT_CASE_BY_PRESET_LABEL: Record<string, PgContextCaseId> = {
-  "1a · Note, list visible on screen": "1a",
-  "1b · Note, no list on screen": "1b",
-  "2 · Entity from its own list view, 4 fields": "2",
-  "3 · Governance policy": "3",
-  "4 · Workflow (owns a workspace)": "4",
-  "6b · Template from marketplace, fields remain": "6b",
-  "5 (control) · Add a node to the canvas": "control",
+function pgResultToContextCase(result: PgCreateResult): PgContextCaseId {
+  return result.gate1 === "source" ? "catalogue" : result.surface
 }
 
 const PG_SURFACE_LABEL: Record<PgCreateSurface, string> = {
@@ -15899,7 +15895,7 @@ function PgCreateContextPreview({ caseId, onClose }: { caseId: PgContextCaseId; 
   const [sixBStep, setSixBStep] = useState<1 | 2>(1)
 
   switch (caseId) {
-    case "1a":
+    case "inline-row":
       return (
         <PgCreateContextShell sidebarId="agents">
           <main className="flex-1 flex flex-col overflow-hidden">
@@ -15926,7 +15922,7 @@ function PgCreateContextPreview({ caseId, onClose }: { caseId: PgContextCaseId; 
         </PgCreateContextShell>
       )
 
-    case "1b":
+    case "slideout":
       return (
         <PgCreateContextShell sidebarId="agents"
           overlay={
@@ -15968,7 +15964,7 @@ function PgCreateContextPreview({ caseId, onClose }: { caseId: PgContextCaseId; 
         </PgCreateContextShell>
       )
 
-    case "2":
+    case "modal-content":
       return (
         <PgCreateContextShell sidebarId="agents"
           overlay={
@@ -16002,7 +15998,7 @@ function PgCreateContextPreview({ caseId, onClose }: { caseId: PgContextCaseId; 
         </PgCreateContextShell>
       )
 
-    case "3":
+    case "dedicated-stepper":
       return (
         <PgCreateContextShell sidebarId="knowledge">
           <main className="flex-1 flex flex-col overflow-hidden">
@@ -16027,7 +16023,7 @@ function PgCreateContextPreview({ caseId, onClose }: { caseId: PgContextCaseId; 
         </PgCreateContextShell>
       )
 
-    case "4":
+    case "dedicated":
       return (
         <PgCreateContextShell sidebarId="automations">
           <main className="flex-1 flex flex-col overflow-hidden">
@@ -16039,7 +16035,7 @@ function PgCreateContextPreview({ caseId, onClose }: { caseId: PgContextCaseId; 
         </PgCreateContextShell>
       )
 
-    case "6b": {
+    case "catalogue": {
       const overlay = sixBStep === 1 ? (
         <ModalDialog isOpen onClose={onClose} variant="content"
           title="Choose a template" description="Templates fully or partially define the new automation."
@@ -16092,7 +16088,34 @@ function PgCreateContextPreview({ caseId, onClose }: { caseId: PgContextCaseId; 
       )
     }
 
-    case "control":
+    case "chat-modal":
+      return (
+        <PgCreateContextShell sidebarId="automations"
+          overlay={
+            <div className="fixed inset-0 flex items-center justify-center p-[16px]" style={{ zIndex: 10000 }}>
+              <div className="w-full" style={{ maxWidth: 420 }}>
+                <InformativeCard state="informative" size="sm" title="Create-with-AI chat — not yet built"
+                  description="Gate 1 resolves to Assisted here — a ModalDialog hosts the chat component and ends in a success ModalDialog. The chat component exists in Figma but isn't implemented in this repo yet." />
+              </div>
+            </div>
+          }>
+          <main className="flex-1 flex flex-col overflow-hidden">
+            <Header title="Automations" description="8 active" size="size-l"
+              primaryAction={<Button variant="primary" size="sm">New automation</Button>} />
+            <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+              <div className="max-w-[820px] flex flex-col gap-[10px]">
+                {PG_CTX_AUTOMATIONS.map(a => (
+                  <CardContainer key={a.id} size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[a]} />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+          </main>
+        </PgCreateContextShell>
+      )
+
+    case "rejected":
       return (
         <PgCreateContextShell sidebarId="automations">
           <main className="flex-1 flex flex-col overflow-hidden">
@@ -16129,14 +16152,10 @@ function PatternCreatePage() {
     fieldCount: pgFieldCount, reversible: pgReversible,
   })
 
-  // "Launch preview" only covers the 7 hand-authored stress-test cases —
-  // it's null (button disabled) when the toggles don't exactly match one.
-  const pgActivePreset = PG_CREATE_PRESETS.find(p =>
-    p.values.trigger === pgTrigger && p.values.ownsWorkspace === pgOwnsWorkspace && p.values.stages === pgStages &&
-    p.values.branches === pgBranches && p.values.singleField === pgSingleField && p.values.listOnScreen === pgListOnScreen &&
-    p.values.attaches === pgAttaches && p.values.fieldCount === pgFieldCount && p.values.reversible === pgReversible
-  )
-  const pgActiveCase = pgActivePreset ? PG_CONTEXT_CASE_BY_PRESET_LABEL[pgActivePreset.label] ?? null : null
+  // "Launch preview" always resolves to a scene — keyed off the actual
+  // decision (surface, or "catalogue" when gate1 is "source"), not off
+  // matching one of the preset combinations.
+  const pgActiveCase = pgResultToContextCase(pgCreateResult)
 
   const applyPgCreatePreset = (values: PgCreateInputs) => {
     setPgTrigger(values.trigger); setPgOwnsWorkspace(values.ownsWorkspace); setPgStages(values.stages)
@@ -16598,24 +16617,24 @@ function PatternCreatePage() {
               { label: "Direct manipulation", value: "direct" },
               { label: "Inside an agent conversation", value: "chat" },
             ]} />
-            <CtrlToggle label="Object declares its own workspace" value={pgOwnsWorkspace} onChange={setPgOwnsWorkspace} />
+            <CtrlToggle label="Own workspace" value={pgOwnsWorkspace} onChange={setPgOwnsWorkspace} />
             <CtrlGroup label="Stages" value={pgStages} onChange={setPgStages} options={[
               { label: "1", value: "1" }, { label: "2", value: "2" }, { label: "3+", value: "3+" },
             ]} />
-            <CtrlToggle label="Flow branches" value={pgBranches} onChange={setPgBranches} />
-            <CtrlToggle label="Creatable from a single field" value={pgSingleField} onChange={setPgSingleField} />
-            <CtrlToggle label="A list of the same type is on screen" value={pgListOnScreen} onChange={setPgListOnScreen} />
-            <CtrlToggle label="Attaches to something on screen" value={pgAttaches} onChange={setPgAttaches} />
+            <CtrlToggle label="Branches" value={pgBranches} onChange={setPgBranches} />
+            <CtrlToggle label="Single field" value={pgSingleField} onChange={setPgSingleField} />
+            <CtrlToggle label="List on screen" value={pgListOnScreen} onChange={setPgListOnScreen} />
+            <CtrlToggle label="Attaches on screen" value={pgAttaches} onChange={setPgAttaches} />
             <CtrlGroup label="Field count" value={pgFieldCount} onChange={setPgFieldCount} options={[
               { label: "5 or fewer", value: "<=5" }, { label: "More than 5", value: ">5" },
             ]} />
-            <CtrlToggle label="Reversible by the user" value={pgReversible} onChange={setPgReversible} />
+            <CtrlToggle label="Reversible" value={pgReversible} onChange={setPgReversible} />
           </div>
 
           <div>
             <div className="flex items-center justify-between gap-[16px] mb-[16px]">
               <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Result</h2>
-              <Button variant="primary" size="sm" disabled={!pgActiveCase} onClick={() => pgActiveCase && setPgContextCase(pgActiveCase)}>
+              <Button variant="primary" size="sm" onClick={() => setPgContextCase(pgActiveCase)}>
                 Launch preview
               </Button>
             </div>
@@ -16650,11 +16669,6 @@ function PatternCreatePage() {
                 </div>
               </div>
             </div>
-            {!pgActiveCase && (
-              <p className="text-[11px] mt-[12px]" style={{ color: "var(--field-supporting)" }}>
-                Launch preview is staged for the 7 stress-test cases below — load one from the presets to see it with real background context.
-              </p>
-            )}
           </div>
 
           <div>
