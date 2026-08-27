@@ -334,7 +334,7 @@ function SeatManagement() {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export function AdminBillingScreen() {
+export function AdminBillingScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   return (
     <ScreenLayout
       workspaceName="Avance Financial"
@@ -342,6 +342,7 @@ export function AdminBillingScreen() {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="billing"
+      onSidebarItemClick={onNavigate}
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}

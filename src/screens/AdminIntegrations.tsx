@@ -459,7 +459,7 @@ function CatalogView({ onConnect }: { onConnect?: (id: string) => void }) {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export function AdminIntegrationsScreen() {
+export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [tab, setTab]         = useState("connected")
   const [selected, setSelected] = useState<Integration | null>(CONNECTED[0])
   const [query, setQuery]     = useState("")
@@ -478,6 +478,7 @@ export function AdminIntegrationsScreen() {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="integrations"
+      onSidebarItemClick={onNavigate}
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}

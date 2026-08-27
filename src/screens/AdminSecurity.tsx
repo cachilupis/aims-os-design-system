@@ -488,7 +488,7 @@ const DEFAULT_IP_RULES: IpRule[] = [
   { id: "ip4", cidr: "72.14.192.0/24", label: "Office — New York, NY",   enabled: false },
 ]
 
-export function AdminSecurityScreen() {
+export function AdminSecurityScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [mfaPolicy, setMfaPolicy]       = useState<MfaPolicy>("recommended")
   const [ssoEnabled, setSsoEnabled]     = useState(true)
   const [sessionTimeout, setSessionTimeout] = useState<SessionTimeout>(8)
@@ -515,6 +515,7 @@ export function AdminSecurityScreen() {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="security"
+      onSidebarItemClick={onNavigate}
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}
