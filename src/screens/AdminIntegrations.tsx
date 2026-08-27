@@ -8,12 +8,10 @@ import { SwitchTab }    from "@/components/ui/switch-tab"
 import { Tabs }         from "@/components/ui/tabs"
 import { SlideOut }    from "@/components/ui/slide-out"
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
-
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type IntegrationStatus = "active" | "error" | "paused" | "pending"
+type ActionType = "reauth" | "pause" | "resume" | "disconnect"
 type AuthType = "OAuth 2.0" | "API Key" | "Service Account" | "SAML" | "Basic Auth"
 
 interface SyncRun { ts: string; duration: string; records: string; status: "success" | "failure" | "warning" }
@@ -43,7 +41,7 @@ const STATUS_META: Record<IntegrationStatus, { label: string; color: string; ico
   pending: { label: "Pending",  color: "var(--badge-alert)",   icon: <Icons.Clock size={11} /> },
 }
 
-const CONNECTED: Integration[] = [
+const INITIAL_CONNECTED: Integration[] = [
   {
     id: "salesforce", name: "Salesforce CRM", category: "CRM", icon: "Building2",
     status: "error", authType: "OAuth 2.0",
@@ -146,9 +144,13 @@ const CATALOG_CATEGORIES = ["All", "CRM", "Data Warehouse", "Database", "Storage
 
 // ─── Operate panel ────────────────────────────────────────────────────────────
 
-function OperatePanel({ integration }: { integration: Integration }) {
+function OperatePanel({ integration, onAction }: {
+  integration: Integration
+  onAction: (id: string, action: ActionType) => void
+}) {
   const [activeTab, setActiveTab] = useState("overview")
   const [rotatingCreds, setRotatingCreds] = useState(false)
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false)
 
   return (
     <>
@@ -165,12 +167,23 @@ function OperatePanel({ integration }: { integration: Integration }) {
       )}
 
       <div style={{ display: "flex", gap: 8, padding: "12px 20px", borderBottom: "1px solid var(--border)" }}>
-        {integration.status === "error"
-          ? <Button variant="main" size="sm" style={{ flex: 1 }}>Re-authenticate</Button>
-          : integration.status === "paused"
-            ? <Button variant="main" size="sm" style={{ flex: 1 }}>Resume sync</Button>
-            : <Button variant="secondary" size="sm" style={{ flex: 1 }}>Sync now</Button>
-        }
+        {integration.status === "error" ? (
+          <Button variant="main" size="sm" style={{ flex: 1 }} onClick={() => onAction(integration.id, "reauth")}>
+            Re-authenticate
+          </Button>
+        ) : integration.status === "paused" ? (
+          <Button variant="main" size="sm" style={{ flex: 1 }} onClick={() => onAction(integration.id, "resume")}>
+            Resume sync
+          </Button>
+        ) : (
+          <>
+            <Button variant="secondary" size="sm" style={{ flex: 1 }}>Sync now</Button>
+            <Button variant="secondary" size="sm" onClick={() => onAction(integration.id, "pause")}>
+              <Icons.Pause size={13} style={{ marginRight: 4 }} />
+              Pause
+            </Button>
+          </>
+        )}
         <Button variant="secondary" size="sm">Settings</Button>
       </div>
 
@@ -206,11 +219,39 @@ function OperatePanel({ integration }: { integration: Integration }) {
                 <span style={{ fontSize: 13, color: "var(--foreground)" }}>{v}</span>
               </div>
             ))}
+
             <div style={{ marginTop: 20 }}>
-              <Button variant="secondary" size="sm" style={{ color: "var(--badge-error)", borderColor: "var(--badge-error)40" }}>
-                <Icons.Unplug size={13} style={{ marginRight: 4 }} />
-                Disconnect
-              </Button>
+              {confirmDisconnect ? (
+                <div style={{ padding: "14px", borderRadius: 8, background: "var(--badge-error)08", border: "1px solid var(--badge-error)30" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>
+                    Disconnect {integration.name}?
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12, lineHeight: 1.5 }}>
+                    This stops all syncs and removes the connection. You can reconnect from the catalog.
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Button
+                      variant="main"
+                      size="sm"
+                      style={{ background: "var(--badge-error)", border: "none" }}
+                      onClick={() => onAction(integration.id, "disconnect")}
+                    >
+                      Disconnect
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => setConfirmDisconnect(false)}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  style={{ color: "var(--badge-error)", borderColor: "var(--badge-error)40" }}
+                  onClick={() => setConfirmDisconnect(true)}
+                >
+                  <Icons.Unplug size={13} style={{ marginRight: 4 }} />
+                  Disconnect
+                </Button>
+              )}
             </div>
           </>
         )}
@@ -252,7 +293,10 @@ function OperatePanel({ integration }: { integration: Integration }) {
               <Button
                 variant={integration.status === "error" ? "main" : "secondary"}
                 size="sm"
-                onClick={() => setRotatingCreds(true)}
+                onClick={() => {
+                  setRotatingCreds(true)
+                  if (integration.status === "error") onAction(integration.id, "reauth")
+                }}
               >
                 {rotatingCreds ? "Rotating…" : integration.status === "error" ? "Re-authenticate" : "Rotate credentials"}
               </Button>
@@ -310,6 +354,86 @@ function IntegrationRow({ integration, selected, onClick }: {
         <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 3 }}>
           {integration.lastSync}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Request integration panel ────────────────────────────────────────────────
+
+function RequestPanel({ onClose }: { onClose: () => void }) {
+  const [name,     setName]     = useState("")
+  const [category, setCategory] = useState("")
+  const [useCase,  setUseCase]  = useState("")
+  const [priority, setPriority] = useState("medium")
+  const [submitted, setSubmitted] = useState(false)
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "8px 12px", fontSize: 13, borderRadius: 8,
+    border: "1px solid var(--border)", background: "var(--surface)",
+    color: "var(--foreground)", outline: "none", boxSizing: "border-box",
+  }
+
+  if (submitted) {
+    return (
+      <div style={{ padding: "60px 24px", textAlign: "center" }}>
+        <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--badge-success)18", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <Icons.CheckCircle size={24} style={{ color: "var(--badge-success)" }} />
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>Request submitted</div>
+        <div style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.6, marginBottom: 24 }}>
+          Your request for <strong>{name}</strong> has been sent to your AIMS-OS account team. You'll hear back within 2 business days.
+        </div>
+        <Button variant="secondary" size="sm" onClick={onClose}>Done</Button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
+        Don't see what you need? Tell us and we'll evaluate it for a future release.
+      </div>
+
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>Integration name <span style={{ color: "var(--badge-error)" }}>*</span></div>
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Workday, Coupa, Greenhouse" style={inputStyle} />
+      </div>
+
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>Category</div>
+        <input value={category} onChange={e => setCategory(e.target.value)} placeholder="e.g. HRIS, Procurement, Recruiting" style={inputStyle} />
+      </div>
+
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>How would you use this integration? <span style={{ color: "var(--badge-error)" }}>*</span></div>
+        <textarea
+          value={useCase}
+          onChange={e => setUseCase(e.target.value)}
+          placeholder="Describe the data you need and how it would support your workflows…"
+          rows={4}
+          style={{ ...inputStyle, resize: "vertical" }}
+        />
+      </div>
+
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>Priority</div>
+        <select value={priority} onChange={e => setPriority(e.target.value)} style={inputStyle}>
+          <option value="low">Low — nice to have</option>
+          <option value="medium">Medium — would improve workflows</option>
+          <option value="high">High — blocking a key use case</option>
+        </select>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
+        <Button
+          variant="main"
+          size="sm"
+          onClick={() => { if (name.trim() && useCase.trim()) setSubmitted(true) }}
+        >
+          Submit request
+        </Button>
+        <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
       </div>
     </div>
   )
@@ -440,11 +564,12 @@ function CatalogDetailPanel({ item, connected, onConnect }: {
 
 // ─── Catalog / Marketplace ────────────────────────────────────────────────────
 
-function CatalogView() {
+function CatalogView({ connectedIds }: { connectedIds: Set<string> }) {
   const [catFilter, setCatFilter] = useState("All")
   const [catQuery, setCatQuery]   = useState("")
   const [selected, setSelected]   = useState<CatalogItem | null>(null)
-  const [connected, setConnected] = useState<Set<string>>(new Set(CONNECTED.map(c => c.id)))
+  const [connected, setConnected] = useState<Set<string>>(connectedIds)
+  const [showRequest, setShowRequest] = useState(false)
 
   const filtered = CATALOG.filter(c =>
     (catFilter === "All" || c.category === catFilter) &&
@@ -462,23 +587,40 @@ function CatalogView() {
   return (
     <div style={{ display: "flex", minHeight: 0, flex: 1 }}>
       {/* Category sidebar */}
-      <div style={{ width: 160, flexShrink: 0, borderRight: "1px solid var(--border)", padding: "16px 0" }}>
-        {CATALOG_CATEGORIES.map(cat => (
+      <div style={{ width: 160, flexShrink: 0, borderRight: "1px solid var(--border)", padding: "16px 0", display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1 }}>
+          {CATALOG_CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setCatFilter(cat)}
+              style={{
+                display: "block", width: "100%", textAlign: "left",
+                padding: "6px 16px", fontSize: 12, fontWeight: catFilter === cat ? 700 : 500,
+                color: catFilter === cat ? "var(--primary)" : "var(--muted-foreground)",
+                background: catFilter === cat ? "var(--primary)10" : "none",
+                border: "none", cursor: "pointer", borderRadius: 0,
+                borderLeft: catFilter === cat ? "2px solid var(--primary)" : "2px solid transparent",
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        {/* Request at bottom of sidebar */}
+        <div style={{ padding: "12px 12px 0", borderTop: "1px solid var(--border)", marginTop: 8 }}>
           <button
-            key={cat}
-            onClick={() => setCatFilter(cat)}
+            onClick={() => setShowRequest(true)}
             style={{
-              display: "block", width: "100%", textAlign: "left",
-              padding: "6px 16px", fontSize: 12, fontWeight: catFilter === cat ? 700 : 500,
-              color: catFilter === cat ? "var(--primary)" : "var(--muted-foreground)",
-              background: catFilter === cat ? "var(--primary)10" : "none",
-              border: "none", cursor: "pointer", borderRadius: 0,
-              borderLeft: catFilter === cat ? "2px solid var(--primary)" : "2px solid transparent",
+              display: "flex", alignItems: "center", gap: 6, width: "100%",
+              padding: "7px 8px", fontSize: 11, fontWeight: 600,
+              color: "var(--muted-foreground)", background: "none", border: "none",
+              cursor: "pointer", borderRadius: 6, textAlign: "left",
             }}
           >
-            {cat}
+            <Icons.PlusCircle size={13} />
+            Request integration
           </button>
-        ))}
+        </div>
       </div>
 
       {/* Main content */}
@@ -524,61 +666,65 @@ function CatalogView() {
           </div>
         )}
 
-        {/* Grid */}
-        {filtered.length === 0
-          ? (
-            <div style={{ padding: "60px 0", textAlign: "center", color: "var(--muted-foreground)" }}>
-              <Icons.SearchX size={24} style={{ marginBottom: 8, opacity: 0.3 }} />
-              <div style={{ fontSize: 13 }}>No integrations match "{catQuery}"</div>
+        {/* Grid or empty state */}
+        {filtered.length === 0 ? (
+          <div style={{ padding: "48px 0", textAlign: "center" }}>
+            <Icons.SearchX size={24} style={{ marginBottom: 10, opacity: 0.3, color: "var(--muted-foreground)" }} />
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No integrations match "{catQuery}"</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 20 }}>
+              Don't see what you're looking for?
             </div>
-          )
-          : (
-            <>
-              {catQuery === "" && popular.length > 0 && (
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>All</div>
-              )}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-                {filtered.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelected(item)}
-                    style={{
-                      padding: "14px", border: "1px solid var(--border)", borderRadius: 10,
-                      background: "var(--surface-raised)", cursor: "pointer", textAlign: "left",
-                      display: "flex", flexDirection: "column", gap: 8,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                      <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 7, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
-                        <IntIcon icon={item.icon} />
-                      </div>
-                      {connected.has(item.id) && (
-                        <Icons.CheckCircle size={13} style={{ color: "var(--badge-success)" }} />
-                      )}
+            <Button variant="secondary" size="sm" onClick={() => { setCatQuery(""); setShowRequest(true) }}>
+              <Icons.PlusCircle size={13} style={{ marginRight: 4 }} />
+              Request integration
+            </Button>
+          </div>
+        ) : (
+          <>
+            {catQuery === "" && popular.length > 0 && (
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>All</div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+              {filtered.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => setSelected(item)}
+                  style={{
+                    padding: "14px", border: "1px solid var(--border)", borderRadius: 10,
+                    background: "var(--surface-raised)", cursor: "pointer", textAlign: "left",
+                    display: "flex", flexDirection: "column", gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                    <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 7, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+                      <IntIcon icon={item.icon} />
                     </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{item.name}</div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>{item.category}</div>
-                    </div>
-                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.4 }}>{item.description}</div>
-                    <div style={{
-                      marginTop: 4, fontSize: 11, fontWeight: 600, padding: "4px 0",
-                      color: connected.has(item.id) ? "var(--badge-success)" : "var(--primary)",
-                    }}>
-                      {connected.has(item.id) ? "Connected" : "Connect →"}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </>
-          )
-        }
+                    {connected.has(item.id) && (
+                      <Icons.CheckCircle size={13} style={{ color: "var(--badge-success)" }} />
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{item.name}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>{item.category}</div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.4 }}>{item.description}</div>
+                  <div style={{
+                    marginTop: 4, fontSize: 11, fontWeight: 600, padding: "4px 0",
+                    color: connected.has(item.id) ? "var(--badge-success)" : "var(--primary)",
+                  }}>
+                    {connected.has(item.id) ? "Connected" : "Connect →"}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Catalog detail SlideOut */}
       <SlideOut
         type="full-slot"
-        open={selected !== null}
+        open={selected !== null && !showRequest}
         onClose={() => setSelected(null)}
         title={selected?.name ?? ""}
         subtitle={selected?.category ?? ""}
@@ -591,6 +737,17 @@ function CatalogView() {
           />
         )}
       </SlideOut>
+
+      {/* Request integration SlideOut */}
+      <SlideOut
+        type="full-slot"
+        open={showRequest}
+        onClose={() => setShowRequest(false)}
+        title="Request integration"
+        subtitle="Tell us what you need"
+      >
+        <RequestPanel onClose={() => setShowRequest(false)} />
+      </SlideOut>
     </div>
   )
 }
@@ -599,15 +756,49 @@ function CatalogView() {
 
 export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [tab, setTab]         = useState("connected")
-  const [selected, setSelected] = useState<Integration | null>(CONNECTED[0])
+  const [connectedList, setConnectedList] = useState<Integration[]>(INITIAL_CONNECTED)
+  const [selected, setSelected] = useState<Integration | null>(INITIAL_CONNECTED[0])
   const [query, setQuery]     = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | IntegrationStatus>("all")
 
-  const filtered = CONNECTED.filter(c =>
+  function handleAction(id: string, action: ActionType) {
+    if (action === "disconnect") {
+      setSelected(null)
+      setConnectedList(prev => prev.filter(i => i.id !== id))
+      return
+    }
+    setConnectedList(prev => prev.map(i => {
+      if (i.id !== id) return i
+      if (action === "reauth") return { ...i, status: "active" as IntegrationStatus, errorMsg: undefined }
+      if (action === "pause")  return { ...i, status: "paused" as IntegrationStatus }
+      if (action === "resume") return { ...i, status: "active" as IntegrationStatus }
+      return i
+    }))
+    // Sync selected with updated state
+    setSelected(prev => {
+      if (!prev || prev.id !== id) return prev
+      if (action === "reauth") return { ...prev, status: "active" as IntegrationStatus, errorMsg: undefined }
+      if (action === "pause")  return { ...prev, status: "paused" as IntegrationStatus }
+      if (action === "resume") return { ...prev, status: "active" as IntegrationStatus }
+      return prev
+    })
+  }
+
+  const filteredByStatus = connectedList.filter(c => statusFilter === "all" || c.status === statusFilter)
+  const filtered = filteredByStatus.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) ||
     c.category.toLowerCase().includes(query.toLowerCase())
   )
 
-  const errorCount = CONNECTED.filter(c => c.status === "error").length
+  const errorCount = connectedList.filter(c => c.status === "error").length
+  const connectedIds = new Set(connectedList.map(c => c.id))
+
+  const STATUS_FILTERS: Array<{ id: "all" | IntegrationStatus; label: string }> = [
+    { id: "all",    label: `All (${connectedList.length})` },
+    { id: "active", label: `Active (${connectedList.filter(c => c.status === "active").length})` },
+    { id: "error",  label: `Error (${connectedList.filter(c => c.status === "error").length})` },
+    { id: "paused", label: `Paused (${connectedList.filter(c => c.status === "paused").length})` },
+  ]
 
   return (
     <ScreenLayout
@@ -621,19 +812,22 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
         <Header
           size={isScrolled ? "compress" : "size-l"}
           title="Integrations"
-          description={`${CONNECTED.length} connected · ${CATALOG.length} available in catalog`}
+          description={`${connectedList.length} connected · ${CATALOG.length} available in catalog`}
           primaryAction={
             <div style={{ display: "flex", gap: 8 }}>
               {errorCount > 0 && (
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700,
-                  padding: "5px 10px", borderRadius: 7,
-                  background: "var(--badge-error)15", color: "var(--badge-error)",
-                  border: "1px solid var(--badge-error)30",
-                }}>
+                <button
+                  onClick={() => { setTab("connected"); setStatusFilter("error") }}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700,
+                    padding: "5px 10px", borderRadius: 7,
+                    background: "var(--badge-error)15", color: "var(--badge-error)",
+                    border: "1px solid var(--badge-error)30", cursor: "pointer",
+                  }}
+                >
                   <Icons.AlertCircle size={12} />
-                  {errorCount} error
-                </span>
+                  {errorCount} {errorCount === 1 ? "error" : "errors"}
+                </button>
               )}
               <Button variant="secondary" size="sm" onClick={() => setTab("catalog")}>
                 <Icons.LayoutGrid size={14} style={{ marginRight: 4 }} />
@@ -661,9 +855,9 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
         <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
           {/* Left list */}
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-            {/* Search */}
+            {/* Toolbar: search + status filter */}
             <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
-              <div style={{ position: "relative" }}>
+              <div style={{ position: "relative", marginBottom: 10 }}>
                 <Icons.Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)", pointerEvents: "none" }} />
                 <input
                   value={query}
@@ -676,29 +870,56 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
                   }}
                 />
               </div>
+              {/* Status filter chips */}
+              <div style={{ display: "flex", gap: 6 }}>
+                {STATUS_FILTERS.map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setStatusFilter(f.id)}
+                    style={{
+                      fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
+                      cursor: "pointer", border: "1px solid",
+                      background: statusFilter === f.id ? "var(--primary)" : "transparent",
+                      color: statusFilter === f.id ? "#fff" : "var(--muted-foreground)",
+                      borderColor: statusFilter === f.id ? "var(--primary)" : "var(--border)",
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            {/* Rows */}
-            {filtered.map(int => (
-              <IntegrationRow
-                key={int.id}
-                integration={int}
-                selected={selected?.id === int.id}
-                onClick={() => setSelected(prev => prev?.id === int.id ? null : int)}
-              />
-            ))}
-          </div>
 
+            {/* Rows */}
+            {filtered.length === 0 ? (
+              <div style={{ padding: "48px 0", textAlign: "center", color: "var(--muted-foreground)" }}>
+                <Icons.Plug size={22} style={{ marginBottom: 8, opacity: 0.3 }} />
+                <div style={{ fontSize: 13 }}>
+                  {statusFilter !== "all" ? `No ${statusFilter} integrations` : "No integrations found"}
+                </div>
+              </div>
+            ) : (
+              filtered.map(int => (
+                <IntegrationRow
+                  key={int.id}
+                  integration={int}
+                  selected={selected?.id === int.id}
+                  onClick={() => setSelected(prev => prev?.id === int.id ? null : int)}
+                />
+              ))
+            )}
+          </div>
         </div>
       )}
 
       <SlideOut
         type="full-slot"
-        open={selected !== null}
+        open={selected !== null && tab === "connected"}
         onClose={() => setSelected(null)}
         title={selected?.name ?? ""}
         subtitle={selected ? `${selected.category} · ${STATUS_META[selected.status].label}` : ""}
       >
-        {selected && <OperatePanel integration={selected} />}
+        {selected && <OperatePanel integration={selected} onAction={handleAction} />}
       </SlideOut>
 
       {tab === "catalog" && (
@@ -707,7 +928,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Integration catalog</div>
             <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Browse and connect {CATALOG.length} available integrations.</div>
           </div>
-          <CatalogView />
+          <CatalogView connectedIds={connectedIds} />
         </div>
       )}
     </ScreenLayout>
