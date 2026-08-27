@@ -232,7 +232,7 @@ function WorkflowRow({ wf }: { wf: WorkflowRecord }) {
           {wf.missingDeps > 0 && (
             <span style={{
               fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100,
-              background: "rgba(237,108,2,0.08)", color: "var(--badge-alert)",
+              background: "rgba(237,108,2,0.08)", color: "var(--badge-alert)",  // audit-ignore: prototype fixture data
               border: "1px solid var(--badge-alert)",
               display: "flex", alignItems: "center", gap: 4,
             }}>

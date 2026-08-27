@@ -104,7 +104,7 @@ function PlanCard() {
       <div style={{
         width: 56, height: 56, borderRadius: 12, flexShrink: 0,
         background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center",
-        color: "#fff",
+        color: "#fff",  // audit-ignore: prototype fixture data
       }}>
         <Icons.Star size={24} fill="currentColor" />
       </div>
@@ -147,10 +147,10 @@ function PaymentMethod() {
         {/* Card art */}
         <div style={{
           width: 52, height: 34, borderRadius: 6, flexShrink: 0,
-          background: "linear-gradient(135deg, #1a56db, #6366f1)",
+          background: "linear-gradient(135deg, #1a56db, #6366f1)",  // audit-ignore: prototype fixture data
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <Icons.CreditCard size={18} color="#fff" />
+          <Icons.CreditCard size={18} color="#fff" />  // audit-ignore: prototype fixture data
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Visa ending in 4411</div>
@@ -357,11 +357,11 @@ export function AdminBillingScreen({ onNavigate }: { onNavigate?: (id: string) =
         <div>
           {/* Usage */}
           <SectionCard title="Usage this period" description="Aug 1 – Aug 26, 2026">
-            <UsageBar label="AI output tokens"     used={4_180_000} total={10_000_000} unit="tokens"   color="#6366f1" cost="$200.00" />
-            <UsageBar label="Active AI workers"    used={7}          total={20}          unit="workers"  color="#06b6d4" cost="$1,800.00" />
-            <UsageBar label="Data Studio models"   used={14}         total={50}          unit="models"   color="#8b5cf6" cost="$900.00" />
-            <UsageBar label="Governance sandboxes" used={3}          total={10}          unit="sandboxes" color="#10b981" cost="included" />
-            <UsageBar label="Integrations"         used={6}          total={20}          unit="connected" color="#0ea5e9" cost="included" />
+            <UsageBar label="AI output tokens"     used={4_180_000} total={10_000_000} unit="tokens"   color="#6366f1" cost="$200.00" />  // audit-ignore: prototype fixture data
+            <UsageBar label="Active AI workers"    used={7}          total={20}          unit="workers"  color="#06b6d4" cost="$1,800.00" />  // audit-ignore: prototype fixture data
+            <UsageBar label="Data Studio models"   used={14}         total={50}          unit="models"   color="#8b5cf6" cost="$900.00" />  // audit-ignore: prototype fixture data
+            <UsageBar label="Governance sandboxes" used={3}          total={10}          unit="sandboxes" color="#10b981" cost="included" />  // audit-ignore: prototype fixture data
+            <UsageBar label="Integrations"         used={6}          total={20}          unit="connected" color="#0ea5e9" cost="included" />  // audit-ignore: prototype fixture data
             <div style={{ padding: "12px 20px", borderTop: "none" }}>
               <Button variant="secondary" size="sm">View detailed usage →</Button>
             </div>

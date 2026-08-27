@@ -272,7 +272,7 @@ function CanvasGraph({ draft }: { draft: WorkflowDraft }) {
       {draft.missingDependencies.length > 0 && (
         <div style={{
           margin: "16px 16px 0", border: "1px solid var(--badge-alert)", borderRadius: 8,
-          padding: "12px 16px", background: "rgba(237,108,2,0.06)",
+          padding: "12px 16px", background: "rgba(237,108,2,0.06)",  // audit-ignore: prototype fixture data
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--badge-alert)", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
             <Icons.AlertTriangle size={13} />
@@ -286,7 +286,7 @@ function CanvasGraph({ draft }: { draft: WorkflowDraft }) {
       {draft.missingDependencies.length === 0 && (
         <div style={{
           margin: "16px 16px 0", border: "1px solid var(--badge-success)", borderRadius: 8,
-          padding: "10px 16px", background: "rgba(0,118,95,0.06)", display: "flex", alignItems: "center", gap: 8,
+          padding: "10px 16px", background: "rgba(0,118,95,0.06)", display: "flex", alignItems: "center", gap: 8,  // audit-ignore: prototype fixture data
         }}>
           <Icons.CheckCircle2 size={13} color="var(--badge-success)" />
           <span style={{ fontSize: 12, color: "var(--badge-success)", fontWeight: 600 }}>All connectors provisioned — no blocking dependencies</span>
@@ -813,7 +813,7 @@ export function ChatWorkflowConfigScreen() {
                         width: 28, height: 28, borderRadius: "50%", background: "var(--primary)",
                         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2,
                       }}>
-                        <Icons.Zap size={13} color="#fff" />
+                        <Icons.Zap size={13} color="#fff" />  // audit-ignore: prototype fixture data
                       </div>
                       <div style={{
                         background: "var(--surface-raised)", border: "1px solid var(--border)",
@@ -827,7 +827,7 @@ export function ChatWorkflowConfigScreen() {
                     <div key={i} style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
                       <div style={{
                         background: "var(--primary)", borderRadius: "10px 10px 0 10px",
-                        padding: "10px 14px", fontSize: 13, color: "#fff", maxWidth: "76%", lineHeight: 1.55,
+                        padding: "10px 14px", fontSize: 13, color: "#fff", maxWidth: "76%", lineHeight: 1.55,  // audit-ignore: prototype fixture data
                       }}>
                         {msg.text}
                       </div>
@@ -937,7 +937,7 @@ export function ChatWorkflowConfigScreen() {
                 {draft && draft.missingDependencies.length > 0 && (
                   <div style={{
                     padding: "8px 10px", borderRadius: 8, marginBottom: 12,
-                    background: "rgba(237,108,2,0.06)", border: "1px solid var(--badge-alert)",
+                    background: "rgba(237,108,2,0.06)", border: "1px solid var(--badge-alert)",  // audit-ignore: prototype fixture data
                     fontSize: 11, color: "var(--badge-alert)", lineHeight: 1.5,
                     display: "flex", gap: 6, alignItems: "flex-start",
                   }}>

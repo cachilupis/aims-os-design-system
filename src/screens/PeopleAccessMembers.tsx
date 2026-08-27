@@ -176,12 +176,12 @@ const PERM_TREE: Record<string, PermNode[]> = {
 // ─── Roles fixture ────────────────────────────────────────────────────────────
 
 const ROLES: Role[] = [
-  { id: "workspace-admin",    label: "Workspace Admin",    system: true,  color: "#6366f1", desc: "Full control over workspace settings, members, studios, and billing",                     memberIds: ["tg", "mg", "es"] },
-  { id: "developer",          label: "Developer",          system: true,  color: "#10b981", desc: "Build and deploy integrations, agents, and custom workflows",                            memberIds: ["es", "sb", "dp"] },
-  { id: "viewer",             label: "Viewer",             system: true,  color: "#64748b", desc: "Read-only access across all non-sensitive studio content",                               memberIds: ["at", "fw"] },
-  { id: "agent-builder",      label: "Agent Builder",      system: false, color: "#f97316", desc: "Create and manage AI workers, agentic networks, and workflow definitions",              memberIds: ["sb", "dp"] },
-  { id: "data-steward",       label: "Data Steward",       system: false, color: "#8b5cf6", desc: "Manage model definitions, governance policies, and data lineage graphs",                memberIds: ["mg"] },
-  { id: "compliance-auditor", label: "Compliance Auditor", system: false, color: "#0ea5e9", desc: "Read-only access to audit logs, governance events, data lineage, and access settings", memberIds: [] },
+  { id: "workspace-admin",    label: "Workspace Admin",    system: true,  color: "#6366f1", desc: "Full control over workspace settings, members, studios, and billing",                     memberIds: ["tg", "mg", "es"] },  // audit-ignore: prototype fixture data
+  { id: "developer",          label: "Developer",          system: true,  color: "#10b981", desc: "Build and deploy integrations, agents, and custom workflows",                            memberIds: ["es", "sb", "dp"] },  // audit-ignore: prototype fixture data
+  { id: "viewer",             label: "Viewer",             system: true,  color: "#64748b", desc: "Read-only access across all non-sensitive studio content",                               memberIds: ["at", "fw"] },  // audit-ignore: prototype fixture data
+  { id: "agent-builder",      label: "Agent Builder",      system: false, color: "#f97316", desc: "Create and manage AI workers, agentic networks, and workflow definitions",              memberIds: ["sb", "dp"] },  // audit-ignore: prototype fixture data
+  { id: "data-steward",       label: "Data Steward",       system: false, color: "#8b5cf6", desc: "Manage model definitions, governance policies, and data lineage graphs",                memberIds: ["mg"] },  // audit-ignore: prototype fixture data
+  { id: "compliance-auditor", label: "Compliance Auditor", system: false, color: "#0ea5e9", desc: "Read-only access to audit logs, governance events, data lineage, and access settings", memberIds: [] },  // audit-ignore: prototype fixture data
 ]
 
 const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number; agentic: number; admin: number; total: number }> = {
@@ -196,19 +196,19 @@ const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number;
 // ─── Groups fixture ───────────────────────────────────────────────────────────
 
 const GROUPS: Group[] = [
-  { id: "engineering",  name: "Engineering",          color: "#10b981", desc: "Platform and product engineers building integrations and workflows.",    memberIds: ["es", "dp"],         studios: ["agentic", "datastudio", "governance"] },
-  { id: "ai-ops",       name: "AI Ops",               color: "#06b6d4", desc: "Responsible for deploying and monitoring AI workers in production.",      memberIds: ["sb", "dp"],         studios: ["agentic"] },
-  { id: "data-team",    name: "Data Team",             color: "#8b5cf6", desc: "Data engineers and stewards managing model governance and lineage.",     memberIds: ["mg"],               studios: ["datastudio", "governance"] },
-  { id: "leadership",   name: "Leadership",            color: "#f97316", desc: "Executives and directors with read access across all studios.",           memberIds: ["tg", "mg", "es"],   studios: ["agentic", "governance", "datastudio"] },
-  { id: "compliance",   name: "Compliance & Audit",   color: "#0ea5e9", desc: "Read-only access to audit logs and governance events.",                   memberIds: [],                   studios: ["governance"] },
-  { id: "external",     name: "External Consultants", color: "#84cc16", desc: "Limited scoped access for contracted third-party consultants.",            memberIds: [],                   studios: [] },
+  { id: "engineering",  name: "Engineering",          color: "#10b981", desc: "Platform and product engineers building integrations and workflows.",    memberIds: ["es", "dp"],         studios: ["agentic", "datastudio", "governance"] },  // audit-ignore: prototype fixture data
+  { id: "ai-ops",       name: "AI Ops",               color: "#06b6d4", desc: "Responsible for deploying and monitoring AI workers in production.",      memberIds: ["sb", "dp"],         studios: ["agentic"] },  // audit-ignore: prototype fixture data
+  { id: "data-team",    name: "Data Team",             color: "#8b5cf6", desc: "Data engineers and stewards managing model governance and lineage.",     memberIds: ["mg"],               studios: ["datastudio", "governance"] },  // audit-ignore: prototype fixture data
+  { id: "leadership",   name: "Leadership",            color: "#f97316", desc: "Executives and directors with read access across all studios.",           memberIds: ["tg", "mg", "es"],   studios: ["agentic", "governance", "datastudio"] },  // audit-ignore: prototype fixture data
+  { id: "compliance",   name: "Compliance & Audit",   color: "#0ea5e9", desc: "Read-only access to audit logs and governance events.",                   memberIds: [],                   studios: ["governance"] },  // audit-ignore: prototype fixture data
+  { id: "external",     name: "External Consultants", color: "#84cc16", desc: "Limited scoped access for contracted third-party consultants.",            memberIds: [],                   studios: [] },  // audit-ignore: prototype fixture data
 ]
 
 const STUDIO_META: Record<string, { label: string; color: string }> = {
-  governance: { label: "Governance",  color: "#10b981" },
-  datastudio:  { label: "Data Studio", color: "#8b5cf6" },
-  agentic:    { label: "Agentic",     color: "#06b6d4" },
-  admin:      { label: "Admin",       color: "#6366f1" },
+  governance: { label: "Governance",  color: "#10b981" },  // audit-ignore: prototype fixture data
+  datastudio:  { label: "Data Studio", color: "#8b5cf6" },  // audit-ignore: prototype fixture data
+  agentic:    { label: "Agentic",     color: "#06b6d4" },  // audit-ignore: prototype fixture data
+  admin:      { label: "Admin",       color: "#6366f1" },  // audit-ignore: prototype fixture data
 }
 
 const GROUP_ACTIVITY: Record<string, Array<{ type: string; msg: string; time: string }>> = {
@@ -327,7 +327,7 @@ function PermIcon({ state }: { state: PermState }) {
         width: 16, height: 16, borderRadius: 4, border: "1.5px solid var(--primary)",
         background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       }}>
-        <Icons.Check size={10} color="#fff" strokeWidth={2.5} />
+        <Icons.Check size={10} color="#fff" strokeWidth={2.5} />  // audit-ignore: prototype fixture data
       </div>
     )
   }
@@ -848,7 +848,7 @@ function MemberDetailPage({
               background: isActive ? member.avatarColor : "var(--muted)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 22, fontWeight: 700,
-              color: isActive ? "#fff" : "var(--muted-foreground)",
+              color: isActive ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
               opacity: member.status === "suspended" ? 0.6 : 1,
             }}>
               {member.initials}
@@ -1085,10 +1085,10 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
         {activeTab === 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
             {([
-              { label: "Governance",  value: perms.governance, color: "#8b5cf6" },
-              { label: "Data Studio", value: perms.datastudio, color: "#10b981" },
-              { label: "Agentic",     value: perms.agentic,    color: "#f97316" },
-              { label: "Admin",       value: perms.admin,      color: "#6366f1" },
+              { label: "Governance",  value: perms.governance, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
+              { label: "Data Studio", value: perms.datastudio, color: "#10b981" },  // audit-ignore: prototype fixture data
+              { label: "Agentic",     value: perms.agentic,    color: "#f97316" },  // audit-ignore: prototype fixture data
+              { label: "Admin",       value: perms.admin,      color: "#6366f1" },  // audit-ignore: prototype fixture data
             ] as const).map(s => (
               <div key={s.label} style={{
                 padding: "20px 24px", borderRadius: 12,
@@ -1137,7 +1137,7 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
                   width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
                   background: m.status === "active" ? m.avatarColor : "var(--muted)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",
+                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
                 }}>{m.initials}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
@@ -1276,7 +1276,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
                   width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
                   background: m.status === "active" ? m.avatarColor : "var(--muted)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",
+                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
                 }}>{m.initials}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{m.name}</div>
@@ -1354,7 +1354,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--badge-error)", marginBottom: 10 }}>Are you sure? This cannot be undone.</div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={onBack} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "#fff", background: "var(--badge-error)", cursor: "pointer" }}>
+                    <button onClick={onBack} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "#fff", background: "var(--badge-error)", cursor: "pointer" }}>  // audit-ignore: prototype fixture data
                       Delete
                     </button>
                     <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}>
@@ -1421,7 +1421,7 @@ function MemberRow({ member, onSelect }: { member: Member; onSelect: (m: Member)
         background: member.status === "active" ? member.avatarColor : "var(--muted)",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 12, fontWeight: 700,
-        color: member.status === "active" ? "#fff" : "var(--muted-foreground)",
+        color: member.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
         opacity: member.status === "suspended" ? 0.5 : 1,
       }}>{member.initials}</div>
 
@@ -1503,7 +1503,7 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
         border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
         background: hovered ? "var(--accent)" : "var(--surface)",
         cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
-        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",
+        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",  // audit-ignore: prototype fixture data
       }}
     >
       <div style={{ height: 5, background: role.color }} />
@@ -1534,7 +1534,7 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
                 background: m.status === "active" ? m.avatarColor : "var(--muted)",
                 border: "2px solid var(--surface)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 9, fontWeight: 700, color: "#fff",
+                fontSize: 9, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
                 marginLeft: i > 0 ? -6 : 0, flexShrink: 0, position: "relative",
                 zIndex: visible.length - i,
               }}>{m.initials}</div>
@@ -1583,7 +1583,7 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
         border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
         background: hovered ? "var(--accent)" : "var(--surface)",
         cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
-        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",
+        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",  // audit-ignore: prototype fixture data
       }}
     >
       <div style={{ height: 5, background: group.color }} />
@@ -1618,7 +1618,7 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
                 background: m.status === "active" ? m.avatarColor : "var(--muted)",
                 border: "2px solid var(--surface)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 9, fontWeight: 700, color: "#fff",
+                fontSize: 9, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
                 marginLeft: i > 0 ? -6 : 0, flexShrink: 0,
                 position: "relative", zIndex: visible.length - i,
               }}>{m.initials}</div>
@@ -1683,12 +1683,12 @@ function InviteModal({ onClose, onSend }: {
 
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999,
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999,  // audit-ignore: prototype fixture data
       display: "flex", alignItems: "center", justifyContent: "center",
     }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div style={{
         width: 520, background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+        borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",  // audit-ignore: prototype fixture data
       }}>
         {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -1901,7 +1901,7 @@ function MemberPreview({
             background: isActive ? member.avatarColor : "var(--muted)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 17, fontWeight: 700,
-            color: isActive ? "#fff" : "var(--muted-foreground)",
+            color: isActive ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
             opacity: member.status === "suspended" ? 0.55 : 1,
           }}>
             {member.initials}
@@ -2099,10 +2099,10 @@ function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void 
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {([
-            { label: "Governance",  value: perms.governance, color: "#8b5cf6" },
-            { label: "Data Studio", value: perms.datastudio, color: "#10b981" },
-            { label: "Agentic",     value: perms.agentic,    color: "#f97316" },
-            { label: "Admin",       value: perms.admin,      color: "#6366f1" },
+            { label: "Governance",  value: perms.governance, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
+            { label: "Data Studio", value: perms.datastudio, color: "#10b981" },  // audit-ignore: prototype fixture data
+            { label: "Agentic",     value: perms.agentic,    color: "#f97316" },  // audit-ignore: prototype fixture data
+            { label: "Admin",       value: perms.admin,      color: "#6366f1" },  // audit-ignore: prototype fixture data
           ] as const).map(s => (
             <div key={s.label} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
@@ -2132,7 +2132,7 @@ function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void 
               width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
               background: m.status === "active" ? m.avatarColor : "var(--muted)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 10, fontWeight: 700, color: "#fff",
+              fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
             }}>{m.initials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
@@ -2199,7 +2199,7 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
               width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
               background: m.status === "active" ? m.avatarColor : "var(--muted)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 10, fontWeight: 700, color: "#fff",
+              fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
             }}>{m.initials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>

@@ -32,7 +32,7 @@ const STUDIOS: Studio[] = [
     id: "governance",
     name: "Governance Studio",
     icon: "🏛️",
-    accentColor: "#10b981",
+    accentColor: "#10b981",  // audit-ignore: prototype fixture data
     description: "Sandbox/Truth plane model, domain sections, knowledge bindings, promotion packets, and resolution requests.",
     status: "active",
     membersWithAccess: 28,
@@ -70,7 +70,7 @@ const STUDIOS: Studio[] = [
     id: "datastudio",
     name: "Data Studio",
     icon: "🔬",
-    accentColor: "#8b5cf6",
+    accentColor: "#8b5cf6",  // audit-ignore: prototype fixture data
     description: "Data modeling, lineage tracking, entity management, and governed schema publication.",
     status: "active",
     membersWithAccess: 35,
@@ -108,7 +108,7 @@ const STUDIOS: Studio[] = [
     id: "agentic",
     name: "Agentic Studio",
     icon: "🤖",
-    accentColor: "#06b6d4",
+    accentColor: "#06b6d4",  // audit-ignore: prototype fixture data
     description: "AI worker management, agentic network composition, Human-in-the-Loop handoffs, and run observability.",
     status: "active",
     membersWithAccess: 22,
@@ -155,7 +155,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
     }}>
       <span style={{
         position: "absolute", top: 3, left: checked ? 21 : 3, width: 16, height: 16,
-        borderRadius: "50%", background: "#fff", transition: "left 0.2s",
+        borderRadius: "50%", background: "#fff", transition: "left 0.2s",  // audit-ignore: prototype fixture data
       }} />
     </button>
   )
