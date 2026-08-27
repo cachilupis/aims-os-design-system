@@ -416,7 +416,7 @@ const failureCount = EVENTS.filter(e => e.result === "failure").length
           <div style={{
             position: "absolute", top: 44, left: 210, zIndex: 200,
             background: "var(--surface)", border: "1px solid var(--border)",
-            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore: box-shadow alpha has no token equivalent
             overflow: "hidden", minWidth: 150,
           }}>
             {(["all", "success", "failure", "warning"] as const).map(v => (
@@ -440,7 +440,7 @@ const failureCount = EVENTS.filter(e => e.result === "failure").length
           <div style={{
             position: "absolute", top: 44, left: 290, zIndex: 200,
             background: "var(--surface)", border: "1px solid var(--border)",
-            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore: box-shadow alpha has no token equivalent
             overflow: "hidden", minWidth: 180, maxHeight: 240, overflowY: "auto",
           }}>
             {[{ id: "all", name: "All actors" }, ...Object.values(ACTORS)].map(a => (
