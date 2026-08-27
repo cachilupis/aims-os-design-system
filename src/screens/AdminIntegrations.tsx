@@ -1092,7 +1092,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
                       fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
                       cursor: "pointer", border: "1px solid",
                       background: statusFilter === f.id ? "var(--primary)" : "transparent",
-                      color: statusFilter === f.id ? "#fff" : "var(--muted-foreground)",
+                      color: statusFilter === f.id ? "var(--primary-foreground)" : "var(--muted-foreground)",
                       borderColor: statusFilter === f.id ? "var(--primary)" : "var(--border)",
                     }}
                   >
