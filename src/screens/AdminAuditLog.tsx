@@ -365,22 +365,23 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
       </div>
 
       {/* Category tabs */}
-      <Tabs
-        items={[
-          { id: "all",          label: `All (${categoryCounts.all ?? 0})`          },
-          { id: "auth",         label: `Auth (${categoryCounts.auth ?? 0})`         },
-          { id: "access",       label: `Access (${categoryCounts.access ?? 0})`     },
-          { id: "members",      label: `Members (${categoryCounts.members ?? 0})`   },
-          { id: "content",      label: `Content (${categoryCounts.content ?? 0})`   },
-          { id: "agents",       label: `Agents (${categoryCounts.agents ?? 0})`     },
-          { id: "integrations", label: `Integrations (${categoryCounts.integrations ?? 0})` },
-          { id: "settings",     label: `Settings (${categoryCounts.settings ?? 0})` },
-        ]}
-        activeId={categoryFilter}
-        onChange={v => { setCategoryFilter(v); setPage(1) }}
-        size="s"
-        className="mb-[16px]"
-      />
+      <div style={{ borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
+        <Tabs
+          items={[
+            { id: "all",          label: `All (${categoryCounts.all ?? 0})`          },
+            { id: "auth",         label: `Auth (${categoryCounts.auth ?? 0})`         },
+            { id: "access",       label: `Access (${categoryCounts.access ?? 0})`     },
+            { id: "members",      label: `Members (${categoryCounts.members ?? 0})`   },
+            { id: "content",      label: `Content (${categoryCounts.content ?? 0})`   },
+            { id: "agents",       label: `Agents (${categoryCounts.agents ?? 0})`     },
+            { id: "integrations", label: `Integrations (${categoryCounts.integrations ?? 0})` },
+            { id: "settings",     label: `Settings (${categoryCounts.settings ?? 0})` },
+          ]}
+          activeId={categoryFilter}
+          onChange={v => { setCategoryFilter(v); setPage(1) }}
+          size="s"
+        />
+      </div>
 
       {/* Filters bar */}
       <div style={{ position: "relative", marginBottom: 20 }}>
