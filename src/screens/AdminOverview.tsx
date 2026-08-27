@@ -373,10 +373,10 @@ function UsageCard() {
         <Button variant="secondary" size="sm">View billing</Button>
       </div>
       <div style={{ padding: "16px 18px 4px" }}>
-        <UsageBar label="AI output tokens"    used={4_180_000} total={10_000_000} unit="tokens" color="#6366f1" />  // audit-ignore: prototype fixture data
-        <UsageBar label="Active AI workers"   used={7}          total={20}          unit="workers" color="#06b6d4" />  // audit-ignore: prototype fixture data
-        <UsageBar label="Data Studio models"  used={14}         total={50}          unit="models"  color="#8b5cf6" />  // audit-ignore: prototype fixture data
-        <UsageBar label="Governance sandboxes" used={3}         total={10}          unit="sandboxes" color="#10b981" />  // audit-ignore: prototype fixture data
+        <UsageBar label="AI output tokens"    used={4_180_000} total={10_000_000} unit="tokens"    color={"#6366f1" /* audit-ignore: prototype fixture data */} />
+        <UsageBar label="Active AI workers"   used={7}          total={20}          unit="workers"   color={"#06b6d4" /* audit-ignore: prototype fixture data */} />
+        <UsageBar label="Data Studio models"  used={14}         total={50}          unit="models"    color={"#8b5cf6" /* audit-ignore: prototype fixture data */} />
+        <UsageBar label="Governance sandboxes" used={3}         total={10}          unit="sandboxes" color={"#10b981" /* audit-ignore: prototype fixture data */} />
       </div>
     </div>
   )

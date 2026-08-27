@@ -327,7 +327,7 @@ function PermIcon({ state }: { state: PermState }) {
         width: 16, height: 16, borderRadius: 4, border: "1.5px solid var(--primary)",
         background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       }}>
-        <Icons.Check size={10} color="#fff" strokeWidth={2.5} />  // audit-ignore: prototype fixture data
+        <Icons.Check size={10} color={"#fff" /* audit-ignore: prototype fixture data */} strokeWidth={2.5} />
       </div>
     )
   }
@@ -1354,7 +1354,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--badge-error)", marginBottom: 10 }}>Are you sure? This cannot be undone.</div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={onBack} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "#fff", background: "var(--badge-error)", cursor: "pointer" }}>  // audit-ignore: prototype fixture data
+                    <button onClick={onBack} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "#fff", /* audit-ignore: prototype fixture data */ background: "var(--badge-error)", cursor: "pointer" }}>
                       Delete
                     </button>
                     <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}>

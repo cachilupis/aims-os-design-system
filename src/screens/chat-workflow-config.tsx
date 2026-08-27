@@ -813,7 +813,7 @@ export function ChatWorkflowConfigScreen() {
                         width: 28, height: 28, borderRadius: "50%", background: "var(--primary)",
                         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2,
                       }}>
-                        <Icons.Zap size={13} color="#fff" />  // audit-ignore: prototype fixture data
+                        <Icons.Zap size={13} color={"#fff" /* audit-ignore: prototype fixture data */} />
                       </div>
                       <div style={{
                         background: "var(--surface-raised)", border: "1px solid var(--border)",
