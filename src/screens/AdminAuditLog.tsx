@@ -4,8 +4,9 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
-import { SwitchTab }    from "@/components/ui/switch-tab"
-import { SlideOut }    from "@/components/ui/slide-out"
+import { Tabs }         from "@/components/ui/tabs"
+import { Filters }      from "@/components/ui/filters"
+import { SlideOut }     from "@/components/ui/slide-out"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -283,6 +284,7 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
   const [resultFilter, setResultFilter]     = useState("all")
   const [actorFilter, setActorFilter]       = useState("all")
   const [query, setQuery]                   = useState("")
+  const [openSlot, setOpenSlot]             = useState<"result" | "actor" | null>(null)
   const [selected, setSelected]             = useState<AuditEvent | null>(null)
   const [page, setPage]                     = useState(1)
 
@@ -362,73 +364,105 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
         ))}
       </div>
 
-      {/* Filters */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <SwitchTab
-          items={[
-            { id: "all",         label: `All (${categoryCounts.all ?? 0})`         },
-            { id: "auth",        label: `Auth (${categoryCounts.auth ?? 0})`        },
-            { id: "access",      label: `Access (${categoryCounts.access ?? 0})`    },
-            { id: "members",     label: `Members (${categoryCounts.members ?? 0})`  },
-            { id: "content",     label: `Content (${categoryCounts.content ?? 0})`  },
-            { id: "agents",      label: `Agents (${categoryCounts.agents ?? 0})`    },
-            { id: "integrations",label: `Integrations (${categoryCounts.integrations ?? 0})` },
-            { id: "settings",    label: `Settings (${categoryCounts.settings ?? 0})` },
-          ]}
-          value={categoryFilter}
-          onChange={v => { setCategoryFilter(v); setPage(1) }}
-          size="s"
-        />
-      </div>
+      {/* Category tabs */}
+      <Tabs
+        items={[
+          { id: "all",          label: `All (${categoryCounts.all ?? 0})`          },
+          { id: "auth",         label: `Auth (${categoryCounts.auth ?? 0})`         },
+          { id: "access",       label: `Access (${categoryCounts.access ?? 0})`     },
+          { id: "members",      label: `Members (${categoryCounts.members ?? 0})`   },
+          { id: "content",      label: `Content (${categoryCounts.content ?? 0})`   },
+          { id: "agents",       label: `Agents (${categoryCounts.agents ?? 0})`     },
+          { id: "integrations", label: `Integrations (${categoryCounts.integrations ?? 0})` },
+          { id: "settings",     label: `Settings (${categoryCounts.settings ?? 0})` },
+        ]}
+        activeId={categoryFilter}
+        onChange={v => { setCategoryFilter(v); setPage(1) }}
+        size="s"
+        className="mb-[16px]"
+      />
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        {/* Result filter */}
-        <SwitchTab
-          items={[
-            { id: "all",     label: "All results" },
-            { id: "success", label: "Success"     },
-            { id: "failure", label: "Failures"    },
-            { id: "warning", label: "Warnings"    },
-          ]}
-          value={resultFilter}
-          onChange={v => { setResultFilter(v); setPage(1) }}
-          size="s"
-        />
-
-        {/* Actor filter */}
-        <select
-          value={actorFilter}
-          onChange={e => { setActorFilter(e.target.value); setPage(1) }}
-          style={{
-            padding: "6px 10px", fontSize: 12, borderRadius: 7,
-            border: "1px solid var(--border)", background: "var(--surface)",
-            color: "var(--foreground)", cursor: "pointer", outline: "none",
-          }}
-        >
-          <option value="all">All actors</option>
-          <option value="sys">System</option>
-          {Object.values(ACTORS).filter(a => a.id !== "sys").map(a => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
-
-        {/* Search */}
-        <div style={{ marginLeft: "auto", position: "relative" }}>
-          <Icons.Search size={13} style={{
-            position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-            color: "var(--muted-foreground)", pointerEvents: "none",
-          }} />
-          <input
-            value={query}
-            onChange={e => { setQuery(e.target.value); setPage(1) }}
-            placeholder="Search events, actors, resources…"
-            style={{
-              paddingLeft: 32, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
-              width: 280, fontSize: 13, border: "1px solid var(--border)", borderRadius: 8,
-              background: "var(--surface)", color: "var(--foreground)", outline: "none",
-            }}
+      {/* Filters bar */}
+      <div style={{ position: "relative", marginBottom: 20 }}>
+        {openSlot && (
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 190 }}
+            onClick={() => setOpenSlot(null)}
           />
-        </div>
+        )}
+        <Filters
+          showSearch
+          searchPlaceholder="Search events, actors, resources…"
+          searchValue={query}
+          onSearchChange={v => { setQuery(v); setPage(1) }}
+          showSort={false}
+          showViewToggle={false}
+          showAllFilters={false}
+          slots={[
+            {
+              placeholder: "Result",
+              value: resultFilter !== "all" ? ({ success: "Success", failure: "Failures", warning: "Warnings" } as Record<string, string>)[resultFilter] : undefined,
+              onOpen:   () => setOpenSlot(s => s === "result" ? null : "result"),
+              onRemove: () => { setResultFilter("all"); setPage(1) },
+            },
+            {
+              placeholder: "Actor",
+              value: actorFilter !== "all" ? ACTORS[actorFilter]?.name : undefined,
+              onOpen:   () => setOpenSlot(s => s === "actor" ? null : "actor"),
+              onRemove: () => { setActorFilter("all"); setPage(1) },
+            },
+          ]}
+          showClearFilters={resultFilter !== "all" || actorFilter !== "all"}
+          onClearFilters={() => { setResultFilter("all"); setActorFilter("all"); setPage(1) }}
+        />
+
+        {/* Result dropdown */}
+        {openSlot === "result" && (
+          <div style={{
+            position: "absolute", top: 44, left: 210, zIndex: 200,
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            overflow: "hidden", minWidth: 150,
+          }}>
+            {(["all", "success", "failure", "warning"] as const).map(v => (
+              <button key={v}
+                onClick={() => { setResultFilter(v); setPage(1); setOpenSlot(null) }}
+                style={{
+                  display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
+                  fontSize: 13, border: "none", cursor: "pointer",
+                  color: resultFilter === v ? "var(--primary)" : "var(--foreground)",
+                  background: resultFilter === v ? "var(--accent)" : "var(--surface)",
+                }}
+              >
+                {v === "all" ? "All results" : v === "success" ? "Success" : v === "failure" ? "Failures" : "Warnings"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Actor dropdown */}
+        {openSlot === "actor" && (
+          <div style={{
+            position: "absolute", top: 44, left: 290, zIndex: 200,
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            overflow: "hidden", minWidth: 180, maxHeight: 240, overflowY: "auto",
+          }}>
+            {[{ id: "all", name: "All actors" }, ...Object.values(ACTORS)].map(a => (
+              <button key={a.id}
+                onClick={() => { setActorFilter(a.id); setPage(1); setOpenSlot(null) }}
+                style={{
+                  display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
+                  fontSize: 13, border: "none", cursor: "pointer",
+                  color: actorFilter === a.id ? "var(--primary)" : "var(--foreground)",
+                  background: actorFilter === a.id ? "var(--accent)" : "var(--surface)",
+                }}
+              >
+                {a.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Table */}
