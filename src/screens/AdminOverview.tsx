@@ -4,6 +4,7 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
+import { AlertBanner }  from "@/components/ui/alert-banner"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -50,58 +51,12 @@ function KpiTile({ icon, label, value, delta, deltaUp, sub, accent }: {
 
 // ─── Alert banner ─────────────────────────────────────────────────────────────
 
-interface AlertBanner { id: string; severity: "error" | "warning" | "info"; title: string; detail: string; cta?: string }
+interface AlertItem { id: string; state: "error" | "alert"; title: string; description: string; cta?: string }
 
-const INITIAL_ALERTS: AlertBanner[] = [
-  { id: "sf-sync", severity: "error",   title: "Salesforce CRM sync failed", detail: "OAuth token expired at 08:00 today. Re-authenticate to restore data sync.", cta: "Fix now" },
-  { id: "mfa",     severity: "warning", title: "10 members have not enrolled in MFA", detail: "Your security policy recommends MFA for all active members.",          cta: "Review" },
+const INITIAL_ALERTS: AlertItem[] = [
+  { id: "sf-sync", state: "error", title: "Salesforce CRM sync failed",           description: "OAuth token expired at 08:00 today. Re-authenticate to restore data sync.", cta: "Fix now" },
+  { id: "mfa",     state: "alert", title: "10 members have not enrolled in MFA",  description: "Your security policy recommends MFA for all active members.",               cta: "Review"   },
 ]
-
-const SEVERITY_META = {
-  error:   { color: "var(--badge-error)",   bg: "color-mix(in srgb, var(--badge-error) 8%, transparent)",   icon: <Icons.AlertCircle size={15} /> },
-  warning: { color: "var(--badge-alert)",   bg: "color-mix(in srgb, var(--badge-alert) 8%, transparent)",   icon: <Icons.AlertTriangle size={15} /> },
-  info:    { color: "var(--badge-info)",    bg: "color-mix(in srgb, var(--badge-info) 8%, transparent)",    icon: <Icons.Info size={15} /> },
-}
-
-function AlertBanners({ alerts, onDismiss }: { alerts: AlertBanner[]; onDismiss: (id: string) => void }) {
-  if (alerts.length === 0) return null
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-      {alerts.map(a => {
-        const meta = SEVERITY_META[a.severity]
-        return (
-          <div key={a.id} style={{
-            display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
-            border: `1px solid ${meta.color}33`, borderRadius: 10,
-            background: meta.bg, borderLeft: `3px solid ${meta.color}`,
-          }}>
-            <span style={{ color: meta.color, flexShrink: 0 }}>{meta.icon}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: meta.color }}>{a.title}</span>
-              <span style={{ fontSize: 12, color: "var(--muted-foreground)", marginLeft: 8 }}>{a.detail}</span>
-            </div>
-            {a.cta && (
-              <button style={{
-                fontSize: 12, fontWeight: 700, color: meta.color, background: "none",
-                border: `1px solid ${meta.color}44`, borderRadius: 6, padding: "4px 10px", cursor: "pointer", flexShrink: 0,
-              }}>
-                {a.cta}
-              </button>
-            )}
-            <button
-              onClick={() => onDismiss(a.id)}
-              style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 2, flexShrink: 0 }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-            >
-              <Icons.X size={14} />
-            </button>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
 
 // ─── Recent activity ──────────────────────────────────────────────────────────
 
@@ -389,7 +344,7 @@ function UsageCard() {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function AdminOverviewScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
-  const [alerts, setAlerts] = useState<AlertBanner[]>(INITIAL_ALERTS)
+  const [alerts, setAlerts] = useState<AlertItem[]>(INITIAL_ALERTS)
   const dismissAlert = useCallback((id: string) => setAlerts(a => a.filter(x => x.id !== id)), [])
 
   return (
@@ -415,7 +370,20 @@ export function AdminOverviewScreen({ onNavigate }: { onNavigate?: (id: string) 
       )}
     >
       {/* Alert banners */}
-      <AlertBanners alerts={alerts} onDismiss={dismissAlert} />
+      {alerts.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+          {alerts.map(a => (
+            <AlertBanner
+              key={a.id}
+              state={a.state}
+              title={a.title}
+              description={a.description}
+              cta={a.cta}
+              onClose={() => dismissAlert(a.id)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* KPI tiles */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
