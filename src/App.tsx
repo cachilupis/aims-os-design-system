@@ -16055,11 +16055,14 @@ function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onC
       <button
         onClick={onClose}
         className="fixed flex items-center gap-[6px] rounded-[6px]"
-        style={{ top: 10, right: 12, zIndex: 10001, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+        style={{ top: 10, right: 12, zIndex: 10031, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
       >
         <LucideIcons.X size={12} /> Close Preview
       </button>
-      <div className="shrink-0 px-[24px] pr-[180px] py-[14px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)", position: "relative", zIndex: 10000 }}>
+      {/* zIndex 10030: above SlideOut (z-10010) and ModalDialog (z-10020) —
+          the didactic bar must stay visible and clickable over any surface
+          the current step has open, not get painted over by its backdrop. */}
+      <div className="shrink-0 px-[24px] pr-[180px] py-[14px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)", position: "relative", zIndex: 10030 }}>
         <div className="flex items-center justify-between gap-[16px]">
           <div className="min-w-0">
             <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Step {i + 1} of {steps.length} — {current.label}</span>
