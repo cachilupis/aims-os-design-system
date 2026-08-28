@@ -1037,10 +1037,8 @@ function CatalogView({ connectedIds }: { connectedIds: Set<string> }) {
 
 // ─── Integration detail page ──────────────────────────────────────────────────
 
-function IntegrationDetailPage({ integration, onBack, onAction }: {
+function IntegrationDetailPage({ integration }: {
   integration: Integration
-  onBack: () => void
-  onAction: (id: string, action: ActionType) => void
 }) {
   const [activeTab, setActiveTab] = useState("overview")
   const [usageFilter, setUsageFilter] = useState("all")
@@ -1064,69 +1062,33 @@ function IntegrationDetailPage({ integration, onBack, onAction }: {
   const studioUsage = integration.studioUsage ?? {}
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column" }}>
 
-      {/* ── Breadcrumb + title header ───────────────────────────────────────── */}
-      <div style={{ padding: "16px 24px 0", borderBottom: "1px solid var(--border)" }}>
-        {/* Breadcrumb */}
-        <button
-          onClick={onBack}
-          style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 14 }}
-        >
-          <Icons.ArrowLeft size={14} />
-          Integrations
-          <Icons.ChevronRight size={12} style={{ margin: "0 2px" }} />
-          <span style={{ color: "var(--foreground)", fontWeight: 600 }}>{integration.name}</span>
-        </button>
-
-        {/* Title row */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 44, height: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, background: "var(--surface-raised)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
-              {IC ? <IC size={22} /> : null}
-            </div>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>{integration.name}</h1>
-                {integration.isOfficial && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100, background: "var(--primary)15", color: "var(--primary)", border: "1px solid var(--primary)30" }}>Official</span>
-                )}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 100, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>{integration.category}</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 100, background: `${statusMeta.color}15`, color: statusMeta.color, border: `1px solid ${statusMeta.color}30` }}>
-                  {statusMeta.icon} {statusMeta.label}
-                </span>
-                <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last sync: {integration.lastSync}</span>
-              </div>
-              {integration.connectedMonthsAgo != null && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: "1px 8px", borderRadius: 100, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>{integration.authType}</span>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Connected {integration.connectedMonthsAgo} months ago · by {integration.connectedBy}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <Button variant="secondary" size="sm">
-              <Icons.Sparkles size={14} style={{ marginRight: 4 }} /> Ask AI
-            </Button>
-            {integration.status === "error" ? (
-              <Button variant="main" size="sm" onClick={() => onAction(integration.id, "reauth")}>
-                <Icons.RefreshCw size={14} style={{ marginRight: 4 }} /> Re-authenticate
-              </Button>
-            ) : (
-              <Button variant="secondary" size="sm">
-                <Icons.KeyRound size={14} style={{ marginRight: 4 }} /> Rotate credentials
-              </Button>
-            )}
-            <Button variant="secondary" size="sm">Disconnect</Button>
-          </div>
+      {/* ── Identity + status info row ──────────────────────────────────────── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ width: 36, height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+          {IC ? <IC size={18} /> : null}
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {integration.isOfficial && (
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100, background: "var(--primary)15", color: "var(--primary)", border: "1px solid var(--primary)30" }}>Official</span>
+          )}
+          <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 100, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>{integration.category}</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 100, background: `${statusMeta.color}15`, color: statusMeta.color, border: `1px solid ${statusMeta.color}30` }}>
+            {statusMeta.icon} {statusMeta.label}
+          </span>
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last sync: {integration.lastSync}</span>
+          {integration.connectedMonthsAgo != null && (
+            <>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: "1px 8px", borderRadius: 100, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>{integration.authType}</span>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Connected {integration.connectedMonthsAgo} months ago · by {integration.connectedBy}</span>
+            </>
+          )}
+        </div>
+      </div>
 
-        {/* Tabs */}
+      {/* Tabs */}
+      <div style={{ marginBottom: 20 }}>
         <Tabs
           items={[
             { id: "overview",     label: "Overview" },
@@ -1144,7 +1106,8 @@ function IntegrationDetailPage({ integration, onBack, onAction }: {
       {/* ── Schema drift banner ─────────────────────────────────────────────── */}
       {integration.schemaDrift && (
         <div style={{
-          padding: "10px 24px", background: "var(--badge-alert)12", borderBottom: "1px solid var(--badge-alert)30",
+          marginBottom: 20, padding: "10px 14px", borderRadius: 8,
+          background: "var(--badge-alert)12", border: "1px solid var(--badge-alert)30",
           display: "flex", alignItems: "center", gap: 12,
         }}>
           <Icons.AlertTriangle size={16} style={{ color: "var(--badge-alert)", flexShrink: 0 }} />
@@ -1158,7 +1121,7 @@ function IntegrationDetailPage({ integration, onBack, onAction }: {
       )}
 
       {/* ── Tab content ─────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+      <div>
 
         {/* Overview */}
         {activeTab === "overview" && (
@@ -1510,7 +1473,37 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       sidebarItems={SIDEBAR}
       activeSidebarId="integrations"
       onSidebarItemClick={onNavigate}
-      header={(isScrolled) => (
+      header={(isScrolled) => detailView ? (
+        <Header
+          size={isScrolled ? "compress" : "size-m"}
+          title={detailView.name}
+          description="Integrations"
+          onBack={() => setDetailView(null)}
+          primaryAction={
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button variant="secondary" size="sm">
+                <Icons.Sparkles size={14} style={{ marginRight: 4 }} />
+                Ask AI
+              </Button>
+              {detailView.status === "error" ? (
+                <Button variant="main" size="sm" onClick={() => handleAction(detailView.id, "reauth")}>
+                  <Icons.RefreshCw size={14} style={{ marginRight: 4 }} />
+                  Re-authenticate
+                </Button>
+              ) : (
+                <Button variant="secondary" size="sm">
+                  <Icons.KeyRound size={14} style={{ marginRight: 4 }} />
+                  Rotate credentials
+                </Button>
+              )}
+              <Button variant="secondary" size="sm" style={{ color: "var(--badge-error)" }}
+                onClick={() => { handleAction(detailView.id, "disconnect"); setDetailView(null) }}>
+                Disconnect
+              </Button>
+            </div>
+          }
+        />
+      ) : (
         <Header
           size={isScrolled ? "compress" : "size-l"}
           title="Integrations"
@@ -1540,18 +1533,9 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
         />
       )}
     >
-      {/* Detail page — full-screen overlay inside ScreenLayout */}
+      {/* Detail page */}
       {detailView && (
-        <div style={{ margin: "-32px -24px", flex: 1, display: "flex", flexDirection: "column" }}>
-          <IntegrationDetailPage
-            integration={detailView}
-            onBack={() => setDetailView(null)}
-            onAction={(id, action) => {
-              if (action === "disconnect") { setDetailView(null); handleAction(id, action) }
-              else handleAction(id, action)
-            }}
-          />
-        </div>
+        <IntegrationDetailPage integration={detailView} />
       )}
 
       {/* Tabs — hidden when detail view is open */}
