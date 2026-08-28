@@ -311,341 +311,7 @@ const CATALOG: CatalogItem[] = [
 
 const CATALOG_CATEGORIES = ["All", "CRM", "Data Warehouse", "Database", "Storage", "Analytics", "Collaboration", "Project Mgmt", "Knowledge Base", "Developer Tools", "Data Transform", "Support", "Payments", "Email"]
 
-// ─── Operate panel ────────────────────────────────────────────────────────────
 
-function MetaRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", gap: 12, padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
-      <span style={{ width: 130, flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", paddingTop: 1 }}>{label}</span>
-      <span style={{ fontSize: 13, color: "var(--foreground)", flex: 1 }}>{value}</span>
-    </div>
-  )
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 8, marginTop: 20 }}>{children}</div>
-  )
-}
-
-function Pill({ children, color }: { children: React.ReactNode; color?: string }) {
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 600,
-      padding: "2px 8px", borderRadius: 20, marginRight: 4, marginBottom: 4,
-      background: color ? `${color}18` : "var(--surface-raised)",
-      color: color ?? "var(--muted-foreground)",
-      border: `1px solid ${color ? `${color}30` : "var(--border)"}`,
-    }}>{children}</span>
-  )
-}
-
-function OperatePanel({ integration, onAction }: {
-  integration: Integration
-  onAction: (id: string, action: ActionType) => void
-}) {
-  const [activeTab, setActiveTab] = useState("overview")
-  const [rotatingCreds, setRotatingCreds] = useState(false)
-  const [confirmDisconnect, setConfirmDisconnect] = useState(false)
-
-  return (
-    <>
-      {integration.errorMsg && (
-        <div style={{
-          margin: "12px 20px 0", padding: "8px 12px", borderRadius: 8,
-          background: "var(--badge-error)10", border: "1px solid var(--badge-error)30",
-          fontSize: 12, color: "var(--badge-error)", lineHeight: 1.4,
-          display: "flex", gap: 8, alignItems: "flex-start",
-        }}>
-          <Icons.AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-          {integration.errorMsg}
-        </div>
-      )}
-
-      <div style={{ display: "flex", gap: 8, padding: "12px 20px", borderBottom: "1px solid var(--border)" }}>
-        {integration.status === "error" ? (
-          <Button variant="main" size="sm" style={{ flex: 1 }} onClick={() => onAction(integration.id, "reauth")}>
-            Re-authenticate
-          </Button>
-        ) : integration.status === "paused" ? (
-          <Button variant="main" size="sm" style={{ flex: 1 }} onClick={() => onAction(integration.id, "resume")}>
-            Resume sync
-          </Button>
-        ) : (
-          <>
-            <Button variant="secondary" size="sm" style={{ flex: 1 }}>Sync now</Button>
-            <Button variant="secondary" size="sm" onClick={() => onAction(integration.id, "pause")}>
-              <Icons.Pause size={13} style={{ marginRight: 4 }} />
-              Pause
-            </Button>
-          </>
-        )}
-        <Button variant="secondary" size="sm">Settings</Button>
-      </div>
-
-      {/* Tabs */}
-      <div style={{ padding: "0 20px", borderBottom: "1px solid var(--border)" }}>
-        <Tabs
-          items={[
-            { id: "overview",    label: "Overview"    },
-            { id: "history",     label: "Sync history" },
-            { id: "guardrails",  label: "Guardrails"  },
-            { id: "creds",       label: "Credentials" },
-          ]}
-          activeId={activeTab}
-          onChange={setActiveTab}
-          size="s"
-        />
-      </div>
-
-      {/* Panel body */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-
-        {/* ── OVERVIEW ── */}
-        {activeTab === "overview" && (
-          <>
-            {/* Description */}
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6, marginBottom: 4, paddingBottom: 12, borderBottom: "1px solid var(--border)" }}>
-              {integration.description}
-            </div>
-
-            <MetaRow label="Authentication" value={integration.authType} />
-            <MetaRow label="Connected by"  value={integration.connectedBy} />
-            <MetaRow label="Connected on"  value={integration.connectedAt} />
-            <MetaRow label="Sync frequency" value={integration.syncFrequency} />
-            <MetaRow label="Last sync"     value={integration.lastSync} />
-            <MetaRow label="Next sync"     value={integration.nextSync} />
-            <MetaRow label="Records synced" value={integration.records} />
-            <MetaRow label="Website"       value={
-              <span style={{ color: "var(--primary)" }}>{integration.website}</span>
-            } />
-
-            <SectionLabel>Data scope</SectionLabel>
-            <div style={{ paddingBottom: 4 }}>
-              {integration.dataScope.map(s => <Pill key={s}>{s}</Pill>)}
-            </div>
-
-            <div style={{ marginTop: 24 }}>
-              {confirmDisconnect ? (
-                <div style={{ padding: "14px", borderRadius: 8, background: "var(--badge-error)08", border: "1px solid var(--badge-error)30" }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>
-                    Disconnect {integration.name}?
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12, lineHeight: 1.5 }}>
-                    This stops all syncs and removes the connection. You can reconnect from the catalog.
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <Button
-                      variant="main" size="sm"
-                      style={{ background: "var(--badge-error)", border: "none" }}
-                      onClick={() => onAction(integration.id, "disconnect")}
-                    >
-                      Disconnect
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => setConfirmDisconnect(false)}>Cancel</Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant="secondary" size="sm"
-                  style={{ color: "var(--badge-error)", borderColor: "var(--badge-error)40" }}
-                  onClick={() => setConfirmDisconnect(true)}
-                >
-                  <Icons.Unplug size={13} style={{ marginRight: 4 }} />
-                  Disconnect
-                </Button>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* ── SYNC HISTORY ── */}
-        {activeTab === "history" && (
-          <div>
-            <SectionLabel>Sync runs</SectionLabel>
-            {integration.history.map((run, i) => {
-              const c = run.status === "success" ? "var(--badge-success)" : run.status === "failure" ? "var(--badge-error)" : "var(--badge-alert)"
-              return (
-                <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ color: c }}>
-                    {run.status === "success" ? <Icons.CheckCircle size={14} /> : run.status === "failure" ? <Icons.XCircle size={14} /> : <Icons.AlertTriangle size={14} />}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{run.ts}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{run.records} · {run.duration}</div>
-                  </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: c }}>
-                    {run.status.charAt(0).toUpperCase() + run.status.slice(1)}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* ── GUARDRAILS ── */}
-        {activeTab === "guardrails" && (() => {
-          const g = integration.guardrails
-          return (
-            <div>
-              {/* Access level */}
-              <div style={{ padding: "12px 14px", borderRadius: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 3 }}>Access level</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{g.accessLevel}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 3 }}>Schema version</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{g.schemaVersion}</div>
-                </div>
-              </div>
-
-              {/* Retention */}
-              <MetaRow label="Data retention" value={`${g.retentionDays} days`} />
-
-              {/* PII fields */}
-              <SectionLabel>PII fields masked</SectionLabel>
-              {g.piiFields.length === 0 ? (
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>No PII fields detected for this integration.</div>
-              ) : (
-                <div>{g.piiFields.map(f => <Pill key={f} color="var(--badge-error)">{f}</Pill>)}</div>
-              )}
-
-              {/* Field exclusions */}
-              <SectionLabel>Excluded fields</SectionLabel>
-              {g.fieldExclusions.length === 0 ? (
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>No field exclusions configured.</div>
-              ) : (
-                <div>{g.fieldExclusions.map(f => <Pill key={f} color="var(--badge-alert)">{f}</Pill>)}</div>
-              )}
-
-              {/* Allowed downstream */}
-              <SectionLabel>Allowed downstream consumers</SectionLabel>
-              <div>{g.allowedDownstream.map(d => <Pill key={d} color="var(--badge-success)">{d}</Pill>)}</div>
-
-              {/* Blocked downstream */}
-              <SectionLabel>Blocked downstream consumers</SectionLabel>
-              {g.blockedDownstream.length === 0 ? (
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>No downstream blocks configured.</div>
-              ) : (
-                <div>{g.blockedDownstream.map(d => <Pill key={d} color="var(--badge-error)">{d}</Pill>)}</div>
-              )}
-
-              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
-                  Guardrails are managed in <span style={{ color: "var(--primary)", fontWeight: 600 }}>Governance Studio</span>. Changes take effect on the next sync run.
-                </div>
-              </div>
-            </div>
-          )
-        })()}
-
-        {/* ── CREDENTIALS ── */}
-        {activeTab === "creds" && (
-          <div>
-            <div style={{ padding: "12px 14px", borderRadius: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 6 }}>Authentication method</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{integration.authType}</div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-                {integration.status === "error" ? "Token expired — rotation required" : "Credentials valid · Last rotated Aug 25, 2026"}
-              </div>
-            </div>
-
-            {integration.oauthScopes && integration.oauthScopes.length > 0 && (
-              <>
-                <SectionLabel>Granted OAuth scopes</SectionLabel>
-                <div style={{ marginBottom: 16 }}>
-                  {integration.oauthScopes.map(s => <Pill key={s}>{s}</Pill>)}
-                </div>
-              </>
-            )}
-
-            {integration.authType === "Service Account" && (
-              <>
-                <MetaRow label="Key type" value="JSON service account" />
-                <MetaRow label="Key ID"   value={<span style={{ fontFamily: "monospace", fontSize: 12 }}>sa-{integration.id}-prod-8f3a</span>} />
-                <MetaRow label="Expires"  value="Never (manual rotation)" />
-              </>
-            )}
-
-            {integration.authType === "Basic Auth" && (
-              <>
-                <MetaRow label="Username" value={<span style={{ fontFamily: "monospace", fontSize: 12 }}>aims_sync_user</span>} />
-                <MetaRow label="Password" value="••••••••••••" />
-                <MetaRow label="Expires"  value="Sep 01, 2027" />
-              </>
-            )}
-
-            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-              <Button
-                variant={integration.status === "error" ? "main" : "secondary"}
-                size="sm"
-                onClick={() => {
-                  setRotatingCreds(true)
-                  if (integration.status === "error") onAction(integration.id, "reauth")
-                }}
-              >
-                {rotatingCreds ? "Rotating…" : integration.status === "error" ? "Re-authenticate" : "Rotate credentials"}
-              </Button>
-              <Button variant="secondary" size="sm">Download audit log</Button>
-            </div>
-          </div>
-        )}
-
-      </div>
-    </>
-  )
-}
-
-// ─── Integration row ──────────────────────────────────────────────────────────
-
-function IntegrationRow({ integration, selected, onClick }: {
-  integration: Integration; selected: boolean; onClick: () => void
-}) {
-  const [hov, setHov] = useState(false)
-  const statusMeta = STATUS_META[integration.status]
-
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        display: "flex", alignItems: "center", gap: 14, padding: "12px 20px",
-        borderBottom: "1px solid var(--border)", cursor: "pointer",
-        background: selected ? "color-mix(in srgb, var(--primary) 8%, transparent)"
-          : hov ? "var(--accent)" : "transparent",
-        borderLeft: selected ? "2px solid var(--primary)" : "2px solid transparent",
-        transition: "background 0.1s",
-      }}
-    >
-      <div style={{ width: 34, height: 34, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
-        {(() => { const IC = Icons[integration.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={18} /> : null })()}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 2 }}>
-          {integration.name}
-        </div>
-        <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-          {integration.category} · {integration.authType}
-        </div>
-      </div>
-      <div style={{ textAlign: "right", flexShrink: 0 }}>
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: 3,
-          fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100,
-          background: `${statusMeta.color}18`, color: statusMeta.color,
-          border: `1px solid ${statusMeta.color}30`,
-        }}>
-          {statusMeta.icon} {statusMeta.label}
-        </div>
-        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 3 }}>
-          {integration.lastSync}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ─── Request integration panel ────────────────────────────────────────────────
 
@@ -1424,7 +1090,6 @@ function IntegrationDetailPage({ integration }: {
 export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [tab, setTab]         = useState("connected")
   const [connectedList, setConnectedList] = useState<Integration[]>(INITIAL_CONNECTED)
-  const [selected, setSelected] = useState<Integration | null>(null)
   const [detailView, setDetailView] = useState<Integration | null>(null)
   const [query, setQuery]     = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | IntegrationStatus>("all")
@@ -1433,7 +1098,6 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
 
   function handleAction(id: string, action: ActionType) {
     if (action === "disconnect") {
-      setSelected(null)
       setConnectedList(prev => prev.filter(i => i.id !== id))
       return
     }
@@ -1444,16 +1108,13 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       if (action === "resume") return { ...i, status: "active" as IntegrationStatus }
       return i
     }))
-    // Sync selected + detailView with updated state
-    const sync = (prev: Integration | null) => {
+    setDetailView(prev => {
       if (!prev || prev.id !== id) return prev
       if (action === "reauth") return { ...prev, status: "active" as IntegrationStatus, errorMsg: undefined }
       if (action === "pause")  return { ...prev, status: "paused" as IntegrationStatus }
       if (action === "resume") return { ...prev, status: "active" as IntegrationStatus }
       return prev
-    }
-    setSelected(sync)
-    setDetailView(sync)
+    })
   }
 
   const filteredByStatus = connectedList.filter(c => statusFilter === "all" || c.status === statusFilter)
@@ -1464,13 +1125,6 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
 
   const errorCount = connectedList.filter(c => c.status === "error").length
   const connectedIds = new Set(connectedList.map(c => c.id))
-
-  const STATUS_FILTERS: Array<{ id: "all" | IntegrationStatus; label: string }> = [
-    { id: "all",    label: `All (${connectedList.length})` },
-    { id: "active", label: `Active (${connectedList.filter(c => c.status === "active").length})` },
-    { id: "error",  label: `Error (${connectedList.filter(c => c.status === "error").length})` },
-    { id: "paused", label: `Paused (${connectedList.filter(c => c.status === "paused").length})` },
-  ]
 
   const INT_ICON_VARIANT: Record<IntegrationStatus, EntityListItemData["iconVariant"]> = {
     active:  "success",
@@ -1602,7 +1256,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
             { id: "catalog",   label: "Catalog"   },
           ]}
           activeId={tab}
-          onChange={v => { setTab(v); if (v === "catalog") setSelected(null) }}
+          onChange={v => { setTab(v) }}
           size="s"
         />
       </div>}
