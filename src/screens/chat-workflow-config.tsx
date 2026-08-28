@@ -5,7 +5,7 @@ import { Header }         from "@/components/ui/header"
 import { Button }         from "@/components/ui/button"
 import { Input }          from "@/components/ui/input"
 import { Checkbox }       from "@/components/ui/checkbox"
-import { SwitchTab }      from "@/components/ui/switch-tab"
+import { Tabs }           from "@/components/ui/tabs"
 import { Tag }            from "@/components/ui/tag"
 import type { SidebarItem } from "@/components/ui/sidebar"
 
@@ -791,12 +791,12 @@ export function ChatWorkflowConfigScreen() {
         }}>
           {/* Tab bar */}
           <div style={{ padding: "12px 16px 0", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <SwitchTab
+            <Tabs
               items={[
                 { id: "conversation", label: "Conversation" },
-                { id: "canvas", label: "Canvas", icon: draft ? <Icons.CheckCircle2 size={12} /> : undefined },
+                { id: "canvas",       label: "Canvas"       },
               ]}
-              value={view}
+              activeId={view}
               onChange={id => setView(id as "conversation" | "canvas")}
               size="s"
             />

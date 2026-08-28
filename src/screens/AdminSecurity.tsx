@@ -128,10 +128,10 @@ function SecurityScoreCard({ mfaPolicy, ssoEnabled, ipAllowlist, sessionLock }: 
           background: `${scoreColor}10`,
         }}>
           <span style={{ fontSize: 28, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>{score}</span>
-          <span style={{ fontSize: 10, color: "var(--muted-foreground)", fontWeight: 600, letterSpacing: "0.06em" }}>SCORE</span>
+          <span style={{ fontSize: 10, color: "var(--muted-foreground)", fontWeight: 600, letterSpacing: "0.06em" }}>Security</span>
         </div>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", textAlign: "center" }}>
-          {score >= 75 ? "Strong" : score >= 50 ? "Moderate" : "Needs work"}
+          {score >= 75 ? "Strong" : score >= 50 ? "Moderate" : "At risk"}
         </div>
         <div style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "center", marginTop: 2 }}>
           {passing} of {checks.length} checks passing
@@ -244,7 +244,7 @@ function SsoSection({ enabled, onToggle }: { enabled: boolean; onToggle: () => v
     >
       <SettingRow
         label="Enable SSO"
-        description={enabled ? "Members with a verified domain are redirected to your IdP." : "Not configured — members sign in with email and password."}
+        description={enabled ? "Members with a verified domain are redirected to your IdP." : "Members sign in with email and password."}
       >
         <Toggle checked={enabled} onChange={onToggle} />
       </SettingRow>
@@ -283,7 +283,7 @@ function SsoSection({ enabled, onToggle }: { enabled: boolean; onToggle: () => v
       )}
 
       {!enabled && (
-        <SettingRow label="Configuration" description="No IdP configured" last>
+        <SettingRow label="Configuration" description="No identity provider configured" last>
           <Button variant="secondary" size="sm">Set up SSO</Button>
         </SettingRow>
       )}
@@ -318,7 +318,7 @@ function SessionSection({ timeout, onTimeout, lock, onLock }: {
         </select>
       </SettingRow>
       <SettingRow
-        label="Device binding"
+        label="Lock session to device"
         description="Invalidate sessions when the IP address or device fingerprint changes."
         last
       >
@@ -554,8 +554,8 @@ export function AdminSecurityScreen({ onNavigate }: { onNavigate?: (id: string) 
                 { label: "Session timeout",  value: sessionTimeout < 24 ? `${sessionTimeout}h` : sessionTimeout === 24 ? "24h" : "3 days", ok: sessionTimeout <= 8 },
                 { label: "Device binding",   value: sessionLock ? "Enabled" : "Disabled", ok: sessionLock },
                 { label: "IP allowlist",     value: activeIpRules ? `${ipRules.filter(r=>r.enabled).length} rules` : "Inactive", ok: activeIpRules },
-                { label: "Encryption",       value: "AES-256-GCM at rest", ok: true },
-                { label: "TLS",              value: "1.3 enforced", ok: true },
+                { label: "Encryption",       value: "AES-256 (at rest)", ok: true },
+                { label: "TLS",              value: "TLS 1.3", ok: true },
                 { label: "Data residency",   value: "US East (us-east-1)", ok: true },
               ].map((row, i, arr) => (
                 <div key={row.label} style={{

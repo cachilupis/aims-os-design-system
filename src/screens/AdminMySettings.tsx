@@ -4,7 +4,7 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
-import { SwitchTab }     from "@/components/ui/switch-tab"
+import { Tabs }          from "@/components/ui/tabs"
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
@@ -184,7 +184,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
     integrationErrors: ["Integration errors",        "Sync failures and authentication issues"],
     auditDigest:       ["Daily audit digest",        "Email summary of workspace activity at 08:00"],
     billingAlerts:     ["Billing alerts",            "Usage thresholds, upcoming renewals, invoices"],
-    aiWorkerFailures:  ["AI worker failures",        "Worker run errors and HITL queue overflow"],
+    aiWorkerFailures:  ["AI worker failures",        "Worker run errors and human review queue overflow"],
   }
 
   return (
@@ -207,15 +207,15 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
       )}
     >
       {/* Tabs */}
-      <div style={{ marginBottom: 20 }}>
-        <SwitchTab
+      <div style={{ borderBottom: "1px solid var(--border)", marginBottom: 20 }}>
+        <Tabs
           items={[
             { id: "profile",       label: "Profile"        },
             { id: "notifications", label: "Notifications"  },
             { id: "tokens",        label: "API Tokens"     },
             { id: "sessions",      label: "Sessions"       },
           ]}
-          value={tab}
+          activeId={tab}
           onChange={setTab}
           size="s"
         />
@@ -299,7 +299,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
 
           {showNewToken && (
             <div style={{ border: "1px solid var(--primary)50", borderRadius: 10, padding: 16, marginBottom: 16, background: "var(--primary)08" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 10 }}>Create personal access token</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 10 }}>New API token</div>
               <input
                 value={newTokenName}
                 onChange={e => setNewTokenName(e.target.value)}

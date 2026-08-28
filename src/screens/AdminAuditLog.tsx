@@ -4,7 +4,9 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
-import { SwitchTab }    from "@/components/ui/switch-tab"
+import { Tabs }         from "@/components/ui/tabs"
+import { Filters }      from "@/components/ui/filters"
+import { SlideOut }     from "@/components/ui/slide-out"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -273,114 +275,6 @@ function DetailRow({ label, value, mono }: { label: string; value: string; mono?
   )
 }
 
-function EventDetailPanel({ event, onClose }: { event: AuditEvent; onClose: () => void }) {
-  const { date, time } = formatTs(event.timestamp)
-  const cat = CATEGORY_META[event.category]
-  const res = RESULT_META[event.result]
-
-  return (
-    <div style={{
-      width: 380, flexShrink: 0, borderLeft: "1px solid var(--border)",
-      background: "var(--surface)", display: "flex", flexDirection: "column",
-      height: "100%", overflow: "hidden",
-    }}>
-      {/* Panel header */}
-      <div style={{
-        padding: "16px 20px", borderBottom: "1px solid var(--border)",
-        background: "var(--surface-raised)", display: "flex", alignItems: "flex-start", gap: 10,
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 3,
-              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-              background: `${cat.color}1a`, color: cat.color, border: `1px solid ${cat.color}33`,
-              textTransform: "uppercase", letterSpacing: "0.05em",
-            }}>
-              {cat.icon} {cat.label}
-            </span>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-              background: `${res.color}15`, color: res.color, border: `1px solid ${res.color}30`,
-            }}>
-              {res.label}
-            </span>
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", marginBottom: 2 }}>
-            {event.actionLabel}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-            {date} at {time}
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, flexShrink: 0, borderRadius: 6 }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-        >
-          <Icons.X size={16} />
-        </button>
-      </div>
-
-      {/* Panel body */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-
-        {/* Actor */}
-        <div style={{ paddingTop: 16, paddingBottom: 4 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Actor</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface-raised)", borderRadius: 8, border: "1px solid var(--border)" }}>
-            <Avatar actor={event.actor} size={32} />
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{event.actor.name}</div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{event.actor.email}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Event details */}
-        <div style={{ marginTop: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Event details</div>
-          <DetailRow label="Event ID"  value={event.id} mono />
-          <DetailRow label="Action"    value={event.action} mono />
-          <DetailRow label="Timestamp" value={`${date} ${time} UTC`} />
-          {event.target && (
-            <DetailRow label="Target" value={event.target.email ? `${event.target.name} (${event.target.email})` : event.target.name} />
-          )}
-          {event.resource && (
-            <>
-              <DetailRow label="Resource type" value={event.resource.type} />
-              <DetailRow label="Resource name" value={event.resource.name} />
-              <DetailRow label="Resource ID"   value={event.resource.id} mono />
-            </>
-          )}
-          {event.studio && (
-            <DetailRow label="Studio" value={STUDIO_META[event.studio].label} />
-          )}
-        </div>
-
-        {/* Metadata */}
-        {event.details && Object.keys(event.details).length > 0 && (
-          <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Metadata</div>
-            {Object.entries(event.details).map(([k, v]) => (
-              <DetailRow key={k} label={k} value={v} />
-            ))}
-          </div>
-        )}
-
-        {/* Network */}
-        <div style={{ marginTop: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Network</div>
-          <DetailRow label="IP address" value={event.ip} mono />
-          <DetailRow label="Location"   value={event.location} />
-          <DetailRow label="User agent" value={event.userAgent} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 20
@@ -390,6 +284,7 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
   const [resultFilter, setResultFilter]     = useState("all")
   const [actorFilter, setActorFilter]       = useState("all")
   const [query, setQuery]                   = useState("")
+  const [openSlot, setOpenSlot]             = useState<"result" | "actor" | null>(null)
   const [selected, setSelected]             = useState<AuditEvent | null>(null)
   const [page, setPage]                     = useState(1)
 
@@ -415,13 +310,7 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: EVENTS.length }
-    EVENTS.forEach(e => { counts[e.category] = (counts[e.category] ?? 0) + 1 })
-    return counts
-  }, [])
-
-  const failureCount = EVENTS.filter(e => e.result === "failure").length
+const failureCount = EVENTS.filter(e => e.result === "failure").length
   const warningCount = EVENTS.filter(e => e.result === "warning").length
 
   function handleRowClick(e: AuditEvent) {
@@ -469,73 +358,106 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
         ))}
       </div>
 
-      {/* Filters */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <SwitchTab
+      {/* Category tabs */}
+      <div style={{ borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
+        <Tabs
           items={[
-            { id: "all",         label: `All (${categoryCounts.all ?? 0})`         },
-            { id: "auth",        label: `Auth (${categoryCounts.auth ?? 0})`        },
-            { id: "access",      label: `Access (${categoryCounts.access ?? 0})`    },
-            { id: "members",     label: `Members (${categoryCounts.members ?? 0})`  },
-            { id: "content",     label: `Content (${categoryCounts.content ?? 0})`  },
-            { id: "agents",      label: `Agents (${categoryCounts.agents ?? 0})`    },
-            { id: "integrations",label: `Integrations (${categoryCounts.integrations ?? 0})` },
-            { id: "settings",    label: `Settings (${categoryCounts.settings ?? 0})` },
+            { id: "all",          label: "All"            },
+            { id: "auth",         label: "Authentication" },
+            { id: "access",       label: "Access control" },
+            { id: "members",      label: "Members"        },
+            { id: "content",      label: "Content"        },
+            { id: "agents",       label: "AI agents"      },
+            { id: "integrations", label: "Integrations"   },
+            { id: "settings",     label: "Settings"       },
           ]}
-          value={categoryFilter}
+          activeId={categoryFilter}
           onChange={v => { setCategoryFilter(v); setPage(1) }}
           size="s"
         />
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        {/* Result filter */}
-        <SwitchTab
-          items={[
-            { id: "all",     label: "All results" },
-            { id: "success", label: "Success"     },
-            { id: "failure", label: "Failures"    },
-            { id: "warning", label: "Warnings"    },
+      {/* Filters bar */}
+      <div style={{ position: "relative", marginBottom: 20 }}>
+        {openSlot && (
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 190 }}
+            onClick={() => setOpenSlot(null)}
+          />
+        )}
+        <Filters
+          showSearch
+          searchPlaceholder="Search events, actors, resources…"
+          searchValue={query}
+          onSearchChange={v => { setQuery(v); setPage(1) }}
+          showSort={false}
+          showViewToggle={false}
+          showAllFilters={false}
+          slots={[
+            {
+              placeholder: "Result",
+              value: resultFilter !== "all" ? ({ success: "Success", failure: "Failures", warning: "Warnings" } as Record<string, string>)[resultFilter] : undefined,
+              onOpen:   () => setOpenSlot(s => s === "result" ? null : "result"),
+              onRemove: () => { setResultFilter("all"); setPage(1) },
+            },
+            {
+              placeholder: "Actor",
+              value: actorFilter !== "all" ? ACTORS[actorFilter]?.name : undefined,
+              onOpen:   () => setOpenSlot(s => s === "actor" ? null : "actor"),
+              onRemove: () => { setActorFilter("all"); setPage(1) },
+            },
           ]}
-          value={resultFilter}
-          onChange={v => { setResultFilter(v); setPage(1) }}
-          size="s"
+          showClearFilters={resultFilter !== "all" || actorFilter !== "all"}
+          onClearFilters={() => { setResultFilter("all"); setActorFilter("all"); setPage(1) }}
         />
 
-        {/* Actor filter */}
-        <select
-          value={actorFilter}
-          onChange={e => { setActorFilter(e.target.value); setPage(1) }}
-          style={{
-            padding: "6px 10px", fontSize: 12, borderRadius: 7,
-            border: "1px solid var(--border)", background: "var(--surface)",
-            color: "var(--foreground)", cursor: "pointer", outline: "none",
-          }}
-        >
-          <option value="all">All actors</option>
-          <option value="sys">System</option>
-          {Object.values(ACTORS).filter(a => a.id !== "sys").map(a => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
+        {/* Result dropdown */}
+        {openSlot === "result" && (
+          <div style={{
+            position: "absolute", top: 44, left: 210, zIndex: 200,
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore: box-shadow alpha has no token equivalent
+            overflow: "hidden", minWidth: 150,
+          }}>
+            {(["all", "success", "failure", "warning"] as const).map(v => (
+              <button key={v}
+                onClick={() => { setResultFilter(v); setPage(1); setOpenSlot(null) }}
+                style={{
+                  display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
+                  fontSize: 13, border: "none", cursor: "pointer",
+                  color: resultFilter === v ? "var(--primary)" : "var(--foreground)",
+                  background: resultFilter === v ? "var(--accent)" : "var(--surface)",
+                }}
+              >
+                {v === "all" ? "All results" : v === "success" ? "Success" : v === "failure" ? "Failures" : "Warnings"}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Search */}
-        <div style={{ marginLeft: "auto", position: "relative" }}>
-          <Icons.Search size={13} style={{
-            position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-            color: "var(--muted-foreground)", pointerEvents: "none",
-          }} />
-          <input
-            value={query}
-            onChange={e => { setQuery(e.target.value); setPage(1) }}
-            placeholder="Search events, actors, resources…"
-            style={{
-              paddingLeft: 32, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
-              width: 280, fontSize: 13, border: "1px solid var(--border)", borderRadius: 8,
-              background: "var(--surface)", color: "var(--foreground)", outline: "none",
-            }}
-          />
-        </div>
+        {/* Actor dropdown */}
+        {openSlot === "actor" && (
+          <div style={{
+            position: "absolute", top: 44, left: 290, zIndex: 200,
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore: box-shadow alpha has no token equivalent
+            overflow: "hidden", minWidth: 180, maxHeight: 240, overflowY: "auto",
+          }}>
+            {[{ id: "all", name: "All actors" }, ...Object.values(ACTORS)].map(a => (
+              <button key={a.id}
+                onClick={() => { setActorFilter(a.id); setPage(1); setOpenSlot(null) }}
+                style={{
+                  display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
+                  fontSize: 13, border: "none", cursor: "pointer",
+                  color: actorFilter === a.id ? "var(--primary)" : "var(--foreground)",
+                  background: actorFilter === a.id ? "var(--accent)" : "var(--surface)",
+                }}
+              >
+                {a.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -615,11 +537,95 @@ export function AdminAuditLogScreen({ onNavigate }: { onNavigate?: (id: string) 
           )}
         </div>
 
-        {/* Detail panel */}
-        {selected && (
-          <EventDetailPanel event={selected} onClose={() => setSelected(null)} />
-        )}
       </div>
+
+      {/* Detail slide-out */}
+      {(() => {
+        const cat = selected ? CATEGORY_META[selected.category] : null
+        const res = selected ? RESULT_META[selected.result] : null
+        const { date, time } = selected ? formatTs(selected.timestamp) : { date: "", time: "" }
+        return (
+          <SlideOut
+            open={selected !== null}
+            onClose={() => setSelected(null)}
+            title={selected?.actionLabel ?? ""}
+            subtitle={selected && cat && res ? `${cat.label} · ${res.label} · ${date} at ${time}` : ""}
+          >
+            {selected && cat && res && (
+              <div style={{ padding: "0 20px 20px" }}>
+                {/* Badges */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, paddingTop: 4 }}>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 3,
+                    fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                    background: `${cat.color}1a`, color: cat.color, border: `1px solid ${cat.color}33`,
+                    textTransform: "uppercase", letterSpacing: "0.05em",
+                  }}>
+                    {cat.icon} {cat.label}
+                  </span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                    background: `${res.color}15`, color: res.color, border: `1px solid ${res.color}30`,
+                  }}>
+                    {res.label}
+                  </span>
+                </div>
+
+                {/* Actor */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Actor</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface-raised)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <Avatar actor={selected.actor} size={32} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{selected.actor.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{selected.actor.email}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event details */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Event details</div>
+                  <DetailRow label="Event ID"  value={selected.id} mono />
+                  <DetailRow label="Action"    value={selected.action} mono />
+                  <DetailRow label="Timestamp" value={`${date} ${time} UTC`} />
+                  {selected.target && (
+                    <DetailRow label="Target" value={selected.target.email ? `${selected.target.name} (${selected.target.email})` : selected.target.name} />
+                  )}
+                  {selected.resource && (
+                    <>
+                      <DetailRow label="Resource type" value={selected.resource.type} />
+                      <DetailRow label="Resource name" value={selected.resource.name} />
+                      <DetailRow label="Resource ID"   value={selected.resource.id} mono />
+                    </>
+                  )}
+                  {selected.studio && (
+                    <DetailRow label="Studio" value={STUDIO_META[selected.studio].label} />
+                  )}
+                </div>
+
+                {/* Metadata */}
+                {selected.details && Object.keys(selected.details).length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Metadata</div>
+                    {Object.entries(selected.details).map(([k, v]) => (
+                      <DetailRow key={k} label={k} value={v} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Network */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 6 }}>Network</div>
+                  <DetailRow label="IP address" value={selected.ip} mono />
+                  <DetailRow label="Location"   value={selected.location} />
+                  <DetailRow label="User agent" value={selected.userAgent} />
+                </div>
+              </div>
+            )}
+          </SlideOut>
+        )
+      })()}
     </ScreenLayout>
   )
 }

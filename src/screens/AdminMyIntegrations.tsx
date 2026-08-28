@@ -4,7 +4,7 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
-import { SwitchTab }     from "@/components/ui/switch-tab"
+import { Tabs }          from "@/components/ui/tabs"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -144,7 +144,7 @@ function RequestCard({
             <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{req.description}</div>
           </div>
           <div style={{ marginBottom: req.reviewerNote ? 12 : 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>My justification</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Your justification</div>
             <div style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5, padding: "8px 10px", background: "var(--surface)", borderRadius: 6, border: "1px solid var(--border)" }}>
               {req.justification}
             </div>
@@ -325,40 +325,47 @@ export function AdminMyIntegrationsScreen({ onNavigate }: { onNavigate?: (id: st
           title="My Integrations"
           description={`${counts.all} requests · ${counts.approved} approved · ${counts.active} in review`}
           primaryAction={
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              {needsInfo > 0 && (
-                <span style={{
-                  fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
-                  background: "var(--primary)15", color: "var(--primary)",
-                  border: "1px solid var(--primary)30",
-                }}>
-                  <Icons.MessageCircle size={11} style={{ marginRight: 4, verticalAlign: "middle" }} />
-                  {needsInfo} awaiting your response
-                </span>
-              )}
-              <Button variant="main" size="sm" onClick={() => setShowNewForm(true)}>
-                <Icons.Plus size={14} style={{ marginRight: 4 }} />
-                New request
-              </Button>
-            </div>
+            <Button variant="main" size="sm" onClick={() => setShowNewForm(true)}>
+              <Icons.Plus size={14} style={{ marginRight: 4 }} />
+              New request
+            </Button>
           }
         />
       )}
     >
       {/* Tabs */}
-      <div style={{ marginBottom: 16 }}>
-        <SwitchTab
+      <div style={{ borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
+        <Tabs
           items={[
-            { id: "active",   label: `In review (${counts.active})`   },
-            { id: "approved", label: `Approved (${counts.approved})`  },
-            { id: "rejected", label: `Rejected (${counts.rejected})`  },
-            { id: "all",      label: `All (${counts.all})`            },
+            { id: "active",   label: "In review"  },
+            { id: "approved", label: "Approved"   },
+            { id: "rejected", label: "Rejected"   },
+            { id: "all",      label: "All"        },
           ]}
-          value={tab}
+          activeId={tab}
           onChange={setTab}
           size="s"
         />
       </div>
+
+      {needsInfo > 0 && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8, marginBottom: 12,
+          padding: "10px 14px", borderRadius: 8,
+          background: "var(--primary)10", border: "1px solid var(--primary)25",
+        }}>
+          <Icons.MessageCircle size={14} style={{ color: "var(--primary)", flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)" }}>
+            {needsInfo === 1 ? "1 request needs your response" : `${needsInfo} requests need your response`}
+          </span>
+          <button
+            onClick={() => setTab("active")}
+            style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          >
+            View
+          </button>
+        </div>
+      )}
 
       {showNewForm && <NewRequestForm onSubmit={addRequest} onCancel={() => setShowNewForm(false)} />}
 

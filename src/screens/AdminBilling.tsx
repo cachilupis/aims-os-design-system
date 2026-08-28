@@ -31,7 +31,7 @@ const COST_BREAKDOWN = [
   { label: "Governance Studio", amount: "$1,500.00",  note: "Advanced compliance + promotion workflows" },
   { label: "Agentic Studio",    amount: "$1,800.00",  note: "7 active workers, HITL handoffs" },
   { label: "Data Studio",       amount: "$900.00",    note: "14 published models, lineage graph" },
-  { label: "AI inference",      amount: "$200.00",    note: "4.18M output tokens @ $0.048/1k" },
+  { label: "AI usage",          amount: "$200.00",    note: "4.18M tokens at $0.048 per 1,000" },
   { label: "Overage",           amount: "$0.00",      note: "No overages this period" },
 ]
 
@@ -85,7 +85,7 @@ function UsageBar({ label, used, total, unit, color, cost }: {
         <div style={{ height: "100%", width: `${pct}%`, borderRadius: 3, background: barColor, transition: "width 0.4s" }} />
       </div>
       <div style={{ fontSize: 10, color: warn ? "var(--badge-alert)" : "var(--muted-foreground)", marginTop: 3 }}>
-        {pct}% used{warn ? " — approaching limit" : ""}
+        {pct}% used{warn ? " — near limit" : ""}
       </div>
     </div>
   )
@@ -181,7 +181,7 @@ function InvoiceHistory() {
   return (
     <SectionCard
       title="Invoice history"
-      description="Last 6 invoices"
+      description={undefined}
       action={
         <Button variant="secondary" size="sm">
           <Icons.Download size={13} style={{ marginRight: 4 }} />
@@ -251,7 +251,7 @@ function CostBreakdown() {
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden", marginBottom: 16 }}>
       <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Aug 2026 breakdown</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Cost breakdown</div>
         <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Aug 1 – Aug 26</div>
       </div>
       {COST_BREAKDOWN.map((row, i) => (
@@ -274,7 +274,7 @@ function CostBreakdown() {
         padding: "12px 18px", background: "var(--surface-raised)", borderTop: "1px solid var(--border)",
         display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Total (estimated)</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Estimated total</span>
         <span style={{ fontSize: 16, fontWeight: 800, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>$12,400.00</span>
       </div>
     </div>
@@ -358,13 +358,13 @@ export function AdminBillingScreen({ onNavigate }: { onNavigate?: (id: string) =
         <div>
           {/* Usage */}
           <SectionCard title="Usage this period" description="Aug 1 – Aug 26, 2026">
-            <UsageBar label="AI output tokens"     used={4_180_000} total={10_000_000} unit="tokens"   color={"#6366f1" /* audit-ignore: prototype fixture data */} cost="$200.00" />
+            <UsageBar label="AI usage"              used={4_180_000} total={10_000_000} unit="tokens"   color={"#6366f1" /* audit-ignore: prototype fixture data */} cost="$200.00" />
 
             <UsageBar label="Active AI workers"    used={7}          total={20}          unit="workers"  color={"#06b6d4" /* audit-ignore: prototype fixture data */} cost="$1,800.00" />
 
             <UsageBar label="Data Studio models"   used={14}         total={50}          unit="models"   color={"#8b5cf6" /* audit-ignore: prototype fixture data */} cost="$900.00" />
 
-            <UsageBar label="Governance sandboxes" used={3}          total={10}          unit="sandboxes" color={"#10b981" /* audit-ignore: prototype fixture data */} cost="included" />
+            <UsageBar label="Sandboxes"             used={3}          total={10}          unit="sandboxes" color={"#10b981" /* audit-ignore: prototype fixture data */} cost="included" />
 
             <UsageBar label="Integrations"         used={6}          total={20}          unit="connected" color={"#0ea5e9" /* audit-ignore: prototype fixture data */} cost="included" />
 
