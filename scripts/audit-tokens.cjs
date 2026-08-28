@@ -410,6 +410,50 @@ screenFiles.forEach((file) => {
   }
 })
 
+// ── Check 8: possible hand-rolled card component (heuristic, WARNING) ─────
+// Check 6 only catches a local def whose NAME collides with a real DS
+// export (e.g. `function Toggle`). It can't catch a local component that
+// does the same JOB under a different name — e.g. AdminSecurity.tsx defines
+// `function SectionCard({ children })` that renders a div styled with
+// border + background using the exact tokens CardContainer itself uses,
+// instead of importing CardContainer. Different name, same reimplementation
+// problem — undetectable by name-matching, so this check looks at what the
+// component actually renders instead: does it accept `children`, and does
+// its body contain a card-shaped div (border + background using DS
+// surface/border tokens)? WARNING only — this is a semantic guess, not a
+// certainty. Composing a bespoke wrapper is sometimes legitimate; a human
+// (or a DS-GAP comment) makes that call, not this script.
+const CARD_LIKE_BORDER_RE = /\bborder\s*:\s*["'][^"']*var\(--(?:border|field-border)/
+const CARD_LIKE_BG_RE = /\bbackground\s*:\s*["']?var\(--(?:surface|surface-raised)\b/
+const TOP_LEVEL_DEF_RE = /^(?:function\s+([A-Z]\w*)\s*\(|const\s+([A-Z]\w*)\s*(?::[^=]*)?=\s*\()/
+
+screenFiles.forEach((file) => {
+  const text = fs.readFileSync(file, "utf8")
+  const lines = stripComments(text)
+
+  const defs = []
+  lines.forEach(({ code }, idx) => {
+    const m = TOP_LEVEL_DEF_RE.exec(code)
+    if (m) defs.push({ name: m[1] || m[2], line: idx })
+  })
+
+  defs.forEach((def, i) => {
+    const end = i + 1 < defs.length ? defs[i + 1].line : lines.length
+    const bodyLines = lines.slice(def.line, end)
+    const acceptsChildren = bodyLines.slice(0, 5).some((l) => /\bchildren\b/.test(l.code))
+    if (!acceptsChildren) return
+    const bodyText = bodyLines.map((l) => l.code).join("\n")
+    if (CARD_LIKE_BORDER_RE.test(bodyText) && CARD_LIKE_BG_RE.test(bodyText)) {
+      warnings.push({
+        type: "possible-card-reimpl",
+        file: rel(file),
+        line: def.line + 1,
+        message: `local "${def.name}" takes children and renders a bordered/background div with card-like tokens — check whether this should be CardContainer instead`,
+      })
+    }
+  })
+})
+
 // ── Report ───────────────────────────────────────────────────────────────
 function printSection(title, items, formatter) {
   if (items.length === 0) return
@@ -430,14 +474,16 @@ const orphanWarnings = warnings.filter((w) => w.type === "orphan")
 const spacingWarnings = warnings.filter((w) => w.type === "spacing")
 const shadowWarnings = warnings.filter((w) => w.type === "shadow-component")
 const mainOveruseWarnings = warnings.filter((w) => w.type === "main-overuse")
+const cardReimplWarnings = warnings.filter((w) => w.type === "possible-card-reimpl")
 
 printSection("⚠️  WARNING — possible orphaned components", orphanWarnings, (w) => `${w.file} — ${w.message}`)
 printSection("⚠️  WARNING — off-scale spacing (informational only)", spacingWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
 printSection("⚠️  WARNING — hand-rolled component shadows a real DS export", shadowWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
 printSection("⚠️  WARNING — variant=\"main\" overused (CLAUDE.md: max 1/screen)", mainOveruseWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
+printSection("⚠️  WARNING — possible hand-rolled CardContainer reimplementation", cardReimplWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
 
 console.log(
-  `\nSummary: ${errors.length} error(s), ${orphanWarnings.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${shadowWarnings.length} shadow-component warning(s), ${mainOveruseWarnings.length} main-overuse warning(s).`
+  `\nSummary: ${errors.length} error(s), ${orphanWarnings.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${shadowWarnings.length} shadow-component warning(s), ${mainOveruseWarnings.length} main-overuse warning(s), ${cardReimplWarnings.length} possible-card-reimpl warning(s).`
 )
 
 if (errors.length > 0) {
