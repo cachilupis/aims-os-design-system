@@ -1094,7 +1094,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
   const [query, setQuery]     = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | IntegrationStatus>("all")
   const [page, setPage]       = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(5)
 
   function handleAction(id: string, action: ActionType) {
     if (action === "disconnect") {
@@ -1225,14 +1225,14 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
         />
       )}
       pagination={
-        !detailView && tab === "connected" && filtered.length > Math.min(10, pageSize)
+        !detailView && tab === "connected" && filtered.length > Math.min(5, pageSize)
           ? <Pagination
               currentPage={page}
               totalItems={filtered.length}
               itemsPerPage={pageSize}
               onPageChange={setPage}
               onItemsPerPageChange={n => { setPageSize(n); setPage(1) }}
-              rowsPerPageOptions={[10, 25, 50]}
+              rowsPerPageOptions={[5, 10, 25]}
             />
           : undefined
       }
