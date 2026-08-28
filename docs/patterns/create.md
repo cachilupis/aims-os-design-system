@@ -1,7 +1,7 @@
 # Pattern — Create
 
 > Single source of truth for how any create action picks its surface in AIMS OS.
-> Everything else — the `CLAUDE.md` table, the `patterns-create` doc page, the playground screens — is derived from this file.
+> Everything else — the `CLAUDE.md` table, the `patterns-create` doc page, the Examples gallery and preview scenes — is derived from this file.
 >
 > Status: **draft v0.3 — pending validation**
 >
@@ -10,6 +10,7 @@
 > v0.4 — third create mode added (from a source / catalogue); §2b defines the jobs a modal holds in Create.
 > v0.5 — contextual vs standalone split added as steps 4 and 5; a modal is now a first-class create form container. Reconciliation mapped against the seven findings in `create-audit.md`.
 > v0.6 — `SlideOut type="default"` corrected to `type="full-slot"` throughout — `"default"` was never a real value on the component (checked directly against `slide-out.tsx`: the only two are `"with-variants"` and `"full-slot"`).
+> v0.7 — Step 1 changed from a surface choice to a hand-off: once the object declares it owns a workspace, Create's job is to navigate to the object's own creation section and nothing past that is specified. "Dedicated view" is retired as an umbrella term — step 2's outcome is now named **Full-page wizard**, step 5's is now named **Full-page create form**. They are different surfaces built for different reasons (flow shape vs. field count) and were never the same thing.
 
 ---
 
@@ -103,13 +104,15 @@ This also satisfies NN/g's constraint that a modal must not host a decision requ
 
 **This is a sequence, not a lookup table.** Start at 1. On a yes, stop and take that surface. On a no, go to the next step. A case never evaluates two tests as equally applicable, because it never reaches the second one.
 
+**Step 1 is a hand-off, not a surface choice.** Once the object type declares it owns a workspace, this pattern's job is done: Create navigates to that object's own creation section, and nothing past that — not the surface, not confirmation, not landing — is specified here. The object's own creation section owns all of it.
+
 | Step | Test | Yes | No |
 | --- | --- | --- | --- |
-| 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | **Dedicated view** | → 2 |
-| 2 | Does the flow branch, or does it have three or more stages? | **Dedicated view + `Stepper` + `StepperNavFooter`** | → 3 |
+| 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | **Hand-off** — navigates to the object's own creation section; nothing else is specified | → 2 |
+| 2 | Does the flow branch, or does it have three or more stages? | **Full-page wizard + `Stepper` + `StepperNavFooter`** | → 3 |
 | 3 | Can the object be created from a single field, *and* is a list of the same object type visible on screen? | **Inline create row** ⚠️ `DS-GAP` | → 4 |
 | 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | **`SlideOut type="full-slot"`** | → 5 |
-| 5 | More than five fields? | **Dedicated view** | **`ModalDialog variant="content"`** |
+| 5 | More than five fields? | **Full-page create form** | **`ModalDialog variant="content"`** |
 
 ### Steps 4 and 5 — contextual versus standalone
 
@@ -124,7 +127,7 @@ This is the split that decides between a panel and a modal, and it is the one mo
 
 **Why the five-field threshold lives here and nowhere else.** A `SlideOut` grows — 350px → 450px → half screen → full screen — so no volume rule is needed on the contextual side. A modal does not grow: it is capped at 900px and can only scroll. The design system's existing rule — *"don't open a ModalDialog for forms with more than 5 fields — the user needs room"* — was written about modals, and step 5 is the only place it applies. Used anywhere else, it is a number borrowed from a problem it was not measuring.
 
-A standalone create that exceeds five fields is not a modal that needs to be bigger. It is a dedicated view.
+A standalone create that exceeds five fields is not a modal that needs to be bigger. It is a full-page create form.
 
 ### Staged flows: where the line sits
 
@@ -134,8 +137,8 @@ A create with **exactly two stages and no branching** resolves to step 4 — a `
 | --- | --- |
 | One stage | `SlideOut` |
 | Two stages, no branching | `SlideOut`, optionally with a lightweight step indicator |
-| Three or more stages | Dedicated view + `Stepper` + `StepperNavFooter` |
-| Any branching, at any stage count | Dedicated view + `Stepper` + `StepperNavFooter` |
+| Three or more stages | Full-page wizard + `Stepper` + `StepperNavFooter` |
+| Any branching, at any stage count | Full-page wizard + `Stepper` + `StepperNavFooter` |
 
 `StepperNavFooter` is a page-level component. It never appears inside a `SlideOut`.
 
@@ -203,8 +206,11 @@ Derived from the container. Not a separate decision.
 | --- | --- |
 | Inline create row | Stays in place. The new row appears in the list, ready to create the next one. |
 | `SlideOut` | Closes. The user returns to where they were; the new object appears in context. |
-| Dedicated view | Navigates to the created object. |
+| Full-page create form | Navigates to the created object. |
+| Full-page wizard | Navigates to the created object. |
 | Assisted create | Success modal → view the object, or create another. |
+
+Step 1's hand-off is not in this table — landing for an object that owns its own workspace is decided by that object's own creation section, not by this pattern.
 
 ---
 
@@ -229,12 +235,12 @@ Create is **always contextual** in v1. There is no global create affordance.
 | 1a | Create a note, notes list visible in an Overview widget | Step 3 | Inline create row |
 | 1b | Create a note, no notes list on screen | Step 4 | `SlideOut` — it attaches to the record |
 | 2 | Create an entity record from its own list view, 4 fields | Step 5 | `ModalDialog variant="content"` |
-| 2b | Create an entity record from its own list view, 9 fields | Step 5 | Dedicated view |
+| 2b | Create an entity record from its own list view, 9 fields | Step 5 | Full-page create form |
 | 2c | Create a secondary entity from inside its parent's profile | Step 4 | `SlideOut` |
 | 2d | Create an entity record, two stages, no branching, contextual | Step 4 | `SlideOut` with step indicator |
-| 3 | Create a governance policy | Step 2 | Dedicated view + `Stepper`, **+ confirmation** |
-| 4 | Create a workflow | Step 1 | Dedicated view → lands in the canvas |
-| 4b | Create an agent | Step 1 | Dedicated view → lands in its workspace |
+| 3 | Create a governance policy | Step 2 | Full-page wizard + `Stepper`, **+ confirmation** |
+| 4 | Create a workflow | Step 1 | Hand-off → the workflow builder owns everything past this point |
+| 4b | Create an agent | Step 1 | Hand-off → the agent's own workspace owns everything past this point |
 | 5 | Add a node to the canvas | **Gate 0** | Rejected — this is Configure |
 | 6 | Add a template from the marketplace, template fully defines the object | Gate 1 — from a source | `ModalDialog variant="content"` → created |
 | 6b | Add a template from the marketplace, fields remain | Gate 1 → Step 4 | Catalogue modal → `SlideOut` pre-filled |
@@ -250,8 +256,8 @@ Cases 1a and 1b resolve differently on purpose: the surface follows the entry po
 
 | Surface in the cascade | Status |
 | --- | --- |
-| Dedicated view | Exists — `ScreenLayout` + `Header` composition |
-| Dedicated view + Stepper | Exists — `Stepper` + `StepperNavFooter` |
+| Full-page create form | Exists — `ScreenLayout` + `Header` composition |
+| Full-page wizard | Exists — `Stepper` + `StepperNavFooter` |
 | `SlideOut` | Exists. A create panel uses `type="full-slot"` — no entity header, no filters layout. This closes an open gap: no existing source stated which `type` a create flow should use. |
 | `ModalDialog variant="confirmation"` | Exists |
 | `ModalDialog variant="content"` — catalogue slot, 900px max-width | Exists. The `slot` prop already accepts arbitrary content; the catalogue itself is composed inside it. |
