@@ -531,7 +531,7 @@ function PermTreeNode({
                   background: "var(--surface)",
                   border: "1px solid var(--border)",
                   borderRadius: 10,
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore: elevation shadow, no token available
                   width: 240,
                   overflow: "hidden",
                 }}>
