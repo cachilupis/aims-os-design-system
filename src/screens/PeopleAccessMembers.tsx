@@ -652,6 +652,8 @@ function PermissionsPanel() {
   const [studio, setStudio]       = useState("governance")
   const [filter, setFilter]       = useState("")
   const [overrides, setOverrides] = useState<Record<string, { state: PermState; scope: string }>>({})
+  const [saveOpen, setSaveOpen]   = useState(false)
+  const [saved, setSaved]         = useState(false)
 
   const nodes = PERM_TREE[studio] ?? []
   const overrideCount = Object.keys(overrides).length
@@ -753,7 +755,7 @@ function PermissionsPanel() {
         {overrideCount > 0 && (
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
             <Button size="sm" variant="secondary" onClick={() => setOverrides({})}>Reset</Button>
-            <Button size="sm" variant="main">Save changes</Button>
+            <Button size="sm" variant="main" onClick={() => setSaveOpen(true)}>Save changes</Button>
           </div>
         )}
       </div>
@@ -794,6 +796,135 @@ function PermissionsPanel() {
           ))
         )}
       </div>
+
+      {/* ── Save changes modal ─────────────────────────────────────── */}
+      {saveOpen && (() => {
+        // Collect every change across all studios with path context
+        const STATE_LABEL: Record<string, string> = { "g-direct": "Granted", "g-denied": "Denied", "": "Removed" }
+
+        function findWithPath(nodeList: PermNode[], id: string, path: string[] = []): { node: PermNode; path: string[] } | null {
+          for (const n of nodeList) {
+            if (n.id === id) return { node: n, path }
+            const found = findWithPath(n.children ?? [], id, [...path, n.label])
+            if (found) return found
+          }
+          return null
+        }
+
+        const changes: { id: string; label: string; path: string[]; studioLabel: string; state: PermState; scope: string }[] = []
+        const studioLabels: Record<string, string> = { governance: "Governance", datastudio: "Data Studio", agentic: "Agentic", admin: "Admin" }
+
+        Object.entries(overrides).forEach(([id, ov]) => {
+          for (const [stKey, stNodes] of Object.entries(PERM_TREE)) {
+            const result = findWithPath(stNodes, id)
+            if (result) {
+              changes.push({ id, label: result.node.label, path: result.path, studioLabel: studioLabels[stKey] ?? stKey, state: ov.state, scope: ov.scope })
+              break
+            }
+          }
+        })
+
+        const grouped = changes.reduce<Record<string, typeof changes>>((acc, c) => {
+          ;(acc[c.studioLabel] ??= []).push(c)
+          return acc
+        }, {})
+
+        return (
+          <>
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 10010, background: "rgba(0,0,0,0.5)" }}
+              onClick={() => setSaveOpen(false)}
+            />
+            <div style={{
+              position: "fixed", zIndex: 10011,
+              top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+              width: 480, maxHeight: "80vh",
+              background: "var(--surface)", border: "1px solid var(--border)",
+              borderRadius: 14, boxShadow: "0 24px 48px rgba(0,0,0,0.28)", // audit-ignore: modal elevation, no token
+              display: "flex", flexDirection: "column", overflow: "hidden",
+            }}>
+              {/* Header */}
+              <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Save permission changes</span>
+                  <button onClick={() => setSaveOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4 }}>
+                    <Icons.X size={16} />
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4 }}>
+                  <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{changes.length} change{changes.length !== 1 ? "s" : ""}</span> to Thomas Gonzalez's permissions
+                </div>
+              </div>
+
+              {/* Change list */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
+                {Object.entries(grouped).map(([studioLabel, rows]) => (
+                  <div key={studioLabel}>
+                    <div style={{ padding: "6px 24px 4px", fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                      {studioLabel}
+                    </div>
+                    {rows.map(c => (
+                      <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 24px", borderTop: "1px solid var(--border)" }}>
+                        <PermIcon state={c.state} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {c.path.length > 0 && (
+                            <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginBottom: 1 }}>
+                              {c.path.join(" › ")}
+                            </div>
+                          )}
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{c.label}</span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 100,
+                            background: c.state === "g-direct" ? "color-mix(in srgb, var(--badge-success) 15%, transparent)"
+                              : c.state === "g-denied" ? "color-mix(in srgb, var(--badge-error) 15%, transparent)"
+                              : "var(--muted)",
+                            color: c.state === "g-direct" ? "var(--badge-success)"
+                              : c.state === "g-denied" ? "var(--badge-error)"
+                              : "var(--muted-foreground)",
+                          }}>
+                            {STATE_LABEL[c.state]}
+                          </span>
+                          {c.state === "g-direct" && (
+                            <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>· {c.scope}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: "14px 24px", borderTop: "1px solid var(--border)", display: "flex", gap: 8, justifyContent: "flex-end", flexShrink: 0 }}>
+                <Button size="sm" variant="secondary" onClick={() => setSaveOpen(false)}>Cancel</Button>
+                <Button size="sm" variant="main" onClick={() => {
+                  setOverrides({})
+                  setSaveOpen(false)
+                  setSaved(true)
+                  setTimeout(() => setSaved(false), 3000)
+                }}>
+                  Confirm changes
+                </Button>
+              </div>
+            </div>
+
+            {/* Success toast */}
+            {saved && (
+              <div style={{
+                position: "fixed", bottom: 24, right: 24, zIndex: 10020,
+                background: "var(--badge-success)", color: "#fff",
+                padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                display: "flex", alignItems: "center", gap: 8,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.2)", // audit-ignore: toast shadow, no token
+              }}>
+                <Icons.CheckCircle size={15} /> Changes saved
+              </div>
+            )}
+          </>
+        )
+      })()}
     </div>
   )
 }
