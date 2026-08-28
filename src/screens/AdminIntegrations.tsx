@@ -1123,7 +1123,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
     c.category.toLowerCase().includes(query.toLowerCase())
   )
 
-  const errorCount = connectedList.filter(c => c.status === "error").length
+
   const connectedIds = new Set(connectedList.map(c => c.id))
 
   const INT_ICON_VARIANT: Record<IntegrationStatus, EntityListItemData["iconVariant"]> = {
@@ -1157,6 +1157,9 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
         { iconName: "User", label: int.connectedBy },
         { iconName: "RefreshCw", label: int.lastSync ? `Synced ${int.lastSync}` : "Never synced" },
       ],
+      actions: int.status === "error" ? [
+        { label: "Re-authenticate", variant: "primary", icon: "RefreshCw", onClick: () => handleAction(int.id, "reauth") },
+      ] : undefined,
       onClick: () => setDetailView(int),
     }
   }
@@ -1214,26 +1217,10 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
           title="Integrations"
           description={`${connectedList.length} connected · ${CATALOG.length} available in catalog`}
           primaryAction={
-            <div style={{ display: "flex", gap: 8 }}>
-              {errorCount > 0 && (
-                <button
-                  onClick={() => { setTab("connected"); setStatusFilter("error") }}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700,
-                    padding: "5px 10px", borderRadius: 7,
-                    background: "var(--badge-error)15", color: "var(--badge-error)",
-                    border: "1px solid var(--badge-error)30", cursor: "pointer",
-                  }}
-                >
-                  <Icons.AlertCircle size={12} />
-                  {errorCount} {errorCount === 1 ? "error" : "errors"}
-                </button>
-              )}
-              <Button variant="main" size="sm" onClick={() => setTab("catalog")}>
-                <Icons.LayoutGrid size={14} style={{ marginRight: 4 }} />
-                Browse catalog
-              </Button>
-            </div>
+            <Button variant="main" size="sm" onClick={() => setTab("catalog")}>
+              <Icons.LayoutGrid size={14} style={{ marginRight: 4 }} />
+              Browse catalog
+            </Button>
           }
         />
       )}
@@ -1286,9 +1273,18 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {pagedIntegrations.map(int => (
-                <CardContainer key={int.id} size="sm" className="!p-0 overflow-hidden">
-                  <EntityList items={[integrationToItem(int)]} />
-                </CardContainer>
+                <div
+                  key={int.id}
+                  style={int.status === "error" ? {
+                    borderLeft: "3px solid var(--badge-error)",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                  } : undefined}
+                >
+                  <CardContainer size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[integrationToItem(int)]} />
+                  </CardContainer>
+                </div>
               ))}
             </div>
           )}
