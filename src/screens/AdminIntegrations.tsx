@@ -37,6 +37,32 @@ interface Integration {
   errorMsg?: string
   history: SyncRun[]
   guardrails: Guardrails
+  // Detail page fields
+  isOfficial?: boolean
+  version?: string
+  maintainer?: string
+  dataResidency?: string
+  compliance?: string[]
+  schemaDrift?: boolean
+  connectedMonthsAgo?: number
+  studioUsage?: StudioUsage
+  capabilitiesV2?: { tools?: Array<{name: string; desc?: string}>; dataSync?: Array<{name: string; desc?: string}> }
+  instances?: Array<{id: string; name: string; status: string; connectedAt: string}>
+  usageConsumers?: UsageConsumer[]
+  activityLog?: ActivityEvent[]
+}
+
+interface StudioUsage {
+  governance?: { enabled: boolean; callsPerDay?: number }
+  agentic?:    { enabled: boolean; callsPerDay?: number; agents?: number }
+  workforce?:  { enabled: boolean; channels?: number; routes?: number }
+}
+interface UsageConsumer {
+  id: string; name: string; type: "workflow" | "agent" | "network" | "widget"
+  owner: string; runsPerWeek?: number; activeUsers?: number; lastActivity: string
+}
+interface ActivityEvent {
+  ts: string; event: string; target: string; actor: string; badge?: string
 }
 
 interface CatalogItem {
@@ -81,6 +107,52 @@ const INITIAL_CONNECTED: Integration[] = [
       schemaVersion: "v2.4.1",
       fieldExclusions: ["Description", "Internal_Notes__c", "Compensation__c"],
     },
+    isOfficial: true, version: "2.4.1", maintainer: "AIMS-OS", connectedMonthsAgo: 2,
+    dataResidency: "US-East · EU available",
+    compliance: ["SOC 2 Type II", "GDPR", "HIPAA ready"],
+    schemaDrift: true,
+    studioUsage: {
+      governance: { enabled: false },
+      agentic:    { enabled: true, callsPerDay: 34, agents: 2 },
+      workforce:  { enabled: true, channels: 5, routes: 2 },
+    },
+    capabilitiesV2: {
+      tools: [
+        { name: "Read accounts",       desc: "Retrieve account records and metadata" },
+        { name: "Read opportunities",  desc: "Pull opportunity pipeline and forecast data" },
+        { name: "Read contacts",       desc: "Access contact details and communication logs" },
+        { name: "Read leads",          desc: "Fetch lead records and conversion status" },
+        { name: "Read cases",          desc: "Access support cases and resolution history" },
+        { name: "Write activities",    desc: "Log calls, emails, and tasks back to Salesforce" },
+      ],
+      dataSync: [
+        { name: "Workspace knowledge sources", desc: "Sync Salesforce objects into AIMS-OS knowledge plane" },
+        { name: "Entity enrichment",           desc: "Enrich account and contact entities with CRM data" },
+      ],
+    },
+    instances: [],
+    usageConsumers: [
+      { id: "uc1",  name: "New lead → Salesforce + Slack alert",  type: "workflow", owner: "Thomas G.", runsPerWeek: 42, lastActivity: "2h ago" },
+      { id: "uc2",  name: "Lead enrichment from Clearbit",         type: "workflow", owner: "Maria L.",  runsPerWeek: 18, lastActivity: "Yesterday" },
+      { id: "uc3",  name: "Renewal risk alert",                    type: "workflow", owner: "Carlos M.", runsPerWeek: 7,  lastActivity: "3d ago" },
+      { id: "uc4",  name: "Stale opportunity nudge",               type: "workflow", owner: "Thomas G.", runsPerWeek: 5,  lastActivity: "1d ago" },
+      { id: "uc5",  name: "Weekly churn digest",                   type: "workflow", owner: "Maria L.",  runsPerWeek: 1,  lastActivity: "6d ago" },
+      { id: "uc6",  name: "Sales Triage Agent",                    type: "agent",    owner: "Thomas G.", activeUsers: 24, lastActivity: "1h ago" },
+      { id: "uc7",  name: "Renewal Risk Agent",                    type: "agent",    owner: "Carlos M.", activeUsers: 6,  lastActivity: "Yesterday" },
+      { id: "uc8",  name: "Deal Coach Agent",                      type: "agent",    owner: "Maria L.",  activeUsers: 11, lastActivity: "2h ago" },
+      { id: "uc9",  name: "Revenue Intelligence Network",          type: "network",  owner: "Thomas G.", lastActivity: "1d ago" },
+      { id: "uc10", name: "GTM Automation Network",               type: "network",  owner: "Carlos M.", lastActivity: "3d ago" },
+      { id: "uc11", name: "Deal health widget",                   type: "widget",   owner: "Thomas G.", lastActivity: "30m ago" },
+      { id: "uc12", name: "Open opportunities widget",            type: "widget",   owner: "Maria L.",  lastActivity: "2h ago" },
+      { id: "uc13", name: "Forecast summary widget",              type: "widget",   owner: "Carlos M.", lastActivity: "Yesterday" },
+      { id: "uc14", name: "Pipeline velocity widget",             type: "widget",   owner: "Thomas G.", lastActivity: "3h ago" },
+    ],
+    activityLog: [
+      { ts: "2 months ago", event: "Integration added to workspace", target: "Salesforce CRM", actor: "Thomas González", badge: "Integration added to workspace" },
+      { ts: "2 months ago", event: "OAuth 2.0 authorized",           target: "Salesforce CRM", actor: "Thomas González" },
+      { ts: "2 weeks ago",  event: "Schema drift detected",          target: "Contacts object", actor: "AIMS-OS system",  badge: "Schema drift" },
+      { ts: "6 days ago",   event: "OAuth token expired",            target: "Salesforce CRM", actor: "AIMS-OS system",  badge: "Error" },
+    ],
   },
   {
     id: "databricks", name: "Databricks", category: "Data Platform", icon: "Layers",
@@ -963,12 +1035,429 @@ function CatalogView({ connectedIds }: { connectedIds: Set<string> }) {
   )
 }
 
+// ─── Integration detail page ──────────────────────────────────────────────────
+
+function IntegrationDetailPage({ integration, onBack, onAction }: {
+  integration: Integration
+  onBack: () => void
+  onAction: (id: string, action: ActionType) => void
+}) {
+  const [activeTab, setActiveTab] = useState("overview")
+  const [usageFilter, setUsageFilter] = useState("all")
+  const [usageQuery,  setUsageQuery]  = useState("")
+
+  const statusMeta = STATUS_META[integration.status]
+  const IC = Icons[integration.icon as keyof typeof Icons] as React.ElementType
+  const consumers = integration.usageConsumers ?? []
+  const usageCounts = {
+    workflow: consumers.filter(c => c.type === "workflow").length,
+    agent:    consumers.filter(c => c.type === "agent").length,
+    network:  consumers.filter(c => c.type === "network").length,
+    widget:   consumers.filter(c => c.type === "widget").length,
+  }
+  const filteredConsumers = consumers.filter(c => {
+    const matchesFilter = usageFilter === "all" || c.type === usageFilter
+    const matchesQuery  = c.name.toLowerCase().includes(usageQuery.toLowerCase()) ||
+                          c.owner.toLowerCase().includes(usageQuery.toLowerCase())
+    return matchesFilter && matchesQuery
+  })
+  const studioUsage = integration.studioUsage ?? {}
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+
+      {/* ── Breadcrumb + title header ───────────────────────────────────────── */}
+      <div style={{ padding: "16px 24px 0", borderBottom: "1px solid var(--border)" }}>
+        {/* Breadcrumb */}
+        <button
+          onClick={onBack}
+          style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 14 }}
+        >
+          <Icons.ArrowLeft size={14} />
+          Integrations
+          <Icons.ChevronRight size={12} style={{ margin: "0 2px" }} />
+          <span style={{ color: "var(--foreground)", fontWeight: 600 }}>{integration.name}</span>
+        </button>
+
+        {/* Title row */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 44, height: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, background: "var(--surface-raised)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
+              {IC ? <IC size={22} /> : null}
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: 0 }}>{integration.name}</h1>
+                {integration.isOfficial && (
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100, background: "var(--primary)15", color: "var(--primary)", border: "1px solid var(--primary)30" }}>Official</span>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 100, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>{integration.category}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 100, background: `${statusMeta.color}15`, color: statusMeta.color, border: `1px solid ${statusMeta.color}30` }}>
+                  {statusMeta.icon} {statusMeta.label}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last sync: {integration.lastSync}</span>
+              </div>
+              {integration.connectedMonthsAgo != null && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "1px 8px", borderRadius: 100, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>{integration.authType}</span>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Connected {integration.connectedMonthsAgo} months ago · by {integration.connectedBy}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Button variant="secondary" size="sm">
+              <Icons.Sparkles size={14} style={{ marginRight: 4 }} /> Ask AI
+            </Button>
+            {integration.status === "error" ? (
+              <Button variant="main" size="sm" onClick={() => onAction(integration.id, "reauth")}>
+                <Icons.RefreshCw size={14} style={{ marginRight: 4 }} /> Re-authenticate
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm">
+                <Icons.KeyRound size={14} style={{ marginRight: 4 }} /> Rotate credentials
+              </Button>
+            )}
+            <Button variant="secondary" size="sm">Disconnect</Button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs
+          items={[
+            { id: "overview",     label: "Overview" },
+            { id: "capabilities", label: "Capabilities" },
+            { id: "instances",    label: "Instances" },
+            { id: "usage",        label: "Usage" },
+            { id: "activity",     label: "Activity" },
+          ]}
+          activeId={activeTab}
+          onChange={setActiveTab}
+          size="s"
+        />
+      </div>
+
+      {/* ── Schema drift banner ─────────────────────────────────────────────── */}
+      {integration.schemaDrift && (
+        <div style={{
+          padding: "10px 24px", background: "var(--badge-alert)12", borderBottom: "1px solid var(--badge-alert)30",
+          display: "flex", alignItems: "center", gap: 12,
+        }}>
+          <Icons.AlertTriangle size={16} style={{ color: "var(--badge-alert)", flexShrink: 0 }} />
+          <div style={{ flex: 1, fontSize: 13, color: "var(--foreground)" }}>
+            <strong>Schema drift detected</strong> for {integration.name}.{" "}
+            <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 4, background: "var(--badge-alert)20", color: "var(--badge-alert)", border: "1px solid var(--badge-alert)40" }}>USE WITH CAUTION</span>
+            <span style={{ color: "var(--muted-foreground)", marginLeft: 8 }}>One or more field definitions changed since last verified. Downstream workflows may behave unexpectedly.</span>
+          </div>
+          <button style={{ fontSize: 12, fontWeight: 700, color: "var(--badge-alert)", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>Review changes →</button>
+        </div>
+      )}
+
+      {/* ── Tab content ─────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+
+        {/* Overview */}
+        {activeTab === "overview" && (
+          <div style={{ display: "flex", gap: 24 }}>
+            {/* Left: Studio usage */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 14 }}>Used in Studios</div>
+              {([
+                { key: "governance", label: "Governance Studio", sub: "Policy enforcement & compliance", iconName: "Shield",  bgColor: "var(--badge-alert)15",   iconColor: "var(--badge-alert)" },
+                { key: "agentic",    label: "Agentic Studio",    sub: "AI agents & automation",         iconName: "Bot",    bgColor: "var(--primary)15",       iconColor: "var(--primary)" },
+                { key: "workforce",  label: "Workforce Studio",  sub: "Human + AI collaboration",       iconName: "Users",  bgColor: "var(--badge-success)15", iconColor: "var(--badge-success)" },
+              ] as const).map(({ key, label, sub, iconName, bgColor, iconColor }) => {
+                const studio = studioUsage[key]
+                const enabled = studio?.enabled ?? false
+                const ICi = Icons[iconName as keyof typeof Icons] as React.ElementType
+                return (
+                  <div key={key} style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden", marginBottom: 12, background: "var(--surface)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: enabled ? "1px solid var(--border)" : "none" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 7, background: bgColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {ICi && <ICi size={15} style={{ color: iconColor }} />}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{label}</div>
+                          <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{sub}</div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: enabled ? "var(--badge-success)15" : "var(--surface-raised)", color: enabled ? "var(--badge-success)" : "var(--muted-foreground)", border: `1px solid ${enabled ? "var(--badge-success)30" : "var(--border)"}` }}>
+                        {enabled ? "Enabled" : "Not enabled"}
+                      </span>
+                    </div>
+                    {enabled && studio && (
+                      <div style={{ padding: "10px 16px", display: "flex", gap: 24, fontSize: 12, color: "var(--muted-foreground)" }}>
+                        {"callsPerDay" in studio && studio.callsPerDay != null && <span><strong style={{ color: "var(--foreground)" }}>{studio.callsPerDay}</strong> calls/day</span>}
+                        {"agents"     in studio && studio.agents     != null && <span><strong style={{ color: "var(--foreground)" }}>{studio.agents}</strong> agents</span>}
+                        {"channels"   in studio && studio.channels   != null && <span><strong style={{ color: "var(--foreground)" }}>{studio.channels}</strong> channels</span>}
+                        {"routes"     in studio && studio.routes     != null && <span><strong style={{ color: "var(--foreground)" }}>{studio.routes}</strong> routes</span>}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Right: About sidebar */}
+            <div style={{ width: 280, flexShrink: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 12 }}>About this integration</div>
+              <div style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.6, marginBottom: 16 }}>{integration.description}</div>
+
+              {(integration.capabilitiesV2?.tools?.length ?? 0) > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>What you can do with it</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                    {integration.capabilitiesV2!.tools!.slice(0, 4).map(t => (
+                      <span key={t.name} style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>{t.name}</span>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>Integration details</div>
+              {([
+                ["Maintainer",     integration.maintainer    ?? "—"],
+                ["Version",        integration.version ? `v${integration.version}` : "—"],
+                ["Website",        integration.website],
+                ["Data residency", integration.dataResidency ?? "—"],
+              ] as [string, string][]).map(([k, v]) => (
+                <div key={k} style={{ display: "flex", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ width: 110, flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", paddingTop: 1 }}>{k}</span>
+                  <span style={{ fontSize: 12, color: "var(--foreground)" }}>{v}</span>
+                </div>
+              ))}
+              {(integration.compliance?.length ?? 0) > 0 && (
+                <div style={{ display: "flex", gap: 12, padding: "7px 0" }}>
+                  <span style={{ width: 110, flexShrink: 0, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", paddingTop: 1 }}>Compliance</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {integration.compliance!.map(c => (
+                      <span key={c} style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: "var(--badge-success)12", color: "var(--badge-success)", border: "1px solid var(--badge-success)25" }}>{c}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Capabilities */}
+        {activeTab === "capabilities" && (
+          <div>
+            <div style={{ marginBottom: 20, padding: "10px 14px", borderRadius: 8, background: "var(--surface-raised)", border: "1px solid var(--border)", fontSize: 13, color: "var(--muted-foreground)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <Icons.Info size={15} style={{ color: "var(--primary)", flexShrink: 0, marginTop: 1 }} />
+              This is a catalog view. Capabilities are configured per instance when you connect this integration.
+            </div>
+            {(integration.capabilitiesV2?.tools?.length ?? 0) > 0 && (
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Tools</div>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100, background: "var(--primary)12", color: "var(--primary)", border: "1px solid var(--primary)25" }}>Available to configure per instance</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {integration.capabilitiesV2!.tools!.map(cap => (
+                    <div key={cap.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 6, background: "var(--primary)12", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Icons.Zap size={13} style={{ color: "var(--primary)" }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{cap.name}</div>
+                        {cap.desc && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{cap.desc}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(integration.capabilitiesV2?.dataSync?.length ?? 0) > 0 && (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Data sync</div>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100, background: "var(--primary)12", color: "var(--primary)", border: "1px solid var(--primary)25" }}>Available to configure per instance</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {integration.capabilitiesV2!.dataSync!.map(cap => (
+                    <div key={cap.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 6, background: "var(--badge-success)12", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Icons.Database size={13} style={{ color: "var(--badge-success)" }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{cap.name}</div>
+                        {cap.desc && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{cap.desc}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!integration.capabilitiesV2 && (
+              <div style={{ textAlign: "center", padding: "60px 0", color: "var(--muted-foreground)" }}>
+                <Icons.Puzzle size={28} style={{ marginBottom: 12, opacity: 0.3 }} />
+                <div style={{ fontSize: 14, fontWeight: 600 }}>No capabilities defined</div>
+                <div style={{ fontSize: 13, marginTop: 6 }}>Capabilities will appear here once the integration catalog is updated.</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Instances */}
+        {activeTab === "instances" && (
+          <div>
+            {(!integration.instances || integration.instances.length === 0) ? (
+              <div style={{ textAlign: "center", padding: "80px 0" }}>
+                <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--surface-raised)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "var(--muted-foreground)" }}>
+                  {IC ? <IC size={24} /> : <Icons.Plug size={24} />}
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>No instances of {integration.name} yet</div>
+                <div style={{ fontSize: 13, color: "var(--muted-foreground)", maxWidth: 360, margin: "0 auto 24px", lineHeight: 1.6 }}>
+                  Instances allow you to connect multiple accounts of the same integration with different credentials and data scopes.
+                </div>
+                <Button variant="main" size="sm">
+                  <Icons.Plus size={14} style={{ marginRight: 4 }} /> Connect {integration.name}
+                </Button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {integration.instances.map(inst => (
+                  <div key={inst.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{inst.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>Connected {inst.connectedAt}</div>
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: "var(--badge-success)15", color: "var(--badge-success)", border: "1px solid var(--badge-success)30" }}>{inst.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Usage */}
+        {activeTab === "usage" && (
+          <div>
+            {/* KPI cards */}
+            <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+              {([
+                { label: "Workflows", count: usageCounts.workflow, iconName: "GitBranch", type: "workflow" },
+                { label: "Agents",    count: usageCounts.agent,    iconName: "Bot",       type: "agent"    },
+                { label: "Networks",  count: usageCounts.network,  iconName: "Network",   type: "network"  },
+                { label: "Widgets",   count: usageCounts.widget,   iconName: "LayoutGrid",type: "widget"   },
+              ] as const).map(({ label, count, iconName, type }) => {
+                const ICk = Icons[iconName as keyof typeof Icons] as React.ElementType
+                const active = usageFilter === type
+                return (
+                  <div key={type} onClick={() => setUsageFilter(active ? "all" : type)} style={{ flex: 1, padding: "14px 16px", borderRadius: 10, border: `1px solid ${active ? "var(--primary)" : "var(--border)"}`, background: active ? "var(--primary)08" : "var(--surface)", cursor: "pointer" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      {ICk && <ICk size={14} style={{ color: active ? "var(--primary)" : "var(--muted-foreground)" }} />}
+                      <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: active ? "var(--primary)" : "var(--muted-foreground)" }}>{label}</span>
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{count}</div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Search + filter */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ position: "relative", flex: "1 1 200px", minWidth: 200 }}>
+                <Icons.Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)", pointerEvents: "none" }} />
+                <input value={usageQuery} onChange={e => setUsageQuery(e.target.value)} placeholder="Search by name or owner…"
+                  style={{ width: "100%", paddingLeft: 30, paddingRight: 12, paddingTop: 7, paddingBottom: 7, fontSize: 13, border: "1px solid var(--border)", borderRadius: 7, background: "var(--surface)", color: "var(--foreground)", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              {([
+                { id: "all",      label: `All (${consumers.length})` },
+                { id: "workflow", label: `Workflows (${usageCounts.workflow})` },
+                { id: "agent",    label: `Agents (${usageCounts.agent})` },
+                { id: "network",  label: `Networks (${usageCounts.network})` },
+                { id: "widget",   label: `Widgets (${usageCounts.widget})` },
+              ] as const).map(f => (
+                <button key={f.id} onClick={() => setUsageFilter(f.id)}
+                  style={{ fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 20, cursor: "pointer", border: "1px solid", whiteSpace: "nowrap", background: usageFilter === f.id ? "var(--primary)" : "transparent", color: usageFilter === f.id ? "var(--primary-foreground)" : "var(--muted-foreground)", borderColor: usageFilter === f.id ? "var(--primary)" : "var(--border)" }}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Consumer list */}
+            {filteredConsumers.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "var(--muted-foreground)", fontSize: 13 }}>No consumers match this filter.</div>
+            ) : (
+              <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                {filteredConsumers.map((c, i) => {
+                  const typeIconMap: Record<string, string> = { workflow: "GitBranch", agent: "Bot", network: "Network", widget: "LayoutGrid" }
+                  const ICt = Icons[typeIconMap[c.type] as keyof typeof Icons] as React.ElementType
+                  return (
+                    <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "11px 16px", background: i % 2 === 0 ? "transparent" : "var(--surface-raised)", borderBottom: i < filteredConsumers.length - 1 ? "1px solid var(--border)" : "none" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 6, background: "var(--surface-raised)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "var(--muted-foreground)" }}>
+                        {ICt && <ICt size={13} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{c.owner}</div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        {c.runsPerWeek  != null && <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{c.runsPerWeek} runs/wk</div>}
+                        {c.activeUsers  != null && <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{c.activeUsers} active users</div>}
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>Last active {c.lastActivity}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Activity */}
+        {activeTab === "activity" && (
+          <div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>Provider activity</div>
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days · lifecycle events only</div>
+            </div>
+            {(!integration.activityLog || integration.activityLog.length === 0) ? (
+              <div style={{ textAlign: "center", padding: "60px 0", color: "var(--muted-foreground)", fontSize: 13 }}>No activity events recorded yet.</div>
+            ) : (
+              <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 160px 160px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
+                  {["TIMESTAMP", "EVENT", "TARGET", "ACTOR"].map(col => (
+                    <div key={col} style={{ padding: "8px 14px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--muted-foreground)" }}>{col}</div>
+                  ))}
+                </div>
+                {integration.activityLog.map((ev, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "160px 1fr 160px 160px", borderBottom: i < integration.activityLog!.length - 1 ? "1px solid var(--border)" : "none", alignItems: "center" }}>
+                    <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" as const }}>{ev.ts}</div>
+                    <div style={{ padding: "10px 14px" }}>
+                      {ev.badge
+                        ? <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: "var(--primary)12", color: "var(--primary)", border: "1px solid var(--primary)25" }}>{ev.badge}</span>
+                        : <span style={{ fontSize: 13, color: "var(--foreground)" }}>{ev.event}</span>
+                      }
+                    </div>
+                    <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--foreground)" }}>{ev.target}</div>
+                    <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--muted-foreground)" }}>{ev.actor}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [tab, setTab]         = useState("connected")
   const [connectedList, setConnectedList] = useState<Integration[]>(INITIAL_CONNECTED)
-  const [selected, setSelected] = useState<Integration | null>(INITIAL_CONNECTED[0])
+  const [selected, setSelected] = useState<Integration | null>(null)
+  const [detailView, setDetailView] = useState<Integration | null>(null)
   const [query, setQuery]     = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | IntegrationStatus>("all")
 
@@ -985,14 +1474,16 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       if (action === "resume") return { ...i, status: "active" as IntegrationStatus }
       return i
     }))
-    // Sync selected with updated state
-    setSelected(prev => {
+    // Sync selected + detailView with updated state
+    const sync = (prev: Integration | null) => {
       if (!prev || prev.id !== id) return prev
       if (action === "reauth") return { ...prev, status: "active" as IntegrationStatus, errorMsg: undefined }
       if (action === "pause")  return { ...prev, status: "paused" as IntegrationStatus }
       if (action === "resume") return { ...prev, status: "active" as IntegrationStatus }
       return prev
-    })
+    }
+    setSelected(sync)
+    setDetailView(sync)
   }
 
   const filteredByStatus = connectedList.filter(c => statusFilter === "all" || c.status === statusFilter)
@@ -1049,8 +1540,22 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
         />
       )}
     >
-      {/* Tabs */}
-      <div style={{ marginBottom: 16 }}>
+      {/* Detail page — full-screen overlay inside ScreenLayout */}
+      {detailView && (
+        <div style={{ margin: "-32px -24px", flex: 1, display: "flex", flexDirection: "column" }}>
+          <IntegrationDetailPage
+            integration={detailView}
+            onBack={() => setDetailView(null)}
+            onAction={(id, action) => {
+              if (action === "disconnect") { setDetailView(null); handleAction(id, action) }
+              else handleAction(id, action)
+            }}
+          />
+        </div>
+      )}
+
+      {/* Tabs — hidden when detail view is open */}
+      {!detailView && <div style={{ marginBottom: 16 }}>
         <Tabs
           items={[
             { id: "connected", label: "Connected" },
@@ -1060,9 +1565,9 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
           onChange={v => { setTab(v); if (v === "catalog") setSelected(null) }}
           size="s"
         />
-      </div>
+      </div>}
 
-      {tab === "connected" && (
+      {!detailView && tab === "connected" && (
         <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", minHeight: 360 }}>
           {/* Left list */}
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", borderRight: selected ? "1px solid var(--border)" : "none" }}>
@@ -1115,7 +1620,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
                   key={int.id}
                   integration={int}
                   selected={selected?.id === int.id}
-                  onClick={() => setSelected(prev => prev?.id === int.id ? null : int)}
+                  onClick={() => setDetailView(int)}
                 />
               ))
             )}
@@ -1145,7 +1650,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
         </div>
       )}
 
-      {tab === "catalog" && (
+      {!detailView && tab === "catalog" && (
         <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Integration catalog</div>
