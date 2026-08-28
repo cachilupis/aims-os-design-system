@@ -383,20 +383,21 @@ function PermIcon({ state }: { state: PermState }) {
 }
 
 function PermTreeNode({
-  node, depth = 0, overrides, onOverride,
+  node, depth = 0, overrides, onOverride, baseOff = false,
 }: {
   node: PermNode
   depth?: number
   overrides: Record<string, { state: PermState; scope: string }>
   onOverride: (id: string, state: PermState, scope: string) => void
+  baseOff?: boolean
 }) {
   const override       = overrides[node.id]
-  const effectiveState: PermState = override?.state ?? node.state
+  const effectiveState: PermState = override?.state ?? (baseOff ? "" : node.state)
   const effectiveScope = override?.scope ?? node.scope ?? "Tenant"
   const isEditable     = !node.locked
 
   const [expanded, setExpanded] = useState(
-    depth === 0 && (effectiveState === "g-inh" || effectiveState === "g-direct")
+    !baseOff && depth === 0 && (effectiveState === "g-inh" || effectiveState === "g-direct")
   )
   const [hovered, setHovered] = useState(false)
   const [scopeOpen, setScopeOpen] = useState(false)
@@ -405,7 +406,7 @@ function PermTreeNode({
   const hasChildren     = (node.children?.length ?? 0) > 0
   const grantedChildren = node.children?.filter(c => {
     const ov = overrides[c.id]
-    return (ov?.state ?? c.state) !== ""
+    return (ov?.state ?? (baseOff ? "" : c.state)) !== ""
   }).length ?? 0
 
   const showToggle      = isEditable && (hovered || !!override)
@@ -617,7 +618,7 @@ function PermTreeNode({
         )}
       </div>
       {expanded && hasChildren && node.children!.map(child => (
-        <PermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onOverride={onOverride} />
+        <PermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onOverride={onOverride} baseOff={baseOff} />
       ))}
     </div>
   )
@@ -632,7 +633,7 @@ const STUDIO_TABS = [
   { id: "admin",      label: "Admin" },
 ]
 
-function PermissionsPanel() {
+function PermissionsPanel({ allOff = false }: { allOff?: boolean }) {
   const [studio, setStudio]       = useState("governance")
   const [filter, setFilter]       = useState("")
   const [overrides, setOverrides] = useState<Record<string, { state: PermState; scope: string }>>({})
@@ -673,7 +674,7 @@ function PermissionsPanel() {
   function countGranted(nodeList: PermNode[]): number {
     return nodeList.reduce((n, nd) => {
       const ov = overrides[nd.id]
-      const eff = ov?.state ?? nd.state
+      const eff = ov?.state ?? (allOff ? "" : nd.state)
       let c = eff !== "" ? 1 : 0
       if (nd.children) c += countGranted(nd.children)
       return n + c
@@ -776,7 +777,7 @@ function PermissionsPanel() {
           </div>
         ) : (
           filteredNodes.map(n => (
-            <PermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onOverride={handleOverride} />
+            <PermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onOverride={handleOverride} baseOff={allOff} />
           ))
         )}
       </div>
@@ -1505,7 +1506,7 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
         )}
 
         {/* Permissions */}
-        {activeTab === 2 && <PermissionsPanel />}
+        {activeTab === 2 && <PermissionsPanel allOff={!role.system && !(role.id in ROLE_PERM_COUNTS)} />}
       </div>
     </ScreenLayout>
   )
@@ -2822,6 +2823,103 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
   )
 }
 
+// ─── Create-role permissions step (Step 2, all perms start OFF) ───────────────
+
+function CreateRolePermStep({ color }: { color: string }) {
+  const [overrides, setOverrides] = useState<Record<string, { state: PermState; scope: string }>>({})
+  const [activeStudio, setActiveStudio] = useState(Object.keys(PERM_TREE)[0])
+  const [search, setSearch] = useState("")
+
+  function handleOverride(id: string, state: PermState, scope: string) {
+    setOverrides(prev => ({ ...prev, [id]: { state, scope } }))
+  }
+
+  function countGranted(nodes: PermNode[]): number {
+    return nodes.reduce((n, nd) => {
+      const eff = overrides[nd.id]?.state ?? ""
+      return n + (eff !== "" ? 1 : 0) + (nd.children ? countGranted(nd.children) : 0)
+    }, 0)
+  }
+
+  const studioNodes = PERM_TREE[activeStudio] ?? []
+  const grantedCount = Object.values(overrides).filter(o => o.state !== "").length
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      {/* Studio tabs */}
+      <div style={{ display: "flex", gap: 4, padding: "12px 24px 0", borderBottom: "1px solid var(--border)", flexShrink: 0, flexWrap: "wrap" }}>
+        {Object.keys(PERM_TREE).map(studio => {
+          const count = countGranted(PERM_TREE[studio])
+          return (
+            <button key={studio} onClick={() => setActiveStudio(studio)} style={{
+              padding: "6px 12px", borderRadius: "8px 8px 0 0",
+              border: "1px solid var(--border)", borderBottom: "none",
+              background: activeStudio === studio ? "var(--surface)" : "transparent",
+              color: activeStudio === studio ? "var(--foreground)" : "var(--muted-foreground)",
+              fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+            }}>
+              {studio}
+              {count > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 99, background: color, color: "#fff" }}>{count}</span> // audit-ignore
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Perm tree body */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px 24px" }}>
+        {/* Legend */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 10, flexWrap: "wrap" }}>
+          {[["", "Off"], ["g-direct", "On — direct"], ["g-inh", "On — inherited"]].map(([st, lbl]) => (
+            <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--muted-foreground)" }}>
+              <div style={{
+                width: 14, height: 14, borderRadius: 3, border: "1.5px solid var(--border)",
+                background: st === "" ? "transparent" : st === "g-direct" ? color : `${color}66`, // audit-ignore
+                flexShrink: 0,
+              }} />
+              {lbl}
+            </div>
+          ))}
+          {grantedCount > 0 && (
+            <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: color }}>
+              {grantedCount} permission{grantedCount !== 1 ? "s" : ""} enabled
+            </span>
+          )}
+        </div>
+
+        {/* Search */}
+        <div style={{ position: "relative", marginBottom: 8 }}>
+          <Icons.Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)", pointerEvents: "none" }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Filter permissions…"
+            style={{
+              width: "100%", paddingLeft: 28, paddingRight: 12, paddingTop: 6, paddingBottom: 6,
+              borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface-raised)",
+              fontSize: 12, color: "var(--foreground)", outline: "none", boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        {/* Tree */}
+        {studioNodes
+          .filter(n => !search || n.label.toLowerCase().includes(search.toLowerCase()))
+          .map(n => (
+            <PermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onOverride={handleOverride} baseOff />
+          ))}
+
+        {studioNodes.filter(n => !search || n.label.toLowerCase().includes(search.toLowerCase())).length === 0 && (
+          <div style={{ padding: "32px 0", textAlign: "center", color: "var(--muted-foreground)", fontSize: 12 }}>
+            No permissions match "{search}"
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
@@ -2837,9 +2935,10 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [showInvite, setShowInvite]     = useState(false)
   const [roles, setRoles]               = useState<Role[]>(ROLES)
   const [showCreateRole, setShowCreateRole] = useState(false)
-  const [createName, setCreateName]     = useState("")
-  const [createDesc, setCreateDesc]     = useState("")
-  const [createColor, setCreateColor]   = useState("#f97316") // audit-ignore: default role color
+  const [createName, setCreateName]         = useState("")
+  const [createDesc, setCreateDesc]         = useState("")
+  const [createColor, setCreateColor]       = useState("#f97316") // audit-ignore: default role color
+  const [createStep, setCreateStep]         = useState<1 | 2>(1)
 
   const counts = useMemo(() => ({
     all:       members.length,
@@ -2920,7 +3019,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
                 Invite member
               </Button>
             ) : mainTab === "roles" ? (
-              <Button variant="primary" size="sm" onClick={() => { setCreateName(""); setCreateDesc(""); setCreateColor("#f97316"); setShowCreateRole(true) }}> {/* audit-ignore: default role color */}
+              <Button variant="primary" size="sm" onClick={() => { setCreateName(""); setCreateDesc(""); setCreateColor("#f97316"); setCreateStep(1); setShowCreateRole(true) }}> {/* audit-ignore: default role color */}
                 <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
                 New role
               </Button>
@@ -3182,112 +3281,172 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         )}
       </SlideOut>
 
-      {/* Create role modal */}
-      {(() => {
+      {/* Create role modal — 2-step: Details → Permissions */}
+      {showCreateRole && (() => {
         const COLOR_SWATCHES = [
           "#f97316", "#8b5cf6", "#0ea5e9", "#10b981", "#6366f1", // audit-ignore: role color picker swatches
           "#ec4899", "#ef4444", "#f59e0b", "#14b8a6", "#64748b", // audit-ignore: role color picker swatches
         ]
         const valid = createName.trim().length > 0
         return (
-          <ModalDialog
-            isOpen={showCreateRole}
-            onClose={() => setShowCreateRole(false)}
-            variant="content"
-            showIcon={false}
-            title="Create new role"
-            description="Custom roles bundle specific permissions for a job function."
-            slotUnstyled
-            slot={
-              <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "4px 0" }}>
-                {/* Name */}
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>
-                    Role name <span style={{ color: "var(--badge-error)" }}>*</span>
-                  </div>
-                  <Input
-                    value={createName}
-                    onChange={e => setCreateName(e.target.value)}
-                    placeholder="e.g. Data Analyst, Marketing Ops…"
-                  />
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.55)", // audit-ignore
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }} onClick={e => { if (e.target === e.currentTarget) setShowCreateRole(false) }}>
+            <div style={{
+              width: createStep === 2 ? 820 : 520,
+              maxHeight: "90vh", background: "var(--surface)",
+              border: "1px solid var(--border)", borderRadius: 16,
+              overflow: "hidden", display: "flex", flexDirection: "column",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.4)", // audit-ignore
+              transition: "width 0.25s cubic-bezier(0.16,1,0.3,1)",
+            }} onClick={e => e.stopPropagation()}>
+
+              {/* Header */}
+              <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12, flexShrink: 0 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                  background: `${createColor}22`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: createColor,
+                }}>
+                  <Icons.Shield size={17} />
                 </div>
-                {/* Description */}
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>
-                    Description
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>
+                    {createStep === 1 ? "Create new role" : `Set permissions — ${createName.trim() || "New role"}`}
                   </div>
-                  <Textarea
-                    value={createDesc}
-                    onChange={e => setCreateDesc(e.target.value)}
-                    placeholder="Briefly describe what this role can do…"
-                    rows={3}
-                  />
+                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
+                    {createStep === 1
+                      ? "Custom roles bundle specific permissions for a job function."
+                      : "All permissions start off. Enable only what this role needs."}
+                  </div>
                 </div>
-                {/* Color */}
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 8 }}>
-                    Role color
+                <button onClick={() => setShowCreateRole(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6 }}>
+                  <Icons.X size={16} />
+                </button>
+              </div>
+
+              {/* Step indicator */}
+              <div style={{ display: "flex", alignItems: "center", gap: 0, padding: "10px 24px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+                {(["Details", "Permissions"] as const).map((lbl, i) => {
+                  const idx = i + 1
+                  const active = createStep === idx
+                  const done   = createStep > idx
+                  return (
+                    <div key={lbl} style={{ display: "flex", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{
+                          width: 20, height: 20, borderRadius: "50%",
+                          background: done ? "var(--badge-success)" : active ? createColor : "var(--border)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 10, fontWeight: 700,
+                          color: (done || active) ? "#fff" : "var(--muted-foreground)",  // audit-ignore
+                        }}>
+                          {done ? <Icons.Check size={10} /> : idx}
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: active ? "var(--foreground)" : "var(--muted-foreground)" }}>{lbl}</span>
+                      </div>
+                      {i < 1 && <div style={{ width: 32, height: 1, background: "var(--border)", margin: "0 8px" }} />}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Body */}
+              {createStep === 1 ? (
+                /* ── Step 1: Details ── */
+                <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", flex: 1 }}>
+                  {/* Name */}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>
+                      Role name <span style={{ color: "var(--badge-error)" }}>*</span>
+                    </div>
+                    <Input value={createName} onChange={e => setCreateName(e.target.value)} placeholder="e.g. Data Analyst, Marketing Ops…" />
                   </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {COLOR_SWATCHES.map(c => (
-                      <button
-                        key={c}
-                        onClick={() => setCreateColor(c)}
-                        style={{
-                          width: 28, height: 28, borderRadius: "50%",
-                          background: c,
+                  {/* Description */}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>Description</div>
+                    <Textarea value={createDesc} onChange={e => setCreateDesc(e.target.value)} placeholder="Briefly describe what this role can do…" rows={3} />
+                  </div>
+                  {/* Color */}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 8 }}>Role color</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {COLOR_SWATCHES.map(c => (
+                        <button key={c} onClick={() => setCreateColor(c)} style={{
+                          width: 28, height: 28, borderRadius: "50%", background: c,
                           border: createColor === c ? `3px solid var(--foreground)` : "3px solid transparent",
                           outline: createColor === c ? `2px solid ${c}` : "none",
-                          cursor: "pointer", padding: 0, flexShrink: 0,
-                          transition: "outline 0.1s, border 0.1s",
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                {/* Preview */}
-                <div style={{
-                  padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)",
-                  background: "var(--surface-raised)", borderLeft: `4px solid ${createColor}`,
-                  display: "flex", alignItems: "center", gap: 10,
-                }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>
-                      {createName.trim() || <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>Role name…</span>}
+                          cursor: "pointer", padding: 0, flexShrink: 0, transition: "outline 0.1s, border 0.1s",
+                        }} />
+                      ))}
                     </div>
-                    {createDesc.trim() && (
-                      <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{createDesc.trim()}</div>
-                    )}
                   </div>
-                  <span style={{
-                    marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-                    background: `${createColor}22`, color: createColor,
-                    border: `1px solid ${createColor}55`,
-                    textTransform: "uppercase" as const, letterSpacing: "0.06em", flexShrink: 0,
-                  }}>Custom</span>
+                  {/* Preview */}
+                  <div style={{
+                    padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)",
+                    background: "var(--surface-raised)", borderLeft: `4px solid ${createColor}`,
+                    display: "flex", alignItems: "center", gap: 10,
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>
+                        {createName.trim() || <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>Role name…</span>}
+                      </div>
+                      {createDesc.trim() && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{createDesc.trim()}</div>}
+                    </div>
+                    <span style={{
+                      marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                      background: `${createColor}22`, color: createColor,
+                      border: `1px solid ${createColor}55`,
+                      textTransform: "uppercase" as const, letterSpacing: "0.06em", flexShrink: 0,
+                    }}>Custom</span>
+                  </div>
                 </div>
+              ) : (
+                /* ── Step 2: Permissions (all OFF) ── */
+                <CreateRolePermStep color={createColor} />
+              )}
+
+              {/* Footer */}
+              <div style={{ padding: "14px 24px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--surface-raised)", flexShrink: 0 }}>
+                {createStep === 1 ? (
+                  <>
+                    <Button variant="secondary" size="sm" onClick={() => setShowCreateRole(false)}>Cancel</Button>
+                    <Button variant="main" size="sm" disabled={!valid} onClick={() => setCreateStep(2)}>
+                      Set permissions
+                      <Icons.ChevronRight size={13} style={{ marginLeft: 4 }} />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="secondary" size="sm" onClick={() => setCreateStep(1)}>
+                      <Icons.ChevronLeft size={13} style={{ marginRight: 4 }} />
+                      Back
+                    </Button>
+                    <Button variant="main" size="sm" onClick={() => {
+                      const id = `role-${createName.trim().toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`
+                      const newRole: Role = {
+                        id,
+                        label: createName.trim(),
+                        system: false,
+                        color: createColor,
+                        desc: createDesc.trim() || `Custom role: ${createName.trim()}`,
+                        memberIds: [],
+                      }
+                      setRoles(rs => [...rs, newRole])
+                      setShowCreateRole(false)
+                      setCreateStep(1)
+                      setDetailView({ type: "role", role: newRole })
+                    }}>
+                      Create role
+                    </Button>
+                  </>
+                )}
               </div>
-            }
-            ctaSecondary={{ label: "Cancel", onClick: () => setShowCreateRole(false) }}
-            ctaPrimary={{
-              label: "Create role",
-              disabled: !valid,
-              onClick: () => {
-                const id = `role-${createName.trim().toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`
-                const newRole: Role = {
-                  id,
-                  label: createName.trim(),
-                  system: false,
-                  color: createColor,
-                  desc: createDesc.trim() || `Custom role: ${createName.trim()}`,
-                  memberIds: [],
-                }
-                setRoles(rs => [...rs, newRole])
-                setShowCreateRole(false)
-                setDetailView({ type: "role", role: newRole })
-              },
-            }}
-          />
+            </div>
+          </div>
         )
       })()}
 
