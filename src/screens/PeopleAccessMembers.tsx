@@ -6,6 +6,7 @@ import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { Input }        from "@/components/ui/input"
 import { Tabs }         from "@/components/ui/tabs"
+import { Filters }      from "@/components/ui/filters"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { ModalDialog }  from "@/components/ui/modal-dialog"
 import { Textarea }     from "@/components/ui/textarea"
@@ -2689,9 +2690,10 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
 
 export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [mainTab, setMainTab]           = useState<"members" | "roles" | "groups">("members")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "invited" | "suspended">("all")
   const [roleFilter, setRoleFilter]     = useState<"all" | "system" | "custom">("all")
   const [groupFilter, setGroupFilter]   = useState<"all" | "with-members" | "empty">("all")
+  const [openSlot, setOpenSlot]         = useState<string | null>(null)
   const [query, setQuery]               = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
   const [detailView, setDetailView]     = useState<DetailView>(null)
@@ -2800,31 +2802,51 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       <div style={{ marginBottom: 20 }}>
         <Tabs
           items={[
-            { id: "members", label: `Members (${counts.all})` },
-            { id: "roles",   label: `Roles (${roles.length})`  },
-            { id: "groups",  label: `Groups (${GROUPS.length})` },
+            { id: "members", label: "Members" },
+            { id: "roles",   label: "Roles"   },
+            { id: "groups",  label: "Groups"  },
           ]}
           activeId={mainTab}
-          onChange={v => setMainTab(v as "members" | "roles" | "groups")}
+          onChange={v => { setMainTab(v as "members" | "roles" | "groups"); setOpenSlot(null) }}
           size="s"
         />
 
         {mainTab === "members" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-            <Tabs
-              size="s"
-              items={[
-                { id: "all",       label: `All (${counts.all})`             },
-                { id: "active",    label: `Active (${counts.active})`       },
-                { id: "invited",   label: `Invited (${counts.invited})`     },
-                { id: "suspended", label: `Suspended (${counts.suspended})` },
-              ]}
-              activeId={statusFilter}
-              onChange={v => setStatusFilter(v as typeof statusFilter)}
+          <div style={{ position: "relative", marginTop: 12 }}>
+            <Filters
+              showSearch
+              searchPlaceholder="Search members…"
+              searchValue={query}
+              onSearchChange={setQuery}
+              slots={[{
+                placeholder: "Status",
+                value: statusFilter !== "all" ? statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) : undefined,
+                onOpen:   () => setOpenSlot(s => s === "member-status" ? null : "member-status"),
+                onRemove: () => { setStatusFilter("all"); setOpenSlot(null) },
+              }]}
             />
-            <div style={{ marginLeft: "auto", width: 240 }}>
-              <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search members…" />
-            </div>
+            {openSlot === "member-status" && (
+              <div style={{
+                position: "absolute", top: 44, left: 0, zIndex: 200,
+                background: "var(--surface)", border: "1px solid var(--border)",
+                borderRadius: 10, overflow: "hidden", minWidth: 160,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
+              }}>
+                {(["all", "active", "invited", "suspended"] as const).map(v => (
+                  <button key={v}
+                    onClick={() => { setStatusFilter(v); setOpenSlot(null) }}
+                    style={{
+                      display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
+                      fontSize: 13, border: "none", cursor: "pointer",
+                      color: statusFilter === v ? "var(--primary)" : "var(--foreground)",
+                      background: statusFilter === v ? "var(--accent)" : "var(--surface)",
+                    }}
+                  >
+                    {v === "all" ? "All statuses" : v.charAt(0).toUpperCase() + v.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2878,17 +2900,37 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         const customRoles = filteredRoles.filter(r => !r.system)
         return (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-              <Tabs
-                size="s"
-                items={[
-                  { id: "all",    label: `All (${roles.length})`                          },
-                  { id: "system", label: `System (${roles.filter(r => r.system).length})` },
-                  { id: "custom", label: `Custom (${roles.filter(r => !r.system).length})` },
-                ]}
-                activeId={roleFilter}
-                onChange={v => setRoleFilter(v as typeof roleFilter)}
+            <div style={{ position: "relative", marginBottom: 20 }}>
+              <Filters
+                slots={[{
+                  placeholder: "Type",
+                  value: roleFilter !== "all" ? (roleFilter === "system" ? "System" : "Custom") : undefined,
+                  onOpen:   () => setOpenSlot(s => s === "role-type" ? null : "role-type"),
+                  onRemove: () => { setRoleFilter("all"); setOpenSlot(null) },
+                }]}
               />
+              {openSlot === "role-type" && (
+                <div style={{
+                  position: "absolute", top: 44, left: 0, zIndex: 200,
+                  background: "var(--surface)", border: "1px solid var(--border)",
+                  borderRadius: 10, overflow: "hidden", minWidth: 160,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
+                }}>
+                  {(["all", "system", "custom"] as const).map(v => (
+                    <button key={v}
+                      onClick={() => { setRoleFilter(v); setOpenSlot(null) }}
+                      style={{
+                        display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
+                        fontSize: 13, border: "none", cursor: "pointer",
+                        color: roleFilter === v ? "var(--primary)" : "var(--foreground)",
+                        background: roleFilter === v ? "var(--accent)" : "var(--surface)",
+                      }}
+                    >
+                      {v === "all" ? "All types" : v.charAt(0).toUpperCase() + v.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             {systemRoles.length > 0 && (
               <div style={{ marginBottom: 24 }}>
@@ -2925,17 +2967,37 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         )
         return (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-              <Tabs
-                size="s"
-                items={[
-                  { id: "all",          label: `All (${GROUPS.length})`                                       },
-                  { id: "with-members", label: `Has members (${GROUPS.filter(g => g.memberIds.length > 0).length})` },
-                  { id: "empty",        label: `Empty (${GROUPS.filter(g => g.memberIds.length === 0).length})` },
-                ]}
-                activeId={groupFilter}
-                onChange={v => setGroupFilter(v as typeof groupFilter)}
+            <div style={{ position: "relative", marginBottom: 20 }}>
+              <Filters
+                slots={[{
+                  placeholder: "Members",
+                  value: groupFilter !== "all" ? (groupFilter === "with-members" ? "Has members" : "Empty") : undefined,
+                  onOpen:   () => setOpenSlot(s => s === "group-members" ? null : "group-members"),
+                  onRemove: () => { setGroupFilter("all"); setOpenSlot(null) },
+                }]}
               />
+              {openSlot === "group-members" && (
+                <div style={{
+                  position: "absolute", top: 44, left: 0, zIndex: 200,
+                  background: "var(--surface)", border: "1px solid var(--border)",
+                  borderRadius: 10, overflow: "hidden", minWidth: 160,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
+                }}>
+                  {(["all", "with-members", "empty"] as const).map(v => (
+                    <button key={v}
+                      onClick={() => { setGroupFilter(v); setOpenSlot(null) }}
+                      style={{
+                        display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
+                        fontSize: 13, border: "none", cursor: "pointer",
+                        color: groupFilter === v ? "var(--primary)" : "var(--foreground)",
+                        background: groupFilter === v ? "var(--accent)" : "var(--surface)",
+                      }}
+                    >
+                      {v === "all" ? "All groups" : v === "with-members" ? "Has members" : "Empty"}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
               {filteredGroups.map(g => (
