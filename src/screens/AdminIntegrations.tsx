@@ -1201,6 +1201,13 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
             </div>
           }
         />
+      ) : tab === "catalog" ? (
+        <Header
+          size={isScrolled ? "compress" : "size-m"}
+          title="Integration catalog"
+          description={`${CATALOG.length} integrations available to connect`}
+          onBack={() => setTab("connected")}
+        />
       ) : (
         <Header
           size={isScrolled ? "compress" : "size-l"}
@@ -1222,7 +1229,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
                   {errorCount} {errorCount === 1 ? "error" : "errors"}
                 </button>
               )}
-              <Button variant="secondary" size="sm" onClick={() => setTab("catalog")}>
+              <Button variant="main" size="sm" onClick={() => setTab("catalog")}>
                 <Icons.LayoutGrid size={14} style={{ marginRight: 4 }} />
                 Browse catalog
               </Button>
@@ -1247,19 +1254,6 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       {detailView && (
         <IntegrationDetailPage integration={detailView} />
       )}
-
-      {/* Tabs — hidden when detail view is open */}
-      {!detailView && <div style={{ marginBottom: 16 }}>
-        <Tabs
-          items={[
-            { id: "connected", label: "Connected" },
-            { id: "catalog",   label: "Catalog"   },
-          ]}
-          activeId={tab}
-          onChange={v => { setTab(v) }}
-          size="s"
-        />
-      </div>}
 
       {!detailView && tab === "connected" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1302,13 +1296,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       )}
 
       {!detailView && tab === "catalog" && (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Integration catalog</div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Browse and connect {CATALOG.length} available integrations.</div>
-          </div>
-          <CatalogView connectedIds={connectedIds} />
-        </div>
+        <CatalogView connectedIds={connectedIds} />
       )}
     </ScreenLayout>
   )
