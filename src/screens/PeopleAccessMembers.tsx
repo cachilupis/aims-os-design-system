@@ -347,10 +347,11 @@ function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number
 // ─── Permission scope options ─────────────────────────────────────────────────
 
 const SCOPE_OPTS = [
-  { id: "Workspace", label: "Workspace", tip: "Applies across all tenants and resources in the platform" },
-  { id: "Tenant",    label: "Tenant",    tip: "Applies to all resources within this workspace"           },
-  { id: "Own",       label: "Own",       tip: "Applies only to resources this person created"            },
-  { id: "Record",    label: "Record",    tip: "Applies to one specific resource (requires selection)"    },
+  { id: "Company",      label: "Company",       desc: "All workspaces in your organization"   },
+  { id: "Tenant",       label: "Tenant",        desc: "This workspace only"                   },
+  { id: "Teams/Groups", label: "Teams / Groups",desc: "Members of the same group(s)"          },
+  { id: "Shared",       label: "Shared with me",desc: "Resources explicitly shared with you"  },
+  { id: "Own",          label: "My own",        desc: "Only resources you created"            },
 ]
 
 // ─── Permission state icon ────────────────────────────────────────────────────
@@ -414,6 +415,8 @@ function PermTreeNode({
     depth === 0 && (effectiveState === "g-inh" || effectiveState === "g-direct")
   )
   const [hovered, setHovered] = useState(false)
+  const [scopeOpen, setScopeOpen] = useState(false)
+  const [scopeAnchor, setScopeAnchor] = useState<{ left: number; top: number } | null>(null)
 
   const hasChildren     = (node.children?.length ?? 0) > 0
   const grantedChildren = node.children?.filter(c => {
@@ -423,6 +426,7 @@ function PermTreeNode({
 
   const showToggle      = isEditable && (hovered || !!override)
   const showScopePicker = isEditable && effectiveState === "g-direct"
+  const currentScopeOpt = SCOPE_OPTS.find(s => s.id === effectiveScope) ?? SCOPE_OPTS[1]
 
   return (
     <div>
@@ -487,25 +491,92 @@ function PermTreeNode({
           )}
         </div>
 
-        {/* Scope picker — shown when directly granted */}
+        {/* Scope dropdown — shown when directly granted */}
         {showScopePicker && (
-          <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
-            {SCOPE_OPTS.map(s => (
-              <button
-                key={s.id}
-                title={s.tip}
-                onClick={() => onOverride(node.id, "g-direct", s.id)}
-                style={{
-                  padding: "2px 7px", fontSize: 10, fontWeight: 600, borderRadius: 100,
-                  border: `1px solid ${effectiveScope === s.id ? "var(--primary)" : "var(--border)"}`,
-                  background: effectiveScope === s.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
-                  color: effectiveScope === s.id ? "var(--primary)" : "var(--muted-foreground)",
-                  cursor: "pointer",
-                }}
-              >
-                {s.label}
-              </button>
-            ))}
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <button
+              onClick={e => {
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                const dropdownW = 240
+                const left = rect.right - dropdownW < 8 ? Math.max(8, rect.left) : rect.right - dropdownW
+                setScopeAnchor({ left, top: rect.bottom })
+                setScopeOpen(o => !o)
+                e.stopPropagation()
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 4,
+                padding: "3px 8px", fontSize: 11, fontWeight: 600, borderRadius: 6,
+                border: "1px solid var(--primary)",
+                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                color: "var(--primary)", cursor: "pointer",
+              }}
+            >
+              {currentScopeOpt.label}
+              <Icons.ChevronDown size={10} />
+            </button>
+
+            {scopeOpen && scopeAnchor && (
+              <>
+                {/* backdrop */}
+                <div
+                  style={{ position: "fixed", inset: 0, zIndex: 10000 }}
+                  onClick={() => setScopeOpen(false)}
+                />
+                {/* dropdown */}
+                <div style={{
+                  position: "fixed",
+                  left: scopeAnchor.left,
+                  top: scopeAnchor.top + 4,
+                  zIndex: 10001,
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 10,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                  width: 240,
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    padding: "8px 12px 4px",
+                    fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
+                    color: "var(--muted-foreground)", textTransform: "uppercase",
+                  }}>
+                    Select scope
+                    <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: 0, textTransform: "none", marginTop: 1 }}>
+                      How broadly this permission applies
+                    </div>
+                  </div>
+                  {SCOPE_OPTS.map(s => {
+                    const selected = effectiveScope === s.id
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          onOverride(node.id, "g-direct", s.id)
+                          setScopeOpen(false)
+                        }}
+                        style={{
+                          width: "100%", textAlign: "left", display: "flex", alignItems: "center",
+                          gap: 10, padding: "8px 12px",
+                          background: selected ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "transparent",
+                          border: "none", cursor: "pointer",
+                          borderTop: "1px solid var(--border)",
+                        }}
+                        onMouseEnter={e => { if (!selected) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+                        onMouseLeave={e => { if (!selected) (e.currentTarget as HTMLElement).style.background = "transparent" }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: selected ? "var(--primary)" : "var(--foreground)" }}>
+                            {s.label}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{s.desc}</div>
+                        </div>
+                        {selected && <Icons.Check size={13} color="var(--primary)" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
 
