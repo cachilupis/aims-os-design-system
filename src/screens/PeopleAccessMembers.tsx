@@ -6,7 +6,6 @@ import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { Input }        from "@/components/ui/input"
 import { Tabs }         from "@/components/ui/tabs"
-import { Chip }         from "@/components/ui/chip"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { ModalDialog }  from "@/components/ui/modal-dialog"
 import { Textarea }     from "@/components/ui/textarea"
@@ -2811,22 +2810,18 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         />
 
         {mainTab === "members" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
-            {([
-              { id: "all",       label: `All (${counts.all})`             },
-              { id: "active",    label: `Active (${counts.active})`       },
-              { id: "invited",   label: `Invited (${counts.invited})`     },
-              { id: "suspended", label: `Suspended (${counts.suspended})` },
-            ] as const).map(f => (
-              <Chip
-                key={f.id}
-                size="s"
-                variant={statusFilter === f.id ? "primary" : "secondary"}
-                onClick={() => setStatusFilter(f.id)}
-              >
-                {f.label}
-              </Chip>
-            ))}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+            <Tabs
+              size="s"
+              items={[
+                { id: "all",       label: `All (${counts.all})`             },
+                { id: "active",    label: `Active (${counts.active})`       },
+                { id: "invited",   label: `Invited (${counts.invited})`     },
+                { id: "suspended", label: `Suspended (${counts.suspended})` },
+              ]}
+              activeId={statusFilter}
+              onChange={v => setStatusFilter(v as typeof statusFilter)}
+            />
             <div style={{ marginLeft: "auto", width: 240 }}>
               <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search members…" />
             </div>
@@ -2884,20 +2879,16 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         return (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-              {([
-                { id: "all",    label: `All (${roles.length})`                          },
-                { id: "system", label: `System (${roles.filter(r => r.system).length})` },
-                { id: "custom", label: `Custom (${roles.filter(r => !r.system).length})` },
-              ] as const).map(f => (
-                <Chip
-                  key={f.id}
-                  size="s"
-                  variant={roleFilter === f.id ? "primary" : "secondary"}
-                  onClick={() => setRoleFilter(f.id)}
-                >
-                  {f.label}
-                </Chip>
-              ))}
+              <Tabs
+                size="s"
+                items={[
+                  { id: "all",    label: `All (${roles.length})`                          },
+                  { id: "system", label: `System (${roles.filter(r => r.system).length})` },
+                  { id: "custom", label: `Custom (${roles.filter(r => !r.system).length})` },
+                ]}
+                activeId={roleFilter}
+                onChange={v => setRoleFilter(v as typeof roleFilter)}
+              />
             </div>
             {systemRoles.length > 0 && (
               <div style={{ marginBottom: 24 }}>
@@ -2935,20 +2926,16 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         return (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-              {([
-                { id: "all",          label: `All (${GROUPS.length})`                                       },
-                { id: "with-members", label: `Has members (${GROUPS.filter(g => g.memberIds.length > 0).length})` },
-                { id: "empty",        label: `Empty (${GROUPS.filter(g => g.memberIds.length === 0).length})` },
-              ] as const).map(f => (
-                <Chip
-                  key={f.id}
-                  size="s"
-                  variant={groupFilter === f.id ? "primary" : "secondary"}
-                  onClick={() => setGroupFilter(f.id)}
-                >
-                  {f.label}
-                </Chip>
-              ))}
+              <Tabs
+                size="s"
+                items={[
+                  { id: "all",          label: `All (${GROUPS.length})`                                       },
+                  { id: "with-members", label: `Has members (${GROUPS.filter(g => g.memberIds.length > 0).length})` },
+                  { id: "empty",        label: `Empty (${GROUPS.filter(g => g.memberIds.length === 0).length})` },
+                ]}
+                activeId={groupFilter}
+                onChange={v => setGroupFilter(v as typeof groupFilter)}
+              />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
               {filteredGroups.map(g => (
