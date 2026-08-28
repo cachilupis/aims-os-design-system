@@ -15769,7 +15769,7 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
     { label: "Trigger visible", note: "The new note hangs off this record — but no notes list exists on this view to hold an inline row instead.", content: frame() },
     { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record stays visible behind it.", content: frame(
       <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
-        <div className="flex flex-col gap-[16px] h-full pt-[92px]">
+        <div className="flex flex-col gap-[16px] h-full">
           <div>
             <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
             <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Attaches to Data Sync Worker.</p>
@@ -15789,19 +15789,30 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
 
 // Section 2 · standalone, ≤5 fields → ModalDialog
 function pgSceneStandaloneModal(next: () => void, _back: () => void, _onClose: () => void): PgTourStepDef[] {
-  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_WORKERS) => (
-    <PgCreateContextShell sidebarId="agents" overlay={overlay}>
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Workers" description={`${items.length} total`} size="size-l"
-          primaryAction={<Button variant="primary" size="sm" onClick={next}>New worker</Button>} />
-        <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-          <div className="max-w-[820px]">
-            <EntityList items={items} />
+  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_WORKERS) => {
+    const active = items.filter(w => w.state?.variant === "success").length
+    return (
+      <PgCreateContextShell sidebarId="agents" overlay={overlay}>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Workers" description={`${items.length} workers · ${active} active`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New worker</Button>} />
+          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+            <div className="max-w-[820px] flex flex-col gap-[16px]">
+              <Filters searchPlaceholder="Search workers…" slots={[{ placeholder: "Status" }, { placeholder: "Owner" }]} />
+              <div className="flex flex-col gap-[12px]">
+                {items.map(item => (
+                  <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[item]} />
+                  </CardContainer>
+                ))}
+              </div>
+              <Pagination currentPage={1} totalItems={items.length} itemsPerPage={2} onPageChange={() => {}} />
+            </div>
           </div>
-        </div>
-      </main>
-    </PgCreateContextShell>
-  )
+        </main>
+      </PgCreateContextShell>
+    )
+  }
   return [
     { label: "Trigger visible", note: "A standalone entity, from its own list view — 4 fields, well under the 5-field threshold.", content: frame() },
     { label: "Surface open", note: "ModalDialog variant=\"content\" — the user can't ignore this and keep working; nothing on screen is this worker's parent.", content: frame(
@@ -15819,7 +15830,7 @@ function pgSceneStandaloneModal(next: () => void, _back: () => void, _onClose: (
         ctaSecondary={{ label: "Cancel" }}
       />
     ) },
-    { label: "Landing", note: "Closes. create.md's own landing table doesn't state a rule for this surface — shown here staying on the list, new worker on top, rather than invented.", content: frame(undefined, PG_CTX_WORKERS_LANDING) },
+    { label: "Landing", note: "Closes. The user returns to the list; the new worker appears there.", content: frame(undefined, PG_CTX_WORKERS_LANDING) },
   ]
 }
 
@@ -15829,11 +15840,19 @@ function pgSceneStandaloneFullPage(next: () => void, _back: () => void, _onClose
     { label: "Trigger visible", note: "Standalone, more than 5 fields — too much for a modal, but only one stage, so no Stepper.", content: (
       <PgCreateContextShell sidebarId="contacts">
         <main className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Users" description={`${PG_CTX_USERS.length} total`} size="size-l"
-            primaryAction={<Button variant="primary" size="sm" onClick={next}>New user</Button>} />
+          <Header title="Users" description={`${PG_CTX_USERS.length} users · ${PG_CTX_USERS.filter(u => u.state?.label === "Invited").length} invited`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New user</Button>} />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-            <div className="max-w-[820px]">
-              <EntityList items={PG_CTX_USERS} />
+            <div className="max-w-[820px] flex flex-col gap-[16px]">
+              <Filters searchPlaceholder="Search users…" slots={[{ placeholder: "Status" }, { placeholder: "Role" }]} />
+              <div className="flex flex-col gap-[12px]">
+                {PG_CTX_USERS.map(item => (
+                  <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[item]} />
+                  </CardContainer>
+                ))}
+              </div>
+              <Pagination currentPage={1} totalItems={PG_CTX_USERS.length} itemsPerPage={2} onPageChange={() => {}} />
             </div>
           </div>
         </main>
@@ -15897,7 +15916,7 @@ function pgSceneStagedSlideout(next: () => void, _back: () => void, _onClose: ()
     { label: "Trigger visible", note: "Two stages, no branching, contextual — attaches to this automation.", content: frame() },
     { label: "Surface open", note: "SlideOut with a lightweight step indicator, not a full Stepper — three or more stages, or any branching, is what earns a Stepper.", content: frame(
       <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
-        <div className="flex flex-col gap-[16px] h-full pt-[92px]">
+        <div className="flex flex-col gap-[16px] h-full">
           <div>
             <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New condition</span>
             <div className="flex items-center gap-[6px] mt-[6px]">
@@ -15978,19 +15997,30 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
 // Section 4 · from a catalogue → selection modal, then the pre-filled form.
 // 4 steps, not 3 — the surface here is genuinely two connected screens.
 function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
-  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_AUTOMATIONS) => (
-    <PgCreateContextShell sidebarId="automations" overlay={overlay}>
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Automations" description={`${items.length} total`} size="size-l"
-          primaryAction={<Button variant="primary" size="sm" onClick={next}>New automation</Button>} />
-        <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-          <div className="max-w-[820px]">
-            <EntityList items={items} />
+  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_AUTOMATIONS) => {
+    const active = items.filter(a => a.state?.variant === "success").length
+    return (
+      <PgCreateContextShell sidebarId="automations" overlay={overlay}>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Automations" description={`${items.length} automations · ${active} active`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New automation</Button>} />
+          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+            <div className="max-w-[820px] flex flex-col gap-[16px]">
+              <Filters searchPlaceholder="Search automations…" slots={[{ placeholder: "Status" }, { placeholder: "Owner" }]} />
+              <div className="flex flex-col gap-[12px]">
+                {items.map(item => (
+                  <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[item]} />
+                  </CardContainer>
+                ))}
+              </div>
+              <Pagination currentPage={1} totalItems={items.length} itemsPerPage={2} onPageChange={() => {}} />
+            </div>
           </div>
-        </div>
-      </main>
-    </PgCreateContextShell>
-  )
+        </main>
+      </PgCreateContextShell>
+    )
+  }
   return [
     { label: "Trigger visible", note: "Browsing a catalogue — templates, marketplace, starting points.", content: frame() },
     { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. It never becomes the form.", content: frame(
@@ -16007,24 +16037,20 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
         ctaSecondary={{ label: "Cancel" }}
       />
     ) },
-    { label: "Pre-filled form", note: "Fields remain after selection, so the cascade runs pre-filled with the source's values — SlideOut here, since it attaches to the Automations list.", content: frame(
-      <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
-        <div className="flex flex-col gap-[16px] h-full pt-[92px]">
-          <div>
-            <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New automation</span>
-            <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Started from the "Lead follow-up" template.</p>
+    { label: "Pre-filled form", note: "A list of the same object type on screen isn't a parent — this is standalone, same as the Worker case. Fields remain after selection, so the cascade resolves at step 5: ModalDialog, pre-filled. The two modals are sequential, never both open at once — the catalogue closes before this one opens.", content: frame(
+      <ModalDialog isOpen onClose={() => {}} variant="content"
+        title="New Automation" description='Pre-filled from the "Lead follow-up" template.'
+        slot={
+          <div className="flex flex-col gap-[12px]">
+            <Input defaultValue="Lead follow-up" />
+            <Textarea defaultValue="Sends a follow-up email 24h after a new lead is created." />
           </div>
-          <Input defaultValue="Lead follow-up" />
-          <Textarea defaultValue="Sends a follow-up email 24h after a new lead is created." />
-          <div className="flex-1" />
-          <div className="flex justify-end gap-[8px]">
-            <Button variant="secondary" size="sm" onClick={back}>Back</Button>
-            <Button variant="primary" size="sm" onClick={next}>Create</Button>
-          </div>
-        </div>
-      </SlideOut>
+        }
+        ctaPrimary={{ label: "Create", onClick: next }}
+        ctaSecondary={{ label: "Back", onClick: back }}
+      />
     ) },
-    { label: "Landing", note: "Closes. The user returns to where they were; the new automation appears in context.", content: frame(undefined, PG_CTX_AUTOMATIONS_LANDING) },
+    { label: "Landing", note: "Closes. The user returns to the list; the new automation appears there.", content: frame(undefined, PG_CTX_AUTOMATIONS_LANDING) },
   ]
 }
 
@@ -16038,19 +16064,18 @@ const PG_PREVIEW_SCENES: Record<PgPreviewCaseId, (next: () => void, back: () => 
 }
 
 // The didactic bar is the ONLY place that explains the rule — it sits in its
-// own strip above the simulated frame, outside it. The simulated product's
-// own copy never explains why a surface was chosen. The single "Close
-// Preview" button is the only exit; the last tour step has no "Next".
+// own strip above the simulated frame, outside it, in normal flow (not
+// portaled, not floating on top). The simulated product's own copy never
+// explains why a surface was chosen. The single "Close Preview" button is
+// the only exit; the last tour step has no "Next".
 //
-// The bar is portaled to document.body, separately from the AppBackground/
-// content wrapper below. SlideOut and ModalDialog ALSO portal to document.body
-// (z-[10010] / z-[10020]) — nested z-index only resolves within its own
-// stacking context, so a bar merely nested inside this component's z-9999
-// wrapper would be outranked and painted over the moment either surface is
-// open, even at a higher nested z-index. Portaling the bar to the same body
-// level as those surfaces is what lets it actually out-rank them.
-const PG_TOUR_BAR_HEIGHT = 92
-
+// SlideOut and ModalDialog are `position: fixed` and would otherwise ignore
+// this flex layout entirely, covering the bar regardless of DOM order (they
+// portal to document.body). `transform` on the frame wrapper below gives it
+// a CSS containing block for fixed-position descendants — SlideOut/
+// ModalDialog's `inset-0` resolves against THIS box, which already starts
+// below the bar, instead of the true viewport. That's what keeps the bar in
+// its own strip; no z-index or portal juggling needed for it.
 function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onClose: () => void }) {
   const [step, setStep] = useState(0)
   const next = () => setStep(s => s + 1)
@@ -16060,42 +16085,29 @@ function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onC
   const current = steps[i]
 
   return (
-    <>
-      <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
-        <AppBackground />
-        <div style={{ height: PG_TOUR_BAR_HEIGHT }} className="shrink-0" />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {current.content}
+    <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+      <AppBackground />
+      <div className="shrink-0 flex items-center justify-between gap-[16px] px-[24px] py-[14px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}>
+        <div className="min-w-0">
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Step {i + 1} of {steps.length} — {current.label}</span>
+          <p className="text-[13px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>{current.note}</p>
+        </div>
+        <div className="flex gap-[8px] shrink-0">
+          <Button variant="secondary" size="sm" disabled={i === 0} onClick={back}>Back</Button>
+          {i < steps.length - 1 && <Button variant="primary" size="sm" onClick={next}>Next</Button>}
         </div>
       </div>
-      {createPortal(
-        <>
-          <div
-            className="fixed top-0 left-0 right-0 flex items-center px-[24px] pr-[180px] overflow-hidden"
-            style={{ height: PG_TOUR_BAR_HEIGHT, zIndex: 10030, background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}
-          >
-            <div className="flex items-center justify-between gap-[16px] w-full">
-              <div className="min-w-0">
-                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Step {i + 1} of {steps.length} — {current.label}</span>
-                <p className="text-[13px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>{current.note}</p>
-              </div>
-              <div className="flex gap-[8px] shrink-0">
-                <Button variant="secondary" size="sm" disabled={i === 0} onClick={back}>Back</Button>
-                {i < steps.length - 1 && <Button variant="primary" size="sm" onClick={next}>Next</Button>}
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="fixed flex items-center gap-[6px] rounded-[6px]"
-            style={{ top: 10, right: 12, zIndex: 10031, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
-          >
-            <LucideIcons.X size={12} /> Close Preview
-          </button>
-        </>,
-        document.body,
-      )}
-    </>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ transform: "translateZ(0)" }}>
+        {current.content}
+      </div>
+      <button
+        onClick={onClose}
+        className="fixed flex items-center gap-[6px] rounded-[6px]"
+        style={{ top: 10, right: 12, zIndex: 10, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+      >
+        <LucideIcons.X size={12} /> Close Preview
+      </button>
+    </div>
   )
 }
 
@@ -16408,6 +16420,7 @@ function PatternCreatePage() {
                   {[
                     ["Inline create row", "Stays in place. The new row appears in the list, ready to create the next one."],
                     ["SlideOut", "Closes. The user returns to where they were; the new object appears in context."],
+                    ["ModalDialog variant=\"content\"", "Closes. The user returns to the list; the new object appears there."],
                     ["Full-page create form", "Navigates to the created object."],
                     ["Full-page wizard", "Navigates to the created object."],
                     ["Assisted create", "Success modal → view the object, or create another."],
@@ -16537,7 +16550,7 @@ function PatternCreatePage() {
                     ["Create an agent", "Step 1", "Hand-off → the agent's own workspace owns everything past this point"],
                     ["Add a node to the canvas", "Gate 0", "Rejected — this is Configure"],
                     ["Add a template from the marketplace, template fully defines the object", "Gate 1 — from a source", "ModalDialog variant=\"content\" → created"],
-                    ["Add a template from the marketplace, fields remain", "Gate 1 → Step 4", "Catalogue modal → SlideOut, pre-filled"],
+                    ["Add a template from the marketplace, fields remain", "Gate 1 → Step 5", "Catalogue modal → ModalDialog, pre-filled"],
                     ["Create with AI", "Gate 1 — assisted", "Chat ModalDialog → success modal"],
                   ].map(([caseName, path, surf], i) => (
                     <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
@@ -16626,6 +16639,7 @@ CONFIRMATION (independent of container)
 LANDING (derived from container, not a separate decision)
   Inline create row       → stays in place, ready for the next create
   SlideOut                → closes, user returns to where they were
+  ModalDialog             → closes, user returns to the list, new object appears there
   Full-page create form   → navigates to the created object
   Full-page wizard        → navigates to the created object
   Assisted create         → success modal → view object OR create another

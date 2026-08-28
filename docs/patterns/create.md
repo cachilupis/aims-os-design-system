@@ -11,6 +11,7 @@
 > v0.5 — contextual vs standalone split added as steps 4 and 5; a modal is now a first-class create form container. Reconciliation mapped against the seven findings in `create-audit.md`.
 > v0.6 — `SlideOut type="default"` corrected to `type="full-slot"` throughout — `"default"` was never a real value on the component (checked directly against `slide-out.tsx`: the only two are `"with-variants"` and `"full-slot"`).
 > v0.7 — Step 1 changed from a surface choice to a hand-off: once the object declares it owns a workspace, Create's job is to navigate to the object's own creation section and nothing past that is specified. "Dedicated view" is retired as an umbrella term — step 2's outcome is now named **Full-page wizard**, step 5's is now named **Full-page create form**. They are different surfaces built for different reasons (flow shape vs. field count) and were never the same thing.
+> v0.8 — Case 6b corrected: a list of the same object type on screen is not a parent, so a catalogue selection that leaves fields remaining is standalone, not contextual — it resolves at step 5 (`ModalDialog`), not step 4 (`SlideOut`). §5's landing table gained the `ModalDialog variant="content"` row it was missing: closes, back to the list, new object appears there.
 
 ---
 
@@ -206,6 +207,7 @@ Derived from the container. Not a separate decision.
 | --- | --- |
 | Inline create row | Stays in place. The new row appears in the list, ready to create the next one. |
 | `SlideOut` | Closes. The user returns to where they were; the new object appears in context. |
+| `ModalDialog variant="content"` | Closes. The user returns to the list; the new object appears there. |
 | Full-page create form | Navigates to the created object. |
 | Full-page wizard | Navigates to the created object. |
 | Assisted create | Success modal → view the object, or create another. |
@@ -243,7 +245,7 @@ Create is **always contextual** in v1. There is no global create affordance.
 | 4b | Create an agent | Step 1 | Hand-off → the agent's own workspace owns everything past this point |
 | 5 | Add a node to the canvas | **Gate 0** | Rejected — this is Configure |
 | 6 | Add a template from the marketplace, template fully defines the object | Gate 1 — from a source | `ModalDialog variant="content"` → created |
-| 6b | Add a template from the marketplace, fields remain | Gate 1 → Step 4 | Catalogue modal → `SlideOut` pre-filled |
+| 6b | Add a template from the marketplace, fields remain | Gate 1 → Step 5 | Catalogue modal → `ModalDialog` pre-filled |
 | 7 | Create with AI | Gate 1 — assisted | Chat `ModalDialog` → success modal |
 
 All five resolve. No exception required.
