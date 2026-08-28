@@ -1,11 +1,16 @@
 import { useState } from "react"
 import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
 import * as Icons from "lucide-react"
-import { ScreenLayout } from "@/components/layouts/screen-layout"
-import { Header }       from "@/components/ui/header"
-import { Button }       from "@/components/ui/button"
-import { Tabs }         from "@/components/ui/tabs"
-import { SlideOut }    from "@/components/ui/slide-out"
+import { ScreenLayout }  from "@/components/layouts/screen-layout"
+import { Header }        from "@/components/ui/header"
+import { Button }        from "@/components/ui/button"
+import { Tabs }          from "@/components/ui/tabs"
+import { SlideOut }      from "@/components/ui/slide-out"
+import { CardContainer } from "@/components/ui/card-container"
+import { EntityList }    from "@/components/ui/entity-list"
+import type { EntityListItemData } from "@/components/ui/entity-list"
+import { Filters }       from "@/components/ui/filters"
+import { Pagination }    from "@/components/ui/pagination"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1423,6 +1428,8 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
   const [detailView, setDetailView] = useState<Integration | null>(null)
   const [query, setQuery]     = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | IntegrationStatus>("all")
+  const [page, setPage]       = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   function handleAction(id: string, action: ActionType) {
     if (action === "disconnect") {
@@ -1464,6 +1471,43 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
     { id: "error",  label: `Error (${connectedList.filter(c => c.status === "error").length})` },
     { id: "paused", label: `Paused (${connectedList.filter(c => c.status === "paused").length})` },
   ]
+
+  const INT_ICON_VARIANT: Record<IntegrationStatus, EntityListItemData["iconVariant"]> = {
+    active:  "success",
+    error:   "error",
+    paused:  "neutral",
+    pending: "yellow",
+  }
+  const INT_STATE_VARIANT: Record<IntegrationStatus, "success" | "error" | "neutral" | "alert"> = {
+    active:  "success",
+    error:   "error",
+    paused:  "neutral",
+    pending: "alert",
+  }
+  const INT_STATE_LABEL: Record<IntegrationStatus, string> = {
+    active:  "Active",
+    error:   "Error",
+    paused:  "Paused",
+    pending: "Pending",
+  }
+
+  function integrationToItem(int: Integration): EntityListItemData {
+    return {
+      id: int.id,
+      title: int.name,
+      iconVariant: INT_ICON_VARIANT[int.status],
+      iconName: int.icon,
+      state: { label: INT_STATE_LABEL[int.status], variant: INT_STATE_VARIANT[int.status] },
+      description: `${int.category} · ${int.authType}`,
+      primaryMeta: [
+        { iconName: "User", label: int.connectedBy },
+        { iconName: "RefreshCw", label: int.lastSync ? `Synced ${int.lastSync}` : "Never synced" },
+      ],
+      onClick: () => setDetailView(int),
+    }
+  }
+
+  const pagedIntegrations = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   return (
     <ScreenLayout
@@ -1532,6 +1576,18 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
           }
         />
       )}
+      pagination={
+        !detailView && tab === "connected" && filtered.length > Math.min(10, pageSize)
+          ? <Pagination
+              currentPage={page}
+              totalItems={filtered.length}
+              itemsPerPage={pageSize}
+              onPageChange={setPage}
+              onItemsPerPageChange={n => { setPageSize(n); setPage(1) }}
+              rowsPerPageOptions={[10, 25, 50]}
+            />
+          : undefined
+      }
     >
       {/* Detail page */}
       {detailView && (
@@ -1552,83 +1608,40 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       </div>}
 
       {!detailView && tab === "connected" && (
-        <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", minHeight: 360 }}>
-          {/* Left list */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", borderRight: selected ? "1px solid var(--border)" : "none" }}>
-            {/* Toolbar: search + status filter */}
-            <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
-              <div style={{ position: "relative", marginBottom: 10 }}>
-                <Icons.Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)", pointerEvents: "none" }} />
-                <input
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="Search connected integrations…"
-                  style={{
-                    width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
-                    fontSize: 13, border: "1px solid var(--border)", borderRadius: 7,
-                    background: "var(--surface)", color: "var(--foreground)", outline: "none",
-                  }}
-                />
-              </div>
-              {/* Status filter chips */}
-              <div style={{ display: "flex", gap: 6 }}>
-                {STATUS_FILTERS.map(f => (
-                  <button
-                    key={f.id}
-                    onClick={() => setStatusFilter(f.id)}
-                    style={{
-                      fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
-                      cursor: "pointer", border: "1px solid",
-                      background: statusFilter === f.id ? "var(--primary)" : "transparent",
-                      color: statusFilter === f.id ? "var(--primary-foreground)" : "var(--muted-foreground)",
-                      borderColor: statusFilter === f.id ? "var(--primary)" : "var(--border)",
-                    }}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Filters
+            showSearch
+            searchPlaceholder="Search connected integrations…"
+            searchValue={query}
+            onSearchChange={q => { setQuery(q); setPage(1) }}
+            slots={[
+              {
+                placeholder: "Status",
+                value: statusFilter !== "all" ? INT_STATE_LABEL[statusFilter as IntegrationStatus] : undefined,
+                onRemove: () => { setStatusFilter("all"); setPage(1) },
+              },
+            ]}
+            showClearFilters={statusFilter !== "all"}
+            onClearFilters={() => { setStatusFilter("all"); setPage(1) }}
+            showAllFilters={false}
+            showSort={false}
+            showViewToggle={false}
+          />
+
+          {filtered.length === 0 ? (
+            <div style={{ padding: "48px 0", textAlign: "center", color: "var(--muted-foreground)" }}>
+              <Icons.Plug size={22} style={{ marginBottom: 8, opacity: 0.3 }} />
+              <div style={{ fontSize: 13 }}>
+                {statusFilter !== "all" ? `No ${statusFilter} integrations` : "No integrations found"}
               </div>
             </div>
-
-            {/* Rows */}
-            {filtered.length === 0 ? (
-              <div style={{ padding: "48px 0", textAlign: "center", color: "var(--muted-foreground)" }}>
-                <Icons.Plug size={22} style={{ marginBottom: 8, opacity: 0.3 }} />
-                <div style={{ fontSize: 13 }}>
-                  {statusFilter !== "all" ? `No ${statusFilter} integrations` : "No integrations found"}
-                </div>
-              </div>
-            ) : (
-              filtered.map(int => (
-                <IntegrationRow
-                  key={int.id}
-                  integration={int}
-                  selected={selected?.id === int.id}
-                  onClick={() => setDetailView(int)}
-                />
-              ))
-            )}
-          </div>
-
-          {/* Right: inline detail panel */}
-          {selected && (
-            <div style={{ width: 380, flexShrink: 0, display: "flex", flexDirection: "column", overflowY: "auto" }}>
-              {/* Panel header */}
-              <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.3 }}>{selected.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 3 }}>
-                    {selected.category} · <span style={{ color: STATUS_META[selected.status].color }}>{STATUS_META[selected.status].label}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelected(null)}
-                  style={{ flexShrink: 0, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}
-                >
-                  <Icons.X size={14} />
-                </button>
-              </div>
-              <OperatePanel integration={selected} onAction={handleAction} />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {pagedIntegrations.map(int => (
+                <CardContainer key={int.id} size="sm" className="!p-0 overflow-hidden">
+                  <EntityList items={[integrationToItem(int)]} />
+                </CardContainer>
+              ))}
             </div>
           )}
         </div>

@@ -1,10 +1,12 @@
 import { useState } from "react"
 import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
 import * as Icons from "lucide-react"
-import { ScreenLayout } from "@/components/layouts/screen-layout"
-import { Header }       from "@/components/ui/header"
-import { Button }       from "@/components/ui/button"
-import { Tabs }         from "@/components/ui/tabs"
+import { ScreenLayout }  from "@/components/layouts/screen-layout"
+import { Header }        from "@/components/ui/header"
+import { Button }        from "@/components/ui/button"
+import { Tabs }          from "@/components/ui/tabs"
+import { CardContainer } from "@/components/ui/card-container"
+import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -149,7 +151,7 @@ const STUDIOS: Studio[] = [
     icon: "Bot",
     accentColor: "#06b6d4",  // audit-ignore: prototype fixture data
     description: "Manages AI workers, multi-agent workflows, human review handoffs, and run history.",
-    status: "active",
+    status: "disabled",
     membersWithAccess: 22,
     totalMembers: 50,
     stats: [
@@ -475,74 +477,48 @@ function StudioDetailPage({ studio }: { studio: Studio }) {
   )
 }
 
-// ─── Studio card ──────────────────────────────────────────────────────────────
+// ─── EntityList mapping ───────────────────────────────────────────────────────
 
-function StudioCard({ studio, onClick }: { studio: Studio; onClick: () => void }) {
-  const [hov, setHov] = useState(false)
-  const accessPct = Math.round((studio.membersWithAccess / studio.totalMembers) * 100)
+const STUDIO_ICON_VARIANT: Record<string, EntityListItemData["iconVariant"]> = {
+  governance: "success",
+  datastudio: "purple",
+  agentic:    "light-blue",
+}
 
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        padding: "16px 20px", borderBottom: "1px solid var(--border)", cursor: "pointer",
-        background: hov ? "var(--accent)" : "transparent",
-        borderLeft: "3px solid transparent",
-        transition: "background 0.1s",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: 11, flexShrink: 0,
-          background: `${studio.accentColor}18`, border: `1px solid ${studio.accentColor}30`,
-          display: "flex", alignItems: "center", justifyContent: "center", color: studio.accentColor,
-        }}>
-          {(() => { const IC = Icons[studio.icon as keyof typeof Icons] as React.ElementType; return IC ? <IC size={22} /> : null })()}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{studio.name}</span>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 100,
-              background: "var(--badge-success)15", color: "var(--badge-success)",
-            }}>Active</span>
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 10, lineHeight: 1.4 }}>
-            {studio.description}
-          </div>
-
-          <div style={{ display: "flex", gap: 16 }}>
-            {studio.stats.map(s => (
-              <div key={s.label}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: studio.accentColor }}>{s.value}</span>
-                <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 4 }}>{s.label}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--border)" }}>
-              <div style={{ height: "100%", width: `${accessPct}%`, borderRadius: 2, background: studio.accentColor }} />
-            </div>
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)", flexShrink: 0 }}>
-              {studio.membersWithAccess} / {studio.totalMembers} members have access
-            </span>
-          </div>
-        </div>
-
-        <Icons.ChevronRight size={16} style={{ color: "var(--muted-foreground)", flexShrink: 0, marginTop: 14 }} />
-      </div>
-    </div>
-  )
+function studioToItem(studio: Studio, onClick: () => void): EntityListItemData {
+  const isActive = studio.status === "active"
+  return {
+    id: studio.id,
+    title: studio.name,
+    iconVariant: isActive ? (STUDIO_ICON_VARIANT[studio.id] ?? "neutral") : "neutral",
+    iconName: studio.icon,
+    state: isActive
+      ? { label: "Active",   variant: "success" }
+      : { label: "Disabled", variant: "neutral" },
+    description: studio.description,
+    primaryMeta: [
+      { label: `${studio.membersWithAccess} / ${studio.totalMembers} members`, iconName: "Users" },
+    ],
+    secondaryMeta: studio.stats.map(s => ({ label: `${s.value} ${s.label}` })),
+    onClick,
+  }
 }
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
+  const [studios, setStudios]   = useState<Studio[]>(STUDIOS)
   const [detailView, setDetailView] = useState<Studio | null>(null)
+
+  function toggleStatus(id: string) {
+    setStudios(prev => prev.map(s =>
+      s.id === id ? { ...s, status: s.status === "active" ? "disabled" : "active" } : s
+    ))
+    setDetailView(prev => prev?.id === id
+      ? { ...prev, status: prev.status === "active" ? "disabled" : "active" }
+      : prev
+    )
+  }
 
   return (
     <ScreenLayout
@@ -564,7 +540,11 @@ export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) =
                 <Icons.Settings size={14} style={{ marginRight: 4 }} />
                 Configure
               </Button>
-              <Button variant={detailView.status === "active" ? "secondary" : "main"} size="sm">
+              <Button
+                variant={detailView.status === "active" ? "secondary" : "main"}
+                size="sm"
+                onClick={() => toggleStatus(detailView.id)}
+              >
                 {detailView.status === "active" ? "Disable studio" : "Enable studio"}
               </Button>
             </div>
@@ -583,18 +563,13 @@ export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) =
       )}
 
       {!detailView && (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{
-            padding: "12px 20px", borderBottom: "1px solid var(--border)",
-            background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
-          }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-              Studios
-            </span>
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{STUDIOS.filter(s => s.status === "active").length} of {STUDIOS.length} active</span>
-          </div>
-          {STUDIOS.map(studio => (
-            <StudioCard key={studio.id} studio={studio} onClick={() => setDetailView(studio)} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {studios.map(s => (
+            <div key={s.id} style={{ opacity: s.status === "disabled" ? 0.55 : 1, transition: "opacity 0.2s" }}>
+              <CardContainer size="sm" className="!p-0 overflow-hidden">
+                <EntityList items={[studioToItem(s, () => setDetailView(s))]} />
+              </CardContainer>
+            </div>
           ))}
         </div>
       )}
