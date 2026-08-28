@@ -4,7 +4,6 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
-import { SwitchTab }    from "@/components/ui/switch-tab"
 import { Tabs }         from "@/components/ui/tabs"
 import { SlideOut }    from "@/components/ui/slide-out"
 
@@ -1052,12 +1051,12 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
     >
       {/* Tabs */}
       <div style={{ marginBottom: 16 }}>
-        <SwitchTab
+        <Tabs
           items={[
             { id: "connected", label: "Connected" },
             { id: "catalog",   label: "Catalog"   },
           ]}
-          value={tab}
+          activeId={tab}
           onChange={v => { setTab(v); if (v === "catalog") setSelected(null) }}
           size="s"
         />
