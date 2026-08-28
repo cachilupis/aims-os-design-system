@@ -79,15 +79,7 @@ import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
 import { ChatWorkflowConfigScreen }           from "./screens/chat-workflow-config"
 import { WorkflowsListScreen }               from "./screens/workflows-list"
 import { PeopleAccessMembersScreen }         from "./screens/PeopleAccessMembers"
-import { AdminAuditLogScreen }              from "./screens/AdminAuditLog"
-import { AdminSecurityScreen }             from "./screens/AdminSecurity"
-import { AdminOverviewScreen }            from "./screens/AdminOverview"
-import { AdminIntegrationsScreen }        from "./screens/AdminIntegrations"
-import { AdminBillingScreen }            from "./screens/AdminBilling"
-import { AdminStudiosScreen }           from "./screens/AdminStudios"
 import { AdminConsoleScreen }           from "./screens/AdminConsole"
-import { AdminMySettingsScreen }        from "./screens/AdminMySettings"
-import { AdminMyIntegrationsScreen }    from "./screens/AdminMyIntegrations"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -157,15 +149,7 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-chat-workflow-config",     label: "Chat Workflow Config",         description: "Conversational governance gates — 4-stage sequence (Intent → Classification → Data Sources → Systems) producing a governed workflow draft with node-vocabulary enforcement, SVG canvas view, and instrumentation panel", author: "Thomas", component: ChatWorkflowConfigScreen },
   { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", component: WorkflowsListScreen },
   { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", component: PeopleAccessMembersScreen },
-  { id: "proto-admin-audit-log",         label: "Admin — Audit Log",            description: "Workspace-level audit log: 50 events across 7 categories (Auth, Access, Members, Content, Agents, Integrations, Settings), right-panel event detail, filter by category/result/actor, search, and pagination", author: "Thomas", component: AdminAuditLogScreen },
-  { id: "proto-admin-security",          label: "Admin — Security",             description: "Security posture score, MFA policy (Off/Recommended/Required), SSO/SAML config, session timeout + device binding, IP allowlist management, and recent security alerts panel", author: "Thomas", component: AdminSecurityScreen },
-  { id: "proto-admin-overview",          label: "Admin — Overview",             description: "Admin console home: 4 KPI tiles (members, integrations, AI workers, security score), recent activity feed with category badges, needs-attention panel with dismissible action items, system status with latency, and monthly usage bars", author: "Thomas", component: AdminOverviewScreen },
-  { id: "proto-admin-integrations",      label: "Admin — Integrations",         description: "Connected integrations split-view with Operate panel (overview, sync history, credentials tabs), integration catalog with 16 items filterable by category, error badges, and re-auth flow", author: "Thomas", component: AdminIntegrationsScreen },
-  { id: "proto-admin-billing",           label: "Admin — Billing",              description: "Enterprise billing: plan card ($12,400/mo, 50 seats), usage bars for tokens/workers/models/sandboxes, invoice history table with download, payment method, monthly cost breakdown, and seat allocation grid", author: "Thomas", component: AdminBillingScreen },
-  { id: "proto-admin-my-settings",       label: "Admin — My Settings",          description: "Personal settings: profile (name, title, timezone), email notification preferences, personal API token management, and active session list with sign-out", author: "Thomas", component: AdminMySettingsScreen },
-  { id: "proto-admin-my-integrations",  label: "Admin — My Integrations",      description: "User's integration request tracker: submit requests with justification and urgency, track pending/approved/rejected status, respond to reviewer info requests", author: "Thomas", component: AdminMyIntegrationsScreen },
   { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", component: AdminConsoleScreen },
-  { id: "proto-admin-studios",          label: "Admin — Studios",              description: "Studio management: 3 studios (Governance, Data Studio, Agentic) with access control by group and role, per-studio settings toggles, usage stats, and split-view detail panel", author: "Thomas", component: AdminStudiosScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
