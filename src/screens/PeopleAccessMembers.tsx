@@ -1997,8 +1997,9 @@ function InviteModal({ onClose, onSend }: {
   const [emails, setEmails]         = useState<string[]>([])
   const [role, setRole]             = useState<MemberRole>("Member")
   const [note, setNote]             = useState("")
-  const [permOverrides, setPermOverrides] = useState<Record<string, { state: PermState; scope: string }>>({})
-  const [previewStudio, setPreviewStudio] = useState("governance")
+  const [permOverrides, setPermOverrides]   = useState<Record<string, { state: PermState; scope: string }>>({})
+  const [previewStudio, setPreviewStudio]   = useState("governance")
+  const [customAccess, setCustomAccess]     = useState(false)
 
   function addEmail() {
     const trimmed = emailInput.trim().toLowerCase()
@@ -2038,8 +2039,9 @@ function InviteModal({ onClose, onSend }: {
       display: "flex", alignItems: "center", justifyContent: "center",
     }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div style={{
-        width: 520, background: "var(--surface)", border: "1px solid var(--border)",
+        width: 780, maxHeight: "90vh", background: "var(--surface)", border: "1px solid var(--border)",
         borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",  // audit-ignore: prototype fixture data
+        display: "flex", flexDirection: "column",
       }}>
         {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -2094,7 +2096,7 @@ function InviteModal({ onClose, onSend }: {
         {step === 1 ? (
           /* ── Step 1: Details ── */
           <>
-            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18, overflowY: "auto", flex: 1 }}>
               {/* Email chips input */}
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
@@ -2188,34 +2190,168 @@ function InviteModal({ onClose, onSend }: {
                   }}
                 />
               </div>
+
+              {/* Custom access toggle */}
+              <div>
+                <button
+                  onClick={() => setCustomAccess(c => !c)}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "12px 16px", borderRadius: 10, cursor: "pointer", textAlign: "left",
+                    border: `1px solid ${customAccess ? "var(--primary)" : "var(--border)"}`,
+                    background: customAccess ? "color-mix(in srgb, var(--primary) 6%, transparent)" : "var(--surface-raised)",
+                    transition: "border-color 0.15s, background 0.15s",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                      background: customAccess ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface-raised)",
+                      border: `1px solid ${customAccess ? "var(--primary)" : "var(--border)"}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: customAccess ? "var(--primary)" : "var(--muted-foreground)",
+                    }}>
+                      <Icons.SlidersHorizontal size={15} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: customAccess ? "var(--primary)" : "var(--foreground)" }}>
+                        Customize permissions
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>
+                        Override specific permissions beyond the role defaults
+                      </div>
+                    </div>
+                  </div>
+                  {/* Toggle pill */}
+                  <div style={{
+                    width: 36, height: 20, borderRadius: 100, flexShrink: 0,
+                    background: customAccess ? "var(--primary)" : "var(--border)",
+                    position: "relative", transition: "background 0.2s",
+                  }}>
+                    <div style={{
+                      position: "absolute", top: 2, left: customAccess ? 18 : 2,
+                      width: 16, height: 16, borderRadius: "50%", background: "#fff",  // audit-ignore
+                      transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",  // audit-ignore
+                    }} />
+                  </div>
+                </button>
+
+                {/* Inline permission editor */}
+                {customAccess && (
+                  <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                    {/* Info banner */}
+                    <div style={{
+                      display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px",
+                      borderRadius: 8, background: "color-mix(in srgb, var(--primary) 8%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
+                    }}>
+                      <Icons.Info size={14} style={{ color: "var(--primary)", flexShrink: 0, marginTop: 1 }} />
+                      <div style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5 }}>
+                        The <strong>{role}</strong> role grants the permissions below.
+                        Click any row to add a direct override for this user.
+                      </div>
+                    </div>
+
+                    {/* Studio tabs */}
+                    <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border)" }}>
+                      {STUDIO_TABS.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => setPreviewStudio(t.id)}
+                          style={{
+                            padding: "6px 12px", fontSize: 12, fontWeight: 600,
+                            border: "none", background: "none", cursor: "pointer",
+                            color: previewStudio === t.id ? "var(--primary)" : "var(--muted-foreground)",
+                            borderBottom: previewStudio === t.id ? "2px solid var(--primary)" : "2px solid transparent",
+                            marginBottom: -1,
+                          }}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Legend */}
+                    <div style={{ display: "flex", gap: 12 }}>
+                      {([
+                        { state: "g-direct" as PermState, label: "Direct" },
+                        { state: "g-inh"    as PermState, label: "Via role" },
+                        { state: ""         as PermState, label: "None" },
+                      ] as const).map(l => (
+                        <div key={l.state} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <PermIcon state={l.state} />
+                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l.label}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Permission tree */}
+                    <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", maxHeight: 240, overflowY: "auto" }}>
+                      {previewNodes.map(n => (
+                        <PermTreeNode
+                          key={n.id}
+                          node={n}
+                          depth={0}
+                          overrides={permOverrides}
+                          onOverride={(id, state, scope) => setPermOverrides(prev => ({ ...prev, [id]: { state, scope } }))}
+                        />
+                      ))}
+                    </div>
+
+                    {Object.keys(permOverrides).length > 0 && (
+                      <div style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600 }}>
+                        {Object.keys(permOverrides).length} permission override{Object.keys(permOverrides).length !== 1 ? "s" : ""} applied
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div style={{
               padding: "14px 24px", borderTop: "1px solid var(--border)",
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              background: "var(--surface-raised)",
+              background: "var(--surface-raised)", flexShrink: 0,
             }}>
               <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                 {emails.length + (emailInput.trim() ? 1 : 0)} recipient{(emails.length + (emailInput.trim() ? 1 : 0)) !== 1 ? "s" : ""}
+                {customAccess && Object.keys(permOverrides).length > 0 && (
+                  <span style={{ marginLeft: 8, color: "var(--badge-alert)", fontWeight: 600 }}>
+                    · {Object.keys(permOverrides).length} override{Object.keys(permOverrides).length !== 1 ? "s" : ""}
+                  </span>
+                )}
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-                <Button
-                  variant="main"
-                  size="sm"
-                  onClick={goNext}
-                  disabled={(emails.length + (emailInput.trim() ? 1 : 0)) === 0}
-                >
-                  Review permissions
-                  <Icons.ChevronRight size={13} style={{ marginLeft: 4 }} />
-                </Button>
+                {customAccess ? (
+                  <Button
+                    variant="main"
+                    size="sm"
+                    onClick={submit}
+                    disabled={(emails.length + (emailInput.trim() ? 1 : 0)) === 0}
+                  >
+                    Send {(emails.length + (emailInput.trim() ? 1 : 0)) > 1
+                      ? `${emails.length + (emailInput.trim() ? 1 : 0)} invitations`
+                      : "invitation"}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="main"
+                    size="sm"
+                    onClick={goNext}
+                    disabled={(emails.length + (emailInput.trim() ? 1 : 0)) === 0}
+                  >
+                    Review permissions
+                    <Icons.ChevronRight size={13} style={{ marginLeft: 4 }} />
+                  </Button>
+                )}
               </div>
             </div>
           </>
         ) : (
           /* ── Step 2: Permission preview ── */
           <>
-            <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", flex: 1 }}>
               {/* Context banner */}
               <div style={{
                 display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px",
@@ -2285,7 +2421,7 @@ function InviteModal({ onClose, onSend }: {
             <div style={{
               padding: "14px 24px", borderTop: "1px solid var(--border)",
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              background: "var(--surface-raised)",
+              background: "var(--surface-raised)", flexShrink: 0,
             }}>
               <Button variant="secondary" size="sm" onClick={() => setStep(1)}>
                 <Icons.ChevronLeft size={13} style={{ marginRight: 4 }} />
