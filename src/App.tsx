@@ -15769,7 +15769,7 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
     { label: "Trigger visible", note: "The new note hangs off this record — but no notes list exists on this view to hold an inline row instead.", content: frame() },
     { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record stays visible behind it.", content: frame(
       <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
-        <div className="flex flex-col gap-[16px] h-full">
+        <div className="flex flex-col gap-[16px] h-full pt-[92px]">
           <div>
             <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
             <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Attaches to Data Sync Worker.</p>
@@ -15897,7 +15897,7 @@ function pgSceneStagedSlideout(next: () => void, _back: () => void, _onClose: ()
     { label: "Trigger visible", note: "Two stages, no branching, contextual — attaches to this automation.", content: frame() },
     { label: "Surface open", note: "SlideOut with a lightweight step indicator, not a full Stepper — three or more stages, or any branching, is what earns a Stepper.", content: frame(
       <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
-        <div className="flex flex-col gap-[16px] h-full">
+        <div className="flex flex-col gap-[16px] h-full pt-[92px]">
           <div>
             <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New condition</span>
             <div className="flex items-center gap-[6px] mt-[6px]">
@@ -16009,7 +16009,7 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
     ) },
     { label: "Pre-filled form", note: "Fields remain after selection, so the cascade runs pre-filled with the source's values — SlideOut here, since it attaches to the Automations list.", content: frame(
       <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
-        <div className="flex flex-col gap-[16px] h-full">
+        <div className="flex flex-col gap-[16px] h-full pt-[92px]">
           <div>
             <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New automation</span>
             <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Started from the "Lead follow-up" template.</p>
