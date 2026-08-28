@@ -5,7 +5,6 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { Tabs }         from "@/components/ui/tabs"
-import { SlideOut }    from "@/components/ui/slide-out"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -162,9 +161,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
   )
 }
 
-// ─── Operate panel ────────────────────────────────────────────────────────────
+// ─── Detail page ──────────────────────────────────────────────────────────────
 
-function StudioPanel({ studio }: { studio: Studio }) {
+function StudioDetailPage({ studio }: { studio: Studio }) {
   const [tab, setTab]       = useState("access")
   const [groups, setGroups] = useState<GroupAccess[]>(studio.groups)
   const [toggles, setToggles] = useState<StudioToggle[]>(studio.settings)
@@ -182,20 +181,39 @@ function StudioPanel({ studio }: { studio: Studio }) {
     none:    "var(--muted-foreground)",
   }
 
+  const IC = Icons[studio.icon as keyof typeof Icons] as React.ElementType
+
   return (
-    <>
-      {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, padding: "12px 20px", borderBottom: "1px solid var(--border)" }}>
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {/* Identity + stats row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 11, flexShrink: 0,
+          background: `${studio.accentColor}18`, border: `1px solid ${studio.accentColor}30`,
+          display: "flex", alignItems: "center", justifyContent: "center", color: studio.accentColor,
+        }}>
+          {IC ? <IC size={22} /> : null}
+        </div>
+        <div style={{ flex: 1, fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
+          {studio.description}
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 24 }}>
         {studio.stats.map(s => (
-          <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 10px", textAlign: "center" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: studio.accentColor }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1 }}>{s.label}</div>
+          <div key={s.label} style={{
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10,
+            padding: "12px 14px", textAlign: "center",
+          }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: studio.accentColor }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: "0 20px", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ marginBottom: 20 }}>
         <Tabs
           items={[
             { id: "access",   label: "Access"   },
@@ -207,14 +225,15 @@ function StudioPanel({ studio }: { studio: Studio }) {
         />
       </div>
 
-      {/* Body */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-        {tab === "access" && (
-          <>
-            {/* Groups */}
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 8 }}>Groups</div>
+      {/* Tab body */}
+      {tab === "access" && (
+        <>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 24 }}>
+            <div style={{ padding: "8px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)" }}>Groups</span>
+            </div>
             {groups.map((g, i) => (
-              <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < groups.length - 1 ? "1px solid var(--border)" : "none" }}>
+              <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderBottom: i < groups.length - 1 ? "1px solid var(--border)" : "none" }}>
                 <div style={{
                   width: 30, height: 30, borderRadius: 7, flexShrink: 0,
                   background: g.access ? `${studio.accentColor}18` : "var(--surface-raised)",
@@ -231,11 +250,14 @@ function StudioPanel({ studio }: { studio: Studio }) {
                 <Toggle checked={g.access} onChange={() => flipGroup(g.id)} />
               </div>
             ))}
+          </div>
 
-            {/* Roles */}
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", margin: "20px 0 8px" }}>Roles</div>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 20 }}>
+            <div style={{ padding: "8px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)" }}>Roles</span>
+            </div>
             {studio.roles.map((r, i) => (
-              <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < studio.roles.length - 1 ? "1px solid var(--border)" : "none" }}>
+              <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderBottom: i < studio.roles.length - 1 ? "1px solid var(--border)" : "none" }}>
                 <span style={{ flex: 1, fontSize: 13, color: "var(--foreground)" }}>{r.name}</span>
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100,
@@ -246,17 +268,17 @@ function StudioPanel({ studio }: { studio: Studio }) {
                 </span>
               </div>
             ))}
+          </div>
 
-            <div style={{ marginTop: 16 }}>
-              <Button variant="secondary" size="sm">Save access changes</Button>
-            </div>
-          </>
-        )}
+          <div><Button variant="secondary" size="sm">Save access changes</Button></div>
+        </>
+      )}
 
-        {tab === "settings" && (
-          <>
+      {tab === "settings" && (
+        <>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 20 }}>
             {toggles.map((t, i) => (
-              <div key={t.id} style={{ padding: "12px 0", borderBottom: i < toggles.length - 1 ? "1px solid var(--border)" : "none", display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <div key={t.id} style={{ padding: "14px 16px", borderBottom: i < toggles.length - 1 ? "1px solid var(--border)" : "none", display: "flex", alignItems: "flex-start", gap: 14 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 3 }}>{t.label}</div>
                   <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.4 }}>{t.description}</div>
@@ -266,13 +288,11 @@ function StudioPanel({ studio }: { studio: Studio }) {
                 </div>
               </div>
             ))}
-            <div style={{ marginTop: 16 }}>
-              <Button variant="main" size="sm">Save settings</Button>
-            </div>
-          </>
-        )}
-      </div>
-    </>
+          </div>
+          <div><Button variant="main" size="sm">Save settings</Button></div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -352,7 +372,7 @@ function StudioCard({ studio, selected, onClick }: {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
-  const [selected, setSelected] = useState<Studio | null>(STUDIOS[0])
+  const [detailView, setDetailView] = useState<Studio | null>(null)
 
   return (
     <ScreenLayout
@@ -362,7 +382,25 @@ export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) =
       sidebarItems={SIDEBAR}
       activeSidebarId="studios"
       onSidebarItemClick={onNavigate}
-      header={(isScrolled) => (
+      header={(isScrolled) => detailView ? (
+        <Header
+          size={isScrolled ? "compress" : "size-m"}
+          title={detailView.name}
+          description="Studios"
+          onBack={() => setDetailView(null)}
+          primaryAction={
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button variant="secondary" size="sm">
+                <Icons.Settings size={14} style={{ marginRight: 4 }} />
+                Configure
+              </Button>
+              <Button variant={detailView.status === "active" ? "secondary" : "main"} size="sm">
+                {detailView.status === "active" ? "Disable studio" : "Enable studio"}
+              </Button>
+            </div>
+          }
+        />
+      ) : (
         <Header
           size={isScrolled ? "compress" : "size-l"}
           title="Studios"
@@ -370,10 +408,14 @@ export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) =
         />
       )}
     >
-      <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-        {/* Studio list */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* List header */}
+      {/* Detail page */}
+      {detailView && (
+        <StudioDetailPage key={detailView.id} studio={detailView} />
+      )}
+
+      {/* Studio list */}
+      {!detailView && (
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
           <div style={{
             padding: "12px 20px", borderBottom: "1px solid var(--border)",
             background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -387,22 +429,12 @@ export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) =
             <StudioCard
               key={studio.id}
               studio={studio}
-              selected={selected?.id === studio.id}
-              onClick={() => setSelected(prev => prev?.id === studio.id ? null : studio)}
+              selected={false}
+              onClick={() => setDetailView(studio)}
             />
           ))}
         </div>
-
-      </div>
-
-      <SlideOut
-        open={selected !== null}
-        onClose={() => setSelected(null)}
-        title={selected?.name ?? ""}
-        subtitle={selected?.description ?? ""}
-      >
-        {selected && <StudioPanel key={selected.id} studio={selected} />}
-      </SlideOut>
+      )}
     </ScreenLayout>
   )
 }
