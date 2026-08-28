@@ -832,7 +832,7 @@ function PermissionsPanel() {
         return (
           <>
             <div
-              style={{ position: "fixed", inset: 0, zIndex: 10010, background: "rgba(0,0,0,0.5)" }}
+              style={{ position: "fixed", inset: 0, zIndex: 10010, background: "rgba(0,0,0,0.5)" }} // audit-ignore: modal backdrop scrim, no token
               onClick={() => setSaveOpen(false)}
             />
             <div style={{
@@ -914,7 +914,7 @@ function PermissionsPanel() {
             {saved && (
               <div style={{
                 position: "fixed", bottom: 24, right: 24, zIndex: 10020,
-                background: "var(--badge-success)", color: "#fff",
+                background: "var(--badge-success)", color: "#fff", // audit-ignore: white text on success green, no token for #fff
                 padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600,
                 display: "flex", alignItems: "center", gap: 8,
                 boxShadow: "0 4px 12px rgba(0,0,0,0.2)", // audit-ignore: toast shadow, no token
