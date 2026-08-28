@@ -415,13 +415,15 @@ The test that decides it: **can the user ignore this and keep working in the bac
 
 | Step | Test | Yes | No |
 | --- | --- | --- | --- |
-| 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | Dedicated view | → 2 |
-| 2 | Does the flow branch, or does it have 3+ stages? | Dedicated view + `Stepper` + `StepperNavFooter` | → 3 |
+| 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | Hand-off — the object has its own creation section; Create just navigates there, nothing else is specified | → 2 |
+| 2 | Does the flow branch, or does it have 3+ stages? | Full-page wizard + `Stepper` + `StepperNavFooter` | → 3 |
 | 3 | Can the object be created from a single field, AND is a list of the same object type visible on screen? | Inline create row — `DS-GAP`, does not exist in this repo yet | → 4 |
 | 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | `SlideOut type="full-slot"` | → 5 |
-| 5 | More than 5 fields? | Dedicated view | `ModalDialog variant="content"` |
+| 5 | More than 5 fields? | Full-page create form | `ModalDialog variant="content"` |
 
-Steps 4–5, stated as one rule: **contextual** (the new object hangs off something on screen) → `SlideOut type="full-slot"`. **Standalone** (nothing on screen is its parent) → `ModalDialog variant="content"` at 5 fields or fewer, dedicated view above that. The 5-field threshold applies ONLY here (standalone, modal-bound) — never to a `SlideOut`, which grows with its content instead.
+Step 1 is a hand-off, not a surface choice — once the object declares it owns a workspace, Create's job ends at navigating there. Nothing about confirmation, landing, or the surface itself is specified past that point; the object's own creation section owns all of it.
+
+Steps 4–5, stated as one rule: **contextual** (the new object hangs off something on screen) → `SlideOut type="full-slot"`. **Standalone** (nothing on screen is its parent) → `ModalDialog variant="content"` at 5 fields or fewer, a full-page create form above that. The 5-field threshold applies ONLY here (standalone, modal-bound) — never to a `SlideOut`, which grows with its content instead.
 
 **Staged flows — where the line sits.**
 
@@ -429,8 +431,8 @@ Steps 4–5, stated as one rule: **contextual** (the new object hangs off someth
 | --- | --- |
 | One stage | `SlideOut` |
 | Two stages, no branching | `SlideOut`, optionally with a lightweight step indicator |
-| Three or more stages | Dedicated view + `Stepper` + `StepperNavFooter` |
-| Any branching, at any stage count | Dedicated view + `Stepper` + `StepperNavFooter` |
+| Three or more stages | Full-page wizard + `Stepper` + `StepperNavFooter` |
+| Any branching, at any stage count | Full-page wizard + `Stepper` + `StepperNavFooter` |
 
 `StepperNavFooter` is a page-level component — it never appears inside a `SlideOut`.
 
