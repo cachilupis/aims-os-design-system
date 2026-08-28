@@ -489,6 +489,11 @@ function PermTreeNode({
               {grantedChildren} of {node.children?.length} permissions granted
             </div>
           )}
+          {!hasChildren && node.desc && (
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1, lineHeight: 1.4 }}>
+              {node.desc}
+            </div>
+          )}
         </div>
 
         {/* Scope dropdown — shown when directly granted */}
