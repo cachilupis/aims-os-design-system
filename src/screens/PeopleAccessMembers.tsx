@@ -10,6 +10,7 @@ import { Chip }         from "@/components/ui/chip"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { ModalDialog }  from "@/components/ui/modal-dialog"
 import { Textarea }     from "@/components/ui/textarea"
+import { CardContainer } from "@/components/ui/card-container"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -1841,23 +1842,12 @@ function MemberRow({ member, onSelect }: { member: Member; onSelect: (m: Member)
 // ─── Role card ────────────────────────────────────────────────────────────────
 
 function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void }) {
-  const [hovered, setHovered] = useState(false)
   const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const visible = members.slice(0, 5)
   const overflow = members.length - visible.length
 
   return (
-    <div
-      onClick={() => onSelect(role)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
-        background: hovered ? "var(--accent)" : "var(--surface)",
-        cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
-        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",  // audit-ignore: prototype fixture data
-      }}
-    >
+    <CardContainer size="sm" className="!p-0 overflow-hidden" onClick={() => onSelect(role)}>
       <div style={{ height: 5, background: role.color }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -1905,39 +1895,25 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
             {members.length} member{members.length !== 1 ? "s" : ""}
           </span>
           <div style={{ marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => onSelect(role)}
-              style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}
-            >
+            <Button variant="secondary" size="sm" onClick={() => onSelect(role)}>
               {role.system ? "View" : "Edit"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </CardContainer>
   )
 }
 
 // ─── Group card ───────────────────────────────────────────────────────────────
 
 function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => void }) {
-  const [hovered, setHovered] = useState(false)
   const members = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const visible = members.slice(0, 5)
   const overflow = members.length - visible.length
 
   return (
-    <div
-      onClick={() => onSelect(group)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
-        background: hovered ? "var(--accent)" : "var(--surface)",
-        cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
-        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",  // audit-ignore: prototype fixture data
-      }}
-    >
+    <CardContainer size="sm" className="!p-0 overflow-hidden" onClick={() => onSelect(group)}>
       <div style={{ height: 5, background: group.color }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
@@ -1989,16 +1965,13 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
             {members.length} member{members.length !== 1 ? "s" : ""}
           </span>
           <div style={{ marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => onSelect(group)}
-              style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}
-            >
+            <Button variant="secondary" size="sm" onClick={() => onSelect(group)}>
               Manage
-            </button>
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </CardContainer>
   )
 }
 
