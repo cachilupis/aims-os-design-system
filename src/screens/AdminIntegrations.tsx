@@ -1093,6 +1093,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
   const [detailView, setDetailView] = useState<Integration | null>(null)
   const [query, setQuery]     = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | IntegrationStatus>("all")
+  const [openSlot, setOpenSlot] = useState<string | null>(null)
   const [page, setPage]       = useState(1)
   const [pageSize, setPageSize] = useState(5)
 
@@ -1244,24 +1245,52 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
 
       {!detailView && tab === "connected" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <Filters
-            showSearch
-            searchPlaceholder="Search connected integrations…"
-            searchValue={query}
-            onSearchChange={q => { setQuery(q); setPage(1) }}
-            slots={[
-              {
-                placeholder: "Status",
-                value: statusFilter !== "all" ? INT_STATE_LABEL[statusFilter as IntegrationStatus] : undefined,
-                onRemove: () => { setStatusFilter("all"); setPage(1) },
-              },
-            ]}
-            showClearFilters={statusFilter !== "all"}
-            onClearFilters={() => { setStatusFilter("all"); setPage(1) }}
-            showAllFilters={false}
-            showSort={false}
-            showViewToggle={false}
-          />
+          <div style={{ position: "relative" }}>
+            <Filters
+              showSearch
+              searchPlaceholder="Search connected integrations…"
+              searchValue={query}
+              onSearchChange={q => { setQuery(q); setPage(1) }}
+              slots={[
+                {
+                  placeholder: "Status",
+                  value: statusFilter !== "all" ? INT_STATE_LABEL[statusFilter as IntegrationStatus] : undefined,
+                  onOpen:   () => setOpenSlot(s => s === "status" ? null : "status"),
+                  onRemove: () => { setStatusFilter("all"); setPage(1) },
+                },
+              ]}
+              showClearFilters={statusFilter !== "all"}
+              onClearFilters={() => { setStatusFilter("all"); setPage(1) }}
+              showAllFilters={false}
+              showSort={false}
+              showViewToggle={false}
+            />
+            {openSlot === "status" && (
+              <div
+                style={{
+                  position: "absolute", top: 44, left: 210, zIndex: 200,
+                  background: "var(--surface)", border: "1px solid var(--border)",
+                  borderRadius: 10, overflow: "hidden", minWidth: 160,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
+                }}
+              >
+                {(["all", "active", "error", "paused", "pending"] as const).map(v => (
+                  <button
+                    key={v}
+                    onClick={() => { setStatusFilter(v); setPage(1); setOpenSlot(null) }}
+                    style={{
+                      display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
+                      fontSize: 13, border: "none", cursor: "pointer",
+                      color: statusFilter === v ? "var(--primary)" : "var(--foreground)",
+                      background: statusFilter === v ? "var(--accent)" : "var(--surface)",
+                    }}
+                  >
+                    {v === "all" ? "All statuses" : INT_STATE_LABEL[v]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {filtered.length === 0 ? (
             <div style={{ padding: "48px 0", textAlign: "center", color: "var(--muted-foreground)" }}>
