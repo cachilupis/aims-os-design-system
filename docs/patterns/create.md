@@ -1,17 +1,17 @@
 # Pattern — Create
 
 > Single source of truth for how any create action picks its surface in AIMS OS.
-> Everything else — the `CLAUDE.md` table, the `patterns-create` doc page, the Examples gallery and preview scenes — is derived from this file.
+> Everything else — the `CLAUDE.md` table, the `patterns-create` doc page, the playground screens — is derived from this file.
 >
-> Status: **draft v0.3 — pending validation**
+> Status: **draft v0.7 — pending validation**
 >
 > v0.2 — volume threshold removed; step 1 rewritten as a declared property rather than an enumerated list.
 > v0.3 — cascade rewritten as an explicit sequence; the two-stage flow named instead of falling through to the default.
 > v0.4 — third create mode added (from a source / catalogue); §2b defines the jobs a modal holds in Create.
 > v0.5 — contextual vs standalone split added as steps 4 and 5; a modal is now a first-class create form container. Reconciliation mapped against the seven findings in `create-audit.md`.
-> v0.6 — `SlideOut type="default"` corrected to `type="full-slot"` throughout — `"default"` was never a real value on the component (checked directly against `slide-out.tsx`: the only two are `"with-variants"` and `"full-slot"`).
-> v0.7 — Step 1 changed from a surface choice to a hand-off: once the object declares it owns a workspace, Create's job is to navigate to the object's own creation section and nothing past that is specified. "Dedicated view" is retired as an umbrella term — step 2's outcome is now named **Full-page wizard**, step 5's is now named **Full-page create form**. They are different surfaces built for different reasons (flow shape vs. field count) and were never the same thing.
-> v0.8 — Case 6b corrected: a list of the same object type on screen is not a parent, so a catalogue selection that leaves fields remaining is standalone, not contextual — it resolves at step 5 (`ModalDialog`), not step 4 (`SlideOut`). §5's landing table gained the `ModalDialog variant="content"` row it was missing: closes, back to the list, new object appears there.
+> v0.6 — `SlideOut type` corrected to `full-slot` after verifying against the component source; landing defined for the standalone modal and the catalogue modal.
+> v0.7 — step 1 reframed as a hand-off rather than a surface; "dedicated view" split into the two distinct outputs it was conflating.
+> v0.8 — Case 6b corrected: a list of the same object type on screen is not a parent, so a catalogue selection that leaves fields remaining is standalone, not contextual — it resolves at step 5 (`ModalDialog`), not step 4 (`SlideOut`). The row in §7 had not been updated to match §5's own landing rule for the standalone modal; corrected here, matching `create-examples.md`'s scene F.
 
 ---
 
@@ -105,12 +105,10 @@ This also satisfies NN/g's constraint that a modal must not host a decision requ
 
 **This is a sequence, not a lookup table.** Start at 1. On a yes, stop and take that surface. On a no, go to the next step. A case never evaluates two tests as equally applicable, because it never reaches the second one.
 
-**Step 1 is a hand-off, not a surface choice.** Once the object type declares it owns a workspace, this pattern's job is done: Create navigates to that object's own creation section, and nothing past that — not the surface, not confirmation, not landing — is specified here. The object's own creation section owns all of it.
-
 | Step | Test | Yes | No |
 | --- | --- | --- | --- |
-| 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | **Hand-off** — navigates to the object's own creation section; nothing else is specified | → 2 |
-| 2 | Does the flow branch, or does it have three or more stages? | **Full-page wizard + `Stepper` + `StepperNavFooter`** | → 3 |
+| 1 | Does the object type declare a creation section of its own — a builder, canvas, or specialised editor? | **Hand off — navigate there** | → 2 |
+| 2 | Does the flow branch, or does it have three or more stages? | **Full-page wizard — `Stepper` + `StepperNavFooter`** | → 3 |
 | 3 | Can the object be created from a single field, *and* is a list of the same object type visible on screen? | **Inline create row** ⚠️ `DS-GAP` | → 4 |
 | 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | **`SlideOut type="full-slot"`** | → 5 |
 | 5 | More than five fields? | **Full-page create form** | **`ModalDialog variant="content"`** |
@@ -128,7 +126,7 @@ This is the split that decides between a panel and a modal, and it is the one mo
 
 **Why the five-field threshold lives here and nowhere else.** A `SlideOut` grows — 350px → 450px → half screen → full screen — so no volume rule is needed on the contextual side. A modal does not grow: it is capped at 900px and can only scroll. The design system's existing rule — *"don't open a ModalDialog for forms with more than 5 fields — the user needs room"* — was written about modals, and step 5 is the only place it applies. Used anywhere else, it is a number borrowed from a problem it was not measuring.
 
-A standalone create that exceeds five fields is not a modal that needs to be bigger. It is a full-page create form.
+A standalone create that exceeds five fields is not a modal that needs to be bigger. It is a dedicated view.
 
 ### Staged flows: where the line sits
 
@@ -138,10 +136,23 @@ A create with **exactly two stages and no branching** resolves to step 4 — a `
 | --- | --- |
 | One stage | `SlideOut` |
 | Two stages, no branching | `SlideOut`, optionally with a lightweight step indicator |
-| Three or more stages | Full-page wizard + `Stepper` + `StepperNavFooter` |
-| Any branching, at any stage count | Full-page wizard + `Stepper` + `StepperNavFooter` |
+| Three or more stages | Dedicated view + `Stepper` + `StepperNavFooter` |
+| Any branching, at any stage count | Dedicated view + `Stepper` + `StepperNavFooter` |
 
 `StepperNavFooter` is a page-level component. It never appears inside a `SlideOut`.
+
+### Step 1 is a hand-off, not a surface
+
+Step 1 does not specify a screen. Some objects — a workflow, an agent — are built in a section of their own, and the only behaviour this pattern defines for them is **the trigger navigates there**. What that section looks like belongs to that section, not to Create.
+
+This matters because "dedicated view" previously named two different outputs. They are not the same thing:
+
+| Output | Who specifies it |
+| --- | --- |
+| Step 1 — the object's own creation section | That section. Create hands off and stops. |
+| Steps 2 and 5 — full-page wizard, full-page create form | This pattern. `ScreenLayout` + `Header` CTAs, plus `StepperNavFooter` when staged. |
+
+A case that resolves at step 1 needs no example and no preview. The rule is one sentence long.
 
 ### Test 1 is a declared property, not a list
 
@@ -207,12 +218,10 @@ Derived from the container. Not a separate decision.
 | --- | --- |
 | Inline create row | Stays in place. The new row appears in the list, ready to create the next one. |
 | `SlideOut` | Closes. The user returns to where they were; the new object appears in context. |
-| `ModalDialog variant="content"` | Closes. The user returns to the list; the new object appears there. |
-| Full-page create form | Navigates to the created object. |
-| Full-page wizard | Navigates to the created object. |
+| `ModalDialog` — standalone create | Closes. The user returns to the list they triggered it from; the new object appears there. It does not navigate away — a standalone create of five fields or fewer is short enough that a user often makes several in a row. |
+| Full-page create form / wizard | Navigates to the created object. |
+| Catalogue modal — source fully defines the object | Closes. Lands as the surface it would have used had the fields been filled by hand. |
 | Assisted create | Success modal → view the object, or create another. |
-
-Step 1's hand-off is not in this table — landing for an object that owns its own workspace is decided by that object's own creation section, not by this pattern.
 
 ---
 
@@ -240,12 +249,12 @@ Create is **always contextual** in v1. There is no global create affordance.
 | 2b | Create an entity record from its own list view, 9 fields | Step 5 | Full-page create form |
 | 2c | Create a secondary entity from inside its parent's profile | Step 4 | `SlideOut` |
 | 2d | Create an entity record, two stages, no branching, contextual | Step 4 | `SlideOut` with step indicator |
-| 3 | Create a governance policy | Step 2 | Full-page wizard + `Stepper`, **+ confirmation** |
-| 4 | Create a workflow | Step 1 | Hand-off → the workflow builder owns everything past this point |
-| 4b | Create an agent | Step 1 | Hand-off → the agent's own workspace owns everything past this point |
+| 3 | Create a governance policy | Step 2 | Full-page wizard, **+ confirmation** |
+| 4 | Create a workflow | Step 1 | Hand-off — navigate to the workflow builder. Nothing further specified. |
+| 4b | Create an agent | Step 1 | Hand-off — navigate to the agent section. Nothing further specified. |
 | 5 | Add a node to the canvas | **Gate 0** | Rejected — this is Configure |
 | 6 | Add a template from the marketplace, template fully defines the object | Gate 1 — from a source | `ModalDialog variant="content"` → created |
-| 6b | Add a template from the marketplace, fields remain | Gate 1 → Step 5 | Catalogue modal → `ModalDialog` pre-filled |
+| 6b | Add a template from the marketplace, fields remain | Gate 1 → Step 5 | Catalogue modal → `ModalDialog` pre-filled — a list of the same object type on screen is not a parent, so this is standalone, not contextual |
 | 7 | Create with AI | Gate 1 — assisted | Chat `ModalDialog` → success modal |
 
 All five resolve. No exception required.
@@ -260,7 +269,7 @@ Cases 1a and 1b resolve differently on purpose: the surface follows the entry po
 | --- | --- |
 | Full-page create form | Exists — `ScreenLayout` + `Header` composition |
 | Full-page wizard | Exists — `Stepper` + `StepperNavFooter` |
-| `SlideOut` | Exists. A create panel uses `type="full-slot"` — no entity header, no filters layout. This closes an open gap: no existing source stated which `type` a create flow should use. |
+| `SlideOut` | Exists. A create panel uses `type="full-slot"` — a blank slot with no pre-built entity anatomy. Verified against the component, which accepts only `"with-variants"` and `"full-slot"`. |
 | `ModalDialog variant="confirmation"` | Exists |
 | `ModalDialog variant="content"` — catalogue slot, 900px max-width | Exists. The `slot` prop already accepts arbitrary content; the catalogue itself is composed inside it. |
 | **Inline create row** | **Does not exist → build in `experimental/`** |
@@ -324,9 +333,17 @@ The audit in `docs/patterns/create-audit.md` found seven conflicts across four s
 | C4 — three separately maintained copies of "modal vs SlideOut" | §2b becomes the single statement for Create. The other copies get pointers. |
 | C5 — no rule covers 6–8 field, single-step, non-destructive forms | Step 5. Standalone and over five fields is a dedicated view. |
 | C6 — no source separates create from edit | This document. Create is now its own axis. |
-| C7 — no stated `SlideOut.type` for a create flow | §8. `type="full-slot"`. |
+| C7 — no stated `SlideOut.type` for a create flow | §8. `type="full-slot"`, verified against the component source. |
 
 **Not yet audited.** `patterns-slideout` and `patterns-panel-content` were outside the audit's scope but are likely to restate surface rules. They need the same pass before this rule ships.
+
+### C8 — documentation describes a `SlideOut` API the component does not have
+
+Found while implementing the playground. `CLAUDE.md`'s panel guidance documents three `SlideOut` `type` values — `"with-variants"`, `"filters"`, `"default"`. The component accepts **two**: `"with-variants"` and `"full-slot"`. Two of the three documented values do not exist.
+
+This predates this pattern; an earlier draft of this rule inherited the error and specified `type="default"`. Corrected here to `type="full-slot"`, verified against `src/components/ui/slide-out.tsx`.
+
+`CLAUDE.md` needs the same correction, and it is worth asking how a prop table drifted this far from its component — a doc that describes an API that does not compile is worse than no doc, because it is confidently wrong.
 
 ### Page-level actions
 

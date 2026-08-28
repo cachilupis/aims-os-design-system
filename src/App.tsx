@@ -15637,11 +15637,10 @@ const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>
 // pattern; keep the two in sync when the rule changes. The audit that fed
 // that rule lives in docs/patterns/create-audit.md.
 
-// ── Create examples gallery — 6 previewable scenes, each a 3-step tour ──────
-// (start with the trigger visible → the surface open → where the user lands)
-// matching the 6 previewable rows in create.md §7's gallery. The catalogue
-// scene is 4 steps because its own surface is genuinely two screens — a
-// selection modal, then the pre-filled form — not a simplification.
+// ── Create examples gallery — 6 previewable scenes, built from
+// docs/create-examples.md §2. Tours are 3 or 4 steps depending on whether
+// the scene's own surface is genuinely more than one screen (a two-stage
+// SlideOut, a wizard's confirmation, the catalogue's two sequential modals).
 
 const PG_CTX_TOPBAR_ACTIONS: TopbarAction[] = [
   { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
@@ -15675,11 +15674,19 @@ const PG_CTX_USERS: EntityListItemData[] = [
   { id: "u3", title: "Jordan Lee", iconVariant: "neutral", iconName: "User", primaryMeta: [{ iconName: "Shield", label: "Viewer" }], state: { label: "Invited", variant: "neutral" }, timestamp: "Invited 3d ago" },
 ]
 
+const PG_CTX_POLICIES: EntityListItemData[] = [
+  { id: "p1", title: "Data Access Policy", iconVariant: "info", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 2w ago" },
+  { id: "p2", title: "Retention Policy", iconVariant: "purple", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 1mo ago" },
+  { id: "p3", title: "Export Approval Policy", iconVariant: "info", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 3mo ago" },
+  { id: "p4", title: "Vendor Access Policy", iconVariant: "yellow", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 4mo ago" },
+  { id: "p5", title: "API Rate Limit Policy", iconVariant: "neutral", iconName: "ShieldCheck", state: { label: "Draft", variant: "neutral" }, timestamp: "Never published" },
+  { id: "p6", title: "Third-Party Sharing Policy", iconVariant: "neutral", iconName: "ShieldCheck", state: { label: "Draft", variant: "neutral" }, timestamp: "Never published" },
+]
+
 const PG_CTX_TEMPLATES: { id: string; name: string; desc: string }[] = [
   { id: "t1", name: "Lead follow-up", desc: "Sends a follow-up email 24h after a new lead is created." },
   { id: "t2", name: "Invoice reminder", desc: "Notifies the account owner when an invoice is 7 days overdue." },
   { id: "t3", name: "Weekly digest", desc: "Compiles workspace activity into a Friday summary email." },
-  { id: "t4", name: "Blank automation", desc: "Start from scratch — no pre-filled fields." },
 ]
 
 function PgRunRow({ status, time }: { status: "success" | "error"; time: string }) {
@@ -15689,6 +15696,18 @@ function PgRunRow({ status, time }: { status: "success" | "error"; time: string 
         <Tag variant={status === "success" ? "success" : "error"} size="sm">{status === "success" ? "Success" : "Failed"}</Tag>
       </div>
       <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{time}</span>
+    </div>
+  )
+}
+
+function PgNoteRow({ author, time, text }: { author: string; time: string; text: string }) {
+  return (
+    <div className="rounded-[8px] p-[10px]" style={{ border: "0.5px solid var(--field-border)" }}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{author}</span>
+        <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{time}</span>
+      </div>
+      <p className="text-[11px] mt-[3px]" style={{ color: "var(--field-supporting)" }}>{text}</p>
     </div>
   )
 }
@@ -15739,11 +15758,11 @@ type PgPreviewCaseId = "contextual-slideout" | "standalone-modal" | "standalone-
 
 // Section 1 · "no list on screen" → SlideOut attaches to the record
 function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose: () => void): PgTourStepDef[] {
-  const frame = (overlay?: React.ReactNode, success?: boolean) => (
+  const frame = (overlay?: React.ReactNode, showNotes?: boolean) => (
     <PgCreateContextShell sidebarId="agents" overlay={overlay}>
       <main className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Data Sync Worker" description="Worker · Active" backButton size="size-l"
-          primaryAction={<Button variant="primary" size="sm" onClick={next}>Add note</Button>} />
+        <Header title="Data Sync Worker" description="Worker · Active" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l"
+          primaryAction={<Button variant="main" size="sm" onClick={next}>Add note</Button>} />
         <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
           <div className="grid grid-cols-[1fr_330px] gap-[20px] items-start max-w-[1040px]">
             <div className="flex flex-col gap-[12px]">
@@ -15751,7 +15770,13 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
                 <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
                 <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Syncs contact records between the CRM and the billing system every 15 minutes.</p>
               </div>
-              {success && <InformativeCard state="success" size="sm" title="Note added" description="Attached to Data Sync Worker — visible from the Notes tab." />}
+              {showNotes && (
+                <WidgetFather title="Notes" widthClass="wide" showMenu>
+                  <div className="flex flex-col gap-[8px]">
+                    <PgNoteRow author="You" time="Just now" text="Bumped the retry limit to 5 after last week's timeout." />
+                  </div>
+                </WidgetFather>
+              )}
             </div>
             <WidgetFather title="Recent Runs" widthClass="narrow" showRefresh showMenu>
               <div className="flex flex-col gap-[8px]">
@@ -15767,13 +15792,10 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
   )
   return [
     { label: "Trigger visible", note: "The new note hangs off this record — but no notes list exists on this view to hold an inline row instead.", content: frame() },
-    { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record stays visible behind it.", content: frame(
+    { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record stays visible behind it — that visibility is the whole point of this step.", content: frame(
       <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
         <div className="flex flex-col gap-[16px] h-full">
-          <div>
-            <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
-            <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>Attaches to Data Sync Worker.</p>
-          </div>
+          <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
           <Textarea placeholder="Write a note…" />
           <div className="flex-1" />
           <div className="flex justify-end gap-[8px]">
@@ -15783,7 +15805,7 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
         </div>
       </SlideOut>
     ) },
-    { label: "Landing", note: "Closes. The user returns to where they were — the note now exists on this record, in context.", content: frame(undefined, true) },
+    { label: "Landing", note: "Closes. The user returns to where they were; the new note now appears in a Notes widget.", content: frame(undefined, true) },
   ]
 }
 
@@ -15844,7 +15866,7 @@ function pgSceneStandaloneFullPage(next: () => void, _back: () => void, _onClose
             primaryAction={<Button variant="main" size="sm" onClick={next}>New user</Button>} />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
             <div className="max-w-[820px] flex flex-col gap-[16px]">
-              <Filters searchPlaceholder="Search users…" slots={[{ placeholder: "Status" }, { placeholder: "Role" }]} />
+              <Filters searchPlaceholder="Search users…" slots={[{ placeholder: "Role" }, { placeholder: "Status" }]} />
               <div className="flex flex-col gap-[12px]">
                 {PG_CTX_USERS.map(item => (
                   <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
@@ -15862,16 +15884,25 @@ function pgSceneStandaloneFullPage(next: () => void, _back: () => void, _onClose
       <PgCreateContextShell sidebarId="contacts">
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="New User" description="Add a teammate to this workspace" backButton size="size-l"
-            primaryAction={<Button variant="primary" size="sm" onClick={next}>Create user</Button>}
+            primaryAction={<Button variant="main" size="sm" onClick={next}>Create user</Button>}
             secondaryAction={<Button variant="secondary" size="sm">Cancel</Button>} />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-            <div className="max-w-[680px] flex flex-col gap-[16px]">
-              <Input placeholder="Full name" />
-              <Input placeholder="Email" />
-              <Select placeholder="Role" />
-              <Select placeholder="Team" />
-              <Select placeholder="Access level" />
-              <Textarea placeholder="Notes (optional)" />
+            <div className="max-w-[680px] flex flex-col gap-[24px]">
+              <div className="flex flex-col gap-[16px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Basic information</span>
+                <Input placeholder="Full name" />
+                <Input placeholder="Email" />
+                <Select placeholder="Role" />
+                <Select placeholder="Team" />
+              </div>
+              <div className="flex flex-col gap-[16px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Access &amp; details</span>
+                <Select placeholder="Access level" />
+                <Select placeholder="Manager" />
+                <Input placeholder="Start date" />
+                <Input placeholder="Location" />
+                <Textarea placeholder="Notes (optional)" />
+              </div>
             </div>
           </div>
         </main>
@@ -15894,63 +15925,95 @@ function pgSceneStandaloneFullPage(next: () => void, _back: () => void, _onClose
 }
 
 // Section 3 · 2 stages, no branching → SlideOut with a lightweight step indicator
-function pgSceneStagedSlideout(next: () => void, _back: () => void, _onClose: () => void): PgTourStepDef[] {
-  const frame = (overlay?: React.ReactNode, success?: boolean) => (
-    <PgCreateContextShell sidebarId="automations" overlay={overlay}>
+function pgSceneStagedSlideout(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const frame = (overlay?: React.ReactNode, showTriggers?: boolean) => (
+    <PgCreateContextShell sidebarId="agents" overlay={overlay}>
       <main className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Invoice overdue reminder" description="Automation · Active" backButton size="size-l"
-          primaryAction={<Button variant="primary" size="sm" onClick={next}>Add condition</Button>} />
+        <Header title="Data Sync Worker" description="Worker · Active" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l"
+          primaryAction={<Button variant="main" size="sm" onClick={next}>Add trigger</Button>} />
         <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-          <div className="max-w-[680px] flex flex-col gap-[12px]">
-            <div className="rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Conditions</span>
-              <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Invoice status is "Overdue" AND days overdue ≥ 7.</p>
+          <div className="grid grid-cols-[1fr_330px] gap-[20px] items-start max-w-[1040px]">
+            <div className="flex flex-col gap-[12px]">
+              <div className="rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
+                <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Syncs contact records between the CRM and the billing system every 15 minutes.</p>
+              </div>
+              {showTriggers && (
+                <WidgetFather title="Triggers" widthClass="wide" showMenu>
+                  <div className="flex items-center justify-between rounded-[8px] p-[10px]" style={{ border: "0.5px solid var(--field-border)" }}>
+                    <span className="text-[12px]" style={{ color: "var(--foreground)" }}>New lead created → Send Slack alert</span>
+                    <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>Just now</span>
+                  </div>
+                </WidgetFather>
+              )}
             </div>
-            {success && <InformativeCard state="success" size="sm" title="Condition added" description="Now part of this automation's trigger logic." />}
+            <WidgetFather title="Recent Runs" widthClass="narrow" showRefresh showMenu>
+              <div className="flex flex-col gap-[8px]">
+                <PgRunRow status="success" time="12m ago" />
+                <PgRunRow status="success" time="27m ago" />
+                <PgRunRow status="error" time="42m ago" />
+              </div>
+            </WidgetFather>
           </div>
         </div>
       </main>
     </PgCreateContextShell>
   )
-  return [
-    { label: "Trigger visible", note: "Two stages, no branching, contextual — attaches to this automation.", content: frame() },
-    { label: "Surface open", note: "SlideOut with a lightweight step indicator, not a full Stepper — three or more stages, or any branching, is what earns a Stepper.", content: frame(
-      <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
-        <div className="flex flex-col gap-[16px] h-full">
-          <div>
-            <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New condition</span>
-            <div className="flex items-center gap-[6px] mt-[6px]">
-              <Tag variant="primary" size="sm">1 · Define</Tag>
-              <Tag variant="secondary" size="sm">2 · Set action</Tag>
-            </div>
-          </div>
-          <Select placeholder="Field" />
-          <Select placeholder="Operator" />
-          <Input placeholder="Value" />
-          <div className="flex-1" />
-          <div className="flex justify-end gap-[8px]">
-            <Button variant="secondary" size="sm">Cancel</Button>
-            <Button variant="primary" size="sm" onClick={next}>Continue</Button>
-          </div>
+  const slideOutStage = (stage: 0 | 1) => (
+    <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
+      <div className="flex flex-col gap-[16px] h-full">
+        <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New trigger</span>
+        <Stepper steps={[
+          { label: "Define", state: stage === 0 ? "active" : "completed" },
+          { label: "Set action", state: stage === 1 ? "active" : "default" },
+        ]} />
+        {stage === 0 ? (
+          <>
+            <Select placeholder="Event" />
+            <Select placeholder="Field" />
+          </>
+        ) : (
+          <>
+            <Select placeholder="Action" />
+            <Input placeholder="Slack channel" />
+          </>
+        )}
+        <div className="flex-1" />
+        <div className="flex justify-end gap-[8px]">
+          <Button variant="secondary" size="sm" onClick={back}>Back</Button>
+          <Button variant="primary" size="sm" onClick={next}>{stage === 0 ? "Next" : "Create"}</Button>
         </div>
-      </SlideOut>
-    ) },
-    { label: "Landing", note: "Closes. The user returns to where they were; the new condition appears in context.", content: frame(undefined, true) },
+      </div>
+    </SlideOut>
+  )
+  return [
+    { label: "Trigger visible", note: "Two stages, no branching, contextual — attaches to this worker.", content: frame() },
+    { label: "Stage 1 of 2", note: "SlideOut with a Stepper for its 2 stages — not StepperNavFooter, which is a page-level component and never appears inside a SlideOut.", content: frame(slideOutStage(0)) },
+    { label: "Stage 2 of 2", note: "Same panel — the Stepper advances, Create replaces Next.", content: frame(slideOutStage(1)) },
+    { label: "Landing", note: "Closes. The user returns to where they were; the new trigger appears in context.", content: frame(undefined, true) },
   ]
 }
 
 // Section 3 · 3+ stages or branching → Full-page wizard
 function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const draft = PG_CTX_POLICIES.filter(p => p.state?.label === "Draft").length
   return [
     { label: "Trigger visible", note: "Three or more stages — a full-page wizard, not a SlideOut.", content: (
       <PgCreateContextShell sidebarId="knowledge">
         <main className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Policies" description="6 active" size="size-l"
-            primaryAction={<Button variant="primary" size="sm" onClick={next}>New policy</Button>} />
+          <Header title="Policies" description={`${PG_CTX_POLICIES.length} policies · ${draft} draft`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New policy</Button>} />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-            <div className="max-w-[680px] rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Recent policies</span>
-              <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Data Access Policy · Retention Policy · Export Approval Policy</p>
+            <div className="max-w-[820px] flex flex-col gap-[16px]">
+              <Filters searchPlaceholder="Search policies…" slots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} />
+              <div className="flex flex-col gap-[12px]">
+                {PG_CTX_POLICIES.map(item => (
+                  <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[item]} />
+                  </CardContainer>
+                ))}
+              </div>
+              <Pagination currentPage={1} totalItems={PG_CTX_POLICIES.length} itemsPerPage={2} onPageChange={() => {}} />
             </div>
           </div>
         </main>
@@ -15962,19 +16025,42 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
           <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l" />
           <div className="px-[24px] pt-[16px] shrink-0">
             <Stepper steps={[
-              { label: "Scope", state: "completed" },
-              { label: "Rules", state: "active" },
+              { label: "Scope", state: "active" },
+              { label: "Rules", state: "default" },
               { label: "Approvals", state: "default" },
               { label: "Review", state: "default" },
             ]} />
           </div>
           <div className="flex-1 overflow-y-auto px-[24px] pt-[16px]">
             <div className="max-w-[680px] flex flex-col gap-[16px]">
-              <Input placeholder="Rule name" />
-              <Textarea placeholder="Describe what this rule enforces" />
+              <Input placeholder="Policy name" />
+              <Select placeholder="Applies to" />
             </div>
           </div>
-          <StepperNavFooter variant="back-next" onBack={back} nextLabel="Next" onNext={next} />
+          <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Next" onNext={next} />
+        </div>
+      </PgCreateContextShell>
+    ) },
+    { label: "Confirm", note: "The creation is irreversible and tenant-wide — this earns a confirmation, independent of which surface built it.", content: (
+      <PgCreateContextShell sidebarId="knowledge"
+        overlay={
+          <ModalDialog isOpen onClose={() => {}} variant="confirmation" tone="warning" iconName="AlertTriangle"
+            title="Publish this policy?"
+            description="This policy applies tenant-wide and cannot be undone once published."
+            ctaPrimary={{ label: "Publish", onClick: next }}
+            ctaSecondary={{ label: "Cancel" }}
+          />
+        }>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l" />
+          <div className="px-[24px] pt-[16px] shrink-0">
+            <Stepper steps={[
+              { label: "Scope", state: "completed" },
+              { label: "Rules", state: "completed" },
+              { label: "Approvals", state: "completed" },
+              { label: "Review", state: "active" },
+            ]} />
+          </div>
         </div>
       </PgCreateContextShell>
     ) },
@@ -15998,15 +16084,15 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
 // 4 steps, not 3 — the surface here is genuinely two connected screens.
 function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
   const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_AUTOMATIONS) => {
-    const active = items.filter(a => a.state?.variant === "success").length
+    const draft = items.filter(a => a.state?.label === "Draft").length
     return (
       <PgCreateContextShell sidebarId="automations" overlay={overlay}>
         <main className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Automations" description={`${items.length} automations · ${active} active`} size="size-l"
+          <Header title="Automations" description={`${items.length} automations · ${draft} draft`} size="size-l"
             primaryAction={<Button variant="main" size="sm" onClick={next}>New automation</Button>} />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
             <div className="max-w-[820px] flex flex-col gap-[16px]">
-              <Filters searchPlaceholder="Search automations…" slots={[{ placeholder: "Status" }, { placeholder: "Owner" }]} />
+              <Filters searchPlaceholder="Search automations…" slots={[{ placeholder: "Status" }, { placeholder: "Category" }]} />
               <div className="flex flex-col gap-[12px]">
                 {items.map(item => (
                   <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
@@ -16420,9 +16506,9 @@ function PatternCreatePage() {
                   {[
                     ["Inline create row", "Stays in place. The new row appears in the list, ready to create the next one."],
                     ["SlideOut", "Closes. The user returns to where they were; the new object appears in context."],
-                    ["ModalDialog variant=\"content\"", "Closes. The user returns to the list; the new object appears there."],
-                    ["Full-page create form", "Navigates to the created object."],
-                    ["Full-page wizard", "Navigates to the created object."],
+                    ["ModalDialog — standalone create", "Closes. The user returns to the list they triggered it from; the new object appears there. It does not navigate away — a standalone create of five fields or fewer is short enough that a user often makes several in a row."],
+                    ["Full-page create form / wizard", "Navigates to the created object."],
+                    ["Catalogue modal — source fully defines the object", "Closes. Lands as the surface it would have used had the fields been filled by hand."],
                     ["Assisted create", "Success modal → view the object, or create another."],
                   ].map(([surf, after]) => (
                     <tr key={surf} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
@@ -16550,7 +16636,7 @@ function PatternCreatePage() {
                     ["Create an agent", "Step 1", "Hand-off → the agent's own workspace owns everything past this point"],
                     ["Add a node to the canvas", "Gate 0", "Rejected — this is Configure"],
                     ["Add a template from the marketplace, template fully defines the object", "Gate 1 — from a source", "ModalDialog variant=\"content\" → created"],
-                    ["Add a template from the marketplace, fields remain", "Gate 1 → Step 5", "Catalogue modal → ModalDialog, pre-filled"],
+                    ["Add a template from the marketplace, fields remain", "Gate 1 → Step 5", "Catalogue modal → ModalDialog, pre-filled — a list of the same type isn't a parent"],
                     ["Create with AI", "Gate 1 — assisted", "Chat ModalDialog → success modal"],
                   ].map(([caseName, path, surf], i) => (
                     <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
@@ -16637,13 +16723,13 @@ CONFIRMATION (independent of container)
   IF mode == ASSISTED                    → always ends in success ModalDialog
 
 LANDING (derived from container, not a separate decision)
-  Inline create row       → stays in place, ready for the next create
-  SlideOut                → closes, user returns to where they were
-  ModalDialog             → closes, user returns to the list, new object appears there
-  Full-page create form   → navigates to the created object
-  Full-page wizard        → navigates to the created object
-  Assisted create         → success modal → view object OR create another
-  Hand-off (step 1)       → not this pattern's decision — the object's own creation section owns it`} />
+  Inline create row            → stays in place, ready for the next create
+  SlideOut                     → closes, user returns to where they were
+  ModalDialog (standalone)     → closes, user returns to the list, new object appears there
+  Full-page create form/wizard → navigates to the created object
+  Catalogue modal (source fully defines it) → closes, lands as if filled by hand
+  Assisted create               → success modal → view object OR create another
+  Hand-off (step 1)             → not this pattern's decision — the object's own creation section owns it`} />
           </PatternCard>
         </div>
       )}
