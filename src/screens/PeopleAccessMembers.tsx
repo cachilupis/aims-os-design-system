@@ -109,9 +109,34 @@ const PERM_TREE: Record<string, PermNode[]> = {
       { id:"gov-truth-view",  label:"View truth plane", desc:"Read facts and claims in the production truth plane", code:"governance.truthplane.view",  state:"" },
       { id:"gov-truth-facts", label:"Manage facts",     desc:"Edit, approve, or retire facts in the truth plane",  code:"governance.truthplane.facts", state:"" },
     ]},
-    { id:"gov-packs", label:"Promotion Packs", code:"governance.packs", desc:"Bundle content changes for review and approval", state:"", children:[
-      { id:"gov-packs-view",   label:"View packs",   desc:"Browse promotion packets and their review status", code:"governance.packs.view",   state:"g-direct" },
-      { id:"gov-packs-create", label:"Create packs", desc:"Assemble new promotion packets for approval",      code:"governance.packs.create", state:"" },
+    { id:"gov-packs", label:"Promotion Packs", code:"governance.packs", desc:"Bundle content changes for review and approval", state:"g-direct", scope:"Tenant", children:[
+      { id:"gov-packs-view",   label:"View packs",   desc:"Browse promotion packets and their review status", code:"governance.packs.view", state:"g-direct", scope:"Tenant" },
+      { id:"gov-packs-create", label:"Create packs", desc:"Assemble new promotion packets for approval",      code:"governance.packs.create", state:"", children:[
+        { id:"gov-packs-create-draft",  label:"Save as draft",     desc:"Save an in-progress packet without submitting it for review", code:"governance.packs.create.draft",  state:"" },
+        { id:"gov-packs-create-submit", label:"Submit for review", desc:"Submit a completed packet into the review queue",             code:"governance.packs.create.submit", state:"" },
+      ]},
+      { id:"gov-packs-review", label:"Review packs", desc:"Evaluate submitted promotion packets from other authors", code:"governance.packs.review", state:"", children:[
+        { id:"gov-packs-rev-view",    label:"View submissions", desc:"See all packets pending review and their current status", code:"governance.packs.review.view", state:"" },
+        { id:"gov-packs-rev-comment", label:"Add comments",     desc:"Annotate a packet with structured feedback",             code:"governance.packs.review.comment", state:"", children:[
+          { id:"gov-packs-rev-comment-suggest", label:"Suggest changes", desc:"Request edits without blocking the promotion",             code:"governance.packs.review.comment.suggest", state:"" },
+          { id:"gov-packs-rev-comment-block",   label:"Block promotion", desc:"Flag a packet as ineligible until critical issues are resolved", code:"governance.packs.review.comment.block", state:"" },
+        ]},
+        { id:"gov-packs-rev-approve", label:"Approve packets", desc:"Grant domain-level or cross-domain sign-off on a promotion packet", code:"governance.packs.review.approve", state:"", children:[
+          { id:"gov-packs-rev-approve-domain", label:"Domain approval",       desc:"Sign off on packets that affect only your governance domain",  code:"governance.packs.review.approve.domain", state:"" },
+          { id:"gov-packs-rev-approve-cross",  label:"Cross-domain approval", desc:"Approve packets that span multiple governance domains",        code:"governance.packs.review.approve.cross", state:"", children:[
+            { id:"gov-packs-rev-approve-cross-final", label:"Final sign-off", desc:"Issue the binding final approval that releases a packet to the truth plane", code:"governance.packs.review.approve.cross.final", state:"" },
+          ]},
+        ]},
+      ]},
+    ]},
+    { id:"gov-resolution", label:"Resolution Requests", code:"governance.resolution", desc:"Raise and resolve disputes over facts, claims, or governance decisions", state:"", children:[
+      { id:"gov-res-view",    label:"View requests",   desc:"Browse open and closed resolution requests across all domains", code:"governance.resolution.view",    state:"" },
+      { id:"gov-res-submit",  label:"Submit request",  desc:"Open a new resolution request disputing a fact or decision",   code:"governance.resolution.submit",  state:"" },
+      { id:"gov-res-resolve", label:"Resolve request", desc:"Act on a resolution request as the assigned reviewer",         code:"governance.resolution.resolve", state:"", children:[
+        { id:"gov-res-resolve-accept",   label:"Accept",             desc:"Close the request by accepting the disputed change",           code:"governance.resolution.resolve.accept",   state:"" },
+        { id:"gov-res-resolve-reject",   label:"Reject with reason", desc:"Close the request by rejecting the dispute with a rationale", code:"governance.resolution.resolve.reject",   state:"" },
+        { id:"gov-res-resolve-escalate", label:"Escalate",           desc:"Forward the request to the cross-domain review board",        code:"governance.resolution.resolve.escalate", state:"" },
+      ]},
     ]},
   ],
   datastudio: [
@@ -319,6 +344,15 @@ function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number
   )
 }
 
+// ─── Permission scope options ─────────────────────────────────────────────────
+
+const SCOPE_OPTS = [
+  { id: "Workspace", label: "Workspace", tip: "Applies across all tenants and resources in the platform" },
+  { id: "Tenant",    label: "Tenant",    tip: "Applies to all resources within this workspace"           },
+  { id: "Own",       label: "Own",       tip: "Applies only to resources this person created"            },
+  { id: "Record",    label: "Record",    tip: "Applies to one specific resource (requires selection)"    },
+]
+
 // ─── Permission state icon ────────────────────────────────────────────────────
 
 function PermIcon({ state }: { state: PermState }) {
@@ -363,37 +397,71 @@ function PermIcon({ state }: { state: PermState }) {
   )
 }
 
-function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
-  const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
-  const hasChildren = (node.children?.length ?? 0) > 0
-  const grantedChildren = node.children?.filter(c => c.state !== "").length ?? 0
+function PermTreeNode({
+  node, depth = 0, overrides, onOverride,
+}: {
+  node: PermNode
+  depth?: number
+  overrides: Record<string, { state: PermState; scope: string }>
+  onOverride: (id: string, state: PermState, scope: string) => void
+}) {
+  const override       = overrides[node.id]
+  const effectiveState: PermState = override?.state ?? node.state
+  const effectiveScope = override?.scope ?? node.scope ?? "Tenant"
+  const isEditable     = !node.locked
+
+  const [expanded, setExpanded] = useState(
+    depth === 0 && (effectiveState === "g-inh" || effectiveState === "g-direct")
+  )
+  const [hovered, setHovered] = useState(false)
+
+  const hasChildren     = (node.children?.length ?? 0) > 0
+  const grantedChildren = node.children?.filter(c => {
+    const ov = overrides[c.id]
+    return (ov?.state ?? c.state) !== ""
+  }).length ?? 0
+
+  const showToggle      = isEditable && (hovered || !!override)
+  const showScopePicker = isEditable && effectiveState === "g-direct"
 
   return (
     <div>
       <div
-        onClick={() => hasChildren && setExpanded(e => !e)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
           display: "flex", alignItems: "center", gap: 8,
           padding: `8px 16px 8px ${16 + depth * 20}px`,
           borderBottom: "1px solid var(--border)",
-          cursor: hasChildren ? "pointer" : "default",
-          background: "transparent",
+          background: hovered ? "var(--accent)" : "transparent",
+          transition: "background 0.1s",
         }}
-        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
       >
-        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Chevron */}
+        <div
+          onClick={() => hasChildren && setExpanded(e => !e)}
+          style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: hasChildren ? "pointer" : "default" }}
+        >
           {hasChildren
             ? expanded
               ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" />
               : <Icons.ChevronRight size={12} color="var(--muted-foreground)" />
             : null}
         </div>
-        <PermIcon state={node.state} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+
+        {/* State icon */}
+        <div onClick={() => hasChildren && setExpanded(e => !e)} style={{ cursor: hasChildren ? "pointer" : "default" }}>
+          <PermIcon state={effectiveState} />
+        </div>
+
+        {/* Label */}
+        <div
+          onClick={() => hasChildren && setExpanded(e => !e)}
+          style={{ flex: 1, minWidth: 0, cursor: hasChildren ? "pointer" : "default" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{node.label}</span>
-            {node.role && (
+            {node.role && !override && (
               <span style={{
                 fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
                 background: "color-mix(in srgb, var(--primary) 12%, transparent)",
@@ -402,8 +470,14 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
                 via {node.role}
               </span>
             )}
-            {node.scope && (
-              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
+            {override && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
+                background: "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
+                color: "var(--badge-alert)", border: "1px solid color-mix(in srgb, var(--badge-alert) 30%, transparent)",
+              }}>
+                overridden
+              </span>
             )}
           </div>
           {depth === 0 && hasChildren && (
@@ -412,12 +486,78 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
             </div>
           )}
         </div>
+
+        {/* Scope picker — shown when directly granted */}
+        {showScopePicker && (
+          <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+            {SCOPE_OPTS.map(s => (
+              <button
+                key={s.id}
+                title={s.tip}
+                onClick={() => onOverride(node.id, "g-direct", s.id)}
+                style={{
+                  padding: "2px 7px", fontSize: 10, fontWeight: 600, borderRadius: 100,
+                  border: `1px solid ${effectiveScope === s.id ? "var(--primary)" : "var(--border)"}`,
+                  background: effectiveScope === s.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+                  color: effectiveScope === s.id ? "var(--primary)" : "var(--muted-foreground)",
+                  cursor: "pointer",
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 3-state toggle: None | Grant | Deny */}
+        {showToggle && !showScopePicker && (
+          <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+            {([
+              { s: "" as PermState,         label: "None",  icon: <Icons.Minus size={10} />,  tip: "No access"                },
+              { s: "g-direct" as PermState, label: "Grant", icon: <Icons.Check size={10} />,  tip: "Grant direct access"      },
+              { s: "g-denied" as PermState, label: "Deny",  icon: <Icons.X size={10} />,      tip: "Explicitly deny access"   },
+            ] as const).map(opt => {
+              const active = effectiveState === opt.s
+              return (
+                <button
+                  key={opt.s}
+                  title={opt.tip}
+                  onClick={() => onOverride(node.id, opt.s, effectiveScope)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 3,
+                    padding: "2px 7px", fontSize: 10, fontWeight: 600, borderRadius: 4,
+                    border: `1px solid ${active ? (opt.s === "g-denied" ? "var(--badge-error)" : opt.s === "g-direct" ? "var(--primary)" : "var(--border)") : "var(--border)"}`,
+                    background: active
+                      ? opt.s === "g-denied" ? "color-mix(in srgb, var(--badge-error) 15%, transparent)"
+                      : opt.s === "g-direct" ? "color-mix(in srgb, var(--primary) 15%, transparent)"
+                      : "var(--muted)"
+                      : "transparent",
+                    color: active
+                      ? opt.s === "g-denied" ? "var(--badge-error)"
+                      : opt.s === "g-direct" ? "var(--primary)"
+                      : "var(--foreground)"
+                      : "var(--muted-foreground)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {opt.icon}{opt.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Scope label — non-editable nodes */}
+        {!isEditable && node.scope && (
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)", flexShrink: 0 }}>· {node.scope}</span>
+        )}
+
         {node.locked && (
           <Icons.Lock size={11} color="var(--muted-foreground)" style={{ flexShrink: 0, opacity: 0.5 }} />
         )}
       </div>
       {expanded && hasChildren && node.children!.map(child => (
-        <PermTreeNode key={child.id} node={child} depth={depth + 1} />
+        <PermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onOverride={onOverride} />
       ))}
     </div>
   )
@@ -433,16 +573,31 @@ const STUDIO_TABS = [
 ]
 
 function PermissionsPanel() {
-  const [studio, setStudio] = useState("governance")
-  const [filter, setFilter] = useState("")
-  const nodes = PERM_TREE[studio] ?? []
+  const [studio, setStudio]       = useState("governance")
+  const [filter, setFilter]       = useState("")
+  const [overrides, setOverrides] = useState<Record<string, { state: PermState; scope: string }>>({})
 
-  const grantedCount = nodes.reduce((n, nd) => {
-    let c = nd.state !== "" ? 1 : 0
-    nd.children?.forEach(ch => { if (ch.state !== "") c++ })
-    return n + c
-  }, 0)
-  const totalCount = nodes.reduce((n, nd) => n + 1 + (nd.children?.length ?? 0), 0)
+  const nodes = PERM_TREE[studio] ?? []
+  const overrideCount = Object.keys(overrides).length
+
+  function handleOverride(id: string, state: PermState, scope: string) {
+    setOverrides(prev => ({ ...prev, [id]: { state, scope } }))
+  }
+
+  function countGranted(nodeList: PermNode[]): number {
+    return nodeList.reduce((n, nd) => {
+      const ov = overrides[nd.id]
+      const eff = ov?.state ?? nd.state
+      let c = eff !== "" ? 1 : 0
+      if (nd.children) c += countGranted(nd.children)
+      return n + c
+    }, 0)
+  }
+  function countTotal(nodeList: PermNode[]): number {
+    return nodeList.reduce((n, nd) => n + 1 + countTotal(nd.children ?? []), 0)
+  }
+  const grantedCount = countGranted(nodes)
+  const totalCount   = countTotal(nodes)
 
   const filteredNodes = filter.trim()
     ? nodes.map(nd => ({
@@ -459,26 +614,17 @@ function PermissionsPanel() {
 
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-      {/* Studio tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
-        {STUDIO_TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setStudio(t.id)}
-            style={{
-              flex: 1, padding: "10px 4px", fontSize: 12, fontWeight: 600,
-              border: "none", background: "none", cursor: "pointer",
-              color: studio === t.id ? "var(--primary)" : "var(--muted-foreground)",
-              borderBottom: studio === t.id ? "2px solid var(--primary)" : "2px solid transparent",
-              marginBottom: -1, transition: "color 0.15s",
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* Studio tabs — DS Tabs */}
+      <div style={{ padding: "0 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
+        <Tabs
+          items={STUDIO_TABS}
+          activeId={studio}
+          onChange={id => { setStudio(id); setFilter(""); setOverrides({}) }}
+          size="s"
+        />
       </div>
 
-      {/* Summary + search */}
+      {/* Summary + search + save row */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "10px 16px", borderBottom: "1px solid var(--border)",
@@ -504,6 +650,12 @@ function PermissionsPanel() {
           <span style={{ fontWeight: 700, color: "var(--primary)" }}>{grantedCount}</span>
           <span> / {totalCount} granted</span>
         </div>
+        {overrideCount > 0 && (
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            <Button size="sm" variant="secondary" onClick={() => setOverrides({})}>Reset</Button>
+            <Button size="sm" variant="main">Save changes</Button>
+          </div>
+        )}
       </div>
 
       {/* Legend */}
@@ -511,17 +663,23 @@ function PermissionsPanel() {
         display: "flex", gap: 16, padding: "8px 16px",
         borderBottom: "1px solid var(--border)", background: "var(--surface-raised)",
       }}>
-        {[
+        {([
           { state: "g-direct" as PermState, label: "Direct" },
           { state: "g-inh"    as PermState, label: "Via role" },
           { state: "g-denied" as PermState, label: "Denied" },
           { state: ""         as PermState, label: "None" },
-        ].map(l => (
+        ] as const).map(l => (
           <div key={l.state} style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <PermIcon state={l.state} />
             <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l.label}</span>
           </div>
         ))}
+        {overrideCount > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 5, marginLeft: 8 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--badge-alert)" }} />
+            <span style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600 }}>{overrideCount} overridden</span>
+          </div>
+        )}
       </div>
 
       {/* Tree */}
@@ -531,7 +689,9 @@ function PermissionsPanel() {
             No permissions match "{filter}"
           </div>
         ) : (
-          filteredNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
+          filteredNodes.map(n => (
+            <PermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onOverride={handleOverride} />
+          ))
         )}
       </div>
     </div>
@@ -1656,14 +1816,26 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
 
 const ALL_ROLES: MemberRole[] = ["Super Admin", "Tenant Admin", "Member", "Viewer", "Billing Admin"]
 
+// Role-based permission preview states for InviteModal step 2
+const ROLE_PERM_PREVIEW: Record<MemberRole, Record<string, PermState>> = {
+  "Super Admin":   { "gov-drives":"g-direct","gov-sandbox":"g-direct","gov-truth":"g-direct","gov-packs":"g-direct","gov-resolution":"g-direct","ds-models":"g-direct","ds-lineage":"g-direct","ds-connectors":"g-direct","ag-workers":"g-direct","ag-hitl":"g-direct","ag-networks":"g-direct","ag-workflows":"g-direct","adm-members":"g-direct","adm-roles":"g-direct","adm-integrations":"g-direct","adm-audit":"g-direct" },
+  "Tenant Admin":  { "gov-drives":"g-direct","gov-sandbox":"g-direct","gov-packs":"g-direct","ds-models":"g-direct","ds-lineage":"g-direct","ag-workers":"g-direct","ag-hitl":"g-direct","ag-workflows":"g-direct","adm-members":"g-direct","adm-roles":"g-direct","adm-integrations":"g-direct" },
+  "Member":        { "gov-drives":"g-inh","gov-sandbox":"g-inh","ds-models":"g-inh","ag-workers":"g-inh","ag-hitl":"g-direct" },
+  "Viewer":        { "gov-drives":"g-inh","ds-models":"g-inh","ds-lineage":"g-direct","ag-workers":"g-inh" },
+  "Billing Admin": { "adm-members":"g-inh" },
+}
+
 function InviteModal({ onClose, onSend }: {
   onClose: () => void
   onSend: (emails: string[], role: MemberRole) => void
 }) {
+  const [step, setStep]             = useState<1 | 2>(1)
   const [emailInput, setEmailInput] = useState("")
   const [emails, setEmails]         = useState<string[]>([])
   const [role, setRole]             = useState<MemberRole>("Member")
   const [note, setNote]             = useState("")
+  const [permOverrides, setPermOverrides] = useState<Record<string, { state: PermState; scope: string }>>({})
+  const [previewStudio, setPreviewStudio] = useState("governance")
 
   function addEmail() {
     const trimmed = emailInput.trim().toLowerCase()
@@ -1676,12 +1848,26 @@ function InviteModal({ onClose, onSend }: {
     if (e.key === "Backspace" && !emailInput && emails.length) setEmails(e => e.slice(0, -1))
   }
 
+  function goNext() {
+    const all = emailInput.trim() ? [...emails, emailInput.trim()] : emails
+    if (all.length === 0) return
+    if (emailInput.trim()) { addEmail() }
+    setStep(2)
+  }
+
   function submit() {
     const all = emailInput.trim() ? [...emails, emailInput.trim()] : emails
     if (all.length === 0) return
     onSend(all, role)
     onClose()
   }
+
+  // Build preview nodes for selected studio, merging role defaults + overrides
+  const previewNodes = (PERM_TREE[previewStudio] ?? []).map(n => {
+    const roleState = ROLE_PERM_PREVIEW[role][n.id] ?? ""
+    const ov = permOverrides[n.id]
+    return { ...n, state: (ov?.state ?? roleState) as PermState, scope: ov?.scope ?? n.scope }
+  })
 
   return (
     <div style={{
@@ -1716,123 +1902,238 @@ function InviteModal({ onClose, onSend }: {
           </button>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Email chips input */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-              Email addresses
-            </label>
-            <div style={{
-              minHeight: 44, border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px",
-              display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center",
-              background: "var(--surface-raised)", cursor: "text",
-            }} onClick={e => (e.currentTarget.querySelector("input") as HTMLInputElement)?.focus()}>
-              {emails.map(em => (
-                <span key={em} style={{
-                  display: "flex", alignItems: "center", gap: 4,
-                  padding: "2px 8px 2px 10px", borderRadius: 100,
-                  background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
-                  fontSize: 12, color: "var(--primary)", fontWeight: 500,
-                }}>
-                  {em}
-                  <button
-                    onClick={ev => { ev.stopPropagation(); setEmails(e => e.filter(x => x !== em)) }}
-                    style={{ border: "none", background: "none", cursor: "pointer", color: "var(--primary)", padding: 0, lineHeight: 1 }}
-                  >
-                    <Icons.X size={11} />
-                  </button>
-                </span>
-              ))}
-              <input
-                value={emailInput}
-                onChange={e => setEmailInput(e.target.value)}
-                onKeyDown={handleKey}
-                onBlur={addEmail}
-                placeholder={emails.length === 0 ? "name@company.com, another@company.com" : "Add another…"}
-                style={{
-                  flex: 1, minWidth: 180, border: "none", outline: "none", background: "transparent",
-                  fontSize: 13, color: "var(--foreground)",
-                }}
-              />
-            </div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5 }}>
-              Press Enter or comma to add multiple addresses
-            </div>
-          </div>
-
-          {/* Role */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-              Role
-            </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {ALL_ROLES.map(r => (
-                <button
-                  key={r}
-                  onClick={() => setRole(r)}
-                  style={{
-                    padding: "10px 14px", border: `1px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
-                    borderRadius: 8, background: role === r ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "var(--surface-raised)",
-                    cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8,
-                  }}
-                >
+        {/* Step indicator */}
+        <div style={{ display: "flex", alignItems: "center", gap: 0, padding: "10px 24px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
+          {(["Details", "Permissions"] as const).map((label, i) => {
+            const idx = i + 1
+            const active = step === idx
+            const done   = step > idx
+            return (
+              <div key={label} style={{ display: "flex", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{
-                    width: 14, height: 14, borderRadius: "50%", flexShrink: 0, border: `2px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
-                    background: role === r ? "var(--primary)" : "transparent",
-                  }} />
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: role === r ? "var(--primary)" : "var(--foreground)" }}>{r}</div>
-                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1 }}>
-                      {r === "Super Admin" ? "Full platform access" : r === "Tenant Admin" ? "Manage members & settings" : r === "Member" ? "Access assigned studios" : r === "Viewer" ? "Read-only access" : "Billing & seats only"}
-                    </div>
+                    width: 20, height: 20, borderRadius: "50%",
+                    background: done ? "var(--badge-success)" : active ? "var(--primary)" : "var(--border)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 10, fontWeight: 700,
+                    color: (done || active) ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
+                  }}>
+                    {done ? <Icons.Check size={10} /> : idx}
                   </div>
-                </button>
-              ))}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: active ? "var(--foreground)" : "var(--muted-foreground)" }}>{label}</span>
+                </div>
+                {i < 1 && <div style={{ width: 32, height: 1, background: "var(--border)", margin: "0 8px" }} />}
+              </div>
+            )
+          })}
+        </div>
+
+        {step === 1 ? (
+          /* ── Step 1: Details ── */
+          <>
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+              {/* Email chips input */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
+                  Email addresses
+                </label>
+                <div style={{
+                  minHeight: 44, border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px",
+                  display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center",
+                  background: "var(--surface-raised)", cursor: "text",
+                }} onClick={e => (e.currentTarget.querySelector("input") as HTMLInputElement)?.focus()}>
+                  {emails.map(em => (
+                    <span key={em} style={{
+                      display: "flex", alignItems: "center", gap: 4,
+                      padding: "2px 8px 2px 10px", borderRadius: 100,
+                      background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+                      fontSize: 12, color: "var(--primary)", fontWeight: 500,
+                    }}>
+                      {em}
+                      <button
+                        onClick={ev => { ev.stopPropagation(); setEmails(e => e.filter(x => x !== em)) }}
+                        style={{ border: "none", background: "none", cursor: "pointer", color: "var(--primary)", padding: 0, lineHeight: 1 }}
+                      >
+                        <Icons.X size={11} />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    value={emailInput}
+                    onChange={e => setEmailInput(e.target.value)}
+                    onKeyDown={handleKey}
+                    onBlur={addEmail}
+                    placeholder={emails.length === 0 ? "name@company.com, another@company.com" : "Add another…"}
+                    style={{
+                      flex: 1, minWidth: 180, border: "none", outline: "none", background: "transparent",
+                      fontSize: 13, color: "var(--foreground)",
+                    }}
+                  />
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5 }}>
+                  Press Enter or comma to add multiple addresses
+                </div>
+              </div>
+
+              {/* Role */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
+                  Role
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {ALL_ROLES.map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setRole(r)}
+                      style={{
+                        padding: "10px 14px", border: `1px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
+                        borderRadius: 8, background: role === r ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "var(--surface-raised)",
+                        cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8,
+                      }}
+                    >
+                      <div style={{
+                        width: 14, height: 14, borderRadius: "50%", flexShrink: 0, border: `2px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
+                        background: role === r ? "var(--primary)" : "transparent",
+                      }} />
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: role === r ? "var(--primary)" : "var(--foreground)" }}>{r}</div>
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1 }}>
+                          {r === "Super Admin" ? "Full platform access" : r === "Tenant Admin" ? "Manage members & settings" : r === "Member" ? "Access assigned studios" : r === "Viewer" ? "Read-only access" : "Billing & seats only"}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Optional note */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
+                  Personal note <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>(optional)</span>
+                </label>
+                <textarea
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                  placeholder="Welcome to AIMS-OS! We're excited to have you…"
+                  rows={3}
+                  style={{
+                    width: "100%", border: "1px solid var(--border)", borderRadius: 8,
+                    padding: "10px 12px", background: "var(--surface-raised)", color: "var(--foreground)",
+                    fontSize: 13, resize: "none", outline: "none", boxSizing: "border-box",
+                    fontFamily: "inherit",
+                  }}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Optional note */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-              Personal note <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>(optional)</span>
-            </label>
-            <textarea
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="Welcome to AIMS-OS! We're excited to have you…"
-              rows={3}
-              style={{
-                width: "100%", border: "1px solid var(--border)", borderRadius: 8,
-                padding: "10px 12px", background: "var(--surface-raised)", color: "var(--foreground)",
-                fontSize: 13, resize: "none", outline: "none", boxSizing: "border-box",
-                fontFamily: "inherit",
-              }}
-            />
-          </div>
-        </div>
+            <div style={{
+              padding: "14px 24px", borderTop: "1px solid var(--border)",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              background: "var(--surface-raised)",
+            }}>
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+                {emails.length + (emailInput.trim() ? 1 : 0)} recipient{(emails.length + (emailInput.trim() ? 1 : 0)) !== 1 ? "s" : ""}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+                <Button
+                  variant="main"
+                  size="sm"
+                  onClick={goNext}
+                  disabled={(emails.length + (emailInput.trim() ? 1 : 0)) === 0}
+                >
+                  Review permissions
+                  <Icons.ChevronRight size={13} style={{ marginLeft: 4 }} />
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* ── Step 2: Permission preview ── */
+          <>
+            <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Context banner */}
+              <div style={{
+                display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px",
+                borderRadius: 8, background: "color-mix(in srgb, var(--primary) 8%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
+              }}>
+                <Icons.Info size={14} style={{ color: "var(--primary)", flexShrink: 0, marginTop: 1 }} />
+                <div style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5 }}>
+                  The <strong>{role}</strong> role grants the permissions below.
+                  Hover any row to add a direct override before sending.
+                </div>
+              </div>
 
-        {/* Footer */}
-        <div style={{
-          padding: "14px 24px", borderTop: "1px solid var(--border)",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          background: "var(--surface-raised)",
-        }}>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            {emails.length + (emailInput.trim() ? 1 : 0)} recipient{(emails.length + (emailInput.trim() ? 1 : 0)) !== 1 ? "s" : ""}
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-            <Button
-              variant="main"
-              size="sm"
-              onClick={submit}
-            >
-              Send {emails.length + (emailInput.trim() ? 1 : 0) > 1 ? `${emails.length + (emailInput.trim() ? 1 : 0)} invitations` : "invitation"}
-            </Button>
-          </div>
-        </div>
+              {/* Studio tabs */}
+              <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
+                {STUDIO_TABS.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setPreviewStudio(t.id)}
+                    style={{
+                      padding: "6px 12px", fontSize: 12, fontWeight: 600,
+                      border: "none", background: "none", cursor: "pointer",
+                      color: previewStudio === t.id ? "var(--primary)" : "var(--muted-foreground)",
+                      borderBottom: previewStudio === t.id ? "2px solid var(--primary)" : "2px solid transparent",
+                      marginBottom: -1,
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div style={{ display: "flex", gap: 12 }}>
+                {([
+                  { state: "g-direct" as PermState, label: "Direct" },
+                  { state: "g-inh"    as PermState, label: "Via role" },
+                  { state: ""         as PermState, label: "None" },
+                ] as const).map(l => (
+                  <div key={l.state} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <PermIcon state={l.state} />
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Permission tree preview */}
+              <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", maxHeight: 280, overflowY: "auto" }}>
+                {previewNodes.map(n => (
+                  <PermTreeNode
+                    key={n.id}
+                    node={n}
+                    depth={0}
+                    overrides={permOverrides}
+                    onOverride={(id, state, scope) => setPermOverrides(prev => ({ ...prev, [id]: { state, scope } }))}
+                  />
+                ))}
+              </div>
+
+              {Object.keys(permOverrides).length > 0 && (
+                <div style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600 }}>
+                  {Object.keys(permOverrides).length} permission override{Object.keys(permOverrides).length !== 1 ? "s" : ""} added
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              padding: "14px 24px", borderTop: "1px solid var(--border)",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              background: "var(--surface-raised)",
+            }}>
+              <Button variant="secondary" size="sm" onClick={() => setStep(1)}>
+                <Icons.ChevronLeft size={13} style={{ marginRight: 4 }} />
+                Back
+              </Button>
+              <Button variant="main" size="sm" onClick={submit}>
+                Send {emails.length > 1 ? `${emails.length} invitations` : "invitation"}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
