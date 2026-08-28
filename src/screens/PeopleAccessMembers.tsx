@@ -9,6 +9,7 @@ import { Tabs }         from "@/components/ui/tabs"
 import { Chip }         from "@/components/ui/chip"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { ModalDialog }  from "@/components/ui/modal-dialog"
+import { Textarea }     from "@/components/ui/textarea"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -303,25 +304,6 @@ function formatDate(iso: string): string {
 
 // ─── Shared UI atoms ──────────────────────────────────────────────────────────
 
-function BackBreadcrumb({ label, onBack }: { label: string; onBack: () => void }) {
-  return (
-    <button
-      onClick={onBack}
-      style={{
-        display: "inline-flex", alignItems: "center", gap: 6,
-        fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)",
-        background: "none", border: "none", cursor: "pointer",
-        padding: "4px 0", marginBottom: 4,
-        transition: "color 0.1s",
-      }}
-      onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-      onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-    >
-      <Icons.ChevronLeft size={14} />
-      People & Access / <span style={{ color: "var(--foreground)", fontWeight: 600 }}>{label}</span>
-    </button>
-  )
-}
 
 function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number; onChange: (i: number) => void }) {
   return (
@@ -1192,15 +1174,15 @@ function MemberDetailPage({
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={() => (
+      header={(isScrolled) => (
         <Header
-          size="compress"
+          size={isScrolled ? "compress" : "size-m"}
           title={member.name}
-          description={`${member.title ?? ""}${member.title && member.department ? " · " : ""}${member.department ?? ""}`}
+          description="People & Access"
+          onBack={onBack}
         />
       )}
     >
-      <BackBreadcrumb label={member.name} onBack={onBack} />
 
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, marginTop: 16, alignItems: "start" }}>
@@ -1399,11 +1381,12 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={() => (
+      header={(isScrolled) => (
         <Header
-          size="compress"
+          size={isScrolled ? "compress" : "size-m"}
           title={role.label}
-          description={role.desc}
+          description="People & Access"
+          onBack={onBack}
           primaryAction={!role.system ? (
             <div style={{ display: "flex", gap: 8 }}>
               <Button variant="secondary" size="sm">Edit role</Button>
@@ -1413,7 +1396,6 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
         />
       )}
     >
-      <BackBreadcrumb label={role.label} onBack={onBack} />
 
       {/* Color accent + identity row */}
       <div style={{
@@ -1565,11 +1547,12 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={() => (
+      header={(isScrolled) => (
         <Header
-          size="compress"
+          size={isScrolled ? "compress" : "size-m"}
           title={group.name}
-          description={group.desc}
+          description="People & Access"
+          onBack={onBack}
           primaryAction={
             <Button variant="primary" size="sm">
               <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
@@ -1579,7 +1562,6 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
         />
       )}
     >
-      <BackBreadcrumb label={group.name} onBack={onBack} />
 
       {/* Group identity bar */}
       <div style={{
@@ -2743,6 +2725,11 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [detailView, setDetailView]     = useState<DetailView>(null)
   const [previewItem, setPreviewItem]   = useState<DetailView>(null)
   const [showInvite, setShowInvite]     = useState(false)
+  const [roles, setRoles]               = useState<Role[]>(ROLES)
+  const [showCreateRole, setShowCreateRole] = useState(false)
+  const [createName, setCreateName]     = useState("")
+  const [createDesc, setCreateDesc]     = useState("")
+  const [createColor, setCreateColor]   = useState("#f97316") // audit-ignore: default role color
 
   const counts = useMemo(() => ({
     all:       members.length,
@@ -2813,7 +2800,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
           title="People & Access"
           description={
             mainTab === "members" ? `${counts.all} members · Avance Financial workspace`
-            : mainTab === "roles"  ? `${ROLES.length} roles · ${ROLES.filter(r => !r.system).length} custom`
+            : mainTab === "roles"  ? `${roles.length} roles · ${roles.filter(r => !r.system).length} custom`
             : `${GROUPS.length} groups · manage shared access across the workspace`
           }
           primaryAction={
@@ -2823,7 +2810,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
                 Invite member
               </Button>
             ) : mainTab === "roles" ? (
-              <Button variant="primary" size="sm">
+              <Button variant="primary" size="sm" onClick={() => { setCreateName(""); setCreateDesc(""); setCreateColor("#f97316"); setShowCreateRole(true) }}> {/* audit-ignore: default role color */}
                 <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
                 New role
               </Button>
@@ -2842,7 +2829,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         <Tabs
           items={[
             { id: "members", label: `Members (${counts.all})` },
-            { id: "roles",   label: `Roles (${ROLES.length})`  },
+            { id: "roles",   label: `Roles (${roles.length})`  },
             { id: "groups",  label: `Groups (${GROUPS.length})` },
           ]}
           activeId={mainTab}
@@ -2916,7 +2903,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
 
       {/* Roles view */}
       {mainTab === "roles" && (() => {
-        const filteredRoles = ROLES.filter(r =>
+        const filteredRoles = roles.filter(r =>
           roleFilter === "all" ? true : roleFilter === "system" ? r.system : !r.system
         )
         const systemRoles = filteredRoles.filter(r => r.system)
@@ -2925,9 +2912,9 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
               {([
-                { id: "all",    label: `All (${ROLES.length})`                          },
-                { id: "system", label: `System (${ROLES.filter(r => r.system).length})` },
-                { id: "custom", label: `Custom (${ROLES.filter(r => !r.system).length})` },
+                { id: "all",    label: `All (${roles.length})`                          },
+                { id: "system", label: `System (${roles.filter(r => r.system).length})` },
+                { id: "custom", label: `Custom (${roles.filter(r => !r.system).length})` },
               ] as const).map(f => (
                 <Chip
                   key={f.id}
@@ -3036,6 +3023,115 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
           />
         )}
       </SlideOut>
+
+      {/* Create role modal */}
+      {(() => {
+        const COLOR_SWATCHES = [
+          "#f97316", "#8b5cf6", "#0ea5e9", "#10b981", "#6366f1", // audit-ignore: role color picker swatches
+          "#ec4899", "#ef4444", "#f59e0b", "#14b8a6", "#64748b", // audit-ignore: role color picker swatches
+        ]
+        const valid = createName.trim().length > 0
+        return (
+          <ModalDialog
+            isOpen={showCreateRole}
+            onClose={() => setShowCreateRole(false)}
+            variant="content"
+            showIcon={false}
+            title="Create new role"
+            description="Custom roles bundle specific permissions for a job function."
+            slotUnstyled
+            slot={
+              <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "4px 0" }}>
+                {/* Name */}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>
+                    Role name <span style={{ color: "var(--badge-error)" }}>*</span>
+                  </div>
+                  <Input
+                    value={createName}
+                    onChange={e => setCreateName(e.target.value)}
+                    placeholder="e.g. Data Analyst, Marketing Ops…"
+                  />
+                </div>
+                {/* Description */}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>
+                    Description
+                  </div>
+                  <Textarea
+                    value={createDesc}
+                    onChange={e => setCreateDesc(e.target.value)}
+                    placeholder="Briefly describe what this role can do…"
+                    rows={3}
+                  />
+                </div>
+                {/* Color */}
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 8 }}>
+                    Role color
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {COLOR_SWATCHES.map(c => (
+                      <button
+                        key={c}
+                        onClick={() => setCreateColor(c)}
+                        style={{
+                          width: 28, height: 28, borderRadius: "50%",
+                          background: c,
+                          border: createColor === c ? `3px solid var(--foreground)` : "3px solid transparent",
+                          outline: createColor === c ? `2px solid ${c}` : "none",
+                          cursor: "pointer", padding: 0, flexShrink: 0,
+                          transition: "outline 0.1s, border 0.1s",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {/* Preview */}
+                <div style={{
+                  padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)",
+                  background: "var(--surface-raised)", borderLeft: `4px solid ${createColor}`,
+                  display: "flex", alignItems: "center", gap: 10,
+                }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>
+                      {createName.trim() || <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>Role name…</span>}
+                    </div>
+                    {createDesc.trim() && (
+                      <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{createDesc.trim()}</div>
+                    )}
+                  </div>
+                  <span style={{
+                    marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                    background: `${createColor}22`, color: createColor,
+                    border: `1px solid ${createColor}55`,
+                    textTransform: "uppercase" as const, letterSpacing: "0.06em", flexShrink: 0,
+                  }}>Custom</span>
+                </div>
+              </div>
+            }
+            ctaSecondary={{ label: "Cancel", onClick: () => setShowCreateRole(false) }}
+            ctaPrimary={{
+              label: "Create role",
+              disabled: !valid,
+              onClick: () => {
+                const id = `role-${createName.trim().toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`
+                const newRole: Role = {
+                  id,
+                  label: createName.trim(),
+                  system: false,
+                  color: createColor,
+                  desc: createDesc.trim() || `Custom role: ${createName.trim()}`,
+                  memberIds: [],
+                }
+                setRoles(rs => [...rs, newRole])
+                setShowCreateRole(false)
+                setDetailView({ type: "role", role: newRole })
+              },
+            }}
+          />
+        )
+      })()}
 
       {/* Invite modal */}
       {showInvite && (

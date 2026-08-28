@@ -25,7 +25,7 @@ export type ModalDialogProps = {
   slot?:              ReactNode             // custom content zone (content variant)
   slotUnstyled?:      boolean               // skip the surface wrapper on slot (no bg, no padding)
   informativeCard?:   string | boolean      // true → default text; string → custom title
-  ctaPrimary?:        { label: string; destructive?: boolean; onClick?: () => void }
+  ctaPrimary?:        { label: string; destructive?: boolean; disabled?: boolean; onClick?: () => void }
   ctaSecondary?:      { label: string; onClick?: () => void }
   showClose?:         boolean               // default: true
   embedded?:          boolean               // static inline render for docs previews
@@ -219,6 +219,7 @@ export function ModalDialog({
             <Button
               variant={ctaPrimary.destructive ? "warning" : "primary"}
               size="default"
+              disabled={ctaPrimary.disabled}
               onClick={embedded ? undefined : ctaPrimary.onClick}
             >
               {ctaPrimary.label}
