@@ -656,8 +656,32 @@ function PermissionsPanel() {
   const nodes = PERM_TREE[studio] ?? []
   const overrideCount = Object.keys(overrides).length
 
+  function collectIds(node: PermNode): string[] {
+    return [node.id, ...(node.children ?? []).flatMap(c => collectIds(c))]
+  }
+  function findNode(nodeList: PermNode[], id: string): PermNode | null {
+    for (const n of nodeList) {
+      if (n.id === id) return n
+      const found = findNode(n.children ?? [], id)
+      if (found) return found
+    }
+    return null
+  }
+
   function handleOverride(id: string, state: PermState, scope: string) {
-    setOverrides(prev => ({ ...prev, [id]: { state, scope } }))
+    const node = findNode(PERM_TREE[studio] ?? [], id)
+    if (node && (node.children?.length ?? 0) > 0) {
+      // Parent: cascade state to all descendants
+      const ids = collectIds(node)
+      setOverrides(prev => {
+        const next = { ...prev }
+        ids.forEach(did => { next[did] = { state, scope } })
+        return next
+      })
+    } else {
+      // Leaf: only set self, never touches parent
+      setOverrides(prev => ({ ...prev, [id]: { state, scope } }))
+    }
   }
 
   function countGranted(nodeList: PermNode[]): number {
