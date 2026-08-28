@@ -16041,6 +16041,16 @@ const PG_PREVIEW_SCENES: Record<PgPreviewCaseId, (next: () => void, back: () => 
 // own strip above the simulated frame, outside it. The simulated product's
 // own copy never explains why a surface was chosen. The single "Close
 // Preview" button is the only exit; the last tour step has no "Next".
+//
+// The bar is portaled to document.body, separately from the AppBackground/
+// content wrapper below. SlideOut and ModalDialog ALSO portal to document.body
+// (z-[10010] / z-[10020]) — nested z-index only resolves within its own
+// stacking context, so a bar merely nested inside this component's z-9999
+// wrapper would be outranked and painted over the moment either surface is
+// open, even at a higher nested z-index. Portaling the bar to the same body
+// level as those surfaces is what lets it actually out-rank them.
+const PG_TOUR_BAR_HEIGHT = 92
+
 function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onClose: () => void }) {
   const [step, setStep] = useState(0)
   const next = () => setStep(s => s + 1)
@@ -16050,34 +16060,42 @@ function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onC
   const current = steps[i]
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
-      <AppBackground />
-      <button
-        onClick={onClose}
-        className="fixed flex items-center gap-[6px] rounded-[6px]"
-        style={{ top: 10, right: 12, zIndex: 10031, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
-      >
-        <LucideIcons.X size={12} /> Close Preview
-      </button>
-      {/* zIndex 10030: above SlideOut (z-10010) and ModalDialog (z-10020) —
-          the didactic bar must stay visible and clickable over any surface
-          the current step has open, not get painted over by its backdrop. */}
-      <div className="shrink-0 px-[24px] pr-[180px] py-[14px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)", position: "relative", zIndex: 10030 }}>
-        <div className="flex items-center justify-between gap-[16px]">
-          <div className="min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Step {i + 1} of {steps.length} — {current.label}</span>
-            <p className="text-[13px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>{current.note}</p>
-          </div>
-          <div className="flex gap-[8px] shrink-0">
-            <Button variant="secondary" size="sm" disabled={i === 0} onClick={back}>Back</Button>
-            {i < steps.length - 1 && <Button variant="primary" size="sm" onClick={next}>Next</Button>}
-          </div>
+    <>
+      <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+        <AppBackground />
+        <div style={{ height: PG_TOUR_BAR_HEIGHT }} className="shrink-0" />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {current.content}
         </div>
       </div>
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {current.content}
-      </div>
-    </div>
+      {createPortal(
+        <>
+          <div
+            className="fixed top-0 left-0 right-0 flex items-center px-[24px] pr-[180px] overflow-hidden"
+            style={{ height: PG_TOUR_BAR_HEIGHT, zIndex: 10030, background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}
+          >
+            <div className="flex items-center justify-between gap-[16px] w-full">
+              <div className="min-w-0">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Step {i + 1} of {steps.length} — {current.label}</span>
+                <p className="text-[13px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>{current.note}</p>
+              </div>
+              <div className="flex gap-[8px] shrink-0">
+                <Button variant="secondary" size="sm" disabled={i === 0} onClick={back}>Back</Button>
+                {i < steps.length - 1 && <Button variant="primary" size="sm" onClick={next}>Next</Button>}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="fixed flex items-center gap-[6px] rounded-[6px]"
+            style={{ top: 10, right: 12, zIndex: 10031, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+          >
+            <LucideIcons.X size={12} /> Close Preview
+          </button>
+        </>,
+        document.body,
+      )}
+    </>
   )
 }
 
