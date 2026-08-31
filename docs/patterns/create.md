@@ -3,7 +3,7 @@
 > Single source of truth for how any create action picks its surface in AIMS OS.
 > Everything else — the `CLAUDE.md` table, the `patterns-create` doc page, the playground screens — is derived from this file.
 >
-> Status: **draft v0.7 — pending validation**
+> Status: **draft v0.8 — pending validation**
 >
 > v0.2 — volume threshold removed; step 1 rewritten as a declared property rather than an enumerated list.
 > v0.3 — cascade rewritten as an explicit sequence; the two-stage flow named instead of falling through to the default.
@@ -11,7 +11,7 @@
 > v0.5 — contextual vs standalone split added as steps 4 and 5; a modal is now a first-class create form container. Reconciliation mapped against the seven findings in `create-audit.md`.
 > v0.6 — `SlideOut type` corrected to `full-slot` after verifying against the component source; landing defined for the standalone modal and the catalogue modal.
 > v0.7 — step 1 reframed as a hand-off rather than a surface; "dedicated view" split into the two distinct outputs it was conflating.
-> v0.8 — Case 6b corrected: a list of the same object type on screen is not a parent, so a catalogue selection that leaves fields remaining is standalone, not contextual — it resolves at step 5 (`ModalDialog`), not step 4 (`SlideOut`). The row in §7 had not been updated to match §5's own landing rule for the standalone modal; corrected here, matching `create-examples.md`'s scene F.
+> v0.8 — staged flows never live in a panel (no Stepper in a SlideOut); page-level create completes in `StepperNavFooter`, not the Header; the trigger lives where the collection lives; §4b defines success feedback by visibility and names the missing Toast component.
 
 ---
 
@@ -108,7 +108,7 @@ This also satisfies NN/g's constraint that a modal must not host a decision requ
 | Step | Test | Yes | No |
 | --- | --- | --- | --- |
 | 1 | Does the object type declare a creation section of its own — a builder, canvas, or specialised editor? | **Hand off — navigate there** | → 2 |
-| 2 | Does the flow branch, or does it have three or more stages? | **Full-page wizard — `Stepper` + `StepperNavFooter`** | → 3 |
+| 2 | Does the flow branch, or does it have two or more stages? | **Full-page wizard — `Stepper` + `StepperNavFooter`** | → 3 |
 | 3 | Can the object be created from a single field, *and* is a list of the same object type visible on screen? | **Inline create row** ⚠️ `DS-GAP` | → 4 |
 | 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | **`SlideOut type="full-slot"`** | → 5 |
 | 5 | More than five fields? | **Full-page create form** | **`ModalDialog variant="content"`** |
@@ -130,14 +130,12 @@ A standalone create that exceeds five fields is not a modal that needs to be big
 
 ### Staged flows: where the line sits
 
-A create with **exactly two stages and no branching** resolves to step 4 — a `SlideOut`. This is deliberate and consistent with what the design system already says in two places: the Forms pattern reserves `StepperNavFooter` for wizards of three or more steps, and the panel guidance explicitly sanctions a step-by-step guided form inside a `SlideOut`.
+Consistent with the cascade above — step 2 already resolves any flow of two or more stages, or any branching, to a full-page wizard. Staged flows never live in a panel: there is no Stepper inside a SlideOut. A single-stage flow is not staged at all; it is just a `SlideOut`.
 
 | Shape of the flow | Surface |
 | --- | --- |
 | One stage | `SlideOut` |
-| Two stages, no branching | `SlideOut`, optionally with a lightweight step indicator |
-| Three or more stages | Dedicated view + `Stepper` + `StepperNavFooter` |
-| Any branching, at any stage count | Dedicated view + `Stepper` + `StepperNavFooter` |
+| Two or more stages, or any branching | Full-page wizard + `Stepper` + `StepperNavFooter` |
 
 `StepperNavFooter` is a page-level component. It never appears inside a `SlideOut`.
 
@@ -210,6 +208,22 @@ Follow the existing `ModalDialog` composition rules in `CLAUDE.md`: `tone` match
 
 ---
 
+## 4b · Confirming that it worked
+
+Separate from the confirmation *before* saving (§4), which is about risk. This is about whether the user can tell the create succeeded.
+
+| Situation | Feedback |
+| --- | --- |
+| The created object lands somewhere visible — a list, a widget, the page you return to | **The object appearing is the confirmation.** Show it as the first row, briefly highlighted. No banner. |
+| The result is not visible — an asynchronous create, a governed action awaiting Council validation, a create the user navigates away from | A transient notice is needed. **No component exists for this** — see below. |
+| The create was irreversible | The confirmation modal before saving already carried the weight. The landing does the rest. |
+
+**`AlertBanner` is not the component for this.** Its spec defines it as a full-width notice for *system-level* feedback, and the Feedback pattern page assigns it to *persistent in-context state*. A success banner for a routine create occupies space until dismissed and says less than the object itself does.
+
+**`DS-GAP` — Toast / Snackbar.** The design system has no transient action-feedback component. Until it exists, the second row above cannot be built, and any create whose result is invisible is under-specified. Worth raising as its own ticket.
+
+---
+
 ## 5 · Third output — where the user lands afterwards
 
 Derived from the container. Not a separate decision.
@@ -233,7 +247,9 @@ Create is **always contextual** in v1. There is no global create affordance.
 | --- | --- |
 | List view | `Header` `primaryAction`, `variant="main"` — max one per screen |
 | Empty state | `EmptyState` CTA — *"Create your first [Entity]"* |
-| Inside a record | Widget-level action, `variant="primary"` |
+| Inside a record, collection held by a widget | An action in **that widget's own header** |
+
+**The trigger lives where the collection lives.** If notes are held by a Notes widget, the affordance to add one belongs in that widget, not in the page `Header`. The page `Header` CTA is reserved for the primary object of that screen — on a Worker detail page that is Run now, not Add note. Putting a child object's create action in the page Header competes with the page's own action and hides the relationship between the action and the collection it fills.
 
 **Not in v1:** a global `+` in the `Topbar`. The `Topbar` accepts a maximum of three actions and all three are occupied. Adding one is a change to the app shell, not to this pattern.
 
@@ -248,16 +264,16 @@ Create is **always contextual** in v1. There is no global create affordance.
 | 2 | Create an entity record from its own list view, 4 fields | Step 5 | `ModalDialog variant="content"` |
 | 2b | Create an entity record from its own list view, 9 fields | Step 5 | Full-page create form |
 | 2c | Create a secondary entity from inside its parent's profile | Step 4 | `SlideOut` |
-| 2d | Create an entity record, two stages, no branching, contextual | Step 4 | `SlideOut` with step indicator |
+| 2d | Create an entity record, two stages, no branching | Step 2 | Full-page wizard |
 | 3 | Create a governance policy | Step 2 | Full-page wizard, **+ confirmation** |
 | 4 | Create a workflow | Step 1 | Hand-off — navigate to the workflow builder. Nothing further specified. |
 | 4b | Create an agent | Step 1 | Hand-off — navigate to the agent section. Nothing further specified. |
 | 5 | Add a node to the canvas | **Gate 0** | Rejected — this is Configure |
 | 6 | Add a template from the marketplace, template fully defines the object | Gate 1 — from a source | `ModalDialog variant="content"` → created |
-| 6b | Add a template from the marketplace, fields remain | Gate 1 → Step 5 | Catalogue modal → `ModalDialog` pre-filled — a list of the same object type on screen is not a parent, so this is standalone, not contextual |
+| 6b | Add a template from the marketplace, fields remain | Gate 1 → Step 5 | Catalogue modal → `ModalDialog`, pre-filled — a list of the same object type on screen is not a parent, so this is standalone, not contextual |
 | 7 | Create with AI | Gate 1 — assisted | Chat `ModalDialog` → success modal |
 
-All five resolve. No exception required.
+All thirteen cases resolve. No exception required.
 
 Cases 1a and 1b resolve differently on purpose: the surface follows the entry point. That is the intended behaviour, not an ambiguity — whether a list of the same type is on screen is observable at the moment the action fires.
 
@@ -327,7 +343,7 @@ The audit in `docs/patterns/create-audit.md` found seven conflicts across four s
 
 | Audit finding | Resolved by |
 | --- | --- |
-| C1 — multi-step create: `SlideOut` or full-page wizard? | §3 "Staged flows". Two stages without branching stay in a `SlideOut`; three or more, or any branching, go to a dedicated view. |
+| C1 — multi-step create: `SlideOut` or full-page wizard? | §3 "Staged flows". Only a single stage stays in a `SlideOut`; two or more stages, or any branching, go to a full-page wizard. |
 | C2 — patterns-forms contradicts its own worked example | Steps 4 and 5. The example creates a standalone record, so it was never a `SlideOut` case. Whether it should be a modal or a dedicated view now depends on its field count. |
 | C3 — `SidePanel` invisible in three of four sources | Gate 0. `SidePanel` belongs to Configure and never appears in Create. Stated once, here. |
 | C4 — three separately maintained copies of "modal vs SlideOut" | §2b becomes the single statement for Create. The other copies get pointers. |

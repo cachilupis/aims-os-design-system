@@ -416,7 +416,7 @@ The test that decides it: **can the user ignore this and keep working in the bac
 | Step | Test | Yes | No |
 | --- | --- | --- | --- |
 | 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | Hand-off — the object has its own creation section; Create just navigates there, nothing else is specified | → 2 |
-| 2 | Does the flow branch, or does it have 3+ stages? | Full-page wizard + `Stepper` + `StepperNavFooter` | → 3 |
+| 2 | Does the flow branch, or does it have two or more stages? | Full-page wizard + `Stepper` + `StepperNavFooter` | → 3 |
 | 3 | Can the object be created from a single field, AND is a list of the same object type visible on screen? | Inline create row — `DS-GAP`, does not exist in this repo yet | → 4 |
 | 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | `SlideOut type="full-slot"` | → 5 |
 | 5 | More than 5 fields? | Full-page create form | `ModalDialog variant="content"` |
@@ -425,16 +425,16 @@ Step 1 is a hand-off, not a surface choice — once the object declares it owns 
 
 Steps 4–5, stated as one rule: **contextual** (the new object hangs off something on screen) → `SlideOut type="full-slot"`. **Standalone** (nothing on screen is its parent) → `ModalDialog variant="content"` at 5 fields or fewer, a full-page create form above that. The 5-field threshold applies ONLY here (standalone, modal-bound) — never to a `SlideOut`, which grows with its content instead.
 
-**Staged flows — where the line sits.**
+**Staged flows — where the line sits.** Staged flows never live in a panel — there is no `Stepper` inside a `SlideOut`.
 
 | Shape of the flow | Surface |
 | --- | --- |
 | One stage | `SlideOut` |
-| Two stages, no branching | `SlideOut`, optionally with a lightweight step indicator |
-| Three or more stages | Full-page wizard + `Stepper` + `StepperNavFooter` |
-| Any branching, at any stage count | Full-page wizard + `Stepper` + `StepperNavFooter` |
+| Two or more stages, or any branching | Full-page wizard + `Stepper` + `StepperNavFooter` |
 
 `StepperNavFooter` is a page-level component — it never appears inside a `SlideOut`.
+
+**Entry points — the trigger lives where the collection lives.** If notes are held by a Notes widget, the affordance to add one belongs in that widget's own header, not in the page `Header`. The page `Header` CTA is reserved for the primary object of that screen — on a Worker detail page that is "Run now," not "Add note." A create page also carries no create CTA in its own `Header`: on a full-page create form or wizard, `Header` carries title and `backButton` only — the action completes in `StepperNavFooter`.
 
 **General overlay stacking rule (applies everywhere, not just Create):** only 1 `ModalDialog` + 1 `SlideOut` active at a time.
 

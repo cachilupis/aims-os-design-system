@@ -15700,9 +15700,12 @@ function PgRunRow({ status, time }: { status: "success" | "error"; time: string 
   )
 }
 
-function PgNoteRow({ author, time, text }: { author: string; time: string; text: string }) {
+function PgNoteRow({ author, time, text, highlighted }: { author: string; time: string; text: string; highlighted?: boolean }) {
   return (
-    <div className="rounded-[8px] p-[10px]" style={{ border: "0.5px solid var(--field-border)" }}>
+    <div className="rounded-[8px] p-[10px]" style={{
+      border: highlighted ? "0.5px solid var(--color-border-success-lighter)" : "0.5px solid var(--field-border)",
+      background: highlighted ? "var(--color-surface-success-more-subtle)" : "transparent",
+    }}>
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{author}</span>
         <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{time}</span>
@@ -15754,15 +15757,19 @@ function PgCreateContextShell({ sidebarId, overlay, children }: { sidebarId: str
 }
 
 type PgTourStepDef = { label: string; note: string; content: React.ReactNode }
-type PgPreviewCaseId = "contextual-slideout" | "standalone-modal" | "standalone-fullpage" | "staged-slideout" | "staged-wizard" | "catalogue"
+type PgPreviewCaseId = "contextual-slideout" | "standalone-modal" | "standalone-fullpage" | "staged-wizard" | "catalogue"
 
-// Section 1 · "no list on screen" → SlideOut attaches to the record
+// Section 1 · "the trigger lives where the collection lives" → SlideOut attaches to the record
 function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose: () => void): PgTourStepDef[] {
-  const frame = (overlay?: React.ReactNode, showNotes?: boolean) => (
+  const existingNotes = [
+    { author: "Priya S.", time: "2h ago", text: "Bumped the retry limit to 5 after last week's timeout." },
+    { author: "Marcus T.", time: "1d ago", text: "Confirmed the field mapping matches the new billing schema." },
+  ]
+  const frame = (overlay?: React.ReactNode, isLanding?: boolean) => (
     <PgCreateContextShell sidebarId="agents" overlay={overlay}>
       <main className="flex-1 flex flex-col overflow-hidden">
         <Header title="Data Sync Worker" description="Worker · Active" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l"
-          primaryAction={<Button variant="main" size="sm" onClick={next}>Add note</Button>} />
+          primaryAction={<Button variant="main" size="sm">Run now</Button>} />
         <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
           <div className="grid grid-cols-[1fr_330px] gap-[20px] items-start max-w-[1040px]">
             <div className="flex flex-col gap-[12px]">
@@ -15770,19 +15777,18 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
                 <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
                 <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Syncs contact records between the CRM and the billing system every 15 minutes.</p>
               </div>
-              {showNotes && (
-                <WidgetFather title="Notes" widthClass="wide" showMenu>
-                  <div className="flex flex-col gap-[8px]">
-                    <PgNoteRow author="You" time="Just now" text="Bumped the retry limit to 5 after last week's timeout." />
-                  </div>
-                </WidgetFather>
-              )}
+              <WidgetFather title="Recent Runs" widthClass="wide" showRefresh showMenu>
+                <div className="flex flex-col gap-[8px]">
+                  <PgRunRow status="success" time="12m ago" />
+                  <PgRunRow status="success" time="27m ago" />
+                  <PgRunRow status="error" time="42m ago" />
+                </div>
+              </WidgetFather>
             </div>
-            <WidgetFather title="Recent Runs" widthClass="narrow" showRefresh showMenu>
+            <WidgetFather title="Notes" widthClass="narrow" cta={{ count: 1, type: "hug", primaryLabel: "+ Add note", onPrimary: next }}>
               <div className="flex flex-col gap-[8px]">
-                <PgRunRow status="success" time="12m ago" />
-                <PgRunRow status="success" time="27m ago" />
-                <PgRunRow status="error" time="42m ago" />
+                {isLanding && <PgNoteRow author="You" time="Just now" text="Reached out to the vendor about the timeout — waiting on their reply." highlighted />}
+                {existingNotes.map(n => <PgNoteRow key={n.author} {...n} />)}
               </div>
             </WidgetFather>
           </div>
@@ -15791,8 +15797,8 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
     </PgCreateContextShell>
   )
   return [
-    { label: "Trigger visible", note: "The new note hangs off this record — but no notes list exists on this view to hold an inline row instead.", content: frame() },
-    { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record stays visible behind it — that visibility is the whole point of this step.", content: frame(
+    { label: "Trigger visible", note: "The trigger lives inside the Notes widget's own header — the collection it fills — not the page Header, which is reserved for the worker's own primary action, Run now.", content: frame() },
+    { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record and its existing notes stay visible behind it — that visibility is the whole point of this step.", content: frame(
       <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
         <div className="flex flex-col gap-[16px] h-full">
           <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
@@ -15800,12 +15806,12 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
           <div className="flex-1" />
           <div className="flex justify-end gap-[8px]">
             <Button variant="secondary" size="sm">Cancel</Button>
-            <Button variant="primary" size="sm" onClick={next}>Create</Button>
+            <Button variant="primary" size="sm" onClick={next}>Add note</Button>
           </div>
         </div>
       </SlideOut>
     ) },
-    { label: "Landing", note: "Closes. The user returns to where they were; the new note now appears in a Notes widget.", content: frame(undefined, true) },
+    { label: "Landing", note: "Closes. The new note is the first row of the Notes widget, briefly highlighted — no success banner, the note appearing is the confirmation.", content: frame(undefined, true) },
   ]
 }
 
@@ -15857,7 +15863,7 @@ function pgSceneStandaloneModal(next: () => void, _back: () => void, _onClose: (
 }
 
 // Section 2 · standalone, >5 fields → Full-page create form
-function pgSceneStandaloneFullPage(next: () => void, _back: () => void, _onClose: () => void): PgTourStepDef[] {
+function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
   return [
     { label: "Trigger visible", note: "Standalone, more than 5 fields — too much for a modal, but only one stage, so no Stepper.", content: (
       <PgCreateContextShell sidebarId="contacts">
@@ -15880,12 +15886,10 @@ function pgSceneStandaloneFullPage(next: () => void, _back: () => void, _onClose
         </main>
       </PgCreateContextShell>
     ) },
-    { label: "Surface open", note: "Full-page create form — the 5-field threshold applies only to the standalone, modal-bound side of the cascade.", content: (
+    { label: "Surface open", note: "A create page has no create CTA in its Header — title and backButton only. The action completes in StepperNavFooter at the bottom, the only place the flow can be finished.", content: (
       <PgCreateContextShell sidebarId="contacts">
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <Header title="New User" description="Add a teammate to this workspace" backButton size="size-l"
-            primaryAction={<Button variant="main" size="sm" onClick={next}>Create user</Button>}
-            secondaryAction={<Button variant="secondary" size="sm">Cancel</Button>} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header title="New User" description="Add a teammate to this workspace" backButton size="size-l" />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
             <div className="max-w-[680px] flex flex-col gap-[24px]">
               <div className="flex flex-col gap-[16px]">
@@ -15905,7 +15909,8 @@ function pgSceneStandaloneFullPage(next: () => void, _back: () => void, _onClose
               </div>
             </div>
           </div>
-        </main>
+          <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Create user" onNext={next} />
+        </div>
       </PgCreateContextShell>
     ) },
     { label: "Landing", note: "Navigates to the created object.", content: (
@@ -15924,81 +15929,12 @@ function pgSceneStandaloneFullPage(next: () => void, _back: () => void, _onClose
   ]
 }
 
-// Section 3 · 2 stages, no branching → SlideOut with a lightweight step indicator
-function pgSceneStagedSlideout(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
-  const frame = (overlay?: React.ReactNode, showTriggers?: boolean) => (
-    <PgCreateContextShell sidebarId="agents" overlay={overlay}>
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Data Sync Worker" description="Worker · Active" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l"
-          primaryAction={<Button variant="main" size="sm" onClick={next}>Add trigger</Button>} />
-        <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-          <div className="grid grid-cols-[1fr_330px] gap-[20px] items-start max-w-[1040px]">
-            <div className="flex flex-col gap-[12px]">
-              <div className="rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
-                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
-                <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Syncs contact records between the CRM and the billing system every 15 minutes.</p>
-              </div>
-              {showTriggers && (
-                <WidgetFather title="Triggers" widthClass="wide" showMenu>
-                  <div className="flex items-center justify-between rounded-[8px] p-[10px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                    <span className="text-[12px]" style={{ color: "var(--foreground)" }}>New lead created → Send Slack alert</span>
-                    <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>Just now</span>
-                  </div>
-                </WidgetFather>
-              )}
-            </div>
-            <WidgetFather title="Recent Runs" widthClass="narrow" showRefresh showMenu>
-              <div className="flex flex-col gap-[8px]">
-                <PgRunRow status="success" time="12m ago" />
-                <PgRunRow status="success" time="27m ago" />
-                <PgRunRow status="error" time="42m ago" />
-              </div>
-            </WidgetFather>
-          </div>
-        </div>
-      </main>
-    </PgCreateContextShell>
-  )
-  const slideOutStage = (stage: 0 | 1) => (
-    <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
-      <div className="flex flex-col gap-[16px] h-full">
-        <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New trigger</span>
-        <Stepper steps={[
-          { label: "Define", state: stage === 0 ? "active" : "completed" },
-          { label: "Set action", state: stage === 1 ? "active" : "default" },
-        ]} />
-        {stage === 0 ? (
-          <>
-            <Select placeholder="Event" />
-            <Select placeholder="Field" />
-          </>
-        ) : (
-          <>
-            <Select placeholder="Action" />
-            <Input placeholder="Slack channel" />
-          </>
-        )}
-        <div className="flex-1" />
-        <div className="flex justify-end gap-[8px]">
-          <Button variant="secondary" size="sm" onClick={back}>Back</Button>
-          <Button variant="primary" size="sm" onClick={next}>{stage === 0 ? "Next" : "Create"}</Button>
-        </div>
-      </div>
-    </SlideOut>
-  )
-  return [
-    { label: "Trigger visible", note: "Two stages, no branching, contextual — attaches to this worker.", content: frame() },
-    { label: "Stage 1 of 2", note: "SlideOut with a Stepper for its 2 stages — not StepperNavFooter, which is a page-level component and never appears inside a SlideOut.", content: frame(slideOutStage(0)) },
-    { label: "Stage 2 of 2", note: "Same panel — the Stepper advances, Create replaces Next.", content: frame(slideOutStage(1)) },
-    { label: "Landing", note: "Closes. The user returns to where they were; the new trigger appears in context.", content: frame(undefined, true) },
-  ]
-}
-
-// Section 3 · 3+ stages or branching → Full-page wizard
+// Section 3 · two or more stages, or any branching → Full-page wizard. Staged
+// flows never live in a panel — there is no Stepper inside a SlideOut.
 function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
   const draft = PG_CTX_POLICIES.filter(p => p.state?.label === "Draft").length
   return [
-    { label: "Trigger visible", note: "Three or more stages — a full-page wizard, not a SlideOut.", content: (
+    { label: "Trigger visible", note: "Two or more stages — a full-page wizard, not a SlideOut. Staged flows never live in a panel.", content: (
       <PgCreateContextShell sidebarId="knowledge">
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="Policies" description={`${PG_CTX_POLICIES.length} policies · ${draft} draft`} size="size-l"
@@ -16144,7 +16080,6 @@ const PG_PREVIEW_SCENES: Record<PgPreviewCaseId, (next: () => void, back: () => 
   "contextual-slideout": pgSceneContextualSlideout,
   "standalone-modal": pgSceneStandaloneModal,
   "standalone-fullpage": pgSceneStandaloneFullPage,
-  "staged-slideout": pgSceneStagedSlideout,
   "staged-wizard": pgSceneStagedWizard,
   "catalogue": pgSceneCatalogue,
 }
@@ -16315,7 +16250,7 @@ function PatternCreatePage() {
                 <tbody>
                   {[
                     ["1", "Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation?", "Hand-off — object's own creation section", "→ 2"],
-                    ["2", "Does the flow branch, or does it have 3+ stages?", "Full-page wizard + Stepper + StepperNavFooter", "→ 3"],
+                    ["2", "Does the flow branch, or does it have two or more stages?", "Full-page wizard + Stepper + StepperNavFooter", "→ 3"],
                     ["3", "Can the object be created from a single field, AND is a list of the same object type visible on screen?", "Inline create row", "→ 4"],
                     ["4", "Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at?", "SlideOut type=\"full-slot\"", "→ 5"],
                     ["5", "More than 5 fields?", "Full-page create form", "ModalDialog variant=\"content\""],
@@ -16365,6 +16300,9 @@ function PatternCreatePage() {
 
           <PatternCard>
             <SectionLabel>Staged flows — where the line sits</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[10px]">
+              Staged flows never live in a panel — there is no Stepper inside a SlideOut.
+            </p>
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
                 <thead>
@@ -16375,9 +16313,7 @@ function PatternCreatePage() {
                 <tbody>
                   {[
                     ["One stage", "SlideOut"],
-                    ["Two stages, no branching", "SlideOut, optionally with a lightweight step indicator"],
-                    ["Three or more stages", "Full-page wizard + Stepper + StepperNavFooter"],
-                    ["Any branching, at any stage count", "Full-page wizard + Stepper + StepperNavFooter"],
+                    ["Two or more stages, or any branching", "Full-page wizard + Stepper + StepperNavFooter"],
                   ].map(([shape, surf]) => (
                     <tr key={shape} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
                       <td className="px-[12px] py-[10px] text-[var(--foreground)]">{shape}</td>
@@ -16453,9 +16389,9 @@ function PatternCreatePage() {
                 { type: "do",   text: "Run the cascade top to bottom and stop at the first \"yes\" — never treat two steps as equally applicable." },
                 { type: "dont", text: "Don't open a ModalDialog for a form whose fields depend on the background it's covering — use SlideOut, regardless of field count." },
                 { type: "do",   text: "Treat \"can the user ignore this and keep working?\" as the real test between ModalDialog and SlideOut." },
-                { type: "dont", text: "Don't put StepperNavFooter inside a SlideOut — it's a page-level component, reserved for 3+ stages or any branching." },
-                { type: "do",   text: "Let a two-stage, non-branching create stay in a SlideOut, optionally with a lightweight step indicator." },
-                { type: "dont", text: "Don't add a global \"+\" affordance to the Topbar — Create is always contextual in v1, entered from a list Header, an EmptyState CTA, or a widget-level action." },
+                { type: "dont", text: "Don't put StepperNavFooter inside a SlideOut — it's a page-level component, reserved for two or more stages or any branching." },
+                { type: "do",   text: "Put a child collection's create trigger in that collection's own widget header, never in the page Header — the page Header CTA is reserved for the screen's primary object." },
+                { type: "dont", text: "Don't add a global \"+\" affordance to the Topbar — Create is always contextual in v1, entered from a list Header, an EmptyState CTA, or an action in the collection's own widget header." },
               ].map((item, i) => (
                 <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
                   style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
@@ -16523,6 +16459,38 @@ function PatternCreatePage() {
           </PatternCard>
 
           <PatternCard>
+            <SectionLabel>Confirming that it worked</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">Separate from the confirmation before saving above, which is about risk. This is about whether the user can tell the create succeeded.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Situation", "Feedback"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["The created object lands somewhere visible — a list, a widget, the page you return to", "The object appearing is the confirmation. Show it as the first row, briefly highlighted. No banner."],
+                    ["The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from", "A transient notice is needed. No component exists for this — see below."],
+                    ["The create was irreversible", "The confirmation modal before saving already carried the weight. The landing does the rest."],
+                  ].map(([sit, feedback]) => (
+                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{feedback}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              <strong style={{ color: "var(--foreground)" }}>AlertBanner is not the component for this.</strong> Its spec defines it as a full-width notice for system-level feedback, and the Feedback pattern page assigns it to persistent in-context state. A success banner for a routine create occupies space until dismissed and says less than the object itself does.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
+              <strong style={{ color: "var(--color-text-alert)" }}>DS-GAP — Toast / Snackbar.</strong> The design system has no transient action-feedback component. Until it exists, the second row above cannot be built, and any create whose result is invisible is under-specified.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
             <SectionLabel>Entry points</SectionLabel>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">Create is always contextual in v1 — there is no global create affordance.</p>
             <div className="overflow-x-auto">
@@ -16536,7 +16504,7 @@ function PatternCreatePage() {
                   {[
                     ["List view", "Header primaryAction, variant=\"main\" — max one per screen"],
                     ["Empty state", "EmptyState CTA — \"Create your first [Entity]\""],
-                    ["Inside a record", "Widget-level action, variant=\"primary\""],
+                    ["Inside a record, collection held by a widget", "An action in that widget's own header"],
                   ].map(([entry, comp]) => (
                     <tr key={entry} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
                       <td className="px-[12px] py-[10px] text-[var(--foreground)]">{entry}</td>
@@ -16546,6 +16514,9 @@ function PatternCreatePage() {
                 </tbody>
               </table>
             </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              <strong style={{ color: "var(--foreground)" }}>The trigger lives where the collection lives.</strong> If notes are held by a Notes widget, the affordance to add one belongs in that widget, not in the page Header. The page Header CTA is reserved for the primary object of that screen — on a Worker detail page that is Run now, not Add note.
+            </p>
             <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">Not in v1: a global "+" in the Topbar. The Topbar accepts a maximum of 3 actions and all 3 are occupied — adding one is a change to the app shell, not to this pattern.</p>
           </PatternCard>
         </div>
@@ -16555,7 +16526,7 @@ function PatternCreatePage() {
       {tab === "examples" && (
         <div className="flex flex-col gap-[24px]">
           <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
-            Every case below resolves by running the cascade — no exception required. Six cases open a full-screen walkthrough; the rest are documentation rows — they explain the rule in text and don't open a preview, either because the component doesn't exist yet or because this pattern deliberately doesn't specify anything further.
+            Every case below resolves by running the cascade — no exception required. Five cases open a full-screen walkthrough; the rest are documentation rows — they explain the rule in text and don't open a preview, either because the component doesn't exist yet or because this pattern deliberately doesn't specify anything further.
           </p>
 
           <PatternCard>
@@ -16584,11 +16555,8 @@ function PatternCreatePage() {
           <PatternCard>
             <SectionLabel>Creating in stages</SectionLabel>
             <div className="flex flex-col gap-[8px]">
-              <PgGalleryRow label="2 stages, no branching" surface="SlideOut with a step indicator" status="preview"
-                note="Step 4 — resolves like any other contextual create; the step indicator is a lightweight one, not a Stepper."
-                onLaunch={() => setPgPreviewCase("staged-slideout")} />
-              <PgGalleryRow label="3+ stages or branching" surface="Full-page wizard" status="preview"
-                note="Step 2 — Stepper + StepperNavFooter."
+              <PgGalleryRow label="2 or more stages, or any branching" surface="Full-page wizard" status="preview"
+                note="Step 2 — Stepper + StepperNavFooter. Staged flows never live in a panel — there is no Stepper inside a SlideOut."
                 onLaunch={() => setPgPreviewCase("staged-wizard")} />
             </div>
           </PatternCard>
@@ -16630,7 +16598,7 @@ function PatternCreatePage() {
                     ["Create an entity record from its own list view, 4 fields", "Step 5", "ModalDialog variant=\"content\""],
                     ["Create an entity record from its own list view, 9 fields", "Step 5", "Full-page create form"],
                     ["Create a secondary entity from inside its parent's profile", "Step 4", "SlideOut"],
-                    ["Create an entity record, 2 stages, no branching, contextual", "Step 4", "SlideOut with step indicator"],
+                    ["Create an entity record, two stages, no branching", "Step 2", "Full-page wizard"],
                     ["Create a governance policy", "Step 2", "Full-page wizard + Stepper, + confirmation"],
                     ["Create a workflow", "Step 1", "Hand-off → the workflow builder owns everything past this point"],
                     ["Create an agent", "Step 1", "Hand-off → the agent's own workspace owns everything past this point"],
@@ -16704,7 +16672,7 @@ GATE_1 — which create mode?
 
 CASCADE (manual create — stop at first YES)
   STEP 1  object_type.owns_workspace()          → HAND-OFF: navigate to the object's own creation section, nothing else specified
-  STEP 2  flow.branches OR flow.stages >= 3     → Full-page wizard + Stepper + StepperNavFooter
+  STEP 2  flow.branches OR flow.stages >= 2     → Full-page wizard + Stepper + StepperNavFooter (never a Stepper inside a SlideOut)
   STEP 3  object_type.single_field_createable
             AND list_of_same_type_on_screen     → Inline create row
   STEP 4  new_object.attaches_to_visible_thing  → SlideOut type="full-slot"
