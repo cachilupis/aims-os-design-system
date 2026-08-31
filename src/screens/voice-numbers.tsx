@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Phone, Shield, Users, Plus, Trash2, Info } from "lucide-react"
+import { Phone, Shield, Users, Plus, Trash2, Info, ShieldOff, Search } from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Tabs } from "@/components/ui/tabs"
@@ -14,6 +14,7 @@ import { Toggle } from "@/components/ui/toggle"
 import { Select } from "@/components/ui/select"
 import { HighlightCard } from "@/components/ui/highlight-card"
 import { InformativeCard } from "@/components/ui/informative-card"
+import { EmptyState } from "@/components/ui/empty-state"
 import type { SidebarItem } from "@/components/ui/sidebar"
 import { NUMBERS, VOICE_AGENTS, type PhoneNumber, type NumberType } from "./voice/data"
 import { BuyNumberModal, NumberConfigSlideOut } from "./voice/flows"
@@ -24,7 +25,7 @@ const VOICE_SIDEBAR: SidebarItem[] = [
   { id: "home",         label: "Home",         icon: "Home" },
   { id: "agents",       label: "Agents",       icon: "Sparkle" },
   { id: "automations",  label: "Automations",  icon: "Zap" },
-  { id: "voice",        label: "Voice",        icon: "Phone" },
+  { id: "voice",        label: "Phone Numbers", icon: "Phone" },
   { id: "voice-agents", label: "Voice Agents", icon: "Bot" },
   { id: "knowledge",    label: "Knowledge",    icon: "LayoutGrid", hasChildren: true },
   { id: "contacts",     label: "Contacts",     icon: "User" },
@@ -85,6 +86,28 @@ function NumbersTab() {
 
   const selected = numbers.find(n => n.id === selectedId) ?? null
   const nextId   = useMemo(() => Math.max(...numbers.map(n => n.id), 0) + 1, [numbers])
+
+  // Zero-numbers empty state (whole workspace hasn't bought anything yet)
+  if (numbers.length === 0) {
+    return (
+      <div className="flex flex-col gap-4">
+        <EmptyState
+          icon={Phone}
+          title="No phone numbers yet"
+          description="Buy a phone number to start routing calls to Voice Agents. Numbers can handle inbound, outbound, or both — with Voice, SMS, or both capabilities."
+          ctaLabel="Buy your first number"
+          onCta={() => setBuyOpen(true)}
+        />
+        <BuyNumberModal
+          isOpen={buyOpen}
+          onClose={() => setBuyOpen(false)}
+          agents={VOICE_AGENTS}
+          nextId={nextId}
+          onBuy={(num) => { setNumbers(prev => [num, ...prev]); setPage(1) }}
+        />
+      </div>
+    )
+  }
 
   const columns: TableColumn<PhoneNumber>[] = [
     {
@@ -198,9 +221,19 @@ function NumbersTab() {
           columns={columns}
           data={paged}
           size="default"
-          emptyIcon={Phone}
-          emptyTitle="No numbers match the current filter."
-          emptyDescription="Try clearing the search or changing the filter above."
+          emptyIcon={search ? Search : Phone}
+          emptyTitle={
+            search             ? `No numbers match "${search}"` :
+            filter !== "all"   ? `No ${filter} numbers` :
+                                 "No phone numbers"
+          }
+          emptyDescription={
+            search             ? "Try a different search term or clear the search." :
+            filter !== "all"   ? "Try switching to a different filter tab above." :
+                                 "Buy your first number to see it here."
+          }
+          emptyCtaLabel={search || filter !== "all" ? undefined : "Buy Number"}
+          onEmptyCta={search || filter !== "all" ? undefined : () => setBuyOpen(true)}
         />
         {filtered.length > 0 && (
           <div className="mt-3">
@@ -276,8 +309,13 @@ function SecurityTab() {
           <div style={{ fontSize: 12, color: "var(--color-text-caption)", marginBottom: 16 }}>
             Numbers or patterns that are blocked for all inbound and outbound calls across this channel.
           </div>
-          <div className="flex gap-2 flex-wrap mb-2">
-            {blocklist.map(v => (
+          <div className="flex gap-2 flex-wrap mb-2 min-h-[24px] items-center">
+            {blocklist.length === 0 ? (
+              <div className="flex items-center gap-2" style={{ fontSize: 12, color: "var(--color-text-caption)", fontStyle: "italic" }}>
+                <ShieldOff size={13}/>
+                <span>No blocked numbers. Add one below.</span>
+              </div>
+            ) : blocklist.map(v => (
               <Tag key={v} variant="neutral" size="sm"
                    trailingIcon={
                      <button aria-label={`Remove ${v} from block list`}
@@ -371,8 +409,8 @@ export default function VoiceNumbersScreen() {
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}
-          title="Voice"
-          description="Phone numbers, policies and activity for the Voice channel."
+          title="Phone Numbers"
+          description="Phone numbers, policies and call activity for the Voice channel."
         />
       )}
     >
