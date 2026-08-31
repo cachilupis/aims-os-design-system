@@ -15737,6 +15737,102 @@ function PgGalleryRow({ label, surface, note, status, onLaunch }: {
   )
 }
 
+// List-view content body — Filters pinned at the top, the entity list scrolling
+// in the middle, Pagination anchored outside that scroll area at the bottom.
+// The list fills the available width; only the view's own 32px padding limits
+// it — no arbitrary max-w. Shared by every list-view scene so this structure
+// (and its 3 recurring bugs — Pagination inside the scroll, a width cap on the
+// list, and mismatched item counts) can't drift independently per scene again.
+function PgListViewBody({ searchPlaceholder, filterSlots, items, visibleCount = 2 }: {
+  searchPlaceholder: string
+  filterSlots: { placeholder: string }[]
+  items: EntityListItemData[]
+  visibleCount?: number
+}) {
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden px-[32px] py-[28px] gap-[16px]">
+      <Filters searchPlaceholder={searchPlaceholder} slots={filterSlots} />
+      <div className="flex-1 overflow-y-auto flex flex-col gap-[12px]">
+        {items.slice(0, visibleCount).map(item => (
+          <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+            <EntityList items={[item]} />
+          </CardContainer>
+        ))}
+      </div>
+      <Pagination currentPage={1} totalItems={items.length} itemsPerPage={visibleCount} onPageChange={() => {}} />
+    </div>
+  )
+}
+
+// Forms pattern — section label (11px, uppercase) 4px above its fields, 16px
+// between fields within the section. 24px between sections is the caller's
+// own gap on the parent stack, not this component's concern.
+function PgFormSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-[4px]">
+      <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{label}</span>
+      <div className="flex flex-col gap-[16px]">{children}</div>
+    </div>
+  )
+}
+
+// Select is trigger-only — no built-in option list. Composed here with a
+// MenuItem list in a position:fixed panel, centered below the trigger, per
+// CLAUDE.md's own "Dropdown menus (filter slots)" convention. Positioned
+// relative to the tour's own translateZ(0) frame (via the frame's
+// data-pg-tour-frame marker) rather than the raw viewport: getBoundingClientRect
+// is always viewport-relative, but that transformed frame is the actual
+// containing block for position:fixed descendants rendered inside it — using
+// raw viewport coordinates there silently offsets the panel down by however
+// tall the tour bar above the frame is.
+function PgInteractiveSelect({ placeholder, options }: { placeholder: string; options: string[] }) {
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState<string | undefined>(undefined)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+
+  const openMenu = () => {
+    const el = triggerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const frame = el.closest("[data-pg-tour-frame]")
+    const frameRect = frame ? frame.getBoundingClientRect() : { left: 0, top: 0 }
+    setPos({ left: rect.left - frameRect.left + rect.width / 2, top: rect.bottom - frameRect.top + 4 })
+    setOpen(true)
+  }
+
+  return (
+    <div ref={triggerRef}>
+      <Select
+        placeholder={placeholder}
+        value={value}
+        open={open}
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        onClear={() => setValue(undefined)}
+      />
+      {open && pos && (
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setOpen(false)} />
+          <div
+            className="flex flex-col rounded-[8px] overflow-hidden"
+            style={{
+              position: "fixed", left: pos.left, top: pos.top, transform: "translateX(-50%)",
+              zIndex: 10001, minWidth: 200,
+              background: "var(--surface-floating-default)",
+              border: "0.5px solid var(--color-border-neutral-subtle)",
+              boxShadow: "var(--shadow-elevation-5)",
+            }}
+          >
+            {options.map(opt => (
+              <MenuItem key={opt} label={opt} size="sm" onClick={() => { setValue(opt); setOpen(false) }} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // Shared shell — Topbar + Sidebar, matching forms-create-page-example.tsx's
 // own composition exactly. `overlay` renders after the row so ModalDialog/
 // SlideOut (both position:fixed, SlideOut also portal-based) stack correctly
@@ -15824,32 +15920,20 @@ function pgSceneStandaloneModal(next: () => void, _back: () => void, _onClose: (
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="Workers" description={`${items.length} workers · ${active} active`} size="size-l"
             primaryAction={<Button variant="main" size="sm" onClick={next}>New worker</Button>} />
-          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-            <div className="max-w-[820px] flex flex-col gap-[16px]">
-              <Filters searchPlaceholder="Search workers…" slots={[{ placeholder: "Status" }, { placeholder: "Owner" }]} />
-              <div className="flex flex-col gap-[12px]">
-                {items.slice(0, 2).map(item => (
-                  <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
-                    <EntityList items={[item]} />
-                  </CardContainer>
-                ))}
-              </div>
-              <Pagination currentPage={1} totalItems={items.length} itemsPerPage={2} onPageChange={() => {}} />
-            </div>
-          </div>
+          <PgListViewBody searchPlaceholder="Search workers…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Owner" }]} items={items} />
         </main>
       </PgCreateContextShell>
     )
   }
   return [
     { label: "Trigger visible", note: "A standalone entity, from its own list view — 4 fields, well under the 5-field threshold.", content: frame() },
-    { label: "Surface open", note: "ModalDialog variant=\"content\" — the user can't ignore this and keep working; nothing on screen is this worker's parent.", content: frame(
-      <ModalDialog isOpen onClose={() => {}} variant="content"
+    { label: "Surface open", note: "ModalDialog variant=\"content\" — the user can't ignore this and keep working; nothing on screen is this worker's parent. slotUnstyled: fields sit directly on the modal, no gray wrapper card.", content: frame(
+      <ModalDialog isOpen onClose={() => {}} variant="content" slotUnstyled
         title="New Worker" description="Add a new AI worker to your team."
         slot={
-          <div className="flex flex-col gap-[12px]">
+          <div className="flex flex-col gap-[16px]">
             <Input placeholder="Worker name" />
-            <Select placeholder="Role" />
+            <PgInteractiveSelect placeholder="Role" options={["Support agent", "Workflow orchestrator", "Data processor"]} />
             <Select placeholder="Model" />
             <Input placeholder="Assigned team" />
           </div>
@@ -15870,19 +15954,7 @@ function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose:
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="Users" description={`${PG_CTX_USERS.length} users · ${PG_CTX_USERS.filter(u => u.state?.label === "Invited").length} invited`} size="size-l"
             primaryAction={<Button variant="main" size="sm" onClick={next}>New user</Button>} />
-          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-            <div className="max-w-[820px] flex flex-col gap-[16px]">
-              <Filters searchPlaceholder="Search users…" slots={[{ placeholder: "Role" }, { placeholder: "Status" }]} />
-              <div className="flex flex-col gap-[12px]">
-                {PG_CTX_USERS.slice(0, 2).map(item => (
-                  <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
-                    <EntityList items={[item]} />
-                  </CardContainer>
-                ))}
-              </div>
-              <Pagination currentPage={1} totalItems={PG_CTX_USERS.length} itemsPerPage={2} onPageChange={() => {}} />
-            </div>
-          </div>
+          <PgListViewBody searchPlaceholder="Search users…" filterSlots={[{ placeholder: "Role" }, { placeholder: "Status" }]} items={PG_CTX_USERS} />
         </main>
       </PgCreateContextShell>
     ) },
@@ -15892,21 +15964,19 @@ function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose:
           <Header title="New User" description="Add a teammate to this workspace" backButton size="size-l" />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
             <div className="max-w-[680px] flex flex-col gap-[24px]">
-              <div className="flex flex-col gap-[16px]">
-                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Basic information</span>
+              <PgFormSection label="Basic information">
                 <Input placeholder="Full name" />
                 <Input placeholder="Email" />
-                <Select placeholder="Role" />
+                <PgInteractiveSelect placeholder="Role" options={["Admin", "Editor", "Viewer"]} />
                 <Select placeholder="Team" />
-              </div>
-              <div className="flex flex-col gap-[16px]">
-                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Access &amp; details</span>
+              </PgFormSection>
+              <PgFormSection label="Access & details">
                 <Select placeholder="Access level" />
                 <Select placeholder="Manager" />
                 <Input placeholder="Start date" />
                 <Input placeholder="Location" />
                 <Textarea placeholder="Notes (optional)" />
-              </div>
+              </PgFormSection>
             </div>
           </div>
           <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Create user" onNext={next} />
@@ -15939,19 +16009,7 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="Policies" description={`${PG_CTX_POLICIES.length} policies · ${draft} draft`} size="size-l"
             primaryAction={<Button variant="main" size="sm" onClick={next}>New policy</Button>} />
-          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-            <div className="max-w-[820px] flex flex-col gap-[16px]">
-              <Filters searchPlaceholder="Search policies…" slots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} />
-              <div className="flex flex-col gap-[12px]">
-                {PG_CTX_POLICIES.slice(0, 2).map(item => (
-                  <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
-                    <EntityList items={[item]} />
-                  </CardContainer>
-                ))}
-              </div>
-              <Pagination currentPage={1} totalItems={PG_CTX_POLICIES.length} itemsPerPage={2} onPageChange={() => {}} />
-            </div>
-          </div>
+          <PgListViewBody searchPlaceholder="Search policies…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={PG_CTX_POLICIES} />
         </main>
       </PgCreateContextShell>
     ) },
@@ -15970,7 +16028,7 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
           <div className="flex-1 overflow-y-auto px-[24px] pt-[16px]">
             <div className="max-w-[680px] flex flex-col gap-[16px]">
               <Input placeholder="Policy name" />
-              <Select placeholder="Applies to" />
+              <PgInteractiveSelect placeholder="Applies to" options={["All tenant workspaces", "This workspace only", "Selected teams"]} />
             </div>
           </div>
           <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Next" onNext={next} />
@@ -16026,27 +16084,15 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="Automations" description={`${items.length} automations · ${draft} draft`} size="size-l"
             primaryAction={<Button variant="main" size="sm" onClick={next}>New automation</Button>} />
-          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-            <div className="max-w-[820px] flex flex-col gap-[16px]">
-              <Filters searchPlaceholder="Search automations…" slots={[{ placeholder: "Status" }, { placeholder: "Category" }]} />
-              <div className="flex flex-col gap-[12px]">
-                {items.slice(0, 2).map(item => (
-                  <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
-                    <EntityList items={[item]} />
-                  </CardContainer>
-                ))}
-              </div>
-              <Pagination currentPage={1} totalItems={items.length} itemsPerPage={2} onPageChange={() => {}} />
-            </div>
-          </div>
+          <PgListViewBody searchPlaceholder="Search automations…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Category" }]} items={items} />
         </main>
       </PgCreateContextShell>
     )
   }
   return [
     { label: "Trigger visible", note: "Browsing a catalogue — templates, marketplace, starting points.", content: frame() },
-    { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. It never becomes the form.", content: frame(
-      <ModalDialog isOpen onClose={() => {}} variant="content"
+    { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. It never becomes the form. slotUnstyled: bare MenuItem rows directly on the modal, no gray wrapper card.", content: frame(
+      <ModalDialog isOpen onClose={() => {}} variant="content" slotUnstyled
         title="Choose a template" description="Start from a template, or build from scratch."
         slot={
           <div className="flex flex-col">
@@ -16060,10 +16106,10 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
       />
     ) },
     { label: "Pre-filled form", note: "A list of the same object type on screen isn't a parent — this is standalone, same as the Worker case. Fields remain after selection, so the cascade resolves at step 5: ModalDialog, pre-filled. The two modals are sequential, never both open at once — the catalogue closes before this one opens.", content: frame(
-      <ModalDialog isOpen onClose={() => {}} variant="content"
+      <ModalDialog isOpen onClose={() => {}} variant="content" slotUnstyled
         title="New Automation" description='Pre-filled from the "Lead follow-up" template.'
         slot={
-          <div className="flex flex-col gap-[12px]">
+          <div className="flex flex-col gap-[16px]">
             <Input defaultValue="Lead follow-up" />
             <Textarea defaultValue="Sends a follow-up email 24h after a new lead is created." />
           </div>
@@ -16118,7 +16164,7 @@ function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onC
           {i < steps.length - 1 && <Button variant="primary" size="sm" onClick={next}>Next</Button>}
         </div>
       </div>
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ transform: "translateZ(0)" }}>
+      <div data-pg-tour-frame className="flex-1 flex flex-col overflow-hidden" style={{ transform: "translateZ(0)" }}>
         {current.content}
       </div>
       <button
