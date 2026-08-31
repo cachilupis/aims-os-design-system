@@ -79,7 +79,7 @@ export function AddAgentModal({ number, open, onClose, onConfirm }: AddAgentModa
                     border: `1.5px solid ${isSel ? "var(--primary)" : "var(--color-border-neutral-default)"}`,
                     background: isSel ? "var(--primary)" : "transparent",
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    color: "var(--primary-foreground, #fff)", flexShrink: 0,
+                    color: "var(--primary-foreground)", flexShrink: 0,
                   }}>
                     {isSel && <Check size={12}/>}
                   </span>

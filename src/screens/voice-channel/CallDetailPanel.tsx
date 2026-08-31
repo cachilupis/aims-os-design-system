@@ -177,7 +177,7 @@ function Metrics({ call, agent }: { call: Call; agent?: { name: string } }) {
       <div className="grid grid-cols-3 gap-2">
         <MetricTile value={call.duration}                                                                            label="Duration"  />
         <MetricTile value={call.sentiment === "negative" ? "0.31" : call.sentiment === "positive" ? "0.82" : "0.55"} label="Sentiment"
-                    color={call.sentiment === "negative" ? "var(--color-text-error, #f04e5e)" : call.sentiment === "positive" ? "var(--color-text-success)" : undefined}/>
+                    color={call.sentiment === "negative" ? "var(--color-text-error)" : call.sentiment === "positive" ? "var(--color-text-success)" : undefined}/>
         <MetricTile value={`$${call.cost.toFixed(2)}`}                                                               label="Cost"     />
       </div>
 

@@ -248,7 +248,7 @@ function StepperBar({ step }: { step: Step }) {
               <div style={{
                 width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
                 background: active ? "var(--primary)" : "var(--color-surface-neutral-more-subtle)",
-                color: active ? "var(--primary-foreground, #fff)" : "var(--color-text-caption)",
+                color: active ? "var(--primary-foreground)" : "var(--color-text-caption)",
                 fontSize: 10, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center",
               }}>
                 {done ? "✓" : s.n}

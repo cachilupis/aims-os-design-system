@@ -75,17 +75,17 @@ export interface AvailableNumber {
 // ── AGENTS ─────────────────────────────────────────────────────────────
 
 export const COLORS = [
-  "#6c63ff", "#22d388", "#f5a623", "#3b8beb", "#f04e5e",
-  "#29c6e0", "#9b6bff", "#ff6b9d",
+  "#6c63ff", "#22d388", "#f5a623", "#3b8beb", "#f04e5e", // audit-ignore: prototype fixture data
+  "#29c6e0", "#9b6bff", "#ff6b9d", // audit-ignore: prototype fixture data
 ]
 
 export const AGENTS: Agent[] = [
-  { id: "a1", name: "Sam Rivera",  email: "sam@acme.com",    initials: "SR", color: "#6c63ff", status: "online",  role: "Primary",  calls: 48, sentiment: 0.72 },
-  { id: "a2", name: "Jordan Kim",  email: "jordan@acme.com", initials: "JK", color: "#22d388", status: "busy",    role: "Backup",   calls: 31, sentiment: 0.65 },
-  { id: "a3", name: "Alex Chen",   email: "alex@acme.com",   initials: "AC", color: "#f5a623", status: "offline", role: "Overflow", calls: 19, sentiment: 0.58 },
-  { id: "a4", name: "Priya Nair",  email: "priya@acme.com",  initials: "PN", color: "#3b8beb", status: "online",  role: "Primary",  calls: 55, sentiment: 0.81 },
-  { id: "a5", name: "Marcus Webb", email: "marcus@acme.com", initials: "MW", color: "#f04e5e", status: "offline", role: "Backup",   calls: 22, sentiment: 0.61 },
-  { id: "a6", name: "Li Zhang",    email: "li@acme.com",     initials: "LZ", color: "#29c6e0", status: "online",  role: "Primary",  calls: 67, sentiment: 0.88 },
+  { id: "a1", name: "Sam Rivera",  email: "sam@acme.com",    initials: "SR", color: "#6c63ff", status: "online",  role: "Primary",  calls: 48, sentiment: 0.72 }, // audit-ignore: prototype fixture data (source prototype's agent brand colors)
+  { id: "a2", name: "Jordan Kim",  email: "jordan@acme.com", initials: "JK", color: "#22d388", status: "busy",    role: "Backup",   calls: 31, sentiment: 0.65 }, // audit-ignore: prototype fixture data (source prototype's agent brand colors)
+  { id: "a3", name: "Alex Chen",   email: "alex@acme.com",   initials: "AC", color: "#f5a623", status: "offline", role: "Overflow", calls: 19, sentiment: 0.58 }, // audit-ignore: prototype fixture data (source prototype's agent brand colors)
+  { id: "a4", name: "Priya Nair",  email: "priya@acme.com",  initials: "PN", color: "#3b8beb", status: "online",  role: "Primary",  calls: 55, sentiment: 0.81 }, // audit-ignore: prototype fixture data (source prototype's agent brand colors)
+  { id: "a5", name: "Marcus Webb", email: "marcus@acme.com", initials: "MW", color: "#f04e5e", status: "offline", role: "Backup",   calls: 22, sentiment: 0.61 }, // audit-ignore: prototype fixture data (source prototype's agent brand colors)
+  { id: "a6", name: "Li Zhang",    email: "li@acme.com",     initials: "LZ", color: "#29c6e0", status: "online",  role: "Primary",  calls: 67, sentiment: 0.88 }, // audit-ignore: prototype fixture data (source prototype's agent brand colors)
 ]
 
 // ── NUMBERS ────────────────────────────────────────────────────────────

@@ -26,7 +26,7 @@ export function HilBadge({ hil }: { hil: boolean }) {
 export function AgentStatusDot({ status }: { status: AgentStatus }) {
   const color =
     status === "online" ? "var(--color-text-success)" :
-    status === "busy"   ? "var(--color-text-warning, #f5a623)" :
+    status === "busy"   ? "var(--color-text-warning)" :
                           "var(--color-icon-neutral-default)"
   const label = status[0].toUpperCase() + status.slice(1)
   return (
@@ -46,7 +46,7 @@ export function AgentAvatar({ color, initials, size = 24 }: { color: string; ini
       style={{
         width: size, height: size, borderRadius: "50%",
         background: color,
-        color: "var(--primary-foreground, #fff)",
+        color: "var(--primary-foreground)",
         display: "inline-flex", alignItems: "center", justifyContent: "center",
         fontSize: Math.floor(size * 0.4), fontWeight: 700, flexShrink: 0,
         boxShadow: "0 0 0 2px var(--color-surface-neutral-white)",
@@ -96,8 +96,8 @@ export function SentimentBar({ value }: { value: number }) {
   const pct = Math.round(value * 100)
   const color =
     value > 0.7 ? "var(--color-text-success)"
-    : value > 0.45 ? "var(--color-text-warning, #f5a623)"
-    : "var(--color-text-error, #f04e5e)"
+    : value > 0.45 ? "var(--color-text-warning)"
+    : "var(--color-text-error)"
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <div style={{ width: 60, height: 4, background: "var(--color-surface-neutral-more-subtle)", borderRadius: 2, overflow: "hidden" }}>
