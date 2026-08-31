@@ -7,6 +7,7 @@ import { Tag }                 from "@/components/ui/tag"
 import { Tabs }                from "@/components/ui/tabs"
 import type { TabItem }        from "@/components/ui/tabs"
 import { Toggle }              from "@/components/ui/toggle"
+import { CardContainer }       from "@/components/ui/card-container"
 import { ModalDialog }         from "@/components/ui/modal-dialog"
 import { EmptyState }          from "@/components/ui/empty-state"
 import type { SidebarItem }    from "@/components/ui/sidebar"
@@ -316,7 +317,7 @@ export default function PMChatWidgetScreen() {
                     )}
                   </button>
                   {notifPanelOpen && (
-                    <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 320, background: "var(--surface)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 12, boxShadow: "0 16px 40px rgba(0,0,0,0.6)", zIndex: 500, overflow: "hidden" }}> {/* audit-ignore: rgba shadow — no token */}
+                    <CardContainer size="sm" className="!p-0 absolute top-[calc(100%+8px)] right-0 w-80 overflow-hidden z-[500] [box-shadow:0_16px_40px_rgba(0,0,0,0.6)]"> {/* audit-ignore: rgba shadow — no token */}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px 10px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>Notifications</span>
                         <button onClick={clearNotifs} style={{ background: "none", border: "none", fontSize: 11, color: "var(--color-text-disabled)", cursor: "pointer", fontFamily: "inherit" }}>Clear all</button>
@@ -337,7 +338,7 @@ export default function PMChatWidgetScreen() {
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </CardContainer>
                   )}
                 </div>
                 <Button variant="primary" size="sm" onClick={handleDeploy}>
@@ -352,15 +353,14 @@ export default function PMChatWidgetScreen() {
         {view === "list" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {WIDGETS.map(w => (
-              <div key={w.id} onClick={() => openWidget(w)}
-                style={{
-                  background: w.status === "draft" ? "var(--tag-alert-bg)" : "var(--color-surface-neutral-default)",
-                  border: `1px solid ${w.status === "draft" ? "var(--color-border-alert-default)" : "var(--color-border-neutral-default)"}`,
-                  borderRadius: 12, padding: "16px 18px 14px", cursor: "pointer",
-                  transition: "border-color 0.15s, background 0.15s",
-                }}>
+              <CardContainer
+                key={w.id}
+                size="sm"
+                variant={w.status === "draft" ? "yellow" : "default"}
+                onClick={() => openWidget(w)}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                  <span style={{ width: 28, height: 28, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: w.status === "draft" ? "rgba(253,199,0,0.15)" : "var(--card-primary-bg)", color: w.status === "draft" ? "var(--field-text-alert)" : "var(--primary)" }}> {/* audit-ignore: rgba tint for draft status — no token */}
+                  <span style={{ width: 28, height: 28, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: w.status === "draft" ? "var(--card-yellow-bg)" : "var(--card-primary-bg)", color: w.status === "draft" ? "var(--field-text-alert)" : "var(--primary)" }}>
                     <Icons.MessageCircle size={14} />
                   </span>
                   <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-title)", flex: 1 }}>{w.name}</span>
@@ -382,14 +382,14 @@ export default function PMChatWidgetScreen() {
                   )}
                 </div>
                 {w.status === "draft" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px 13px", background: "rgba(253,199,0,0.07)", border: "1px solid var(--color-border-alert-default)", borderRadius: 8, marginTop: 10 }}> {/* audit-ignore: rgba alert tint — no ds token */}
+                  <CardContainer variant="yellow" size="sm" className="mt-2 flex items-center gap-2">
                     <Icons.AlertTriangle size={14} color="var(--field-text-alert)" />
                     <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>
                       This widget is a draft. <span style={{ color: "var(--primary)", fontWeight: 600, cursor: "pointer" }}>Complete setup</span> to publish.
                     </span>
-                  </div>
+                  </CardContainer>
                 )}
-              </div>
+              </CardContainer>
             ))}
           </div>
         )}
@@ -408,7 +408,7 @@ export default function PMChatWidgetScreen() {
               {activeTab === "overview" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {/* Metrics row — 2x2 grid */}
-                  <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                  <CardContainer size="sm" className="!p-0 overflow-hidden">
                     <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--color-border-neutral-default)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)" }}>Metrics</span>
                       <Icons.RefreshCw size={12} color="var(--color-text-disabled)" style={{ cursor: "pointer" }} />
@@ -437,12 +437,12 @@ export default function PMChatWidgetScreen() {
                         )
                       })}
                     </div>
-                  </div>
+                  </CardContainer>
 
                   {/* Details + Assigned side by side */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                     {/* Details */}
-                    <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                    <CardContainer size="sm" className="!p-0 overflow-hidden">
                       <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
                         <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)" }}>Details</span>
                       </div>
@@ -462,10 +462,10 @@ export default function PMChatWidgetScreen() {
                           </div>
                         </div>
                       ))}
-                    </div>
+                    </CardContainer>
 
                     {/* Assigned Network */}
-                    <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                    <CardContainer size="sm" className="!p-0 overflow-hidden">
                       <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
                         <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)" }}>Assigned Network</span>
                       </div>
@@ -504,7 +504,7 @@ export default function PMChatWidgetScreen() {
                       ) : (
                         <EmptyState icon={Icons.Bot} title="No network assigned" description="Assign an agentic network from the Agentic Network tab." />
                       )}
-                    </div>
+                    </CardContainer>
                   </div>
                 </div>
               )}
@@ -537,7 +537,7 @@ export default function PMChatWidgetScreen() {
                   {/* Brand color */}
                   <div style={{ marginBottom: 28 }}>
                     <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)", marginBottom: 12 }}>Brand Color</div>
-                    <div style={{ background: "var(--color-surface-neutral-default)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 10, padding: "14px 18px" }}>
+                    <CardContainer size="sm">
                       <div style={{ fontSize: 11, color: "var(--color-text-subtitle)", marginBottom: 10 }}>Primary Color — affects buttons, avatars, and widget accents</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         {["var(--primary)", "var(--badge-purple)", "var(--color-text-success)", "var(--color-text-error)", "var(--field-text-alert)"].map(c => (
@@ -545,13 +545,13 @@ export default function PMChatWidgetScreen() {
                         ))}
                       </div>
                       <div style={{ marginTop: 8, fontSize: 11, color: "var(--color-text-disabled)" }}>Changes are reflected live in the preview panel</div>
-                    </div>
+                    </CardContainer>
                   </div>
 
                   {/* Layout */}
                   <div style={{ marginBottom: 28 }}>
                     <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)", marginBottom: 12 }}>Layout</div>
-                    <div style={{ background: "var(--color-surface-neutral-default)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 10, overflow: "hidden" }}>
+                    <CardContainer size="sm" className="!p-0 overflow-hidden">
                       {[
                         { label: "Theme",        options: ["System (auto)", "Dark", "Light"] },
                         { label: "Widget Size",  options: ["Medium (default)", "Small", "Large", "Full screen"] },
@@ -564,7 +564,7 @@ export default function PMChatWidgetScreen() {
                           </select>
                         </div>
                       ))}
-                    </div>
+                    </CardContainer>
                   </div>
 
                   {/* Options toggles */}
@@ -591,7 +591,7 @@ export default function PMChatWidgetScreen() {
 
                   {/* Replace banner */}
                   {showReplaceBanner && (
-                    <div style={{ background: "var(--card-primary-bg)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                    <CardContainer variant="primary" size="sm" className="mb-4">
                       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 4 }}>Replace current network?</div>
                       <div style={{ fontSize: 12, color: "var(--color-text-disabled)", marginBottom: 12, lineHeight: 1.5 }}>
                         This will replace <strong style={{ color: "var(--color-text-title)" }}>{NETWORKS.find(n => n.id === selectedNet)?.name}</strong> with <strong style={{ color: "var(--color-text-title)" }}>{NETWORKS.find(n => n.id === pendingNet)?.name}</strong>. Your widget will continue to use the old network until you deploy.
@@ -600,7 +600,7 @@ export default function PMChatWidgetScreen() {
                         <button onClick={cancelReplace} style={{ background: "transparent", border: "1px solid var(--color-border-neutral-default)", color: "var(--color-text-subtitle)", padding: "6px 14px", borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
                         <button onClick={confirmReplace} style={{ background: "var(--primary)", border: "none", color: "#fff", padding: "6px 14px", borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Continue</button> {/* audit-ignore: #fff on primary bg — standard button pattern */}
                       </div>
-                    </div>
+                    </CardContainer>
                   )}
 
                   {/* Type selector */}
@@ -614,14 +614,13 @@ export default function PMChatWidgetScreen() {
                         const Ic = (Icons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[tc.icon]
                         const sel = agentType === tc.id
                         return (
-                          <div key={tc.id} onClick={() => setAgentType(tc.id as "agent" | "network")}
-                            style={{ flex: 1, padding: "12px 8px", border: `1px solid ${sel ? "var(--primary)" : "var(--color-border-neutral-default)"}`, borderRadius: 10, cursor: "pointer", textAlign: "center", background: sel ? "var(--card-primary-bg)" : "transparent", transition: "all 0.15s" }}>
+                          <CardContainer key={tc.id} size="sm" variant={sel ? "primary" : "default"} selected={sel} onClick={() => setAgentType(tc.id as "agent" | "network")} className="flex-1 text-center">
                             <div style={{ width: 30, height: 30, borderRadius: 8, margin: "0 auto 7px", display: "flex", alignItems: "center", justifyContent: "center", background: sel ? "var(--card-primary-bg)" : "var(--color-surface-neutral-default)" }}>
                               <Ic size={14} color={sel ? "var(--primary)" : "var(--color-text-subtitle)"} />
                             </div>
                             <div style={{ fontSize: 12, fontWeight: 600, color: sel ? "var(--color-text-title)" : "var(--color-text-subtitle)", marginBottom: 2 }}>{tc.label}</div>
                             <div style={{ fontSize: 10, color: "var(--color-text-disabled)", lineHeight: 1.3 }}>{tc.desc}</div>
-                          </div>
+                          </CardContainer>
                         )
                       })}
                     </div>
@@ -632,7 +631,7 @@ export default function PMChatWidgetScreen() {
                     <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)", marginBottom: 10 }}>
                       Select {agentType === "agent" ? "Agent" : "Agentic Network"}
                     </div>
-                    <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: 10, overflow: "hidden" }}>
+                    <CardContainer size="sm" className="!p-0 overflow-hidden">
                       {NETWORKS.filter(n => n.type === agentType).map(n => {
                         const sel = selectedNet === n.id
                         return (
@@ -667,12 +666,12 @@ export default function PMChatWidgetScreen() {
                         <Icons.Search size={13} /> Browse all networks &amp; agents
                         <Icons.ArrowRight size={11} style={{ marginLeft: "auto", opacity: 0.5 }} />
                       </button>
-                    </div>
+                    </CardContainer>
                   </div>
 
                   {/* Network summary */}
                   {currentNet && (
-                    <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: 10, background: "var(--card-primary-bg)", padding: "14px 16px" }}>
+                    <CardContainer variant="primary" size="sm">
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
                         <span style={{ width: 32, height: 32, borderRadius: 8, background: "var(--card-purple-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <Icons.Network size={14} color="var(--badge-purple)" />
@@ -692,7 +691,7 @@ export default function PMChatWidgetScreen() {
                       <button style={{ marginTop: 12, fontSize: 12, fontWeight: 500, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, padding: 0, fontFamily: "inherit" }}>
                         View in Agentic Studio <Icons.ExternalLink size={11} />
                       </button>
-                    </div>
+                    </CardContainer>
                   )}
                 </div>
               )}
@@ -904,7 +903,7 @@ export default function PMChatWidgetScreen() {
 
               {/* Step 0 — Name */}
               {createStep === 0 && (
-                <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                <CardContainer size="sm" className="!p-0 overflow-hidden">
                   <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>Name your widget</div>
                     <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Give it a clear name so your team can identify it easily.</div>
@@ -922,13 +921,13 @@ export default function PMChatWidgetScreen() {
                         style={{ width: "100%", background: "var(--field-bg)", border: "1px solid var(--field-border)", borderRadius: "var(--radius-m)", padding: "10px 13px", fontSize: 13, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }} />
                     </div>
                   </div>
-                </div>
+                </CardContainer>
               )}
 
               {/* Step 1 — Assign Network (empty state shown) */}
               {createStep === 1 && (
                 <div>
-                  <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden", marginBottom: 12 }}>
+                  <CardContainer size="sm" className="!p-0 overflow-hidden mb-3">
                     <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>Assign an Agentic Network</div>
                       <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>The network powers your widget. You can change this later.</div>
@@ -945,14 +944,14 @@ export default function PMChatWidgetScreen() {
                         <Icons.Plus size={13} style={{ marginRight: 5 }} />Browse Networks
                       </Button>
                     </div>
-                  </div>
+                  </CardContainer>
                   <div style={{ fontSize: 12, color: "var(--color-text-disabled)", textAlign: "center" }}>You can skip this step and assign a network later from the widget settings.</div>
                 </div>
               )}
 
               {/* Step 2 — Appearance (empty state) */}
               {createStep === 2 && (
-                <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                <CardContainer size="sm" className="!p-0 overflow-hidden">
                   <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>Appearance</div>
                     <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Customize how the widget looks on your site.</div>
@@ -966,12 +965,12 @@ export default function PMChatWidgetScreen() {
                       Your widget will use your brand's primary color and default layout. You can fine-tune everything after publishing.
                     </div>
                   </div>
-                </div>
+                </CardContainer>
               )}
 
               {/* Step 3 — Embed & Publish */}
               {createStep === 3 && (
-                <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                <CardContainer size="sm" className="!p-0 overflow-hidden">
                   <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>Ready to publish</div>
                     <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Copy the snippet and paste it before the closing <code style={{ fontFamily: "monospace", fontSize: 11, color: "var(--primary)" }}>&lt;/body&gt;</code> tag on your site.</div>
@@ -987,7 +986,7 @@ export default function PMChatWidgetScreen() {
                       <span style={{ fontSize: 11, color: "var(--color-text-disabled)" }}>The widget will appear after deploy</span>
                     </div>
                   </div>
-                </div>
+                </CardContainer>
               )}
 
               {/* Nav buttons */}
@@ -1037,7 +1036,7 @@ export default function PMChatWidgetScreen() {
             ].map(row => {
               const Ic = (Icons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[row.icon]
               return (
-                <div key={row.label} style={{ background: "var(--color-surface-neutral-default)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", gap: 11, marginBottom: 6 }}>
+                <CardContainer key={row.label} size="sm" className="flex items-center gap-[11px] mb-[6px]">
                   <span style={{ width: 32, height: 32, borderRadius: 8, background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <Ic size={14} color="var(--primary)" />
                   </span>
@@ -1045,7 +1044,7 @@ export default function PMChatWidgetScreen() {
                     <span style={{ display: "block", fontSize: 10, color: "var(--color-text-disabled)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{row.label}</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", marginTop: 2, display: "block" }}>{row.value}</span>
                   </span>
-                </div>
+                </CardContainer>
               )
             })}
             <div style={{ fontSize: 11, color: "var(--color-text-disabled)", lineHeight: 1.5, marginTop: 12, padding: "10px 12px", background: "var(--card-primary-bg)", borderLeft: "2px solid var(--primary)", borderRadius: 6 }}>
