@@ -1165,8 +1165,8 @@ export default function PMChatWidgetScreen() {
                             style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 20px", background: rowBg, border: "none", borderBottom: idx < NETWORKS.length - 1 ? "1px solid var(--color-border-neutral-default)" : "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "background 0.12s" }}>
                             <div style={{ width: 32, height: 32, borderRadius: "var(--radius-m)", background: isSelected ? "var(--primary)" : "var(--color-surface-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.12s" }}>
                               {n.type === "network"
-                                ? <Icons.Network size={14} color={isSelected ? "#fff" : "var(--color-text-subtitle)"} />
-                                : <Icons.Bot size={14} color={isSelected ? "#fff" : "var(--color-text-subtitle)"} />}
+                                ? <Icons.Network size={14} color={isSelected ? "#fff" : "var(--color-text-subtitle)"} /> // audit-ignore: #fff on selected primary bg
+                                : <Icons.Bot size={14} color={isSelected ? "#fff" : "var(--color-text-subtitle)"} />} // audit-ignore: #fff on selected primary bg
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 1 }}>{n.name}</div>
