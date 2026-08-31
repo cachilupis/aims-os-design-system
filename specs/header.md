@@ -2,7 +2,7 @@
 
 **Figma node:** [`7995:4268`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7995-4268)
 
-Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — only title + CTAs visible).
+Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + CTAs, plus the back button when showBackInCompress is set).
 
 ## Properties
 
@@ -12,7 +12,9 @@ Page-level header with title, description, status tag, back button, icon highlig
 | size | Variant | size-l,size-m,compress | size-l | — |
 | description | string | any string | undefined | Hidden in compress. |
 | tag | node | <Tag /> | undefined | Renders inline after title. Hidden in compress. |
-| backButton | Boolean | true,false | false | ArrowLeft button. Hidden in compress. Use only in drill-down pages. |
+| backButton | Boolean | true,false | false | ArrowLeft button. The ONLY prop that controls back-button visibility. Hidden in compress unless showBackInCompress is also true. Use only in drill-down pages. |
+| onBack | function | () => void | undefined | Click handler for the back button. Never affects visibility — use backButton for that. |
+| showBackInCompress | Boolean | true,false | false | Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user. |
 | icon | node | LucideIcon | undefined | Rendered inside a HighlightIcon (sm). Hidden in compress. |
 | iconVariant | Variant | informative,success,alert,error,neutral,yellow,lime,purple,light-blue | informative | HighlightIcon color variant. Only applies when icon is set. |
 | primaryAction | node | <Button variant="main" size="sm" /> | undefined | — |
@@ -24,7 +26,7 @@ Page-level header with title, description, status tag, back button, icon highlig
 | --- | --- | --- | --- | --- |
 | Size L | 12px 24px | 24px | auto (~48px) | Default. Full slots visible. |
 | Size M | 10px 24px | 18px | auto (~38px) | Compact. Full slots visible. |
-| Compress | 8px 24px | 18px | 60px (fixed) | Scroll state. Only title + CTAs. |
+| Compress | 8px 24px | 18px | 60px (fixed) | Scroll state. Title + CTAs, plus the back button when showBackInCompress is set. |
 
 ## Typography
 
