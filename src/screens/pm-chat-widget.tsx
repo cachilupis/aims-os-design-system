@@ -39,36 +39,26 @@ interface WidgetCard {
 }
 
 const INITIAL_WIDGETS: WidgetCard[] = [
-  {
-    id: "main-website",
-    name: "Main Website",
-    status: "active",
-    description: "Customer-facing support and lead qualification widget embedded on acme.com.",
-    network: "Sales AI",
-    executions: 1240,
-    successRate: "94.2%",
-    lastUpdated: "2m ago",
-  },
-  {
-    id: "support-portal",
-    name: "Support Portal",
-    status: "active",
-    description: "Internal support portal widget for ticket triage and escalation routing.",
-    network: "Support Agent",
-    executions: 880,
-    successRate: "91.5%",
-    lastUpdated: "14m ago",
-  },
-  {
-    id: "blog",
-    name: "Blog",
-    status: "draft",
-    description: "Content engagement widget — not yet published.",
-    network: "—",
-    executions: 0,
-    successRate: "—",
-    lastUpdated: "3d ago",
-  },
+  { id: "main-website",     name: "Main Website",        status: "active",   description: "Customer-facing support and lead qualification widget embedded on acme.com.",                network: "Sales AI",           executions: 12400, successRate: "94.2%", lastUpdated: "2m ago"   },
+  { id: "support-portal",   name: "Support Portal",      status: "active",   description: "Internal support portal for ticket triage and escalation routing.",                           network: "Support Agent",      executions: 8800,  successRate: "91.5%", lastUpdated: "14m ago"  },
+  { id: "blog",             name: "Blog",                status: "draft",    description: "Content engagement widget — not yet published.",                                              network: "—",                  executions: 0,     successRate: "—",     lastUpdated: "3d ago"   },
+  { id: "checkout",         name: "Checkout Assistant",  status: "active",   description: "Helps customers complete purchase flow and resolve payment questions in real time.",          network: "Sales AI",           executions: 5430,  successRate: "88.7%", lastUpdated: "1h ago"   },
+  { id: "onboarding",       name: "Onboarding Flow",     status: "active",   description: "Guides new customers through product setup and answers first-week questions.",               network: "Onboarding Network", executions: 3210,  successRate: "92.1%", lastUpdated: "3h ago"   },
+  { id: "pricing-page",     name: "Pricing Page",        status: "inactive", description: "Answers pricing questions and routes enterprise leads to the sales team.",                   network: "Sales AI",           executions: 420,   successRate: "79.3%", lastUpdated: "1d ago"   },
+  { id: "docs-helper",      name: "Docs Helper",         status: "active",   description: "Surfaces relevant documentation and code snippets to developers browsing the dev portal.",   network: "Support Agent",      executions: 7650,  successRate: "96.0%", lastUpdated: "30m ago"  },
+  { id: "hr-portal",        name: "HR Portal",           status: "active",   description: "Handles employee HR queries, PTO requests, and policy lookups.",                            network: "HR Assistant",       executions: 1100,  successRate: "89.1%", lastUpdated: "2h ago"   },
+  { id: "partner-portal",   name: "Partner Portal",      status: "draft",    description: "Assist channel partners with deal registration and co-marketing requests.",                  network: "—",                  executions: 0,     successRate: "—",     lastUpdated: "5d ago"   },
+  { id: "mobile-app",       name: "Mobile App",          status: "active",   description: "In-app assistant embedded in the iOS and Android apps for real-time customer support.",     network: "Support Agent",      executions: 22100, successRate: "90.4%", lastUpdated: "8m ago"   },
+  { id: "finance-queries",  name: "Finance Queries",     status: "inactive", description: "Invoice lookup, payment status, and billing escalation routing for finance team.",          network: "Finance Bot",        executions: 520,   successRate: "76.3%", lastUpdated: "4d ago"   },
+  { id: "landing-trial",    name: "Free Trial Landing",  status: "active",   description: "Converts trial sign-up visitors with tailored demos and answers to common objections.",     network: "Sales AI",           executions: 3880,  successRate: "85.2%", lastUpdated: "45m ago"  },
+  { id: "community",        name: "Community Hub",       status: "draft",    description: "Widget for the developer community forum — routes questions to the right GitHub issues.",    network: "—",                  executions: 0,     successRate: "—",     lastUpdated: "6d ago"   },
+  { id: "status-page",      name: "Status Page",         status: "active",   description: "Incident updates and real-time status queries for platform availability.",                  network: "Support Agent",      executions: 940,   successRate: "98.5%", lastUpdated: "20m ago"  },
+  { id: "ecomm-cart",       name: "Cart Recovery",       status: "active",   description: "Re-engages shoppers who abandoned carts with personalized offers and answers.",             network: "Sales AI",           executions: 6710,  successRate: "82.0%", lastUpdated: "15m ago"  },
+  { id: "webinar-reg",      name: "Webinar Registration",status: "inactive", description: "Handles webinar sign-ups, reminders, and FAQs for marketing events.",                      network: "Onboarding Network", executions: 210,   successRate: "91.0%", lastUpdated: "12d ago"  },
+  { id: "knowledge-base",   name: "Knowledge Base",      status: "active",   description: "Semantic search over internal documentation and support articles.",                         network: "Support Agent",      executions: 4320,  successRate: "93.7%", lastUpdated: "1h ago"   },
+  { id: "sales-demo",       name: "Sales Demo",          status: "draft",    description: "Interactive product demo widget for prospects — personalized by vertical.",                 network: "—",                  executions: 0,     successRate: "—",     lastUpdated: "2d ago"   },
+  { id: "retention",        name: "Retention Assistant", status: "active",   description: "Detects churn signals and routes at-risk accounts to the customer success team.",           network: "Sales AI",           executions: 1890,  successRate: "87.4%", lastUpdated: "4h ago"   },
+  { id: "gdpr-consent",     name: "GDPR Consent Bot",    status: "inactive", description: "Handles data subject requests, consent queries, and privacy-related escalations.",          network: "HR Assistant",       executions: 88,    successRate: "100%",  lastUpdated: "18d ago"  },
 ]
 
 interface NetworkOption {
@@ -123,6 +113,7 @@ export default function PMChatWidgetScreen() {
   const [newDesc, setNewDesc]         = useState("")
   const [newNetwork, setNewNetwork]   = useState("")
   const [widgets, setWidgets]           = useState<WidgetCard[]>(INITIAL_WIDGETS)
+  const [visibleCount, setVisibleCount] = useState(8)
   const [activeWidget, setActiveWidget] = useState<WidgetCard>(INITIAL_WIDGETS[0])
 
   // Detail tab state
@@ -396,6 +387,7 @@ export default function PMChatWidgetScreen() {
     const w = buildNewWidget("draft")
     setWidgets(prev => [w, ...prev])
     resetCreateWizard()
+    setVisibleCount(8)
     setView("list")
   }
 
@@ -404,6 +396,7 @@ export default function PMChatWidgetScreen() {
     setWidgets(prev => [w, ...prev])
     setActiveWidget(w)
     resetCreateWizard()
+    setVisibleCount(8)
     setView("list")
     setDeployOpen(true)
   }
@@ -493,7 +486,7 @@ export default function PMChatWidgetScreen() {
         {/* ── LIST VIEW ── */}
         {view === "list" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {widgets.map(w => (
+            {widgets.slice(0, visibleCount).map(w => (
               <CardContainer
                 key={w.id}
                 size="sm"
@@ -532,6 +525,18 @@ export default function PMChatWidgetScreen() {
                 )}
               </CardContainer>
             ))}
+            {visibleCount < widgets.length && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingTop: 6, paddingBottom: 8 }}>
+                <button onClick={() => setVisibleCount(c => Math.min(c + 8, widgets.length))}
+                  style={{ background: "none", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-m)", padding: "9px 24px", fontSize: 13, fontWeight: 600, color: "var(--color-text-subtitle)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, transition: "border-color 0.15s" }}>
+                  <Icons.ChevronDown size={14} />
+                  Load more
+                </button>
+                <span style={{ fontSize: 11, color: "var(--color-text-disabled)" }}>
+                  Showing {visibleCount} of {widgets.length} widgets
+                </span>
+              </div>
+            )}
           </div>
         )}
 
