@@ -10,7 +10,8 @@ import { Tag } from "@/components/ui/tag"
 import type { Call, PhoneNumberRecord, CallDirection } from "./data"
 import { AGENTS } from "./data"
 import { AgentAvatar, HilBadge, SentimentTag } from "./shared"
-import { CallDetailPanel } from "./CallDetailPanel"
+import { CallPreview } from "./CallPreview"
+import { CallDetailPage } from "./CallDetailPage"
 
 type DirFilter = "all" | CallDirection | "hil"
 
@@ -60,10 +61,11 @@ function CallHistoryTableWrap<T extends { id: string }>({
 }
 
 export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
-  const [dirFilter,      setDirFilter]      = useState<DirFilter>("all")
-  const [search,         setSearch]         = useState("")
-  const [dateRange,      setDateRange]      = useState("Last 7 days")
-  const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
+  const [dirFilter, setDirFilter]     = useState<DirFilter>("all")
+  const [search,    setSearch]        = useState("")
+  const [dateRange, setDateRange]     = useState("Last 7 days")
+  const [previewId, setPreviewId]     = useState<string | null>(null)  // Slide-out preview
+  const [detailId,  setDetailId]      = useState<string | null>(null)  // Full-page detail
 
   const filtered = useMemo(() => {
     return calls.filter(c => {
@@ -76,7 +78,19 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
     })
   }, [calls, dirFilter, search])
 
-  const selectedCall = calls.find(c => c.id === selectedCallId) ?? null
+  const previewCall = calls.find(c => c.id === previewId) ?? null
+  const detailCall  = calls.find(c => c.id === detailId)  ?? null
+
+  // Full page view takes over the tab body when a call is opened
+  if (detailCall) {
+    return (
+      <CallDetailPage
+        call={detailCall}
+        number={numbers.find(n => n.id === detailCall.numberId) ?? null}
+        onBack={() => setDetailId(null)}
+      />
+    )
+  }
 
   const columns: TableColumn<Call>[] = [
     {
@@ -98,7 +112,7 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
     {
       key: "direction", header: "Dir", width: "110px",
       render: (c) => c.direction === "inbound"
-        ? <Tag variant="success" size="sm">↙ Inbound</Tag>
+        ? <Tag variant="success"     size="sm">↙ Inbound</Tag>
         : <Tag variant="informative" size="sm">↗ Outbound</Tag>,
     },
     {
@@ -141,86 +155,77 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
   ]
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex-1 min-w-[200px]">
-          <Filters
-            showSearch
-            searchPlaceholder="Search transcripts…"
-            searchValue={search}
-            onSearchChange={setSearch}
-            showAllFilters={false}
-            showSort={false}
-            showViewToggle={false}
-          />
+    <>
+      <div className="flex flex-col gap-4">
+        {/* Toolbar */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <Filters
+              showSearch
+              searchPlaceholder="Search transcripts…"
+              searchValue={search}
+              onSearchChange={setSearch}
+              showAllFilters={false}
+              showSort={false}
+              showViewToggle={false}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            {(["all", "inbound", "outbound", "hil"] as const).map(k => (
+              <Chip
+                key={k}
+                variant={dirFilter === k ? "primary" : "secondary"}
+                size="s"
+                onClick={() => setDirFilter(k)}
+              >
+                {k === "all" ? "All" : k === "inbound" ? "Inbound" : k === "outbound" ? "Outbound" : "HiL only"}
+              </Chip>
+            ))}
+            <Select
+              value={dateRange}
+              onClear={() => setDateRange("Last 7 days")}
+              size="sm"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {(["all", "inbound", "outbound", "hil"] as const).map(k => (
-            <Chip
-              key={k}
-              variant={dirFilter === k ? "primary" : "secondary"}
-              size="s"
-              onClick={() => setDirFilter(k)}
-            >
-              {k === "all" ? "All" : k === "inbound" ? "Inbound" : k === "outbound" ? "Outbound" : "HiL only"}
-            </Chip>
-          ))}
-          <Select
-            value={dateRange}
-            onClear={() => setDateRange("Last 7 days")}
-            size="sm"
-          />
-          {/* Hidden select used just to advertise choices — DS Select is trigger-only */}
-          <select
-            aria-hidden="true"
-            style={{ position: "absolute", left: -9999, width: 1, height: 1 }}
-            onChange={e => setDateRange(e.target.value)}
-            value={dateRange}
+
+        {/* Full-width table (no more split view — preview lives in a slide-out) */}
+        {filtered.length === 0 ? (
+          <CardContainer variant="default" size="default">
+            <EmptyState
+              icon={search ? Search : PhoneCall}
+              title={search ? `No calls match "${search}"` : "No calls this filter"}
+              description={search ? "Try clearing your search." : "Try a different direction filter."}
+              ctaLabel={search ? "Clear search" : "Show all"}
+              onCta={search ? () => setSearch("") : () => setDirFilter("all")}
+            />
+          </CardContainer>
+        ) : (
+          <CallHistoryTableWrap
+            rows={filtered}
+            selectedId={previewId}
+            onRowClick={(id) => setPreviewId(id)}
           >
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-            <option>Today</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Split layout: table (60%) + detail panel (40%) */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: selectedCall ? "1fr 1fr" : "1fr" }}>
-        <div>
-          {filtered.length === 0 ? (
-            <CardContainer variant="default" size="default">
-              <EmptyState
-                icon={search ? Search : PhoneCall}
-                title={search ? `No calls match "${search}"` : "No calls this filter"}
-                description={search ? "Try clearing your search." : "Try a different direction filter."}
-                ctaLabel={search ? "Clear search" : "Show all"}
-                onCta={search ? () => setSearch("") : () => setDirFilter("all")}
-              />
-            </CardContainer>
-          ) : (
-            <CallHistoryTableWrap
-              rows={filtered}
-              selectedId={selectedCallId}
-              onRowClick={(id) => setSelectedCallId(id)}
-            >
-              <Table
-                columns={columns}
-                data={filtered}
-                size="default"
-              />
-            </CallHistoryTableWrap>
-          )}
-        </div>
-
-        {selectedCall && (
-          <CallDetailPanel
-            call={selectedCall}
-            number={numbers.find(n => n.id === selectedCall.numberId) ?? null}
-            onClose={() => setSelectedCallId(null)}
-          />
+            <Table
+              columns={columns}
+              data={filtered}
+              size="default"
+            />
+          </CallHistoryTableWrap>
         )}
       </div>
-    </div>
+
+      {/* Preview slide-out */}
+      <CallPreview
+        call={previewCall}
+        number={previewCall ? numbers.find(n => n.id === previewCall.numberId) ?? null : null}
+        open={previewId !== null}
+        onClose={() => setPreviewId(null)}
+        onOpenFull={() => {
+          if (previewId) setDetailId(previewId)
+          setPreviewId(null)
+        }}
+      />
+    </>
   )
 }
