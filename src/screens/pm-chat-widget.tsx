@@ -118,7 +118,10 @@ function StatusDot({ status }: { status: WidgetStatus }) {
 
 export default function PMChatWidgetScreen() {
   // View state
-  const [view, setView]               = useState<"list" | "detail">("list")
+  const [view, setView]               = useState<"list" | "detail" | "create">("list")
+  const [createStep, setCreateStep]   = useState(0)
+  const [newName, setNewName]         = useState("")
+  const [newDesc, setNewDesc]         = useState("")
   const [activeWidget, setActiveWidget] = useState<WidgetCard>(WIDGETS[0])
 
   // Detail tab state
@@ -360,6 +363,10 @@ export default function PMChatWidgetScreen() {
     { id: "embed",        label: "Embed"            },
   ]
 
+  // ── Create wizard helpers ──────────────────────────────────────────────────
+  const CREATE_STEPS = ["Name & Description", "Assign Network", "Appearance", "Embed & Publish"]
+  const createCanNext = createStep === 0 ? newName.trim().length > 0 : true
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -378,9 +385,16 @@ export default function PMChatWidgetScreen() {
             size={isScrolled ? "compress" : "size-l"}
             title="Chat Widgets"
             description="Embeddable AI chat widgets connected to your Agentic Workflows"
-            primaryAction={<Button variant="main" size="sm" onClick={() => {}}>
+            primaryAction={<Button variant="main" size="sm" onClick={() => { setCreateStep(0); setNewName(""); setNewDesc(""); setView("create") }}>
               <Icons.Plus size={14} style={{ marginRight: 4 }} />New Widget
             </Button>}
+          />
+        ) : view === "create" ? (
+          <Header
+            size={isScrolled ? "compress" : "size-l"}
+            title="New Chat Widget"
+            description="Set up your widget in a few steps"
+            backButton
           />
         ) : (
           <Header
@@ -493,7 +507,107 @@ export default function PMChatWidgetScreen() {
 
               {/* ── OVERVIEW ── */}
               {activeTab === "overview" && (
-                <WidgetCanvasView initialSlots={[metricsSlot, detailsSlot, assignedSlot]} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {/* Metrics row — 2x2 grid */}
+                  <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                    <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--color-border-neutral-default)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)" }}>Metrics</span>
+                      <Icons.RefreshCw size={12} color="var(--color-text-disabled)" style={{ cursor: "pointer" }} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0" }}>
+                      {[
+                        { icon: "Activity",   label: "Success Rate",          value: "94.2%",  meta: "+2.1%",          ok: true  },
+                        { icon: "Shield",     label: "Autonomous Resolution",  value: "78.5%",  meta: "+5.3%",          ok: true  },
+                        { icon: "DollarSign", label: "Cost per Execution",    value: "$0.08",  meta: "No change",      ok: false },
+                        { icon: "Clock",      label: "Executions",            value: "1,240",  meta: "+142 this month", ok: true  },
+                      ].map((row, i) => {
+                        const Ic = (Icons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[row.icon]
+                        const borderRight = i % 2 === 0 ? "1px solid var(--color-border-neutral-default)" : "none"
+                        const borderBottom = i < 2 ? "1px solid var(--color-border-neutral-default)" : "none"
+                        return (
+                          <div key={row.label} style={{ padding: "14px 16px", borderRight, borderBottom }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+                              <span style={{ width: 24, height: 24, borderRadius: 6, background: "var(--color-surface-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <Ic size={11} color="var(--color-text-subtitle)" />
+                              </span>
+                              <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{row.label}</span>
+                            </div>
+                            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-title)", lineHeight: 1, marginBottom: 4 }}>{row.value}</div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: row.ok ? "var(--color-text-success)" : "var(--color-text-disabled)" }}>{row.meta}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Details + Assigned side by side */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    {/* Details */}
+                    <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                      <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)" }}>Details</span>
+                      </div>
+                      {[
+                        { label: "Owner",           value: "Thomas González", action: undefined },
+                        { label: "Version",         value: "v2.4.1",          action: undefined },
+                        { label: "Created",         value: "Mar 14, 2025",    action: undefined },
+                        { label: "Trusted Domains", value: "3 configured",    action: () => setActiveTab("embed") },
+                        { label: "Status",          value: "Active",          action: undefined },
+                      ].map((row, i, arr) => (
+                        <div key={row.label} onClick={row.action}
+                          style={{ padding: "11px 16px", borderBottom: i < arr.length - 1 ? "1px solid var(--color-border-neutral-default)" : "none", cursor: row.action ? "pointer" : "default" }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-disabled)", marginBottom: 3 }}>{row.label}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", display: "flex", alignItems: "center", gap: 6 }}>
+                            {row.value}
+                            {row.action && <span style={{ fontSize: 11, color: "var(--primary)" }}>View →</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Assigned Network */}
+                    <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                      <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)" }}>Assigned Network</span>
+                      </div>
+                      {currentNet ? (
+                        <div>
+                          {/* Network identity */}
+                          <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--color-border-neutral-default)", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                            <span style={{ width: 34, height: 34, borderRadius: 9, background: "var(--card-purple-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <Icons.Network size={16} color="var(--badge-purple)" />
+                            </span>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>{currentNet.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--color-text-subtitle)", lineHeight: 1.4 }}>{currentNet.description}</div>
+                            </div>
+                          </div>
+                          {/* Stats row */}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                            {[
+                              { label: "Success",    value: currentNet.successRate },
+                              { label: "Avg Resp",   value: "<1s"                 },
+                              { label: "Resolution", value: "78.5%"               },
+                            ].map((s, i) => (
+                              <div key={s.label} style={{ padding: "12px 12px", borderRight: i < 2 ? "1px solid var(--color-border-neutral-default)" : "none" }}>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 2 }}>{s.value}</div>
+                                <div style={{ fontSize: 10, color: "var(--color-text-disabled)" }}>{s.label}</div>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ padding: "10px 16px" }}>
+                            <button onClick={() => setActiveTab("agent")}
+                              style={{ background: "none", border: "none", color: "var(--primary)", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit", padding: 0 }}>
+                              Manage in Agentic Studio <Icons.ChevronRight size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <EmptyState icon={Icons.Bot} title="No network assigned" description="Assign an agentic network from the Agentic Network tab." />
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* ── APPEARANCE ── */}
@@ -859,6 +973,147 @@ export default function PMChatWidgetScreen() {
 
             </div>
           </div>
+        )}
+
+        {/* ── CREATE VIEW ── */}
+        {view === "create" && (
+            <div style={{ maxWidth: 580, padding: "8px 0 40px" }}>
+              {/* Step progress */}
+              <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 32 }}>
+                {CREATE_STEPS.map((s, i) => (
+                  <div key={s} style={{ display: "flex", alignItems: "center", flex: i < CREATE_STEPS.length - 1 ? 1 : "initial" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                      <div style={{
+                        width: 24, height: 24, borderRadius: "var(--radius-full)",
+                        background: i < createStep ? "var(--primary)" : i === createStep ? "var(--primary)" : "var(--color-surface-neutral-default)",
+                        border: i === createStep ? "2px solid var(--primary)" : i < createStep ? "none" : "1px solid var(--color-border-neutral-default)",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                      }}>
+                        {i < createStep
+                          ? <Icons.Check size={12} color="#fff" /> /* audit-ignore: white on primary */
+                          : <span style={{ fontSize: 10, fontWeight: 700, color: i === createStep ? "#fff" : "var(--color-text-disabled)" }}>{i + 1}</span> /* audit-ignore: white on primary step */
+                        }
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: i === createStep ? 600 : 400, color: i === createStep ? "var(--color-text-title)" : "var(--color-text-disabled)", whiteSpace: "nowrap" }}>{s}</span>
+                    </div>
+                    {i < CREATE_STEPS.length - 1 && (
+                      <div style={{ flex: 1, height: 1, background: i < createStep ? "var(--primary)" : "var(--color-border-neutral-default)", margin: "0 10px" }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Step 0 — Name */}
+              {createStep === 0 && (
+                <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                  <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>Name your widget</div>
+                    <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Give it a clear name so your team can identify it easily.</div>
+                  </div>
+                  <div style={{ padding: "20px" }}>
+                    <div style={{ marginBottom: 18 }}>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--color-text-disabled)", marginBottom: 7 }}>Widget Name *</label>
+                      <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Support Portal, Blog Widget, Checkout Assistant…"
+                        style={{ width: "100%", background: "var(--field-bg)", border: "1px solid var(--field-border)", borderRadius: "var(--radius-m)", padding: "10px 13px", fontSize: 13, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--color-text-disabled)", marginBottom: 7 }}>Description <span style={{ color: "var(--color-text-disabled)", textTransform: "none", fontWeight: 400 }}>(optional)</span></label>
+                      <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="What will this widget be used for? Where will it be embedded?"
+                        rows={3}
+                        style={{ width: "100%", background: "var(--field-bg)", border: "1px solid var(--field-border)", borderRadius: "var(--radius-m)", padding: "10px 13px", fontSize: 13, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 1 — Assign Network (empty state shown) */}
+              {createStep === 1 && (
+                <div>
+                  <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden", marginBottom: 12 }}>
+                    <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>Assign an Agentic Network</div>
+                      <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>The network powers your widget. You can change this later.</div>
+                    </div>
+                    <div style={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "36px 20px", textAlign: "center" }}>
+                      <div style={{ width: 48, height: 48, borderRadius: "var(--radius-l)", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                        <Icons.Network size={22} color="var(--primary)" />
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 6 }}>No network selected</div>
+                      <div style={{ fontSize: 12, color: "var(--color-text-subtitle)", maxWidth: 320, lineHeight: 1.6, marginBottom: 18 }}>
+                        Connect an Agentic Network or a single Agent to power your widget's conversations.
+                      </div>
+                      <Button variant="secondary" size="sm" onClick={() => {}}>
+                        <Icons.Plus size={13} style={{ marginRight: 5 }} />Browse Networks
+                      </Button>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--color-text-disabled)", textAlign: "center" }}>You can skip this step and assign a network later from the widget settings.</div>
+                </div>
+              )}
+
+              {/* Step 2 — Appearance (empty state) */}
+              {createStep === 2 && (
+                <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                  <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>Appearance</div>
+                    <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Customize how the widget looks on your site.</div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center" }}>
+                    <div style={{ width: 48, height: 48, borderRadius: "var(--radius-l)", background: "var(--color-surface-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                      <Icons.Palette size={22} color="var(--color-text-subtitle)" />
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 6 }}>Default appearance applied</div>
+                    <div style={{ fontSize: 12, color: "var(--color-text-subtitle)", maxWidth: 320, lineHeight: 1.6 }}>
+                      Your widget will use your brand's primary color and default layout. You can fine-tune everything after publishing.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3 — Embed & Publish */}
+              {createStep === 3 && (
+                <div style={{ border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l)", overflow: "hidden" }}>
+                  <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>Ready to publish</div>
+                    <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Copy the snippet and paste it before the closing <code style={{ fontFamily: "monospace", fontSize: 11, color: "var(--primary)" }}>&lt;/body&gt;</code> tag on your site.</div>
+                  </div>
+                  <div style={{ padding: "20px" }}>
+                    <div style={{ background: "var(--color-surface-neutral-default)", borderRadius: "var(--radius-m)", padding: "14px 16px", fontFamily: "monospace", fontSize: 11, color: "var(--color-text-subtitle)", lineHeight: 1.7, marginBottom: 14, whiteSpace: "pre-wrap" }}>
+                      {`<script\n  src="https://cdn.aimsos.ai/widget.js"\n  data-widget-id="wgt_new"\n  data-name="${newName || "my-widget"}"\n  async\n></script>`}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Button variant="secondary" size="sm" onClick={() => {}}>
+                        <Icons.Copy size={13} style={{ marginRight: 5 }} />Copy snippet
+                      </Button>
+                      <span style={{ fontSize: 11, color: "var(--color-text-disabled)" }}>The widget will appear after deploy</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Nav buttons */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 24 }}>
+                <button onClick={() => createStep === 0 ? setView("list") : setCreateStep(s => s - 1)}
+                  style={{ background: "none", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-m)", padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "var(--color-text-subtitle)", cursor: "pointer", fontFamily: "inherit" }}>
+                  {createStep === 0 ? "Cancel" : "Back"}
+                </button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {createStep < CREATE_STEPS.length - 1 && createStep === 1 && (
+                    <button onClick={() => setCreateStep(s => s + 1)}
+                      style={{ background: "none", border: "none", fontSize: 13, fontWeight: 600, color: "var(--color-text-disabled)", cursor: "pointer", fontFamily: "inherit" }}>
+                      Skip
+                    </button>
+                  )}
+                  <button disabled={!createCanNext} onClick={() => {
+                    if (createStep < CREATE_STEPS.length - 1) { setCreateStep(s => s + 1) }
+                    else { setView("list") }
+                  }}
+                    style={{ background: createCanNext ? "var(--primary)" : "var(--color-surface-neutral-default)", border: "none", borderRadius: "var(--radius-m)", padding: "9px 18px", fontSize: 13, fontWeight: 700, color: createCanNext ? "#fff" : "var(--color-text-disabled)", cursor: createCanNext ? "pointer" : "not-allowed", fontFamily: "inherit", transition: "background 0.15s" }}> {/* audit-ignore: #fff on primary */}
+                    {createStep === CREATE_STEPS.length - 1 ? "Publish Widget" : "Continue"}
+                  </button>
+                </div>
+              </div>
+            </div>
         )}
       </ScreenLayout>
 
