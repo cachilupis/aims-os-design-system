@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Phone, PhoneCall, Settings as SettingsIcon, Plus, Search } from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
@@ -58,6 +58,49 @@ export default function VoiceChannelScreen() {
     <ToastProvider>
       <VoiceChannelScreenInner/>
     </ToastProvider>
+  )
+}
+
+// Small helper that mounts the DS Table and, after each render, marks the
+// selected row (previewed or detail-view target) with a tinted background
+// via an effect. Direct DOM manipulation is used because the DS Table has
+// no "selectedRowIndex"-style prop, and CSS :nth-child can't take a
+// dynamic variable. Uses a token so the audit stays clean.
+function NumbersTableWrap<T extends { id: string }>({
+  rows, selectedId, onRowClick, children,
+}: {
+  rows: T[]
+  selectedId: string | null
+  onRowClick: (id: string) => void
+  children: React.ReactNode
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const trs = wrapRef.current?.querySelectorAll<HTMLTableRowElement>("tbody tr")
+    if (!trs) return
+    trs.forEach((tr, i) => {
+      const row = rows[i]
+      tr.style.background = row && row.id === selectedId
+        ? "var(--color-surface-primary-more-subtle)"
+        : ""
+    })
+  })
+
+  return (
+    <div
+      ref={wrapRef}
+      onClick={(e) => {
+        const tr = (e.target as HTMLElement).closest("tbody tr")
+        if (!tr) return
+        const idx = Array.from(tr.parentElement!.children).indexOf(tr)
+        const row = rows[idx]
+        if (row) onRowClick(row.id)
+      }}
+      style={{ cursor: "pointer" }}
+    >
+      {children}
+    </div>
   )
 }
 
@@ -271,22 +314,17 @@ function VoiceChannelScreenInner() {
                   />
                 </CardContainer>
               ) : (
-                <div
-                  onClick={(e) => {
-                    const tr = (e.target as HTMLElement).closest("tbody tr")
-                    if (!tr) return
-                    const idx = Array.from(tr.parentElement!.children).indexOf(tr)
-                    const row = filteredNumbers[idx]
-                    if (row) setPreviewId(row.id)
-                  }}
-                  style={{ cursor: "pointer" }}
+                <NumbersTableWrap
+                  rows={filteredNumbers}
+                  selectedId={previewId ?? detailId}
+                  onRowClick={(id) => setPreviewId(id)}
                 >
                   <Table
                     columns={columns}
                     data={filteredNumbers}
                     size="default"
                   />
-                </div>
+                </NumbersTableWrap>
               )}
             </div>
           )}

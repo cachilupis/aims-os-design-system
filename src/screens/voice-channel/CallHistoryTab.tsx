@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { PhoneCall, Search } from "lucide-react"
 import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
@@ -17,6 +17,44 @@ type DirFilter = "all" | CallDirection | "hil"
 interface CallHistoryTabProps {
   calls:   Call[]
   numbers: PhoneNumberRecord[]
+}
+
+// Same DOM-effect selection pattern used in the Numbers table — tints the
+// currently-open call's row with the primary-more-subtle token.
+function CallHistoryTableWrap<T extends { id: string }>({
+  rows, selectedId, onRowClick, children,
+}: {
+  rows: T[]
+  selectedId: string | null
+  onRowClick: (id: string) => void
+  children: React.ReactNode
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const trs = wrapRef.current?.querySelectorAll<HTMLTableRowElement>("tbody tr")
+    if (!trs) return
+    trs.forEach((tr, i) => {
+      const row = rows[i]
+      tr.style.background = row && row.id === selectedId
+        ? "var(--color-surface-primary-more-subtle)"
+        : ""
+    })
+  })
+  return (
+    <div
+      ref={wrapRef}
+      onClick={(e) => {
+        const tr = (e.target as HTMLElement).closest("tbody tr")
+        if (!tr) return
+        const idx = Array.from(tr.parentElement!.children).indexOf(tr)
+        const row = rows[idx]
+        if (row) onRowClick(row.id)
+      }}
+      style={{ cursor: "pointer" }}
+    >
+      {children}
+    </div>
+  )
 }
 
 export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
@@ -159,22 +197,17 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
               />
             </CardContainer>
           ) : (
-            <div
-              onClick={(e) => {
-                const tr = (e.target as HTMLElement).closest("tbody tr")
-                if (!tr) return
-                const idx = Array.from(tr.parentElement!.children).indexOf(tr)
-                const row = filtered[idx]
-                if (row) setSelectedCallId(row.id)
-              }}
-              style={{ cursor: "pointer" }}
+            <CallHistoryTableWrap
+              rows={filtered}
+              selectedId={selectedCallId}
+              onRowClick={(id) => setSelectedCallId(id)}
             >
               <Table
                 columns={columns}
                 data={filtered}
                 size="default"
               />
-            </div>
+            </CallHistoryTableWrap>
           )}
         </div>
 
