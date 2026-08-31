@@ -158,6 +158,11 @@ export default function PMChatWidgetScreen() {
   const [widgetSize, setWidgetSize]     = useState("Medium (default)")
   const [widgetPosition, setWidgetPosition] = useState("Bottom right")
 
+  // Content — editable widget name, greeting, and chat starters
+  const [widgetName, setWidgetName]     = useState(WIDGETS[0].name)
+  const [greetingMsg, setGreetingMsg]   = useState("")
+  const [chatStarters, setChatStarters] = useState<string[]>([])
+
   // Preferences toggles
   const [togFileUpload, setTogFileUpload]   = useState(false)
   const [togHistory, setTogHistory]         = useState(true)
@@ -186,6 +191,9 @@ export default function PMChatWidgetScreen() {
     window.addEventListener("mouseup", onUp)
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp) }
   }, [])
+
+  // Reset chat starters to defaults when network changes (user edits override later)
+  useEffect(() => { setChatStarters([]) }, [selectedNet])
 
   // Close notif panel on outside click
   useEffect(() => {
@@ -267,6 +275,18 @@ export default function PMChatWidgetScreen() {
   ]
 
   const currentNet = NETWORKS.find(n => n.id === selectedNet)
+
+  // ── Per-network content defaults ───────────────────────────────────────────
+  const NET_DEFAULTS: Record<string, { greeting: string; starters: string[] }> = {
+    "sales-ai":      { greeting: "Hi! I'm {name}. How can I help you today?", starters: ["What are your pricing plans?", "Schedule a demo", "Compare plans", "Talk to sales"] },
+    "support-agent": { greeting: "Hi! I'm {name}. What can I help you with?",  starters: ["I have a billing issue", "Track my order", "Reset my password", "Speak to an agent"] },
+    "onboarding-nw": { greeting: "Welcome! I'm {name}. Ready to get you started.", starters: ["Give me a quick tour", "Connect my data", "Invite my team", "Explore features"] },
+    "finance-bot":   { greeting: "Hi! I'm {name}. Ask me about invoices and payments.", starters: ["Check invoice status", "View payment history", "Download a receipt", "Update payment method"] },
+    "hr-assistant":  { greeting: "Hello! I'm {name}. I can help with HR questions.", starters: ["View my benefits", "Request time off", "Company policy", "Talk to HR"] },
+  }
+  const netDefaults = NET_DEFAULTS[selectedNet] ?? { greeting: "Hi! I'm {name}. How can I help you today?", starters: ["How can you help me?", "Tell me more", "Get started", "Contact support"] }
+  const resolvedGreeting = (greetingMsg || netDefaults.greeting).replace("{name}", currentNet?.name ?? "your AI assistant")
+  const resolvedStarters = chatStarters.length > 0 ? chatStarters : netDefaults.starters
 
   // ── Appearance derived values ──────────────────────────────────────────────
   const AVATAR_PRESETS = [
@@ -545,6 +565,70 @@ export default function PMChatWidgetScreen() {
               {/* ── APPEARANCE ── */}
               {activeTab === "appearance" && (
                 <div style={{ maxWidth: 640 }}>
+
+                  {/* Widget content */}
+                  <div style={{ marginBottom: 28 }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)", marginBottom: 12 }}>Widget Content</div>
+                    <CardContainer size="sm" className="!p-0 overflow-hidden">
+                      {/* Name */}
+                      <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--color-text-subtitle)", marginBottom: 6 }}>Widget Name</label>
+                        <input
+                          value={widgetName}
+                          onChange={e => setWidgetName(e.target.value)}
+                          placeholder={activeWidget.name}
+                          style={{ width: "100%", background: "var(--field-bg)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 7, padding: "8px 12px", fontSize: 12, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                        />
+                      </div>
+                      {/* Greeting */}
+                      <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--color-text-subtitle)", marginBottom: 6 }}>Greeting Message</label>
+                        <textarea
+                          value={greetingMsg}
+                          onChange={e => setGreetingMsg(e.target.value)}
+                          placeholder={netDefaults.greeting.replace("{name}", currentNet?.name ?? "your AI assistant")}
+                          rows={2}
+                          style={{ width: "100%", background: "var(--field-bg)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 7, padding: "8px 12px", fontSize: 12, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.5 }}
+                        />
+                        <div style={{ fontSize: 10, color: "var(--color-text-disabled)", marginTop: 4 }}>Use {"{name}"} to insert the agent name</div>
+                      </div>
+                      {/* Chat starters */}
+                      <div style={{ padding: "14px 18px" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-subtitle)" }}>Chat Starters</label>
+                          {chatStarters.length > 0 && (
+                            <button onClick={() => setChatStarters([])} style={{ fontSize: 10, color: "var(--color-text-disabled)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>Reset to defaults</button>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {(chatStarters.length > 0 ? chatStarters : netDefaults.starters).map((s, i) => (
+                            <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <input
+                                value={chatStarters.length > 0 ? s : ""}
+                                onChange={e => {
+                                  const next = chatStarters.length > 0 ? [...chatStarters] : [...netDefaults.starters]
+                                  next[i] = e.target.value
+                                  setChatStarters(next)
+                                }}
+                                onFocus={() => { if (chatStarters.length === 0) setChatStarters([...netDefaults.starters]) }}
+                                placeholder={s}
+                                style={{ flex: 1, background: "var(--field-bg)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 7, padding: "7px 10px", fontSize: 12, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none" }}
+                              />
+                              <button onClick={() => setChatStarters(prev => { const a = prev.length > 0 ? [...prev] : [...netDefaults.starters]; a.splice(i, 1); return a })} style={{ width: 26, height: 26, borderRadius: 6, background: "none", border: "1px solid var(--color-border-neutral-default)", color: "var(--color-text-disabled)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                <Icons.X size={11} />
+                              </button>
+                            </div>
+                          ))}
+                          {(chatStarters.length > 0 ? chatStarters : netDefaults.starters).length < 6 && (
+                            <button onClick={() => setChatStarters(prev => [...(prev.length > 0 ? prev : netDefaults.starters), ""])} style={{ alignSelf: "flex-start", fontSize: 11, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                              <Icons.Plus size={12} />Add starter
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContainer>
+                  </div>
+
                   {/* Avatar presets */}
                   <div style={{ marginBottom: 28 }}>
                     <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)", marginBottom: 12 }}>Agent Avatar</div>
@@ -861,8 +945,8 @@ export default function PMChatWidgetScreen() {
                       </div>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{activeWidget.name}</div> {/* audit-ignore: #fff on brand bg */}
-                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.72)", marginTop: 1 }}>{activeWidget.network !== "—" ? activeWidget.network : "No agent assigned"}</div> {/* audit-ignore: rgba on brand bg */}
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{widgetName || activeWidget.name}</div> {/* audit-ignore: #fff on brand bg */}
+                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.72)", marginTop: 1 }}>{currentNet?.name ?? "No agent assigned"}</div> {/* audit-ignore: rgba on brand bg */}
                     </div>
                     <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#09E2AB", boxShadow: "0 0 0 2px rgba(9,226,171,0.25)" }} /> {/* audit-ignore: decorative status dot */}
                   </div>
@@ -877,8 +961,14 @@ export default function PMChatWidgetScreen() {
                         </div>
                       )}
                       <div style={{ maxWidth: "80%", background: previewBubbleBg, border: `1px solid ${previewBorder}`, borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "8px 10px", fontSize: 11, color: previewText, lineHeight: 1.5, transition: "background 0.2s, color 0.2s" }}>
-                        Hi! I&apos;m {activeWidget.network !== "—" ? activeWidget.network : "your AI assistant"}. How can I help you today?
+                        {resolvedGreeting}
                       </div>
+                    </div>
+                    {/* Chat starters */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, paddingLeft: togAvatar ? 26 : 0 }}>
+                      {resolvedStarters.map((s, i) => (
+                        <div key={i} style={{ fontSize: 10, padding: "4px 9px", borderRadius: 20, border: `1px solid ${previewBorder}`, color: previewText, background: previewBubbleBg, cursor: "default", lineHeight: 1.4, transition: "background 0.2s, color 0.2s" }}>{s}</div>
+                      ))}
                     </div>
                     {/* User bubble */}
                     <div style={{ display: "flex", justifyContent: "flex-end" }}>
