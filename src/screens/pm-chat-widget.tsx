@@ -268,8 +268,8 @@ export default function PMChatWidgetScreen() {
 
   const DETAIL_TABS: TabItem[] = [
     { id: "overview",     label: "Overview"         },
-    { id: "appearance",   label: "Appearance"       },
     { id: "agent",        label: "Agentic Network"  },
+    { id: "appearance",   label: "Appearance"       },
     { id: "preferences",  label: "Preferences"      },
     { id: "embed",        label: "Embed"            },
   ]
