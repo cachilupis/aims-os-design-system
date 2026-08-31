@@ -148,11 +148,15 @@ export default function PMChatWidgetScreen() {
   const [notifPanelOpen, setNotifPanelOpen] = useState(false)
   const notifRef                      = useRef<HTMLDivElement>(null)
 
-  // Appearance toggles + brand color
-  const [togBranding, setTogBranding] = useState(true)
-  const [togAvatar, setTogAvatar]     = useState(true)
-  const [togTyping, setTogTyping]     = useState(true)
-  const [brandColor, setBrandColor]   = useState("var(--primary)")
+  // Appearance toggles + brand color + layout
+  const [togBranding, setTogBranding]   = useState(true)
+  const [togAvatar, setTogAvatar]       = useState(true)
+  const [togTyping, setTogTyping]       = useState(true)
+  const [brandColor, setBrandColor]     = useState("var(--primary)")
+  const [selectedAvatar, setSelectedAvatar] = useState(0)
+  const [widgetTheme, setWidgetTheme]   = useState("System (auto)")
+  const [widgetSize, setWidgetSize]     = useState("Medium (default)")
+  const [widgetPosition, setWidgetPosition] = useState("Bottom right")
 
   // Preferences toggles
   const [togFileUpload, setTogFileUpload]   = useState(false)
@@ -263,6 +267,34 @@ export default function PMChatWidgetScreen() {
   ]
 
   const currentNet = NETWORKS.find(n => n.id === selectedNet)
+
+  // ── Appearance derived values ──────────────────────────────────────────────
+  const AVATAR_PRESETS = [
+    { bg: "linear-gradient(135deg,#6366f1,#8b5cf6)", icon: "Zap"         }, // audit-ignore: decorative avatar preset gradient
+    { bg: "linear-gradient(135deg,#2b7fff,#09E2AB)", icon: "CheckCircle" }, // audit-ignore: decorative avatar preset gradient
+    { bg: "linear-gradient(135deg,#09E2AB,#00A07E)", icon: "Activity"    }, // audit-ignore: decorative avatar preset gradient
+    { bg: "linear-gradient(135deg,#f59e0b,#f97316)", icon: "Network"     }, // audit-ignore: decorative avatar preset gradient
+    { bg: "linear-gradient(135deg,#ec4899,#a855f7)", icon: "Shield"      }, // audit-ignore: decorative avatar preset gradient
+  ]
+  const currentAvatar = AVATAR_PRESETS[selectedAvatar]
+  const AvatarIcon = (Icons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[currentAvatar.icon]
+
+  // Preview size → panel dimensions
+  const previewSizeMap: Record<string, { w: number; h: string }> = {
+    "Small":            { w: 260, h: "360px" },
+    "Medium (default)": { w: 300, h: "480px" },
+    "Large":            { w: 340, h: "560px" },
+    "Full screen":      { w: 300, h: "100%"  },
+  }
+  const previewDims = previewSizeMap[widgetSize] ?? previewSizeMap["Medium (default)"]
+
+  // Preview theme → force bg/text tokens
+  const isDarkTheme  = widgetTheme === "Dark"
+  const isLightTheme = widgetTheme === "Light"
+  const previewBg    = isDarkTheme ? "#0F172B" : isLightTheme ? "#FFFFFF" : "var(--canvas)"
+  const previewText  = isDarkTheme ? "#E5EEF8" : isLightTheme ? "#2A2A2A" : "var(--color-text-title)"
+  const previewBubbleBg = isDarkTheme ? "#1E2B3C" : isLightTheme ? "#F2F2F2" : "var(--canvas)"
+  const previewBorder   = isDarkTheme ? "rgba(255,255,255,0.08)" : isLightTheme ? "#D9D9D9" : "var(--color-border-neutral-default)" // audit-ignore: themed preview surface colors — no token
 
   // ── Create wizard helpers ──────────────────────────────────────────────────
   const CREATE_STEPS = ["Name & Description", "Assign Network", "Appearance", "Embed & Publish"]
@@ -518,16 +550,11 @@ export default function PMChatWidgetScreen() {
                     <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)", marginBottom: 12 }}>Agent Avatar</div>
                     <div style={{ fontSize: 12, color: "var(--color-text-subtitle)", marginBottom: 12 }}>Pick a preset or upload your own image</div>
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                      {[
-                        { bg: "linear-gradient(135deg,#6366f1,#8b5cf6)", icon: "Zap"          }, // audit-ignore: decorative avatar preset gradient
-                        { bg: "linear-gradient(135deg,#2b7fff,#09E2AB)", icon: "CheckCircle"  }, // audit-ignore: decorative avatar preset gradient
-                        { bg: "linear-gradient(135deg,#09E2AB,#00A07E)", icon: "Activity"     }, // audit-ignore: decorative avatar preset gradient
-                        { bg: "linear-gradient(135deg,#f59e0b,#f97316)", icon: "Network"      }, // audit-ignore: decorative avatar preset gradient
-                        { bg: "linear-gradient(135deg,#ec4899,#a855f7)", icon: "Shield"       }, // audit-ignore: decorative avatar preset gradient
-                      ].map((preset, i) => {
+                      {AVATAR_PRESETS.map((preset, i) => {
                         const Ic = (Icons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[preset.icon]
+                        const sel = selectedAvatar === i
                         return (
-                          <div key={i} style={{ width: 44, height: 44, borderRadius: "50%", background: preset.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: i === 0 ? "2px solid var(--primary)" : "2px solid transparent", boxShadow: i === 0 ? "0 0 0 3px var(--card-primary-bg)" : "none" }}>
+                          <div key={i} onClick={() => setSelectedAvatar(i)} style={{ width: 44, height: 44, borderRadius: "50%", background: preset.bg, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: sel ? "2px solid var(--primary)" : "2px solid transparent", boxShadow: sel ? "0 0 0 3px var(--card-primary-bg)" : "none", transition: "box-shadow 0.15s" }}>
                             <Ic size={18} color="#fff" /> {/* audit-ignore: white on gradient avatar — no token */}
                           </div>
                         )
@@ -554,13 +581,13 @@ export default function PMChatWidgetScreen() {
                     <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)", marginBottom: 12 }}>Layout</div>
                     <CardContainer size="sm" className="!p-0 overflow-hidden">
                       {[
-                        { label: "Theme",        options: ["System (auto)", "Dark", "Light"] },
-                        { label: "Widget Size",  options: ["Medium (default)", "Small", "Large", "Full screen"] },
-                        { label: "Position",     options: ["Bottom right", "Bottom left", "Inline (custom)"] },
+                        { label: "Theme",       options: ["System (auto)", "Dark", "Light"],                               val: widgetTheme,    set: setWidgetTheme    },
+                        { label: "Widget Size", options: ["Medium (default)", "Small", "Large", "Full screen"],            val: widgetSize,     set: setWidgetSize     },
+                        { label: "Position",    options: ["Bottom right", "Bottom left", "Inline (custom)"],               val: widgetPosition, set: setWidgetPosition },
                       ].map((row, i) => (
                         <div key={row.label} style={{ display: "flex", alignItems: "center", padding: "12px 18px", borderBottom: i < 2 ? "1px solid var(--color-border-neutral-default)" : "none" }}>
                           <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "var(--color-text-subtitle)" }}>{row.label}</span>
-                          <select style={{ background: "var(--surface)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 7, padding: "6px 28px 6px 10px", color: "var(--color-text-title)", fontSize: 12, fontFamily: "inherit", outline: "none", cursor: "pointer", appearance: "none" }}>
+                          <select value={row.val} onChange={e => row.set(e.target.value)} style={{ background: "var(--surface)", border: "1px solid var(--color-border-neutral-default)", borderRadius: 7, padding: "6px 28px 6px 10px", color: "var(--color-text-title)", fontSize: 12, fontFamily: "inherit", outline: "none", cursor: "pointer", appearance: "none" }}>
                             {row.options.map(o => <option key={o}>{o}</option>)}
                           </select>
                         </div>
@@ -809,76 +836,92 @@ export default function PMChatWidgetScreen() {
               </div>
 
               {/* Chat window */}
-              {/* Chat window */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                {/* Chat header */}
-                <div style={{ padding: "12px 14px 10px", background: brandColor, display: "flex", alignItems: "center", gap: 10, transition: "background 0.2s" }}>
-                  {togAvatar && (
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}> {/* audit-ignore: rgba overlay on brand bg */}
-                      <Icons.Bot size={15} color="#fff" /> {/* audit-ignore: #fff on colored bg */}
-                    </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{activeWidget.name}</div> {/* audit-ignore: #fff on brand bg */}
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.72)", marginTop: 1 }}>{activeWidget.network !== "—" ? activeWidget.network : "No agent assigned"}</div> {/* audit-ignore: rgba on brand bg */}
-                  </div>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#09E2AB", boxShadow: "0 0 0 2px rgba(9,226,171,0.25)" }} /> {/* audit-ignore: decorative status dot color */}
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overflow: "hidden", position: "relative" }}>
+                {/* Position label */}
+                <div style={{ position: "absolute", bottom: 12, right: 12, fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-disabled)", opacity: 0.7 }}>
+                  {widgetPosition}
                 </div>
-
-                {/* Messages */}
-                <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
-                  {/* Agent bubble */}
-                  <div style={{ display: "flex", alignItems: "flex-end", gap: 7 }}>
+                {/* Widget mock at chosen size */}
+                <div style={{
+                  width: previewDims.w, height: previewDims.h,
+                  maxHeight: "100%",
+                  display: "flex", flexDirection: "column",
+                  background: previewBg,
+                  border: `1px solid ${previewBorder}`,
+                  borderRadius: "var(--radius-l)",
+                  overflow: "hidden",
+                  transition: "all 0.25s",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.32)", // audit-ignore: preview widget elevation — no token
+                }}>
+                  {/* Widget header */}
+                  <div style={{ padding: "10px 12px 9px", background: brandColor, display: "flex", alignItems: "center", gap: 8, transition: "background 0.2s", flexShrink: 0 }}>
                     {togAvatar && (
-                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
-                        <Icons.Bot size={11} color={brandColor} />
+                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: currentAvatar.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}> {/* audit-ignore: avatar preset bg — no token */}
+                        <AvatarIcon size={13} color="#fff" /> {/* audit-ignore: #fff on gradient avatar */}
                       </div>
                     )}
-                    <div style={{ maxWidth: "80%", background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "9px 12px", fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.5 }}>
-                      Hi! I&apos;m {activeWidget.network !== "—" ? activeWidget.network : "your AI assistant"}. How can I help you today?
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{activeWidget.name}</div> {/* audit-ignore: #fff on brand bg */}
+                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.72)", marginTop: 1 }}>{activeWidget.network !== "—" ? activeWidget.network : "No agent assigned"}</div> {/* audit-ignore: rgba on brand bg */}
                     </div>
+                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#09E2AB", boxShadow: "0 0 0 2px rgba(9,226,171,0.25)" }} /> {/* audit-ignore: decorative status dot */}
                   </div>
-                  {/* User bubble */}
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <div style={{ maxWidth: "80%", background: brandColor, borderRadius: "var(--radius-l) var(--radius-l) var(--radius-xs) var(--radius-l)", padding: "9px 12px", fontSize: 12, color: "#fff", lineHeight: 1.5, transition: "background 0.2s" }}> {/* audit-ignore: #fff on brand bg */}
-                      I&apos;d like to know more about pricing.
-                    </div>
-                  </div>
-                  {/* Agent typing */}
-                  {togTyping && (
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: 7 }}>
+
+                  {/* Messages */}
+                  <div style={{ flex: 1, overflowY: "auto", padding: "12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
+                    {/* Agent bubble */}
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
                       {togAvatar && (
-                        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
-                          <Icons.Bot size={11} color={brandColor} />
+                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: currentAvatar.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}> {/* audit-ignore: avatar preset bg — no token */}
+                          <AvatarIcon size={10} color="#fff" /> {/* audit-ignore: #fff on gradient avatar */}
                         </div>
                       )}
-                      <div style={{ background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "10px 14px", display: "flex", gap: 4, alignItems: "center" }}>
-                        {[0, 0.15, 0.3].map((delay, i) => (
-                          <span key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-text-disabled)", display: "inline-block", animation: `bounce 1.1s ${delay}s infinite` }} />
-                        ))}
+                      <div style={{ maxWidth: "80%", background: previewBubbleBg, border: `1px solid ${previewBorder}`, borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "8px 10px", fontSize: 11, color: previewText, lineHeight: 1.5, transition: "background 0.2s, color 0.2s" }}>
+                        Hi! I&apos;m {activeWidget.network !== "—" ? activeWidget.network : "your AI assistant"}. How can I help you today?
                       </div>
+                    </div>
+                    {/* User bubble */}
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <div style={{ maxWidth: "80%", background: brandColor, borderRadius: "var(--radius-l) var(--radius-l) var(--radius-xs) var(--radius-l)", padding: "8px 10px", fontSize: 11, color: "#fff", lineHeight: 1.5, transition: "background 0.2s" }}> {/* audit-ignore: #fff on brand bg */}
+                        I&apos;d like to know more about pricing.
+                      </div>
+                    </div>
+                    {/* Agent typing */}
+                    {togTyping && (
+                      <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
+                        {togAvatar && (
+                          <div style={{ width: 20, height: 20, borderRadius: "50%", background: currentAvatar.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}> {/* audit-ignore: avatar preset bg — no token */}
+                            <AvatarIcon size={10} color="#fff" /> {/* audit-ignore: #fff on gradient avatar */}
+                          </div>
+                        )}
+                        <div style={{ background: previewBubbleBg, border: `1px solid ${previewBorder}`, borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "9px 12px", display: "flex", gap: 4, alignItems: "center", transition: "background 0.2s" }}>
+                          {[0, 0.15, 0.3].map((delay, i) => (
+                            <span key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--color-text-disabled)", display: "inline-block", animation: `bounce 1.1s ${delay}s infinite` }} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input */}
+                  <div style={{ padding: "8px 10px", borderTop: `1px solid ${previewBorder}`, display: "flex", gap: 6, alignItems: "center", flexShrink: 0, background: previewBg, transition: "background 0.2s" }}>
+                    <input
+                      placeholder="Type a message…"
+                      style={{ flex: 1, background: isLightTheme ? "#F2F2F2" : "var(--field-bg)", border: `1px solid ${previewBorder}`, borderRadius: "var(--radius-full)", padding: "7px 11px", fontSize: 11, color: previewText, fontFamily: "inherit", outline: "none" }} // audit-ignore: themed field bg
+                    />
+                    <button style={{ width: 26, height: 26, borderRadius: "var(--radius-full)", background: brandColor, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+                      <Icons.Send size={10} color="#fff" /> {/* audit-ignore: #fff on brand bg */}
+                    </button>
+                  </div>
+
+                  {/* Branding */}
+                  {togBranding && (
+                    <div style={{ padding: "5px 10px", borderTop: `1px solid ${previewBorder}`, textAlign: "center", fontSize: 9, color: "var(--color-text-disabled)", background: previewBg, flexShrink: 0 }}>
+                      Powered by <strong style={{ color: brandColor }}>AIMS OS</strong>
                     </div>
                   )}
                 </div>
-
-                {/* Input */}
-                <div style={{ padding: "10px 12px", borderTop: "1px solid var(--color-border-neutral-default)", display: "flex", gap: 7, alignItems: "center" }}>
-                  <input
-                    placeholder="Type a message…"
-                    style={{ flex: 1, background: "var(--field-bg)", border: "1px solid var(--field-border)", borderRadius: "var(--radius-full)", padding: "8px 13px", fontSize: 12, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none" }}
-                  />
-                  <button style={{ width: 30, height: 30, borderRadius: "var(--radius-full)", background: brandColor, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
-                    <Icons.Send size={12} color="#fff" /> {/* audit-ignore: #fff on brand bg */}
-                  </button>
-                </div>
               </div>
-
-              {/* Branding */}
-              {togBranding && (
-                <div style={{ padding: "7px 12px", borderTop: "1px solid var(--color-border-neutral-default)", textAlign: "center", fontSize: 10, color: "var(--color-text-disabled)" }}>
-                  Powered by <strong style={{ color: brandColor }}>AIMS OS</strong>
-                </div>
-              )}
             </div>
 
             </div>
