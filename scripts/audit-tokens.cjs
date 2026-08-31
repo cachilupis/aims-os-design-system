@@ -347,9 +347,17 @@ if (fs.existsSync(appTsxPath)) {
 // Builds the set of real exported component names from src/components/ui
 // and src/components/layouts (handles both `export function Name(` and
 // `export { Name, ... }`), then flags any src/screens/** file that locally
-// defines a same-named function or arrow-function component — that's a
-// shadow reimplementation, not a legitimate screen-local helper, because
-// the name collision with a real DS export is exactly the tell.
+// defines a same-named function or arrow-function component.
+//
+// This matches NAMES ONLY, never behaviour, so the finding is "the name is
+// taken", not "you reimplemented this component". Usually those are the same
+// thing; sometimes they are not. Real case (PR #55, 2026-08-31): a screen
+// defined a local `Stepper` that was a numeric +/- input, while the DS
+// `Stepper` is a wizard step indicator — unrelated components, same word.
+// Substituting one for the other would have been wrong; renaming the local
+// one was right. That is why the message offers both fixes instead of
+// assuming duplication — a collision is always worth removing, but which
+// way you remove it depends on what the two components actually do.
 function extractExportedNames(file) {
   const text = fs.readFileSync(file, "utf8")
   const names = new Set()
@@ -381,7 +389,7 @@ screenFiles.forEach((file) => {
         type: "shadow-component",
         file: rel(file),
         line: idx + 1,
-        message: `local "${name}" shadows the real src/components/ui or layouts export of the same name — import it instead of reimplementing it`,
+        message: `local "${name}" shadows a real src/components/ui or layouts export of the same name. This check matches NAMES, not behaviour — pick the fix that applies: if it does the same job, delete it and import the DS one; if it is a genuinely different component that happens to share the name, rename the local one to something specific to what it does. Either way the collision has to go.`,
       })
     }
   })
@@ -481,6 +489,18 @@ printSection("⚠️  WARNING — off-scale spacing (informational only)", spaci
 printSection("⚠️  WARNING — hand-rolled component shadows a real DS export", shadowWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
 printSection("⚠️  WARNING — variant=\"main\" overused (CLAUDE.md: max 1/screen)", mainOveruseWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
 printSection("⚠️  WARNING — possible hand-rolled CardContainer reimplementation", cardReimplWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
+
+// `--counts` prints one machine-readable line so CI can ratchet: run the audit
+// on main, run it on the PR, and fail if any category went UP. Warnings stay
+// non-blocking on their own (main is not at zero on several of them), but a PR
+// is never allowed to add more. Without this, checks 6-8 print their findings
+// into the CI log and the job still goes green — which is what let PR #55's
+// 4 shadow + 6 main-overuse warnings sit unnoticed for three days.
+if (process.argv.includes("--counts")) {
+  console.log(
+    `AUDIT_COUNTS errors=${errors.length} orphan=${orphanWarnings.length} shadow=${shadowWarnings.length} main_overuse=${mainOveruseWarnings.length} card_reimpl=${cardReimplWarnings.length}`
+  )
+}
 
 console.log(
   `\nSummary: ${errors.length} error(s), ${orphanWarnings.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${shadowWarnings.length} shadow-component warning(s), ${mainOveruseWarnings.length} main-overuse warning(s), ${cardReimplWarnings.length} possible-card-reimpl warning(s).`

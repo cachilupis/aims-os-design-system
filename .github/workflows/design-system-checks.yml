@@ -1,8 +1,11 @@
 name: Design system checks
 
 on:
+  # Every pull request, not only the ones targeting main. Stacked PRs point at
+  # an intermediate branch, so `branches: [main]` silently skipped them: #70 and
+  # #71 (5,000+ lines between them) ran no type check and no audit at all, and
+  # still reported CLEAN because only the Vercel check was present.
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
@@ -24,3 +27,56 @@ jobs:
 
       - name: Token audit (hardcoded values, orphaned components)
         run: npm run audit:tokens
+
+      # Checks 6-8 (DS-component shadows, variant="main" overuse, hand-rolled
+      # cards) are warnings, so the step above prints them and still exits 0.
+      # That is deliberate — main is not at zero on any of them yet — but it
+      # meant PR #55 shipped 4 shadow and 6 main-overuse findings straight past
+      # a green CI. This step is the ratchet: warnings may stay, but a PR is
+      # not allowed to add more of them than its base already has.
+      - name: No new DS warnings vs base
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          # Compare against the PR's OWN base, not always main. A stacked PR
+          # (#70 → feat/voice-channel) would otherwise inherit every finding
+          # its base already carries and fail for work it did not do.
+          BASE="${{ github.base_ref }}"
+          echo "Comparing against base: $BASE"
+          git fetch --depth=1 origin "$BASE"
+          git worktree add --detach /tmp/base FETCH_HEAD
+
+          # Both sides must be measured with the SAME ruler — the base's script.
+          # Measuring the branch with the branch's own copy is how PR #55 slipped
+          # through: a branch cut before checks 6-8 existed grades itself against
+          # rules that cannot see its own findings. Overwriting the branch's copy
+          # for the duration of this step also means a PR that legitimately edits
+          # the audit script is not judged by its own new rules.
+          cp /tmp/base/scripts/audit-tokens.cjs /tmp/ruler.cjs
+
+          if ! grep -q -- '--counts' /tmp/ruler.cjs; then
+            echo "::notice::the base branch's audit script has no --counts flag yet; ratchet skipped until this lands on main."
+            exit 0
+          fi
+
+          # `|| true` — a non-zero exit means hardcoded-colour errors, which the
+          # step above already failed on. Here we only want the counts.
+          node /tmp/base/scripts/audit-tokens.cjs --counts > /tmp/base.log || true
+          cp /tmp/ruler.cjs scripts/audit-tokens.cjs
+          node scripts/audit-tokens.cjs --counts > /tmp/head.log || true
+          git checkout -- scripts/audit-tokens.cjs
+
+          parse() { grep -o 'AUDIT_COUNTS.*' "$1" | tr ' ' '\n' | grep '=' ; }
+          echo "base: $(grep -o 'AUDIT_COUNTS.*' /tmp/base.log)"
+          echo "head: $(grep -o 'AUDIT_COUNTS.*' /tmp/head.log)"
+
+          failed=0
+          for pair in $(parse /tmp/head.log); do
+            key=${pair%%=*}; head_n=${pair##*=}
+            base_n=$(parse /tmp/base.log | grep "^${key}=" | cut -d= -f2)
+            if [ "$head_n" -gt "$base_n" ]; then
+              echo "::error::${key} went from ${base_n} on the base branch to ${head_n} on this branch — fix the new findings printed above, or remove an equivalent existing one."
+              failed=1
+            fi
+          done
+          exit $failed
