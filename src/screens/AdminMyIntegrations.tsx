@@ -183,7 +183,7 @@ function RequestCard({
                 }}
               />
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                <Button variant="main" size="sm" onClick={() => { onRespondToInfo(req.id, infoReply); setInfoReply("") }}>
+                <Button variant="primary" size="sm" onClick={() => { onRespondToInfo(req.id, infoReply); setInfoReply("") }}>
                   Send response
                 </Button>
               </div>
@@ -267,7 +267,7 @@ function NewRequestForm({ onSubmit, onCancel }: { onSubmit: (r: IntegrationReque
       </div>
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
-        <Button variant="main" size="sm" onClick={submit}>Submit request</Button>
+        <Button variant="primary" size="sm" onClick={submit}>Submit request</Button>
       </div>
     </div>
   )

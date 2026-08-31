@@ -270,7 +270,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
       {tab === "tokens" && (
         <>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-            <Button variant="main" size="sm" onClick={() => setShowNewToken(true)}>
+            <Button variant="primary" size="sm" onClick={() => setShowNewToken(true)}>
               <Icons.Plus size={14} style={{ marginRight: 4 }} />
               New token
             </Button>
@@ -287,7 +287,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
               />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <Button variant="secondary" size="sm" onClick={() => { setShowNewToken(false); setNewTokenName("") }}>Cancel</Button>
-                <Button variant="main" size="sm" onClick={() => {
+                <Button variant="primary" size="sm" onClick={() => {
                   if (!newTokenName.trim()) return
                   setTokens(ts => [{ id: `t${Date.now()}`, name: newTokenName.trim(), created: "Today", lastUsed: "Never", scopes: "read:all" }, ...ts])
                   setShowNewToken(false); setNewTokenName("")
