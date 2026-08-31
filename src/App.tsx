@@ -16173,7 +16173,7 @@ function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onC
   return (
     <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
       <AppBackground />
-      <div className="shrink-0 flex items-center justify-between gap-[16px] px-[24px] py-[14px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}>
+      <div className="shrink-0 flex items-center justify-between gap-[16px] px-[24px] pr-[170px] py-[14px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}>
         <div className="min-w-0">
           <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Step {i + 1} of {steps.length} — {current.label}</span>
           <p className="text-[13px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>{current.note}</p>
