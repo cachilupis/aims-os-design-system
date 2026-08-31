@@ -291,9 +291,9 @@ export default function PMChatWidgetScreen() {
   // Preview theme → force bg/text tokens
   const isDarkTheme  = widgetTheme === "Dark"
   const isLightTheme = widgetTheme === "Light"
-  const previewBg    = isDarkTheme ? "#0F172B" : isLightTheme ? "#FFFFFF" : "var(--canvas)"
-  const previewText  = isDarkTheme ? "#E5EEF8" : isLightTheme ? "#2A2A2A" : "var(--color-text-title)"
-  const previewBubbleBg = isDarkTheme ? "#1E2B3C" : isLightTheme ? "#F2F2F2" : "var(--canvas)"
+  const previewBg    = isDarkTheme ? "#0F172B" : isLightTheme ? "#FFFFFF" : "var(--canvas)" // audit-ignore: widget preview forces raw theme colors
+  const previewText  = isDarkTheme ? "#E5EEF8" : isLightTheme ? "#2A2A2A" : "var(--color-text-title)" // audit-ignore: widget preview forces raw theme colors
+  const previewBubbleBg = isDarkTheme ? "#1E2B3C" : isLightTheme ? "#F2F2F2" : "var(--canvas)" // audit-ignore: widget preview forces raw theme colors
   const previewBorder   = isDarkTheme ? "rgba(255,255,255,0.08)" : isLightTheme ? "#D9D9D9" : "var(--color-border-neutral-default)" // audit-ignore: themed preview surface colors — no token
 
   // ── Create wizard helpers ──────────────────────────────────────────────────
