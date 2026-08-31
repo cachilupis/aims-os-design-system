@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import * as Icons from "lucide-react"
 import { ScreenLayout }        from "@/components/layouts/screen-layout"
-import { WidgetCanvasView }    from "@/components/layouts/widget-canvas-view"
-import type { CanvasSlot }     from "@/components/layouts/widget-canvas-view"
 import { Header }              from "@/components/ui/header"
 import { Button }              from "@/components/ui/button"
 import { Tag }                 from "@/components/ui/tag"
@@ -251,107 +249,6 @@ export default function PMChatWidgetScreen() {
       || n.description.toLowerCase().includes(browseSearch.toLowerCase())
     return matchFilter && matchSearch
   })
-
-  // ── Overview canvas slots ──────────────────────────────────────────────────
-
-  const metricsSlot: CanvasSlot = {
-    uid: "cw-metrics", title: "Metrics", colSpan: 2,
-    content: (
-      <div style={{ padding: "0 16px 16px" }}>
-        {[
-          { icon: "Activity",  label: "Success Rate",          value: "94.2%", meta: "+2.1%",         metaColor: "var(--color-text-success)" },
-          { icon: "Shield",    label: "Autonomous Resolution",  value: "78.5%", meta: "+5.3%",         metaColor: "var(--color-text-success)" },
-          { icon: "DollarSign",label: "Cost per Execution",    value: "$0.08", meta: "No change",     metaColor: "var(--color-text-disabled)" },
-          { icon: "Clock",     label: "Executions",            value: "1,240", meta: "+142 this month", metaColor: "var(--color-text-success)" },
-        ].map(row => {
-          const Ic = (Icons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[row.icon]
-          return (
-            <div key={row.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
-              <span style={{ width: 26, height: 26, borderRadius: 7, background: "var(--color-surface-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Ic size={12} color="var(--color-text-subtitle)" />
-              </span>
-              <span style={{ flex: 1 }}>
-                <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "var(--color-text-title)" }}>{row.value}</span>
-                <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{row.label}</span>
-              </span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: row.metaColor }}>{row.meta}</span>
-            </div>
-          )
-        })}
-      </div>
-    ),
-  }
-
-  const detailsSlot: CanvasSlot = {
-    uid: "cw-details", title: "Details", colSpan: 1,
-    content: (
-      <div>
-        {[
-          { label: "Owner",           value: "Thomas González" },
-          { label: "Version",         value: "v2.4.1"          },
-          { label: "Created",         value: "Mar 14, 2025"    },
-          { label: "Trusted Domains", value: "3 domains",      action: () => setActiveTab("embed") },
-        ].map(row => (
-          <div key={row.label}
-            onClick={row.action}
-            style={{
-              padding: "12px 16px", borderBottom: "1px solid var(--color-border-neutral-default)",
-              cursor: row.action ? "pointer" : "default",
-            }}
-          >
-            <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-disabled)", marginBottom: 4 }}>{row.label}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", display: "flex", alignItems: "center", gap: 6 }}>
-              {row.value}
-              {row.action && <span style={{ fontSize: 11, color: "var(--primary)" }}>View →</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-    ),
-  }
-
-  const currentNet = NETWORKS.find(n => n.id === selectedNet)
-
-  const assignedSlot: CanvasSlot = {
-    uid: "cw-assigned", title: "Assigned Agentic Network", colSpan: 1, rowSpan: 8,
-    content: (
-      <div style={{ padding: "0 0 16px" }}>
-        {currentNet ? (
-          <>
-            {[
-              { icon: "Bot",      label: currentNet.name,         sub: currentNet.description, color: "var(--badge-purple)", bg: "var(--card-purple-bg)" },
-              { icon: "Star",     label: currentNet.successRate,  sub: "Success Rate" },
-              { icon: "Clock",    label: "<1s",                   sub: "Avg. Response" },
-              { icon: "MessageCircle", label: "78.5%",            sub: "Autonomous Resolution" },
-            ].map((row, i) => {
-              const Ic = (Icons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[row.icon]
-              const isFirst = i === 0
-              return (
-                <div key={row.label + i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid var(--color-border-neutral-default)", cursor: "pointer" }}
-                  onClick={() => setActiveTab("agent")}>
-                  <span style={{ width: 26, height: 26, borderRadius: 7, background: isFirst ? "var(--card-purple-bg)" : "var(--color-surface-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Ic size={12} color={isFirst ? "var(--badge-purple)" : "var(--color-text-subtitle)"} />
-                  </span>
-                  <span style={{ flex: 1 }}>
-                    <span style={{ display: "block", fontSize: isFirst ? 13 : 14, fontWeight: 700, color: "var(--color-text-title)" }}>{row.label}</span>
-                    <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{row.sub}</span>
-                  </span>
-                </div>
-              )
-            })}
-            <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-              <button onClick={() => setActiveTab("agent")}
-                style={{ background: "none", border: "none", color: "var(--primary)", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                View in Agentic Studio <Icons.ChevronRight size={12} />
-              </button>
-            </div>
-          </>
-        ) : (
-          <EmptyState icon={Icons.Bot} title="No network assigned" description="Assign an agentic network from the Agentic Network tab." />
-        )}
-      </div>
-    ),
-  }
 
   // ── Tab items ──────────────────────────────────────────────────────────────
 
