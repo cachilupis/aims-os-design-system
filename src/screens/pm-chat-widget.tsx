@@ -260,6 +260,8 @@ export default function PMChatWidgetScreen() {
     { id: "embed",        label: "Embed"            },
   ]
 
+  const currentNet = NETWORKS.find(n => n.id === selectedNet)
+
   // ── Create wizard helpers ──────────────────────────────────────────────────
   const CREATE_STEPS = ["Name & Description", "Assign Network", "Appearance", "Embed & Publish"]
   const createCanNext = createStep === 0 ? newName.trim().length > 0 : true
