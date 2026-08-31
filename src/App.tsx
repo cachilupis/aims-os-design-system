@@ -15931,12 +15931,12 @@ function pgSceneStandaloneModal(next: () => void, _back: () => void, _onClose: (
       <ModalDialog isOpen onClose={() => {}} variant="content" slotUnstyled
         title="New Worker" description="Add a new AI worker to your team."
         slot={
-          <div className="flex flex-col gap-[16px]">
+          <PgFormSection label="Worker details">
             <Input placeholder="Worker name" />
             <PgInteractiveSelect placeholder="Role" options={["Support agent", "Workflow orchestrator", "Data processor"]} />
             <Select placeholder="Model" />
             <Input placeholder="Assigned team" />
-          </div>
+          </PgFormSection>
         }
         ctaPrimary={{ label: "Create", onClick: next }}
         ctaSecondary={{ label: "Cancel" }}
