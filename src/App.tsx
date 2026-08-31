@@ -8,6 +8,8 @@ import PMHomeCanvasScreen         from "./screens/pm-home-canvas"
 import PMMichaelAttentionRoomScreen from "./screens/pm-michael-attention-room"
 import PMMichaelLoginScreen         from "./screens/pm-michael-login"
 import PMThomasUniversalProfileScreen from "./screens/pm-thomas-universal-profile"
+import VoiceNumbersScreen             from "./screens/voice-numbers"
+import VoiceAgentsScreen              from "./screens/voice-agents"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AvatarCircle, AVATAR_SIZE_SPECS, AVATAR_COLOR_KEYS, type AvatarSizeKey, type AvatarColorKey } from "@/components/ui/avatar"
@@ -150,6 +152,8 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", component: WorkflowsListScreen },
   { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", component: PeopleAccessMembersScreen },
   { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", component: AdminConsoleScreen },
+  { id: "proto-voice-numbers",          label: "Voice — Numbers & Security",   description: "Voice channel main screen: Numbers table (60 rows, 4 segmented filters, search, pagination) + Security tab (Block List, Geo Restrictions, Rate Limiting, Recording & Consent). Ported from voice-channel-ux.html with DS Table, Tabs, Chip, Tag, Toggle, InformativeCard, HighlightCard.", author: "Thomas", component: VoiceNumbersScreen },
+  { id: "proto-voice-agents",           label: "Voice — Agents",               description: "Voice-only Agent management: list of agents that answer/place calls, per-agent slide-out with assigned numbers, voice model, language, recording toggle, script attached. Non-voice config (prompt/knowledge/tools) intentionally scoped OUT — lives in Agentic Studio.", author: "Thomas", component: VoiceAgentsScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
