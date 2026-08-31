@@ -157,6 +157,7 @@ export default function PMChatWidgetScreen() {
   const [widgetTheme, setWidgetTheme]   = useState("System (auto)")
   const [widgetSize, setWidgetSize]     = useState("Medium (default)")
   const [widgetPosition, setWidgetPosition] = useState("Bottom right")
+  const [previewOpen, setPreviewOpen]       = useState(true)
 
   // Content — editable widget name, greeting, and chat starters
   const [widgetName, setWidgetName]     = useState(WIDGETS[0].name)
@@ -315,6 +316,47 @@ export default function PMChatWidgetScreen() {
   const previewText  = isDarkTheme ? "#E5EEF8" : isLightTheme ? "#2A2A2A" : "var(--color-text-title)" // audit-ignore: widget preview forces raw theme colors
   const previewBubbleBg = isDarkTheme ? "#1E2B3C" : isLightTheme ? "#F2F2F2" : "var(--canvas)" // audit-ignore: widget preview forces raw theme colors
   const previewBorder   = isDarkTheme ? "rgba(255,255,255,0.08)" : isLightTheme ? "#D9D9D9" : "var(--color-border-neutral-default)" // audit-ignore: themed preview surface colors — no token
+
+  // ── Launcher bubble position (computed before return to avoid OXC spread-in-JSX) ──
+  const isInline   = widgetPosition.startsWith("Inline")
+  const isLeft     = widgetPosition === "Bottom left"
+  const launcherStyle: React.CSSProperties = {
+    position:     "absolute",
+    bottom:       isInline ? "50%" : 16,
+    left:         isLeft   ? 16    : isInline ? "50%" : undefined,
+    right:        (!isLeft && !isInline) ? 16 : undefined,
+    transform:    isInline ? "translate(-50%, 50%)" : undefined,
+    width:        44, height: 44,
+    borderRadius: "50%",
+    background:   brandColor,
+    border:       "none",
+    cursor:       "pointer",
+    display:      "flex", alignItems: "center", justifyContent: "center",
+    boxShadow:    "0 4px 16px rgba(0,0,0,0.35)", // audit-ignore: launcher shadow — no token
+    transition:   "all 0.25s",
+    zIndex:       10,
+  }
+
+  // ── Widget popup position (anchored above the bubble) ──
+  const widgetPopupStyle: React.CSSProperties = {
+    position:     "absolute",
+    bottom:       isInline ? "calc(50% + 28px)" : 68,
+    left:         isLeft   ? 16    : isInline ? "50%" : undefined,
+    right:        (!isLeft && !isInline) ? 16 : undefined,
+    transform:    isInline ? "translateX(-50%)" : undefined,
+    width:        previewDims.w,
+    display:      "flex", flexDirection: "column",
+    background:   previewBg,
+    border:       "1px solid " + previewBorder,
+    borderRadius: "var(--radius-l)",
+    overflow:     "hidden",
+    boxShadow:    "0 8px 32px rgba(0,0,0,0.32)", // audit-ignore: preview widget elevation — no token
+    transition:   "all 0.25s",
+    opacity:         previewOpen ? 1 : 0,
+    maxHeight:       previewOpen ? (previewDims.h === "100%" ? "80%" : previewDims.h) : "0px",
+    pointerEvents:   previewOpen ? "auto" : "none",
+    transformOrigin: isLeft ? "bottom left" : isInline ? "bottom center" : "bottom right",
+  }
 
   // ── Widget position anchor (computed before return to avoid OXC spread-in-JSX) ──
   const widgetMockStyle: React.CSSProperties = {
@@ -934,26 +976,13 @@ export default function PMChatWidgetScreen() {
                 </span>
               </div>
 
-              {/* Chat window */}
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overflow: "hidden", position: "relative" }}>
-                {/* Position badge — moves to the correct corner */}
-                <div style={{
-                  position: "absolute",
-                  bottom: widgetPosition.startsWith("Inline") ? 12 : 10,
-                  top: widgetPosition.startsWith("Inline") ? undefined : undefined,
-                  left: widgetPosition === "Bottom left" ? 10 : widgetPosition.startsWith("Inline") ? "50%" : undefined,
-                  right: widgetPosition === "Bottom right" || (!widgetPosition.startsWith("Inline") && widgetPosition !== "Bottom left") ? 10 : undefined,
-                  transform: widgetPosition.startsWith("Inline") ? "translateX(-50%)" : undefined,
-                  fontSize: 8, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.08em",
-                  color: "var(--color-text-disabled)", background: "var(--color-surface-neutral-default)",
-                  border: "1px solid var(--color-border-neutral-default)",
-                  borderRadius: 20, padding: "2px 8px", whiteSpace: "nowrap" as const,
-                  transition: "all 0.25s",
-                }}>
-                  {widgetPosition}
-                </div>
-                {/* Widget mock at chosen size */}
-                <div style={widgetMockStyle}>
+              {/* Chat window — launcher bubble + popup */}
+              <div style={{ flex: 1, overflow: "hidden", position: "relative", background: "var(--canvas)" }}>
+                {/* Subtle "page" bg hint */}
+                <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg,transparent,transparent 23px,var(--color-border-neutral-default) 24px)", opacity: 0.18 }} />
+
+                {/* Widget popup (above the bubble) */}
+                <div style={widgetPopupStyle}>
                   {/* Widget header */}
                   <div style={{ padding: "10px 12px 9px", background: brandColor, display: "flex", alignItems: "center", gap: 8, transition: "background 0.2s", flexShrink: 0 }}>
                     {togAvatar && (
@@ -1028,6 +1057,14 @@ export default function PMChatWidgetScreen() {
                     </div>
                   )}
                 </div>
+
+                {/* Launcher bubble */}
+                <button onClick={() => setPreviewOpen(o => !o)} style={launcherStyle}>
+                  {previewOpen
+                    ? <Icons.X size={20} color="#fff" />         /* audit-ignore: #fff on brand bg */
+                    : <Icons.MessageCircle size={20} color="#fff" /> /* audit-ignore: #fff on brand bg */
+                  }
+                </button>
               </div>
             </div>
 
