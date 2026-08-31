@@ -161,6 +161,25 @@ export default function PMChatWidgetScreen() {
   const [domains, setDomains]         = useState(["acme.com", "acme.co", "staging.acme.com"])
   const [domainInput, setDomainInput] = useState("")
 
+  // Resizable preview panel
+  const [previewWidth, setPreviewWidth] = useState(300)
+  const isDragging = useRef(false)
+  const dragStartX = useRef(0)
+  const dragStartW = useRef(0)
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!isDragging.current) return
+      const delta = dragStartX.current - e.clientX
+      const next = Math.min(520, Math.max(220, dragStartW.current + delta))
+      setPreviewWidth(next)
+    }
+    const onUp = () => { isDragging.current = false; document.body.style.cursor = "" }
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp) }
+  }, [])
+
   // Close notif panel on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -741,10 +760,28 @@ export default function PMChatWidgetScreen() {
 
             </div>
 
+            {/* DRAG HANDLE */}
+            <div
+              onMouseDown={e => {
+                isDragging.current = true
+                dragStartX.current = e.clientX
+                dragStartW.current = previewWidth
+                document.body.style.cursor = "col-resize"
+                e.preventDefault()
+              }}
+              style={{
+                width: 4, flexShrink: 0, cursor: "col-resize",
+                background: "transparent",
+                transition: "background 0.15s",
+                position: "relative", zIndex: 1,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "var(--primary)")}
+              onMouseLeave={e => { if (!isDragging.current) e.currentTarget.style.background = "transparent" }}
+            />
+
             {/* RIGHT: widget live preview — always visible */}
             <div style={{
-              width: 300, flexShrink: 0,
-              borderLeft: "1px solid var(--color-border-neutral-default)",
+              width: previewWidth, flexShrink: 0,
               background: "var(--color-surface-neutral-default)",
               display: "flex", flexDirection: "column",
               overflow: "hidden",
@@ -779,13 +816,13 @@ export default function PMChatWidgetScreen() {
                     <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
                       <Icons.Bot size={11} color="var(--primary)" />
                     </div>
-                    <div style={{ maxWidth: "80%", background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "12px 12px 12px 3px", padding: "9px 12px", fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.5 }}>
+                    <div style={{ maxWidth: "80%", background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "9px 12px", fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.5 }}>
                       Hi! I'm {activeWidget.network !== "—" ? activeWidget.network : "your AI assistant"}. How can I help you today?
                     </div>
                   </div>
                   {/* User bubble */}
                   <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <div style={{ maxWidth: "80%", background: "var(--primary)", borderRadius: "12px 12px 3px 12px", padding: "9px 12px", fontSize: 12, color: "#fff", lineHeight: 1.5 }}> {/* audit-ignore: #fff on primary */}
+                    <div style={{ maxWidth: "80%", background: "var(--primary)", borderRadius: "var(--radius-l) var(--radius-l) var(--radius-xs) var(--radius-l)", padding: "9px 12px", fontSize: 12, color: "#fff", lineHeight: 1.5 }}> {/* audit-ignore: #fff on primary */}
                       I'd like to know more about pricing.
                     </div>
                   </div>
@@ -794,7 +831,7 @@ export default function PMChatWidgetScreen() {
                     <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
                       <Icons.Bot size={11} color="var(--primary)" />
                     </div>
-                    <div style={{ background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "12px 12px 12px 3px", padding: "10px 14px", display: "flex", gap: 4, alignItems: "center" }}>
+                    <div style={{ background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "10px 14px", display: "flex", gap: 4, alignItems: "center" }}>
                       {[0, 0.15, 0.3].map((delay, i) => (
                         <span key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-text-disabled)", display: "inline-block", animation: `bounce 1.1s ${delay}s infinite` }} />
                       ))}
@@ -806,9 +843,9 @@ export default function PMChatWidgetScreen() {
                 <div style={{ padding: "10px 12px", borderTop: "1px solid var(--color-border-neutral-default)", display: "flex", gap: 7, alignItems: "center" }}>
                   <input
                     placeholder="Type a message…"
-                    style={{ flex: 1, background: "var(--field-bg)", border: "1px solid var(--field-border)", borderRadius: 20, padding: "8px 13px", fontSize: 12, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none" }}
+                    style={{ flex: 1, background: "var(--field-bg)", border: "1px solid var(--field-border)", borderRadius: "var(--radius-full)", padding: "8px 13px", fontSize: 12, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none" }}
                   />
-                  <button style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--primary)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <button style={{ width: 30, height: 30, borderRadius: "var(--radius-full)", background: "var(--primary)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <Icons.Send size={12} color="#fff" /> {/* audit-ignore: #fff on primary */}
                   </button>
                 </div>
