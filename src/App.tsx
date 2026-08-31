@@ -80,6 +80,7 @@ import { ChatWorkflowConfigScreen }           from "./screens/chat-workflow-conf
 import { WorkflowsListScreen }               from "./screens/workflows-list"
 import { PeopleAccessMembersScreen }         from "./screens/PeopleAccessMembers"
 import { AdminConsoleScreen }           from "./screens/AdminConsole"
+import PMChatWidgetScreen               from "./screens/pm-chat-widget"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -150,6 +151,7 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", component: WorkflowsListScreen },
   { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", component: PeopleAccessMembersScreen },
   { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", component: AdminConsoleScreen },
+  { id: "pm-chat-widget",              label: "Chat Widget Manager",          description: "Chat widget manager — widget list (Active/Draft/Inactive), detail view with 5 tabs (Overview, Appearance, Agentic Network, Preferences, Embed), browse-all modal with replacement warning, deploy flow with progress steps, bell notification panel", author: "Thomas", component: PMChatWidgetScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────

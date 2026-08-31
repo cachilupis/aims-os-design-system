@@ -27,6 +27,26 @@
  *   5. Spacing/size values in px that aren't a multiple of 4                   → WARNING
  *      (see SCALE below for the accepted non-grid exceptions — this is
  *      informational, not a failing check)
+ *   6. Screen files that locally define a function/const with the same name
+ *      as a real exported DS component (e.g. a hand-rolled `function Toggle`
+ *      shadowing `src/components/ui/toggle.tsx`'s `Toggle`)                  → WARNING
+ *      (2026-08-27: found 3 separate hand-rolled `Toggle` reimplementations
+ *      across Admin* screens, each with a slightly different prop shape,
+ *      shipped clean because this check didn't exist yet — hardcoded-color
+ *      and build checks have no way to catch "looks like the DS component
+ *      but isn't")
+ *   7. More than one `variant="main"` in a single screen file               → WARNING
+ *      (CLAUDE.md: max 1 per screen, header CTA only — RecordHeader's one
+ *      named exception lives inside record-header.tsx itself, so a screen
+ *      that only ever renders `<RecordHeader .../>` never trips this)
+ *
+ * Checks 6 and 7 are WARNING, not ERROR, on purpose for now: the first run
+ * against the existing repo found 9 pre-existing hits, 2 of them already on
+ * main (pm-michael-test-v1.tsx, pm-thomas-universal-profile.tsx) — making
+ * these blocking immediately would fail CI on any unrelated PR until all 9
+ * are cleaned up. Promote both (swap their `warnings.push` for `errors.push`,
+ * same shape as Check 1) once that cleanup pass lands, so this stops being
+ * optional.
  *
  * App.tsx coverage (2026-08 audit): only the widget content functions are
  * scanned, sliced out by marker rather than the whole 30K-line file. The
@@ -323,6 +343,117 @@ if (fs.existsSync(appTsxPath)) {
   // if these markers ever go missing — no need to duplicate that here.)
 }
 
+// ── Check 6: hand-rolled reimplementations of real DS components ───────────
+// Builds the set of real exported component names from src/components/ui
+// and src/components/layouts (handles both `export function Name(` and
+// `export { Name, ... }`), then flags any src/screens/** file that locally
+// defines a same-named function or arrow-function component — that's a
+// shadow reimplementation, not a legitimate screen-local helper, because
+// the name collision with a real DS export is exactly the tell.
+function extractExportedNames(file) {
+  const text = fs.readFileSync(file, "utf8")
+  const names = new Set()
+  for (const m of text.matchAll(/export\s+function\s+([A-Z]\w*)\s*\(/g)) names.add(m[1])
+  for (const m of text.matchAll(/export\s*\{([^}]+)\}/g)) {
+    m[1].split(",").forEach((part) => {
+      const name = part.trim().split(/\s+as\s+/)[0].trim()
+      if (/^type\s/.test(part.trim())) return // type-only export, not a component
+      if (/^[A-Z]\w*$/.test(name)) names.add(name)
+    })
+  }
+  return names
+}
+
+const dsComponentNames = new Set()
+componentFiles.forEach((f) => extractExportedNames(f).forEach((n) => dsComponentNames.add(n)))
+
+const LOCAL_DEF_RE = /^\s*(?:function\s+([A-Z]\w*)\s*\(|const\s+([A-Z]\w*)\s*(?::[^=]*)?=\s*(?:\(|function\b))/
+
+screenFiles.forEach((file) => {
+  const text = fs.readFileSync(file, "utf8")
+  const lines = stripComments(text)
+  lines.forEach(({ code }, idx) => {
+    const m = LOCAL_DEF_RE.exec(code)
+    if (!m) return
+    const name = m[1] || m[2]
+    if (dsComponentNames.has(name)) {
+      warnings.push({
+        type: "shadow-component",
+        file: rel(file),
+        line: idx + 1,
+        message: `local "${name}" shadows the real src/components/ui or layouts export of the same name — import it instead of reimplementing it`,
+      })
+    }
+  })
+})
+
+// ── Check 7: variant="main" used more than once in one screen file ────────
+// CLAUDE.md: max 1 per screen, header CTA only. RecordHeader's one named
+// exception lives inside record-header.tsx itself, so a screen that renders
+// <RecordHeader/> never writes the literal string and never trips this.
+const MAIN_VARIANT_RE = /variant=["']main["']/
+
+screenFiles.forEach((file) => {
+  const text = fs.readFileSync(file, "utf8")
+  const lines = stripComments(text)
+  const hits = []
+  lines.forEach(({ code }, idx) => {
+    if (MAIN_VARIANT_RE.test(code)) hits.push(idx + 1)
+  })
+  if (hits.length > 1) {
+    warnings.push({
+      type: "main-overuse",
+      file: rel(file),
+      line: hits[hits.length - 1],
+      message: `variant="main" used ${hits.length} times in this file (lines ${hits.join(", ")}) — max 1 per screen, header CTA only`,
+    })
+  }
+})
+
+// ── Check 8: possible hand-rolled card component (heuristic, WARNING) ─────
+// Check 6 only catches a local def whose NAME collides with a real DS
+// export (e.g. `function Toggle`). It can't catch a local component that
+// does the same JOB under a different name — e.g. AdminSecurity.tsx defines
+// `function SectionCard({ children })` that renders a div styled with
+// border + background using the exact tokens CardContainer itself uses,
+// instead of importing CardContainer. Different name, same reimplementation
+// problem — undetectable by name-matching, so this check looks at what the
+// component actually renders instead: does it accept `children`, and does
+// its body contain a card-shaped div (border + background using DS
+// surface/border tokens)? WARNING only — this is a semantic guess, not a
+// certainty. Composing a bespoke wrapper is sometimes legitimate; a human
+// (or a DS-GAP comment) makes that call, not this script.
+const CARD_LIKE_BORDER_RE = /\bborder\s*:\s*["'][^"']*var\(--(?:border|field-border)/
+const CARD_LIKE_BG_RE = /\bbackground\s*:\s*["']?var\(--(?:surface|surface-raised)\b/
+const TOP_LEVEL_DEF_RE = /^(?:function\s+([A-Z]\w*)\s*\(|const\s+([A-Z]\w*)\s*(?::[^=]*)?=\s*\()/
+
+screenFiles.forEach((file) => {
+  const text = fs.readFileSync(file, "utf8")
+  const lines = stripComments(text)
+
+  const defs = []
+  lines.forEach(({ code }, idx) => {
+    const m = TOP_LEVEL_DEF_RE.exec(code)
+    if (m) defs.push({ name: m[1] || m[2], line: idx })
+  })
+
+  defs.forEach((def, i) => {
+    const end = i + 1 < defs.length ? defs[i + 1].line : lines.length
+    const bodyLines = lines.slice(def.line, end)
+    const acceptsChildren = bodyLines.slice(0, 5).some((l) => /\bchildren\b/.test(l.code))
+    if (!acceptsChildren) return
+    const bodyText = bodyLines.map((l) => l.code).join("\n")
+    if (CARD_LIKE_BORDER_RE.test(bodyText) && CARD_LIKE_BG_RE.test(bodyText)) {
+      warnings.push({
+        type: "possible-card-reimpl",
+        file: rel(file),
+        line: def.line + 1,
+        message: `local "${def.name}" takes children and renders a bordered/background div with card-like tokens — check whether this should be CardContainer instead`,
+      })
+    }
+  })
+})
+
 // ── Report ───────────────────────────────────────────────────────────────
 function printSection(title, items, formatter) {
   if (items.length === 0) return
@@ -341,12 +472,18 @@ printSection(
 
 const orphanWarnings = warnings.filter((w) => w.type === "orphan")
 const spacingWarnings = warnings.filter((w) => w.type === "spacing")
+const shadowWarnings = warnings.filter((w) => w.type === "shadow-component")
+const mainOveruseWarnings = warnings.filter((w) => w.type === "main-overuse")
+const cardReimplWarnings = warnings.filter((w) => w.type === "possible-card-reimpl")
 
 printSection("⚠️  WARNING — possible orphaned components", orphanWarnings, (w) => `${w.file} — ${w.message}`)
 printSection("⚠️  WARNING — off-scale spacing (informational only)", spacingWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
+printSection("⚠️  WARNING — hand-rolled component shadows a real DS export", shadowWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
+printSection("⚠️  WARNING — variant=\"main\" overused (CLAUDE.md: max 1/screen)", mainOveruseWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
+printSection("⚠️  WARNING — possible hand-rolled CardContainer reimplementation", cardReimplWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
 
 console.log(
-  `\nSummary: ${errors.length} error(s), ${orphanWarnings.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s).`
+  `\nSummary: ${errors.length} error(s), ${orphanWarnings.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${shadowWarnings.length} shadow-component warning(s), ${mainOveruseWarnings.length} main-overuse warning(s), ${cardReimplWarnings.length} possible-card-reimpl warning(s).`
 )
 
 if (errors.length > 0) {
