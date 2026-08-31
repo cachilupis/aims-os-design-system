@@ -139,6 +139,7 @@ export default function PMChatWidgetScreen() {
   const [browseFilter, setBrowseFilter] = useState("All")
   const [browseSearch, setBrowseSearch] = useState("")
   const [browseSelected, setBrowseSelected] = useState<string | null>(null)
+  const [browseContext, setBrowseContext] = useState<"detail" | "create">("detail")
 
   // Deploy modal
   const [deployOpen, setDeployOpen]   = useState(false)
@@ -238,6 +239,11 @@ export default function PMChatWidgetScreen() {
   // ── Browse modal handlers ──────────────────────────────────────────────────
 
   function handleBrowseSelect(id: string) {
+    if (browseContext === "create") {
+      setNewNetwork(id)
+      setBrowseOpen(false)
+      return
+    }
     const current = NETWORKS.find(n => n.id === selectedNet)
     if (current) {
       setPendingNet(id)
@@ -1182,7 +1188,11 @@ export default function PMChatWidgetScreen() {
                       })}
                     </div>
                   </CardContainer>
-                  <div style={{ fontSize: 12, color: "var(--color-text-disabled)", textAlign: "center" }}>You can skip this step and assign a network later from the widget settings.</div>
+                  <button onClick={() => { setBrowseContext("create"); setBrowseOpen(true); setBrowseFilter("All"); setBrowseSearch(""); setBrowseSelected(newNetwork || null) }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", background: "none", border: "none", padding: "10px 0 2px", fontSize: 12, fontWeight: 600, color: "var(--primary)", cursor: "pointer", justifyContent: "center", fontFamily: "inherit" }}>
+                    <Icons.Search size={13} />Browse all networks &amp; agents
+                  </button>
+                  <div style={{ fontSize: 12, color: "var(--color-text-disabled)", textAlign: "center", marginTop: 8 }}>You can skip this step and assign a network later from the widget settings.</div>
                 </div>
               )}
 
@@ -1344,8 +1354,8 @@ export default function PMChatWidgetScreen() {
 
             {/* List */}
             <div style={{ overflowY: "auto", padding: "16px 20px", flex: 1 }}>
-              {/* Warning banner if replacing */}
-              {selectedNet && (
+              {/* Warning banner if replacing — only in detail context */}
+              {browseContext === "detail" && selectedNet && (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "rgba(251,146,60,0.09)", border: "1px solid rgba(251,146,60,0.22)", borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}> {/* audit-ignore: rgba warning tint — no ds token */}
                   <span style={{ flexShrink: 0, marginTop: 1 }}><Icons.AlertTriangle size={16} color="var(--field-text-alert)" /></span>
                   <div>
