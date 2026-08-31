@@ -4,11 +4,11 @@ import { CardContainer } from "@/components/ui/card-container"
 import { Select } from "@/components/ui/select"
 import { Toggle } from "@/components/ui/toggle"
 import { Button } from "@/components/ui/button"
-import { AlertBanner } from "@/components/ui/alert-banner"
 import {
   DISTRIBUTION_MODES,
   TIMEZONES,
 } from "./data"
+import { useToast } from "./toast"
 
 const BUSINESS_HOURS_PRESETS = [
   "Monday–Friday 9AM–6PM",
@@ -17,27 +17,17 @@ const BUSINESS_HOURS_PRESETS = [
 ]
 
 export function SettingsTab() {
-  const [recordAll,   setRecordAll]   = useState(true)
-  const [autoTrans,   setAutoTrans]   = useState(true)
-  const [sentiment,   setSentiment]   = useState(true)
-  const [saved,       setSaved]       = useState(false)
+  const toast = useToast()
+  const [recordAll, setRecordAll] = useState(true)
+  const [autoTrans, setAutoTrans] = useState(true)
+  const [sentiment, setSentiment] = useState(true)
 
   function save() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    toast.success("Settings saved")
   }
 
   return (
     <div className="flex flex-col gap-4" style={{ maxWidth: 640 }}>
-      {saved && (
-        <AlertBanner
-          state="success"
-          title="Settings saved"
-          description="Workspace defaults will apply to newly acquired numbers."
-          onClose={() => setSaved(false)}
-        />
-      )}
-
       <CardContainer variant="default" size="default">
         <div style={{ fontSize: 16, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 4 }}>
           Workspace Voice Defaults

@@ -28,6 +28,7 @@ import {
   HilBadge,
   SentimentTag,
 } from "./shared"
+import { useToast } from "./toast"
 
 type SubTab = "overview" | "agents" | "hours" | "calls"
 
@@ -44,6 +45,8 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const DEFAULT_OPEN = [false, true, true, true, true, true, false]
 
 export function NumberDetailPage({ number, onBack, onChange, onRelease, onAddAgent, allCalls }: NumberDetailPageProps) {
+  const toast = useToast()
+
   const [tab,      setTab]      = useState<SubTab>("overview")
   const [draft,    setDraft]    = useState<PhoneNumberRecord>(number)
   const [openDays, setOpenDays] = useState<boolean[]>(DEFAULT_OPEN)
@@ -58,7 +61,23 @@ export function NumberDetailPage({ number, onBack, onChange, onRelease, onAddAge
     setDraft(next); onChange(next)
   }
 
-  const removeAgent = (agentId: string) => persist({ agents: draft.agents.filter(id => id !== agentId) })
+  const setDistribution = (dist: Distribution) => {
+    persist({ dist })
+    toast.success(`Distribution set to ${dist}`)
+  }
+
+  const setHil = (hil: boolean) => {
+    persist({ hil })
+    toast.info(`HiL ${hil ? "enabled" : "disabled"} for ${draft.number}`)
+  }
+
+  const removeAgent = (agentId: string) => {
+    const agent = AGENTS.find(a => a.id === agentId)
+    persist({ agents: draft.agents.filter(id => id !== agentId) })
+    if (agent) toast.success(`${agent.name} removed`)
+  }
+
+  const save = () => toast.success("✓ Configuration saved")
 
   return (
     <div className="flex flex-col gap-4">
@@ -86,7 +105,7 @@ export function NumberDetailPage({ number, onBack, onChange, onRelease, onAddAge
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <Button variant="secondary" size="default" onClick={onRelease}>Release Number</Button>
-            <Button variant="primary"   size="default">Save Configuration</Button>
+            <Button variant="primary"   size="default" onClick={save}>Save Configuration</Button>
           </div>
         </div>
       </CardContainer>
@@ -113,7 +132,9 @@ export function NumberDetailPage({ number, onBack, onChange, onRelease, onAddAge
       {tab === "overview" && <OverviewSubTab draft={draft} persist={persist}/>}
       {tab === "agents"   && (
         <AgentsSubTab
-          draft={draft} persist={persist}
+          draft={draft}
+          onSetDist={setDistribution}
+          onSetHil={setHil}
           removeAgent={removeAgent}
           triggers={triggers} setTriggers={setTriggers}
           onAddAgent={onAddAgent}
@@ -215,10 +236,11 @@ function OverviewSubTab({ draft, persist }: { draft: PhoneNumberRecord; persist:
 }
 
 function AgentsSubTab({
-  draft, persist, removeAgent, triggers, setTriggers, onAddAgent,
+  draft, onSetDist, onSetHil, removeAgent, triggers, setTriggers, onAddAgent,
 }: {
   draft: PhoneNumberRecord
-  persist: (p: Partial<PhoneNumberRecord>) => void
+  onSetDist: (d: Distribution) => void
+  onSetHil: (h: boolean) => void
   removeAgent: (id: string) => void
   triggers: Record<string, boolean>
   setTriggers: (t: Record<string, boolean>) => void
@@ -299,7 +321,7 @@ function AgentsSubTab({
               {DISTRIBUTION_MODES.map(m => (
                 <button
                   key={m.id}
-                  onClick={() => persist({ dist: m.id as Distribution })}
+                  onClick={() => onSetDist(m.id as Distribution)}
                   style={{
                     textAlign: "left",
                     padding: "10px 12px",
@@ -329,7 +351,7 @@ function AgentsSubTab({
 
         <CardContainer variant={draft.hil ? "purple" : "default"} size="default">
           <Section title="Human in the Loop (HiL)" action={
-            <Toggle checked={draft.hil} onChange={(c) => persist({ hil: c })} size="default"/>
+            <Toggle checked={draft.hil} onChange={onSetHil} size="default"/>
           }>
             <div className="flex items-center gap-2">
               <Shield size={14} style={{ color: "var(--primary)" }}/>

@@ -29,6 +29,7 @@ import { ReleaseNumberModal } from "./voice-channel/ReleaseNumberModal"
 import { AddAgentModal } from "./voice-channel/AddAgentModal"
 import { CallHistoryTab } from "./voice-channel/CallHistoryTab"
 import { SettingsTab } from "./voice-channel/SettingsTab"
+import { ToastProvider, useToast } from "./voice-channel/toast"
 
 // ── Sidebar (matches the prototype's sections, flattened for DS) ───────
 
@@ -53,6 +54,16 @@ type NumberFilter = "all" | "active" | "suspended"
 // ─────────────────────────────────────────────────────────────────────
 
 export default function VoiceChannelScreen() {
+  return (
+    <ToastProvider>
+      <VoiceChannelScreenInner/>
+    </ToastProvider>
+  )
+}
+
+function VoiceChannelScreenInner() {
+  const toast = useToast()
+
   const [tab,           setTab]           = useState<TopTab>("numbers")
   const [numbers,       setNumbers]       = useState<PhoneNumberRecord[]>(NUMBERS_SEED)
   const [calls]                            = useState<Call[]>(CALLS_SEED)
@@ -304,7 +315,11 @@ export default function VoiceChannelScreen() {
       <AcquireNumberModal
         open={acquireOpen}
         onClose={() => setAcquireOpen(false)}
-        onAcquire={(newNum) => { addNumber(newNum); setAcquireOpen(false) }}
+        onAcquire={(newNum) => {
+          addNumber(newNum)
+          setAcquireOpen(false)
+          toast.info("Go to the number to add agents")
+        }}
       />
 
       {/* Release confirmation — acts on whichever number is currently focused
@@ -318,6 +333,7 @@ export default function VoiceChannelScreen() {
           setReleaseOpen(false)
           setPreviewId(null)
           setDetailId(null)
+          toast.success("Number released. Billing will stop next cycle.")
         }}
       />
 
@@ -328,8 +344,12 @@ export default function VoiceChannelScreen() {
         onClose={() => setAddAgentOpen(false)}
         onConfirm={(agentIds) => {
           if (!focusedNumber) return
-          updateNumber({ ...focusedNumber, agents: [...focusedNumber.agents, ...agentIds.filter(id => !focusedNumber.agents.includes(id))] })
+          const added = agentIds.filter(id => !focusedNumber.agents.includes(id))
+          updateNumber({ ...focusedNumber, agents: [...focusedNumber.agents, ...added] })
           setAddAgentOpen(false)
+          if (added.length > 0) {
+            toast.success(`${added.length} agent${added.length > 1 ? "s" : ""} added`)
+          }
         }}
       />
     </>
