@@ -22,7 +22,8 @@ import {
   HilBadge,
   AgentAvatarStack,
 } from "./voice-channel/shared"
-import { NumberSheet } from "./voice-channel/NumberSheet"
+import { NumberSheet as NumberPreview } from "./voice-channel/NumberSheet"
+import { NumberDetailPage } from "./voice-channel/NumberDetailPage"
 import { AcquireNumberModal } from "./voice-channel/AcquireNumberModal"
 import { ReleaseNumberModal } from "./voice-channel/ReleaseNumberModal"
 import { AddAgentModal } from "./voice-channel/AddAgentModal"
@@ -56,8 +57,9 @@ export default function VoiceChannelScreen() {
   const [numbers,       setNumbers]       = useState<PhoneNumberRecord[]>(NUMBERS_SEED)
   const [calls]                            = useState<Call[]>(CALLS_SEED)
 
-  // Modals + sheet state
-  const [sheetNumberId, setSheetNumberId] = useState<string | null>(null)
+  // Modals + sheet + full-view state
+  const [previewId,     setPreviewId]     = useState<string | null>(null)  // Right-side lightweight slide-out
+  const [detailId,      setDetailId]      = useState<string | null>(null)  // Full page (replaces the numbers table)
   const [acquireOpen,   setAcquireOpen]   = useState(false)
   const [releaseOpen,   setReleaseOpen]   = useState(false)
   const [addAgentOpen,  setAddAgentOpen]  = useState(false)
@@ -66,7 +68,12 @@ export default function VoiceChannelScreen() {
   const [numFilter,     setNumFilter]     = useState<NumberFilter>("all")
   const [numSearch,     setNumSearch]     = useState("")
 
-  const sheetNumber = numbers.find(n => n.id === sheetNumberId) ?? null
+  // The number that's currently "focused" — for release/add-agent modals we
+  // prefer the full-view target when it exists, else the preview target.
+  const focusedId     = detailId ?? previewId
+  const focusedNumber = numbers.find(n => n.id === focusedId) ?? null
+  const previewNumber = numbers.find(n => n.id === previewId) ?? null
+  const detailNumber  = numbers.find(n => n.id === detailId)  ?? null
 
   const filteredNumbers = useMemo(() => {
     return numbers.filter(n => {
@@ -168,12 +175,26 @@ export default function VoiceChannelScreen() {
         header={(isScrolled) => (
           <Header
             size={isScrolled ? "compress" : "size-l"}
-            title="Voice Channel"
-            description="Phone numbers, call history, and workspace defaults for the Voice channel."
+            title={detailNumber ? detailNumber.number : "Voice Channel"}
+            description={detailNumber
+              ? `${detailNumber.label || "No label"} · ${detailNumber.type} · Full configuration`
+              : "Phone numbers, call history, and workspace defaults for the Voice channel."}
           />
         )}
       >
         <div className="flex flex-col gap-4">
+          {/* When a number is opened in the full-page view, the top-level Tabs
+              and all list content are hidden — the detail page owns the screen. */}
+          {detailNumber ? (
+            <NumberDetailPage
+              number={detailNumber}
+              onBack={() => setDetailId(null)}
+              onChange={updateNumber}
+              onRelease={() => setReleaseOpen(true)}
+              onAddAgent={() => setAddAgentOpen(true)}
+              allCalls={calls}
+            />
+          ) : (<>
           {/* Top-level tabs with counts */}
           <Tabs
             items={[
@@ -245,7 +266,7 @@ export default function VoiceChannelScreen() {
                     if (!tr) return
                     const idx = Array.from(tr.parentElement!.children).indexOf(tr)
                     const row = filteredNumbers[idx]
-                    if (row) setSheetNumberId(row.id)
+                    if (row) setPreviewId(row.id)
                   }}
                   style={{ cursor: "pointer" }}
                 >
@@ -261,17 +282,21 @@ export default function VoiceChannelScreen() {
 
           {tab === "history"  && <CallHistoryTab calls={calls} numbers={numbers}/>}
           {tab === "settings" && <SettingsTab/>}
+          </>)}
         </div>
       </ScreenLayout>
 
-      {/* Number Detail Sheet */}
-      <NumberSheet
-        number={sheetNumber}
-        open={sheetNumberId !== null}
-        onClose={() => setSheetNumberId(null)}
-        onChange={updateNumber}
+      {/* Lightweight preview slide-out — only opens over the Numbers list.
+          "View full details →" hands off to the full page (setDetailId). */}
+      <NumberPreview
+        number={previewNumber}
+        open={previewId !== null}
+        onClose={() => setPreviewId(null)}
+        onOpenFull={() => {
+          if (previewId) setDetailId(previewId)
+          setPreviewId(null)
+        }}
         onRelease={() => setReleaseOpen(true)}
-        onAddAgent={() => setAddAgentOpen(true)}
         allCalls={calls}
       />
 
@@ -282,26 +307,28 @@ export default function VoiceChannelScreen() {
         onAcquire={(newNum) => { addNumber(newNum); setAcquireOpen(false) }}
       />
 
-      {/* Release confirmation */}
+      {/* Release confirmation — acts on whichever number is currently focused
+          (full page view has priority over the preview). */}
       <ReleaseNumberModal
-        number={sheetNumber}
+        number={focusedNumber}
         open={releaseOpen}
         onClose={() => setReleaseOpen(false)}
         onConfirm={() => {
-          if (sheetNumber) removeNumber(sheetNumber.id)
+          if (focusedNumber) removeNumber(focusedNumber.id)
           setReleaseOpen(false)
-          setSheetNumberId(null)
+          setPreviewId(null)
+          setDetailId(null)
         }}
       />
 
-      {/* Add Agent to a number */}
+      {/* Add Agent to the focused number */}
       <AddAgentModal
-        number={sheetNumber}
+        number={focusedNumber}
         open={addAgentOpen}
         onClose={() => setAddAgentOpen(false)}
         onConfirm={(agentIds) => {
-          if (!sheetNumber) return
-          updateNumber({ ...sheetNumber, agents: [...sheetNumber.agents, ...agentIds.filter(id => !sheetNumber.agents.includes(id))] })
+          if (!focusedNumber) return
+          updateNumber({ ...focusedNumber, agents: [...focusedNumber.agents, ...agentIds.filter(id => !focusedNumber.agents.includes(id))] })
           setAddAgentOpen(false)
         }}
       />
