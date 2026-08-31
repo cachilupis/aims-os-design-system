@@ -1180,6 +1180,8 @@ function MemberDetailPage({
           size={isScrolled ? "compress" : "size-m"}
           title={member.name}
           description="People & Access"
+          backButton
+          showBackInCompress
           onBack={onBack}
         />
       )}
@@ -1387,6 +1389,8 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
           size={isScrolled ? "compress" : "size-m"}
           title={role.label}
           description="People & Access"
+          backButton
+          showBackInCompress
           onBack={onBack}
           primaryAction={!role.system ? (
             <div style={{ display: "flex", gap: 8 }}>
@@ -1553,6 +1557,8 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
           size={isScrolled ? "compress" : "size-m"}
           title={group.name}
           description="People & Access"
+          backButton
+          showBackInCompress
           onBack={onBack}
           primaryAction={
             <Button variant="primary" size="sm">

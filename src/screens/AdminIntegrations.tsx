@@ -1180,6 +1180,8 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
           size={isScrolled ? "compress" : "size-m"}
           title={detailView.name}
           description="Integrations"
+          backButton
+          showBackInCompress
           onBack={() => setDetailView(null)}
           primaryAction={
             <div style={{ display: "flex", gap: 8 }}>
@@ -1210,6 +1212,8 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
           size={isScrolled ? "compress" : "size-m"}
           title="Integration catalog"
           description={`${CATALOG.length} integrations available to connect`}
+          backButton
+          showBackInCompress
           onBack={() => setTab("connected")}
         />
       ) : (
