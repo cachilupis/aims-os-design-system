@@ -114,6 +114,7 @@ export default function PMChatWidgetScreen() {
   const [newNetwork, setNewNetwork]   = useState("")
   const [widgets, setWidgets]           = useState<WidgetCard[]>(INITIAL_WIDGETS)
   const [visibleCount, setVisibleCount] = useState(8)
+  const [statusFilter, setStatusFilter] = useState<"all" | WidgetStatus>("all")
   const [activeWidget, setActiveWidget] = useState<WidgetCard>(INITIAL_WIDGETS[0])
 
   // Detail tab state
@@ -484,9 +485,34 @@ export default function PMChatWidgetScreen() {
         )}
       >
         {/* ── LIST VIEW ── */}
-        {view === "list" && (
+        {view === "list" && (() => {
+          const STATUS_FILTERS: { key: "all" | WidgetStatus; label: string }[] = [
+            { key: "all",      label: "All"      },
+            { key: "active",   label: "Active"   },
+            { key: "draft",    label: "Draft"    },
+            { key: "inactive", label: "Inactive" },
+          ]
+          const filtered = statusFilter === "all" ? widgets : widgets.filter(w => w.status === statusFilter)
+          return (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {widgets.slice(0, visibleCount).map(w => (
+            {/* Filter chips */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 4 }}>
+              {STATUS_FILTERS.map(f => {
+                const active = statusFilter === f.key
+                return (
+                  <button key={f.key} onClick={() => { setStatusFilter(f.key); setVisibleCount(8) }}
+                    style={{ background: active ? "var(--primary)" : "var(--color-surface-neutral-default)", border: active ? "none" : "1px solid var(--color-border-neutral-default)", borderRadius: 20, padding: "5px 14px", fontSize: 12, fontWeight: active ? 700 : 500, color: active ? "#fff" : "var(--color-text-subtitle)", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}> {/* audit-ignore: #fff on primary chip */}
+                    {f.label}
+                    {f.key !== "all" && (
+                      <span style={{ marginLeft: 5, fontSize: 11, opacity: 0.75 }}>
+                        {widgets.filter(w => w.status === f.key).length}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            {filtered.slice(0, visibleCount).map(w => (
               <CardContainer
                 key={w.id}
                 size="sm"
@@ -525,20 +551,26 @@ export default function PMChatWidgetScreen() {
                 )}
               </CardContainer>
             ))}
-            {visibleCount < widgets.length && (
+            {visibleCount < filtered.length && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingTop: 6, paddingBottom: 8 }}>
-                <button onClick={() => setVisibleCount(c => Math.min(c + 8, widgets.length))}
+                <button onClick={() => setVisibleCount(c => Math.min(c + 8, filtered.length))}
                   style={{ background: "none", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-m)", padding: "9px 24px", fontSize: 13, fontWeight: 600, color: "var(--color-text-subtitle)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, transition: "border-color 0.15s" }}>
                   <Icons.ChevronDown size={14} />
                   Load more
                 </button>
                 <span style={{ fontSize: 11, color: "var(--color-text-disabled)" }}>
-                  Showing {visibleCount} of {widgets.length} widgets
+                  Showing {Math.min(visibleCount, filtered.length)} of {filtered.length} widgets
                 </span>
               </div>
             )}
+            {filtered.length === 0 && (
+              <div style={{ textAlign: "center", padding: "48px 0", color: "var(--color-text-disabled)", fontSize: 13 }}>
+                No {statusFilter} widgets yet.
+              </div>
+            )}
           </div>
-        )}
+          )
+        })()}
 
         {/* ── DETAIL VIEW ── */}
         {view === "detail" && (
