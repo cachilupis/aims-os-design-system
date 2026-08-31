@@ -345,6 +345,7 @@ export default function PMChatWidgetScreen() {
 
   return (
     <>
+      <style>{`@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}`}</style>
       <ScreenLayout
         workspaceName="AIMS OS"
         userName="Thomas González"
@@ -466,7 +467,10 @@ export default function PMChatWidgetScreen() {
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             <Tabs items={DETAIL_TABS} activeId={activeTab} onChange={setActiveTab} />
 
-            <div style={{ flex: 1, overflowY: "auto", paddingTop: 24 }}>
+            <div style={{ flex: 1, display: "flex", gap: 0, minHeight: 0, overflow: "hidden" }}>
+
+            {/* LEFT: scrollable config panel */}
+            <div style={{ flex: 1, overflowY: "auto", paddingTop: 24, paddingRight: 24, minWidth: 0 }}>
 
               {/* ── OVERVIEW ── */}
               {activeTab === "overview" && (
@@ -734,6 +738,87 @@ export default function PMChatWidgetScreen() {
                   </div>
                 </div>
               )}
+
+            </div>
+
+            {/* RIGHT: widget live preview — always visible */}
+            <div style={{
+              width: 300, flexShrink: 0,
+              borderLeft: "1px solid var(--color-border-neutral-default)",
+              background: "var(--color-surface-neutral-default)",
+              display: "flex", flexDirection: "column",
+              overflow: "hidden",
+            }}>
+              {/* Preview header */}
+              <div style={{ padding: "12px 14px 10px", borderBottom: "1px solid var(--color-border-neutral-default)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--color-text-disabled)" }}>Live Preview</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "var(--color-text-success)", fontWeight: 600 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-text-success)", display: "inline-block" }} />
+                  Live
+                </span>
+              </div>
+
+              {/* Chat window */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                {/* Chat header */}
+                <div style={{ padding: "12px 14px 10px", background: "var(--primary)", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}> {/* audit-ignore: rgba overlay on primary */}
+                    <Icons.Bot size={15} color="#fff" /> {/* audit-ignore: #fff on colored bg */}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{activeWidget.name}</div> {/* audit-ignore: #fff on primary */}
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.72)", marginTop: 1 }}>{activeWidget.network !== "—" ? activeWidget.network : "No agent assigned"}</div> {/* audit-ignore: rgba on primary */}
+                  </div>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#09E2AB", boxShadow: "0 0 0 2px rgba(9,226,171,0.25)" }} /> {/* audit-ignore: decorative status dot color */}
+                </div>
+
+                {/* Messages */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
+                  {/* Agent bubble */}
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 7 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
+                      <Icons.Bot size={11} color="var(--primary)" />
+                    </div>
+                    <div style={{ maxWidth: "80%", background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "12px 12px 12px 3px", padding: "9px 12px", fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.5 }}>
+                      Hi! I'm {activeWidget.network !== "—" ? activeWidget.network : "your AI assistant"}. How can I help you today?
+                    </div>
+                  </div>
+                  {/* User bubble */}
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <div style={{ maxWidth: "80%", background: "var(--primary)", borderRadius: "12px 12px 3px 12px", padding: "9px 12px", fontSize: 12, color: "#fff", lineHeight: 1.5 }}> {/* audit-ignore: #fff on primary */}
+                      I'd like to know more about pricing.
+                    </div>
+                  </div>
+                  {/* Agent typing */}
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 7 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
+                      <Icons.Bot size={11} color="var(--primary)" />
+                    </div>
+                    <div style={{ background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "12px 12px 12px 3px", padding: "10px 14px", display: "flex", gap: 4, alignItems: "center" }}>
+                      {[0, 0.15, 0.3].map((delay, i) => (
+                        <span key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-text-disabled)", display: "inline-block", animation: `bounce 1.1s ${delay}s infinite` }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Input */}
+                <div style={{ padding: "10px 12px", borderTop: "1px solid var(--color-border-neutral-default)", display: "flex", gap: 7, alignItems: "center" }}>
+                  <input
+                    placeholder="Type a message…"
+                    style={{ flex: 1, background: "var(--field-bg)", border: "1px solid var(--field-border)", borderRadius: 20, padding: "8px 13px", fontSize: 12, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none" }}
+                  />
+                  <button style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--primary)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Icons.Send size={12} color="#fff" /> {/* audit-ignore: #fff on primary */}
+                  </button>
+                </div>
+              </div>
+
+              {/* Branding */}
+              <div style={{ padding: "7px 12px", borderTop: "1px solid var(--color-border-neutral-default)", textAlign: "center", fontSize: 10, color: "var(--color-text-disabled)" }}>
+                Powered by <strong style={{ color: "var(--primary)" }}>AIMS OS</strong>
+              </div>
+            </div>
 
             </div>
           </div>
