@@ -26,7 +26,7 @@ export type ModalDialogProps = {
   slotUnstyled?:      boolean               // skip the surface wrapper on slot (no bg, no padding)
   informativeCard?:   string | boolean      // true → default text; string → custom title
   ctaPrimary?:        { label: string; destructive?: boolean; disabled?: boolean; onClick?: () => void }
-  ctaSecondary?:      { label: string; onClick?: () => void }
+  ctaSecondary?:      { label: string; disabled?: boolean; onClick?: () => void }
   showClose?:         boolean               // default: true
   embedded?:          boolean               // static inline render for docs previews
 }
@@ -210,6 +210,7 @@ export function ModalDialog({
             <Button
               variant="secondary"
               size="default"
+              disabled={ctaSecondary.disabled}
               onClick={embedded ? undefined : ctaSecondary.onClick}
             >
               {ctaSecondary.label}
