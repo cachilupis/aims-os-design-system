@@ -81,6 +81,7 @@ import { WorkflowsListScreen }               from "./screens/workflows-list"
 import { PeopleAccessMembersScreen }         from "./screens/PeopleAccessMembers"
 import { AdminConsoleScreen }           from "./screens/AdminConsole"
 import PMChatWidgetScreen               from "./screens/pm-chat-widget"
+import VoiceChannelScreen               from "./screens/voice-channel"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", component: PeopleAccessMembersScreen },
   { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", component: AdminConsoleScreen },
   { id: "pm-chat-widget",              label: "Chat Widget Manager",          description: "Chat widget manager — widget list (Active/Draft/Inactive), detail view with 5 tabs (Overview, Appearance, Agentic Network, Preferences, Embed), browse-all modal with replacement warning, deploy flow with progress steps, bell notification panel", author: "Thomas", component: PMChatWidgetScreen },
+  { id: "proto-voice-channel",         label: "Voice Channel",                description: "Faithful port of aims-voice-prototype: Numbers table (Agents · Distribution · HiL · Cost MTD) + Call History with Call Detail (Transcript / AI Summary / Metrics) + Workspace Voice Defaults + per-number sheet with 4 sub-tabs (Overview / Agents & Routing incl. HiL config / Business Hours / Call History) + Acquire Number 4-step wizard + Release confirmation with last-4-digit input + multi-select Add Agent modal. Only the visual layer is DS-native; every screen, flow, and mock data value is preserved from the source prototype.", author: "Thomas", component: VoiceChannelScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
