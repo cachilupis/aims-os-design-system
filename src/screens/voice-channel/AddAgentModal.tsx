@@ -105,6 +105,10 @@ export function AddAgentModal({ number, open, onClose, onConfirm }: AddAgentModa
       ctaSecondary={{ label: "Cancel", onClick: onClose }}
       ctaPrimary={{
         label:    selected.size === 0 ? "Add Selected (0)" : `Add Selected (${selected.size})`,
+        // DS-GAP: ModalDialog.ctaPrimary has no `disabled?: boolean`. The
+        // "Add Selected (N)" label already telegraphs the empty state
+        // (N=0), but the button visually stays enabled — clicking with 0
+        // selected is a no-op instead of being blocked.
         onClick:  () => { if (selected.size > 0) onConfirm(Array.from(selected)) },
       }}
     />

@@ -30,6 +30,14 @@ interface NumberPreviewProps {
 // recent call snapshot) and hands off to the full detail page for
 // deep configuration (Overview / Agents & Routing / Business Hours /
 // Call History sub-tabs).
+//
+// DS-GAP: DS SlideOut is always right-anchored. The source prototype
+// uses a bottom-anchored sheet with a drag handle — the "phone number
+// configuration" pattern is a well-known mobile-first shape.
+// An `anchor?: "right" | "bottom"` prop on SlideOut (or a sibling
+// `BottomSheet` component) would let this port match the prototype's
+// vertical orientation. Right-anchored is functionally equivalent for
+// desktop, so this is polish, not a blocker.
 // ─────────────────────────────────────────────────────────────────────
 
 export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allCalls }: NumberPreviewProps) {

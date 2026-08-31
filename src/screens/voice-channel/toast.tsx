@@ -3,13 +3,18 @@ import { createPortal } from "react-dom"
 import { CheckCircle2, Info, XCircle, X } from "lucide-react"
 
 // ─────────────────────────────────────────────────────────────────────
-// Lightweight local toast system for the Voice Channel prototype.
+// DS-GAP: DS has no Toast primitive.
 //
-// The prototype fires 9 confirmation toasts on user actions (save,
-// HiL toggle, agent add/remove, distribution change, release, etc.).
-// DS has no Toast primitive, so this file provides a minimal one
-// scoped to this screen only. Portals to <body>, positions bottom-
-// right, auto-dismisses after 3500ms.
+// Confirmation toasts are needed across many workflows (save/undo,
+// destructive action feedback, background progress). This Voice
+// Channel screen alone fires 9 of them (save, HiL toggle, agent
+// add/remove, distribution change, release, etc.). The file below
+// is a minimal local implementation — portal to <body>, bottom-right
+// stack, 3.5s auto-dismiss, three variants (success/info/error),
+// dismiss button, slide-in animation. It should be promoted to
+// `src/components/ui/toast.tsx` with the same public API
+// (ToastProvider + useToast → { success, info, error }) so every
+// screen can share the same behaviour and tokens.
 // ─────────────────────────────────────────────────────────────────────
 
 export type ToastVariant = "success" | "info" | "error"

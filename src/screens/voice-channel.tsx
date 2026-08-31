@@ -32,6 +32,17 @@ import { SettingsTab } from "./voice-channel/SettingsTab"
 import { ToastProvider, useToast } from "./voice-channel/toast"
 
 // ── Sidebar (matches the prototype's sections, flattened for DS) ───────
+//
+// DS-GAP: SidebarItem is a flat item list — there's no `type:"section-header"`
+// discriminator or SidebarSection wrapper, so the prototype's three visual
+// groups (Workspace · Channels · Studio) are flattened here. Section headers
+// give a real information-density win in sidebars with 8+ items; worth
+// promoting once the DS is ready to accept the new item type.
+// DS-GAP: The DS Sidebar has no footer/user-row slot. The prototype pins an
+// "AK · Alex Kim · Admin" identity row at the bottom of the sidebar; here the
+// Topbar avatar carries that identity instead. A `<Sidebar footer={...}/>`
+// prop (or matching ScreenLayout `sidebarFooter` slot) would let both
+// surfaces coexist.
 
 const VOICE_SIDEBAR: SidebarItem[] = [
   { id: "dashboard",     label: "Dashboard",       icon: "LayoutDashboard" },
@@ -61,6 +72,14 @@ export default function VoiceChannelScreen() {
   )
 }
 
+// DS-GAP: DS Table has no `selectedRowIndex` / `getRowProps` prop for
+// highlighting the row whose detail is currently open. In master-detail
+// layouts (Numbers table + preview, Call History + call detail) that
+// highlight is important UX feedback. Workaround below uses useRef +
+// useEffect to walk `tbody tr` after render and set an inline background
+// using the primary-more-subtle token. A first-class `selectedRowKey`
+// prop or a `rowSelectedTone` variant would let this go away.
+//
 // Small helper that mounts the DS Table and, after each render, marks the
 // selected row (previewed or detail-view target) with a tinted background
 // via an effect. Direct DOM manipulation is used because the DS Table has

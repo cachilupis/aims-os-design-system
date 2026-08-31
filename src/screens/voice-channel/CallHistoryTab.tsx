@@ -19,8 +19,10 @@ interface CallHistoryTabProps {
   numbers: PhoneNumberRecord[]
 }
 
-// Same DOM-effect selection pattern used in the Numbers table — tints the
-// currently-open call's row with the primary-more-subtle token.
+// DS-GAP: DS Table has no row-selection-highlight prop. Duplicated helper
+// with the same effect-based tinting pattern used in voice-channel.tsx.
+// See the equivalent DS-GAP note there for the proposed fix; both wrappers
+// collapse into a single row prop once Table exposes it.
 function CallHistoryTableWrap<T extends { id: string }>({
   rows, selectedId, onRowClick, children,
 }: {
