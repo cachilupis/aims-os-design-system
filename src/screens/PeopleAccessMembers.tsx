@@ -739,7 +739,7 @@ function PermissionsPanel() {
         {overrideCount > 0 && (
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
             <Button size="sm" variant="secondary" onClick={() => setOverrides({})}>Reset</Button>
-            <Button size="sm" variant="main" onClick={() => setSaveOpen(true)}>Save changes</Button>
+            <Button size="sm" variant="primary" onClick={() => setSaveOpen(true)}>Save changes</Button>
           </div>
         )}
       </div>
@@ -2325,7 +2325,7 @@ function InviteModal({ onClose, onSend }: {
                 <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
                 {customAccess ? (
                   <Button
-                    variant="main"
+                    variant="primary"
                     size="sm"
                     onClick={submit}
                     disabled={(emails.length + (emailInput.trim() ? 1 : 0)) === 0}
@@ -2336,7 +2336,7 @@ function InviteModal({ onClose, onSend }: {
                   </Button>
                 ) : (
                   <Button
-                    variant="main"
+                    variant="primary"
                     size="sm"
                     onClick={goNext}
                     disabled={(emails.length + (emailInput.trim() ? 1 : 0)) === 0}
@@ -2427,7 +2427,7 @@ function InviteModal({ onClose, onSend }: {
                 <Icons.ChevronLeft size={13} style={{ marginRight: 4 }} />
                 Back
               </Button>
-              <Button variant="main" size="sm" onClick={submit}>
+              <Button variant="primary" size="sm" onClick={submit}>
                 Send {emails.length > 1 ? `${emails.length} invitations` : "invitation"}
               </Button>
             </div>

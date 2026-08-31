@@ -4,6 +4,7 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
+import { CardContainer } from "@/components/ui/card-container"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -41,22 +42,21 @@ function SectionCard({ title, description, action, children }: {
   title: string; description?: string; action?: React.ReactNode; children: React.ReactNode
 }) {
   return (
-    <div style={{
-      border: "1px solid var(--border)", borderRadius: 12,
-      background: "var(--surface)", marginBottom: 16, overflow: "hidden",
-    }}>
-      <div style={{
-        padding: "14px 20px", borderBottom: "1px solid var(--border)",
-        background: "var(--surface-raised)",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-      }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{title}</div>
-          {description && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{description}</div>}
+    <div style={{ marginBottom: 16 }}>
+      <CardContainer variant="default" size="default" className="!p-0 overflow-hidden">
+        <div style={{
+          padding: "14px 20px", borderBottom: "1px solid var(--border)",
+          background: "var(--surface-raised)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{title}</div>
+            {description && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{description}</div>}
+          </div>
+          {action}
         </div>
-        {action}
-      </div>
-      <div>{children}</div>
+        <div>{children}</div>
+      </CardContainer>
     </div>
   )
 }

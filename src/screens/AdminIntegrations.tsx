@@ -381,7 +381,7 @@ function RequestPanel({ onClose }: { onClose: () => void }) {
 
       <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
         <Button
-          variant="main"
+          variant="primary"
           size="sm"
           onClick={() => { if (name.trim() && useCase.trim()) setSubmitted(true) }}
         >
@@ -452,7 +452,7 @@ function CatalogDetailPanel({ item, connected, onConnect }: {
                     <Icons.Unplug size={13} style={{ marginRight: 4 }} />
                     Disconnect
                   </Button>
-                : <Button variant="main" size="sm" onClick={() => setStep("config")}>
+                : <Button variant="primary" size="sm" onClick={() => setStep("config")}>
                     Connect {item.name}
                   </Button>
               }
@@ -494,7 +494,7 @@ function CatalogDetailPanel({ item, connected, onConnect }: {
             </div>
 
             <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="main" size="sm" onClick={() => { onConnect(); setStep("done") }}>
+              <Button variant="primary" size="sm" onClick={() => { onConnect(); setStep("done") }}>
                 {item.authType === "OAuth 2.0" ? "Authorize with " + item.name : "Connect"}
               </Button>
               <Button variant="secondary" size="sm" onClick={() => setStep("info")}>Cancel</Button>
@@ -950,7 +950,7 @@ function IntegrationDetailPage({ integration }: {
                 <div style={{ fontSize: 13, color: "var(--muted-foreground)", maxWidth: 360, margin: "0 auto 24px", lineHeight: 1.6 }}>
                   Instances allow you to connect multiple accounts of the same integration with different credentials and data scopes.
                 </div>
-                <Button variant="main" size="sm">
+                <Button variant="primary" size="sm">
                   <Icons.Plus size={14} style={{ marginRight: 4 }} /> Connect {integration.name}
                 </Button>
               </div>
@@ -1188,7 +1188,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
                 Ask AI
               </Button>
               {detailView.status === "error" ? (
-                <Button variant="main" size="sm" onClick={() => handleAction(detailView.id, "reauth")}>
+                <Button variant="primary" size="sm" onClick={() => handleAction(detailView.id, "reauth")}>
                   <Icons.RefreshCw size={14} style={{ marginRight: 4 }} />
                   Re-authenticate
                 </Button>

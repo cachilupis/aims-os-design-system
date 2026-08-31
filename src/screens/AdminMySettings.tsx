@@ -5,29 +5,8 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
 import { Tabs }          from "@/components/ui/tabs"
-
-// ─── Toggle ───────────────────────────────────────────────────────────────────
-
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!value)}
-      aria-pressed={value}
-      style={{
-        width: 36, height: 20, borderRadius: 10, border: "none", cursor: "pointer",
-        background: value ? "var(--primary)" : "var(--border)",
-        position: "relative", transition: "background 200ms",
-        flexShrink: 0,
-      }}
-    >
-      <span style={{
-        position: "absolute", top: 2, left: value ? 18 : 2,
-        width: 16, height: 16, borderRadius: "50%", background: "#fff",  // audit-ignore: prototype fixture data
-        transition: "left 200ms",
-      }} />
-    </button>
-  )
-}
+import { Toggle }        from "@/components/ui/toggle"
+import { CardContainer } from "@/components/ui/card-container"
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 
@@ -38,9 +17,9 @@ function Section({ title, description, children }: { title: string; description?
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{title}</div>
         {description && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{description}</div>}
       </div>
-      <div style={{ border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-raised)", overflow: "hidden" }}>
+      <CardContainer variant="default" size="default" className="!p-0 overflow-hidden">
         {children}
-      </div>
+      </CardContainer>
     </div>
   )
 }
@@ -280,7 +259,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
             const [label, desc] = NOTIF_LABELS[key] ?? [key, ""]
             return (
               <Row key={key} label={label} description={desc} last={i === arr.length - 1}>
-                <Toggle value={val} onChange={v => setNotifs(n => ({ ...n, [key]: v }))} />
+                <Toggle checked={val} onChange={v => setNotifs(n => ({ ...n, [key]: v }))} />
               </Row>
             )
           })}

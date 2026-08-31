@@ -4,6 +4,8 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
+import { Toggle }       from "@/components/ui/toggle"
+import { CardContainer } from "@/components/ui/card-container"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -19,25 +21,24 @@ function SectionCard({ title, description, badge, children }: {
   title: string; description?: string; badge?: React.ReactNode; children: React.ReactNode
 }) {
   return (
-    <div style={{
-      border: "1px solid var(--border)", borderRadius: 12,
-      background: "var(--surface)", marginBottom: 16, overflow: "hidden",
-    }}>
-      <div style={{
-        padding: "16px 20px", borderBottom: "1px solid var(--border)",
-        background: "var(--surface-raised)", display: "flex", alignItems: "flex-start", gap: 10,
-      }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{title}</span>
-            {badge}
+    <div style={{ marginBottom: 16 }}>
+      <CardContainer variant="default" size="default" className="!p-0 overflow-hidden">
+        <div style={{
+          padding: "16px 20px", borderBottom: "1px solid var(--border)",
+          background: "var(--surface-raised)", display: "flex", alignItems: "flex-start", gap: 10,
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{title}</span>
+              {badge}
+            </div>
+            {description && (
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{description}</div>
+            )}
           </div>
-          {description && (
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{description}</div>
-          )}
         </div>
-      </div>
-      <div style={{ padding: "0 20px" }}>{children}</div>
+        <div style={{ padding: "0 20px" }}>{children}</div>
+      </CardContainer>
     </div>
   )
 }
@@ -58,24 +59,6 @@ function SettingRow({ label, description, children, last }: {
       </div>
       <div style={{ flexShrink: 0 }}>{children}</div>
     </div>
-  )
-}
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
-  return (
-    <button
-      onClick={onChange}
-      style={{
-        width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
-        background: checked ? "var(--primary)" : "var(--border)",
-        position: "relative", transition: "background 0.2s", flexShrink: 0,
-      }}
-    >
-      <span style={{
-        position: "absolute", top: 3, left: checked ? 21 : 3, width: 16, height: 16,
-        borderRadius: "50%", background: "#fff", transition: "left 0.2s",  // audit-ignore: prototype fixture data
-      }} />
-    </button>
   )
 }
 

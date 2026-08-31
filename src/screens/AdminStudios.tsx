@@ -6,6 +6,7 @@ import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
 import { Tabs }          from "@/components/ui/tabs"
 import { CardContainer } from "@/components/ui/card-container"
+import { Toggle }        from "@/components/ui/toggle"
 import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -203,22 +204,7 @@ const STUDIOS: Studio[] = [
 
 // ─── Shared controls ──────────────────────────────────────────────────────────
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
-  return (
-    <button onClick={onChange} style={{
-      width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
-      background: checked ? "var(--primary)" : "var(--border)",
-      position: "relative", transition: "background 0.2s", flexShrink: 0,
-    }}>
-      <span style={{
-        position: "absolute", top: 3, left: checked ? 21 : 3, width: 16, height: 16,
-        borderRadius: "50%", background: "#fff", transition: "left 0.2s",  // audit-ignore: prototype fixture data
-      }} />
-    </button>
-  )
-}
-
-function Stepper({ value, onChange, min = 0, max = 999 }: { value: number; onChange: (v: number) => void; min?: number; max?: number }) {
+function NumberStepper({ value, onChange, min = 0, max = 999 }: { value: number; onChange: (v: number) => void; min?: number; max?: number }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 0, border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
       <button
@@ -281,7 +267,7 @@ function SettingRow({ item, onToggle, onStepper, onSelect, isLast }: {
       </div>
       <div style={{ paddingTop: 2, flexShrink: 0 }}>
         {item.type === "toggle"  && <Toggle checked={item.value} onChange={() => onToggle(item.id)} />}
-        {item.type === "stepper" && <Stepper value={item.value} onChange={v => onStepper(item.id, v)} min={item.min} max={item.max} />}
+        {item.type === "stepper" && <NumberStepper value={item.value} onChange={v => onStepper(item.id, v)} min={item.min} max={item.max} />}
         {item.type === "select"  && <SelectControl value={item.value} options={item.options} onChange={v => onSelect(item.id, v)} />}
       </div>
     </div>
