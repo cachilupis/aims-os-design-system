@@ -148,10 +148,11 @@ export default function PMChatWidgetScreen() {
   const [notifPanelOpen, setNotifPanelOpen] = useState(false)
   const notifRef                      = useRef<HTMLDivElement>(null)
 
-  // Appearance toggles
+  // Appearance toggles + brand color
   const [togBranding, setTogBranding] = useState(true)
   const [togAvatar, setTogAvatar]     = useState(true)
   const [togTyping, setTogTyping]     = useState(true)
+  const [brandColor, setBrandColor]   = useState("var(--primary)")
 
   // Preferences toggles
   const [togFileUpload, setTogFileUpload]   = useState(false)
@@ -541,7 +542,7 @@ export default function PMChatWidgetScreen() {
                       <div style={{ fontSize: 11, color: "var(--color-text-subtitle)", marginBottom: 10 }}>Primary Color — affects buttons, avatars, and widget accents</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         {["var(--primary)", "var(--badge-purple)", "var(--color-text-success)", "var(--color-text-error)", "var(--field-text-alert)"].map(c => (
-                          <div key={c} style={{ width: 26, height: 26, borderRadius: 7, background: c, cursor: "pointer", border: c === "var(--primary)" ? "2px solid var(--color-text-title)" : "2px solid transparent", flexShrink: 0 }} />
+                          <div key={c} onClick={() => setBrandColor(c)} style={{ width: 26, height: 26, borderRadius: 7, background: c, cursor: "pointer", border: c === brandColor ? "2px solid var(--color-text-title)" : "2px solid transparent", flexShrink: 0 }} />
                         ))}
                       </div>
                       <div style={{ marginTop: 8, fontSize: 11, color: "var(--color-text-disabled)" }}>Changes are reflected live in the preview panel</div>
@@ -808,15 +809,18 @@ export default function PMChatWidgetScreen() {
               </div>
 
               {/* Chat window */}
+              {/* Chat window */}
               <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
                 {/* Chat header */}
-                <div style={{ padding: "12px 14px 10px", background: "var(--primary)", display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}> {/* audit-ignore: rgba overlay on primary */}
-                    <Icons.Bot size={15} color="#fff" /> {/* audit-ignore: #fff on colored bg */}
-                  </div>
+                <div style={{ padding: "12px 14px 10px", background: brandColor, display: "flex", alignItems: "center", gap: 10, transition: "background 0.2s" }}>
+                  {togAvatar && (
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}> {/* audit-ignore: rgba overlay on brand bg */}
+                      <Icons.Bot size={15} color="#fff" /> {/* audit-ignore: #fff on colored bg */}
+                    </div>
+                  )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{activeWidget.name}</div> {/* audit-ignore: #fff on primary */}
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.72)", marginTop: 1 }}>{activeWidget.network !== "—" ? activeWidget.network : "No agent assigned"}</div> {/* audit-ignore: rgba on primary */}
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{activeWidget.name}</div> {/* audit-ignore: #fff on brand bg */}
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.72)", marginTop: 1 }}>{activeWidget.network !== "—" ? activeWidget.network : "No agent assigned"}</div> {/* audit-ignore: rgba on brand bg */}
                   </div>
                   <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#09E2AB", boxShadow: "0 0 0 2px rgba(9,226,171,0.25)" }} /> {/* audit-ignore: decorative status dot color */}
                 </div>
@@ -825,30 +829,36 @@ export default function PMChatWidgetScreen() {
                 <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
                   {/* Agent bubble */}
                   <div style={{ display: "flex", alignItems: "flex-end", gap: 7 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
-                      <Icons.Bot size={11} color="var(--primary)" />
-                    </div>
+                    {togAvatar && (
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
+                        <Icons.Bot size={11} color={brandColor} />
+                      </div>
+                    )}
                     <div style={{ maxWidth: "80%", background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "9px 12px", fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.5 }}>
-                      Hi! I'm {activeWidget.network !== "—" ? activeWidget.network : "your AI assistant"}. How can I help you today?
+                      Hi! I&apos;m {activeWidget.network !== "—" ? activeWidget.network : "your AI assistant"}. How can I help you today?
                     </div>
                   </div>
                   {/* User bubble */}
                   <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <div style={{ maxWidth: "80%", background: "var(--primary)", borderRadius: "var(--radius-l) var(--radius-l) var(--radius-xs) var(--radius-l)", padding: "9px 12px", fontSize: 12, color: "#fff", lineHeight: 1.5 }}> {/* audit-ignore: #fff on primary */}
-                      I'd like to know more about pricing.
+                    <div style={{ maxWidth: "80%", background: brandColor, borderRadius: "var(--radius-l) var(--radius-l) var(--radius-xs) var(--radius-l)", padding: "9px 12px", fontSize: 12, color: "#fff", lineHeight: 1.5, transition: "background 0.2s" }}> {/* audit-ignore: #fff on brand bg */}
+                      I&apos;d like to know more about pricing.
                     </div>
                   </div>
                   {/* Agent typing */}
-                  <div style={{ display: "flex", alignItems: "flex-end", gap: 7 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
-                      <Icons.Bot size={11} color="var(--primary)" />
+                  {togTyping && (
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 7 }}>
+                      {togAvatar && (
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginBottom: 2 }}>
+                          <Icons.Bot size={11} color={brandColor} />
+                        </div>
+                      )}
+                      <div style={{ background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "10px 14px", display: "flex", gap: 4, alignItems: "center" }}>
+                        {[0, 0.15, 0.3].map((delay, i) => (
+                          <span key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-text-disabled)", display: "inline-block", animation: `bounce 1.1s ${delay}s infinite` }} />
+                        ))}
+                      </div>
                     </div>
-                    <div style={{ background: "var(--canvas)", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-l) var(--radius-l) var(--radius-l) var(--radius-xs)", padding: "10px 14px", display: "flex", gap: 4, alignItems: "center" }}>
-                      {[0, 0.15, 0.3].map((delay, i) => (
-                        <span key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-text-disabled)", display: "inline-block", animation: `bounce 1.1s ${delay}s infinite` }} />
-                      ))}
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Input */}
@@ -857,16 +867,18 @@ export default function PMChatWidgetScreen() {
                     placeholder="Type a message…"
                     style={{ flex: 1, background: "var(--field-bg)", border: "1px solid var(--field-border)", borderRadius: "var(--radius-full)", padding: "8px 13px", fontSize: 12, color: "var(--color-text-title)", fontFamily: "inherit", outline: "none" }}
                   />
-                  <button style={{ width: 30, height: 30, borderRadius: "var(--radius-full)", background: "var(--primary)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Icons.Send size={12} color="#fff" /> {/* audit-ignore: #fff on primary */}
+                  <button style={{ width: 30, height: 30, borderRadius: "var(--radius-full)", background: brandColor, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+                    <Icons.Send size={12} color="#fff" /> {/* audit-ignore: #fff on brand bg */}
                   </button>
                 </div>
               </div>
 
               {/* Branding */}
-              <div style={{ padding: "7px 12px", borderTop: "1px solid var(--color-border-neutral-default)", textAlign: "center", fontSize: 10, color: "var(--color-text-disabled)" }}>
-                Powered by <strong style={{ color: "var(--primary)" }}>AIMS OS</strong>
-              </div>
+              {togBranding && (
+                <div style={{ padding: "7px 12px", borderTop: "1px solid var(--color-border-neutral-default)", textAlign: "center", fontSize: 10, color: "var(--color-text-disabled)" }}>
+                  Powered by <strong style={{ color: brandColor }}>AIMS OS</strong>
+                </div>
+              )}
             </div>
 
             </div>
