@@ -16131,7 +16131,7 @@ function pgSceneStandaloneModal(next: () => void, _back: () => void, _onClose: (
             <div className="max-w-[820px] flex flex-col gap-[16px]">
               <Filters searchPlaceholder="Search workers…" slots={[{ placeholder: "Status" }, { placeholder: "Owner" }]} />
               <div className="flex flex-col gap-[12px]">
-                {items.map(item => (
+                {items.slice(0, 2).map(item => (
                   <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
                     <EntityList items={[item]} />
                   </CardContainer>
@@ -16177,7 +16177,7 @@ function pgSceneStandaloneFullPage(next: () => void, _back: () => void, _onClose
             <div className="max-w-[820px] flex flex-col gap-[16px]">
               <Filters searchPlaceholder="Search users…" slots={[{ placeholder: "Role" }, { placeholder: "Status" }]} />
               <div className="flex flex-col gap-[12px]">
-                {PG_CTX_USERS.map(item => (
+                {PG_CTX_USERS.slice(0, 2).map(item => (
                   <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
                     <EntityList items={[item]} />
                   </CardContainer>
@@ -16316,7 +16316,7 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
             <div className="max-w-[820px] flex flex-col gap-[16px]">
               <Filters searchPlaceholder="Search policies…" slots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} />
               <div className="flex flex-col gap-[12px]">
-                {PG_CTX_POLICIES.map(item => (
+                {PG_CTX_POLICIES.slice(0, 2).map(item => (
                   <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
                     <EntityList items={[item]} />
                   </CardContainer>
@@ -16403,7 +16403,7 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
             <div className="max-w-[820px] flex flex-col gap-[16px]">
               <Filters searchPlaceholder="Search automations…" slots={[{ placeholder: "Status" }, { placeholder: "Category" }]} />
               <div className="flex flex-col gap-[12px]">
-                {items.map(item => (
+                {items.slice(0, 2).map(item => (
                   <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
                     <EntityList items={[item]} />
                   </CardContainer>
