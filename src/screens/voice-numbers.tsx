@@ -15,7 +15,8 @@ import { Select } from "@/components/ui/select"
 import { HighlightCard } from "@/components/ui/highlight-card"
 import { InformativeCard } from "@/components/ui/informative-card"
 import type { SidebarItem } from "@/components/ui/sidebar"
-import { NUMBERS, computeNumbersKpis, type PhoneNumber, type NumberType } from "./voice/data"
+import { NUMBERS, VOICE_AGENTS, type PhoneNumber, type NumberType } from "./voice/data"
+import { BuyNumberModal, NumberConfigSlideOut } from "./voice/flows"
 
 // ── Sidebar ────────────────────────────────────────────────────────────
 
@@ -49,23 +50,41 @@ function filterMatches(row: PhoneNumber, filter: string, q: string): boolean {
 // ── Numbers tab ────────────────────────────────────────────────────────
 
 function NumbersTab() {
-  const kpis = computeNumbersKpis()
+  // Mutable state — supports buy, edit, release flows
+  const [numbers,  setNumbers]  = useState<PhoneNumber[]>(NUMBERS)
   const [filter,   setFilter]   = useState<"all" | "inbound" | "outbound" | "unassigned">("all")
   const [search,   setSearch]   = useState("")
   const [page,     setPage]     = useState(1)
   const [pageSize, setPageSize] = useState(25)
+  const [buyOpen,      setBuyOpen]      = useState(false)
+  const [selectedId,   setSelectedId]   = useState<number | null>(null)
 
   const filtered = useMemo(
-    () => NUMBERS.filter(r => filterMatches(r, filter, search)),
-    [filter, search]
+    () => numbers.filter(r => filterMatches(r, filter, search)),
+    [numbers, filter, search]
   )
 
   const counts = useMemo(() => ({
-    all:        NUMBERS.length,
-    inbound:    NUMBERS.filter(r => r.type === "inbound"  || r.type === "both").length,
-    outbound:   NUMBERS.filter(r => r.type === "outbound" || r.type === "both").length,
-    unassigned: NUMBERS.filter(r => r.status === "unassigned").length,
-  }), [])
+    all:        numbers.length,
+    inbound:    numbers.filter(r => r.type === "inbound"  || r.type === "both").length,
+    outbound:   numbers.filter(r => r.type === "outbound" || r.type === "both").length,
+    unassigned: numbers.filter(r => r.status === "unassigned").length,
+  }), [numbers])
+
+  const kpis = useMemo(() => {
+    const total       = numbers.length
+    const unassigned  = numbers.filter(n => n.status === "unassigned").length
+    return {
+      total,
+      active:       total - unassigned,
+      unassigned,
+      callsToday:   487,
+      avgDuration:  "3:42",
+    }
+  }, [numbers])
+
+  const selected = numbers.find(n => n.id === selectedId) ?? null
+  const nextId   = useMemo(() => Math.max(...numbers.map(n => n.id), 0) + 1, [numbers])
 
   const columns: TableColumn<PhoneNumber>[] = [
     {
@@ -162,13 +181,19 @@ function NumbersTab() {
             showViewToggle={false}
           />
         </div>
-        <Button variant="primary" size="default" icon={<Plus size={14}/>} iconPosition="left">
+        <Button variant="primary" size="default" icon={<Plus size={14}/>} iconPosition="left" onClick={() => setBuyOpen(true)}>
           Buy Number
         </Button>
       </div>
 
-      {/* Table */}
-      <div>
+      {/* Table — rows are clickable to open the config drawer */}
+      <div onClick={(e) => {
+        const tr = (e.target as HTMLElement).closest("tbody tr")
+        if (!tr) return
+        const idx = Array.from(tr.parentElement!.children).indexOf(tr)
+        const row = paged[idx]
+        if (row) setSelectedId(row.id)
+      }} style={{ cursor: paged.length > 0 ? "pointer" : "default" }}>
         <Table
           columns={columns}
           data={paged}
@@ -190,6 +215,26 @@ function NumbersTab() {
           </div>
         )}
       </div>
+
+      {/* Flows */}
+      <BuyNumberModal
+        isOpen={buyOpen}
+        onClose={() => setBuyOpen(false)}
+        agents={VOICE_AGENTS}
+        nextId={nextId}
+        onBuy={(num) => {
+          setNumbers(prev => [num, ...prev])
+          setPage(1)
+        }}
+      />
+      <NumberConfigSlideOut
+        number={selected}
+        agents={VOICE_AGENTS}
+        open={selectedId !== null}
+        onClose={() => setSelectedId(null)}
+        onSave={(updated) => setNumbers(prev => prev.map(n => n.id === updated.id ? updated : n))}
+        onRelease={(id) => setNumbers(prev => prev.filter(n => n.id !== id))}
+      />
     </div>
   )
 }

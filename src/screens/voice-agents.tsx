@@ -15,7 +15,8 @@ import { HighlightCard } from "@/components/ui/highlight-card"
 import { CardContainer } from "@/components/ui/card-container"
 import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
 import type { SidebarItem } from "@/components/ui/sidebar"
-import { VOICE_AGENTS, type VoiceAgent } from "./voice/data"
+import { NUMBERS, VOICE_AGENTS, type VoiceAgent, type PhoneNumber } from "./voice/data"
+import { BuyNumberModal, AssignNumberSlideOut } from "./voice/flows"
 
 // ── Sidebar ────────────────────────────────────────────────────────────
 
@@ -40,13 +41,15 @@ const STATUS_META: Record<VoiceAgent["status"], { label: string; variant: "succe
 // ── Voice-only slide-out ───────────────────────────────────────────────
 
 interface AgentSlideOutProps {
-  agent: VoiceAgent | null
-  open:  boolean
-  onClose: () => void
-  onSave:  (agent: VoiceAgent) => void
+  agent:          VoiceAgent | null
+  open:           boolean
+  onClose:        () => void
+  onSave:         (agent: VoiceAgent) => void
+  onAssignClick:  () => void
+  onUnassign:     (agentId: string, phoneNumber: string) => void
 }
 
-function AgentSlideOut({ agent, open, onClose, onSave }: AgentSlideOutProps) {
+function AgentSlideOut({ agent, open, onClose, onSave, onAssignClick, onUnassign }: AgentSlideOutProps) {
   const [draft, setDraft] = useState<VoiceAgent | null>(agent)
   useMemo(() => setDraft(agent), [agent])
 
@@ -88,13 +91,30 @@ function AgentSlideOut({ agent, open, onClose, onSave }: AgentSlideOutProps) {
             {draft.numbers.length === 0
               ? <span style={{ fontSize: 12, color: "var(--color-text-caption)", fontStyle: "italic" }}>No numbers assigned yet.</span>
               : draft.numbers.map(n => (
-                  <Tag key={n} variant="informative" size="sm" leadingIcon={<Phone size={11}/>}>
+                  <Tag
+                    key={n}
+                    variant="informative"
+                    size="sm"
+                    leadingIcon={<Phone size={11}/>}
+                    trailingIcon={
+                      <button
+                        aria-label={`Unassign ${n}`}
+                        onClick={() => {
+                          onUnassign(draft.id, n)
+                          setDraft({ ...draft, numbers: draft.numbers.filter(x => x !== n) })
+                        }}
+                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", opacity: 0.6, color: "inherit", display: "inline-flex" }}
+                      >
+                        ×
+                      </button>
+                    }
+                  >
                     <span className="font-mono">{n}</span>
                   </Tag>
                 ))
             }
           </div>
-          <Button variant="secondary" size="sm" icon={<Plus size={13}/>} iconPosition="left">
+          <Button variant="secondary" size="sm" icon={<Plus size={13}/>} iconPosition="left" onClick={onAssignClick}>
             Assign number
           </Button>
         </section>
@@ -184,6 +204,40 @@ export default function VoiceAgentsScreen() {
   const [statusFilter, setStatus]     = useState<"all" | VoiceAgent["status"]>("all")
   const [selectedId,   setSelectedId] = useState<string | null>(null)
   const [agents,       setAgents]     = useState<VoiceAgent[]>(VOICE_AGENTS)
+  const [numbers,      setNumbers]    = useState<PhoneNumber[]>(NUMBERS)
+  const [buyOpen,      setBuyOpen]    = useState(false)
+  const [assignOpen,   setAssignOpen] = useState(false)
+
+  const nextNumberId = useMemo(() => Math.max(...numbers.map(n => n.id), 0) + 1, [numbers])
+
+  // Assign selected free-pool numbers to an agent
+  function assignNumbers(agentId: string, numberIds: number[]) {
+    const targetNums = numbers.filter(n => numberIds.includes(n.id))
+    const agent = agents.find(a => a.id === agentId)
+    if (!agent) return
+    // Mark those numbers as active + attached to this agent
+    setNumbers(prev => prev.map(n => numberIds.includes(n.id)
+      ? { ...n, status: "active", agent: { name: agent.name, kind: "agent" } }
+      : n
+    ))
+    // Append their phone strings to agent.numbers
+    setAgents(prev => prev.map(a => a.id === agentId
+      ? { ...a, numbers: [...a.numbers, ...targetNums.map(n => n.number)] }
+      : a
+    ))
+  }
+
+  // Free a number when unassigned from an agent
+  function unassignNumber(agentId: string, phoneNumber: string) {
+    setAgents(prev => prev.map(a => a.id === agentId
+      ? { ...a, numbers: a.numbers.filter(n => n !== phoneNumber) }
+      : a
+    ))
+    setNumbers(prev => prev.map(n => n.number === phoneNumber
+      ? { ...n, status: "unassigned", agent: null }
+      : n
+    ))
+  }
 
   const filtered = useMemo(() => agents.filter(a => {
     if (statusFilter !== "all" && a.status !== statusFilter) return false
@@ -259,7 +313,7 @@ export default function VoiceAgentsScreen() {
             <Button variant="secondary" size="default" icon={<ExternalLink size={14}/>} iconPosition="left">
               Open in Agentic Studio
             </Button>
-            <Button variant="primary" size="default" icon={<Plus size={14}/>} iconPosition="left">
+            <Button variant="primary" size="default" icon={<Plus size={14}/>} iconPosition="left" onClick={() => setBuyOpen(true)}>
               Buy Number
             </Button>
           </div>
@@ -283,9 +337,37 @@ export default function VoiceAgentsScreen() {
 
       <AgentSlideOut
         agent={selected}
-        open={selectedId !== null}
+        open={selectedId !== null && !assignOpen}
         onClose={() => setSelectedId(null)}
         onSave={(updated) => setAgents(prev => prev.map(a => a.id === updated.id ? updated : a))}
+        onAssignClick={() => setAssignOpen(true)}
+        onUnassign={unassignNumber}
+      />
+
+      <AssignNumberSlideOut
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        agentName={selected?.name ?? ""}
+        numbers={numbers}
+        onAssign={(numberIds) => {
+          if (selectedId) assignNumbers(selectedId, numberIds)
+        }}
+      />
+
+      <BuyNumberModal
+        isOpen={buyOpen}
+        onClose={() => setBuyOpen(false)}
+        agents={agents}
+        nextId={nextNumberId}
+        onBuy={(num, assignToId) => {
+          setNumbers(prev => [num, ...prev])
+          if (assignToId) {
+            setAgents(prev => prev.map(a => a.id === assignToId
+              ? { ...a, numbers: [...a.numbers, num.number] }
+              : a
+            ))
+          }
+        }}
       />
     </>
   )
