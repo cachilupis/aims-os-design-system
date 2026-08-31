@@ -358,20 +358,6 @@ export default function PMChatWidgetScreen() {
     transformOrigin: isLeft ? "bottom left" : isInline ? "bottom center" : "bottom right",
   }
 
-  // ── Widget position anchor (computed before return to avoid OXC spread-in-JSX) ──
-  const widgetMockStyle: React.CSSProperties = {
-    width:        previewDims.w,
-    height:       previewDims.h,
-    maxHeight:    "100%",
-    display:      "flex",
-    flexDirection: "column",
-    background:   previewBg,
-    border:       "1px solid " + previewBorder,
-    borderRadius: "var(--radius-l)",
-    overflow:     "hidden",
-    transition:   "all 0.25s",
-    boxShadow:    "0 8px 32px rgba(0,0,0,0.32)", // audit-ignore: preview widget elevation — no token
-  }
 
   // ── Create wizard helpers ──────────────────────────────────────────────────
   const CREATE_STEPS = ["Name & Description", "Assign Network", "Appearance", "Embed & Publish"]
