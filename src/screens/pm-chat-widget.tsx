@@ -316,6 +316,21 @@ export default function PMChatWidgetScreen() {
   const previewBubbleBg = isDarkTheme ? "#1E2B3C" : isLightTheme ? "#F2F2F2" : "var(--canvas)" // audit-ignore: widget preview forces raw theme colors
   const previewBorder   = isDarkTheme ? "rgba(255,255,255,0.08)" : isLightTheme ? "#D9D9D9" : "var(--color-border-neutral-default)" // audit-ignore: themed preview surface colors — no token
 
+  // ── Widget position anchor (computed before return to avoid OXC spread-in-JSX) ──
+  const widgetMockStyle: React.CSSProperties = {
+    width:        previewDims.w,
+    height:       previewDims.h,
+    maxHeight:    "100%",
+    display:      "flex",
+    flexDirection: "column",
+    background:   previewBg,
+    border:       "1px solid " + previewBorder,
+    borderRadius: "var(--radius-l)",
+    overflow:     "hidden",
+    transition:   "all 0.25s",
+    boxShadow:    "0 8px 32px rgba(0,0,0,0.32)", // audit-ignore: preview widget elevation — no token
+  }
+
   // ── Create wizard helpers ──────────────────────────────────────────────────
   const CREATE_STEPS = ["Name & Description", "Assign Network", "Appearance", "Embed & Publish"]
   const createCanNext = createStep === 0 ? newName.trim().length > 0 : true
@@ -921,22 +936,24 @@ export default function PMChatWidgetScreen() {
 
               {/* Chat window */}
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overflow: "hidden", position: "relative" }}>
-                {/* Position label */}
-                <div style={{ position: "absolute", bottom: 12, right: 12, fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-disabled)", opacity: 0.7 }}>
+                {/* Position badge — moves to the correct corner */}
+                <div style={{
+                  position: "absolute",
+                  bottom: widgetPosition.startsWith("Inline") ? 12 : 10,
+                  top: widgetPosition.startsWith("Inline") ? undefined : undefined,
+                  left: widgetPosition === "Bottom left" ? 10 : widgetPosition.startsWith("Inline") ? "50%" : undefined,
+                  right: widgetPosition === "Bottom right" || (!widgetPosition.startsWith("Inline") && widgetPosition !== "Bottom left") ? 10 : undefined,
+                  transform: widgetPosition.startsWith("Inline") ? "translateX(-50%)" : undefined,
+                  fontSize: 8, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.08em",
+                  color: "var(--color-text-disabled)", background: "var(--color-surface-neutral-default)",
+                  border: "1px solid var(--color-border-neutral-default)",
+                  borderRadius: 20, padding: "2px 8px", whiteSpace: "nowrap" as const,
+                  transition: "all 0.25s",
+                }}>
                   {widgetPosition}
                 </div>
                 {/* Widget mock at chosen size */}
-                <div style={{
-                  width: previewDims.w, height: previewDims.h,
-                  maxHeight: "100%",
-                  display: "flex", flexDirection: "column",
-                  background: previewBg,
-                  border: `1px solid ${previewBorder}`,
-                  borderRadius: "var(--radius-l)",
-                  overflow: "hidden",
-                  transition: "all 0.25s",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.32)", // audit-ignore: preview widget elevation — no token
-                }}>
+                <div style={widgetMockStyle}>
                   {/* Widget header */}
                   <div style={{ padding: "10px 12px 9px", background: brandColor, display: "flex", alignItems: "center", gap: 8, transition: "background 0.2s", flexShrink: 0 }}>
                     {togAvatar && (
