@@ -3,7 +3,7 @@ import { Phone, Shield, Users, Plus, Trash2, Info } from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Tabs } from "@/components/ui/tabs"
-import { Chip } from "@/components/ui/chip"
+import { Filters } from "@/components/ui/filters"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tag } from "@/components/ui/tag"
@@ -17,7 +17,7 @@ import { InformativeCard } from "@/components/ui/informative-card"
 import type { SidebarItem } from "@/components/ui/sidebar"
 import { NUMBERS, computeNumbersKpis, type PhoneNumber, type NumberType } from "./voice/data"
 
-// ── Sidebar for the Voice module ───────────────────────────────────────
+// ── Sidebar ────────────────────────────────────────────────────────────
 
 const VOICE_SIDEBAR: SidebarItem[] = [
   { id: "home",         label: "Home",         icon: "Home" },
@@ -29,7 +29,7 @@ const VOICE_SIDEBAR: SidebarItem[] = [
   { id: "contacts",     label: "Contacts",     icon: "User" },
 ]
 
-// ── Helpers ────────────────────────────────────────────────────────────
+// ── Renderers ──────────────────────────────────────────────────────────
 
 const TYPE_TAG: Record<Exclude<NumberType, null>, { variant: "informative" | "purple" | "neutral"; label: string }> = {
   inbound:  { variant: "informative", label: "Inbound"  },
@@ -50,9 +50,9 @@ function filterMatches(row: PhoneNumber, filter: string, q: string): boolean {
 
 function NumbersTab() {
   const kpis = computeNumbersKpis()
-  const [filter, setFilter]     = useState<"all" | "inbound" | "outbound" | "unassigned">("all")
-  const [search, setSearch]     = useState("")
-  const [page, setPage]         = useState(1)
+  const [filter,   setFilter]   = useState<"all" | "inbound" | "outbound" | "unassigned">("all")
+  const [search,   setSearch]   = useState("")
+  const [page,     setPage]     = useState(1)
   const [pageSize, setPageSize] = useState(25)
 
   const filtered = useMemo(
@@ -71,10 +71,8 @@ function NumbersTab() {
     {
       key: "number", header: "Number", width: "180px",
       render: (r) => (
-        <span
-          className="font-mono text-[13px]"
-          style={{ opacity: r.status === "unassigned" ? 0.45 : 1, color: "var(--color-text-title)" }}
-        >
+        <span className="font-mono text-[13px]"
+              style={{ opacity: r.status === "unassigned" ? 0.45 : 1, color: "var(--color-text-title)" }}>
           {r.number}
         </span>
       ),
@@ -118,10 +116,9 @@ function NumbersTab() {
     {
       key: "calls", header: "Calls 30d", width: "90px", align: "right",
       render: (r) => (
-        <span style={{
-          fontWeight: 600,
-          color: r.calls >= 200 ? "var(--primary)" : "var(--color-text-body)",
-        }}>{r.calls}</span>
+        <span style={{ fontWeight: 600, color: r.calls >= 200 ? "var(--primary)" : "var(--color-text-body)" }}>
+          {r.calls}
+        </span>
       ),
     },
   ]
@@ -130,45 +127,44 @@ function NumbersTab() {
   const paged = filtered.slice(start, start + pageSize)
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* KPI strip */}
+    <div className="flex flex-col gap-4">
+      {/* KPIs */}
       <div className="grid grid-cols-4 gap-3">
-        <HighlightCard label="Total Numbers" value={kpis.total}       iconName="Phone"      feedback="+8 this month"           feedbackType="positive" />
-        <HighlightCard label="Active"        value={kpis.active}      iconName="CheckCircle" feedback={`${kpis.unassigned} unassigned`} feedbackType="neutral" />
-        <HighlightCard label="Calls Today"   value={kpis.callsToday}  iconName="PhoneCall"  feedback="+62 vs yesterday"        feedbackType="positive" />
-        <HighlightCard label="Avg Duration"  value={kpis.avgDuration} iconName="Clock"      feedback="minutes"                 feedbackType="neutral" />
+        <HighlightCard label="Total Numbers" value={kpis.total}       iconName="Phone"       feedback="+8 this month"                    feedbackType="positive" />
+        <HighlightCard label="Active"        value={kpis.active}      iconName="CheckCircle" feedback={`${kpis.unassigned} unassigned`}  feedbackType="neutral"  />
+        <HighlightCard label="Calls Today"   value={kpis.callsToday}  iconName="PhoneCall"   feedback="+62 vs yesterday"                 feedbackType="positive" />
+        <HighlightCard label="Avg Duration"  value={kpis.avgDuration} iconName="Clock"       feedback="minutes"                          feedbackType="neutral"  />
       </div>
 
-      {/* Segmented filter + search + primary action */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          {(["all", "inbound", "outbound", "unassigned"] as const).map(f => (
-            <Chip
-              key={f}
-              variant={filter === f ? "primary" : "secondary"}
-              size="s"
-              onClick={() => { setFilter(f); setPage(1) }}
-            >
-              {f === "all"        ? `All ${counts.all}`
-               : f === "inbound"  ? `Inbound ${counts.inbound}`
-               : f === "outbound" ? `Outbound ${counts.outbound}`
-               :                    `Unassigned ${counts.unassigned}`}
-            </Chip>
-          ))}
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Input
-            placeholder="Search numbers or labels…"
-            size="sm"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            style={{ width: 240 }}
-            aria-label="Search numbers or labels"
+      {/* Type tabs — mutually-exclusive filter with counts */}
+      <Tabs
+        items={[
+          { id: "all",        label: `All (${counts.all})` },
+          { id: "inbound",    label: `Inbound (${counts.inbound})` },
+          { id: "outbound",   label: `Outbound (${counts.outbound})` },
+          { id: "unassigned", label: `Unassigned (${counts.unassigned})` },
+        ]}
+        activeId={filter}
+        onChange={(id) => { setFilter(id as typeof filter); setPage(1) }}
+        size="s"
+      />
+
+      {/* DS Filters (search only) + primary CTA */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <Filters
+            showSearch
+            searchPlaceholder="Search numbers, labels, or agents…"
+            searchValue={search}
+            onSearchChange={(v) => { setSearch(v); setPage(1) }}
+            showAllFilters={false}
+            showSort={false}
+            showViewToggle={false}
           />
-          <Button variant="primary" size="sm" icon={<Plus size={14}/>} iconPosition="left">
-            Buy Number
-          </Button>
         </div>
+        <Button variant="primary" size="default" icon={<Plus size={14}/>} iconPosition="left">
+          Buy Number
+        </Button>
       </div>
 
       {/* Table */}
@@ -179,7 +175,7 @@ function NumbersTab() {
           size="default"
           emptyIcon={Phone}
           emptyTitle="No numbers match the current filter."
-          emptyDescription="Try clearing the search or changing the filter chips above."
+          emptyDescription="Try clearing the search or changing the filter above."
         />
         {filtered.length > 0 && (
           <div className="mt-3">
@@ -201,11 +197,11 @@ function NumbersTab() {
 // ── Security tab ───────────────────────────────────────────────────────
 
 function SecurityTab() {
-  const [blocklist, setBlocklist] = useState<string[]>(["+1-800-*", "Unknown / No ID"])
-  const [blockInput, setBlockInput] = useState("")
-  const [geoEnabled, setGeoEnabled] = useState(false)
+  const [blocklist, setBlocklist]     = useState<string[]>(["+1-800-*", "Unknown / No ID"])
+  const [blockInput, setBlockInput]   = useState("")
+  const [geoEnabled, setGeoEnabled]   = useState(false)
   const [rateEnabled, setRateEnabled] = useState(false)
-  const [rateValue, setRateValue] = useState("100")
+  const [rateValue, setRateValue]     = useState("100")
 
   function addBlock() {
     const v = blockInput.trim()
@@ -223,14 +219,12 @@ function SecurityTab() {
         </p>
       </div>
 
-      {/* Tenant-wide info banner */}
       <InformativeCard
         state="informative"
         title="Bot & spam detection is configured tenant-wide"
         description="Applies to all channels. Manage it in Workspace Settings → Security."
       />
 
-      {/* 3-card grid — Block List, Geo, Rate Limit */}
       <div className="grid grid-cols-2 gap-4">
         <CardContainer variant="default" size="default">
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 4 }}>Block List</div>
@@ -241,28 +235,19 @@ function SecurityTab() {
             {blocklist.map(v => (
               <Tag key={v} variant="neutral" size="sm"
                    trailingIcon={
-                     <button
-                       aria-label={`Remove ${v} from block list`}
-                       onClick={() => setBlocklist(blocklist.filter(x => x !== v))}
-                       style={{ background: "none", border: "none", padding: 0, cursor: "pointer", opacity: 0.6, color: "inherit" }}
-                     >
+                     <button aria-label={`Remove ${v} from block list`}
+                             onClick={() => setBlocklist(blocklist.filter(x => x !== v))}
+                             style={{ background: "none", border: "none", padding: 0, cursor: "pointer", opacity: 0.6, color: "inherit" }}>
                        <Trash2 size={12}/>
                      </button>
-                   }>
-                {v}
-              </Tag>
+                   }>{v}</Tag>
             ))}
           </div>
           <div className="flex gap-2">
-            <Input
-              size="sm"
-              placeholder="e.g. +18005551234 or +1800*"
-              value={blockInput}
-              onChange={e => setBlockInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && addBlock()}
-              style={{ flex: 1 }}
-              aria-label="Add number or pattern to block list"
-            />
+            <Input size="sm" placeholder="e.g. +18005551234 or +1800*"
+                   value={blockInput} onChange={e => setBlockInput(e.target.value)}
+                   onKeyDown={e => e.key === "Enter" && addBlock()}
+                   style={{ flex: 1 }} aria-label="Add number or pattern to block list" />
             <Button variant="secondary" size="sm" onClick={addBlock}>Add</Button>
           </div>
           <p style={{ fontSize: 12, color: "var(--color-text-caption)", marginTop: 8 }}>
@@ -346,7 +331,7 @@ export default function VoiceNumbersScreen() {
         />
       )}
     >
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         <Tabs
           items={[
             { id: "numbers",  label: "Numbers",  icon: Phone },
