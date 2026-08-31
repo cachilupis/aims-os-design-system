@@ -38,7 +38,7 @@ interface WidgetCard {
   lastUpdated: string
 }
 
-const WIDGETS: WidgetCard[] = [
+const INITIAL_WIDGETS: WidgetCard[] = [
   {
     id: "main-website",
     name: "Main Website",
@@ -121,7 +121,9 @@ export default function PMChatWidgetScreen() {
   const [createStep, setCreateStep]   = useState(0)
   const [newName, setNewName]         = useState("")
   const [newDesc, setNewDesc]         = useState("")
-  const [activeWidget, setActiveWidget] = useState<WidgetCard>(WIDGETS[0])
+  const [newNetwork, setNewNetwork]   = useState("")
+  const [widgets, setWidgets]           = useState<WidgetCard[]>(INITIAL_WIDGETS)
+  const [activeWidget, setActiveWidget] = useState<WidgetCard>(INITIAL_WIDGETS[0])
 
   // Detail tab state
   const [activeTab, setActiveTab]     = useState("overview")
@@ -160,7 +162,7 @@ export default function PMChatWidgetScreen() {
   const [previewOpen, setPreviewOpen]       = useState(true)
 
   // Content — editable widget name, greeting, and chat starters
-  const [widgetName, setWidgetName]     = useState(WIDGETS[0].name)
+  const [widgetName, setWidgetName]     = useState(INITIAL_WIDGETS[0].name)
   const [greetingMsg, setGreetingMsg]   = useState("")
   const [chatStarters, setChatStarters] = useState<string[]>([])
 
@@ -363,6 +365,43 @@ export default function PMChatWidgetScreen() {
   const CREATE_STEPS = ["Name & Description", "Assign Network", "Appearance", "Embed & Publish"]
   const createCanNext = createStep === 0 ? newName.trim().length > 0 : true
 
+  function buildNewWidget(status: "draft" | "active"): WidgetCard {
+    const selectedNet = NETWORKS.find(n => n.id === newNetwork)
+    return {
+      id: "wgt-" + Date.now(),
+      name: newName.trim(),
+      status,
+      description: newDesc.trim() || "No description provided.",
+      network: selectedNet ? selectedNet.name : "—",
+      executions: 0,
+      successRate: "—",
+      lastUpdated: "Just now",
+    }
+  }
+
+  function resetCreateWizard() {
+    setCreateStep(0)
+    setNewName("")
+    setNewDesc("")
+    setNewNetwork("")
+  }
+
+  function handleCreateDraft() {
+    const w = buildNewWidget("draft")
+    setWidgets(prev => [w, ...prev])
+    resetCreateWizard()
+    setView("list")
+  }
+
+  function handleCreateDeploy() {
+    const w = buildNewWidget("active")
+    setWidgets(prev => [w, ...prev])
+    setActiveWidget(w)
+    resetCreateWizard()
+    setView("list")
+    setDeployOpen(true)
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -448,7 +487,7 @@ export default function PMChatWidgetScreen() {
         {/* ── LIST VIEW ── */}
         {view === "list" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {WIDGETS.map(w => (
+            {widgets.map(w => (
               <CardContainer
                 key={w.id}
                 size="sm"
@@ -1109,7 +1148,7 @@ export default function PMChatWidgetScreen() {
                 </CardContainer>
               )}
 
-              {/* Step 1 — Assign Network (empty state shown) */}
+              {/* Step 1 — Assign Network */}
               {createStep === 1 && (
                 <div>
                   <CardContainer size="sm" className="!p-0 overflow-hidden mb-3">
@@ -1117,17 +1156,29 @@ export default function PMChatWidgetScreen() {
                       <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 3 }}>Assign an Agentic Network</div>
                       <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>The network powers your widget. You can change this later.</div>
                     </div>
-                    <div style={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "36px 20px", textAlign: "center" }}>
-                      <div style={{ width: 48, height: 48, borderRadius: "var(--radius-l)", background: "var(--card-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-                        <Icons.Network size={22} color="var(--primary)" />
-                      </div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 6 }}>No network selected</div>
-                      <div style={{ fontSize: 12, color: "var(--color-text-subtitle)", maxWidth: 320, lineHeight: 1.6, marginBottom: 18 }}>
-                        Connect an Agentic Network or a single Agent to power your widget's conversations.
-                      </div>
-                      <Button variant="secondary" size="sm" onClick={() => {}}>
-                        <Icons.Plus size={13} style={{ marginRight: 5 }} />Browse Networks
-                      </Button>
+                    <div style={{ padding: "12px 0" }}>
+                      {NETWORKS.map((n, idx) => {
+                        const isSelected = newNetwork === n.id
+                        const rowBg = isSelected ? "var(--card-primary-bg)" : "transparent"
+                        return (
+                          <button key={n.id} onClick={() => setNewNetwork(n.id)}
+                            style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 20px", background: rowBg, border: "none", borderBottom: idx < NETWORKS.length - 1 ? "1px solid var(--color-border-neutral-default)" : "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "background 0.12s" }}>
+                            <div style={{ width: 32, height: 32, borderRadius: "var(--radius-m)", background: isSelected ? "var(--primary)" : "var(--color-surface-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.12s" }}>
+                              {n.type === "network"
+                                ? <Icons.Network size={14} color={isSelected ? "#fff" : "var(--color-text-subtitle)"} />
+                                : <Icons.Bot size={14} color={isSelected ? "#fff" : "var(--color-text-subtitle)"} />}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 1 }}>{n.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--color-text-subtitle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.description}</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                              <span style={{ fontSize: 11, color: n.status === "active" ? "var(--color-text-success)" : "var(--color-text-disabled)", fontWeight: 500 }}>{n.status === "active" ? "Active" : "Inactive"}</span>
+                              {isSelected && <Icons.CheckCircle size={16} color="var(--primary)" />}
+                            </div>
+                          </button>
+                        )
+                      })}
                     </div>
                   </CardContainer>
                   <div style={{ fontSize: 12, color: "var(--color-text-disabled)", textAlign: "center" }}>You can skip this step and assign a network later from the widget settings.</div>
@@ -1187,13 +1238,23 @@ export default function PMChatWidgetScreen() {
                       Skip
                     </button>
                   )}
-                  <button disabled={!createCanNext} onClick={() => {
-                    if (createStep < CREATE_STEPS.length - 1) { setCreateStep(s => s + 1) }
-                    else { setView("list") }
-                  }}
-                    style={{ background: createCanNext ? "var(--primary)" : "var(--color-surface-neutral-default)", border: "none", borderRadius: "var(--radius-m)", padding: "9px 18px", fontSize: 13, fontWeight: 700, color: createCanNext ? "#fff" : "var(--color-text-disabled)", cursor: createCanNext ? "pointer" : "not-allowed", fontFamily: "inherit", transition: "background 0.15s" }}> {/* audit-ignore: #fff on primary */}
-                    {createStep === CREATE_STEPS.length - 1 ? "Publish Widget" : "Continue"}
-                  </button>
+                  {createStep === CREATE_STEPS.length - 1 ? (
+                    <>
+                      <button onClick={handleCreateDraft}
+                        style={{ background: "none", border: "1px solid var(--color-border-neutral-default)", borderRadius: "var(--radius-m)", padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "var(--color-text-subtitle)", cursor: "pointer", fontFamily: "inherit" }}>
+                        Save as Draft
+                      </button>
+                      <button onClick={handleCreateDeploy}
+                        style={{ background: "var(--primary)", border: "none", borderRadius: "var(--radius-m)", padding: "9px 18px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}> {/* audit-ignore: #fff on primary */}
+                        <Icons.Send size={13} />Deploy
+                      </button>
+                    </>
+                  ) : (
+                    <button disabled={!createCanNext} onClick={() => setCreateStep(s => s + 1)}
+                      style={{ background: createCanNext ? "var(--primary)" : "var(--color-surface-neutral-default)", border: "none", borderRadius: "var(--radius-m)", padding: "9px 18px", fontSize: 13, fontWeight: 700, color: createCanNext ? "#fff" : "var(--color-text-disabled)", cursor: createCanNext ? "pointer" : "not-allowed", fontFamily: "inherit", transition: "background 0.15s" }}> {/* audit-ignore: #fff on primary */}
+                      Continue
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
