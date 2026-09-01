@@ -434,7 +434,7 @@ function ApiSimpleView({ entity }: { entity: EntityRow }) {
   const enabledCount = defs.filter(d => on[d.key]).length
   return (
     <div style={{ paddingBottom: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 10, marginBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, marginBottom: 12, flexWrap: "wrap" }}>
         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>Base URL</span>
         <code style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--color-text-title)" }}>/api/v1{s}</code>
         <Tag variant="informative" size="sm">v1</Tag>
@@ -443,7 +443,7 @@ function ApiSimpleView({ entity }: { entity: EntityRow }) {
       <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: "0 0 10px" }}>
         Auto-generated endpoints for {entity.name}. Toggle each on or off and set its description — the request/response builder and custom endpoints are Full vision.
       </p>
-      <div style={{ border: "0.5px solid var(--field-border)", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ border: "0.5px solid var(--field-border)", borderRadius: 12, overflow: "hidden" }}>
         {defs.map((d, i) => (
           <div key={d.key} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 14px", borderTop: i ? "0.5px solid var(--field-border)" : "none", opacity: on[d.key] ? 1 : 0.55 }}>
             <Tag variant={METHOD_TAG[d.method]} size="sm">{d.method}</Tag>
@@ -589,7 +589,7 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
   return (
     <div style={{ paddingBottom: 16 }}>
       {/* base URL banner */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 10, marginBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, marginBottom: 12, flexWrap: "wrap" }}>
         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>Base URL</span>
         <code style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--color-text-title)" }}>{baseUrl}</code>
         <Tag variant="informative" size="sm">v1</Tag>
@@ -598,13 +598,13 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 14, alignItems: "start" }}>
         {/* LEFT — grouped endpoint list */}
-        <div style={{ border: "0.5px solid var(--field-border)", borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ border: "0.5px solid var(--field-border)", borderRadius: 12, overflow: "hidden" }}>
           {API_OPS.map(o => {
             const rows = endpoints.filter(e => e.op === o.op)
             return (
               <div key={o.op} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--surface)", fontSize: 10, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>
-                  <span>{o.label}</span><span style={{ marginLeft: "auto", fontSize: 10, background: "var(--field-border)", color: "var(--color-text-subtitle)", borderRadius: 9, padding: "0 6px" }}>{rows.length}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--surface)", fontSize: 10, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>
+                  <span>{o.label}</span><span style={{ marginLeft: "auto", fontSize: 10, background: "var(--field-border)", color: "var(--color-text-subtitle)", borderRadius: 8, padding: "0 6px" }}>{rows.length}</span>
                 </div>
                 {rows.map(ep => {
                   const ec = cfg[ep.key]
@@ -632,7 +632,7 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
         </div>
 
         {/* RIGHT — config for the selected endpoint */}
-        <div style={{ border: "0.5px solid var(--field-border)", borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ border: "0.5px solid var(--field-border)", borderRadius: 12, overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 16px", borderBottom: "0.5px solid var(--field-border)" }}>
             <Tag variant={METHOD_TAG[current.method]} size="sm">{current.method}</Tag>
             <div style={{ flex: 1, minWidth: 0 }}>
