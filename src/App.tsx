@@ -49,6 +49,7 @@ import { InformativeCard, type InformativeCardState, type InformativeCardSize } 
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
 import { AlertBanner, type AlertBannerState } from "@/components/ui/alert-banner"
+import { ToastProvider, useToast } from "@/components/ui/toast"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -84,8 +85,8 @@ import PMChatWidgetScreen               from "./screens/pm-chat-widget"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -197,6 +198,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · inside card or standalone · active indicator · icon · 2 sizes (M/S) · disabled state · use for in-context view switching, not page navigation" },
   { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
   { id: "textarea",        label: "Text Description",  group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
+  { id: "toast",           label: "Toast",             group: "Components",  description: "Transient confirmation feedback · 3 states (Success · Info · Error) · portals bottom-right · auto-dismiss 3500ms · imperative useToast() API · z-index 10050." },
   { id: "toggle",          label: "Toggle",            group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
   { id: "tooltip",         label: "Tooltip",           group: "Components",  description: "Informational overlay on hover/focus · always dark · plain or arrow variant · 4 sides · max 300px width · 2 lines max" },
   { id: "topbar",          label: "Topbar",            group: "Components",  description: "App header · global navigation bar · 2 variants (Default/Tablet) · workspace selector, search, action buttons, profile avatar" },
@@ -2356,6 +2358,69 @@ const ALERT_BANNER_SPEC = {
   ],
 }
 
+const TOAST_SPEC = {
+  name: "Toast",
+  figmaNodeId: "—",
+  figmaUrl: "",
+  description: "Elevated transient notice for confirmation feedback (save/undo, background progress, non-blocking success or failure). Portals to <body>, stacks bottom-right and auto-dismisses after 3500ms. 3 semantic states — Success, Info, Error — pushed imperatively via ToastProvider + useToast().",
+  properties: [
+    { name: "ToastProvider",      type: "Component", values: ["wraps a subtree"],                   default: "required", note: "Renders the portal stack; descendants can call useToast()" },
+    { name: "useToast()",         type: "Hook",      values: ["{ success, info, error, dismiss }"], default: "—",        note: "Imperative push handlers; no-op fallback outside a provider" },
+    { name: "success/info/error", type: "Method",    values: ["(message, options?) => void"],       default: "—",        note: "Push a toast of that variant" },
+    { name: "dismiss",            type: "Method",    values: ["(id: number) => void"],              default: "—",        note: "Remove a specific toast before it auto-dismisses" },
+    { name: "variant",            type: "Variant",   values: ["success","info","error"],            default: "—",        note: "Sets the icon + left accent stripe" },
+    { name: "duration",           type: "Option",    values: ["number (ms)"],                       default: "3500",     note: "Auto-dismiss delay; pass 0 to persist until dismissed" },
+  ],
+  sizes: [
+    { element: "Tile",          padding: "12×14px", gap: "12px", radius: "10px", note: "min-w 280px · max-w 380px" },
+    { element: "Accent border", padding: "—",       gap: "—",    radius: "—",    note: "4px left border · per-state color" },
+    { element: "Icon",          padding: "—",       gap: "—",    radius: "—",    note: "18px · state-colored" },
+    { element: "Close button",  padding: "—",       gap: "—",    radius: "—",    note: "14px × icon · Text/Caption" },
+    { element: "Stack",         padding: "24px",    gap: "8px",  radius: "—",    note: "Fixed bottom-right · grows upward · z-index 10050" },
+  ],
+  typography: [
+    { element: "Message", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.43" },
+  ],
+  variants: [
+    {
+      name: "Success",
+      description: "Completed saves · confirmed non-blocking actions (CheckCircle2 icon)",
+      cssPrefix: "--color-text-success",
+      tokens: [
+        { role: "Accent + Icon", variable: "--color-text-success", light: "#003328", dark: "#6ee7b7" },
+      ],
+    },
+    {
+      name: "Info",
+      description: "Neutral status · background progress · undo affordance (Info icon)",
+      cssPrefix: "--primary",
+      tokens: [
+        { role: "Accent + Icon", variable: "--primary", light: "#2b7fff", dark: "#2173ff" },
+      ],
+    },
+    {
+      name: "Error",
+      description: "Non-blocking failure feedback (XCircle icon) — errors needing a decision use Modal instead",
+      cssPrefix: "--color-text-error",
+      tokens: [
+        { role: "Accent + Icon", variable: "--color-text-error", light: "#5f2120", dark: "#ff6467" },
+      ],
+    },
+    {
+      name: "Shared chrome",
+      description: "Surface, border, message and elevation shared across all 3 states",
+      cssPrefix: "tile",
+      tokens: [
+        { role: "Background", variable: "--color-surface-neutral-white",  light: "#FFFFFF", dark: "#FFFFFF"                },
+        { role: "Border",     variable: "--color-border-neutral-default", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+        { role: "Message",    variable: "--color-text-title",             light: "#000000", dark: "rgba(255,255,255,0.80)" },
+        { role: "Close",      variable: "--color-text-caption",           light: "#5c5c5c", dark: "rgba(255,255,255,0.50)" },
+        { role: "Elevation",  variable: "--shadow-elevation-3",           light: "4px 4px 12px 2px rgba(0,0,0,0.12)", dark: "4px 4px 12px 2px rgba(0,0,0,0.12)" },
+      ],
+    },
+  ],
+}
+
 const EMPTY_STATE_SPEC = {
   name: "Empty State",
   figmaNodeId: "8419:24544",
@@ -3248,6 +3313,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "topbar")           return TOPBAR_SPEC           as AnySpec
   if (id === "sidebar")          return SIDEBAR_SPEC          as AnySpec
   if (id === "alert-banner")     return ALERT_BANNER_SPEC     as AnySpec
+  if (id === "toast")            return TOAST_SPEC            as AnySpec
   if (id === "app-background")   return APP_BACKGROUND_SPEC   as AnySpec
   if (id === "entity-list")      return ENTITY_LIST_SPEC      as AnySpec
   if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
@@ -7720,6 +7786,48 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 // AvatarCircle, AVATAR_SIZE_SPECS, AVATAR_COLOR_KEYS, nameToAvatarColor are
 // the real @/components/ui/avatar atom (imported above) — this section is
 // just the doc/playground page below.
+
+// ── ToastPage ────────────────────────────────────────────────────────────────
+
+function ToastDemo() {
+  const toast = useToast()
+  return (
+    <div className="flex flex-wrap gap-[8px]">
+      <Button variant="secondary" size="sm" onClick={() => toast.success("Changes saved successfully")}>Success toast</Button>
+      <Button variant="secondary" size="sm" onClick={() => toast.info("Export started — running in the background")}>Info toast</Button>
+      <Button variant="secondary" size="sm" onClick={() => toast.error("Couldn't reach the server — changes not saved")}>Error toast</Button>
+      <Button variant="tertiary" size="sm" onClick={() => { toast.success("Saved"); toast.info("Syncing…"); toast.error("Retrying…") }}>Push all three</Button>
+    </div>
+  )
+}
+
+function ToastPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  return (
+    <ToastProvider>
+      <div>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+          <div>
+            <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Toast</h1>
+            <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
+              Elevated transient notice for confirmation feedback. Portals to the page, stacks in the bottom-right corner, and auto-dismisses after 3500ms. Three semantic states — Success, Info, Error — pushed imperatively via <code className="text-[13px] font-mono">useToast()</code>.
+            </p>
+          </div>
+          <SpecButton onClick={() => openSpec("toast")} />
+        </div>
+
+        {/* Live states */}
+        <section className="flex flex-col gap-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Live states — click to push a toast (bottom-right)</p>
+          <ToastDemo />
+          <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5] max-w-[560px]">
+            Each toast auto-dismisses after 3500ms, or click its × to dismiss early. Toasts stack upward and sit above SlideOut and ModalDialog (z-index 10050).
+          </p>
+        </section>
+      </div>
+    </ToastProvider>
+  )
+}
 
 // ── AlertBannerPage ───────────────────────────────────────────────────────────
 
@@ -13276,7 +13384,7 @@ function PatternFeedbackPage() {
                     ["Action resulted in error (non-blocking)", "Inline banner", "AlertBanner (Error)"],
                     ["Action succeeded (non-blocking)", "Inline banner", "AlertBanner (Success)"],
                     ["Form field validation failed", "Inline error under field", "Input / Textarea (error state)"],
-                    ["Ephemeral success / info after action", "Toast (when available)", "AlertBanner (auto-dismiss)"],
+                    ["Ephemeral success / info after action", "Transient toast", "Toast (auto-dismiss)"],
                   ].map(([sit, pat, comp]) => (
                     <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
                       <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
@@ -13390,7 +13498,7 @@ PRIORITY_HIERARCHY
   CRITICAL (blocking)     → Modal (ModalDialog)
   PERSISTENT (contextual) → AlertBanner
   FIELD_VALIDATION        → Inline error under field
-  EPHEMERAL (transient)   → Toast (use AlertBanner until Toast built)
+  EPHEMERAL (transient)   → Toast
 
 ALERT_BANNER_USAGE
   state=informative → general info, tips, non-critical system notices
@@ -13418,11 +13526,11 @@ STACKING_RULES
   IF multiple events → use most specific/critical message only
   never stack overlapping feedback for the same trigger
 
-TOAST (when available)
-  use for: transient success after non-blocking action
-  auto-dismiss: 3–5 seconds
-  do NOT use for errors that require user action
-  current workaround: AlertBanner with auto-dismiss behavior`} />
+TOAST
+  use for: transient success / info after a non-blocking action
+  variants: success · info · error
+  auto-dismiss: 3500ms default (pass duration:0 to persist)
+  do NOT use for errors that require a user decision → use Modal`} />
           </PatternCard>
         </div>
       )}
@@ -39898,6 +40006,7 @@ export default function App() {
           {active === "home"            && <HomePage />}
           {active === "proto-gallery"   && <PrototypeGalleryPage onOpen={(id) => setActive(id)} />}
           {active === "alert-banner"    && <AlertBannerPage      openSpec={setSpecModal} />}
+          {active === "toast"           && <ToastPage            openSpec={setSpecModal} />}
           {active === "app-background"  && <AppBackgroundPage   openSpec={setSpecModal} />}
           {active === "empty-state"     && <EmptyStatePage   openSpec={setSpecModal} />}
           {active === "avatar"          && <AvatarPage          openSpec={setSpecModal} />}
