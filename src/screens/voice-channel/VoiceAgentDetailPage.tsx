@@ -19,6 +19,9 @@ import { ConfigureSmsSlideOut }   from "./ConfigureSmsSlideOut"
 import { ConfigureEmailSlideOut } from "./ConfigureEmailSlideOut"
 import { KnowledgePanel } from "./KnowledgePanel"
 import { ToolsPanel } from "./ToolsPanel"
+import { CreatePanel } from "./CreatePanel"
+import { ConfigurationPanel } from "./ConfigurationPanel"
+import { InstructionsPanel } from "./InstructionsPanel"
 import { useToast } from "./toast"
 
 // ─────────────────────────────────────────────────────────────────────
@@ -167,6 +170,12 @@ export function VoiceAgentDetailPage({
             onConfigureVoice={() => setVoiceOpen(true)}
             onAddTool={() => toast.info("Open tool catalog — coming soon")}
           />
+        ) : subTab === "create" ? (
+          <CreatePanel        agent={agent} onChange={(patch) => { onChange(patch); toast.success("Agent identity saved") }}/>
+        ) : subTab === "configuration" ? (
+          <ConfigurationPanel agent={agent} onChange={(patch) => { onChange(patch); toast.success("Runtime configuration saved") }}/>
+        ) : subTab === "instructions" ? (
+          <InstructionsPanel  agent={agent} onChange={(patch) => { onChange(patch); toast.success("Instructions saved") }}/>
         ) : (
           <PlaceholderPanel subTab={subTab} agentName={agent.name}/>
         )}

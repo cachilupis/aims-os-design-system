@@ -119,6 +119,24 @@ export interface AIChannel {
 
 // ── AI Voice Agent ─────────────────────────────────────────────────────
 
+export interface AgentRuntimeConfig {
+  model:        string     // "GPT-4o" | "GPT-5" | "Claude Sonnet 5" | "Claude Opus 5"
+  temperature:  "focused" | "balanced" | "creative"  // preset shorthand for a slider
+  maxTokens:    number     // per-response cap
+  timeoutSec:   number     // hard wall-clock cap per turn
+  guardrails:   boolean    // content filter + safe topics
+  piiBlocking:  boolean    // scrub PII from tool inputs
+  fallback:     "retry" | "hil-handoff" | "silent"
+}
+
+export interface AgentInstructions {
+  systemPrompt: string     // main behavioural prompt
+  persona:      string     // voice/tone description
+  dos:          string[]   // do-this bullets
+  donts:        string[]   // don't-do bullets
+  examples:     { user: string; agent: string }[]  // 3-column "few-shot" panel
+}
+
 export interface VoiceAIAgent {
   id:          string
   name:        string        // "Sammy"
@@ -128,6 +146,8 @@ export interface VoiceAIAgent {
   iconColor:   string        // avatar tint (uses --primary etc. tokens where possible)
   iconLetter:  string        // "S"
   channels:    AIChannel[]
+  runtime:     AgentRuntimeConfig
+  instructions: AgentInstructions
   // Read-only agent-wide stats surfaced in the list card
   numbersAssigned: number
   callsHandled30d: number
@@ -138,6 +158,47 @@ export interface VoiceAIAgent {
 // Numbers referenced by the voice channel come from data.ts (n1..n4).
 // We reuse them here so number-select dropdowns in ConfigureVoiceSlideOut
 // show real numbers that already exist elsewhere in the prototype.
+
+export // ── Runtime + Instructions defaults ────────────────────────────────────
+
+const SAMMY_RUNTIME: AgentRuntimeConfig = {
+  model:       "Claude Sonnet 5",
+  temperature: "balanced",
+  maxTokens:   1024,
+  timeoutSec:  30,
+  guardrails:  true,
+  piiBlocking: true,
+  fallback:    "hil-handoff",
+}
+
+const SAMMY_INSTRUCTIONS: AgentInstructions = {
+  systemPrompt:
+    "You are Sammy, an AI service-desk assistant for AIMS Motors. Book service appointments, answer routine vehicle-service questions and hand off to a human when the customer asks or when sentiment turns negative. Always confirm the customer's contact information before ending the call.",
+  persona:
+    "Warm, calm and efficient. Speak like a senior service advisor — never robotic. Use short sentences. Confirm what you heard before acting.",
+  dos: [
+    "Confirm vehicle year/make/model before booking.",
+    "Read back the appointment slot in local time.",
+    "Ask clarifying questions when the concern is vague.",
+    "Escalate to a human when the customer requests one.",
+  ],
+  donts: [
+    "Never quote parts or labour prices without a repair order.",
+    "Never promise loaner vehicles — offer to check availability.",
+    "Never share other customers' data.",
+    "Never argue back if sentiment turns negative — hand off.",
+  ],
+  examples: [
+    {
+      user:  "My 2023 Explorer is making a clicking noise when I turn left.",
+      agent: "Thanks for calling. That sounds like a front-axle CV joint or a brake caliper — both need a hands-on look. Do you want me to book the next available service appointment?",
+    },
+    {
+      user:  "Can I speak to a real person?",
+      agent: "Absolutely — I'll connect you now. One moment while I brief the service advisor with what you've shared so far.",
+    },
+  ],
+}
 
 export const DEFAULT_SMS_CONFIG: SmsConfig = {
   numberId:          "n1",
@@ -216,6 +277,8 @@ export const VOICE_AI_AGENTS: VoiceAIAgent[] = [
     iconLetter:  "S",
     numbersAssigned: 2,
     callsHandled30d: 342,
+    runtime:      SAMMY_RUNTIME,
+    instructions: SAMMY_INSTRUCTIONS,
     channels: [
       {
         kind:    "voice",
@@ -256,6 +319,33 @@ export const VOICE_AI_AGENTS: VoiceAIAgent[] = [
     iconLetter:  "A",
     numbersAssigned: 1,
     callsHandled30d: 289,
+    runtime: {
+      ...SAMMY_RUNTIME,
+      model:       "GPT-5",
+      temperature: "creative",
+      fallback:    "retry",
+    },
+    instructions: {
+      systemPrompt:
+        "You are Alex, a sales BDC assistant for AIMS Motors. Qualify inbound web leads, gauge intent, and book test drives with the sales team. Never quote final pricing; always route final-price and finance questions to a human sales advisor.",
+      persona: "Confident, enthusiastic, courteous. Move the conversation forward with clear next steps.",
+      dos: [
+        "Ask about model interest, budget range and timeline.",
+        "Confirm the customer's email before booking a test drive.",
+        "Log the lead source and vehicle interest in the CRM.",
+      ],
+      donts: [
+        "Never state final OTD prices — hand off to a human.",
+        "Never promise trade-in valuations.",
+        "Never send finance rate quotes.",
+      ],
+      examples: [
+        {
+          user:  "I'm interested in the new Bronco Sport.",
+          agent: "Great choice — the 2026 Bronco Sport is one of our most-requested. When would you like to come in for a test drive? I have slots this week from Tuesday afternoon onwards.",
+        },
+      ],
+    },
     channels: [
       {
         kind:    "voice",
@@ -279,6 +369,30 @@ export const VOICE_AI_AGENTS: VoiceAIAgent[] = [
     iconLetter:  "N",
     numbersAssigned: 3,
     callsHandled30d: 178,
+    runtime: {
+      ...SAMMY_RUNTIME,
+      model:       "Haiku 4.5",
+      temperature: "focused",
+      maxTokens:   512,
+      timeoutSec:  20,
+      fallback:    "silent",
+    },
+    instructions: {
+      systemPrompt:
+        "You are the Notify Bot. Place outbound reminder calls for confirmed appointments and outbound CSAT surveys after service visits. Keep every call under 90 seconds. If the recipient asks a question you cannot answer, offer to have a human call back.",
+      persona: "Brief, friendly, respectful of the caller's time.",
+      dos: [
+        "Read the appointment slot back once, in local time.",
+        "Confirm or offer to reschedule in the same call.",
+        "Ask 1 CSAT question after service, no more.",
+      ],
+      donts: [
+        "Never call outside the recipient's local calling hours.",
+        "Never leave voicemails longer than 15 seconds.",
+        "Never call the same recipient more than 3 times.",
+      ],
+      examples: [],
+    },
     channels: [
       { kind: "voice",   active: false, summary: "3 numbers assigned but channel paused.", pills: ["+1 (407) 311-4991", "+1 (305) 755-0019", "+1 (321) 348-2910"] },
       { kind: "email",   active: false, summary: "No email address connected.",             pills: [] },
@@ -320,3 +434,27 @@ export const AVAILABLE_EMAIL_ADDRESSES: EmailAddress[] = [
 
 // Max retry cap surfaced in the "attempts · max 5" hint on the slide-out.
 export const MAX_RETRY_CAP = 5
+
+// ── Configuration + Instructions tab options ───────────────────────────
+
+export const MODEL_OPTIONS = [
+  "Claude Opus 5",
+  "Claude Sonnet 5",
+  "GPT-5",
+  "GPT-4o",
+  "Haiku 4.5",
+]
+
+export const TEMPERATURE_OPTIONS: { id: AgentRuntimeConfig["temperature"]; label: string; desc: string }[] = [
+  { id: "focused",   label: "Focused",   desc: "Deterministic. Best for high-stakes, compliance-heavy tasks." },
+  { id: "balanced",  label: "Balanced",  desc: "Default. Good for customer-facing conversation." },
+  { id: "creative",  label: "Creative",  desc: "More variety. Best for outbound writing / brainstorming." },
+]
+
+export const FALLBACK_OPTIONS: { id: AgentRuntimeConfig["fallback"]; label: string; desc: string }[] = [
+  { id: "retry",       label: "Retry",         desc: "Retry once with a lower temperature before giving up." },
+  { id: "hil-handoff", label: "Human handoff", desc: "Escalate to a live operator via the HiL queue." },
+  { id: "silent",      label: "Silent fail",   desc: "Log the failure and continue — no user-facing error." },
+]
+
+export const AGENT_STATUS_OPTIONS: AIAgentStatus[] = ["Published", "Draft", "Paused"]
