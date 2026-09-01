@@ -1817,13 +1817,15 @@ const HEADER_SPEC = {
   name: "Header",
   figmaNodeId: "7995:4268",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7995-4268",
-  description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — only title + CTAs visible).",
+  description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + CTAs, plus the back button when showBackInCompress is set).",
   properties: [
     { name: "title",           type: "string",  values: ["any string"],                                                                       default: "—",             note: "Required. Always visible in all sizes." },
     { name: "size",            type: "Variant", values: ["size-l", "size-m", "compress"],                                                     default: "size-l" },
     { name: "description",     type: "string",  values: ["any string"],                                                                       default: "undefined",     note: "Hidden in compress." },
     { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after title. Hidden in compress." },
-    { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. Hidden in compress. Use only in drill-down pages." },
+    { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. The ONLY prop that controls back-button visibility. Hidden in compress unless showBackInCompress is also true. Use only in drill-down pages." },
+    { name: "onBack",          type: "function", values: ["() => void"],                                                                      default: "undefined",     note: "Click handler for the back button. Never affects visibility — use backButton for that." },
+    { name: "showBackInCompress", type: "Boolean", values: ["true", "false"],                                                                 default: "false",         note: "Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user." },
     { name: "icon",            type: "node",    values: ["LucideIcon"],                                                                       default: "undefined",     note: "Rendered inside a HighlightIcon (sm). Hidden in compress." },
     { name: "iconVariant",     type: "Variant", values: ["informative","success","alert","error","neutral","yellow","lime","purple","light-blue"], default: "informative", note: "HighlightIcon color variant. Only applies when icon is set." },
     { name: "primaryAction",   type: "node",    values: ["<Button variant=\"main\" size=\"sm\" />"],                                          default: "undefined" },
@@ -1832,7 +1834,7 @@ const HEADER_SPEC = {
   sizes: [
     { size: "Size L",   padding: "12px 24px", titleSize: "24px", height: "auto (~48px)", notes: "Default. Full slots visible." },
     { size: "Size M",   padding: "10px 24px", titleSize: "18px", height: "auto (~38px)", notes: "Compact. Full slots visible." },
-    { size: "Compress", padding: "8px 24px",  titleSize: "18px", height: "60px (fixed)", notes: "Scroll state. Only title + CTAs." },
+    { size: "Compress", padding: "8px 24px",  titleSize: "18px", height: "60px (fixed)", notes: "Scroll state. Title + CTAs, plus the back button when showBackInCompress is set." },
   ],
   typography: [
     { element: "Title — Size L",          family: "Inter", size: "24px", weight: "600 SemiBold", lineHeight: "tight (1.2)" },
