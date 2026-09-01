@@ -25,12 +25,19 @@ interface NumberPreviewProps {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// NumberSheet is a LIGHTWEIGHT preview using the DS SlideOut with
-// anchor="bottom" — matches the source prototype's bottom-sheet shape.
-// It surfaces the essentials (identity + stats + agents summary + HiL
-// + recent call snapshot) and hands off to the full detail page for
-// deep configuration (Overview / Agents & Routing / Business Hours /
-// Call History sub-tabs).
+// NumberSheet is a LIGHTWEIGHT preview using the DS SlideOut
+// (right-anchored). It surfaces the essentials (identity + stats +
+// agents summary + HiL + recent call snapshot) and hands off to the
+// full detail page for deep configuration (Overview / Agents & Routing
+// / Business Hours / Call History sub-tabs).
+//
+// Note: the source prototype uses a bottom sheet for this preview, and
+// SlideOut supports anchor="bottom", but at desktop width the
+// bottom-sheet layout stretches the narrow-column preview content
+// across the whole viewport with a lot of wasted horizontal space.
+// The right-anchor keeps the preview a tight 350px column beside the
+// list. anchor="bottom" is still available for callers whose content
+// genuinely spans full width.
 // ─────────────────────────────────────────────────────────────────────
 
 export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allCalls }: NumberPreviewProps) {
@@ -48,7 +55,6 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
       onClose={onClose}
       type="with-variants"
       size="m"
-      anchor="bottom"
       title={number.number}
       subtitle={`${number.label || "No label"} · ${number.type}`}
       iconContent={<Settings size={18}/>}
