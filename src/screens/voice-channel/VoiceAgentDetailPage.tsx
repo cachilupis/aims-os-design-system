@@ -1,14 +1,12 @@
 import { useState } from "react"
 import {
-  ArrowLeft, ChevronDown, Phone, Mail, MessageSquare, MessageCircle,
+  ArrowLeft, ChevronDown,
   Plus, Settings, MoreHorizontal,
 } from "lucide-react"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Tag } from "@/components/ui/tag"
-import { CardContainer } from "@/components/ui/card-container"
-import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { EmptyState } from "@/components/ui/empty-state"
+import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
 import type { PhoneNumberRecord } from "./data"
 import type {
   VoiceAIAgent, AIChannel, ChannelKind, VoiceConfig, SmsConfig, EmailConfig,
@@ -245,6 +243,21 @@ export function VoiceAgentDetailPage({
 
 // ─── Channels panel ─────────────────────────────────────────────────
 
+// Per-channel visual signature: icon variant + Lucide icon name +
+// human label. EntityList's iconVariant vocabulary uses "info" for
+// primary-blue and "yellow" for the amber/alert slot — matches the
+// source prototype's channel highlight-icon variants.
+const CHANNEL_META: Record<ChannelKind, {
+  label:       string
+  iconName:    string
+  iconVariant: EntityListItemData["iconVariant"]
+}> = {
+  voice:   { label: "Voice",    iconName: "Phone",          iconVariant: "info"       },
+  email:   { label: "Email",    iconName: "Mail",           iconVariant: "success"    },
+  sms:     { label: "SMS",      iconName: "MessageSquare",  iconVariant: "yellow"     },
+  webchat: { label: "Web Chat", iconName: "MessageCircle",  iconVariant: "light-blue" },
+}
+
 function ChannelsPanel({
   channels, onConfigure, numbers, onOpenNumber, onAddChannel,
 }: {
@@ -254,6 +267,45 @@ function ChannelsPanel({
   onOpenNumber?: (numberId: string) => void
   onAddChannel:  () => void
 }) {
+  // Each channel → one EntityListItemData row so icon, title, state
+  // tag, meta chips and Configure/Set up action all live in DS-typed
+  // fields instead of bespoke flex markup. Number chips come from
+  // channel.numberIds via a workspace-number lookup and render as
+  // secondary tags; row onClick jumps to the primary number's detail
+  // when the channel has one and onOpenNumber is wired.
+  const items: EntityListItemData[] = channels.map(ch => {
+    const meta = CHANNEL_META[ch.kind]
+    const isConfigured = ch.active
+    const numberRecords = (ch.numberIds ?? [])
+      .map(id => numbers.find(n => n.id === id))
+      .filter((n): n is NonNullable<typeof n> => !!n)
+    const primaryNumber = numberRecords[0]
+
+    return {
+      id:          ch.kind,
+      iconVariant: meta.iconVariant,
+      iconName:    meta.iconName,
+      title:       meta.label,
+      description: ch.summary,
+      state: isConfigured
+        ? { label: "Active",   variant: "success" }
+        : { label: "Inactive", variant: "neutral" },
+      tags: [
+        ...numberRecords.map(n => ({ label: n.number })),
+        ...ch.pills.map(p => ({ label: p })),
+      ],
+      actions: [{
+        label:   isConfigured ? "Configure" : "Set up",
+        variant: isConfigured ? "secondary" : "primary",
+        icon:    isConfigured ? "Settings"  : "Plus",
+        onClick: () => onConfigure(ch.kind),
+      }],
+      onClick: primaryNumber && onOpenNumber
+        ? () => onOpenNumber(primaryNumber.id)
+        : undefined,
+    }
+  })
+
   return (
     <div className="flex flex-row h-full" style={{ overflow: "hidden" }}>
 
@@ -274,17 +326,7 @@ function ChannelsPanel({
           <Button variant="secondary" size="sm" icon={<Plus size={12}/>} onClick={onAddChannel}>Add Channel</Button>
         </div>
 
-        <div className="flex flex-col gap-3">
-          {channels.map(ch => (
-            <ChannelCard
-              key={ch.kind}
-              channel={ch}
-              numbers={numbers}
-              onOpenNumber={onOpenNumber}
-              onConfigure={() => onConfigure(ch.kind)}
-            />
-          ))}
-        </div>
+        <EntityList items={items}/>
       </div>
 
       {/* Right — Test your Agent (shared component) */}
@@ -294,115 +336,6 @@ function ChannelsPanel({
       />
 
     </div>
-  )
-}
-
-// ─── Channel card ───────────────────────────────────────────────────
-
-const CHANNEL_META: Record<ChannelKind, {
-  label: string
-  icon:  React.ReactNode
-  tone:  "informative" | "success" | "alert" | "light-blue"
-}> = {
-  voice:   { label: "Voice",    icon: <Phone size={16}/>,          tone: "informative" },
-  email:   { label: "Email",    icon: <Mail size={16}/>,           tone: "success"     },
-  sms:     { label: "SMS",      icon: <MessageSquare size={16}/>,  tone: "alert"       },
-  webchat: { label: "Web Chat", icon: <MessageCircle size={16}/>,  tone: "light-blue"  },
-}
-
-function ChannelCard({
-  channel, numbers, onOpenNumber, onConfigure,
-}: {
-  channel:       AIChannel
-  numbers:       PhoneNumberRecord[]
-  onOpenNumber?: (numberId: string) => void
-  onConfigure:   () => void
-}) {
-  const meta = CHANNEL_META[channel.kind]
-  const isConfigured = channel.active
-
-  // Resolve numberIds → PhoneNumberRecord lookups. Number chips render
-  // clickable + primary-color when we have an onOpenNumber handler;
-  // fall back to a neutral pill if the id doesn't match any workspace
-  // number (defensive — shouldn't happen but keeps the row rendering).
-  const numberChips = (channel.numberIds ?? [])
-    .map(id => numbers.find(n => n.id === id))
-    .filter((n): n is NonNullable<typeof n> => !!n)
-
-  return (
-    <CardContainer
-      variant={isConfigured ? "purple" : "default"}
-      size="default"
-    >
-      <div className="flex items-start gap-3">
-        <HighlightIcon icon={<>{meta.icon}</>} variant={meta.tone} size="md" iconColor="dark"/>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="flex items-center gap-2">
-            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)" }}>
-              {meta.label}
-            </span>
-            <Tag variant={isConfigured ? "success" : "secondary"} size="sm">
-              {isConfigured ? "Active" : "Inactive"}
-            </Tag>
-          </div>
-          <div style={{ fontSize: 12, color: "var(--color-text-caption)", marginTop: 4, lineHeight: 1.4 }}>
-            {channel.summary}
-          </div>
-          {(numberChips.length > 0 || channel.pills.length > 0) && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {/* Number chips first (from numberIds, clickable). */}
-              {numberChips.map(n => {
-                const clickable = !!onOpenNumber
-                const pillStyle: React.CSSProperties = {
-                  padding: "2px 8px",
-                  fontSize: 11,
-                  color: clickable ? "var(--primary)" : "var(--color-text-caption)",
-                  background: "var(--color-surface-neutral-subtle)",
-                  border: `1px solid ${clickable ? "var(--primary)" : "var(--color-border-neutral-default)"}`,
-                  borderRadius: "var(--radius-sm)",
-                  cursor: clickable ? "pointer" : "default",
-                  fontFamily: "monospace",
-                }
-                return clickable ? (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => onOpenNumber!(n.id)}
-                    aria-label={`Open ${n.number} in Numbers`}
-                    style={{ ...pillStyle, textAlign: "left" }}
-                  >
-                    {n.number}
-                  </button>
-                ) : (
-                  <span key={n.id} style={pillStyle}>{n.number}</span>
-                )
-              })}
-              {/* Descriptive pills (voice model, recording, etc.). */}
-              {channel.pills.map(p => (
-                <span
-                  key={p}
-                  style={{
-                    padding: "2px 8px",
-                    fontSize: 11,
-                    color: "var(--color-text-caption)",
-                    background: "var(--color-surface-neutral-subtle)",
-                    border: "1px solid var(--color-border-neutral-default)",
-                    borderRadius: "var(--radius-sm)",
-                  }}
-                >
-                  {p}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <div style={{ flexShrink: 0 }}>
-          {isConfigured
-            ? <Button variant="secondary" size="sm" icon={<Settings size={12}/>} onClick={onConfigure}>Configure</Button>
-            : <Button variant="primary"   size="sm" icon={<Plus size={12}/>}     onClick={onConfigure}>Set up</Button>}
-        </div>
-      </div>
-    </CardContainer>
   )
 }
 
