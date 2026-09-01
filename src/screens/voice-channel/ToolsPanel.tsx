@@ -7,6 +7,7 @@ import { CardContainer } from "@/components/ui/card-container"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Tag } from "@/components/ui/tag"
 import type { VoiceAIAgent, AIChannel } from "./voice-agents-data"
+import type { PhoneNumberRecord } from "./data"
 
 // ─────────────────────────────────────────────────────────────────────
 // ToolsPanel — port of the Agent detail's "Tools" sub-tab from
@@ -29,11 +30,13 @@ import type { VoiceAIAgent, AIChannel } from "./voice-agents-data"
 
 interface ToolsPanelProps {
   agent:            VoiceAIAgent
+  numbers:          PhoneNumberRecord[]
+  onOpenNumber?:    (numberId: string) => void
   onConfigureVoice: () => void
   onAddTool:        () => void
 }
 
-export function ToolsPanel({ agent, onConfigureVoice, onAddTool }: ToolsPanelProps) {
+export function ToolsPanel({ agent, numbers, onOpenNumber, onConfigureVoice, onAddTool }: ToolsPanelProps) {
   const voiceChannel = agent.channels.find(c => c.kind === "voice")
 
   return (
@@ -57,7 +60,12 @@ export function ToolsPanel({ agent, onConfigureVoice, onAddTool }: ToolsPanelPro
         </div>
 
         <div className="flex flex-col gap-3">
-          <VoiceToolCard channel={voiceChannel ?? null} onConfigure={onConfigureVoice}/>
+          <VoiceToolCard
+            channel={voiceChannel ?? null}
+            numbers={numbers}
+            onOpenNumber={onOpenNumber}
+            onConfigure={onConfigureVoice}
+          />
           <ReadyToolCard
             icon={<Mail size={16}/>}
             tone="success"
@@ -88,15 +96,23 @@ export function ToolsPanel({ agent, onConfigureVoice, onAddTool }: ToolsPanelPro
 // ─── Voice tool card (configured — mirrors Voice channel state) ─────
 
 function VoiceToolCard({
-  channel, onConfigure,
-}: { channel: AIChannel | null; onConfigure: () => void }) {
+  channel, numbers, onOpenNumber, onConfigure,
+}: {
+  channel:       AIChannel | null
+  numbers:       PhoneNumberRecord[]
+  onOpenNumber?: (numberId: string) => void
+  onConfigure:   () => void
+}) {
   const isConfigured = !!channel?.active && !!channel?.voice
   const cfg = channel?.voice
 
-  // Primary phone number surfaced next to the "Voice" name — falls back
-  // to the first channel pill if the config's numberId can't be resolved
-  // to a display string.
-  const primaryNumber = channel?.pills.find(p => p.startsWith("+")) ?? "Not assigned"
+  // Primary phone number surfaced next to the "Voice" name. Prefer the
+  // config's numberId (source of truth) — falls back to the first channel
+  // pill so the card still renders when config is missing.
+  const primaryNumberRecord = cfg?.numberId ? numbers.find(n => n.id === cfg.numberId) : undefined
+  const primaryNumberText   = primaryNumberRecord?.number
+    ?? channel?.pills.find(p => p.startsWith("+"))
+    ?? "Not assigned"
 
   const capabilities: string[] = isConfigured && cfg
     ? [
@@ -121,12 +137,31 @@ function VoiceToolCard({
               Voice
             </span>
             {isConfigured ? (
-              <span
-                className="font-mono"
-                style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-caption)" }}
-              >
-                {primaryNumber}
-              </span>
+              primaryNumberRecord && onOpenNumber ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenNumber(primaryNumberRecord.id)}
+                  aria-label={`Open ${primaryNumberText} in Numbers`}
+                  className="font-mono"
+                  style={{
+                    background: "transparent", border: "none", padding: 0,
+                    fontSize: 12, fontWeight: 500,
+                    color: "var(--primary)",
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    textUnderlineOffset: 2,
+                  }}
+                >
+                  {primaryNumberText}
+                </button>
+              ) : (
+                <span
+                  className="font-mono"
+                  style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-caption)" }}
+                >
+                  {primaryNumberText}
+                </span>
+              )
             ) : (
               <Tag variant="secondary" size="sm">Inactive</Tag>
             )}

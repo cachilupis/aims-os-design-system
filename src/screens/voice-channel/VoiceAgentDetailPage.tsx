@@ -46,6 +46,8 @@ interface VoiceAgentDetailPageProps {
   onChange: (patch: VoiceAIAgent) => void
   numbers: PhoneNumberRecord[]
   onOpenAddNumber: () => void
+  /** Click-through from a number chip → Voice → Numbers → number detail. */
+  onOpenNumber?:   (numberId: string) => void
 }
 
 type AgentSubTab = "create" | "configuration" | "knowledge" | "instructions" | "tools" | "channels"
@@ -60,7 +62,7 @@ const SUB_TABS: TabItem[] = [
 ]
 
 export function VoiceAgentDetailPage({
-  agent, onBack, onChange, numbers, onOpenAddNumber,
+  agent, onBack, onChange, numbers, onOpenAddNumber, onOpenNumber,
 }: VoiceAgentDetailPageProps) {
   const toast = useToast()
   const [subTab,    setSubTab]    = useState<AgentSubTab>("channels")
@@ -147,6 +149,8 @@ export function VoiceAgentDetailPage({
         {subTab === "channels" ? (
           <ChannelsPanel
             channels={agent.channels}
+            numbers={numbers}
+            onOpenNumber={onOpenNumber}
             onConfigure={(kind) => {
               if (kind === "voice") setVoiceOpen(true)
               else if (kind === "sms")   setSmsOpen(true)
@@ -167,6 +171,8 @@ export function VoiceAgentDetailPage({
         ) : subTab === "tools" ? (
           <ToolsPanel
             agent={agent}
+            numbers={numbers}
+            onOpenNumber={onOpenNumber}
             onConfigureVoice={() => setVoiceOpen(true)}
             onAddTool={() => toast.info("Open tool catalog — coming soon")}
           />
@@ -221,10 +227,12 @@ export function VoiceAgentDetailPage({
 // ─── Channels panel ─────────────────────────────────────────────────
 
 function ChannelsPanel({
-  channels, onConfigure,
+  channels, onConfigure, numbers, onOpenNumber,
 }: {
-  channels:    AIChannel[]
-  onConfigure: (kind: ChannelKind) => void
+  channels:      AIChannel[]
+  onConfigure:   (kind: ChannelKind) => void
+  numbers:       PhoneNumberRecord[]
+  onOpenNumber?: (numberId: string) => void
 }) {
   return (
     <div className="flex flex-row h-full" style={{ overflow: "hidden" }}>
@@ -251,6 +259,8 @@ function ChannelsPanel({
             <ChannelCard
               key={ch.kind}
               channel={ch}
+              numbers={numbers}
+              onOpenNumber={onOpenNumber}
               onConfigure={() => onConfigure(ch.kind)}
             />
           ))}
@@ -340,9 +350,24 @@ const CHANNEL_META: Record<ChannelKind, {
   webchat: { label: "Web Chat", icon: <MessageCircle size={16}/>,  tone: "light-blue"  },
 }
 
-function ChannelCard({ channel, onConfigure }: { channel: AIChannel; onConfigure: () => void }) {
+function ChannelCard({
+  channel, numbers, onOpenNumber, onConfigure,
+}: {
+  channel:       AIChannel
+  numbers:       PhoneNumberRecord[]
+  onOpenNumber?: (numberId: string) => void
+  onConfigure:   () => void
+}) {
   const meta = CHANNEL_META[channel.kind]
   const isConfigured = channel.active
+
+  // Resolve pill text to a Number id when the pill matches a workspace
+  // number — that's the click-through target for Fix #10 of the
+  // design critique. Pills that don't match a number stay non-clickable.
+  const resolveNumberId = (pill: string): string | null => {
+    if (!pill.startsWith("+")) return null
+    return numbers.find(n => n.number === pill)?.id ?? null
+  }
 
   return (
     <CardContainer
@@ -365,21 +390,33 @@ function ChannelCard({ channel, onConfigure }: { channel: AIChannel; onConfigure
           </div>
           {channel.pills.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {channel.pills.map(p => (
-                <span
-                  key={p}
-                  style={{
-                    padding: "2px 8px",
-                    fontSize: 11,
-                    color: "var(--color-text-caption)",
-                    background: "var(--color-surface-neutral-subtle)",
-                    border: "1px solid var(--color-border-neutral-default)",
-                    borderRadius: "var(--radius-sm)",
-                  }}
-                >
-                  {p}
-                </span>
-              ))}
+              {channel.pills.map(p => {
+                const numberId = resolveNumberId(p)
+                const clickable = !!numberId && !!onOpenNumber
+                const pillStyle: React.CSSProperties = {
+                  padding: "2px 8px",
+                  fontSize: 11,
+                  color: clickable ? "var(--primary)" : "var(--color-text-caption)",
+                  background: "var(--color-surface-neutral-subtle)",
+                  border: `1px solid ${clickable ? "var(--primary)" : "var(--color-border-neutral-default)"}`,
+                  borderRadius: "var(--radius-sm)",
+                  cursor: clickable ? "pointer" : "default",
+                  fontFamily: p.startsWith("+") ? "monospace" : "inherit",
+                }
+                return clickable ? (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => onOpenNumber!(numberId)}
+                    aria-label={`Open ${p} in Numbers`}
+                    style={{ ...pillStyle, textAlign: "left" }}
+                  >
+                    {p}
+                  </button>
+                ) : (
+                  <span key={p} style={pillStyle}>{p}</span>
+                )
+              })}
             </div>
           )}
         </div>

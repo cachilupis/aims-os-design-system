@@ -77,38 +77,53 @@ export function NumberDetailPage({ number, onBack, onChange, onRelease, onAddAge
     if (agent) toast.success(`${agent.name} removed`)
   }
 
+  // Dirty state — "Save Configuration" only shows when there are
+  // unsaved changes vs the parent's number prop. Deep-ish equality is
+  // fine here because PhoneNumberRecord is flat plus a small agents[].
+  const dirty =
+    draft.label !== number.label ||
+    draft.dist  !== number.dist  ||
+    draft.hil   !== number.hil   ||
+    draft.status !== number.status ||
+    JSON.stringify(draft.agents) !== JSON.stringify(number.agents)
+
   const save = () => toast.success("✓ Configuration saved")
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Page header: back nav + identity + primary actions */}
-      <div className="flex items-center gap-2">
-        <Button variant="tertiary" size="sm" icon={<ArrowLeft size={13}/>} iconPosition="left" onClick={onBack}>
-          Back to Numbers
-        </Button>
-      </div>
-
-      <CardContainer variant="default" size="default">
-        <div className="flex items-start gap-4">
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="font-mono" style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-title)" }}>
-                {draft.number}
-              </h2>
-              <NumberStatusTag status={draft.status}/>
-              {draft.type !== "Toll-Free" && <Tag variant="purple" size="sm">10DLC: Approved</Tag>}
-              {draft.hil && <HilBadge hil={true}/>}
-            </div>
-            <p style={{ fontSize: 13, color: "var(--color-text-caption)", marginTop: 4 }}>
-              {draft.label || "No label"} · {draft.type} · Distribution: {draft.dist}
-            </p>
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button variant="secondary" size="default" onClick={onRelease}>Release Number</Button>
-            <Button variant="primary"   size="default" onClick={save}>Save Configuration</Button>
-          </div>
+      {/* Back-arrow + status tags + primary actions. The phone number
+          itself lives in the ScreenLayout Header above this row (via
+          voice-channel.tsx), so we don't repeat it here — only its
+          state chips (Active / 10DLC / HiL) and the actions. Matches
+          the AgentDetailPage header pattern. */}
+      <div className="flex items-center gap-3" style={{ borderBottom: "1px solid var(--color-border-neutral-default)", paddingBottom: 12 }}>
+        <button
+          onClick={onBack}
+          aria-label="Back to Numbers"
+          style={{
+            width: 28, height: 28, borderRadius: "var(--radius-md)",
+            background: "transparent", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "var(--color-text-caption)",
+          }}
+        >
+          <ArrowLeft size={18}/>
+        </button>
+        <div className="flex items-center gap-2 flex-wrap" style={{ flex: 1, minWidth: 0 }}>
+          <NumberStatusTag status={draft.status}/>
+          {draft.type !== "Toll-Free" && <Tag variant="purple" size="sm">10DLC: Approved</Tag>}
+          {draft.hil && <HilBadge hil={true}/>}
+          <span style={{ fontSize: 12, color: "var(--color-text-caption)", marginLeft: 4 }}>
+            Distribution: {draft.dist}
+          </span>
         </div>
-      </CardContainer>
+        <div className="flex gap-2 flex-shrink-0 ml-auto">
+          <Button variant="secondary" size="default" onClick={onRelease}>Release Number</Button>
+          {dirty && (
+            <Button variant="primary" size="default" onClick={save}>Save Configuration</Button>
+          )}
+        </div>
+      </div>
 
       {/* Stats strip */}
       <div className="grid grid-cols-3 gap-3">

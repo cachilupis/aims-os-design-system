@@ -259,7 +259,7 @@ function VoiceChannelScreenInner() {
               screen === "agents" && agentDetailAgent ? `AI voice agent · ${agentDetailAgent.status}` :
               screen === "agents"                     ? "AI voice agents that answer, route and act across channels." :
               detailNumber                            ? `${detailNumber.label || "No label"} · ${detailNumber.type} · Full configuration` :
-                                                        "Phone numbers, call history, and workspace defaults for the Voice channel."
+                                                        "Phone numbers, activity, security policies and defaults for the Voice channel."
             }
           />
         )}
@@ -277,6 +277,14 @@ function VoiceChannelScreenInner() {
               onChange={(patch) => setVoiceAgents(prev => prev.map(a => a.id === patch.id ? patch : a))}
               numbers={numbers}
               onOpenAddNumber={() => setAcquireOpen(true)}
+              onOpenNumber={(numberId) => {
+                // Click-through from an AI agent's channel/tool number
+                // chip → Voice section → that Number's detail page.
+                setScreen("voice")
+                setAgentDetailId(null)
+                setDetailId(numberId)
+                setTab("numbers")
+              }}
             />
           ) : screen === "agents" ? (
             <VoiceAgentsTab
