@@ -10,8 +10,13 @@ import { CardContainer } from "@/components/ui/card-container"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { EmptyState } from "@/components/ui/empty-state"
 import type { PhoneNumberRecord } from "./data"
-import type { VoiceAIAgent, AIChannel, ChannelKind, VoiceConfig } from "./voice-agents-data"
+import type {
+  VoiceAIAgent, AIChannel, ChannelKind, VoiceConfig, SmsConfig, EmailConfig,
+} from "./voice-agents-data"
+import { DEFAULT_SMS_CONFIG, DEFAULT_EMAIL_CONFIG } from "./voice-agents-data"
 import { ConfigureVoiceSlideOut } from "./ConfigureVoiceSlideOut"
+import { ConfigureSmsSlideOut }   from "./ConfigureSmsSlideOut"
+import { ConfigureEmailSlideOut } from "./ConfigureEmailSlideOut"
 import { KnowledgePanel } from "./KnowledgePanel"
 import { ToolsPanel } from "./ToolsPanel"
 import { useToast } from "./toast"
@@ -57,14 +62,34 @@ export function VoiceAgentDetailPage({
   const toast = useToast()
   const [subTab,    setSubTab]    = useState<AgentSubTab>("channels")
   const [voiceOpen, setVoiceOpen] = useState(false)
+  const [smsOpen,   setSmsOpen]   = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
 
   const voiceChannel = agent.channels.find(c => c.kind === "voice")
+  const smsChannel   = agent.channels.find(c => c.kind === "sms")
+  const emailChannel = agent.channels.find(c => c.kind === "email")
 
   const handleSaveVoice = (next: VoiceConfig) => {
     onChange({
       ...agent,
       channels: agent.channels.map(c =>
         c.kind === "voice" ? { ...c, voice: next, active: true } : c
+      ),
+    })
+  }
+  const handleSaveSms = (next: SmsConfig) => {
+    onChange({
+      ...agent,
+      channels: agent.channels.map(c =>
+        c.kind === "sms" ? { ...c, sms: next, active: true } : c
+      ),
+    })
+  }
+  const handleSaveEmail = (next: EmailConfig) => {
+    onChange({
+      ...agent,
+      channels: agent.channels.map(c =>
+        c.kind === "email" ? { ...c, email: next, active: true } : c
       ),
     })
   }
@@ -119,14 +144,11 @@ export function VoiceAgentDetailPage({
         {subTab === "channels" ? (
           <ChannelsPanel
             channels={agent.channels}
-            onConfigureVoice={() => setVoiceOpen(true)}
-            onSetup={(kind) => {
-              // For inactive channels, activate first — the actual config
-              // slide-out is stubbed in this iteration for non-voice kinds.
-              onChange({
-                ...agent,
-                channels: agent.channels.map(c => c.kind === kind ? { ...c, active: true } : c),
-              })
+            onConfigure={(kind) => {
+              if (kind === "voice") setVoiceOpen(true)
+              else if (kind === "sms")   setSmsOpen(true)
+              else if (kind === "email") setEmailOpen(true)
+              else toast.info("Set up Web Chat — coming soon")
             }}
           />
         ) : subTab === "knowledge" ? (
@@ -162,6 +184,27 @@ export function VoiceAgentDetailPage({
           onAddNumber={onOpenAddNumber}
         />
       )}
+
+      {/* ── Configure SMS slide-out ──────────────────────────────── */}
+      <ConfigureSmsSlideOut
+        open={smsOpen}
+        onClose={() => setSmsOpen(false)}
+        agentName={`${agent.name} — ${agent.purpose}`}
+        numbers={numbers}
+        config={smsChannel?.sms ?? DEFAULT_SMS_CONFIG}
+        onSave={handleSaveSms}
+        onAddNumber={onOpenAddNumber}
+      />
+
+      {/* ── Configure Email slide-out ────────────────────────────── */}
+      <ConfigureEmailSlideOut
+        open={emailOpen}
+        onClose={() => setEmailOpen(false)}
+        agentName={`${agent.name} — ${agent.purpose}`}
+        config={emailChannel?.email ?? DEFAULT_EMAIL_CONFIG}
+        onSave={handleSaveEmail}
+        onAddAddress={() => toast.info("Add email address — coming soon")}
+      />
     </div>
   )
 }
@@ -169,11 +212,10 @@ export function VoiceAgentDetailPage({
 // ─── Channels panel ─────────────────────────────────────────────────
 
 function ChannelsPanel({
-  channels, onConfigureVoice, onSetup,
+  channels, onConfigure,
 }: {
-  channels: AIChannel[]
-  onConfigureVoice: () => void
-  onSetup: (kind: ChannelKind) => void
+  channels:    AIChannel[]
+  onConfigure: (kind: ChannelKind) => void
 }) {
   return (
     <div className="flex flex-row h-full" style={{ overflow: "hidden" }}>
@@ -200,7 +242,7 @@ function ChannelsPanel({
             <ChannelCard
               key={ch.kind}
               channel={ch}
-              onConfigure={ch.kind === "voice" ? onConfigureVoice : () => onSetup(ch.kind)}
+              onConfigure={() => onConfigure(ch.kind)}
             />
           ))}
         </div>

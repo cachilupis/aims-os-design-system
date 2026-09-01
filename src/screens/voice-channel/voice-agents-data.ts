@@ -49,14 +49,72 @@ export interface VoiceConfig {
   outbound:              VoiceOutboundConfig
 }
 
+// ── SMS channel config ─────────────────────────────────────────────────
+
+export interface SmsInboundConfig {
+  enabled:            boolean
+  autoReply:          string
+  businessHoursOnly:  boolean
+}
+
+export interface SmsOutboundConfig {
+  enabled:      boolean
+  sendingHours: string
+  dncEnforce:   boolean
+  maxRetries:   number
+}
+
+export interface SmsConfig {
+  numberId:          string
+  configurationName: string
+  numberLabel:       string
+  tcpaOptOut:        boolean
+  messageLogging:    boolean
+  inbound:           SmsInboundConfig
+  outbound:          SmsOutboundConfig
+}
+
+// ── Email channel config ───────────────────────────────────────────────
+
+export interface EmailInboundConfig {
+  enabled:            boolean
+  autoReply:          string
+  businessHoursOnly:  boolean
+  spamFilter:         boolean
+}
+
+export interface EmailOutboundConfig {
+  enabled:      boolean
+  sendingHours: string
+  replyTo:      string
+  templates:    boolean
+}
+
+export interface EmailAddress {
+  id:     string     // "service"
+  email:  string     // "service@aimsos.ai"
+  label:  string     // "Service Desk"
+}
+
+export interface EmailConfig {
+  addressId:         string
+  configurationName: string
+  addressLabel:      string
+  displayName:       string
+  emailLogging:      boolean
+  unsubscribeEnforce: boolean
+  inbound:           EmailInboundConfig
+  outbound:          EmailOutboundConfig
+}
+
 export interface AIChannel {
   kind:    ChannelKind
   active:  boolean
   summary: string             // "Service Desk · 2 numbers assigned · Inbound + Outbound"
   pills:   string[]           // ["+1 (305) 892-4710", "Rachel (ElevenLabs)", "Recording on"]
   voice?:  VoiceConfig        // present when kind === "voice"
-  // sms/email configs live in the source prototype but are out-of-scope
-  // for this iteration — the Configure SMS/Email slide-outs stay stubs.
+  sms?:    SmsConfig          // present when kind === "sms"
+  email?:  EmailConfig        // present when kind === "email"
 }
 
 // ── AI Voice Agent ─────────────────────────────────────────────────────
@@ -80,6 +138,46 @@ export interface VoiceAIAgent {
 // Numbers referenced by the voice channel come from data.ts (n1..n4).
 // We reuse them here so number-select dropdowns in ConfigureVoiceSlideOut
 // show real numbers that already exist elsewhere in the prototype.
+
+export const DEFAULT_SMS_CONFIG: SmsConfig = {
+  numberId:          "n1",
+  configurationName: "Service Desk SMS",
+  numberLabel:       "Service Desk SMS",
+  tcpaOptOut:        true,
+  messageLogging:    true,
+  inbound: {
+    enabled:            true,
+    autoReply:          "Thanks for reaching out! I'm Sammy. How can I help you today?",
+    businessHoursOnly:  false,
+  },
+  outbound: {
+    enabled:      true,
+    sendingHours: "8am–9pm local (TCPA default)",
+    dncEnforce:   true,
+    maxRetries:   3,
+  },
+}
+
+export const DEFAULT_EMAIL_CONFIG: EmailConfig = {
+  addressId:          "service",
+  configurationName:  "Service Desk Email",
+  addressLabel:       "Service Desk",
+  displayName:        "AIMS Service Desk",
+  emailLogging:       true,
+  unsubscribeEnforce: true,
+  inbound: {
+    enabled:            true,
+    autoReply:          "Thank you for your email. I'm Sammy. I'll review your message and get back to you shortly.",
+    businessHoursOnly:  false,
+    spamFilter:         true,
+  },
+  outbound: {
+    enabled:      true,
+    sendingHours: "Any time",
+    replyTo:      "",
+    templates:    true,
+  },
+}
 
 const DEFAULT_VOICE_CONFIG: VoiceConfig = {
   numberId:              "n1",
@@ -131,12 +229,14 @@ export const VOICE_AI_AGENTS: VoiceAIAgent[] = [
         active:  true,
         summary: "service@aimsos.ai · Inbound + Outbound",
         pills:   ["Inbound", "Outbound", "Templates on"],
+        email:   DEFAULT_EMAIL_CONFIG,
       },
       {
         kind:    "sms",
         active:  false,
         summary: "Assign a phone number with SMS capability to enable this channel.",
         pills:   [],
+        sms:     DEFAULT_SMS_CONFIG,
       },
       {
         kind:    "webchat",
@@ -203,6 +303,19 @@ export const CALLING_HOURS_OPTIONS = [
   "8am–9pm local (TCPA default)",
   "Business hours (9am–6pm)",
   "Custom",
+]
+
+// Email sending hours has a distinct "Any time" default option per source.
+export const EMAIL_SENDING_HOURS_OPTIONS = [
+  "Any time",
+  "Business hours (9am–6pm)",
+  "Custom",
+]
+
+// Available email addresses surfaced in the Configure Email address picker.
+export const AVAILABLE_EMAIL_ADDRESSES: EmailAddress[] = [
+  { id: "service", email: "service@aimsos.ai", label: "Service Desk"    },
+  { id: "support", email: "support@aimsos.ai", label: "Support alias"   },
 ]
 
 // Max retry cap surfaced in the "attempts · max 5" hint on the slide-out.
