@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Phone, PhoneCall, Settings as SettingsIcon, Plus, Search } from "lucide-react"
+import { Phone, PhoneCall, Settings as SettingsIcon, Plus, Search, Shield } from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Tabs } from "@/components/ui/tabs"
@@ -30,6 +30,7 @@ import { ReleaseNumberModal } from "./voice-channel/ReleaseNumberModal"
 import { AddAgentModal } from "./voice-channel/AddAgentModal"
 import { CallHistoryTab } from "./voice-channel/CallHistoryTab"
 import { SettingsTab } from "./voice-channel/SettingsTab"
+import { SecurityTab } from "./voice-channel/SecurityTab"
 import { VoiceAgentsTab } from "./voice-channel/VoiceAgentsTab"
 import { VoiceAgentDetailPage } from "./voice-channel/VoiceAgentDetailPage"
 import { VOICE_AI_AGENTS, type VoiceAIAgent } from "./voice-channel/voice-agents-data"
@@ -95,7 +96,7 @@ function renderSidebarFooter(collapsed: boolean) {
 // Voice slide-out and Agent detail page continue to live inside the
 // Agents section.
 type Screen       = "voice" | "agents"
-type TopTab       = "numbers" | "history" | "settings"
+type TopTab       = "numbers" | "history" | "security" | "settings"
 type NumberFilter = "all" | "active" | "suspended"
 
 // ─────────────────────────────────────────────────────────────────────
@@ -298,6 +299,7 @@ function VoiceChannelScreenInner() {
             items={[
               { id: "numbers",  label: `Numbers (${numbers.length})`,    icon: Phone         },
               { id: "history",  label: `Call History (${calls.length})`, icon: PhoneCall     },
+              { id: "security", label: "Security",                        icon: Shield       },
               { id: "settings", label: "Settings",                        icon: SettingsIcon },
             ]}
             activeId={tab}
@@ -371,6 +373,7 @@ function VoiceChannelScreenInner() {
           )}
 
           {tab === "history"  && <CallHistoryTab calls={calls} numbers={numbers}/>}
+          {tab === "security" && <SecurityTab/>}
           {tab === "settings" && <SettingsTab/>}
           </>)}
         </div>
