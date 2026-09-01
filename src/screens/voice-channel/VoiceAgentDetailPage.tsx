@@ -221,8 +221,8 @@ function ChannelsPanel({
           <div
             style={{
               padding: 8,
-              background: "var(--color-surface-neutral-white)",
-              border: "1px solid var(--color-border-neutral-default)",
+              background: "var(--field-bg)",
+              border: "1px solid var(--field-border)",
               borderRadius: "var(--radius-md)",
             }}
           >
