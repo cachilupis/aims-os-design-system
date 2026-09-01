@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Phone, PhoneCall, Settings as SettingsIcon, Plus, Search } from "lucide-react"
+import { Phone, PhoneCall, Settings as SettingsIcon, Plus, Search, Bot } from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Tabs } from "@/components/ui/tabs"
@@ -30,6 +30,9 @@ import { ReleaseNumberModal } from "./voice-channel/ReleaseNumberModal"
 import { AddAgentModal } from "./voice-channel/AddAgentModal"
 import { CallHistoryTab } from "./voice-channel/CallHistoryTab"
 import { SettingsTab } from "./voice-channel/SettingsTab"
+import { VoiceAgentsTab } from "./voice-channel/VoiceAgentsTab"
+import { VoiceAgentDetailPage } from "./voice-channel/VoiceAgentDetailPage"
+import { VOICE_AI_AGENTS, type VoiceAIAgent } from "./voice-channel/voice-agents-data"
 import { ToastProvider, useToast } from "./voice-channel/toast"
 
 // Restored to the source prototype's three sections (Workspace · Channels ·
@@ -79,7 +82,7 @@ function renderSidebarFooter(collapsed: boolean) {
   )
 }
 
-type TopTab       = "numbers" | "history" | "settings"
+type TopTab       = "numbers" | "history" | "agents" | "settings"
 type NumberFilter = "all" | "active" | "suspended"
 
 // ─────────────────────────────────────────────────────────────────────
@@ -100,6 +103,8 @@ function VoiceChannelScreenInner() {
   const [tab,           setTab]           = useState<TopTab>("numbers")
   const [numbers,       setNumbers]       = useState<PhoneNumberRecord[]>(NUMBERS_SEED)
   const [calls]                            = useState<Call[]>(CALLS_SEED)
+  const [voiceAgents,   setVoiceAgents]   = useState<VoiceAIAgent[]>(VOICE_AI_AGENTS)
+  const [agentDetailId, setAgentDetailId] = useState<string | null>(null)
 
   // Modals + sheet + full-view state
   const [previewId,     setPreviewId]     = useState<string | null>(null)  // Right-side lightweight slide-out
@@ -114,10 +119,11 @@ function VoiceChannelScreenInner() {
 
   // The number that's currently "focused" — for release/add-agent modals we
   // prefer the full-view target when it exists, else the preview target.
-  const focusedId     = detailId ?? previewId
-  const focusedNumber = numbers.find(n => n.id === focusedId) ?? null
-  const previewNumber = numbers.find(n => n.id === previewId) ?? null
-  const detailNumber  = numbers.find(n => n.id === detailId)  ?? null
+  const focusedId       = detailId ?? previewId
+  const focusedNumber   = numbers.find(n => n.id === focusedId) ?? null
+  const previewNumber   = numbers.find(n => n.id === previewId) ?? null
+  const detailNumber    = numbers.find(n => n.id === detailId)  ?? null
+  const agentDetailAgent = voiceAgents.find(a => a.id === agentDetailId) ?? null
 
   const filteredNumbers = useMemo(() => {
     return numbers.filter(n => {
@@ -220,17 +226,32 @@ function VoiceChannelScreenInner() {
         header={(isScrolled) => (
           <Header
             size={isScrolled ? "compress" : "size-l"}
-            title={detailNumber ? detailNumber.number : "Voice Channel"}
-            description={detailNumber
-              ? `${detailNumber.label || "No label"} · ${detailNumber.type} · Full configuration`
-              : "Phone numbers, call history, and workspace defaults for the Voice channel."}
+            title={
+              agentDetailAgent    ? `${agentDetailAgent.name} — ${agentDetailAgent.purpose}` :
+              detailNumber        ? detailNumber.number :
+                                    "Voice Channel"
+            }
+            description={
+              agentDetailAgent    ? `AI voice agent · ${agentDetailAgent.status}` :
+              detailNumber        ? `${detailNumber.label || "No label"} · ${detailNumber.type} · Full configuration` :
+                                    "Phone numbers, call history, and workspace defaults for the Voice channel."
+            }
           />
         )}
       >
-        <div className="flex flex-col gap-4">
-          {/* When a number is opened in the full-page view, the top-level Tabs
-              and all list content are hidden — the detail page owns the screen. */}
-          {detailNumber ? (
+        <div className="flex flex-col gap-4" style={{ minHeight: agentDetailAgent ? "70vh" : undefined }}>
+          {/* When a number OR an agent is opened in the full-page view,
+              the top-level Tabs and all list content are hidden — the
+              detail page owns the screen. */}
+          {agentDetailAgent ? (
+            <VoiceAgentDetailPage
+              agent={agentDetailAgent}
+              onBack={() => setAgentDetailId(null)}
+              onChange={(patch) => setVoiceAgents(prev => prev.map(a => a.id === patch.id ? patch : a))}
+              numbers={numbers}
+              onOpenAddNumber={() => setAcquireOpen(true)}
+            />
+          ) : detailNumber ? (
             <NumberDetailPage
               number={detailNumber}
               onBack={() => setDetailId(null)}
@@ -245,6 +266,7 @@ function VoiceChannelScreenInner() {
             items={[
               { id: "numbers",  label: `Numbers (${numbers.length})`,      icon: Phone         },
               { id: "history",  label: `Call History (${calls.length})`,   icon: PhoneCall     },
+              { id: "agents",   label: `Agents (${voiceAgents.length})`,   icon: Bot           },
               { id: "settings", label: "Settings",                          icon: SettingsIcon },
             ]}
             activeId={tab}
@@ -318,6 +340,12 @@ function VoiceChannelScreenInner() {
           )}
 
           {tab === "history"  && <CallHistoryTab calls={calls} numbers={numbers}/>}
+          {tab === "agents"   && (
+            <VoiceAgentsTab
+              agents={voiceAgents}
+              onOpenAgent={(id) => setAgentDetailId(id)}
+            />
+          )}
           {tab === "settings" && <SettingsTab/>}
           </>)}
         </div>
