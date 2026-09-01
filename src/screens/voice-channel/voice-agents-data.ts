@@ -111,7 +111,13 @@ export interface AIChannel {
   kind:    ChannelKind
   active:  boolean
   summary: string             // "Service Desk · 2 numbers assigned · Inbound + Outbound"
-  pills:   string[]           // ["+1 (305) 892-4710", "Rachel (ElevenLabs)", "Recording on"]
+  // Non-number chips only — number chips are derived from numberIds so
+  // Add Phone Number and Configure both edit ONE source of truth.
+  pills:   string[]           // e.g. ["Rachel (ElevenLabs)", "Recording on"]
+  // Numbers currently assigned to this channel. The Configure Voice
+  // slide-out's top dropdown reads from this; Add Phone Number appends
+  // to it; Detach removes from it.
+  numberIds?: string[]
   voice?:  VoiceConfig        // present when kind === "voice"
   sms?:    SmsConfig          // present when kind === "sms"
   email?:  EmailConfig        // present when kind === "email"
@@ -284,10 +290,12 @@ export const VOICE_AI_AGENTS: VoiceAIAgent[] = [
         kind:    "voice",
         active:  true,
         summary: "Service Desk · 2 numbers assigned · Inbound + Outbound",
-        // Numbers below come from data.ts so the Sammy pills match what
-        // shows up in the Voice → Numbers list.
-        pills:   ["+1 (402) 555-0171", "+1 (415) 555-0138", "Rachel (ElevenLabs)", "Recording on"],
-        voice:   DEFAULT_VOICE_CONFIG,
+        // Numbers are stored as ids so they cross-reference data.ts;
+        // the rest of the row (voice model + recording flag) still
+        // renders as free-form pills.
+        numberIds: ["n1", "n3"],
+        pills:     ["Rachel (ElevenLabs)", "Recording on"],
+        voice:     DEFAULT_VOICE_CONFIG,
       },
       {
         kind:    "email",
@@ -353,9 +361,9 @@ export const VOICE_AI_AGENTS: VoiceAIAgent[] = [
         kind:    "voice",
         active:  true,
         summary: "Sales BDC · 1 number assigned · Inbound",
-        // Number matches n2 in data.ts.
-        pills:   ["+1 (800) 555-0192", "Aria (ElevenLabs)", "Recording on"],
-        voice:   { ...DEFAULT_VOICE_CONFIG, numberId: "n2", configurationName: "Sales BDC Voice", numberLabel: "Sales BDC Line", voiceName: "Aria" },
+        numberIds: ["n2"],
+        pills:     ["Aria (ElevenLabs)", "Recording on"],
+        voice:     { ...DEFAULT_VOICE_CONFIG, numberId: "n2", configurationName: "Sales BDC Voice", numberLabel: "Sales BDC Line", voiceName: "Aria" },
       },
       { kind: "email",   active: false, summary: "No email address connected.",  pills: [] },
       { kind: "sms",     active: false, summary: "No number with SMS capability.", pills: [] },
@@ -399,7 +407,7 @@ export const VOICE_AI_AGENTS: VoiceAIAgent[] = [
     channels: [
       // Numbers below reference n1/n3/n4 in data.ts — everything the
       // workspace actually has.
-      { kind: "voice",   active: false, summary: "3 numbers assigned but channel paused.", pills: ["+1 (402) 555-0171", "+1 (415) 555-0138", "+1 (312) 555-0204"] },
+      { kind: "voice",   active: false, summary: "3 numbers assigned but channel paused.", numberIds: ["n1","n3","n4"], pills: [] },
       { kind: "email",   active: false, summary: "No email address connected.",             pills: [] },
       { kind: "sms",     active: false, summary: "No number with SMS capability.",          pills: [] },
       { kind: "webchat", active: false, summary: "Not connected.",                          pills: [] },

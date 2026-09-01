@@ -196,9 +196,15 @@ export function VoiceAgentDetailPage({
           onClose={() => setVoiceOpen(false)}
           agentName={`${agent.name} — ${agent.purpose}`}
           numbers={numbers}
+          numberIds={voiceChannel.numberIds ?? []}
           config={voiceChannel.voice}
           onSave={handleSaveVoice}
-          onAddNumber={onOpenAddNumber}
+          onAddNumbers={(ids) => onChange({
+            ...agent,
+            channels: agent.channels.map(c => c.kind === "voice"
+              ? { ...c, numberIds: Array.from(new Set([...(c.numberIds ?? []), ...ids])) }
+              : c),
+          })}
         />
       )}
 
@@ -304,13 +310,13 @@ function ChannelCard({
   const meta = CHANNEL_META[channel.kind]
   const isConfigured = channel.active
 
-  // Resolve pill text to a Number id when the pill matches a workspace
-  // number — that's the click-through target for Fix #10 of the
-  // design critique. Pills that don't match a number stay non-clickable.
-  const resolveNumberId = (pill: string): string | null => {
-    if (!pill.startsWith("+")) return null
-    return numbers.find(n => n.number === pill)?.id ?? null
-  }
+  // Resolve numberIds → PhoneNumberRecord lookups. Number chips render
+  // clickable + primary-color when we have an onOpenNumber handler;
+  // fall back to a neutral pill if the id doesn't match any workspace
+  // number (defensive — shouldn't happen but keeps the row rendering).
+  const numberChips = (channel.numberIds ?? [])
+    .map(id => numbers.find(n => n.id === id))
+    .filter((n): n is NonNullable<typeof n> => !!n)
 
   return (
     <CardContainer
@@ -331,11 +337,11 @@ function ChannelCard({
           <div style={{ fontSize: 12, color: "var(--color-text-caption)", marginTop: 4, lineHeight: 1.4 }}>
             {channel.summary}
           </div>
-          {channel.pills.length > 0 && (
+          {(numberChips.length > 0 || channel.pills.length > 0) && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {channel.pills.map(p => {
-                const numberId = resolveNumberId(p)
-                const clickable = !!numberId && !!onOpenNumber
+              {/* Number chips first (from numberIds, clickable). */}
+              {numberChips.map(n => {
+                const clickable = !!onOpenNumber
                 const pillStyle: React.CSSProperties = {
                   padding: "2px 8px",
                   fontSize: 11,
@@ -344,22 +350,38 @@ function ChannelCard({
                   border: `1px solid ${clickable ? "var(--primary)" : "var(--color-border-neutral-default)"}`,
                   borderRadius: "var(--radius-sm)",
                   cursor: clickable ? "pointer" : "default",
-                  fontFamily: p.startsWith("+") ? "monospace" : "inherit",
+                  fontFamily: "monospace",
                 }
                 return clickable ? (
                   <button
-                    key={p}
+                    key={n.id}
                     type="button"
-                    onClick={() => onOpenNumber!(numberId)}
-                    aria-label={`Open ${p} in Numbers`}
+                    onClick={() => onOpenNumber!(n.id)}
+                    aria-label={`Open ${n.number} in Numbers`}
                     style={{ ...pillStyle, textAlign: "left" }}
                   >
-                    {p}
+                    {n.number}
                   </button>
                 ) : (
-                  <span key={p} style={pillStyle}>{p}</span>
+                  <span key={n.id} style={pillStyle}>{n.number}</span>
                 )
               })}
+              {/* Descriptive pills (voice model, recording, etc.). */}
+              {channel.pills.map(p => (
+                <span
+                  key={p}
+                  style={{
+                    padding: "2px 8px",
+                    fontSize: 11,
+                    color: "var(--color-text-caption)",
+                    background: "var(--color-surface-neutral-subtle)",
+                    border: "1px solid var(--color-border-neutral-default)",
+                    borderRadius: "var(--radius-sm)",
+                  }}
+                >
+                  {p}
+                </span>
+              ))}
             </div>
           )}
         </div>

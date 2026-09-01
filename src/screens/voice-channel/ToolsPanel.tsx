@@ -110,12 +110,12 @@ function VoiceToolCard({
   const cfg = channel?.voice
 
   // Primary phone number surfaced next to the "Voice" name. Prefer the
-  // config's numberId (source of truth) — falls back to the first channel
-  // pill so the card still renders when config is missing.
-  const primaryNumberRecord = cfg?.numberId ? numbers.find(n => n.id === cfg.numberId) : undefined
-  const primaryNumberText   = primaryNumberRecord?.number
-    ?? channel?.pills.find(p => p.startsWith("+"))
-    ?? "Not assigned"
+  // config's numberId (source of truth) — falls back to the first
+  // assigned numberId, then to "Not assigned" if the channel is empty.
+  const primaryNumberRecord =
+    (cfg?.numberId ? numbers.find(n => n.id === cfg.numberId) : undefined)
+    ?? (channel?.numberIds?.[0] ? numbers.find(n => n.id === channel.numberIds![0]) : undefined)
+  const primaryNumberText = primaryNumberRecord?.number ?? "Not assigned"
 
   const capabilities: string[] = isConfigured && cfg
     ? [

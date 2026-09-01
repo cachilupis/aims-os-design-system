@@ -6,6 +6,7 @@ import { Toggle } from "@/components/ui/toggle"
 import { Button } from "@/components/ui/button"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
 import { CardContainer } from "@/components/ui/card-container"
+import { AddPhoneNumberModal } from "./AddPhoneNumberModal"
 import {
   VOICE_MODEL_OPTIONS,
   VOICE_NAME_OPTIONS,
@@ -36,11 +37,13 @@ import type { PhoneNumberRecord } from "./data"
 interface ConfigureVoiceSlideOutProps {
   open:      boolean
   onClose:   () => void
-  agentName: string          // "Sammy — Service Desk"
-  numbers:   PhoneNumberRecord[]
-  config:    VoiceConfig     // current voice channel config
+  agentName: string                // "Sammy — Service Desk"
+  numbers:   PhoneNumberRecord[]   // every workspace number
+  numberIds: string[]              // numbers currently assigned to this channel
+  config:    VoiceConfig           // current voice channel config
   onSave:    (next: VoiceConfig) => void
-  onAddNumber: () => void
+  /** Called when Add Phone Number returns picked ids. */
+  onAddNumbers: (numberIds: string[]) => void
 }
 
 type SubTab = "general" | "inbound" | "outbound"
@@ -52,13 +55,24 @@ const SUB_TABS: TabItem[] = [
 ]
 
 export function ConfigureVoiceSlideOut({
-  open, onClose, agentName, numbers, config, onSave, onAddNumber,
+  open, onClose, agentName, numbers, numberIds, config, onSave, onAddNumbers,
 }: ConfigureVoiceSlideOutProps) {
-  const [draft, setDraft]  = useState<VoiceConfig>(config)
+  const [draft, setDraft]   = useState<VoiceConfig>(config)
   const [subTab, setSubTab] = useState<SubTab>("general")
+  const [addOpen, setAddOpen] = useState(false)
 
   // Re-hydrate when opening for a different channel
   useEffect(() => { if (open) setDraft(config) }, [open, config])
+
+  // The number dropdown lists only numbers assigned to this channel —
+  // Add Number is the way to grow that list. If the current draft
+  // numberId isn't in the list (e.g. someone just added a number and
+  // the config still points at the old one) we still surface the old
+  // one so the picker doesn't look empty.
+  const assignedNumbers = numbers.filter(n => numberIds.includes(n.id))
+  const dropdownOptions = assignedNumbers.length > 0
+    ? assignedNumbers.map(n => ({ value: n.id, label: `${n.number}${n.label ? ` — ${n.label}` : ""}` }))
+    : [{ value: "", label: "No numbers assigned — use Add Number" }]
 
   // Setter helpers keep the update paths immutable (no in-place mutation).
   const set   = <K extends keyof VoiceConfig>(k: K, v: VoiceConfig[K]) => setDraft(d => ({ ...d, [k]: v }))
@@ -69,7 +83,16 @@ export function ConfigureVoiceSlideOut({
 
   const handleSave = () => { onSave(draft); onClose() }
 
+  // When Add Phone Number returns picks: append them to the channel
+  // and switch the active dropdown to the first new one so the user
+  // immediately sees which number they just added.
+  const handleAdd = (newIds: string[]) => {
+    onAddNumbers(newIds)
+    if (newIds[0]) set("numberId", newIds[0])
+  }
+
   return (
+    <>
     <SlideOut
       open={open}
       onClose={onClose}
@@ -99,13 +122,10 @@ export function ConfigureVoiceSlideOut({
               value={draft.numberId}
               onChange={(v) => set("numberId", v)}
               size="default"
-              options={numbers.map(n => ({
-                value: n.id,
-                label: `${n.number}${n.label ? ` — ${n.label}` : ""}`,
-              }))}
+              options={dropdownOptions}
             />
           </div>
-          <Button variant="secondary" size="sm" onClick={onAddNumber} icon={<Plus size={12}/>}>
+          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} icon={<Plus size={12}/>}>
             Add Number
           </Button>
         </div>
@@ -169,6 +189,18 @@ export function ConfigureVoiceSlideOut({
         </div>
       </div>
     </SlideOut>
+
+    {/* Add Phone Number modal — reads the workspace numbers, excludes
+        anything already on this channel, and appends the user's picks
+        to numberIds via onAddNumbers. */}
+    <AddPhoneNumberModal
+      open={addOpen}
+      onClose={() => setAddOpen(false)}
+      numbers={numbers}
+      assignedIds={numberIds}
+      onAdd={handleAdd}
+    />
+    </>
   )
 }
 
