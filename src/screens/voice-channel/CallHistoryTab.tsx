@@ -80,7 +80,7 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
       render: (c) => <span className="font-mono text-[12px]" style={{ color: "var(--color-text-title)" }}>{c.caller}</span>,
     },
     {
-      key: "agent", header: "Agent", width: "160px",
+      key: "agent", header: "Operator", width: "160px",
       render: (c) => {
         const a = AGENTS.find(x => x.id === c.agent)
         if (!a) return null

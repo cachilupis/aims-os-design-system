@@ -55,8 +55,12 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
       onClose={onClose}
       type="with-variants"
       size="m"
-      title={number.number}
-      subtitle={`${number.label || "No label"} · ${number.type}`}
+      // Title stays extremely short — the DS SlideOut header column is
+      // narrow enough that anything longer than ~10 chars truncates.
+      // The full number + label live prominently in the body's first
+      // block instead.
+      title="Preview"
+      subtitle={number.label || "No label"}
       iconContent={<Settings size={18}/>}
       showStatus={true}
       statusLabel={number.status === "active" ? "Active" : "Suspended"}
@@ -70,6 +74,24 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
       onCtaSecondary={onRelease}
     >
       <div className="flex flex-col gap-4 px-6 py-4">
+
+        {/* Full phone number — lives in the body so it never truncates
+            in the SlideOut header. Uses tabular-nums + white-space:nowrap
+            so it never wraps mid-hyphen either. */}
+        <div
+          className="font-mono"
+          style={{
+            fontSize: 18, fontWeight: 700,
+            color: "var(--color-text-title)",
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {number.number}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--color-text-caption)", marginTop: -8 }}>
+          {number.type}
+        </div>
 
         {/* Identity badges */}
         <div className="flex flex-wrap gap-2">
@@ -87,7 +109,7 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
 
         {/* Agents summary */}
         <CardContainer variant="default" size="sm">
-          <SectionLabel icon={<Users size={12}/>}>Assigned Agents ({assigned.length})</SectionLabel>
+          <SectionLabel icon={<Users size={12}/>}>Assigned operators ({assigned.length})</SectionLabel>
           {assigned.length === 0 ? (
             <div style={{ fontSize: 12, color: "var(--color-text-caption)", fontStyle: "italic" }}>
               None — calls will go unanswered.
@@ -142,7 +164,7 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
                   {recentCall.direction === "inbound" ? "↙" : "↗"}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="font-mono" style={{ fontSize: 12, color: "var(--color-text-title)" }}>{recentCall.caller}</div>
+                  <div className="font-mono" style={{ fontSize: 12, color: "var(--color-text-title)", whiteSpace: "nowrap" }}>{recentCall.caller}</div>
                   <div className="flex items-center gap-1" style={{ fontSize: 11, color: "var(--color-text-caption)" }}>
                     {agent && <AgentAvatar color={agent.color} initials={agent.initials} size={14}/>}
                     <span>{agent?.name}</span>
@@ -165,7 +187,7 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
           style={{ fontSize: 11, color: "var(--color-text-caption)" }}
         >
           <ArrowRight size={12}/>
-          <span>Overview, Agents & Routing, Business Hours and Call History live in the full view.</span>
+          <span>Overview, Operators & Routing, Business Hours and Call History live in the full view.</span>
         </div>
       </div>
     </SlideOut>

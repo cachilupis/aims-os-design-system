@@ -35,8 +35,11 @@ export function CallPreview({ call, number, open, onClose, onOpenFull }: CallPre
       onClose={onClose}
       type="with-variants"
       size="m"
-      title={call.caller}
-      subtitle={`${number?.number ?? ""} · ${call.ts} · ${call.duration}`}
+      // Title stays short; caller number is displayed prominently in
+      // the body's first line so it never truncates in the SlideOut
+      // header column (same treatment as NumberSheet).
+      title="Call preview"
+      subtitle={`${call.ts} · ${call.duration}`}
       iconContent={<PhoneCall size={18}/>}
       showStatus={false}
       showTabs={false}
@@ -49,6 +52,25 @@ export function CallPreview({ call, number, open, onClose, onOpenFull }: CallPre
       onCtaSecondary={onClose}
     >
       <div className="flex flex-col gap-4 px-6 py-4">
+
+        {/* Full caller number — mono, tabular, no-wrap, in the body so
+            it never truncates in the SlideOut header column. */}
+        <div
+          className="font-mono"
+          style={{
+            fontSize: 18, fontWeight: 700,
+            color: "var(--color-text-title)",
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {call.caller}
+        </div>
+        {number && (
+          <div style={{ fontSize: 12, color: "var(--color-text-caption)", marginTop: -8 }}>
+            via {number.number} — {number.label || "No label"}
+          </div>
+        )}
 
         {/* Meta chips row */}
         <div className="flex flex-wrap gap-2">

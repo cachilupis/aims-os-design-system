@@ -42,12 +42,12 @@ export function AddAgentModal({ number, open, onClose, onConfirm }: AddAgentModa
       variant="content"
       tone="default"
       iconName="Users"
-      title="Add Agents"
+      title="Add operators"
       description={number ? `To ${number.number}` : undefined}
       slot={
         <div className="flex flex-col gap-3">
           <Input
-            placeholder="Search agents…"
+            placeholder="Search operators…"
             value={query}
             onChange={e => setQuery(e.target.value)}
             leftIcon={<Search size={14}/>}
@@ -96,7 +96,7 @@ export function AddAgentModal({ number, open, onClose, onConfirm }: AddAgentModa
             })}
             {list.length === 0 && (
               <div style={{ padding: 24, textAlign: "center", fontSize: 13, color: "var(--color-text-caption)" }}>
-                No agents match your search.
+                No operators match your search.
               </div>
             )}
           </div>

@@ -191,7 +191,7 @@ function VoiceChannelScreenInner() {
       render: (n) => <NumberStatusTag status={n.status}/>,
     },
     {
-      key: "agents", header: "Agents", width: "170px",
+      key: "agents", header: "Operators", width: "170px",
       render: (n) => {
         if (n.agents.length === 0) {
           return <span style={{ fontSize: 11, color: "var(--color-text-caption)", fontStyle: "italic" }}>Unassigned</span>
@@ -313,7 +313,7 @@ function VoiceChannelScreenInner() {
                 <div className="flex-1 min-w-[200px]">
                   <Filters
                     showSearch
-                    searchPlaceholder="Search by number, label, or agent…"
+                    searchPlaceholder="Search…"
                     searchValue={numSearch}
                     onSearchChange={setNumSearch}
                     showAllFilters={false}
@@ -400,7 +400,7 @@ function VoiceChannelScreenInner() {
         onAcquire={(newNum) => {
           addNumber(newNum)
           setAcquireOpen(false)
-          toast.info("Go to the number to add agents")
+          toast.info("Go to the number to assign operators")
         }}
       />
 
@@ -430,7 +430,7 @@ function VoiceChannelScreenInner() {
           updateNumber({ ...focusedNumber, agents: [...focusedNumber.agents, ...added] })
           setAddAgentOpen(false)
           if (added.length > 0) {
-            toast.success(`${added.length} agent${added.length > 1 ? "s" : ""} added`)
+            toast.success(`${added.length} operator${added.length > 1 ? "s" : ""} added`)
           }
         }}
       />

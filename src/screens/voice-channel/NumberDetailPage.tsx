@@ -121,7 +121,7 @@ export function NumberDetailPage({ number, onBack, onChange, onRelease, onAddAge
       <Tabs
         items={[
           { id: "overview", label: "Overview",         icon: Settings   },
-          { id: "agents",   label: "Agents & Routing", icon: Users      },
+          { id: "agents",   label: "Operators & Routing", icon: Users   },
           { id: "hours",    label: "Business Hours",   icon: Clock      },
           { id: "calls",    label: `Call History (${allCalls.filter(c => c.numberId === draft.id).length})`, icon: PhoneCall  },
         ]}
@@ -254,8 +254,8 @@ function AgentsSubTab({
     <div className="flex flex-col gap-4">
       <CardContainer variant="default" size="default">
         <Section
-          title={`Assigned Agents (${draft.agents.length})`}
-          action={<Button variant="primary" size="sm" icon={<Plus size={12}/>} iconPosition="left" onClick={onAddAgent}>Add Agent</Button>}
+          title={`Assigned operators (${draft.agents.length})`}
+          action={<Button variant="primary" size="sm" icon={<Plus size={12}/>} iconPosition="left" onClick={onAddAgent}>Add operator</Button>}
         >
           {assigned.length === 0 ? (
             <CardContainer variant="dashed" size="default">
@@ -272,7 +272,7 @@ function AgentsSubTab({
               <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "var(--color-surface-neutral-more-subtle)" }}>
-                    <th style={thStyle}>Agent</th>
+                    <th style={thStyle}>Operator</th>
                     <th style={thStyle}>Role</th>
                     <th style={thStyle}>Status</th>
                     <th style={thStyle}>Calls 30d</th>
