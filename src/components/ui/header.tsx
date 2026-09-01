@@ -12,12 +12,16 @@ export interface HeaderProps {
   title: string
   /** Subtitle below the title. Hidden in compress. */
   description?: string
-  /** Size variant. "size-l" = 24px title + full padding. "size-m" = 18px. "compress" = 18px, description/tag/backButton hidden. */
+  /** Size variant. "size-l" = 24px title + full padding. "size-m" = 18px. "compress" = 18px, description/tag/icon hidden; back button hidden unless showBackInCompress is true. */
   size?: HeaderSize
   /** Tag node rendered inline after the title. Hidden in compress. */
   tag?: React.ReactNode
-  /** Shows an ArrowLeft back-navigation button. Hidden in compress. */
+  /** Shows an ArrowLeft back-navigation button. This is the ONLY thing that controls visibility. Hidden in compress unless showBackInCompress is also true. */
   backButton?: boolean
+  /** Click handler for the back button. Never affects visibility — use backButton for that. */
+  onBack?: () => void
+  /** Keep the back button visible in compress mode (requires backButton={true}). */
+  showBackInCompress?: boolean
   /** Optional Lucide icon shown in a HighlightIcon (size sm). Hidden in compress. */
   icon?: LucideIcon
   /** HighlightIcon color variant for the icon slot. Defaults to "informative". */
@@ -54,6 +58,8 @@ export function Header({
   size = "size-l",
   tag,
   backButton = false,
+  onBack,
+  showBackInCompress = false,
   icon: Icon,
   iconVariant = "informative",
   primaryAction,
@@ -74,13 +80,14 @@ export function Header({
       >
         {/* Left zone: back button + icon + title + tag + description */}
         <div className="flex items-start gap-[8px] min-w-0 flex-1">
-          {!isCompress && backButton && (
+          {backButton && (!isCompress || showBackInCompress) && (
             <Button
               variant="tertiary"
               size="sm"
               iconPosition="alone"
               aria-label="Back"
               className="mt-[3px]"
+              onClick={onBack}
               icon={<ArrowLeft size={16} strokeWidth={1.75} style={{ color: "var(--header-back-icon)" }} />}
             />
           )}

@@ -4,30 +4,9 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
-import { SwitchTab }     from "@/components/ui/switch-tab"
-
-// ─── Toggle ───────────────────────────────────────────────────────────────────
-
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!value)}
-      aria-pressed={value}
-      style={{
-        width: 36, height: 20, borderRadius: 10, border: "none", cursor: "pointer",
-        background: value ? "var(--primary)" : "var(--border)",
-        position: "relative", transition: "background 200ms",
-        flexShrink: 0,
-      }}
-    >
-      <span style={{
-        position: "absolute", top: 2, left: value ? 18 : 2,
-        width: 16, height: 16, borderRadius: "50%", background: "#fff",  // audit-ignore: prototype fixture data
-        transition: "left 200ms",
-      }} />
-    </button>
-  )
-}
+import { Tabs }          from "@/components/ui/tabs"
+import { Toggle }        from "@/components/ui/toggle"
+import { CardContainer } from "@/components/ui/card-container"
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 
@@ -38,9 +17,9 @@ function Section({ title, description, children }: { title: string; description?
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{title}</div>
         {description && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{description}</div>}
       </div>
-      <div style={{ border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-raised)", overflow: "hidden" }}>
+      <CardContainer variant="default" size="default" className="!p-0 overflow-hidden">
         {children}
-      </div>
+      </CardContainer>
     </div>
   )
 }
@@ -184,7 +163,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
     integrationErrors: ["Integration errors",        "Sync failures and authentication issues"],
     auditDigest:       ["Daily audit digest",        "Email summary of workspace activity at 08:00"],
     billingAlerts:     ["Billing alerts",            "Usage thresholds, upcoming renewals, invoices"],
-    aiWorkerFailures:  ["AI worker failures",        "Worker run errors and HITL queue overflow"],
+    aiWorkerFailures:  ["AI worker failures",        "Worker run errors and human review queue overflow"],
   }
 
   return (
@@ -207,15 +186,15 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
       )}
     >
       {/* Tabs */}
-      <div style={{ marginBottom: 20 }}>
-        <SwitchTab
+      <div style={{ borderBottom: "1px solid var(--border)", marginBottom: 20 }}>
+        <Tabs
           items={[
             { id: "profile",       label: "Profile"        },
             { id: "notifications", label: "Notifications"  },
             { id: "tokens",        label: "API Tokens"     },
             { id: "sessions",      label: "Sessions"       },
           ]}
-          value={tab}
+          activeId={tab}
           onChange={setTab}
           size="s"
         />
@@ -280,7 +259,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
             const [label, desc] = NOTIF_LABELS[key] ?? [key, ""]
             return (
               <Row key={key} label={label} description={desc} last={i === arr.length - 1}>
-                <Toggle value={val} onChange={v => setNotifs(n => ({ ...n, [key]: v }))} />
+                <Toggle checked={val} onChange={v => setNotifs(n => ({ ...n, [key]: v }))} />
               </Row>
             )
           })}
@@ -291,7 +270,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
       {tab === "tokens" && (
         <>
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-            <Button variant="main" size="sm" onClick={() => setShowNewToken(true)}>
+            <Button variant="primary" size="sm" onClick={() => setShowNewToken(true)}>
               <Icons.Plus size={14} style={{ marginRight: 4 }} />
               New token
             </Button>
@@ -299,7 +278,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
 
           {showNewToken && (
             <div style={{ border: "1px solid var(--primary)50", borderRadius: 10, padding: 16, marginBottom: 16, background: "var(--primary)08" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 10 }}>Create personal access token</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 10 }}>New API token</div>
               <input
                 value={newTokenName}
                 onChange={e => setNewTokenName(e.target.value)}
@@ -308,7 +287,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
               />
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <Button variant="secondary" size="sm" onClick={() => { setShowNewToken(false); setNewTokenName("") }}>Cancel</Button>
-                <Button variant="main" size="sm" onClick={() => {
+                <Button variant="primary" size="sm" onClick={() => {
                   if (!newTokenName.trim()) return
                   setTokens(ts => [{ id: `t${Date.now()}`, name: newTokenName.trim(), created: "Today", lastUsed: "Never", scopes: "read:all" }, ...ts])
                   setShowNewToken(false); setNewTokenName("")
