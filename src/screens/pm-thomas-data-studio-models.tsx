@@ -81,7 +81,7 @@ const SCOPE_CHANGELOG: ChangeBlock[] = [
 function ScopeSwitcher({ scope, setScope, onChangelog }: { scope: Scope; setScope: (s: Scope) => void; onChangelog: () => void }) {
   return (
     <div style={{ position: "fixed", right: 16, bottom: 16, zIndex: 9990, display: "flex", alignItems: "center", gap: 8, background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: "6px 8px 6px 12px", boxShadow: "var(--shadow-elevation-4)" }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-subtitle)", textTransform: "uppercase", letterSpacing: ".04em" }}>Scope</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-subtitle)", textTransform: "uppercase", letterSpacing: ".04em" }}>Scope</span>
       <SwitchTab size="s" items={[{ id: "v1", label: "V1" }, { id: "v1.5", label: "V1.2" }, { id: "v2", label: "Full vision" }]} value={scope} onChange={s => setScope(s as Scope)} />
       <Button variant="tertiary" size="sm" onClick={onChangelog}><LucideIcons.ListChecks size={15} /></Button>
     </div>
@@ -91,7 +91,7 @@ function ScopeSwitcher({ scope, setScope, onChangelog }: { scope: Scope; setScop
 function ChangelogPanel({ open, onClose, scope }: { open: boolean; onClose: () => void; scope: Scope }) {
   const sec = (label: string, items: string[] | undefined, color: string) => (!items || !items.length) ? null : (
     <div style={{ marginTop: 10 }}>
-      <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color, marginBottom: 5 }}>{label}</div>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color, marginBottom: 5 }}>{label}</div>
       <ul style={{ margin: 0, paddingLeft: 16 }}>{items.map((x, i) => <li key={i} style={{ fontSize: 12, lineHeight: 1.5, color: "var(--color-text-subtitle)", marginBottom: 2 }}>{x}</li>)}</ul>
     </div>
   )
@@ -105,7 +105,7 @@ function ChangelogPanel({ open, onClose, scope }: { open: boolean; onClose: () =
           return (
             <div key={b.scope} style={{ border: `1px solid ${on ? "var(--primary)" : "var(--field-border)"}`, background: on ? "var(--tag-informative-bg)" : "transparent", borderRadius: 12, padding: "12px 14px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <div><div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--color-text-title)" }}>{b.tier}</div><div style={{ fontSize: 11, color: "var(--color-text-subtitle)", marginTop: 1 }}>{b.sub} · Target: {b.target}</div></div>
+                <div><div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)" }}>{b.tier}</div><div style={{ fontSize: 12, color: "var(--color-text-subtitle)", marginTop: 1 }}>{b.sub} · Target: {b.target}</div></div>
                 {on && <Tag variant="informative" size="sm">Current</Tag>}
               </div>
               {sec("New", b.nw, "var(--tag-success-bd)")}
@@ -264,7 +264,7 @@ function DataTable({ cols }: { cols: ColumnDef[] }) {
 function ItemsTable({ items }: { items: RefItem[] }) {
   const columns: TableColumn<RefItem>[] = [
     { key: "key",   header: "Key",   render: r => <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--color-text-title)" }}>{r.key}</span> },
-    { key: "label", header: "Label", render: r => <span style={{ fontSize: 13, color: "var(--color-text-title)" }}>{r.label}</span> },
+    { key: "label", header: "Label", render: r => <span style={{ fontSize: 14, color: "var(--color-text-title)" }}>{r.label}</span> },
     { key: "code",  header: "Code",  render: r => <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--color-text-subtitle)" }}>{r.code}</span> },
     { key: "active", header: "Status", render: r => <Tag variant={r.active ? "success" : "neutral"} size="sm">{r.active ? "Active" : "Retired"}</Tag> },
   ]
@@ -288,7 +288,7 @@ function privilegesFor(entity: EntityRow): PrivRow[] {
 }
 function PrivilegesTable({ entity }: { entity: EntityRow }) {
   const cols: TableColumn<PrivRow>[] = [
-    { key: "name", header: "Privilege", render: r => <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)" }}>{r.name}</span> },
+    { key: "name", header: "Privilege", render: r => <span style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-title)" }}>{r.name}</span> },
     { key: "type", header: "Type", render: r => <Tag variant={r.type === "Custom" ? "purple" : "neutral"} size="sm">{r.type}</Tag> },
     { key: "grantedTo", header: "Granted to (roles)", render: r => <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{r.grantedTo}</span> },
   ]
@@ -308,7 +308,7 @@ const KIND_TAG: Record<HistRow["kind"], "success" | "error" | "alert" | "neutral
 function HistoryTable({ status, updated }: { status: Status; updated: string }) {
   const cols: TableColumn<HistRow>[] = [
     { key: "version", header: "Version", render: r => <Tag variant="neutral" size="sm">{r.version}</Tag> },
-    { key: "change", header: "Change", render: r => <span style={{ fontSize: 13, color: "var(--color-text-title)" }}>{r.change}</span> },
+    { key: "change", header: "Change", render: r => <span style={{ fontSize: 14, color: "var(--color-text-title)" }}>{r.change}</span> },
     { key: "kind", header: "Type", render: r => <Tag variant={KIND_TAG[r.kind]} size="sm">{r.kind}</Tag> },
     { key: "author", header: "Author", render: r => <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{r.author}</span> },
     { key: "when", header: "When", render: r => <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{r.when}</span> },
@@ -360,7 +360,7 @@ function TablesContent({ tables }: { tables: TableRef[] }) {
         <div key={t.alias} className="flex items-center gap-[10px]" style={{ padding: "8px 0", borderBottom: "0.5px solid var(--field-border)" }}>
           <HighlightIcon size="sm" variant={t.role === "Primary" ? "informative" : "neutral"} iconName="Table" />
           <div className="flex flex-col" style={{ flex: 1 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)" }}>{t.alias}</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-title)" }}>{t.alias}</span>
             <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{t.role} · {t.cols} columns · {t.rows} rows</span>
           </div>
           <Tag variant={t.role === "Primary" ? "informative" : "neutral"} size="sm">{t.role}</Tag>
@@ -378,13 +378,13 @@ function RelsContent({ rels }: { rels: RelRef[] }) {
     <div key={i} className="flex items-center gap-[10px]" style={{ padding: "8px 0", borderBottom: "0.5px solid var(--field-border)" }}>
       <HighlightIcon size="sm" variant={r.incoming ? "neutral" : "purple"} iconName={r.incoming ? "ArrowDownLeft" : "ArrowUpRight"} />
       <div className="flex flex-col" style={{ flex: 1 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)" }}>{r.target}</span>
+        <span style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-title)" }}>{r.target}</span>
         <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{r.incoming ? "Incoming" : "Outgoing"} · {r.kind}</span>
       </div>
     </div>
   )
   const secHeader = (label: string) => (
-    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--color-text-subtitle)", padding: "6px 0" }}>{label}</div>
+    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--color-text-subtitle)", padding: "6px 0" }}>{label}</div>
   )
   return (
     <div className="flex flex-col gap-[8px]" style={{ padding: "0 16px 16px" }}>
@@ -435,10 +435,10 @@ function ApiSimpleView({ entity }: { entity: EntityRow }) {
   return (
     <div style={{ paddingBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 10, marginBottom: 12, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>Base URL</span>
-        <code style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12.5, color: "var(--color-text-title)" }}>/api/v1{s}</code>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>Base URL</span>
+        <code style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--color-text-title)" }}>/api/v1{s}</code>
         <Tag variant="informative" size="sm">v1</Tag>
-        <span style={{ marginLeft: "auto", fontSize: 11.5, color: "var(--color-text-subtitle)" }}>{enabledCount} of {defs.length} endpoints enabled</span>
+        <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--color-text-subtitle)" }}>{enabledCount} of {defs.length} endpoints enabled</span>
       </div>
       <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: "0 0 10px" }}>
         Auto-generated endpoints for {entity.name}. Toggle each on or off and set its description — the request/response builder and custom endpoints are Full vision.
@@ -449,10 +449,10 @@ function ApiSimpleView({ entity }: { entity: EntityRow }) {
             <Tag variant={METHOD_TAG[d.method]} size="sm">{d.method}</Tag>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{d.name}</span>
-                <span style={{ fontSize: 9.5, fontWeight: 600, color: "var(--color-text-subtitle)", border: "1px solid var(--field-border)", borderRadius: 5, padding: "1px 6px", textTransform: "uppercase", letterSpacing: ".03em" }}>Default</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)" }}>{d.name}</span>
+                <span style={{ fontSize: 10, fontWeight: 600, color: "var(--color-text-subtitle)", border: "1px solid var(--field-border)", borderRadius: 4, padding: "1px 6px", textTransform: "uppercase", letterSpacing: ".04em" }}>Default</span>
               </div>
-              <div style={{ fontSize: 11.5, color: "var(--color-text-subtitle)", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "var(--color-text-subtitle)", marginTop: 2 }}>
                 <code style={{ fontFamily: "var(--font-mono, monospace)" }}>{d.path}</code> · {API_DESC[d.op]}
               </div>
             </div>
@@ -532,15 +532,15 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
   const accessSection = (
     <div style={{ padding: "14px 0", borderBottom: "0.5px solid var(--field-border)" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--color-text-title)" }}>Access control</span>
-        <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>Caller needs <b>any one</b> of these (OR)</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>Access control</span>
+        <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Caller needs <b>any one</b> of these (OR)</span>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 7, alignItems: "center" }}>
-        {c.privs.length === 0 && <span style={{ fontSize: 11.5, color: "var(--color-text-subtitle)", fontStyle: "italic" }}>No privilege required — any authenticated caller</span>}
+        {c.privs.length === 0 && <span style={{ fontSize: 12, color: "var(--color-text-subtitle)", fontStyle: "italic" }}>No privilege required — any authenticated caller</span>}
         {c.privs.map(p => (
           <span key={p} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <Tag variant="informative" size="sm">{p}</Tag>
-            <button onClick={() => patch(current.key, x => ({ ...x, privs: x.privs.filter(y => y !== p) }))} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--color-text-subtitle)", fontSize: 13, lineHeight: 1 }} aria-label={`Remove ${p}`}>×</button>
+            <button onClick={() => patch(current.key, x => ({ ...x, privs: x.privs.filter(y => y !== p) }))} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--color-text-subtitle)", fontSize: 14, lineHeight: 1 }} aria-label={`Remove ${p}`}>×</button>
           </span>
         ))}
         <span onClick={e => anchor(e, "priv")} style={{ display: "inline-flex" }}>
@@ -559,19 +559,19 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
   }
   const reqCols: TableColumn<ColumnDef>[] = [
     { key: "name", header: "Field", render: f => <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--color-text-title)" }}>{f.name}{!f.nullable && <span style={{ color: "var(--field-text-error)" }}> *</span>}</span> },
-    { key: "type", header: "Type", render: f => <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{f.type}</span> },
+    { key: "type", header: "Type", render: f => <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{f.type}</span> },
     { key: "include", header: "Include", render: f => <Toggle size="sm" checked={c.req[f.name].include} onChange={v => patch(current.key, p => ({ ...p, req: { ...p.req, [f.name]: { ...p.req[f.name], include: v, ...(v ? {} : { mode: "none" as DefMode, val: "" }) } } }))} /> },
     { key: "def", header: "Default value", render: defCell },
   ]
   const respCols: TableColumn<ColumnDef>[] = [
     { key: "name", header: "Field", render: f => <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--color-text-title)" }}>{f.name}</span> },
-    { key: "type", header: "Type", render: f => <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{f.type}</span> },
+    { key: "type", header: "Type", render: f => <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{f.type}</span> },
     { key: "include", header: "Include", render: f => <Toggle size="sm" checked={c.resp[f.name]} onChange={v => patch(current.key, p => ({ ...p, resp: { ...p.resp, [f.name]: v } }))} /> },
   ]
   const sectionHead = (title: string, note: string) => (
     <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
-      <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--color-text-title)" }}>{title}</span>
-      <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{note}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>{title}</span>
+      <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{note}</span>
     </div>
   )
 
@@ -590,10 +590,10 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
     <div style={{ paddingBottom: 16 }}>
       {/* base URL banner */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 10, marginBottom: 12, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>Base URL</span>
-        <code style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12.5, color: "var(--color-text-title)" }}>{baseUrl}</code>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>Base URL</span>
+        <code style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--color-text-title)" }}>{baseUrl}</code>
         <Tag variant="informative" size="sm">v1</Tag>
-        <span style={{ marginLeft: "auto", fontSize: 11.5, color: "var(--color-text-subtitle)" }}>{enabledCount} of {endpoints.length} endpoints enabled</span>
+        <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--color-text-subtitle)" }}>{enabledCount} of {endpoints.length} endpoints enabled</span>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 14, alignItems: "start" }}>
@@ -603,7 +603,7 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
             const rows = endpoints.filter(e => e.op === o.op)
             return (
               <div key={o.op} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--surface)", fontSize: 10.5, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--surface)", fontSize: 10, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--color-text-subtitle)" }}>
                   <span>{o.label}</span><span style={{ marginLeft: "auto", fontSize: 10, background: "var(--field-border)", color: "var(--color-text-subtitle)", borderRadius: 9, padding: "0 6px" }}>{rows.length}</span>
                 </div>
                 {rows.map(ep => {
@@ -614,10 +614,10 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
                       <Tag variant={METHOD_TAG[ep.method]} size="sm">{ep.method}</Tag>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ep.custom ? ep.dname : ep.name}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ep.custom ? ep.dname : ep.name}</span>
                           {ep.custom && <Tag variant="lightBlue" size="sm">Custom</Tag>}
                         </div>
-                        <code style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "var(--color-text-subtitle)" }}>{ep.path}</code>
+                        <code style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--color-text-subtitle)" }}>{ep.path}</code>
                       </div>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0, background: ec?.enabled ? "var(--tag-success-bd)" : "var(--field-border)" }} />
                     </div>
@@ -640,7 +640,7 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
                 <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)" }}>{current.custom ? current.dname : current.name}</span>
                 <Tag variant={current.custom ? "lightBlue" : "neutral"} size="sm">{current.custom ? "Custom" : "Default"}</Tag>
               </div>
-              <div style={{ fontSize: 11.5, color: "var(--color-text-subtitle)", marginTop: 3 }}>
+              <div style={{ fontSize: 12, color: "var(--color-text-subtitle)", marginTop: 3 }}>
                 <code style={{ fontFamily: "var(--font-mono, monospace)" }}>{current.path}</code>{current.custom ? ` · derived from ${API_OPS.find(o => o.op === current.op)!.label}` : ""}
               </div>
             </div>
@@ -671,12 +671,12 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
               <div style={{ padding: "14px 0", borderBottom: "0.5px solid var(--field-border)" }}>
                 {sectionHead("Predefined filters", "Baked into the query; callers can add more at call time.")}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 9 }}>
-                  {c.filters.length === 0 && <span style={{ fontSize: 11.5, color: "var(--color-text-subtitle)", fontStyle: "italic" }}>No predefined filters — returns every record the caller can access.</span>}
+                  {c.filters.length === 0 && <span style={{ fontSize: 12, color: "var(--color-text-subtitle)", fontStyle: "italic" }}>No predefined filters — returns every record the caller can access.</span>}
                   {c.filters.map((f, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 7 }}>
                       {i > 0
                         ? <Button variant="secondary" size="sm" onClick={() => patchFilter(i, "join", f.join === "AND" ? "OR" : "AND")}>{f.join}</Button>
-                        : <span style={{ fontSize: 10.5, fontWeight: 700, color: "var(--color-text-subtitle)", minWidth: 44 }}>WHERE</span>}
+                        : <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-subtitle)", minWidth: 44 }}>WHERE</span>}
                       <span onClick={e => anchor(e, `filter:${i}:field`)} style={{ display: "inline-flex", minWidth: 150 }}><Select value={f.field} placeholder="field" size="sm" /></span>
                       <span onClick={e => anchor(e, `filter:${i}:op`)} style={{ display: "inline-flex", minWidth: 110 }}><Select value={f.op} placeholder="operator" size="sm" /></span>
                       <div style={{ flex: 1, minWidth: 80 }}><Input size="sm" placeholder="value" value={f.val} onChange={ev => patchFilter(i, "val", (ev.target as HTMLInputElement).value)} /></div>
@@ -693,7 +693,7 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {entity.rels.map(r => (
                     <div key={r.target} style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 12.5, color: "var(--color-text-title)", flex: 1 }}>{r.target}<span style={{ fontSize: 11, color: "var(--color-text-subtitle)", marginLeft: 8 }}>{r.kind}</span></span>
+                      <span style={{ fontSize: 12, color: "var(--color-text-title)", flex: 1 }}>{r.target}<span style={{ fontSize: 12, color: "var(--color-text-subtitle)", marginLeft: 8 }}>{r.kind}</span></span>
                       <SwitchTab size="s" items={REL_MODES.map(m => ({ id: m, label: m }))} value={c.rels[r.target] ?? "reference"} onChange={m => patch(current.key, p => ({ ...p, rels: { ...p.rels, [r.target]: m } }))} />
                     </div>
                   ))}
@@ -703,7 +703,7 @@ function ApiBuilder({ entity }: { entity: EntityRow }) {
 
             <div style={{ padding: "14px 0" }}>
               {sectionHead("OpenAPI", "Generated from this contract")}
-              <pre style={{ margin: 0, padding: "12px 14px", background: "var(--canvas)", border: "0.5px solid var(--field-border)", borderRadius: 8, fontFamily: "var(--font-mono, monospace)", fontSize: 11, lineHeight: 1.55, color: "var(--color-text-subtitle)", overflow: "auto", maxHeight: 300, whiteSpace: "pre" }}>{JSON.stringify(spec, null, 2)}</pre>
+              <pre style={{ margin: 0, padding: "12px 14px", background: "var(--canvas)", border: "0.5px solid var(--field-border)", borderRadius: 8, fontFamily: "var(--font-mono, monospace)", fontSize: 12, lineHeight: 1.55, color: "var(--color-text-subtitle)", overflow: "auto", maxHeight: 300, whiteSpace: "pre" }}>{JSON.stringify(spec, null, 2)}</pre>
             </div>
           </div>
         </div>
@@ -841,7 +841,7 @@ function ListRows({ rows }: { rows: { icon: string; variant: RowVariant; title: 
         <div key={i} className="flex items-center gap-[10px]" style={{ padding: "8px 0", borderBottom: "0.5px solid var(--field-border)" }}>
           <HighlightIcon size="sm" variant={r.variant} iconName={r.icon} />
           <div className="flex flex-col" style={{ flex: 1 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)" }}>{r.title}</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-title)" }}>{r.title}</span>
             <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{r.sub}</span>
           </div>
           {r.tag && <Tag variant={r.tag.variant} size="sm">{r.tag.label}</Tag>}
