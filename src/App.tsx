@@ -15856,7 +15856,7 @@ type PgTourStepDef = { label: string; note: string; content: React.ReactNode }
 type PgPreviewCaseId = "contextual-slideout" | "standalone-modal" | "standalone-fullpage" | "staged-wizard" | "catalogue"
 
 // Section 1 · "the trigger lives where the collection lives" → SlideOut attaches to the record
-function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose: () => void): PgTourStepDef[] {
+function pgSceneContextualSlideout(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
   const existingNotes = [
     { author: "Priya S.", time: "2h ago", text: "Bumped the retry limit to 5 after last week's timeout." },
     { author: "Marcus T.", time: "1d ago", text: "Confirmed the field mapping matches the new billing schema." },
@@ -15895,13 +15895,13 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
   return [
     { label: "Trigger visible", note: "The trigger lives inside the Notes widget's own header — the collection it fills — not the page Header, which is reserved for the worker's own primary action, Run now.", content: frame() },
     { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record and its existing notes stay visible behind it — that visibility is the whole point of this step.", content: frame(
-      <SlideOut open onClose={() => {}} type="full-slot" size="s" showScrollbar={false}>
+      <SlideOut open onClose={back} type="full-slot" size="s" showScrollbar={false}>
         <div className="flex flex-col gap-[16px] h-full">
           <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
           <Textarea placeholder="Write a note…" />
           <div className="flex-1" />
           <div className="flex justify-end gap-[8px]">
-            <Button variant="secondary" size="sm">Cancel</Button>
+            <Button variant="secondary" size="sm" onClick={back}>Cancel</Button>
             <Button variant="primary" size="sm" onClick={next}>Add note</Button>
           </div>
         </div>
@@ -15912,7 +15912,7 @@ function pgSceneContextualSlideout(next: () => void, _back: () => void, _onClose
 }
 
 // Section 2 · standalone, ≤5 fields → ModalDialog
-function pgSceneStandaloneModal(next: () => void, _back: () => void, _onClose: () => void): PgTourStepDef[] {
+function pgSceneStandaloneModal(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
   const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_WORKERS) => {
     const active = items.filter(w => w.state?.variant === "success").length
     return (
@@ -15928,7 +15928,7 @@ function pgSceneStandaloneModal(next: () => void, _back: () => void, _onClose: (
   return [
     { label: "Trigger visible", note: "A standalone entity, from its own list view — 4 fields, well under the 5-field threshold.", content: frame() },
     { label: "Surface open", note: "ModalDialog variant=\"content\" — the user can't ignore this and keep working; nothing on screen is this worker's parent. slotUnstyled: fields sit directly on the modal, no gray wrapper card.", content: frame(
-      <ModalDialog isOpen onClose={() => {}} variant="content" slotUnstyled
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
         title="New Worker" description="Add a new AI worker to your team."
         slot={
           <PgFormSection label="Worker details">
@@ -15939,7 +15939,7 @@ function pgSceneStandaloneModal(next: () => void, _back: () => void, _onClose: (
           </PgFormSection>
         }
         ctaPrimary={{ label: "Create", onClick: next }}
-        ctaSecondary={{ label: "Cancel" }}
+        ctaSecondary={{ label: "Cancel", onClick: back }}
       />
     ) },
     { label: "Landing", note: "Closes. The user returns to the list; the new worker appears there.", content: frame(undefined, PG_CTX_WORKERS_LANDING) },
@@ -16038,11 +16038,11 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
     { label: "Confirm", note: "The creation is irreversible and tenant-wide — this earns a confirmation, independent of which surface built it.", content: (
       <PgCreateContextShell sidebarId="knowledge"
         overlay={
-          <ModalDialog isOpen onClose={() => {}} variant="confirmation" tone="warning" iconName="AlertTriangle"
+          <ModalDialog isOpen onClose={back} variant="confirmation" tone="warning" iconName="AlertTriangle"
             title="Publish this policy?"
             description="This policy applies tenant-wide and cannot be undone once published."
             ctaPrimary={{ label: "Publish", onClick: next }}
-            ctaSecondary={{ label: "Cancel" }}
+            ctaSecondary={{ label: "Cancel", onClick: back }}
           />
         }>
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -16092,7 +16092,7 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
   return [
     { label: "Trigger visible", note: "Browsing a catalogue — templates, marketplace, starting points.", content: frame() },
     { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. It never becomes the form. slotUnstyled: bare MenuItem rows directly on the modal, no gray wrapper card.", content: frame(
-      <ModalDialog isOpen onClose={() => {}} variant="content" slotUnstyled
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
         title="Choose a template" description="Start from a template, or build from scratch."
         slot={
           <div className="flex flex-col">
@@ -16102,11 +16102,11 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
             ))}
           </div>
         }
-        ctaSecondary={{ label: "Cancel" }}
+        ctaSecondary={{ label: "Cancel", onClick: back }}
       />
     ) },
     { label: "Pre-filled form", note: "A list of the same object type on screen isn't a parent — this is standalone, same as the Worker case. Fields remain after selection, so the cascade resolves at step 5: ModalDialog, pre-filled. The two modals are sequential, never both open at once — the catalogue closes before this one opens.", content: frame(
-      <ModalDialog isOpen onClose={() => {}} variant="content" slotUnstyled
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
         title="New Automation" description='Pre-filled from the "Lead follow-up" template.'
         slot={
           <div className="flex flex-col gap-[16px]">
