@@ -41,6 +41,10 @@ import { ToastProvider, useToast } from "./voice-channel/toast"
 const VOICE_SIDEBAR: SidebarEntry[] = [
   { kind: "section",   label: "Workspace" },
   { id: "dashboard",     label: "Dashboard",       icon: "LayoutDashboard" },
+  // Agents lives at the top of the workspace section — matches the source
+  // prototype where Agents is a first-class main-nav item (not a tab inside
+  // a channel). Clicking it deep-links into the Voice screen's Agents tab.
+  { id: "agents",        label: "Agents",          icon: "Bot"             },
   { id: "contacts",      label: "Contacts",        icon: "Users"           },
   { id: "conversations", label: "Conversations",   icon: "MessagesSquare"  },
   { kind: "section",   label: "Channels" },
@@ -221,7 +225,15 @@ function VoiceChannelScreenInner() {
     <>
       <ScreenLayout
         sidebarItems={VOICE_SIDEBAR}
-        activeSidebarId="voice"
+        activeSidebarId={tab === "agents" ? "agents" : "voice"}
+        onSidebarItemClick={(id) => {
+          if (id === "agents") {
+            setTab("agents"); setAgentDetailId(null); setDetailId(null)
+          } else if (id === "voice") {
+            setTab("numbers"); setAgentDetailId(null); setDetailId(null)
+          }
+          // Other sidebar ids are illustrative stubs — no route wired yet.
+        }}
         sidebarFooter={renderSidebarFooter}
         header={(isScrolled) => (
           <Header
