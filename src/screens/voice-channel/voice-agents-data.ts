@@ -114,10 +114,13 @@ export interface AIChannel {
   // Non-number chips only — number chips are derived from numberIds so
   // Add Phone Number and Configure both edit ONE source of truth.
   pills:   string[]           // e.g. ["Rachel (ElevenLabs)", "Recording on"]
-  // Numbers currently assigned to this channel. The Configure Voice
-  // slide-out's top dropdown reads from this; Add Phone Number appends
-  // to it; Detach removes from it.
-  numberIds?: string[]
+  // Numbers currently assigned to this channel (voice / sms). The
+  // Configure slide-out's top dropdown reads from this; Add Phone
+  // Number appends to it; Detach removes from it.
+  numberIds?:  string[]
+  // Email addresses currently assigned to this channel (email only).
+  // Same source-of-truth pattern as numberIds — Add Address appends.
+  addressIds?: string[]
   voice?:  VoiceConfig        // present when kind === "voice"
   sms?:    SmsConfig          // present when kind === "sms"
   email?:  EmailConfig        // present when kind === "email"
@@ -298,18 +301,20 @@ export const VOICE_AI_AGENTS: VoiceAIAgent[] = [
         voice:     DEFAULT_VOICE_CONFIG,
       },
       {
-        kind:    "email",
-        active:  true,
-        summary: "service@aimsos.ai · Inbound + Outbound",
-        pills:   ["Inbound", "Outbound", "Templates on"],
-        email:   DEFAULT_EMAIL_CONFIG,
+        kind:       "email",
+        active:     true,
+        summary:    "service@aimsos.ai · Inbound + Outbound",
+        pills:      ["Inbound", "Outbound", "Templates on"],
+        addressIds: ["service"],
+        email:      DEFAULT_EMAIL_CONFIG,
       },
       {
-        kind:    "sms",
-        active:  false,
-        summary: "Assign a phone number with SMS capability to enable this channel.",
-        pills:   [],
-        sms:     DEFAULT_SMS_CONFIG,
+        kind:      "sms",
+        active:    false,
+        summary:   "Assign a phone number with SMS capability to enable this channel.",
+        pills:     [],
+        numberIds: [],
+        sms:       DEFAULT_SMS_CONFIG,
       },
       {
         kind:    "webchat",

@@ -12,6 +12,7 @@ import {
   EMAIL_SENDING_HOURS_OPTIONS,
   type EmailConfig,
 } from "./voice-agents-data"
+import { AddEmailAddressModal } from "./AddEmailAddressModal"
 
 // ─────────────────────────────────────────────────────────────────────
 // ConfigureEmailSlideOut — port of the "Configure Email" slide-out
@@ -21,12 +22,13 @@ import {
 // ─────────────────────────────────────────────────────────────────────
 
 interface ConfigureEmailSlideOutProps {
-  open:      boolean
-  onClose:   () => void
-  agentName: string
-  config:    EmailConfig
-  onSave:    (next: EmailConfig) => void
-  onAddAddress: () => void
+  open:          boolean
+  onClose:       () => void
+  agentName:     string
+  addressIds:    string[]              // assigned to this Email channel
+  config:        EmailConfig
+  onSave:        (next: EmailConfig) => void
+  onAddAddresses: (addressIds: string[]) => void
 }
 
 type SubTab = "general" | "inbound" | "outbound"
@@ -38,10 +40,11 @@ const SUB_TABS: TabItem[] = [
 ]
 
 export function ConfigureEmailSlideOut({
-  open, onClose, agentName, config, onSave, onAddAddress,
+  open, onClose, agentName, addressIds, config, onSave, onAddAddresses,
 }: ConfigureEmailSlideOutProps) {
-  const [draft,  setDraft]  = useState<EmailConfig>(config)
-  const [subTab, setSubTab] = useState<SubTab>("general")
+  const [draft,   setDraft]   = useState<EmailConfig>(config)
+  const [subTab,  setSubTab]  = useState<SubTab>("general")
+  const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => { if (open) setDraft(config) }, [open, config])
 
@@ -53,7 +56,20 @@ export function ConfigureEmailSlideOut({
 
   const handleSave = () => { onSave(draft); onClose() }
 
+  // Dropdown lists only addresses assigned to this channel; unassigned
+  // ones live in Add Address. Empty channel gets a hint row.
+  const assignedAddresses = AVAILABLE_EMAIL_ADDRESSES.filter(a => addressIds.includes(a.id))
+  const dropdownOptions = assignedAddresses.length > 0
+    ? assignedAddresses.map(a => ({ value: a.id, label: `${a.email} — ${a.label}` }))
+    : [{ value: "", label: "No addresses assigned — use Add Address" }]
+
+  const handleAdd = (newIds: string[]) => {
+    onAddAddresses(newIds)
+    if (newIds[0]) set("addressId", newIds[0])
+  }
+
   return (
+    <>
     <SlideOut
       open={open}
       onClose={onClose}
@@ -82,13 +98,10 @@ export function ConfigureEmailSlideOut({
             <NativeSelect
               value={draft.addressId}
               onChange={(v) => set("addressId", v)}
-              options={AVAILABLE_EMAIL_ADDRESSES.map(a => ({
-                value: a.id,
-                label: `${a.email} — ${a.label}`,
-              }))}
+              options={dropdownOptions}
             />
           </div>
-          <Button variant="secondary" size="sm" onClick={onAddAddress} icon={<Plus size={12}/>}>
+          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} icon={<Plus size={12}/>}>
             Add Address
           </Button>
         </div>
@@ -233,5 +246,15 @@ export function ConfigureEmailSlideOut({
         </div>
       </div>
     </SlideOut>
+
+    {/* Add Email Address modal — picks from AVAILABLE_EMAIL_ADDRESSES,
+        excludes anything already on this channel. */}
+    <AddEmailAddressModal
+      open={addOpen}
+      onClose={() => setAddOpen(false)}
+      assignedIds={addressIds}
+      onAdd={handleAdd}
+    />
+    </>
   )
 }

@@ -46,7 +46,6 @@ interface VoiceAgentDetailPageProps {
   onBack:  () => void
   onChange: (patch: VoiceAIAgent) => void
   numbers: PhoneNumberRecord[]
-  onOpenAddNumber: () => void
   /** Click-through from a number chip → Voice → Numbers → number detail. */
   onOpenNumber?:   (numberId: string) => void
 }
@@ -63,7 +62,7 @@ const SUB_TABS: TabItem[] = [
 ]
 
 export function VoiceAgentDetailPage({
-  agent, onBack, onChange, numbers, onOpenAddNumber, onOpenNumber,
+  agent, onBack, onChange, numbers, onOpenNumber,
 }: VoiceAgentDetailPageProps) {
   const toast = useToast()
   const [subTab,    setSubTab]    = useState<AgentSubTab>("channels")
@@ -214,9 +213,15 @@ export function VoiceAgentDetailPage({
         onClose={() => setSmsOpen(false)}
         agentName={`${agent.name} — ${agent.purpose}`}
         numbers={numbers}
+        numberIds={smsChannel?.numberIds ?? []}
         config={smsChannel?.sms ?? DEFAULT_SMS_CONFIG}
         onSave={handleSaveSms}
-        onAddNumber={onOpenAddNumber}
+        onAddNumbers={(ids) => onChange({
+          ...agent,
+          channels: agent.channels.map(c => c.kind === "sms"
+            ? { ...c, numberIds: Array.from(new Set([...(c.numberIds ?? []), ...ids])) }
+            : c),
+        })}
       />
 
       {/* ── Configure Email slide-out ────────────────────────────── */}
@@ -224,9 +229,15 @@ export function VoiceAgentDetailPage({
         open={emailOpen}
         onClose={() => setEmailOpen(false)}
         agentName={`${agent.name} — ${agent.purpose}`}
+        addressIds={emailChannel?.addressIds ?? []}
         config={emailChannel?.email ?? DEFAULT_EMAIL_CONFIG}
         onSave={handleSaveEmail}
-        onAddAddress={() => toast.info("Add email address — coming soon")}
+        onAddAddresses={(ids) => onChange({
+          ...agent,
+          channels: agent.channels.map(c => c.kind === "email"
+            ? { ...c, addressIds: Array.from(new Set([...(c.addressIds ?? []), ...ids])) }
+            : c),
+        })}
       />
     </div>
   )

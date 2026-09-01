@@ -276,7 +276,6 @@ function VoiceChannelScreenInner() {
               onBack={() => setAgentDetailId(null)}
               onChange={(patch) => setVoiceAgents(prev => prev.map(a => a.id === patch.id ? patch : a))}
               numbers={numbers}
-              onOpenAddNumber={() => setAcquireOpen(true)}
               onOpenNumber={(numberId) => {
                 // Click-through from an AI agent's channel/tool number
                 // chip → Voice section → that Number's detail page.

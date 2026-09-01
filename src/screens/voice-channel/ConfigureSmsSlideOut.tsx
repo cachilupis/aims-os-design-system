@@ -12,6 +12,7 @@ import {
   type SmsConfig,
 } from "./voice-agents-data"
 import type { PhoneNumberRecord } from "./data"
+import { AddPhoneNumberModal } from "./AddPhoneNumberModal"
 
 // ─────────────────────────────────────────────────────────────────────
 // ConfigureSmsSlideOut — port of the "Configure SMS" slide-out from
@@ -23,13 +24,14 @@ import type { PhoneNumberRecord } from "./data"
 // ─────────────────────────────────────────────────────────────────────
 
 interface ConfigureSmsSlideOutProps {
-  open:        boolean
-  onClose:     () => void
-  agentName:   string
-  numbers:     PhoneNumberRecord[]
-  config:      SmsConfig
-  onSave:      (next: SmsConfig) => void
-  onAddNumber: () => void
+  open:         boolean
+  onClose:      () => void
+  agentName:    string
+  numbers:      PhoneNumberRecord[]     // every workspace number
+  numberIds:    string[]                 // assigned to this SMS channel
+  config:       SmsConfig
+  onSave:       (next: SmsConfig) => void
+  onAddNumbers: (numberIds: string[]) => void
 }
 
 type SubTab = "general" | "inbound" | "outbound"
@@ -41,10 +43,11 @@ const SUB_TABS: TabItem[] = [
 ]
 
 export function ConfigureSmsSlideOut({
-  open, onClose, agentName, numbers, config, onSave, onAddNumber,
+  open, onClose, agentName, numbers, numberIds, config, onSave, onAddNumbers,
 }: ConfigureSmsSlideOutProps) {
-  const [draft,  setDraft]  = useState<SmsConfig>(config)
-  const [subTab, setSubTab] = useState<SubTab>("general")
+  const [draft,   setDraft]   = useState<SmsConfig>(config)
+  const [subTab,  setSubTab]  = useState<SubTab>("general")
+  const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => { if (open) setDraft(config) }, [open, config])
 
@@ -56,7 +59,20 @@ export function ConfigureSmsSlideOut({
 
   const handleSave = () => { onSave(draft); onClose() }
 
+  // Dropdown lists only numbers already assigned to this channel.
+  // Empty state surfaces a hint so Add Number is the obvious next step.
+  const assignedNumbers = numbers.filter(n => numberIds.includes(n.id))
+  const dropdownOptions = assignedNumbers.length > 0
+    ? assignedNumbers.map(n => ({ value: n.id, label: `${n.number}${n.label ? ` — ${n.label}` : ""}` }))
+    : [{ value: "", label: "No numbers assigned — use Add Number" }]
+
+  const handleAdd = (newIds: string[]) => {
+    onAddNumbers(newIds)
+    if (newIds[0]) set("numberId", newIds[0])
+  }
+
   return (
+    <>
     <SlideOut
       open={open}
       onClose={onClose}
@@ -85,13 +101,10 @@ export function ConfigureSmsSlideOut({
             <NativeSelect
               value={draft.numberId}
               onChange={(v) => set("numberId", v)}
-              options={numbers.map(n => ({
-                value: n.id,
-                label: `${n.number}${n.label ? ` — ${n.label}` : ""}`,
-              }))}
+              options={dropdownOptions}
             />
           </div>
-          <Button variant="secondary" size="sm" onClick={onAddNumber} icon={<Plus size={12}/>}>
+          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} icon={<Plus size={12}/>}>
             Add Number
           </Button>
         </div>
@@ -220,5 +233,16 @@ export function ConfigureSmsSlideOut({
         </div>
       </div>
     </SlideOut>
+
+    {/* Add Phone Number modal — reuses the same picker as Configure
+        Voice; filters by numbers not already on this SMS channel. */}
+    <AddPhoneNumberModal
+      open={addOpen}
+      onClose={() => setAddOpen(false)}
+      numbers={numbers}
+      assignedIds={numberIds}
+      onAdd={handleAdd}
+    />
+    </>
   )
 }
