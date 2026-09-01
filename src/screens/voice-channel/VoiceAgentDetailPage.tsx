@@ -13,6 +13,7 @@ import type { PhoneNumberRecord } from "./data"
 import type { VoiceAIAgent, AIChannel, ChannelKind, VoiceConfig } from "./voice-agents-data"
 import { ConfigureVoiceSlideOut } from "./ConfigureVoiceSlideOut"
 import { KnowledgePanel } from "./KnowledgePanel"
+import { ToolsPanel } from "./ToolsPanel"
 import { useToast } from "./toast"
 
 // ─────────────────────────────────────────────────────────────────────
@@ -137,6 +138,12 @@ export function VoiceAgentDetailPage({
             onPreviewPack={(id)  => toast.info(`Preview pack ${id}`)}
             onUploadFile={()     => toast.info("Open file uploader")}
             onDownloadFile={(id) => toast.info(`Download file ${id}`)}
+          />
+        ) : subTab === "tools" ? (
+          <ToolsPanel
+            agent={agent}
+            onConfigureVoice={() => setVoiceOpen(true)}
+            onAddTool={() => toast.info("Open tool catalog — coming soon")}
           />
         ) : (
           <PlaceholderPanel subTab={subTab} agentName={agent.name}/>

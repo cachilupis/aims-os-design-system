@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Phone, PhoneCall, Settings as SettingsIcon, Plus, Search, Bot } from "lucide-react"
+import { Phone, PhoneCall, Settings as SettingsIcon, Plus, Search } from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Tabs } from "@/components/ui/tabs"
@@ -86,11 +86,20 @@ function renderSidebarFooter(collapsed: boolean) {
   )
 }
 
-type TopTab       = "numbers" | "history" | "agents" | "settings"
+// The prototype has two top-level sections routed via the sidebar:
+//   voice   — Numbers · Call History · Settings tabs (Voice channel UI)
+//   agents  — Agents list + agent detail (Voice AI Agents workspace)
+// Prior iterations put Agents as a top tab inside Voice; now Agents is
+// a first-class section reached via the sidebar's "Agents" entry, and
+// the top tabs strip only lists Voice-channel tabs. The Configure
+// Voice slide-out and Agent detail page continue to live inside the
+// Agents section.
+type Screen       = "voice" | "agents"
+type TopTab       = "numbers" | "history" | "settings"
 type NumberFilter = "all" | "active" | "suspended"
 
 // ─────────────────────────────────────────────────────────────────────
-// Main screen — 3 top tabs (Numbers · Call History · Settings)
+// Main screen — sidebar-routed: Voice (3 tabs) · Agents (list/detail)
 // ─────────────────────────────────────────────────────────────────────
 
 export default function VoiceChannelScreen() {
@@ -104,6 +113,7 @@ export default function VoiceChannelScreen() {
 function VoiceChannelScreenInner() {
   const toast = useToast()
 
+  const [screen,        setScreen]        = useState<Screen>("voice")
   const [tab,           setTab]           = useState<TopTab>("numbers")
   const [numbers,       setNumbers]       = useState<PhoneNumberRecord[]>(NUMBERS_SEED)
   const [calls]                            = useState<Call[]>(CALLS_SEED)
@@ -225,12 +235,12 @@ function VoiceChannelScreenInner() {
     <>
       <ScreenLayout
         sidebarItems={VOICE_SIDEBAR}
-        activeSidebarId={tab === "agents" ? "agents" : "voice"}
+        activeSidebarId={screen === "agents" ? "agents" : "voice"}
         onSidebarItemClick={(id) => {
           if (id === "agents") {
-            setTab("agents"); setAgentDetailId(null); setDetailId(null)
+            setScreen("agents"); setDetailId(null); setPreviewId(null)
           } else if (id === "voice") {
-            setTab("numbers"); setAgentDetailId(null); setDetailId(null)
+            setScreen("voice"); setAgentDetailId(null)
           }
           // Other sidebar ids are illustrative stubs — no route wired yet.
         }}
@@ -239,29 +249,38 @@ function VoiceChannelScreenInner() {
           <Header
             size={isScrolled ? "compress" : "size-l"}
             title={
-              agentDetailAgent    ? `${agentDetailAgent.name} — ${agentDetailAgent.purpose}` :
-              detailNumber        ? detailNumber.number :
-                                    "Voice Channel"
+              screen === "agents" && agentDetailAgent ? `${agentDetailAgent.name} — ${agentDetailAgent.purpose}` :
+              screen === "agents"                     ? "Agents" :
+              detailNumber                            ? detailNumber.number :
+                                                        "Voice Channel"
             }
             description={
-              agentDetailAgent    ? `AI voice agent · ${agentDetailAgent.status}` :
-              detailNumber        ? `${detailNumber.label || "No label"} · ${detailNumber.type} · Full configuration` :
-                                    "Phone numbers, call history, and workspace defaults for the Voice channel."
+              screen === "agents" && agentDetailAgent ? `AI voice agent · ${agentDetailAgent.status}` :
+              screen === "agents"                     ? "AI voice agents that answer, route and act across channels." :
+              detailNumber                            ? `${detailNumber.label || "No label"} · ${detailNumber.type} · Full configuration` :
+                                                        "Phone numbers, call history, and workspace defaults for the Voice channel."
             }
           />
         )}
       >
-        <div className="flex flex-col gap-4" style={{ minHeight: agentDetailAgent ? "70vh" : undefined }}>
-          {/* When a number OR an agent is opened in the full-page view,
-              the top-level Tabs and all list content are hidden — the
-              detail page owns the screen. */}
-          {agentDetailAgent ? (
+        <div className="flex flex-col gap-4" style={{ minHeight: (agentDetailAgent || screen === "agents") ? "70vh" : undefined }}>
+          {/* Screen routing:
+              screen === "agents" && agentDetailAgent → full-page Agent detail
+              screen === "agents"                    → Agents list
+              detailNumber                           → full-page Number detail
+              else                                   → Voice tabs + tab body */}
+          {screen === "agents" && agentDetailAgent ? (
             <VoiceAgentDetailPage
               agent={agentDetailAgent}
               onBack={() => setAgentDetailId(null)}
               onChange={(patch) => setVoiceAgents(prev => prev.map(a => a.id === patch.id ? patch : a))}
               numbers={numbers}
               onOpenAddNumber={() => setAcquireOpen(true)}
+            />
+          ) : screen === "agents" ? (
+            <VoiceAgentsTab
+              agents={voiceAgents}
+              onOpenAgent={(id) => setAgentDetailId(id)}
             />
           ) : detailNumber ? (
             <NumberDetailPage
@@ -273,13 +292,13 @@ function VoiceChannelScreenInner() {
               allCalls={calls}
             />
           ) : (<>
-          {/* Top-level tabs with counts */}
+          {/* Top-level tabs — Voice-channel only (Agents lives in the
+              sidebar as its own section, not as a tab in this strip). */}
           <Tabs
             items={[
-              { id: "numbers",  label: `Numbers (${numbers.length})`,      icon: Phone         },
-              { id: "history",  label: `Call History (${calls.length})`,   icon: PhoneCall     },
-              { id: "agents",   label: `Agents (${voiceAgents.length})`,   icon: Bot           },
-              { id: "settings", label: "Settings",                          icon: SettingsIcon },
+              { id: "numbers",  label: `Numbers (${numbers.length})`,    icon: Phone         },
+              { id: "history",  label: `Call History (${calls.length})`, icon: PhoneCall     },
+              { id: "settings", label: "Settings",                        icon: SettingsIcon },
             ]}
             activeId={tab}
             onChange={(id) => setTab(id as TopTab)}
@@ -352,12 +371,6 @@ function VoiceChannelScreenInner() {
           )}
 
           {tab === "history"  && <CallHistoryTab calls={calls} numbers={numbers}/>}
-          {tab === "agents"   && (
-            <VoiceAgentsTab
-              agents={voiceAgents}
-              onOpenAgent={(id) => setAgentDetailId(id)}
-            />
-          )}
           {tab === "settings" && <SettingsTab/>}
           </>)}
         </div>
