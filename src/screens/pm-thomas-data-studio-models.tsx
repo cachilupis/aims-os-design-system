@@ -80,7 +80,7 @@ const SCOPE_CHANGELOG: ChangeBlock[] = [
 
 function ScopeSwitcher({ scope, setScope, onChangelog }: { scope: Scope; setScope: (s: Scope) => void; onChangelog: () => void }) {
   return (
-    <div style={{ position: "fixed", right: 16, bottom: 16, zIndex: 9990, display: "flex", alignItems: "center", gap: 8, background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: "6px 8px 6px 12px", boxShadow: "0 8px 28px rgba(0,0,0,0.28)" }}>
+    <div style={{ position: "fixed", right: 16, bottom: 16, zIndex: 9990, display: "flex", alignItems: "center", gap: 8, background: "var(--surface)", border: "0.5px solid var(--field-border)", borderRadius: 12, padding: "6px 8px 6px 12px", boxShadow: "var(--shadow-elevation-4)" }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-subtitle)", textTransform: "uppercase", letterSpacing: ".04em" }}>Scope</span>
       <SwitchTab size="s" items={[{ id: "v1", label: "V1" }, { id: "v1.5", label: "V1.2" }, { id: "v2", label: "Full vision" }]} value={scope} onChange={s => setScope(s as Scope)} />
       <Button variant="tertiary" size="sm" onClick={onChangelog}><LucideIcons.ListChecks size={15} /></Button>
@@ -324,7 +324,7 @@ function KpiContent({ value, feedback, iconName, iconVariant }: {
   return (
     <div style={{ padding: "4px 16px 16px" }}>
       <div className="flex items-center justify-between">
-        <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.1, color: "var(--color-text-title)" }}>{value}</span>
+        <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: "var(--color-text-title)" }}>{value}</span>
         <HighlightIcon size="lg" variant={iconVariant} iconName={iconName} />
       </div>
       <span style={{ fontSize: 12, color: "var(--color-text-subtitle)", marginTop: 6, display: "block" }}>{feedback}</span>
