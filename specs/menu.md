@@ -35,16 +35,19 @@ Floating list of selectable options. Used inside dropdowns, context menus, comma
 
 ### default
 
-Unselected row. Hover applies Surface/Floating/Hover automatically via CSS.
+Unselected row. Hover applies --menu-item-hover automatically via CSS.
 
 CSS prefix: `menu-item`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Floating/Default | 13469:2 | rgba(255,255,255,0.92) | rgba(20,27,42,0.85) |
-| Hover background | Surface/Floating/Hover | 13469:3 | rgba(242,242,242,0.95) | rgba(32,42,62,0.90) |
-| Label text | Text/Subtitle | 4465:4468 | #2A2A2A | rgba(255,255,255,0.60) |
-| Icon | Icon/Neutral/Dark | 4465:4510 | #5C5C5C | rgba(255,255,255,0.50) |
+| Background | --menu-bg |  | rgba(255,255,255,0.92) | rgba(16,22,40,0.92) |
+| Hover background | --menu-item-hover |  | rgba(242,242,242,0.95) | rgba(32,42,62,0.90) |
+| Label text | --menu-item-text |  | #2A2A2A | rgba(255,255,255,0.60) |
+| Subtext | --menu-item-subtext |  | #5C5C5C | rgba(255,255,255,0.60) |
+| Icon | --menu-item-icon |  | #5C5C5C | rgba(255,255,255,0.50) |
+| Divider | --menu-divider |  | #f2f2f2 | rgba(255,255,255,0.08) |
+| Section label | --menu-section-text |  | #9ca3af | rgba(255,255,255,0.40) |
 
 ### focus
 
@@ -54,19 +57,19 @@ CSS prefix: `menu-item-focus`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Floating/Hover | 13469:3 | rgba(242,242,242,0.95) | rgba(32,42,62,0.90) |
-| Label text | Text/Subtitle (unchanged) | 4465:4468 | #2A2A2A | rgba(255,255,255,0.60) |
+| Background (reused) | --menu-item-hover |  | rgba(242,242,242,0.95) | rgba(32,42,62,0.90) |
+| Label text (reused) | --menu-item-text |  | #2A2A2A | rgba(255,255,255,0.60) |
 
 ### disabled
 
-Unavailable row. Background stays the same — only text/icon color changes to Text/Disabled.
+Unavailable row. Background stays the same — only text/icon color changes.
 
 CSS prefix: `menu-item-disabled`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Floating/Default (unchanged) | 13469:2 | rgba(255,255,255,0.92) | rgba(20,27,42,0.85) |
-| Label + icon | Text/Disabled | 4465:4472 | #BABABA | rgba(255,255,255,0.30) |
+| Background (reused) | --menu-bg |  | rgba(255,255,255,0.92) | rgba(16,22,40,0.92) |
+| Label + icon | --menu-item-disabled |  | #BABABA | rgba(255,255,255,0.30) |
 
 ---
 

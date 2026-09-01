@@ -37,7 +37,7 @@ Border width: `1.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Icon color | Border/Neutral/Default |  | #5c5c5c | rgba(255,255,255,0.10) |
+| Icon color | --field-border |  | #5c5c5c | rgba(255,255,255,0.10) |
 
 ### unchecked hover
 
@@ -45,8 +45,8 @@ Border width: `1.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Ripple bg | Surface/Neutral/Default |  | rgba(242,242,242,0.8) | rgba(255,255,255,0.06) |
-| Icon color | Border/Neutral/Darker |  | #2a2a2a | rgba(255,255,255,0.20) |
+| Ripple bg | --checkbox-ripple |  | rgba(242,242,242,0.80) | rgba(255,255,255,0.06) |
+| Icon color | --field-border-hover |  | #2a2a2a | rgba(255,255,255,0.20) |
 
 ### checked default
 
@@ -54,8 +54,8 @@ Border width: `–`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill color | Border/Primary/Default |  | #2173ff | #2b7fff |
-| Check stroke | Text/White |  | #ffffff | #ffffff |
+| Fill color | --field-border-focus |  | #2173ff | #2b7fff |
+| Check stroke | — |  | #ffffff | #ffffff |
 
 ### checked hover
 
@@ -63,7 +63,7 @@ Border width: `–`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Ripple bg | Primary/50 |  | #e9f1ff | rgba(43,127,255,0.14) |
+| Ripple bg | --checkbox-ripple-checked |  | rgba(233,241,255,1) | rgba(43,127,255,0.14) |
 
 ### disabled
 
@@ -71,8 +71,8 @@ Border width: `1.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Unchecked color | Text/Disabled |  | #bababa | rgba(255,255,255,0.20) |
-| Checked fill | Primary/200 |  | #80afff | rgba(43,127,255,0.50) |
+| Unchecked color | --field-placeholder |  | #bababa | rgba(255,255,255,0.30) |
+| Checked fill | --checkbox-checked-dim |  | #80afff | rgba(43,127,255,0.50) |
 
 ---
 
