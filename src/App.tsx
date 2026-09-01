@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, Fragment, useRef, type CSSProperties, type ReactNode } from "react"
 import { createPortal } from "react-dom"
+import { Popover } from "@base-ui/react/popover"
 import { usePageTab, useScrollToHash } from "@/lib/use-page-tab"
 import * as LucideIcons from "lucide-react"
 import PMMichaelTestV1Screen      from "./screens/pm-michael-test-v1"
@@ -15689,6 +15690,17 @@ const PG_CTX_TEMPLATES: { id: string; name: string; desc: string }[] = [
   { id: "t3", name: "Weekly digest", desc: "Compiles workspace activity into a Friday summary email." },
 ]
 
+const PG_CTX_API_KEYS: EntityListItemData[] = [
+  { id: "k1", title: "Production API Key", iconVariant: "info", iconName: "KeyRound", state: { label: "Active", variant: "success" }, timestamp: "Created 3mo ago" },
+  { id: "k2", title: "Staging API Key", iconVariant: "purple", iconName: "KeyRound", state: { label: "Active", variant: "success" }, timestamp: "Created 1mo ago" },
+  { id: "k3", title: "Analytics Read Key", iconVariant: "yellow", iconName: "KeyRound", state: { label: "Expiring soon", variant: "alert" }, timestamp: "Expires in 5d" },
+  { id: "k4", title: "Legacy Webhook Key", iconVariant: "neutral", iconName: "KeyRound", state: { label: "Revoked", variant: "neutral" }, timestamp: "Revoked 2mo ago" },
+]
+const PG_CTX_API_KEYS_LANDING: EntityListItemData[] = [
+  { id: "k0", title: "Reporting API Key", iconVariant: "success", iconName: "KeyRound", state: { label: "Active", variant: "success" }, timestamp: "Just now" },
+  ...PG_CTX_API_KEYS,
+]
+
 function PgRunRow({ status, time }: { status: "success" | "error"; time: string }) {
   return (
     <div className="flex items-center justify-between rounded-[8px] p-[10px]" style={{ border: "0.5px solid var(--field-border)" }}>
@@ -15776,30 +15788,20 @@ function PgFormSection({ label, children }: { label: string; children: React.Rea
   )
 }
 
-// Select is trigger-only — no built-in option list. Composed here with a
-// MenuItem list in a position:fixed panel, centered below the trigger, per
-// CLAUDE.md's own "Dropdown menus (filter slots)" convention. Positioned
-// relative to the tour's own translateZ(0) frame (via the frame's
-// data-pg-tour-frame marker) rather than the raw viewport: getBoundingClientRect
-// is always viewport-relative, but that transformed frame is the actual
-// containing block for position:fixed descendants rendered inside it — using
-// raw viewport coordinates there silently offsets the panel down by however
-// tall the tour bar above the frame is.
+// Select is trigger-only — no built-in option list, so a working dropdown has
+// to be composed. Anchored with @base-ui/react's Popover instead of hand-computed
+// getBoundingClientRect() math: whether that math is correct depends on which
+// ancestor happens to carry a transform and whether the surrounding surface
+// portals (SlideOut does, ModalDialog does not always) — four combinations,
+// correct in some, wrong in the rest. Popover.Positioner's `anchor` ref resolves
+// the containing block itself through Floating UI, correctly through transforms
+// and portals alike, and also handles edge collision and flipping for free.
+// z-[10030] clears ModalDialog's z-[10020] and SlideOut's z-[10010] — the
+// popover portals to document.body as a sibling of both, not a descendant.
 function PgInteractiveSelect({ placeholder, options }: { placeholder: string; options: string[] }) {
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState<string | undefined>(undefined)
-  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
-
-  const openMenu = () => {
-    const el = triggerRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const frame = el.closest("[data-pg-tour-frame]")
-    const frameRect = frame ? frame.getBoundingClientRect() : { left: 0, top: 0 }
-    setPos({ left: rect.left - frameRect.left + rect.width / 2, top: rect.bottom - frameRect.top + 4 })
-    setOpen(true)
-  }
 
   return (
     <div ref={triggerRef}>
@@ -15807,29 +15809,43 @@ function PgInteractiveSelect({ placeholder, options }: { placeholder: string; op
         placeholder={placeholder}
         value={value}
         open={open}
-        onClick={() => (open ? setOpen(false) : openMenu())}
+        onClick={() => setOpen(o => !o)}
         onClear={() => setValue(undefined)}
       />
-      {open && pos && (
-        <>
-          <div className="fixed inset-0" style={{ zIndex: 10000 }} onClick={() => setOpen(false)} />
-          <div
-            className="flex flex-col rounded-[8px] overflow-hidden"
-            style={{
-              position: "fixed", left: pos.left, top: pos.top, transform: "translateX(-50%)",
-              zIndex: 10001, minWidth: 200,
-              background: "var(--surface-floating-default)",
-              border: "0.5px solid var(--color-border-neutral-subtle)",
-              boxShadow: "var(--shadow-elevation-5)",
-            }}
-          >
-            {options.map(opt => (
-              <MenuItem key={opt} label={opt} size="sm" onClick={() => { setValue(opt); setOpen(false) }} />
-            ))}
-          </div>
-        </>
-      )}
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <Popover.Portal>
+          <Popover.Positioner anchor={triggerRef} side="bottom" align="start" sideOffset={4} style={{ zIndex: 10030 }}>
+            <Popover.Popup
+              className="flex flex-col rounded-[8px] overflow-hidden"
+              style={{
+                minWidth: 200,
+                background: "var(--surface-floating-default)",
+                border: "0.5px solid var(--color-border-neutral-subtle)",
+                boxShadow: "var(--shadow-elevation-5)",
+              }}
+            >
+              {options.map(opt => (
+                <MenuItem key={opt} label={opt} size="sm" onClick={() => { setValue(opt); setOpen(false) }} />
+              ))}
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
     </div>
+  )
+}
+
+// TagInput is a controlled component — this just gives each scene instance its
+// own local tag list so the demo is genuinely interactive, not a static prop.
+function PgInteractiveTagInput({ placeholder }: { placeholder?: string }) {
+  const [tags, setTags] = useState<string[]>([])
+  return (
+    <TagInput
+      tags={tags}
+      onAddTag={t => setTags(ts => [...ts, t])}
+      onRemoveTag={t => setTags(ts => ts.filter(x => x !== t))}
+      placeholder={placeholder}
+    />
   )
 }
 
@@ -15853,7 +15869,7 @@ function PgCreateContextShell({ sidebarId, overlay, children }: { sidebarId: str
 }
 
 type PgTourStepDef = { label: string; note: string; content: React.ReactNode }
-type PgPreviewCaseId = "contextual-slideout" | "standalone-modal" | "standalone-fullpage" | "staged-wizard" | "catalogue"
+type PgPreviewCaseId = "contextual-slideout" | "standalone-modal" | "standalone-modal-apikey" | "standalone-fullpage" | "staged-wizard" | "catalogue"
 
 // Section 1 · "the trigger lives where the collection lives" → SlideOut attaches to the record
 function pgSceneContextualSlideout(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
@@ -15894,11 +15910,15 @@ function pgSceneContextualSlideout(next: () => void, back: () => void, _onClose:
   )
   return [
     { label: "Trigger visible", note: "The trigger lives inside the Notes widget's own header — the collection it fills — not the page Header, which is reserved for the worker's own primary action, Run now.", content: frame() },
-    { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record and its existing notes stay visible behind it — that visibility is the whole point of this step.", content: frame(
+    { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record and its existing notes stay visible behind it. Three fields, because that is what a note needs here — a note on a different object would carry different ones.", content: frame(
       <SlideOut open onClose={back} type="full-slot" size="s" showScrollbar={false}>
         <div className="flex flex-col gap-[16px] h-full">
           <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
-          <Textarea placeholder="Write a note…" />
+          <PgFormSection label="Note">
+            <PgInteractiveSelect placeholder="Category" options={["Incident", "Configuration", "Follow-up"]} />
+            <PgInteractiveTagInput placeholder="Add a tag…" />
+            <Textarea placeholder="Write a note…" />
+          </PgFormSection>
           <div className="flex-1" />
           <div className="flex justify-end gap-[8px]">
             <Button variant="secondary" size="sm" onClick={back}>Cancel</Button>
@@ -15926,15 +15946,15 @@ function pgSceneStandaloneModal(next: () => void, back: () => void, _onClose: ()
     )
   }
   return [
-    { label: "Trigger visible", note: "A standalone entity, from its own list view — 4 fields, well under the 5-field threshold.", content: frame() },
-    { label: "Surface open", note: "ModalDialog variant=\"content\" — the user can't ignore this and keep working; nothing on screen is this worker's parent. slotUnstyled: fields sit directly on the modal, no gray wrapper card.", content: frame(
+    { label: "Trigger visible", note: "A standalone entity, from its own list view — 4 fields, because that is what a worker needs. Field count is an input to the cascade, not an output of it.", content: frame() },
+    { label: "Surface open", note: "ModalDialog variant=\"content\" — the user can't ignore this and keep working; nothing on screen is this worker's parent. slotUnstyled: fields sit directly on the modal, no gray wrapper card. Four fields, because that is what a worker needs — see the API key scene for the same modal with two.", content: frame(
       <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
         title="New Worker" description="Add a new AI worker to your team."
         slot={
           <PgFormSection label="Worker details">
             <Input placeholder="Worker name" />
-            <PgInteractiveSelect placeholder="Role" options={["Support agent", "Workflow orchestrator", "Data processor"]} />
-            <Select placeholder="Model" />
+            <PgInteractiveSelect placeholder="Role" options={["Operator", "Analyst", "Supervisor"]} />
+            <PgInteractiveSelect placeholder="Model" options={["GPT-class", "Claude-class", "Custom"]} />
             <Input placeholder="Assigned team" />
           </PgFormSection>
         }
@@ -15943,6 +15963,40 @@ function pgSceneStandaloneModal(next: () => void, back: () => void, _onClose: ()
       />
     ) },
     { label: "Landing", note: "Closes. The user returns to the list; the new worker appears there.", content: frame(undefined, PG_CTX_WORKERS_LANDING) },
+  ]
+}
+
+// Section 2 · the same surface as scene B, a different object — the container
+// is the constant, the content is the variable. See create.md §1b.
+function pgSceneStandaloneModalApiKey(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_API_KEYS) => {
+    const expiring = items.filter(k => k.state?.label === "Expiring soon").length
+    return (
+      <PgCreateContextShell sidebarId="settings" overlay={overlay}>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="API keys" description={`${items.length} keys · ${expiring} expiring`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New key</Button>} />
+          <PgListViewBody searchPlaceholder="Search keys…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={items} />
+        </main>
+      </PgCreateContextShell>
+    )
+  }
+  return [
+    { label: "Trigger visible", note: "The same ModalDialog as the Worker scene — but this object needs two fields, not four.", content: frame() },
+    { label: "Surface open", note: "Same modal, same slotUnstyled, same Forms-pattern spacing. Two fields, because that is what an API key needs. The pattern chose the container; the object chose the fields.", content: frame(
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
+        title="New API Key" description="Generate a new API key for this workspace."
+        slot={
+          <PgFormSection label="Key details">
+            <Input placeholder="Label" />
+            <PgInteractiveSelect placeholder="Scope" options={["Read", "Read and write", "Admin"]} />
+          </PgFormSection>
+        }
+        ctaPrimary={{ label: "Create", onClick: next }}
+        ctaSecondary={{ label: "Cancel", onClick: back }}
+      />
+    ) },
+    { label: "Landing", note: "Closes, back on the list, the new key as the first row, briefly highlighted.", content: frame(undefined, PG_CTX_API_KEYS_LANDING) },
   ]
 }
 
@@ -15968,12 +16022,12 @@ function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose:
                 <Input placeholder="Full name" />
                 <Input placeholder="Email" />
                 <PgInteractiveSelect placeholder="Role" options={["Admin", "Editor", "Viewer"]} />
-                <Select placeholder="Team" />
+                <PgInteractiveSelect placeholder="Team" options={["Growth", "Platform", "Support"]} />
               </PgFormSection>
               <PgFormSection label="Access & details">
-                <Select placeholder="Access level" />
-                <Select placeholder="Manager" />
-                <Input placeholder="Start date" />
+                <PgInteractiveSelect placeholder="Access level" options={["Full access", "Standard", "Restricted"]} />
+                <PgInteractiveSelect placeholder="Manager" options={["Priya Shah", "Marcus Tran", "Jordan Lee"]} />
+                <Input placeholder="Phone number" />
                 <Input placeholder="Location" />
                 <Textarea placeholder="Notes (optional)" />
               </PgFormSection>
@@ -16125,6 +16179,7 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
 const PG_PREVIEW_SCENES: Record<PgPreviewCaseId, (next: () => void, back: () => void, onClose: () => void) => PgTourStepDef[]> = {
   "contextual-slideout": pgSceneContextualSlideout,
   "standalone-modal": pgSceneStandaloneModal,
+  "standalone-modal-apikey": pgSceneStandaloneModalApiKey,
   "standalone-fullpage": pgSceneStandaloneFullPage,
   "staged-wizard": pgSceneStagedWizard,
   "catalogue": pgSceneCatalogue,
@@ -16164,7 +16219,7 @@ function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onC
           {i < steps.length - 1 && <Button variant="primary" size="sm" onClick={next}>Next</Button>}
         </div>
       </div>
-      <div data-pg-tour-frame className="flex-1 flex flex-col overflow-hidden" style={{ transform: "translateZ(0)" }}>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ transform: "translateZ(0)" }}>
         {current.content}
       </div>
       <button
@@ -16218,6 +16273,30 @@ function PatternCreatePage() {
             <SectionLabel>Scope</SectionLabel>
             <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
               <strong className="text-[var(--foreground)]">Create</strong> brings a new object into existence. <strong className="text-[var(--foreground)]">Configure</strong> edits the properties of something that already exists. This pattern governs Create only — it never governs Configure.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>The pattern decides the container, never the fields</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px] mb-[12px]">
+              This is the single most misread thing about the pattern. <strong className="text-[var(--foreground)]">The fields belong to the object. The container belongs to the pattern.</strong> A create modal for a worker has the fields a worker needs; a create modal for an API key has the fields an API key needs. Neither is "what a create modal looks like."
+            </p>
+            <div className="overflow-x-auto mb-[12px]">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <tbody>
+                  <tr style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                    <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)] w-[220px]">Input to the cascade</td>
+                    <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">How many mandatory fields the object has, whether the flow has stages, whether it branches</td>
+                  </tr>
+                  <tr>
+                    <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">Output of the cascade</td>
+                    <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">Which container holds them</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
+              The fields determine the surface. The surface never determines the fields. Anyone reading an example and copying its field list has inverted the pattern — a prototype for a different object, in the same surface, will look different inside, and that is the pattern working correctly, not an inconsistency. See scenes B and B2 in the Examples tab for the same modal with different fields.
             </p>
           </PatternCard>
 
@@ -16532,6 +16611,9 @@ function PatternCreatePage() {
               <strong style={{ color: "var(--foreground)" }}>AlertBanner is not the component for this.</strong> Its spec defines it as a full-width notice for system-level feedback, and the Feedback pattern page assigns it to persistent in-context state. A success banner for a routine create occupies space until dismissed and says less than the object itself does.
             </p>
             <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
+              <strong style={{ color: "var(--color-text-alert)" }}>DS-GAP — Date field.</strong> There is no <code style={{ fontSize: 11 }}>DatePicker</code> or <code style={{ fontSize: 11 }}>Calendar</code> component in the repo. Any create whose object needs a date is under-specified until one exists — do not improvise one.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
               <strong style={{ color: "var(--color-text-alert)" }}>DS-GAP — Toast / Snackbar.</strong> The design system has no transient action-feedback component. Until it exists, the second row above cannot be built, and any create whose result is invisible is under-specified.
             </p>
           </PatternCard>
@@ -16572,7 +16654,7 @@ function PatternCreatePage() {
       {tab === "examples" && (
         <div className="flex flex-col gap-[24px]">
           <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
-            Every case below resolves by running the cascade — no exception required. Five cases open a full-screen walkthrough; the rest are documentation rows — they explain the rule in text and don't open a preview, either because the component doesn't exist yet or because this pattern deliberately doesn't specify anything further.
+            Every case below resolves by running the cascade — no exception required. Six cases open a full-screen walkthrough; the rest are documentation rows — they explain the rule in text and don't open a preview, either because the component doesn't exist yet or because this pattern deliberately doesn't specify anything further.
           </p>
 
           <PatternCard>
@@ -16589,9 +16671,12 @@ function PatternCreatePage() {
           <PatternCard>
             <SectionLabel>Creating something standalone</SectionLabel>
             <div className="flex flex-col gap-[8px]">
-              <PgGalleryRow label="5 fields or fewer" surface="ModalDialog" status="preview"
-                note="Step 5 — nothing on screen is this object's parent."
+              <PgGalleryRow label="5 fields or fewer — a worker" surface="ModalDialog" status="preview"
+                note="Step 5 — nothing on screen is this object's parent. Four fields, because that is what a worker needs."
                 onLaunch={() => setPgPreviewCase("standalone-modal")} />
+              <PgGalleryRow label="Same modal, a different object — an API key" surface="ModalDialog" status="preview"
+                note="Step 5 — the same surface as the worker scene, with two fields instead of four. The pattern chose the container; the object chose the fields."
+                onLaunch={() => setPgPreviewCase("standalone-modal-apikey")} />
               <PgGalleryRow label="More than 5" surface="Full-page create form" status="preview"
                 note="Step 5 — the 5-field threshold applies only on the standalone, modal-bound side."
                 onLaunch={() => setPgPreviewCase("standalone-fullpage")} />

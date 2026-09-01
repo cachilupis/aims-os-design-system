@@ -41,6 +41,7 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "automations", label: "Automations", icon: "Zap" },
   { id: "knowledge",   label: "Knowledge",   icon: "LayoutGrid", hasChildren: true },
   { id: "contacts",    label: "Contacts",    icon: "User" },
+  { id: "settings",    label: "Settings",    icon: "Settings" },
 ]
 
 // ── Unified nav item — handles both collapsed (icon-only) and expanded (icon+label) states

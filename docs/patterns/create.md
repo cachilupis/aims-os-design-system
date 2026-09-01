@@ -3,7 +3,7 @@
 > Single source of truth for how any create action picks its surface in AIMS OS.
 > Everything else — the `CLAUDE.md` table, the `patterns-create` doc page, the playground screens — is derived from this file.
 >
-> Status: **draft v0.8 — pending validation**
+> Status: **draft v0.9 — pending validation**
 >
 > v0.2 — volume threshold removed; step 1 rewritten as a declared property rather than an enumerated list.
 > v0.3 — cascade rewritten as an explicit sequence; the two-stage flow named instead of falling through to the default.
@@ -12,6 +12,7 @@
 > v0.6 — `SlideOut type` corrected to `full-slot` after verifying against the component source; landing defined for the standalone modal and the catalogue modal.
 > v0.7 — step 1 reframed as a hand-off rather than a surface; "dedicated view" split into the two distinct outputs it was conflating.
 > v0.8 — staged flows never live in a panel (no Stepper in a SlideOut); page-level create completes in `StepperNavFooter`, not the Header; the trigger lives where the collection lives; §4b defines success feedback by visibility and names the missing Toast component.
+> v0.9 — §1b added: the pattern decides the container, never the fields; field count is an input to the cascade, not an output. DatePicker named as a second `DS-GAP`.
 
 ---
 
@@ -33,6 +34,25 @@ Run this before anything else. If any of the following is true, **the pattern do
 | The action edits properties of an existing object | Nothing new comes into existence | Configure pattern |
 
 **Control case.** Dragging a node from the library onto the Workflow Builder canvas is *not* a create action under this pattern. The `SidePanel` that opens afterwards configures the node that already exists. Any rule that tries to select a surface here is misapplied.
+
+---
+
+## 1b · The pattern decides the container, never the fields
+
+This is the single most misread thing about the pattern, and the examples are where the misreading happens.
+
+**The fields belong to the object. The container belongs to the pattern.** A create modal for a worker has the fields a worker needs. A create modal for an API key has the fields an API key needs. Neither is "what a create modal looks like".
+
+And the direction of the relationship matters:
+
+| | |
+| --- | --- |
+| **Input to the cascade** | How many mandatory fields the object has, whether the flow has stages, whether it branches |
+| **Output of the cascade** | Which container holds them |
+
+The fields determine the surface. The surface never determines the fields. Anyone reading an example and copying its field list has inverted the pattern.
+
+A prototype for a different object, in the same surface, will look different inside — and that is the pattern working correctly, not an inconsistency.
 
 ---
 
@@ -219,6 +239,8 @@ Separate from the confirmation *before* saving (§4), which is about risk. This 
 | The create was irreversible | The confirmation modal before saving already carried the weight. The landing does the rest. |
 
 **`AlertBanner` is not the component for this.** Its spec defines it as a full-width notice for *system-level* feedback, and the Feedback pattern page assigns it to *persistent in-context state*. A success banner for a routine create occupies space until dismissed and says less than the object itself does.
+
+**`DS-GAP` — Date field.** There is no `DatePicker` or `Calendar` component in the repo. Any create whose object needs a date is under-specified until one exists. Do not improvise one.
 
 **`DS-GAP` — Toast / Snackbar.** The design system has no transient action-feedback component. Until it exists, the second row above cannot be built, and any create whose result is invisible is under-specified. Worth raising as its own ticket.
 

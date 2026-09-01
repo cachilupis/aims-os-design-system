@@ -374,6 +374,8 @@ Full rule, reasoning, and open questions live in `docs/patterns/create.md`. This
 
 **Create** brings a new object into existence. **Configure** edits the properties of something that already exists. This pattern governs Create only, never Configure.
 
+**The pattern decides the container, never the fields.** A create modal for a worker has the fields a worker needs; a create modal for an API key has the fields an API key needs — neither is "what a create modal looks like." Field count, stage count, and branching are **inputs** to the cascade below; the container is its **output**, never the reverse. Two prototypes for different objects landing on the same surface (e.g. two `ModalDialog` creates with different field counts) is the pattern working correctly, not an inconsistency to fix.
+
 **Gate 0 — does this pattern apply at all?**
 
 | Condition | Why it is excluded | What governs it instead |
@@ -435,6 +437,8 @@ Steps 4–5, stated as one rule: **contextual** (the new object hangs off someth
 `StepperNavFooter` is a page-level component — it never appears inside a `SlideOut`.
 
 **Entry points — the trigger lives where the collection lives.** If notes are held by a Notes widget, the affordance to add one belongs in that widget's own header, not in the page `Header`. The page `Header` CTA is reserved for the primary object of that screen — on a Worker detail page that is "Run now," not "Add note." A create page also carries no create CTA in its own `Header`: on a full-page create form or wizard, `Header` carries title and `backButton` only — the action completes in `StepperNavFooter`.
+
+**`DS-GAP` — no date field.** There is no `DatePicker` or `Calendar` component in `src/components/ui/`. Any create form whose object needs a date is under-specified until one exists — do not improvise one.
 
 **General overlay stacking rule (applies everywhere, not just Create):** only 1 `ModalDialog` + 1 `SlideOut` active at a time.
 
