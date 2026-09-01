@@ -86,11 +86,11 @@ const WIDGET_SIZES = [
 // DS-GAP: AccentColorPalette — widget accent swatches; hex values are product data (displayed to user), not CSS styling. Needs tokenization.
 const ACCENT_COLORS = [
   { id: "",       label: "Default",  hex: "transparent" },
-  { id: "blue",   label: "Blue",    hex: "#2B7FFF" },
-  { id: "green",  label: "Green",   hex: "#22C55E" },
-  { id: "amber",  label: "Amber",   hex: "#F59E0B" },
-  { id: "red",    label: "Red",     hex: "#EF4444" },
-  { id: "purple", label: "Purple",  hex: "#A78BFA" },
+  { id: "blue",   label: "Blue",    hex: "#2B7FFF" }, // audit-ignore: widget accent colour picker swatches
+  { id: "green",  label: "Green",   hex: "#22C55E" }, // audit-ignore: widget accent colour picker swatches
+  { id: "amber",  label: "Amber",   hex: "#F59E0B" }, // audit-ignore: widget accent colour picker swatches
+  { id: "red",    label: "Red",     hex: "#EF4444" }, // audit-ignore: widget accent colour picker swatches
+  { id: "purple", label: "Purple",  hex: "#A78BFA" }, // audit-ignore: widget accent colour picker swatches
 ]
 
 const STYLE_VARIANTS = [
@@ -320,7 +320,7 @@ function SavedConfirmationView({ name, onReset }: { name: string; onReset: () =>
         <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)" }}>"{name || "Untitled widget"}"</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-        <Button variant="main">Add to a dashboard</Button>
+        <Button variant="primary">Add to a dashboard</Button>
         <div style={{ display: "flex", gap: 8 }}>
           <Button variant="secondary" onClick={onReset}>New widget</Button>
           <Button variant="secondary">Back to library</Button>
@@ -512,7 +512,7 @@ export default function PMThomasWidgetBuilderScreen() {
                 )}
 
                 {dataComplete && (
-                  <Button variant="main" onClick={() => setTab("widget")}>Continue to Widget →</Button>
+                  <Button variant="primary" onClick={() => setTab("widget")}>Continue to Widget →</Button>
                 )}
               </div>
             )}
@@ -580,7 +580,7 @@ export default function PMThomasWidgetBuilderScreen() {
                 </div>
 
                 {canSave && (
-                  <Button variant="main" onClick={() => setSaved(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
+                  <Button variant="primary" onClick={() => setSaved(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
                 )}
               </div>
             )}

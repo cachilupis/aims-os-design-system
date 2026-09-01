@@ -105,8 +105,10 @@ function FilterToolbar({ search, onSearch, status, onStatus, entity, onEntity, o
         {open === id && (
           <>
             <div onClick={() => setOpen(null)} style={{ position: "fixed", inset: 0, zIndex: 198 }} />
-            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 199, background: "var(--surface)", border: "1px solid var(--field-border)", borderRadius: 10, boxShadow: "var(--shadow-elevation-3)", minWidth: 160, padding: 4 }}>
-              {children}
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 199, boxShadow: "var(--shadow-elevation-3)", minWidth: 160 }}>
+              <CardContainer size="sm" className="!p-1">
+                {children}
+              </CardContainer>
             </div>
           </>
         )}
@@ -342,7 +344,7 @@ export default function PMThomasDashboardList() {
               </div>
             )}
             <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
-              <Button variant="main" size="sm">Open dashboard</Button>
+              <Button variant="primary" size="sm">Open dashboard</Button>
               <Button variant="secondary" size="sm">Edit</Button>
             </div>
           </div>

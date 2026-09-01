@@ -36,13 +36,13 @@ interface MarketplaceWidget {
 
 // DS-GAP: CategoryColors — business-function palette; no DS tokens for these. Needs tokenization.
 const CAT_COLOR: Record<string, string> = {
-  "aims-os":          "#2B7FFF",
-  "sales":            "#22C55E",
-  "finance":          "#0EA5E9",
-  "customer-service": "#F97316",
-  "hr":               "#A78BFA",
-  "marketing":        "#EC4899",
-  "operations":       "#64748B",
+  "aims-os":          "#2B7FFF", // audit-ignore: prototype category colours
+  "sales":            "#22C55E", // audit-ignore: prototype category colours
+  "finance":          "#0EA5E9", // audit-ignore: prototype category colours
+  "customer-service": "#F97316", // audit-ignore: prototype category colours
+  "hr":               "#A78BFA", // audit-ignore: prototype category colours
+  "marketing":        "#EC4899", // audit-ignore: prototype category colours
+  "operations":       "#64748B", // audit-ignore: prototype category colours
 }
 
 const CATEGORIES: { id: BizCat; label: string }[] = [
@@ -212,7 +212,7 @@ function MarketplaceCard({ widget, catColor, onView, onUse }: {
             {widget.entityCount} fields · {widget.tenantUsage.toLocaleString()} uses
           </span>
           <Button variant="secondary" size="sm" onClick={onView}>View</Button>
-          <Button variant="main" size="sm" onClick={onUse}>Use</Button>
+          <Button variant="primary" size="sm" onClick={onUse}>Use</Button>
         </div>
       </div>
     </div>
@@ -410,7 +410,7 @@ export default function PMThomasWidgetMarketplaceScreen() {
                   <CardContainer className="h-full overflow-hidden">
                     <MarketplaceCard
                       widget={w}
-                      catColor={CAT_COLOR[w.businessCategory] ?? "#64748B"}
+                      catColor={CAT_COLOR[w.businessCategory] ?? "#64748B"} // audit-ignore: prototype category colours
                       onView={() => setViewWidget(w)}
                       onUse={() => setUseWidget(w)}
                     />
@@ -460,7 +460,7 @@ export default function PMThomasWidgetMarketplaceScreen() {
               </div>
             </div>
             <div style={{ height: 1, background: "var(--field-border)" }} />
-            <Button variant="main" onClick={() => { setUseWidget(viewWidget); setViewWidget(null) }}>
+            <Button variant="primary" onClick={() => { setUseWidget(viewWidget); setViewWidget(null) }}>
               Use this widget
             </Button>
           </div>

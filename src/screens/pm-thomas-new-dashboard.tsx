@@ -131,12 +131,11 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)", marginBottom: 8 }}>{children}</div>
 }
 
-// DS-GAP: FormSection — bordered card grouping related form controls. Closest DS component: CardContainer.
 function FormSection({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ borderRadius: 12, border: "1px solid var(--field-border)", padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+    <CardContainer className="flex flex-col gap-4">
       {children}
-    </div>
+    </CardContainer>
   )
 }
 
@@ -254,7 +253,7 @@ export default function PMThomasNewDashboardScreen() {
           <div style={{ fontSize: 13, color: "var(--color-text-subtitle)", marginBottom: 24 }}>
             {destinationLabel} · Audience: {audLabel}
           </div>
-          <Button variant="main" onClick={() => { setCreated(false); setStep(0); setDashName("") }}>
+          <Button variant="primary" onClick={() => { setCreated(false); setStep(0); setDashName("") }}>
             Create another
           </Button>
         </div>
@@ -466,12 +465,12 @@ export default function PMThomasNewDashboardScreen() {
 
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
               {step === 0 ? (
-                <Button variant="main" disabled={!canNext0} onClick={() => setStep(1)}>
+                <Button variant="primary" disabled={!canNext0} onClick={() => setStep(1)}>
                   Next: Start point
                   <ChevronRightIcon size={16} />
                 </Button>
               ) : (
-                <Button variant="main" disabled={!canCreate} onClick={handleCreate}>
+                <Button variant="primary" disabled={!canCreate} onClick={handleCreate}>
                   <CheckIcon size={16} style={{ color: "inherit" }} />
                   Create dashboard
                 </Button>
