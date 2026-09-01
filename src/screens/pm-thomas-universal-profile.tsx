@@ -853,7 +853,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
             </div>
             <Tag variant={entityPreview.statusVariant} size="sm">{entityPreview.statusLabel}</Tag>
             <div style={{ marginTop: 8 }}>
-              <Button variant="main" size="sm" onClick={() => setEntityPreview(null)}>
+              <Button variant="primary" size="sm" onClick={() => setEntityPreview(null)}>
                 View full profile
               </Button>
             </div>

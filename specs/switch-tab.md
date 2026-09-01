@@ -68,6 +68,16 @@ CSS prefix: `st-inactive`
 | --- | --- | --- | --- | --- |
 | Text | --st-text | Text/Info | #1a1a1a | rgba(255,255,255,.80) |
 
+### Focus
+
+Keyboard focus ring on the active tab button (reused from Tabs/Buttons)
+
+CSS prefix: `—`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Focus ring | --primary |  | #2173ff | #2b7fff |
+
 ---
 
 _Generated from `src/App.tsx` by `scripts/generate-specs.cjs`. This mirrors the same data the in-app SpecModal renders — edit the `_SPEC` object in `src/App.tsx`, not this file, then re-run the script._

@@ -32,9 +32,9 @@ Border width: `0px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | --color-surface-neutral-darker | Surface/Neutral/Darker | #111827 | #111827 |
-| Text color | --color-text-negative | Text/Negative | #ffffff | #ffffff |
-| Arrow fill | --color-surface-neutral-darker | Surface/Neutral/Darker | #111827 | #111827 |
+| Background | --tooltip-bg |  | #111827 | #111827 |
+| Text color | --tooltip-text |  | #ffffff | #ffffff |
+| Arrow fill (reused) | --tooltip-bg |  | #111827 | #111827 |
 
 ### Typography
 
@@ -43,7 +43,7 @@ Border width: `0px`
 | Font size | text-sm | — | 14px | 14px |
 | Font weight | font-medium | — | 500 | 500 |
 | Line height | leading-5 | — | 20px | 20px |
-| Text color | --tooltip-text (Text/Negative) | — | #ffffff | #ffffff |
+| Text color (reused) | --tooltip-text | — | #ffffff | #ffffff |
 
 ---
 

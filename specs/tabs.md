@@ -37,21 +37,21 @@ Border width: `indicator 2px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Label | Border/Primary/Default |  | #2173ff | #2b7fff |
-| Indicator | Border/Primary/Default |  | #2173ff | #2b7fff |
+| Label | --primary |  | #2173ff | #2b7fff |
+| Indicator | --primary |  | #2173ff | #2b7fff |
 
 ### Default
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Label | Text/Body |  | #5c5c5c | rgba(255,255,255,0.60) |
+| Label | --color-text-subtitle |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ### Hover
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/Subtle |  | #fafafa | rgba(255,255,255,0.06) |
-| Label | Text/Title |  | #1a1a1a | rgba(255,255,255,0.80) |
+| Background | --tabs-hover-bg |  | #fafafa | rgba(255,255,255,0.06) |
+| Label | --foreground |  | #1a1a1a | #ffffffcc |
 
 ### Disabled
 
@@ -59,7 +59,7 @@ Border width: `opacity 40%`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Label ×0.4 | Text/Body |  | #5c5c5c | rgba(255,255,255,0.60) |
+| Label ×0.4 (reused) | --color-text-subtitle |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ---
 

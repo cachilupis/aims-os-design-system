@@ -41,28 +41,35 @@ Focused overlay for confirmations and structured content. Fixed scrim + blur bac
 
 ### Confirmation
 
-max-w-[900px] · p-[24px] · centered column layout
+max-w-[900px] · p-[24px] · centered column layout. All tokens below are shared with Content — only the layout differs.
 
 CSS prefix: `--modal`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Surface | Surface/Modal |  | rgba(255,255,255,0.96) | rgba(18,20,30,0.96) |
-| Border | Border/Modal |  | #BABABA | rgba(255,255,255,0.15) |
-| Scrim | Overlay/Scrim |  | rgba(0,0,0,0.40) | rgba(0,0,0,0.60) |
-| Slot bg | Surface/Modal/Slot |  | #F5F6FA | rgba(255,255,255,0.05) |
-| Close icon | Icon/Neutral/Default |  | #5C5C5C | rgba(255,255,255,0.50) |
+| Surface | --modal-surface |  | #FFFFFF | rgba(12,14,34,0.82) |
+| Surface blur | --modal-surface-blur |  | none | blur(10px) |
+| Border | --modal-border |  | #BABABA | rgba(255,255,255,0.15) |
+| Scrim | --modal-scrim |  | rgba(0,0,0,0.50) | rgba(0,0,0,0.65) |
+| Slot bg | --modal-slot-bg |  | #F5F6FA | rgba(255,255,255,0.04) |
+| Close icon | --modal-close-icon |  | rgba(0,0,0,0.35) | rgba(255,255,255,0.35) |
+| Close icon hover | --modal-close-hover |  | rgba(0,0,0,0.80) | rgba(255,255,255,0.80) |
 
 ### Content
 
-max-w-[900px] · p-[32px] · left-aligned row layout
+max-w-[900px] · p-[32px] · left-aligned row layout (icon + title inline). Same 7 tokens as Confirmation (reused) — layout is the only difference.
 
 CSS prefix: `--modal`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Surface | Surface/Modal |  | rgba(255,255,255,0.96) | rgba(18,20,30,0.96) |
-| Border | Border/Modal |  | #BABABA | rgba(255,255,255,0.15) |
+| Surface (reused) | --modal-surface |  | #FFFFFF | rgba(12,14,34,0.82) |
+| Surface blur (reused) | --modal-surface-blur |  | none | blur(10px) |
+| Border (reused) | --modal-border |  | #BABABA | rgba(255,255,255,0.15) |
+| Scrim (reused) | --modal-scrim |  | rgba(0,0,0,0.50) | rgba(0,0,0,0.65) |
+| Slot bg (reused) | --modal-slot-bg |  | #F5F6FA | rgba(255,255,255,0.04) |
+| Close icon (reused) | --modal-close-icon |  | rgba(0,0,0,0.35) | rgba(255,255,255,0.35) |
+| Close icon hover (reused) | --modal-close-hover |  | rgba(0,0,0,0.80) | rgba(255,255,255,0.80) |
 
 ---
 

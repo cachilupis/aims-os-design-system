@@ -33,37 +33,38 @@ Horizontal multi-step progress indicator. Communicates position in a multi-stage
 
 ### Active & Completed
 
-Primary-tinted dot · SemiBold 600 label · aria-current=step
+The dot is rendered by the HighlightIcon atom (variant=informative, iconColor=dark) — NOT by dedicated --stepper-dot-*/--stepper-icon-* tokens (those exist in index.css but are never read by stepper.tsx). Real colors come from HighlightIcon's own informative variant.
 
-CSS prefix: `stepper-active`
+CSS prefix: `—`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Dot fill | --stepper-dot-active-bg | Surface/Primary/Subtle | #E9F1FF | rgba(33,115,255,0.15) |
-| Icon color | --stepper-icon-active | Icon/Primary/Darker | #001740 | #155dfc |
-| Label color | --stepper-label-active | Text/Subtitle | #2a2a2a | rgba(255,255,255,0.60) |
+| Dot fill (→ HighlightIcon informative) | --hi-informative-bg |  | #E9F1FF | rgba(33,115,255,0.14) |
+| Icon color (→ HighlightIcon informative, dark) | --hi-informative-icon |  | #001740 | #A8C8FF |
+| Label color | --stepper-label-active |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ### Default & View-only
 
-Neutral dot · Medium 500 label · upcoming or read-only steps
+Dot rendered by HighlightIcon (variant=neutral, iconColor=dark).
 
-CSS prefix: `stepper-default`
+CSS prefix: `—`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Dot fill | --stepper-dot-default-bg | Surface/Neutral/Default | #f2f2f2 | rgba(255,255,255,0.06) |
-| Icon color | --stepper-icon-default | Icon/Neutral/Dark | #3F3F46 | rgba(255,255,255,0.50) |
-| Label color | --stepper-label-default | Text/Body | #5C5C5C | #94A3B8 |
+| Dot fill (→ HighlightIcon neutral) | --hi-neutral-bg |  | #F2F2F2 | rgba(255,255,255,0.08) |
+| Icon color (→ HighlightIcon neutral, dark) | --hi-neutral-icon |  | #2A2A2A | rgba(255,255,255,0.70) |
+| Label color | --stepper-label-default |  | — | #94A3B8 |
 
 ### Locked
 
-Neutral dot · Lock icon · non-interactive, aria-disabled=true
+Dot rendered by HighlightIcon (variant=neutral, iconColor=default → the softer 'icon-soft' tone, not the 'dark' tone used by Default/Active).
 
-CSS prefix: `stepper-locked`
+CSS prefix: `—`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Lock icon | --stepper-icon-locked | Icon/Neutral/Disabled | #bababa | rgba(255,255,255,0.30) |
+| Dot fill (reused, → HighlightIcon neutral) | --hi-neutral-bg |  | #F2F2F2 | rgba(255,255,255,0.08) |
+| Lock icon (→ HighlightIcon neutral, default) | --hi-neutral-icon-soft |  | #6B7280 | rgba(255,255,255,0.40) |
 
 ### Connector
 
@@ -73,7 +74,21 @@ CSS prefix: `stepper-connector`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Chevron color | --stepper-connector | Icon/Neutral/Disabled | #bababa | rgba(255,255,255,0.30) |
+| Chevron color | --stepper-connector |  | #bababa | rgba(255,255,255,0.30) |
+
+### Unused tokens (defined in index.css, never read by stepper.tsx)
+
+The component delegates dot fill/icon color to the HighlightIcon atom — these dedicated stepper tokens are orphaned.
+
+CSS prefix: `—`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Dot fill active (unused) | --stepper-dot-active-bg |  | #E9F1FF | rgba(33,115,255,0.15) |
+| Icon color active (unused) | --stepper-icon-active |  | #001740 | #155dfc |
+| Dot fill default (unused) | --stepper-dot-default-bg |  | #f2f2f2 | rgba(255,255,255,0.06) |
+| Icon color default (unused) | --stepper-icon-default |  | #3F3F46 | rgba(255,255,255,0.50) |
+| Lock icon (unused) | --stepper-icon-locked |  | #bababa | rgba(255,255,255,0.30) |
 
 ---
 
