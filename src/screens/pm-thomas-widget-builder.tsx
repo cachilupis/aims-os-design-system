@@ -34,6 +34,16 @@ const ENTITY_SOURCES = [
   { id: "ai_workers_aims",       label: "AI Workers",     integration: "AIMS OS",  governed: true,  hasPII: false },
 ]
 
+const PRESET_DATASETS = [
+  { id: "ds-total-mrr",         name: "Total MRR",              description: "Month-to-date closed revenue across all deals.", integration: "HubSpot",  governed: true },
+  { id: "ds-active-contacts",   name: "Active Contacts",        description: "Contacts with at least one interaction in the last 30 days.", integration: "HubSpot",  governed: true },
+  { id: "ds-open-deals",        name: "Open Deals",             description: "All deals currently in an open pipeline stage.", integration: "HubSpot",  governed: true },
+  { id: "ds-ticket-volume",     name: "Ticket Volume",          description: "Total support tickets opened in the current period.", integration: "Zendesk", governed: true },
+  { id: "ds-csat-score",        name: "CSAT Score",             description: "Average satisfaction rating across closed tickets.", integration: "Zendesk", governed: true },
+  { id: "ds-headcount",         name: "Headcount",              description: "Active employee count by department.", integration: "BambooHR", governed: true },
+  { id: "ds-workflow-success",  name: "Workflow Success Rate",   description: "Percentage of workflow runs completed without errors.", integration: "AIMS OS", governed: true },
+]
+
 const SOURCE_COLUMNS: Record<string, string[]> = {
   contacts_hubspot:      ["Name", "Email", "Company", "Lifecycle Stage", "Owner", "Created At"],
   companies_hubspot:     ["Name", "Domain", "Industry", "Annual Revenue", "Employees", "Owner"],
@@ -163,6 +173,24 @@ function EntitySourceCard({ source, selected, onSelect }: { source: typeof ENTIT
   )
 }
 
+// DS-GAP: DatasetCard — selectable pre-built dataset tile with description + governance badge. Closest DS component: CardContainer.
+function DatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_DATASETS[0]; selected: boolean; onSelect: () => void }) {
+  return (
+    <div onClick={onSelect} style={{ cursor: "pointer" }}>
+      <CardContainer selected={selected} className="h-full">
+        <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{dataset.name}</div>
+          <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: 0, lineHeight: 1.4 }}>{dataset.description}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Tag variant="informative">{dataset.integration}</Tag>
+            <Tag variant="success">Governed</Tag>
+          </div>
+        </div>
+      </CardContainer>
+    </div>
+  )
+}
+
 // DS-GAP: TypeTile — widget type selector tile with icon and label. Closest DS component: CardContainer.
 function TypeTile({ type, selected, onSelect }: { type: typeof WIDGET_TYPES[0]; selected: boolean; onSelect: () => void }) {
   const Icon = (LucideIcons as Record<string, unknown>)[type.icon] as React.FC<{ size?: number; style?: React.CSSProperties }>
@@ -229,7 +257,9 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, pr
   typeId: string | null; name: string; sourceId: string | null; freshness: string; accentColor: string;
   previewSize: string; setPreviewSize: (s: string) => void; saveHint: string
 }) {
-  const src = ENTITY_SOURCES.find(s => s.id === sourceId)
+  const entitySrc  = ENTITY_SOURCES.find(s => s.id === sourceId)
+  const datasetSrc = PRESET_DATASETS.find(d => d.id === sourceId)
+  const srcLabel   = entitySrc?.label ?? datasetSrc?.name ?? null
   const typeInfo = WIDGET_TYPES.find(t => t.id === typeId)
   const maxW = previewSize === "sm" ? 240 : previewSize === "md" ? 420 : undefined
   const freshnessLabel = freshness === "realtime" ? "Live" : freshness === "15m" ? "15m" : freshness === "1h" ? "1h" : "24h"
@@ -256,7 +286,7 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, pr
             </div>
             <SkeletonShape typeId={typeId} color={accentColor} />
             <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid var(--field-border)" }}>
-              {src && <Tag variant="informative">{src.label}</Tag>}
+              {srcLabel && <Tag variant="informative">{srcLabel}</Tag>}
               {typeInfo && <Tag variant="neutral">{typeInfo.label}</Tag>}
             </div>
           </div>
@@ -325,21 +355,22 @@ export default function PMThomasWidgetBuilderScreen() {
   const [styleVariant, setStyleVariant] = useState("")
 
   // UI state
+  const [dataMode, setDataMode]         = useState<"entity" | "dataset">("entity")
   const [previewSize, setPreviewSize]   = useState("lg")
   const [saved, setSaved]               = useState(false)
   const [showLeave, setShowLeave]       = useState(false)
 
   // ── Derived ──
 
-  const dataComplete = !!sourceId && !!opType && (
-    opType === "aggregate" ? !!calcColumn.trim() : recordColumns.length > 0
-  )
+  const dataComplete = dataMode === "dataset"
+    ? !!sourceId
+    : !!sourceId && !!opType && (opType === "aggregate" ? !!calcColumn.trim() : recordColumns.length > 0)
   const widgetComplete = dataComplete && !!typeId && name.trim().length > 0
   const canSave        = widgetComplete
   const hasUnsaved     = !!(sourceId || typeId || name.trim())
 
   const saveHint = !sourceId
-    ? "Select an entity source on the Data tab."
+    ? (dataMode === "dataset" ? "Select a governed dataset on the Data tab." : "Select an entity source on the Data tab.")
     : !dataComplete
     ? "Complete the dataset configuration on the Data tab."
     : !typeId
@@ -362,7 +393,7 @@ export default function PMThomasWidgetBuilderScreen() {
   }
 
   function resetAll() {
-    setTab("data"); setSourceId(null); setOpType(null); setCalcFn("count"); setCalcColumn(""); setRecordColumns([])
+    setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setCalcFn("count"); setCalcColumn(""); setRecordColumns([])
     setTypeId(null); setName(""); setSubtitle(""); setFreshness("15m"); setInteractiveFilters(true)
     setAccentColor(""); setStyleVariant(""); setSaved(false)
   }
@@ -415,17 +446,38 @@ export default function PMThomasWidgetBuilderScreen() {
             {tab === "data" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
-                  <SectionLabel n={1}>Entity source</SectionLabel>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    {ENTITY_SOURCES.map(src => (
-                      <EntitySourceCard key={src.id} source={src} selected={sourceId === src.id} onSelect={() => selectSource(src.id)} />
-                    ))}
+                  <SectionLabel n={1}>Data source type</SectionLabel>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <SectionChip active={dataMode === "entity"} onClick={() => { setDataMode("entity"); setSourceId(null); setOpType(null); setCalcColumn(""); setCalcFn("count"); setRecordColumns([]) }}>Entity source</SectionChip>
+                    <SectionChip active={dataMode === "dataset"} onClick={() => { setDataMode("dataset"); setSourceId(null); setOpType(null); setCalcColumn(""); setCalcFn("count"); setRecordColumns([]) }}>Governed dataset</SectionChip>
                   </div>
                 </div>
 
-                {sourceId && (
+                {dataMode === "entity" && (
                   <div>
-                    <SectionLabel n={2}>Operation type</SectionLabel>
+                    <SectionLabel n={2}>Entity source</SectionLabel>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      {ENTITY_SOURCES.map(src => (
+                        <EntitySourceCard key={src.id} source={src} selected={sourceId === src.id} onSelect={() => selectSource(src.id)} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {dataMode === "dataset" && (
+                  <div>
+                    <SectionLabel n={2}>Governed dataset</SectionLabel>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {PRESET_DATASETS.map(ds => (
+                        <DatasetCard key={ds.id} dataset={ds} selected={sourceId === ds.id} onSelect={() => setSourceId(ds.id)} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {sourceId && dataMode === "entity" && (
+                  <div>
+                    <SectionLabel n={3}>Operation type</SectionLabel>
                     <div style={{ display: "flex", gap: 8 }}>
                       <SectionChip active={opType === "aggregate"} onClick={() => { setOpType("aggregate"); setRecordColumns([]) }}>Aggregate</SectionChip>
                       <SectionChip active={opType === "record_set"} onClick={() => { setOpType("record_set"); setCalcColumn(""); setCalcFn("count") }}>Record set</SectionChip>
@@ -433,9 +485,9 @@ export default function PMThomasWidgetBuilderScreen() {
                   </div>
                 )}
 
-                {sourceId && opType === "aggregate" && (
+                {sourceId && dataMode === "entity" && opType === "aggregate" && (
                   <div>
-                    <SectionLabel n={3}>Calculation</SectionLabel>
+                    <SectionLabel n={4}>Calculation</SectionLabel>
                     <div style={{ display: "flex", gap: 8 }}>
                       <select value={calcFn} onChange={e => setCalcFn(e.target.value)} style={{ ...selectStyle, width: "auto" }}>
                         {["count", "sum", "avg", "max", "min"].map(f => <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
@@ -445,9 +497,9 @@ export default function PMThomasWidgetBuilderScreen() {
                   </div>
                 )}
 
-                {sourceId && opType === "record_set" && (
+                {sourceId && dataMode === "entity" && opType === "record_set" && (
                   <div>
-                    <SectionLabel n={3}>Exposed columns</SectionLabel>
+                    <SectionLabel n={4}>Exposed columns</SectionLabel>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {(SOURCE_COLUMNS[sourceId] ?? []).map(col => (
                         <label key={col} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "var(--color-text-title)" }}>
