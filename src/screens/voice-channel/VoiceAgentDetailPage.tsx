@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import type { PhoneNumberRecord } from "./data"
 import type { VoiceAIAgent, AIChannel, ChannelKind, VoiceConfig } from "./voice-agents-data"
 import { ConfigureVoiceSlideOut } from "./ConfigureVoiceSlideOut"
+import { KnowledgePanel } from "./KnowledgePanel"
+import { useToast } from "./toast"
 
 // ─────────────────────────────────────────────────────────────────────
 // VoiceAgentDetailPage — 1:1 port of the Agent detail page in
@@ -51,6 +53,7 @@ const SUB_TABS: TabItem[] = [
 export function VoiceAgentDetailPage({
   agent, onBack, onChange, numbers, onOpenAddNumber,
 }: VoiceAgentDetailPageProps) {
+  const toast = useToast()
   const [subTab,    setSubTab]    = useState<AgentSubTab>("channels")
   const [voiceOpen, setVoiceOpen] = useState(false)
 
@@ -124,6 +127,16 @@ export function VoiceAgentDetailPage({
                 channels: agent.channels.map(c => c.kind === kind ? { ...c, active: true } : c),
               })
             }}
+          />
+        ) : subTab === "knowledge" ? (
+          <KnowledgePanel
+            agentName={agent.name}
+            onOpenGovernance={() => toast.info("Open Governance Studio → Knowledge Library")}
+            onBrowseLibrary={()  => toast.info("Open Knowledge Pack Library (marketplace) — coming soon")}
+            onEditPack={(id)     => toast.info(`Open pack editor for ${id}`)}
+            onPreviewPack={(id)  => toast.info(`Preview pack ${id}`)}
+            onUploadFile={()     => toast.info("Open file uploader")}
+            onDownloadFile={(id) => toast.info(`Download file ${id}`)}
           />
         ) : (
           <PlaceholderPanel subTab={subTab} agentName={agent.name}/>
