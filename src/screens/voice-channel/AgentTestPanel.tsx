@@ -1,5 +1,7 @@
+import { useState } from "react"
 import { MessageCircle, Paperclip, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useToast } from "./toast"
 
 // ─────────────────────────────────────────────────────────────────────
 // AgentTestPanel — the right-side "Test your Agent" chat area used by
@@ -8,9 +10,9 @@ import { Button } from "@/components/ui/button"
 //
 // Description copy is per-tab (Channels talks about routing, Knowledge
 // talks about sources, Instructions talks about persona, etc.).
-// Composer is intentionally inert in this iteration — the test loop
-// itself is a follow-up. See "Instructions/Configuration/Create" note
-// in the PR body.
+// The composer holds local draft text, wires Cmd/Ctrl+Enter to send,
+// and fires a toast — the real chat runtime is a follow-up but this
+// gives the panel a lived-in feel instead of feeling frozen.
 // ─────────────────────────────────────────────────────────────────────
 
 interface AgentTestPanelProps {
@@ -21,6 +23,18 @@ interface AgentTestPanelProps {
 }
 
 export function AgentTestPanel({ description, placeholder }: AgentTestPanelProps) {
+  const toast = useToast()
+  const [draft, setDraft] = useState("")
+
+  const canSend = draft.trim().length > 0
+
+  const send = () => {
+    if (!canSend) return
+    const preview = draft.trim().slice(0, 60)
+    toast.info(`Test message sent — "${preview}${draft.length > 60 ? "…" : ""}"`)
+    setDraft("")
+  }
+
   return (
     <div
       className="flex-1 min-w-0 flex flex-col"
@@ -59,6 +73,15 @@ export function AgentTestPanel({ description, placeholder }: AgentTestPanelProps
           }}
         >
           <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              // Cmd/Ctrl+Enter sends. Plain Enter still adds a newline.
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                send()
+              }
+            }}
             placeholder={placeholder}
             rows={2}
             aria-label="Test message to agent"
@@ -70,9 +93,20 @@ export function AgentTestPanel({ description, placeholder }: AgentTestPanelProps
             }}
           />
           <div className="flex items-center gap-2">
-            <Button variant="tertiary" size="sm" icon={<Paperclip size={13}/>} iconPosition="alone" aria-label="Attach file"/>
+            <Button
+              variant="tertiary" size="sm"
+              icon={<Paperclip size={13}/>} iconPosition="alone"
+              aria-label="Attach file"
+              onClick={() => toast.info("Attach file — coming soon")}
+            />
             <div className="ml-auto">
-              <Button variant="primary" size="sm" icon={<Send size={13}/>} iconPosition="alone" aria-label="Send test message"/>
+              <Button
+                variant="primary" size="sm"
+                icon={<Send size={13}/>} iconPosition="alone"
+                aria-label="Send test message"
+                disabled={!canSend}
+                onClick={send}
+              />
             </div>
           </div>
         </div>

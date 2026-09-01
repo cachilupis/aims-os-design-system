@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react"
 import {
   FileText, Folder, Package, Eye, X, ChevronRight,
-  Plus, Search, MessageCircle, Paperclip, Send, Download,
+  Plus, Search, Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CardContainer } from "@/components/ui/card-container"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/ui/empty-state"
+import { AgentTestPanel } from "./AgentTestPanel"
 import {
   KNOWLEDGE_PACKS,
   SHARED_DRIVES,
@@ -251,7 +252,10 @@ export function KnowledgePanel({
       </div>
 
       {/* ── Right pane: Test your Agent ────────────────────────── */}
-      <TestAgentPanel agentName={agentName}/>
+      <AgentTestPanel
+        description={`Use this simulated chat to see how ${agentName} uses these knowledge sources to answer.`}
+        placeholder="Ask the agent something…"
+      />
     </div>
   )
 }
@@ -485,74 +489,6 @@ function FileRow({
         </div>
       </div>
     </CardContainer>
-  )
-}
-
-// ─── Test your Agent panel (identical to Channels tab) ──────────────
-
-function TestAgentPanel({ agentName }: { agentName: string }) {
-  return (
-    <div
-      className="flex-1 min-w-0 flex flex-col"
-      style={{ borderLeft: "1px solid var(--color-border-neutral-default)", overflow: "hidden" }}
-    >
-      <div
-        className="flex items-center gap-2"
-        style={{ padding: "12px 20px", borderBottom: "1px solid var(--color-border-neutral-default)" }}
-      >
-        <span style={{
-          fontSize: 11, fontWeight: 700, textTransform: "uppercase",
-          letterSpacing: "0.08em", color: "var(--color-text-caption)",
-        }}>
-          Test your Agent
-        </span>
-        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-text-success)" }}/>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center px-6" style={{ textAlign: "center" }}>
-        <MessageCircle size={40} style={{ color: "var(--color-icon-primary-default)", marginBottom: 12 }}/>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 4 }}>
-          Test your Agent
-        </div>
-        <div style={{ fontSize: 13, color: "var(--color-text-caption)", maxWidth: 320 }}>
-          Use this simulated chat to see how {agentName} uses these knowledge sources to answer.
-        </div>
-      </div>
-
-      <div style={{ padding: 12, borderTop: "1px solid var(--color-border-neutral-default)" }}>
-        <div
-          style={{
-            padding: 8,
-            background: "var(--field-bg)",
-            border: "1px solid var(--field-border)",
-            borderRadius: "var(--radius-md)",
-          }}
-        >
-          <textarea
-            placeholder="Ask the agent something…"
-            rows={2}
-            aria-label="Test message to agent"
-            style={{
-              width: "100%",
-              padding: "4px",
-              fontSize: 13,
-              color: "var(--color-text-title)",
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              resize: "none",
-              fontFamily: "inherit",
-            }}
-          />
-          <div className="flex items-center gap-2">
-            <Button variant="tertiary" size="sm" icon={<Paperclip size={13}/>} iconPosition="alone" aria-label="Attach file"/>
-            <div className="ml-auto">
-              <Button variant="primary" size="sm" icon={<Send size={13}/>} iconPosition="alone" aria-label="Send test message"/>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }
 
