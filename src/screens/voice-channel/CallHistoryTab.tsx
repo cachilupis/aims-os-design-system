@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 import { PhoneCall, Search } from "lucide-react"
 import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
@@ -18,46 +18,6 @@ type DirFilter = "all" | CallDirection | "hil"
 interface CallHistoryTabProps {
   calls:   Call[]
   numbers: PhoneNumberRecord[]
-}
-
-// DS-GAP: DS Table has no row-selection-highlight prop. Duplicated helper
-// with the same effect-based tinting pattern used in voice-channel.tsx.
-// See the equivalent DS-GAP note there for the proposed fix; both wrappers
-// collapse into a single row prop once Table exposes it.
-function CallHistoryTableWrap<T extends { id: string }>({
-  rows, selectedId, onRowClick, children,
-}: {
-  rows: T[]
-  selectedId: string | null
-  onRowClick: (id: string) => void
-  children: React.ReactNode
-}) {
-  const wrapRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const trs = wrapRef.current?.querySelectorAll<HTMLTableRowElement>("tbody tr")
-    if (!trs) return
-    trs.forEach((tr, i) => {
-      const row = rows[i]
-      tr.style.background = row && row.id === selectedId
-        ? "var(--color-surface-primary-more-subtle)"
-        : ""
-    })
-  })
-  return (
-    <div
-      ref={wrapRef}
-      onClick={(e) => {
-        const tr = (e.target as HTMLElement).closest("tbody tr")
-        if (!tr) return
-        const idx = Array.from(tr.parentElement!.children).indexOf(tr)
-        const row = rows[idx]
-        if (row) onRowClick(row.id)
-      }}
-      style={{ cursor: "pointer" }}
-    >
-      {children}
-    </div>
-  )
 }
 
 export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
@@ -201,17 +161,14 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
             />
           </CardContainer>
         ) : (
-          <CallHistoryTableWrap
-            rows={filtered}
-            selectedId={previewId}
-            onRowClick={(id) => setPreviewId(id)}
-          >
-            <Table
-              columns={columns}
-              data={filtered}
-              size="default"
-            />
-          </CallHistoryTableWrap>
+          <Table
+            columns={columns}
+            data={filtered}
+            size="default"
+            rowKey={c => c.id}
+            selectedRowKey={previewId}
+            onRowClick={(row) => setPreviewId(row.id)}
+          />
         )}
       </div>
 

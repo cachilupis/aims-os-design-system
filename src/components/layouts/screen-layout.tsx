@@ -4,7 +4,7 @@ import { Sparkles, Bell, Settings } from "lucide-react"
 import { Topbar } from "@/components/ui/topbar"
 import type { TopbarAction } from "@/components/ui/topbar"
 import { Sidebar } from "@/components/ui/sidebar"
-import type { SidebarItem } from "@/components/ui/sidebar"
+import type { SidebarEntry } from "@/components/ui/sidebar"
 import { AppBackground } from "@/components/ui/app-background"
 import type { AppBgVariant } from "@/components/ui/app-background"
 import { NotificationCenter, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
@@ -95,8 +95,8 @@ export interface ScreenLayoutProps {
   notificationsContent?: ReactNode
   /** AppBackground color variant — defaults to "default" */
   bgVariant?: AppBgVariant
-  /** Left sidebar navigation items */
-  sidebarItems: SidebarItem[]
+  /** Left sidebar navigation items — accepts nav items and section headers */
+  sidebarItems: SidebarEntry[]
   /** ID of the active sidebar item */
   activeSidebarId?: string
   /** Called when a sidebar item is clicked — use to implement inter-screen navigation */

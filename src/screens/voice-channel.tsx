@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 import { Phone, PhoneCall, Settings as SettingsIcon, Plus, Search } from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Table, type TableColumn } from "@/components/ui/table"
 import { CardContainer } from "@/components/ui/card-container"
 import { EmptyState } from "@/components/ui/empty-state"
-import type { SidebarItem } from "@/components/ui/sidebar"
+import type { SidebarEntry } from "@/components/ui/sidebar"
+import { AvatarCircle } from "@/components/ui/avatar"
 import {
   AGENTS,
   NUMBERS as NUMBERS_SEED,
@@ -31,31 +32,52 @@ import { CallHistoryTab } from "./voice-channel/CallHistoryTab"
 import { SettingsTab } from "./voice-channel/SettingsTab"
 import { ToastProvider, useToast } from "./voice-channel/toast"
 
-// ── Sidebar (matches the prototype's sections, flattened for DS) ───────
-//
-// DS-GAP: SidebarItem is a flat item list — there's no `type:"section-header"`
-// discriminator or SidebarSection wrapper, so the prototype's three visual
-// groups (Workspace · Channels · Studio) are flattened here. Section headers
-// give a real information-density win in sidebars with 8+ items; worth
-// promoting once the DS is ready to accept the new item type.
-// DS-GAP: The DS Sidebar has no footer/user-row slot. The prototype pins an
-// "AK · Alex Kim · Admin" identity row at the bottom of the sidebar; here the
-// Topbar avatar carries that identity instead. A `<Sidebar footer={...}/>`
-// prop (or matching ScreenLayout `sidebarFooter` slot) would let both
-// surfaces coexist.
+// Restored to the source prototype's three sections (Workspace · Channels ·
+// Studio) now that Sidebar supports SidebarSection entries.
 
-const VOICE_SIDEBAR: SidebarItem[] = [
+const VOICE_SIDEBAR: SidebarEntry[] = [
+  { kind: "section",   label: "Workspace" },
   { id: "dashboard",     label: "Dashboard",       icon: "LayoutDashboard" },
   { id: "contacts",      label: "Contacts",        icon: "Users"           },
   { id: "conversations", label: "Conversations",   icon: "MessagesSquare"  },
+  { kind: "section",   label: "Channels" },
   { id: "voice",         label: "Voice",           icon: "Phone"           },
   { id: "email",         label: "Email",           icon: "Mail"            },
   { id: "sms",           label: "SMS",             icon: "MessageSquare"   },
   { id: "chat-widget",   label: "Chat Widget",     icon: "Bot"             },
+  { kind: "section",   label: "Studio" },
   { id: "networks",      label: "Agentic Networks", icon: "GitBranch"      },
   { id: "automations",   label: "Automations",     icon: "Zap"             },
   { id: "analytics",     label: "Analytics",       icon: "BarChart3"       },
 ]
+
+// Sidebar footer — identity row matching the source prototype's
+// "AK · Alex Kim · Admin" bottom pin. Render-function form so we can
+// switch to icon-only when the sidebar is collapsed (56px width).
+function renderSidebarFooter(collapsed: boolean) {
+  if (collapsed) {
+    return (
+      <div style={{ padding: 4, display: "flex", justifyContent: "center" }}>
+        <AvatarCircle name="Alex Kim" sizeKey="sm" />
+      </div>
+    )
+  }
+  return (
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "6px 4px",
+        borderTop: "1px solid var(--sb-divider, var(--color-border-neutral-default))",
+      }}
+    >
+      <AvatarCircle name="Alex Kim" sizeKey="sm" />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--sb-text)", lineHeight: 1.2 }}>Alex Kim</div>
+        <div style={{ fontSize: 10, color: "var(--sb-text)", opacity: 0.6, lineHeight: 1.2 }}>Admin</div>
+      </div>
+    </div>
+  )
+}
 
 type TopTab       = "numbers" | "history" | "settings"
 type NumberFilter = "all" | "active" | "suspended"
@@ -69,57 +91,6 @@ export default function VoiceChannelScreen() {
     <ToastProvider>
       <VoiceChannelScreenInner/>
     </ToastProvider>
-  )
-}
-
-// DS-GAP: DS Table has no `selectedRowIndex` / `getRowProps` prop for
-// highlighting the row whose detail is currently open. In master-detail
-// layouts (Numbers table + preview, Call History + call detail) that
-// highlight is important UX feedback. Workaround below uses useRef +
-// useEffect to walk `tbody tr` after render and set an inline background
-// using the primary-more-subtle token. A first-class `selectedRowKey`
-// prop or a `rowSelectedTone` variant would let this go away.
-//
-// Small helper that mounts the DS Table and, after each render, marks the
-// selected row (previewed or detail-view target) with a tinted background
-// via an effect. Direct DOM manipulation is used because the DS Table has
-// no "selectedRowIndex"-style prop, and CSS :nth-child can't take a
-// dynamic variable. Uses a token so the audit stays clean.
-function NumbersTableWrap<T extends { id: string }>({
-  rows, selectedId, onRowClick, children,
-}: {
-  rows: T[]
-  selectedId: string | null
-  onRowClick: (id: string) => void
-  children: React.ReactNode
-}) {
-  const wrapRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const trs = wrapRef.current?.querySelectorAll<HTMLTableRowElement>("tbody tr")
-    if (!trs) return
-    trs.forEach((tr, i) => {
-      const row = rows[i]
-      tr.style.background = row && row.id === selectedId
-        ? "var(--color-surface-primary-more-subtle)"
-        : ""
-    })
-  })
-
-  return (
-    <div
-      ref={wrapRef}
-      onClick={(e) => {
-        const tr = (e.target as HTMLElement).closest("tbody tr")
-        if (!tr) return
-        const idx = Array.from(tr.parentElement!.children).indexOf(tr)
-        const row = rows[idx]
-        if (row) onRowClick(row.id)
-      }}
-      style={{ cursor: "pointer" }}
-    >
-      {children}
-    </div>
   )
 }
 
@@ -245,6 +216,7 @@ function VoiceChannelScreenInner() {
       <ScreenLayout
         sidebarItems={VOICE_SIDEBAR}
         activeSidebarId="voice"
+        sidebarFooter={renderSidebarFooter}
         header={(isScrolled) => (
           <Header
             size={isScrolled ? "compress" : "size-l"}
@@ -333,17 +305,14 @@ function VoiceChannelScreenInner() {
                   />
                 </CardContainer>
               ) : (
-                <NumbersTableWrap
-                  rows={filteredNumbers}
-                  selectedId={previewId ?? detailId}
-                  onRowClick={(id) => setPreviewId(id)}
-                >
-                  <Table
-                    columns={columns}
-                    data={filteredNumbers}
-                    size="default"
-                  />
-                </NumbersTableWrap>
+                <Table
+                  columns={columns}
+                  data={filteredNumbers}
+                  size="default"
+                  rowKey={n => n.id}
+                  selectedRowKey={previewId ?? detailId}
+                  onRowClick={(row) => setPreviewId(row.id)}
+                />
               )}
             </div>
           )}

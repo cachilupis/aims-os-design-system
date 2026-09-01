@@ -25,19 +25,12 @@ interface NumberPreviewProps {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// NumberSheet is now a LIGHTWEIGHT preview.
-// It surfaces the essentials (identity + stats + agents summary + HiL +
-// recent call snapshot) and hands off to the full detail page for
+// NumberSheet is a LIGHTWEIGHT preview using the DS SlideOut with
+// anchor="bottom" — matches the source prototype's bottom-sheet shape.
+// It surfaces the essentials (identity + stats + agents summary + HiL
+// + recent call snapshot) and hands off to the full detail page for
 // deep configuration (Overview / Agents & Routing / Business Hours /
 // Call History sub-tabs).
-//
-// DS-GAP: DS SlideOut is always right-anchored. The source prototype
-// uses a bottom-anchored sheet with a drag handle — the "phone number
-// configuration" pattern is a well-known mobile-first shape.
-// An `anchor?: "right" | "bottom"` prop on SlideOut (or a sibling
-// `BottomSheet` component) would let this port match the prototype's
-// vertical orientation. Right-anchored is functionally equivalent for
-// desktop, so this is polish, not a blocker.
 // ─────────────────────────────────────────────────────────────────────
 
 export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allCalls }: NumberPreviewProps) {
@@ -55,6 +48,7 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
       onClose={onClose}
       type="with-variants"
       size="m"
+      anchor="bottom"
       title={number.number}
       subtitle={`${number.label || "No label"} · ${number.type}`}
       iconContent={<Settings size={18}/>}
