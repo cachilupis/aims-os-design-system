@@ -2,9 +2,10 @@ import { useMemo, useState } from "react"
 import { Phone, Mail, Sparkles, MessageSquare, ClipboardCheck, PhoneCall } from "lucide-react"
 import { Tabs } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+import { Chip } from "@/components/ui/chip"
+import { Filters } from "@/components/ui/filters"
 import { Tag, type TagVariant } from "@/components/ui/tag"
 import { EmptyState } from "@/components/ui/empty-state"
-import { NativeSelect } from "./configure-shared"
 import {
   UCP_ALEJANDRO,
   UCP_ACTIVITY_GROUPS,
@@ -25,9 +26,8 @@ import {
 //   – Contact header (avatar + email + phone + last interaction)
 //   – 7 UCP tabs — Overview / Activity / Snapshot / Garage /
 //     Appointments / Repair Orders / Tasks
-//   – Activity tab body: kind filter (All/Calls/Email/SMS/Tasks) + agent
-//     + sort dropdowns + date-grouped timeline with per-item badge, AI
-//     summary and SMS quote blocks.
+//   – Activity tab body: DS Chip pills for kind + agent filters (matches
+//     the CallHistoryTab pattern) and DS Filters showSort for order.
 //
 // Only the Activity tab has real content — the source prototype exposes
 // the other 6 as labels only. Ports them as honest EmptyState stubs so
@@ -191,39 +191,59 @@ function ActivityBody({
     { id: "task",  label: "Tasks" },
   ]
 
+  // Agent filter: current seed only has Sammy — render one chip per agent
+  // + an "All" chip, matching the CallHistoryTab direction-filter pattern.
+  const agentOptions = ["all", ...UCP_AGENTS]
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Toolbar: header + kind toggle + agents + sort */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)" }}>
-          Activity
-          <span style={{ fontSize: 14, color: "var(--color-text-caption)", fontWeight: 400, marginLeft: 8 }}>
-            {filteredCount === UCP_ACTIVITY_TOTAL
-              ? `${UCP_ACTIVITY_TOTAL} items`
-              : `${filteredCount} of ${UCP_ACTIVITY_TOTAL} items`}
-          </span>
+      {/* Header row: title + item count */}
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)" }}>
+        Activity
+        <span style={{ fontSize: 14, color: "var(--color-text-caption)", fontWeight: 400, marginLeft: 8 }}>
+          {filteredCount === UCP_ACTIVITY_TOTAL
+            ? `${UCP_ACTIVITY_TOTAL} items`
+            : `${filteredCount} of ${UCP_ACTIVITY_TOTAL} items`}
+        </span>
+      </div>
+
+      {/* Toolbar — DS Chip pills on the left (kind + agent), DS Filters
+          on the right (showSort only). Mirrors CallHistoryTab's filter
+          bar so the whole voice module uses one toolbar pattern. */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+          {KIND_OPTIONS.map(o => (
+            <Chip
+              key={o.id}
+              variant={o.id === kind ? "primary" : "secondary"}
+              size="s"
+              onClick={() => onKind(o.id)}
+            >
+              {o.label}
+            </Chip>
+          ))}
+          <span style={{
+            width: 1, height: 16, background: "var(--color-border-neutral-default)", margin: "0 4px",
+          }} aria-hidden/>
+          {agentOptions.map(a => (
+            <Chip
+              key={a}
+              variant={a === agent ? "primary" : "secondary"}
+              size="s"
+              onClick={() => onAgent(a)}
+            >
+              {a === "all" ? "All agents" : a}
+            </Chip>
+          ))}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <KindToggle value={kind} onChange={onKind} options={KIND_OPTIONS}/>
-          <NativeSelect
-            value={agent}
-            onChange={onAgent}
-            options={[
-              { value: "all", label: "All agents" },
-              ...UCP_AGENTS.map(a => ({ value: a, label: a })),
-            ]}
-            size="sm"
-          />
-          <NativeSelect
-            value={sort}
-            onChange={(v) => onSort(v as SortOrder)}
-            options={[
-              { value: "newest", label: "Newest first" },
-              { value: "oldest", label: "Oldest first" },
-            ]}
-            size="sm"
-          />
-        </div>
+        <Filters
+          showSearch={false}
+          showAllFilters={false}
+          showViewToggle={false}
+          showSort={true}
+          sortLabel={sort === "newest" ? "Newest first" : "Oldest first"}
+          onSortClick={() => onSort(sort === "newest" ? "oldest" : "newest")}
+        />
       </div>
 
       {/* Date groups */}
@@ -258,57 +278,6 @@ function ActivityBody({
       <div className="flex justify-center" style={{ padding: "16px 0 4px" }}>
         <Button variant="secondary" size="sm">Load older activity</Button>
       </div>
-    </div>
-  )
-}
-
-// ─── Kind toggle (All / Calls / Email / SMS / Tasks) ─────────────────
-
-function KindToggle({
-  value, onChange, options,
-}: {
-  value:    KindFilter
-  onChange: (v: KindFilter) => void
-  options:  { id: KindFilter; label: string }[]
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="Filter activity by type"
-      style={{
-        display: "inline-flex",
-        padding: 2,
-        background: "var(--color-surface-neutral-subtle)",
-        border: "1px solid var(--color-border-neutral-default)",
-        borderRadius: "var(--radius-md)",
-      }}
-    >
-      {options.map(o => {
-        const active = o.id === value
-        return (
-          <button
-            key={o.id}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(o.id)}
-            style={{
-              padding: "4px 12px",
-              fontSize: 12,
-              fontWeight: active ? 600 : 500,
-              color:      active ? "var(--primary)" : "var(--color-text-caption)",
-              background: active ? "var(--color-surface-primary-more-subtle)" : "transparent",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              cursor: "pointer",
-              transition: "all 150ms ease",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {o.label}
-          </button>
-        )
-      })}
     </div>
   )
 }
