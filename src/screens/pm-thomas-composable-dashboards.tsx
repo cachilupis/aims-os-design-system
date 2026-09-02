@@ -1303,16 +1303,16 @@ function WBSectionChip({ onClick, children }: { onClick: () => void; children: R
   )
 }
 
-function WBSectionLabel({ children }: { children: React.ReactNode }) {
+function WBSectionLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" as const, color: "var(--field-supporting)", marginBottom: 10 }}>
+    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" as const, color: "var(--field-supporting)", marginBottom: 10, ...style }}>
       {children}
     </div>
   )
 }
 
 function WBBuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: TabId; setTab: (t: TabId) => void; dataComplete: boolean; widgetComplete: boolean }) {
-  const CheckIcon = LucideIcons.Check as React.FC<{ size?: number }>
+  const CheckIcon = LucideIcons.Check as React.FC<{ size?: number; style?: React.CSSProperties }>
   const tabs: { id: TabId; label: string; done: boolean; enabled: boolean }[] = [
     { id: "data",       label: "Data",       done: dataComplete,   enabled: true },
     { id: "widget",     label: "Widget",     done: widgetComplete, enabled: dataComplete },
@@ -1327,11 +1327,7 @@ function WBBuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: T
           background: tab === t.id ? "var(--surface)" : "transparent",
           opacity: t.enabled ? 1 : 0.35, transition: "all 0.15s",
         }}>
-          {t.done && (
-            <div style={{ width: 16, height: 16, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--success)" }}>
-              <CheckIcon size={10} />
-            </div>
-          )}
+          {t.done && <CheckIcon size={13} style={{ color: "var(--success)", flexShrink: 0 }} />}
           <span style={{ fontSize: 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "var(--foreground)" : "var(--field-supporting)" }}>{t.label}</span>
         </button>
       ))}
@@ -1435,7 +1431,7 @@ function WBPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previe
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 1, color: "var(--field-supporting)" }}>Live preview</span>
+        <WBSectionLabel style={{ marginBottom: 0 }}>Live preview</WBSectionLabel>
         <div style={{ display: "flex", border: "1px solid var(--field-border)", borderRadius: 6, overflow: "hidden" }}>
           {WIDGET_SIZES.map(s => (
             <button key={s.id} onClick={() => setPreviewSize(s.id)} style={{
@@ -1453,16 +1449,26 @@ function WBPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previe
               <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{name || "Untitled widget"}</span>
               <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
             </div>
-            {!typeId && !srcLabel ? (
+            {!typeId || !srcLabel ? (
               <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 24px", textAlign: "center" as const }}>
-                <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.5 }}>Pick a source, metric, and widget type to preview it live.</span>
+                <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.5 }}>
+                  {!srcLabel
+                    ? "Select a data source and visualization type to see a preview."
+                    : "Choose a visualization type to render the preview."}
+                </span>
               </div>
             ) : (
               <WBSkeletonShape typeId={typeId} color={accentColor} />
             )}
             <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px dashed var(--field-border)" }}>
-              {srcLabel && <Tag variant="informative">{srcLabel}</Tag>}
-              {typeInfo  && <Tag variant="neutral">{typeInfo.label}</Tag>}
+              {srcLabel
+                ? <Tag variant="informative">{srcLabel}</Tag>
+                : <span style={{ fontSize: 11, color: "var(--field-supporting)", opacity: 0.45 }}>No source</span>
+              }
+              {typeInfo
+                ? <Tag variant="neutral">{typeInfo.label}</Tag>
+                : <span style={{ fontSize: 11, color: "var(--field-supporting)", opacity: 0.45 }}>No type</span>
+              }
             </div>
           </div>
         </div>
