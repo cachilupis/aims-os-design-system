@@ -47,7 +47,19 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
     .map(id => AGENTS.find(a => a.id === id))
     .filter((a): a is NonNullable<typeof a> => !!a)
 
-  const recentCall = allCalls.filter(c => c.numberId === number.id)[0] ?? null
+  const numberCalls = allCalls.filter(c => c.numberId === number.id)
+  const recentCall = numberCalls[0] ?? null
+  const avgDuration = numberCalls.length === 0
+    ? "—"
+    : (() => {
+        const totalSecs = numberCalls.reduce((sum, c) => {
+          const [m, s] = c.duration.split(":").map(Number)
+          return sum + (m || 0) * 60 + (s || 0)
+        }, 0) / numberCalls.length
+        const m = Math.floor(totalSecs / 60)
+        const s = Math.round(totalSecs - m * 60)
+        return `${m}:${s.toString().padStart(2, "0")}`
+      })()
 
   return (
     <SlideOut
@@ -100,10 +112,11 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
           {number.hil && <HilBadge hil={true}/>}
         </div>
 
-        {/* Stats strip */}
+        {/* Stats strip — Avg Duration derived from the number's calls
+            so a suspended / unused number honestly shows "—". */}
         <div className="grid grid-cols-3 gap-2">
           <StatTile value={number.calls.toLocaleString()} label="Total Calls"/>
-          <StatTile value="3:42"                          label="Avg Duration"/>
+          <StatTile value={avgDuration}                   label="Avg Duration"/>
           <StatTile value={`$${number.cost.toFixed(2)}`}  label="Cost MTD"/>
         </div>
 

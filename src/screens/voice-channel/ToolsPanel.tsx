@@ -4,6 +4,7 @@ import { EntityList, type EntityListItemData } from "@/components/ui/entity-list
 import type { VoiceAIAgent } from "./voice-agents-data"
 import type { PhoneNumberRecord } from "./data"
 import { AgentTestPanel } from "./AgentTestPanel"
+import { useToast } from "./toast"
 
 // ─────────────────────────────────────────────────────────────────────
 // ToolsPanel — Agent detail's "Tools" sub-tab.
@@ -26,6 +27,9 @@ interface ToolsPanelProps {
 export function ToolsPanel({
   agent, numbers, onOpenNumber, onConfigureVoice, onAddTool,
 }: ToolsPanelProps) {
+  const toast = useToast()
+  const stubConfigure = (toolName: string) =>
+    toast.info(`${toolName} configuration lives in Governance Studio — jumping there in a future release.`)
   const voiceChannel = agent.channels.find(c => c.kind === "voice")
   const isVoiceConfigured = !!voiceChannel?.active && !!voiceChannel?.voice
   const cfg = voiceChannel?.voice
@@ -80,6 +84,7 @@ export function ToolsPanel({
       title:       "Send Email",
       description: "Send emails to communicate information or interact with other people.",
       state:       { label: "Ready to use", variant: "success" },
+      actions:     [{ label: "Configure", variant: "secondary", icon: "Settings", onClick: () => stubConfigure("Send Email") }],
     },
     {
       // EntityList's iconVariant vocabulary uses "yellow" for the
@@ -90,6 +95,7 @@ export function ToolsPanel({
       title:       "Human in the Loop Alert",
       description: "Sends notifications or alerts to involve a human operator when manual intervention is required.",
       state:       { label: "Ready to use", variant: "alert" },
+      actions:     [{ label: "Configure", variant: "secondary", icon: "Settings", onClick: () => stubConfigure("Human in the Loop Alert") }],
     },
     {
       id:          "web-search",
@@ -98,6 +104,7 @@ export function ToolsPanel({
       title:       "Web Search",
       description: "Search the internet for up-to-date information to answer questions or assist with research tasks.",
       state:       { label: "Ready to use", variant: "informative" },
+      actions:     [{ label: "Configure", variant: "secondary", icon: "Settings", onClick: () => stubConfigure("Web Search") }],
     },
   ]
 

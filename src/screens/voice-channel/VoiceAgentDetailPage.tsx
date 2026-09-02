@@ -1,6 +1,6 @@
 import { useState } from "react"
 import {
-  ArrowLeft, ChevronDown,
+  ArrowLeft,
   Plus, Settings, MoreHorizontal,
 } from "lucide-react"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
@@ -9,9 +9,10 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
 import type { PhoneNumberRecord } from "./data"
 import type {
-  VoiceAIAgent, AIChannel, ChannelKind, VoiceConfig, SmsConfig, EmailConfig,
+  VoiceAIAgent, AIChannel, ChannelKind, VoiceConfig, SmsConfig, EmailConfig, AIAgentStatus,
 } from "./voice-agents-data"
-import { DEFAULT_SMS_CONFIG, DEFAULT_EMAIL_CONFIG } from "./voice-agents-data"
+import { DEFAULT_SMS_CONFIG, DEFAULT_EMAIL_CONFIG, AGENT_STATUS_OPTIONS } from "./voice-agents-data"
+import { NativeSelect } from "./configure-shared"
 import { ConfigureVoiceSlideOut } from "./ConfigureVoiceSlideOut"
 import { ConfigureSmsSlideOut }   from "./ConfigureSmsSlideOut"
 import { ConfigureEmailSlideOut } from "./ConfigureEmailSlideOut"
@@ -123,20 +124,12 @@ export function VoiceAgentDetailPage({
           <ArrowLeft size={14}/>
           Agents
         </button>
-        <div
-          className="flex items-center gap-1"
-          style={{
-            padding: "4px 12px",
-            border: "1px solid var(--color-border-neutral-default)",
-            borderRadius: "var(--radius-md)",
-            fontSize: 13, fontWeight: 500,
-            color: "var(--color-text-label)",
-            cursor: "pointer",
-          }}
-        >
-          {agent.status}
-          <ChevronDown size={13}/>
-        </div>
+        <NativeSelect
+          value={agent.status}
+          onChange={(v) => onChange({ ...agent, status: v as AIAgentStatus })}
+          options={AGENT_STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
+          size="sm"
+        />
         <div className="ml-auto">
           <Button variant="secondary" size="sm" icon={<MoreHorizontal size={14}/>} iconPosition="right">
             Actions
