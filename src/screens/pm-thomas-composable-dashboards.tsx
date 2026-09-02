@@ -148,14 +148,14 @@ const MKT_WIDGETS = [
 // ── Widget builder data ───────────────────────────────────────────────────────
 
 const ENTITY_SOURCES = [
-  { id: "contacts_hubspot",      label: "Contacts",      integration: "HubSpot",  governed: true,  hasPII: true },
-  { id: "companies_hubspot",     label: "Companies",     integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "deals_hubspot",         label: "Deals",         integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "tickets_zendesk",       label: "Tickets",       integration: "Zendesk",  governed: true,  hasPII: false },
-  { id: "conversations_zendesk", label: "Conversations", integration: "Zendesk",  governed: false, hasPII: true },
-  { id: "employees_bamboohr",    label: "Employees",     integration: "BambooHR", governed: true,  hasPII: true },
-  { id: "workflows_aims",        label: "Workflows",     integration: "AIMS OS",  governed: true,  hasPII: false },
-  { id: "ai_workers_aims",       label: "AI Workers",    integration: "AIMS OS",  governed: true,  hasPII: false },
+  { id: "contacts_hubspot",      label: "Contacts",      icon: "Users",         desc: "CRM contact profiles and relationship history",    integration: "HubSpot",  governed: true,  hasPII: true },
+  { id: "companies_hubspot",     label: "Companies",     icon: "Building2",     desc: "Organization records, domains, and account data",  integration: "HubSpot",  governed: true,  hasPII: false },
+  { id: "deals_hubspot",         label: "Deals",         icon: "TrendingUp",    desc: "Pipeline opportunities and deal stages",           integration: "HubSpot",  governed: true,  hasPII: false },
+  { id: "tickets_zendesk",       label: "Tickets",       icon: "HelpCircle",    desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false },
+  { id: "conversations_zendesk", label: "Conversations", icon: "MessageSquare", desc: "Chat and email threads with CSAT scores",          integration: "Zendesk",  governed: false, hasPII: true },
+  { id: "employees_bamboohr",    label: "Employees",     icon: "UserCheck",     desc: "HR records, roles, and people data",               integration: "BambooHR", governed: true,  hasPII: true },
+  { id: "workflows_aims",        label: "Workflows",     icon: "GitBranch",     desc: "Automated process definitions in AIMS OS",        integration: "AIMS OS",  governed: true,  hasPII: false },
+  { id: "ai_workers_aims",       label: "AI Workers",    icon: "Bot",           desc: "AI agent instances and performance metrics",       integration: "AIMS OS",  governed: true,  hasPII: false },
 ]
 const PRESET_DATASETS = [
   { id: "ds-contacts-tier",  name: "Contacts by Tier",  description: "Count of contacts grouped by tier.",                     type: "GROUPED",      integration: "HubSpot" },
@@ -1339,19 +1339,24 @@ function WBBuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: T
   )
 }
 
-function WBEntitySourceCard({ source, selected, onSelect }: { source: typeof ENTITY_SOURCES[0]; selected: boolean; onSelect: () => void }) {
+function WBEntitySourceCard({ source, selected, onSelect, isLast }: { source: typeof ENTITY_SOURCES[0]; selected: boolean; onSelect: () => void; isLast?: boolean }) {
+  const Icon = (LucideIcons as Record<string, unknown>)[source.icon] as React.FC<{ size?: number; style?: React.CSSProperties }> | undefined
   return (
-    <div onClick={onSelect} style={{ cursor: "pointer" }}>
-      <CardContainer selected={selected} className="h-full">
-        <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{source.label}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Tag variant="informative">{source.integration}</Tag>
-            {!source.governed && <Tag variant="alert">Ungoverned</Tag>}
-            {source.hasPII && <Tag variant="alert">PII</Tag>}
-          </div>
-        </div>
-      </CardContainer>
+    <div onClick={onSelect} style={{
+      cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px",
+      borderBottom: isLast ? "none" : "1px solid var(--field-border)",
+      background: selected ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "transparent", // audit-ignore: color-mix with tokens
+    }}>
+      {Icon && <Icon size={14} style={{ color: "var(--field-supporting)", marginTop: 2, flexShrink: 0 }} />}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{source.label}</div>
+        <div style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.4 }}>{source.desc}</div>
+      </div>
+      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+        <Tag variant="informative">{source.integration}</Tag>
+        {!source.governed && <Tag variant="alert">Ungoverned</Tag>}
+        {source.hasPII && <Tag variant="alert">PII</Tag>}
+      </div>
     </div>
   )
 }
@@ -1620,9 +1625,9 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
             {dataMode === "source" && (
               <div>
                 <WBSectionLabel>Choose entity</WBSectionLabel>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {ENTITY_SOURCES.map(s => (
-                    <WBEntitySourceCard key={s.id} source={s} selected={sourceId === s.id} onSelect={() => { setSourceId(s.id); setMetric("") }} />
+                <div style={{ borderRadius: 10, border: "1px solid var(--field-border)", overflow: "hidden", background: "var(--surface)" }}>
+                  {ENTITY_SOURCES.map((s, i) => (
+                    <WBEntitySourceCard key={s.id} source={s} selected={sourceId === s.id} isLast={i === ENTITY_SOURCES.length - 1} onSelect={() => { setSourceId(s.id); setMetric("") }} />
                   ))}
                 </div>
               </div>
@@ -1890,11 +1895,11 @@ export default function PMThomasComposableDashboardsScreen() {
             if (builderTab === "data" && builderDataDone)        setBuilderTab("widget")
             else if (builderTab === "widget" && builderWidgetDone) setBuilderTab("appearance")
           }}>
-          {builderTab === "widget" ? "Appearance →" : "Widget →"}
+          Widget →
         </Button>
         <Button variant="main" size="sm" disabled={!builderWidgetDone}
           onClick={() => builderSaveRef.current?.()}>
-          {editingWidget ? "✓ Update widget" : "✓ Save to catalog"}
+          Save to catalog
         </Button>
       </div>
     )
