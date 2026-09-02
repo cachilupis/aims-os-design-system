@@ -15,8 +15,7 @@ import type { SidebarItem } from "@/components/ui/sidebar"
 // ── Routing state ─────────────────────────────────────────────────────────────
 
 type MainView      = "dashboards" | "widgets"
-type WidgetSubView = "library" | "marketplace"
-type OverlayView   = null | "new-dashboard" | "builder"
+type OverlayView   = null | "new-dashboard" | "builder" | "marketplace"
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -1601,7 +1600,6 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef 
 
 export default function PMThomasComposableDashboardsScreen() {
   const [mainView, setMainView]       = useState<MainView>("dashboards")
-  const [subView, setSubView]         = useState<WidgetSubView>("library")
   const [overlayView, setOverlay]     = useState<OverlayView>(null)
 
   // Builder state lifted so header buttons can read/drive it
@@ -1609,6 +1607,9 @@ export default function PMThomasComposableDashboardsScreen() {
   const [builderDataDone, setBDDone]      = useState(false)
   const [builderWidgetDone, setBWDone]    = useState(false)
   const builderSaveRef                    = useRef<(() => void) | null>(null)
+
+  const [showCreateMenu, setShowCreateMenu] = useState(false)
+  const [createMenuAnchor, setCreateMenuAnchor] = useState({ top: 0, right: 0 })
 
   function openBuilder() {
     setBuilderTab("data"); setBDDone(false); setBWDone(false)
@@ -1654,14 +1655,55 @@ export default function PMThomasComposableDashboardsScreen() {
     )
   } else if (mainView === "dashboards") {
     headerPrimary = <Button variant="main" size="sm" onClick={() => setOverlay("new-dashboard")}>Create dashboard</Button>
-  } else if (subView === "library") {
+  } else {
     headerTitle = "Widget Library"
     headerDesc  = `${LIB_WIDGETS.length} widgets · ${LIB_GOVERNED_COUNT} governed`
-    headerPrimary = <Button variant="main" size="sm" onClick={openBuilder}>Create widget</Button>
-  } else {
-    headerTitle = "Widget Marketplace"
-    headerDesc  = "Browse community and integration widgets by category."
-    headerPrimary = <Button variant="main" size="sm" onClick={openBuilder}>Create with AI assist</Button>
+    const ChevDown = LucideIcons.ChevronDown as React.FC<{ size?: number }>
+    headerPrimary = (
+      <div style={{ position: "relative" as const }}>
+        <div style={{ display: "flex", alignItems: "stretch", borderRadius: 8, overflow: "hidden" }}>
+          <Button variant="main" size="sm" onClick={openBuilder}
+            style={{ borderRadius: "8px 0 0 8px", borderRight: "1px solid color-mix(in srgb, var(--on-primary, #fff) 25%, transparent)" }}>
+            Create widget
+          </Button>
+          <button onClick={(e) => {
+            const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+            setCreateMenuAnchor({ top: r.bottom + 4, right: window.innerWidth - r.right })
+            setShowCreateMenu(v => !v)
+          }} style={{
+            display: "flex", alignItems: "center", padding: "0 8px", background: "var(--primary)",
+            border: "none", borderRadius: "0 8px 8px 0", cursor: "pointer", color: "var(--on-primary, #fff)"
+          }}>
+            <ChevDown size={14} />
+          </button>
+        </div>
+        {showCreateMenu && (
+          <div style={{ position: "fixed" as const, top: createMenuAnchor.top, right: createMenuAnchor.right, zIndex: 10001,
+            background: "var(--surface)", border: "1px solid var(--field-border)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", minWidth: 200, overflow: "hidden" }}
+            onMouseLeave={() => setShowCreateMenu(false)}>
+            <button onClick={() => { openBuilder(); setShowCreateMenu(false) }} style={{
+              display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 14px", background: "none",
+              border: "none", cursor: "pointer", fontSize: 13, color: "var(--foreground)", textAlign: "left" as const }}>
+              <span style={{ fontSize: 16 }}>⚡</span>
+              <div>
+                <div style={{ fontWeight: 600 }}>Build new widget</div>
+                <div style={{ fontSize: 11, color: "var(--field-supporting)" }}>Open Widget Playground</div>
+              </div>
+            </button>
+            <div style={{ height: 1, background: "var(--field-border)" }} />
+            <button onClick={() => { setOverlay("marketplace"); setShowCreateMenu(false) }} style={{
+              display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 14px", background: "none",
+              border: "none", cursor: "pointer", fontSize: 13, color: "var(--foreground)", textAlign: "left" as const }}>
+              <span style={{ fontSize: 16 }}>🛒</span>
+              <div>
+                <div style={{ fontWeight: 600 }}>Browse marketplace</div>
+                <div style={{ fontSize: 11, color: "var(--field-supporting)" }}>Find community widgets</div>
+              </div>
+            </button>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -1680,19 +1722,6 @@ export default function PMThomasComposableDashboardsScreen() {
             description={overlayView ? undefined : headerDesc}
             primaryAction={headerPrimary}
           />
-          {/* Sub-tabs for Widgets view */}
-          {mainView === "widgets" && !overlayView && (
-            <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--field-border)", padding: "0 0 0 0", marginBottom: -1 }}>
-              {(["library", "marketplace"] as const).map(sv => (
-                <button key={sv} onClick={() => setSubView(sv)}
-                  style={{ padding: "8px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
-                    color: subView === sv ? "var(--primary)" : "var(--text-subtitle)",
-                    borderBottom: `2px solid ${subView === sv ? "var(--primary)" : "transparent"}`, marginBottom: -1 }}>
-                  {sv === "library" ? "Widget Library" : "Marketplace"}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
     >
@@ -1711,11 +1740,21 @@ export default function PMThomasComposableDashboardsScreen() {
       {!overlayView && mainView === "dashboards" && (
         <DashboardsView />
       )}
-      {!overlayView && mainView === "widgets" && subView === "library" && (
-        <WidgetLibraryView onCreateWidget={() => setOverlay("builder")} />
+      {overlayView === "marketplace" && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 16, borderBottom: "1px solid var(--field-border)", marginBottom: 20 }}>
+            <button onClick={() => setOverlay(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", display: "flex", alignItems: "center", gap: 4, fontSize: 13 }}>
+              {(() => { const Arr = LucideIcons.ArrowLeft as React.FC<{ size?: number }>; return <Arr size={14} /> })()}
+              Widget Library
+            </button>
+            <span style={{ color: "var(--field-border)" }}>/</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>Marketplace</span>
+          </div>
+          <MarketplaceView onUseWidget={() => setOverlay("builder")} />
+        </div>
       )}
-      {!overlayView && mainView === "widgets" && subView === "marketplace" && (
-        <MarketplaceView onUseWidget={() => setOverlay("builder")} />
+      {!overlayView && mainView === "widgets" && (
+        <WidgetLibraryView onCreateWidget={() => setOverlay("builder")} />
       )}
     </ScreenLayout>
   )
