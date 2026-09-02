@@ -153,12 +153,12 @@ export function VoiceAgentDetailPage({
             channels={agent.channels}
             numbers={numbers}
             onOpenNumber={onOpenNumber}
-            onAddChannel={() => toast.info("Add channel — coming soon")}
+            onAddChannel={() => toast.info("Pick a channel to add to this agent")}
             onConfigure={(kind) => {
               if (kind === "voice") setVoiceOpen(true)
               else if (kind === "sms")   setSmsOpen(true)
               else if (kind === "email") setEmailOpen(true)
-              else toast.info("Set up Web Chat — coming soon")
+              else toast.info("Set up Web Chat in the Chat Widget manager")
             }}
           />
         ) : subTab === "knowledge" ? (
@@ -176,7 +176,7 @@ export function VoiceAgentDetailPage({
             numbers={numbers}
             onOpenNumber={onOpenNumber}
             onConfigureVoice={() => setVoiceOpen(true)}
-            onAddTool={() => toast.info("Open tool catalog — coming soon")}
+            onAddTool={() => toast.info("Browse the tool catalog to add capabilities to this agent")}
           />
         ) : subTab === "create" ? (
           <CreatePanel        agent={agent} onChange={(patch) => { onChange(patch); toast.success("Agent identity saved") }}/>

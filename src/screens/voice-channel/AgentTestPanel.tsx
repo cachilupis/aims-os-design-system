@@ -97,7 +97,7 @@ export function AgentTestPanel({ description, placeholder }: AgentTestPanelProps
               variant="tertiary" size="sm"
               icon={<Paperclip size={13}/>} iconPosition="alone"
               aria-label="Attach file"
-              onClick={() => toast.info("Attach file — coming soon")}
+              onClick={() => toast.info("Attach a file to the test session")}
             />
             <div className="ml-auto">
               <Button

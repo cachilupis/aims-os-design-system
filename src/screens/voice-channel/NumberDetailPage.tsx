@@ -373,10 +373,12 @@ function AgentsSubTab({
       <div className="grid grid-cols-2 gap-4">
         <CardContainer variant="default" size="default">
           <Section title="Distribution Mode">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2" role="radiogroup" aria-label="Distribution mode">
               {DISTRIBUTION_MODES.map(m => (
                 <button
                   key={m.id}
+                  role="radio"
+                  aria-checked={draft.dist === m.id}
                   onClick={() => onSetDist(m.id as Distribution)}
                   style={{
                     textAlign: "left",

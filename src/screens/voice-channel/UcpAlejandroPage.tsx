@@ -347,6 +347,16 @@ function ActivityRow({
   return (
     <article
       onClick={onClick}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable
+        ? (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              onClick!()
+            }
+          }
+        : undefined}
       style={{
         padding: 14,
         background: "var(--color-surface-neutral-subtle)",

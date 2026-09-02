@@ -147,12 +147,22 @@ export function KnowledgePanel({
             <div style={{ fontSize: 13, color: "var(--color-text-caption)", maxWidth: 560, lineHeight: 1.5 }}>
               Choose what information your agent can use to answer questions. Knowledge Packs and Shared Drives are
               governed in{" "}
-              <span
+              <button
+                type="button"
                 onClick={onOpenGovernance}
-                style={{ color: "var(--color-icon-primary-default)", cursor: "pointer", fontWeight: 500 }}
+                style={{
+                  color: "var(--color-icon-primary-default)",
+                  fontWeight: 500,
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  font: "inherit",
+                  textDecoration: "underline",
+                }}
               >
                 Governance Studio
-              </span>
+              </button>
               ; own documents live with this agent.
             </div>
           </div>

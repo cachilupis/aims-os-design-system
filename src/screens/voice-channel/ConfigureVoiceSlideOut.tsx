@@ -186,7 +186,7 @@ export function ConfigureVoiceSlideOut({
             Multi-agent routing, language detection, and step-by-step Voice flows are configured inside the{" "}
             <button
               type="button"
-              onClick={() => toast.info("Agentic Network editor opens in Agentic Networks — jumping there soon.")}
+              onClick={() => toast.info("Agentic Network editor opens in Agentic Networks.")}
               style={{
                 color: "var(--color-icon-primary-default)",
                 fontWeight: 500,

@@ -29,7 +29,7 @@ export function ToolsPanel({
 }: ToolsPanelProps) {
   const toast = useToast()
   const stubConfigure = (toolName: string) =>
-    toast.info(`${toolName} configuration lives in Governance Studio — jumping there in a future release.`)
+    toast.info(`${toolName} configuration opens in Governance Studio.`)
   const voiceChannel = agent.channels.find(c => c.kind === "voice")
   const isVoiceConfigured = !!voiceChannel?.active && !!voiceChannel?.voice
   const cfg = voiceChannel?.voice

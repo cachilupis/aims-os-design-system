@@ -2,7 +2,7 @@ import { PhoneCall, ArrowRight, User, MessageSquare } from "lucide-react"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Tag } from "@/components/ui/tag"
 import { CardContainer } from "@/components/ui/card-container"
-import { AGENTS, TRANSCRIPT, type Call, type PhoneNumberRecord } from "./data"
+import { AGENTS, type Call, type PhoneNumberRecord } from "./data"
 import { AgentAvatar, HilBadge, SentimentTag } from "./shared"
 
 interface CallPreviewProps {
@@ -25,9 +25,15 @@ export function CallPreview({ call, number, open, onClose, onOpenFull }: CallPre
   if (!call) return null
 
   const agent = AGENTS.find(a => a.id === call.agent) ?? null
-  // First real exchange from the transcript — used as the teaser
-  const firstCallerLine = TRANSCRIPT.find(t => t.role === "caller" && !t.divider)
-  const firstAgentLine  = TRANSCRIPT.find(t => t.role === "agent"  && !t.divider)
+  // First real exchange from the transcript — used as the teaser.
+  // Prefer the call's own transcript so the teaser matches the call
+  // the user is previewing; when no per-call intel exists we hide the
+  // teaser entirely rather than showing the generic mock (which used
+  // to make every preview look identical).
+  const transcript = call.intel?.transcript ?? null
+  const firstCallerLine = transcript?.find(t => t.role === "caller" && !t.divider)
+  const firstAgentLine  = transcript?.find(t => t.role === "agent"  && !t.divider)
+  const hasTeaser       = !!(firstCallerLine || firstAgentLine)
 
   return (
     <SlideOut
@@ -109,24 +115,27 @@ export function CallPreview({ call, number, open, onClose, onOpenFull }: CallPre
           </CardContainer>
         )}
 
-        {/* Transcript teaser (first two lines) */}
-        <CardContainer variant="default" size="sm">
-          <SectionLabel icon={<MessageSquare size={12}/>}>Transcript Preview</SectionLabel>
-          <div className="flex flex-col gap-2 mt-2">
-            {firstAgentLine && (
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "var(--color-text-caption)" }}>AI AGENT · {firstAgentLine.t}</div>
-                <div style={{ fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.4 }}>{firstAgentLine.text}</div>
-              </div>
-            )}
-            {firstCallerLine && (
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "var(--color-text-caption)" }}>CALLER · {firstCallerLine.t}</div>
-                <div style={{ fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.4 }}>{firstCallerLine.text}</div>
-              </div>
-            )}
-          </div>
-        </CardContainer>
+        {/* Transcript teaser (first two lines). Only rendered when
+            the call ships its own transcript — no generic mock. */}
+        {hasTeaser && (
+          <CardContainer variant="default" size="sm">
+            <SectionLabel icon={<MessageSquare size={12}/>}>Transcript Preview</SectionLabel>
+            <div className="flex flex-col gap-2 mt-2">
+              {firstAgentLine && (
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "var(--color-text-caption)" }}>AI AGENT · {firstAgentLine.t}</div>
+                  <div style={{ fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.4 }}>{firstAgentLine.text}</div>
+                </div>
+              )}
+              {firstCallerLine && (
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "var(--color-text-caption)" }}>CALLER · {firstCallerLine.t}</div>
+                  <div style={{ fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.4 }}>{firstCallerLine.text}</div>
+                </div>
+              )}
+            </div>
+          </CardContainer>
+        )}
 
         {/* Hint */}
         <div className="flex items-center gap-2" style={{ fontSize: 11, color: "var(--color-text-caption)" }}>

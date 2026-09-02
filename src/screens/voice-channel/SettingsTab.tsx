@@ -61,13 +61,13 @@ export function SettingsTab() {
 
           <ToggleRow
             label="Record all calls"
-            sub="Stored in S3, accessible in Call History"
+            sub="Recordings kept for 30 days and searchable in Call History"
             checked={recordAll}
             onChange={setRecordAll}
           />
           <ToggleRow
             label="Auto-transcribe"
-            sub="Deepgram Nova-3, 30+ languages"
+            sub="Automatic transcription in 30+ languages"
             checked={autoTrans}
             onChange={setAutoTrans}
           />
