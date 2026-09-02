@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, lazy, Suspense } from "react"
+const DashboardCanvasScreen = lazy(() => import("./pm-thomas-dashboard-canvas"))
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
@@ -622,22 +623,29 @@ function LibFilterToolbar({ search, onSearch, cat, onCat, profile, onProfile, sk
 
 // ── Dashboard List view ───────────────────────────────────────────────────────
 
-function DashboardsView() {
+type DashRecord = typeof DASHBOARDS[0]
+
+function DashboardsView({ onOpenCanvas }: { onOpenCanvas: (d: DashRecord) => void }) {
   const [search, setSearch]         = useState("")
   const [statusFilter, setStatus]   = useState("All")
   const [entityFilter, setEntity]   = useState("All")
+  const [sortBy, setSortBy]         = useState<"name" | "updated">("name")
   const [page, setPage]             = useState(1)
-  const [detail, setDetail]         = useState<typeof DASHBOARDS[0] | null>(null)
-  const [deleteTarget, setDelete]   = useState<typeof DASHBOARDS[0] | null>(null)
+  const [detail, setDetail]         = useState<DashRecord | null>(null)
+  const [deleteTarget, setDelete]   = useState<DashRecord | null>(null)
+  const [dupTarget, setDupTarget]   = useState<DashRecord | null>(null)
+  const [dupName, setDupName]       = useState("")
+  const [cardMenu, setCardMenu]     = useState<string | null>(null)
   const [bannerDismissed, dismiss]  = useState(false)
+  const [dashboards, setDashboards] = useState(DASHBOARDS)
   const PAGE_SIZE = 6
 
-  const filtered = DASHBOARDS.filter(d => {
+  const filtered = dashboards.filter(d => {
     if (search && !d.name.toLowerCase().includes(search.toLowerCase())) return false
     if (statusFilter !== "All" && d.status !== statusFilter.toLowerCase()) return false
     if (entityFilter !== "All" && d.entity !== entityFilter) return false
     return true
-  })
+  }).sort((a, b) => sortBy === "name" ? a.name.localeCompare(b.name) : a.updated.localeCompare(b.updated))
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
@@ -663,21 +671,48 @@ function DashboardsView() {
         pills={[
           { label: "Status", value: statusFilter, options: ["All", "Published", "Draft", "Pending"], onSelect: v => { setStatus(v); setPage(1) } },
           { label: "Entity", value: entityFilter, options: ["All", "Company", "Contact", "Employee", "Deal", "Standalone"], onSelect: v => { setEntity(v); setPage(1) } },
+          { label: "Sort", value: sortBy === "name" ? "Name" : "Updated", options: ["Name", "Updated"], onSelect: v => setSortBy(v === "Name" ? "name" : "updated") },
         ]}
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12, marginBottom: 16 }}>
-        {paged.map(d => (
-          <CardContainer key={d.id} size="sm" className="flex flex-col gap-2 cursor-pointer" onClick={() => setDetail(d)}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)", lineHeight: 1.3 }}>{d.name}</div>
-              <StatusBadge status={d.status} />
+        {paged.map(d => {
+          const isProfile = d.entity !== "Standalone"
+          return (
+            <div key={d.id} style={{ position: "relative" }} onClick={() => { if (!cardMenu) setDetail(d) }}>
+              <CardContainer size="sm" className="flex flex-col gap-2 cursor-pointer">
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)", lineHeight: 1.3, marginBottom: 2 }}>{d.name}</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      <Tag variant={isProfile ? "informative" : "neutral"} size="sm">{isProfile ? "Profile" : "Standalone"}</Tag>
+                      <StatusBadge status={d.status} />
+                    </div>
+                  </div>
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <button onClick={e => { e.stopPropagation(); setCardMenu(cardMenu === d.id ? null : d.id) }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: "1px 2px", borderRadius: 6, display: "flex" }}>
+                      <LucideIcons.MoreHorizontal size={14} />
+                    </button>
+                    {cardMenu === d.id && (
+                      <LibOverflowMenu onClose={() => setCardMenu(null)} items={[
+                        { label: "Open",      icon: "ExternalLink", onClick: () => { setCardMenu(null); setDetail(null); onOpenCanvas(d) } },
+                        { label: "Duplicate", icon: "Copy",         onClick: () => { setCardMenu(null); setDupTarget(d); setDupName(`${d.name} (copy)`) } },
+                        { label: "Delete",    icon: "Trash2",       danger: true, onClick: () => { setCardMenu(null); setDelete(d) } },
+                      ]} />
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text-subtitle)" }}>
+                  <LucideIcons.MapPin size={11} style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.placement}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-subtitle)" }}>{d.widgetCount} widgets · {d.audience} · {d.updated}</div>
+                <div style={{ fontSize: 12, color: "var(--text-muted, var(--text-subtitle))", marginTop: 2 }}>{d.description}</div>
+              </CardContainer>
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-subtitle)" }}>{d.placement}</div>
-            <div style={{ fontSize: 12, color: "var(--text-subtitle)" }}>{d.widgetCount} widgets · {d.audience} · {d.updated}</div>
-            <div style={{ fontSize: 12, color: "var(--text-muted, var(--text-subtitle))", marginTop: 2 }}>{d.description}</div>
-          </CardContainer>
-        ))}
+          )
+        })}
       </div>
 
       {filtered.length > PAGE_SIZE && (
@@ -685,13 +720,18 @@ function DashboardsView() {
       )}
 
       {detail && (
-        <SlideOut open title={detail.name} onClose={() => setDetail(null)}
+        <SlideOut open title={detail.name} subtitle={detail.placement} onClose={() => setDetail(null)}
           ctaPrimaryLabel="Open dashboard"
           ctaSecondaryLabel="Delete"
-          onCtaPrimary={() => setDetail(null)}
+          onCtaPrimary={() => { const d = detail; setDetail(null); onOpenCanvas(d) }}
           onCtaSecondary={() => { setDelete(detail); setDetail(null) }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 0" }}>
-            <StatusBadge status={detail.status} />
+            <div style={{ display: "flex", gap: 6 }}>
+              <Tag variant={detail.entity !== "Standalone" ? "informative" : "neutral"} size="sm">
+                {detail.entity !== "Standalone" ? "Profile" : "Standalone"}
+              </Tag>
+              <StatusBadge status={detail.status} />
+            </div>
             <div style={{ fontSize: 13, color: "var(--text-body)" }}>{detail.description}</div>
             {[["Entity", detail.entity], ["Placement", detail.placement], ["Audience", detail.audience], ["Owner", detail.owner], ["Widgets", `${detail.widgetCount} widgets`], ["Updated", detail.updated]].map(([k, v]) => (
               <div key={k} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--field-border)", paddingBottom: 8 }}>
@@ -708,8 +748,23 @@ function DashboardsView() {
           variant="confirmation" tone="error"
           title="Delete dashboard?"
           description={`"${deleteTarget.name}" will be permanently removed. Widgets inside will not be deleted.`}
-          ctaPrimary={{ label: "Delete", destructive: true, onClick: () => setDelete(null) }}
+          ctaPrimary={{ label: "Delete", destructive: true, onClick: () => { setDashboards(ds => ds.filter(d => d.id !== deleteTarget.id)); setDelete(null) } }}
           ctaSecondary={{ label: "Cancel", onClick: () => setDelete(null) }}
+        />
+      )}
+
+      {dupTarget && (
+        <ModalDialog isOpen onClose={() => setDupTarget(null)}
+          title="Duplicate dashboard"
+          description="Give the copy a new name. It starts as a draft and inherits the same placement and audience."
+          ctaPrimary={{ label: "Duplicate", onClick: () => {
+            if (!dupName.trim()) return
+            setDashboards(ds => [...ds, { ...dupTarget, id: `d-dup-${Date.now()}`, name: dupName.trim(), status: "draft" as DashStatus, updated: "Just now" }])
+            setDupTarget(null)
+          }}}
+          ctaSecondary={{ label: "Cancel", onClick: () => setDupTarget(null) }}
+          variant="content"
+          slot={<Input placeholder="Dashboard name" value={dupName} onChange={e => setDupName(e.target.value)} style={{ width: "100%", marginTop: 4 }} />}
         />
       )}
     </>
@@ -812,11 +867,11 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget }: { onCreateWidget: (
                     </div>
                   </div>
 
-                  {/* Tags: skeleton type + Truth (governed) */}
+                  {/* Tags: skeleton type + governance exception */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                     <Tag variant="neutral" size="sm">{w.skeleton}</Tag>
-                    {w.governed && <Tag variant="informative" size="sm">Truth</Tag>}
-                    {w.system   && <Tag variant="neutral"      size="sm">System</Tag>}
+                    {!w.governed && <Tag variant="alert"   size="sm">Ungoverned</Tag>}
+                    {w.system    && <Tag variant="neutral" size="sm">System</Tag>}
                   </div>
 
                   {/* Mini preview — real visual */}
@@ -1087,37 +1142,191 @@ function MarketplaceView({ onUseWidget }: { onUseWidget: () => void }) {
 
 // ── New Dashboard overlay ─────────────────────────────────────────────────────
 
-function NewDashboardOverlay({ onClose: _onClose }: { onClose: () => void }) {
+const ENTITY_OPTIONS: { id: EntityKind; label: string; desc: string; icon: keyof typeof LucideIcons }[] = [
+  { id: "Company",   label: "Company",   desc: "Appears on company profiles",   icon: "Building2" },
+  { id: "Contact",   label: "Contact",   desc: "Appears on contact profiles",   icon: "User" },
+  { id: "Employee",  label: "Employee",  desc: "Appears on employee profiles",  icon: "UserCheck" },
+  { id: "Deal",      label: "Deal",      desc: "Appears on deal records",       icon: "TrendingUp" },
+  { id: "Standalone",label: "Standalone",desc: "Report collection or Home",     icon: "LayoutDashboard" },
+]
+const PLACEMENT_TABS: Record<string, string[]> = {
+  Company:    ["Overview", "Activity", "Timeline", "Files"],
+  Contact:    ["Overview", "Activity", "Engagement", "Files"],
+  Employee:   ["Overview", "Performance", "Goals", "Files"],
+  Deal:       ["Overview", "Activity", "Pipeline"],
+  Standalone: ["Report collection", "Home — Workspace", "Home — Personal"],
+}
+const DASHBOARD_TEMPLATES = [
+  { id: "blank",    name: "Blank canvas",   desc: "Start from scratch with an empty grid." },
+  { id: "kpi-row",  name: "KPI Row",        desc: "3 headline KPIs with a trend chart below." },
+  { id: "pipeline", name: "Pipeline view",  desc: "Stage funnel + table of active records." },
+  { id: "activity", name: "Activity feed",  desc: "Recent events + engagement summary." },
+]
 
-  const MapPin    = LucideIcons.MapPin    as React.FC<{ size?: number; style?: React.CSSProperties }>
-  const Grid2x2   = LucideIcons.Grid2x2   as React.FC<{ size?: number; style?: React.CSSProperties }>
+function NewDashboardOverlay({ onClose, onCreated }: { onClose: () => void; onCreated: (d: DashRecord) => void }) {
+  const [step, setStep]             = useState<1 | 2>(1)
+  const [dashName, setDashName]     = useState("")
+  const [entity, setEntity]         = useState<EntityKind | null>(null)
+  const [placement, setPlacement]   = useState("")
+  const [audience, setAudience]     = useState("Everyone")
+  const [template, setTemplate]     = useState("blank")
+
+  const tabs = entity ? PLACEMENT_TABS[entity] ?? [] : []
+  const step1Valid = !!(dashName.trim() && entity && placement)
+  const conflict = DASHBOARDS.find(d => d.entity === entity && d.placement === placement)
+
+  function handleCreate() {
+    const newDash: DashRecord = {
+      id: `d-new-${Date.now()}`,
+      name: dashName.trim() || "Untitled dashboard",
+      status: "draft" as DashStatus,
+      entity: entity!,
+      placement,
+      owner: "Thomas G.",
+      widgetCount: 0,
+      audience,
+      updated: "Just now",
+      description: "",
+    }
+    onCreated(newDash)
+  }
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Canvas header */}
-      <div style={{ paddingBottom: 16, borderBottom: "1px solid var(--field-border)" }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)" }}>Untitled dashboard</div>
-        <div style={{ fontSize: 12, color: "var(--field-supporting)", marginTop: 4 }}>
-          Standalone · Manager · Role · <Tag variant="neutral">Draft</Tag>&nbsp; All changes saved
+    <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 560 }}>
+      {/* Step indicator */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
+        {[{ n: 1, label: "Placement" }, { n: 2, label: "Start point" }].map(({ n, label }) => (
+          <div key={n} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, fontWeight: 700,
+              background: step >= n ? "var(--primary)" : "var(--field-border)",
+              color: step >= n ? "var(--on-primary, white)" : "var(--field-supporting)",
+            }}>{n < step ? "✓" : n}</div>
+            <span style={{ fontSize: 12, fontWeight: step === n ? 600 : 400, color: step === n ? "var(--foreground)" : "var(--field-supporting)" }}>{label}</span>
+            {n < 2 && <div style={{ width: 28, height: 1, background: "var(--field-border)", marginLeft: 4 }} />}
+          </div>
+        ))}
+      </div>
+
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Name */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--field-supporting)", marginBottom: 6 }}>Dashboard name</div>
+            <Input value={dashName} onChange={e => setDashName(e.target.value)} placeholder="e.g. Company Overview" style={{ width: "100%" }} />
+          </div>
+
+          {/* Entity type */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--field-supporting)", marginBottom: 8 }}>Entity type</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {ENTITY_OPTIONS.map(opt => {
+                const Icon = LucideIcons[opt.icon] as React.FC<{ size?: number; style?: React.CSSProperties }>
+                return (
+                  <button key={opt.id} onClick={() => { setEntity(opt.id); setPlacement("") }} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, cursor: "pointer",
+                    border: `1px solid ${entity === opt.id ? "var(--primary)" : "var(--field-border)"}`,
+                    background: entity === opt.id ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)", // audit-ignore: color-mix no hex
+                    textAlign: "left",
+                  }}>
+                    <Icon size={14} style={{ color: entity === opt.id ? "var(--primary)" : "var(--field-supporting)", flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{opt.label}</div>
+                      <div style={{ fontSize: 11, color: "var(--field-supporting)" }}>{opt.desc}</div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Placement tab */}
+          {entity && tabs.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--field-supporting)", marginBottom: 8 }}>Section / tab</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {tabs.map(t => (
+                  <button key={t} onClick={() => setPlacement(t)} style={{
+                    padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: "pointer",
+                    border: `1px solid ${placement === t ? "var(--primary)" : "var(--field-border)"}`,
+                    background: placement === t ? "var(--primary)" : "var(--surface)",
+                    color: placement === t ? "var(--on-primary, white)" : "var(--foreground)", // audit-ignore: white keyword fallback
+                  }}>{t}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Audience */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--field-supporting)", marginBottom: 8 }}>Audience</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {["Everyone", "Sales team", "HR team", "By role"].map(a => (
+                <button key={a} onClick={() => setAudience(a)} style={{
+                  padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: "pointer",
+                  border: `1px solid ${audience === a ? "var(--primary)" : "var(--field-border)"}`,
+                  background: audience === a ? "var(--primary)" : "var(--surface)",
+                  color: audience === a ? "var(--on-primary, white)" : "var(--foreground)", // audit-ignore: white keyword fallback
+                }}>{a}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Conflict warning */}
+          {conflict && (
+            <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderRadius: 8, background: "color-mix(in srgb, var(--alert) 10%, var(--surface))", border: "1px solid var(--alert)" }}> {/* audit-ignore: color-mix */}
+              <LucideIcons.AlertTriangle size={14} style={{ color: "var(--alert)", marginTop: 1, flexShrink: 0 }} />
+              <div style={{ fontSize: 12 }}>
+                <span style={{ fontWeight: 600, color: "var(--foreground)" }}>A dashboard already lives here:</span>
+                {" "}<span style={{ color: "var(--field-supporting)" }}>{conflict.name}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, paddingTop: 8, borderTop: "1px solid var(--field-border)" }}>
+            <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+            <Button variant="main" size="sm" disabled={!step1Valid} onClick={() => setStep(2)}>Next →</Button>
+          </div>
         </div>
-      </div>
-      {/* Choose section card */}
-      <div style={{ padding: "40px 24px", borderRadius: 12, border: "1px solid var(--field-border)", background: "var(--surface)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center" as const }}>
-        <MapPin size={28} style={{ color: "var(--field-supporting)" }} />
-        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--foreground)" }}>Choose section</div>
-        <p style={{ fontSize: 13, color: "var(--field-supporting)", maxWidth: 320, margin: 0, lineHeight: 1.5 }}>
-          The widgets you can add depend on where this dashboard will be displayed.
-        </p>
-        <Button variant="main" size="sm">Choose +</Button>
-      </div>
-      {/* Start adding widgets card (disabled) */}
-      <div style={{ padding: "40px 24px", borderRadius: 12, border: "1px solid var(--field-border)", background: "var(--surface)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center" as const, opacity: 0.45 }}>
-        <Grid2x2 size={28} style={{ color: "var(--field-supporting)" }} />
-        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--foreground)" }}>Start adding widgets</div>
-        <p style={{ fontSize: 13, color: "var(--field-supporting)", maxWidth: 320, margin: 0, lineHeight: 1.5 }}>
-          Customize your dashboard with widgets that assist your team.
-        </p>
-        <Button variant="secondary" size="sm" disabled>Add +</Button>
-      </div>
+      )}
+
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--field-supporting)" }}>
+            <LucideIcons.MapPin size={12} />
+            <span>Creating in <strong style={{ color: "var(--foreground)" }}>{entity} — {placement}</strong></span>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--field-supporting)", marginBottom: 8 }}>Start point</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {DASHBOARD_TEMPLATES.map(t => (
+                <button key={t.id} onClick={() => setTemplate(t.id)} style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 8, cursor: "pointer", textAlign: "left",
+                  border: `1px solid ${template === t.id ? "var(--primary)" : "var(--field-border)"}`,
+                  background: template === t.id ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)", // audit-ignore: color-mix no hex
+                }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: template === t.id ? "var(--primary)" : "var(--field-border)", flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{t.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--field-supporting)" }}>{t.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid var(--field-border)" }}>
+            <Button variant="secondary" size="sm" onClick={() => setStep(1)}>← Back</Button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+              <Button variant="main" size="sm" onClick={handleCreate}>Create dashboard →</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1621,6 +1830,7 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
 export default function PMThomasComposableDashboardsScreen() {
   const [mainView, setMainView]       = useState<MainView>("dashboards")
   const [overlayView, setOverlay]     = useState<OverlayView>(null)
+  const [canvasDash, setCanvasDash]   = useState<DashRecord | null>(null)
 
   // Builder state lifted so header buttons can read/drive it
   const [builderTab, setBuilderTab]       = useState<TabId>("data")
@@ -1669,7 +1879,7 @@ export default function PMThomasComposableDashboardsScreen() {
             if (builderTab === "data" && builderDataDone)        setBuilderTab("widget")
             else if (builderTab === "widget" && builderWidgetDone) setBuilderTab("appearance")
           }}>
-          Widget →
+          {builderTab === "widget" ? "Appearance →" : "Widget →"}
         </Button>
         <Button variant="main" size="sm" disabled={!builderWidgetDone}
           onClick={() => builderSaveRef.current?.()}>
@@ -1730,6 +1940,14 @@ export default function PMThomasComposableDashboardsScreen() {
     )
   }
 
+  if (canvasDash) {
+    return (
+      <Suspense fallback={<div style={{ padding: 40, color: "var(--foreground)" }}>Loading canvas…</div>}>
+        <DashboardCanvasScreen dash={canvasDash} onBack={() => setCanvasDash(null)} />
+      </Suspense>
+    )
+  }
+
   return (
     <ScreenLayout
       workspaceName="Meridian Corp"
@@ -1750,7 +1968,7 @@ export default function PMThomasComposableDashboardsScreen() {
       )}
     >
       {overlayView === "new-dashboard" && (
-        <NewDashboardOverlay onClose={() => setOverlay(null)} />
+        <NewDashboardOverlay onClose={() => setOverlay(null)} onCreated={d => { setOverlay(null); setCanvasDash(d) }} />
       )}
       {overlayView === "builder" && (
         <WidgetBuilderOverlay
@@ -1764,7 +1982,7 @@ export default function PMThomasComposableDashboardsScreen() {
         />
       )}
       {!overlayView && mainView === "dashboards" && (
-        <DashboardsView />
+        <DashboardsView onOpenCanvas={d => setCanvasDash(d)} />
       )}
       {overlayView === "marketplace" && (
         <div>
