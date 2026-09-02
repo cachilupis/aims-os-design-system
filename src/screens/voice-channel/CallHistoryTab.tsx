@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { PhoneCall, Search } from "lucide-react"
 import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
@@ -17,13 +17,32 @@ type DirFilter = "all" | CallDirection | "hil"
 interface CallHistoryTabProps {
   calls:   Call[]
   numbers: PhoneNumberRecord[]
+  /** Optional call id to open on the full detail page as soon as the
+   *  tab mounts / becomes visible. Used by UCP's "View full details"
+   *  handoff to jump straight into the detail without an extra click. */
+  openDetailId?: string | null
+  /** Fired after `openDetailId` has been consumed so the parent can
+   *  clear its own state and not re-open the same call on next render. */
+  onOpenDetailConsumed?: () => void
 }
 
-export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
+export function CallHistoryTab({
+  calls, numbers, openDetailId, onOpenDetailConsumed,
+}: CallHistoryTabProps) {
   const [dirFilter, setDirFilter]     = useState<DirFilter>("all")
   const [search,    setSearch]        = useState("")
   const [previewId, setPreviewId]     = useState<string | null>(null)  // Slide-out preview
   const [detailId,  setDetailId]      = useState<string | null>(null)  // Full-page detail
+
+  // Parent-driven detail open — used by cross-section flows (UCP →
+  // "View full details") so a caller can land directly on the detail
+  // page rather than the preview slide-out.
+  useEffect(() => {
+    if (openDetailId) {
+      setDetailId(openDetailId)
+      onOpenDetailConsumed?.()
+    }
+  }, [openDetailId, onOpenDetailConsumed])
 
   const filtered = useMemo(() => {
     return calls.filter(c => {

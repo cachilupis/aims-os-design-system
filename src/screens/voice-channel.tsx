@@ -135,6 +135,11 @@ function VoiceChannelScreenInner() {
   // The Call History tab keeps its own local preview state to avoid
   // touching an already-working flow.
   const [callPreviewId, setCallPreviewId] = useState<string | null>(null)
+  // Pending "open detail" hand-off — when the user clicks "View full
+  // details" from the shell preview, we set this and switch to Call
+  // History; CallHistoryTab picks it up via its openDetailId prop and
+  // renders the full detail page directly (no extra click).
+  const [pendingDetailId, setPendingDetailId] = useState<string | null>(null)
 
   // Numbers-tab controls
   const [numFilter,     setNumFilter]     = useState<NumberFilter>("all")
@@ -400,7 +405,14 @@ function VoiceChannelScreenInner() {
             </div>
           )}
 
-          {tab === "history"  && <CallHistoryTab calls={calls} numbers={numbers}/>}
+          {tab === "history"  && (
+            <CallHistoryTab
+              calls={calls}
+              numbers={numbers}
+              openDetailId={pendingDetailId}
+              onOpenDetailConsumed={() => setPendingDetailId(null)}
+            />
+          )}
           {tab === "security" && <SecurityTab/>}
           {tab === "settings" && <SettingsTab/>}
           </>)}
@@ -462,10 +474,12 @@ function VoiceChannelScreenInner() {
         onClose={() => setCallPreviewId(null)}
         onOpenFull={() => {
           if (!callPreviewId) return
+          // Hand the call id to Call History so it lands on the full
+          // detail page directly — no interstitial row-click required.
+          setPendingDetailId(callPreviewId)
           setCallPreviewId(null)
           setScreen("voice")
           setTab("history")
-          toast.info("Opened call in Call History. Click the row to view the full detail.")
         }}
       />
 

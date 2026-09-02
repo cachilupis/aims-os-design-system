@@ -217,8 +217,11 @@ function OverviewSubTab({ draft, persist }: { draft: PhoneNumberRecord; persist:
     voicemail:     true,
     transcribe:    false,
   })
-  const [language,       setLanguage]       = useState<string>(LANGUAGES[0])
-  const [autoDetectLang, setAutoDetectLang] = useState(true)
+  const [language,        setLanguage]        = useState<string>(LANGUAGES[0])
+  const [autoDetectLang,  setAutoDetectLang]  = useState(true)
+  const [forwardTo,       setForwardTo]       = useState("")
+  const [greeting,        setGreeting]        = useState("Hello! How can I help you today?")
+  const [recordingNotice, setRecordingNotice] = useState("This call may be recorded.")
   return (
     <div className="grid grid-cols-2 gap-4">
       <CardContainer variant="default" size="default">
@@ -244,7 +247,13 @@ function OverviewSubTab({ draft, persist }: { draft: PhoneNumberRecord; persist:
             <Toggle checked={inbound.transcribe} onChange={c => setInbound({ ...inbound, transcribe: c })} size="default"/>
           </Row>
           <Row label="Forward To">
-            <Input placeholder="(none)" size="sm" style={{ width: 160 }}/>
+            <Input
+              value={forwardTo}
+              onChange={e => setForwardTo(e.target.value)}
+              placeholder="(none)"
+              size="sm"
+              style={{ width: 160 }}
+            />
           </Row>
         </Section>
       </CardContainer>
@@ -267,8 +276,12 @@ function OverviewSubTab({ draft, persist }: { draft: PhoneNumberRecord; persist:
 
       <CardContainer variant="default" size="default">
         <Section title="Greeting & Recording">
-          <Row label="Greeting"><Input defaultValue="Hello! How can I help you today?" size="sm" style={{ width: 240 }}/></Row>
-          <Row label="Recording Notice"><Input defaultValue="This call may be recorded." size="sm" style={{ width: 240 }}/></Row>
+          <Row label="Greeting">
+            <Input value={greeting} onChange={e => setGreeting(e.target.value)} size="sm" style={{ width: 240 }}/>
+          </Row>
+          <Row label="Recording Notice">
+            <Input value={recordingNotice} onChange={e => setRecordingNotice(e.target.value)} size="sm" style={{ width: 240 }}/>
+          </Row>
         </Section>
       </CardContainer>
     </div>

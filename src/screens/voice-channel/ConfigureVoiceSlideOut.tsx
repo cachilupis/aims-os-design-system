@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
 import { CardContainer } from "@/components/ui/card-container"
 import { AddPhoneNumberModal } from "./AddPhoneNumberModal"
+import { useToast } from "./toast"
 import {
   VOICE_MODEL_OPTIONS,
   VOICE_NAME_OPTIONS,
@@ -57,6 +58,7 @@ const SUB_TABS: TabItem[] = [
 export function ConfigureVoiceSlideOut({
   open, onClose, agentName, numbers, numberIds, config, onSave, onAddNumbers,
 }: ConfigureVoiceSlideOutProps) {
+  const toast = useToast()
   const [draft, setDraft]   = useState<VoiceConfig>(config)
   const [subTab, setSubTab] = useState<SubTab>("general")
   const [addOpen, setAddOpen] = useState(false)
@@ -182,9 +184,22 @@ export function ConfigureVoiceSlideOut({
           <Info size={14} style={{ color: "var(--color-icon-primary-default)", flexShrink: 0, marginTop: 2 }}/>
           <div style={{ fontSize: 12, color: "var(--color-text-caption)", lineHeight: 1.5 }}>
             Multi-agent routing, language detection, and step-by-step Voice flows are configured inside the{" "}
-            <span style={{ color: "var(--color-icon-primary-default)", fontWeight: 500, cursor: "pointer" }}>
+            <button
+              type="button"
+              onClick={() => toast.info("Agentic Network editor opens in Agentic Networks — jumping there soon.")}
+              style={{
+                color: "var(--color-icon-primary-default)",
+                fontWeight: 500,
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                font: "inherit",
+                textDecoration: "underline",
+              }}
+            >
               Agentic Network editor
-            </span>.
+            </button>.
           </div>
         </div>
       </div>
