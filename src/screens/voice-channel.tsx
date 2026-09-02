@@ -29,6 +29,7 @@ import { AcquireNumberModal } from "./voice-channel/AcquireNumberModal"
 import { ReleaseNumberModal } from "./voice-channel/ReleaseNumberModal"
 import { AddAgentModal } from "./voice-channel/AddAgentModal"
 import { CallHistoryTab } from "./voice-channel/CallHistoryTab"
+import { CallPreview } from "./voice-channel/CallPreview"
 import { SettingsTab } from "./voice-channel/SettingsTab"
 import { SecurityTab } from "./voice-channel/SecurityTab"
 import { VoiceAgentsTab } from "./voice-channel/VoiceAgentsTab"
@@ -129,6 +130,11 @@ function VoiceChannelScreenInner() {
   const [acquireOpen,   setAcquireOpen]   = useState(false)
   const [releaseOpen,   setReleaseOpen]   = useState(false)
   const [addAgentOpen,  setAddAgentOpen]  = useState(false)
+  // Shell-level Call preview — driven by UCP `View details →` clicks so the
+  // call slide-out overlays regardless of which section the user is on.
+  // The Call History tab keeps its own local preview state to avoid
+  // touching an already-working flow.
+  const [callPreviewId, setCallPreviewId] = useState<string | null>(null)
 
   // Numbers-tab controls
   const [numFilter,     setNumFilter]     = useState<NumberFilter>("all")
@@ -283,12 +289,7 @@ function VoiceChannelScreenInner() {
               else                                   → Voice tabs + tab body */}
           {screen === "contacts" ? (
             <UcpAlejandroPage
-              onOpenCallDetail={() => {
-                // The Call Detail slide-out lives in the Voice section's
-                // Call History tab — a follow-up PR will lift it into the
-                // shared shell so a UCP click can jump into it directly.
-                toast.info("Call detail will open once wired to the Voice call history slide-out.")
-              }}
+              onOpenCallDetail={(id) => setCallPreviewId(id)}
             />
           ) : screen === "agents" && agentDetailAgent ? (
             <VoiceAgentDetailPage
@@ -443,6 +444,28 @@ function VoiceChannelScreenInner() {
           setPreviewId(null)
           setDetailId(null)
           toast.success("Number released. Billing will stop next cycle.")
+        }}
+      />
+
+      {/* Shell-level Call preview — opened from UCP's `View details →`.
+          Rendered here (not inside CallHistoryTab) so the slide-out
+          overlays regardless of which section the user is currently on.
+          `Open full` closes the preview and jumps into the Voice section's
+          Call History tab so the full detail page anchors correctly. */}
+      <CallPreview
+        call={calls.find(c => c.id === callPreviewId) ?? null}
+        number={(() => {
+          const c = calls.find(x => x.id === callPreviewId)
+          return c ? numbers.find(n => n.id === c.numberId) ?? null : null
+        })()}
+        open={callPreviewId !== null}
+        onClose={() => setCallPreviewId(null)}
+        onOpenFull={() => {
+          if (!callPreviewId) return
+          setCallPreviewId(null)
+          setScreen("voice")
+          setTab("history")
+          toast.info("Opened call in Call History. Click the row to view the full detail.")
         }}
       />
 

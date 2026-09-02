@@ -91,7 +91,7 @@ export const UCP_ACTIVITY_GROUPS: ActivityGroup[] = [
         sentiment:    "positive",
         summary:      "Alejandro called to schedule a service appointment for his 2023 Explorer (clicking noise). Sammy booked Thursday Apr 20 at 9 AM and sent a confirmation SMS.",
         metaChips:    ["4:12", "Sammy", "2 tools used"],
-        callDetailId: "call1",
+        callDetailId: "c2",  // "Positive · Sammy · Inbound" from the CALLS seed
         agent:        "Sammy",
       },
       {
@@ -120,7 +120,7 @@ export const UCP_ACTIVITY_GROUPS: ActivityGroup[] = [
         sentiment:    "neutral",
         summary:      "Alejandro called about a billing discrepancy on RO #4821. Sammy transferred to service manager. Task created for billing team.", // audit-ignore: "#4821" is a repair order number, not a hex color
         metaChips:    ["2:44", "Sammy → Human", "Task created"],
-        callDetailId: "call2",
+        callDetailId: "c1",  // "Negative · HiL" from the CALLS seed — matches the "escalated" tone
         agent:        "Sammy",
       },
       {
