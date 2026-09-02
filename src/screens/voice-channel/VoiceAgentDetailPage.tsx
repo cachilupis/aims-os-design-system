@@ -99,23 +99,30 @@ export function VoiceAgentDetailPage({
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Agent header ─────────────────────────────────────────── */}
+      {/* ── Agent toolbar ────────────────────────────────────────
+          The DS Header (rendered by the outer ScreenLayout) already
+          carries the agent name + status subtitle for this screen, so
+          this row drops the duplicated title and only exposes the
+          detail-scoped controls: back-to-list, publish state and the
+          Actions menu. */}
       <div className="flex items-center gap-3 px-1 pb-3" style={{ borderBottom: "1px solid var(--color-border-neutral-default)" }}>
         <button
           onClick={onBack}
           aria-label="Back to Agents list"
+          className="flex items-center gap-2"
           style={{
-            width: 28, height: 28, borderRadius: "var(--radius-md)",
-            background: "transparent", border: "none", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "4px 10px",
+            height: 28, borderRadius: "var(--radius-md)",
+            background: "transparent",
+            border: "1px solid var(--color-border-neutral-default)",
+            cursor: "pointer",
+            fontSize: 12, fontWeight: 500,
             color: "var(--color-text-caption)",
           }}
         >
-          <ArrowLeft size={18}/>
+          <ArrowLeft size={14}/>
+          Agents
         </button>
-        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-title)" }}>
-          {agent.name} — {agent.purpose}
-        </div>
         <div
           className="flex items-center gap-1"
           style={{
