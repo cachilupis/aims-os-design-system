@@ -50,7 +50,12 @@ export function AgentTestPanel({ description, placeholder }: AgentTestPanelProps
         }}>
           Test your Agent
         </span>
-        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-text-success)" }}/>
+        <span
+          role="status"
+          aria-label="Simulator ready"
+          title="Simulator ready"
+          style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-text-success)" }}
+        />
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6" style={{ textAlign: "center" }}>

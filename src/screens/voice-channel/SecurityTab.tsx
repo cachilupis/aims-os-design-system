@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { Info, Plus, X, Shield, Globe, Gauge, Search } from "lucide-react"
+import { Info, Plus, X, Shield, Globe, Gauge, Search, Check } from "lucide-react"
 import { CardContainer } from "@/components/ui/card-container"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Input } from "@/components/ui/input"
@@ -409,7 +409,7 @@ function CountryPicker({
                 >
                   <span>{country.label}</span>
                   {isSelected && (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)" }}>✓</span>
+                    <Check size={12} strokeWidth={2.5} style={{ color: "var(--primary)" }}/>
                   )}
                 </div>
               )

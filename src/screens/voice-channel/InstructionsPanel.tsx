@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Plus, X, ArrowRight } from "lucide-react"
+import { Plus, X, ArrowRight, Check } from "lucide-react"
 import { CardContainer } from "@/components/ui/card-container"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -114,8 +114,11 @@ export function InstructionsPanel({ agent, onChange }: InstructionsPanelProps) {
         </div>
         <div className="flex gap-4 mt-2">
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-success)", marginBottom: 6 }}>
-              ✓ Do
+            <div
+              className="flex items-center gap-1"
+              style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-success)", marginBottom: 6 }}
+            >
+              <Check size={12} strokeWidth={2.5}/> Do
             </div>
             <div className="flex flex-col gap-2">
               {draft.dos.map((s, i) => (
@@ -130,8 +133,11 @@ export function InstructionsPanel({ agent, onChange }: InstructionsPanelProps) {
             </div>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-error)", marginBottom: 6 }}>
-              ✕ Don't
+            <div
+              className="flex items-center gap-1"
+              style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-error)", marginBottom: 6 }}
+            >
+              <X size={12} strokeWidth={2.5}/> Don't
             </div>
             <div className="flex flex-col gap-2">
               {draft.donts.map((s, i) => (

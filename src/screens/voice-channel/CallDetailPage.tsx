@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowLeft, Download, FileText, Sparkles, BarChart3, PhoneCall, User } from "lucide-react"
+import { ArrowLeft, Download, FileText, Sparkles, BarChart3, PhoneCall, User, Shield } from "lucide-react"
 import { Tabs } from "@/components/ui/tabs"
 import { Tag } from "@/components/ui/tag"
 import { Button } from "@/components/ui/button"
@@ -167,13 +167,17 @@ function Transcript({ lines }: { lines: TranscriptLine[] }) {
           return (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0" }}>
               <div style={{ flex: 1, height: 1, background: "var(--primary)", opacity: 0.4 }}/>
-              <span style={{
-                fontSize: 11, fontWeight: 700, color: "var(--primary)",
-                padding: "4px 10px", border: "1px solid var(--primary)",
-                borderRadius: 9999,
-                background: "var(--color-surface-primary-more-subtle)",
-              }}>
-                🛡 {line.text}
+              <span
+                className="flex items-center gap-1"
+                style={{
+                  fontSize: 11, fontWeight: 700, color: "var(--primary)",
+                  padding: "4px 10px", border: "1px solid var(--primary)",
+                  borderRadius: 9999,
+                  background: "var(--color-surface-primary-more-subtle)",
+                }}
+              >
+                <Shield size={12} strokeWidth={2}/>
+                {line.text}
               </span>
               <div style={{ flex: 1, height: 1, background: "var(--primary)", opacity: 0.4 }}/>
             </div>

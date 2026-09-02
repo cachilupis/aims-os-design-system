@@ -166,7 +166,7 @@ export function CallHistoryTab({
           <CardContainer variant="default" size="default">
             <EmptyState
               icon={search ? Search : PhoneCall}
-              title={search ? `No calls match "${search}"` : "No calls this filter"}
+              title={search ? `No calls match "${search}"` : "No calls match this filter"}
               description={search ? "Try clearing your search." : "Try a different direction filter."}
               ctaLabel={search ? "Clear search" : "Show all"}
               onCta={search ? () => setSearch("") : () => setDirFilter("all")}

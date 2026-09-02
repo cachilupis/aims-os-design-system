@@ -136,7 +136,7 @@ export function ToolsPanel({
       {/* ── Right pane: Test your Agent ────────────────────────── */}
       <AgentTestPanel
         description={`Use this simulated chat to see how ${agent.name} responds when it calls its tools.`}
-        placeholder="Type your instructions here..."
+        placeholder="Type your message…"
       />
     </div>
   )
