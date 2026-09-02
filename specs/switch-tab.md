@@ -2,7 +2,7 @@
 
 **Figma node:** [`4591:349`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4591-349)
 
-Segmented tab switcher for top-level navigation within a contained view. White pill container (Elevation-5 shadow) with 2–7 equal-width tab items. Active tab shows a blue tinted fill and SemiBold label; inactive tabs are transparent with a Medium label.
+Secondary navigation, one level below Tabs — for when Tabs alone is not enough. White pill container with 2-7 equal-width items. Two placements: in a main list view it sits to the LEFT of Filters (see the Navigation Depth pattern); on a detail page that already has Tabs above, it navigates the content below them when there are fewer than 4 options, so a single view never stacks two rows of Tabs. Not a List/Table view toggle — List View has its own section for that.
 
 ## Properties
 

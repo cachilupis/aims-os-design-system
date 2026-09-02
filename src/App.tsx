@@ -93,7 +93,7 @@ import VoiceChannelScreen               from "./screens/voice-channel"
 // ── Types ─────────────────────────────────────────────────────────────────
 
 type SectionId = "home" | "ds-health" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SpecModal = "process-item" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -573,7 +573,7 @@ const CARD_SPEC = {
   name: "Card Container",
   figmaNodeId: "5388:23473",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5388-23473",
-  description: "Semantic container for grouping related content. 11 color styles communicate intent at a glance — neutral, primary, status, or categorical. Use S for compact metadata, M for general content, L for featured sections.",
+  description: "Semantic container for grouping related content — the DS default for any bordered, filled box. If a screen needs a container with a border and a background, this is it, never a hand-rolled div. 11 colour styles communicate intent at a glance, but Default is the right answer in the overwhelming majority of cases; reach for a colour only when the design genuinely calls for one. S for compact items — entity rows, selectable cards, and items with a CTA inside a SlideOut or Modal. M for general content, L for featured sections. Nothing visual that is not part of the component belongs inside it: no accent stripes, no coloured top borders, no dividers bolted on. EmptyState renders inside the dashed variant.",
   properties: [
     { name: "Style",    type: "Variant",  values: ["Default","White Opacity","Primary","Green","Reed","Orange","Yellow","Purple","Light Blue","Lime Green","Dashed"], default: "Default" },
     { name: "Size",     type: "Variant",  values: ["S","M","L"], default: "M" },
@@ -1027,7 +1027,7 @@ const MENU_SPEC = {
   name: "Menu / Dropdown",
   figmaNodeId: "4762:7152",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4762-7152",
-  description: "Floating list of selectable options. Used inside dropdowns, context menus, command palettes, and select fields. Supports icons, subtext, dividers, and section headers.",
+  description: "Floating list of selectable options. Used inside dropdowns, context menus, command palettes, and select fields. Supports icons, subtext, dividers, and section headers. Placement is not the caller's decision: the panel's left edge aligns with its trigger's left edge, 4px below, flipping to right-aligned only when it would cross the viewport edge — use src/lib/dropdown-anchor.ts, never centre it on the trigger and never open it away from the element that was clicked. In the 3-dot kebab menu, always the icon + text variant at size S.",
   properties: [
     { name: "State",          type: "Variant",  values: ["Default","Hover","Focus","Disabled","Skeleton"], default: "Default" },
     { name: "Size",           type: "Variant",  values: ["M","S"],                                         default: "M", note: "M/S: height auto (py-8px) · 40px single-line · 56px with subtext" },
@@ -2975,7 +2975,7 @@ const TABS_SPEC = {
   name: "Tabs",
   figmaNodeId: "856:11281",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=856-11281",
-  description: "Horizontal tab bar for switching between related views within the same context. Sits directly on any surface — no CardContainer needed. Active state: primary-blue 2px indicator + label. Supports leading icon, disabled state, and two sizes (M/S).",
+  description: "Primary navigation inside a screen — answers \"where am I?\". Horizontal bar with a 2px indicator under the active tab only. It manages its own indicator, so never add a borderBottom to the wrapper: that draws a line under ALL tabs, which the DS spec forbids. Sits directly on the surface, no CardContainer needed. Top of the navigation hierarchy — when a second level is needed below it, that is SwitchTab. Size M only on L screens; S everywhere else, to save space and stay consistent.",
   properties: [
     { name: "items",     type: "Array",    values: ["TabItem[]"],       default: "required",   note: "id · label · icon? · disabled?" },
     { name: "activeId",  type: "String",   values: ["string"],          default: "required",   note: "ID of the currently selected tab" },
@@ -3043,7 +3043,7 @@ const PROGRESS_BAR_SPEC = {
   name: "Progress Bar",
   figmaNodeId: "7091:37109",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7091-37109",
-  description: "Linear determinate loading bar that communicates known progress. Full-width track with a filled indicator that animates as value changes. 7 semantic styles, 2 track sizes, and full ARIA progressbar semantics.",
+  description: "Linear determinate bar for progress that is known and short — a file upload, a \"processing\" step. Also used purely informatively to show how far along something is: inside widgets, or as the visual state of an item in a SlideOut or SidePanel. Not for loading a view (that is Skeleton) and not for work of unknown duration (that is Spinner).",
   properties: [
     { name: "value",     type: "number",           values: ["0–100"],                                                                      default: "required", note: "Current progress percentage. Clamped to [0, 100] automatically." },
     { name: "style",     type: "ProgressBarStyle", values: ["primary", "success", "alert", "error", "yellow", "light-blue", "purple"],     default: "primary",  note: "Determines fill and track colors via Surface/* DS tokens." },
@@ -3096,7 +3096,7 @@ const SWITCH_TAB_SPEC = {
   name: "Switch Tab",
   figmaNodeId: "4591:349",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4591-349",
-  description: "Segmented tab switcher for top-level navigation within a contained view. White pill container (Elevation-5 shadow) with 2–7 equal-width tab items. Active tab shows a blue tinted fill and SemiBold label; inactive tabs are transparent with a Medium label.",
+  description: "Secondary navigation, one level below Tabs — for when Tabs alone is not enough. White pill container with 2-7 equal-width items. Two placements: in a main list view it sits to the LEFT of Filters (see the Navigation Depth pattern); on a detail page that already has Tabs above, it navigates the content below them when there are fewer than 4 options, so a single view never stacks two rows of Tabs. Not a List/Table view toggle — List View has its own section for that.",
   properties: [
     { name: "items",        type: "SwitchTabItem[]", values: ["{ id, label, icon? }[]"],           default: "required",  note: "Tab definitions. Each item needs a unique id and a label. Icon is optional." },
     { name: "value",        type: "string",          values: ["string"],                            default: "—",         note: "Controlled active tab id. Pair with onChange." },
@@ -3310,6 +3310,7 @@ const SLIDE_OUT_SPEC = {
 // ── Unified Spec Panel ─────────────────────────────────────────────────────
 
 function getSpec(id: NonNullable<SpecModal>): AnySpec {
+  if (id === "process-item")     return PROCESS_ITEM_SPEC     as AnySpec
   if (id === "breadcrumb")       return BREADCRUMB_SPEC       as AnySpec
   if (id === "button")           return BUTTON_SPEC           as AnySpec
   if (id === "input")            return INPUT_SPEC            as AnySpec
@@ -34486,6 +34487,44 @@ function FiltersInteractivePlayground() {
 }
 
 // ── BreadcrumbPage ────────────────────────────────────────────────────────────
+
+const PROCESS_ITEM_SPEC = {
+  name: "Process Item",
+  figmaNodeId: "13501:28579",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=13501-28579",
+  description: "One step of a process or workflow, with its state. Use it wherever the current state of a running process needs to be visible — SlideOut and SidePanel content, workflow views, threads. Each item can expand in place to reveal its detail. Not a Stepper: Stepper shows where the user is in a flow they advance themselves; Process Item shows what the system is doing.",
+  properties: [
+    { name: "title",       type: "string",          values: ["any string"],                                  default: "—",         note: "Required." },
+    { name: "description", type: "string",          values: ["any string"],                                  default: "undefined", note: "" },
+    { name: "timestamp",   type: "string",          values: ["any string"],                                  default: "undefined", note: "" },
+    { name: "tag",         type: "string",          values: ["any string"],                                  default: "undefined", note: "Renders an informative Tag when set." },
+    { name: "status",      type: "Variant",         values: ["done","loading","error","pending","warning"],  default: "pending",   note: "Drives the icon and its colour." },
+    { name: "state",       type: "Variant",         values: ["default","selected"],                          default: "default",   note: "" },
+    { name: "number",      type: "number | string", values: ["1","2","3"],                                   default: "undefined", note: "Shows a HighlightNumber badge instead of the status icon, for numbered sequences." },
+    { name: "showLine",    type: "Boolean",         values: ["true","false"],                                default: "false",     note: "Vertical connector to the next item. On for every item except the last." },
+    { name: "showExpand",  type: "Boolean",         values: ["true","false"],                                default: "false",     note: "Shows the expand chevron." },
+    { name: "expanded",    type: "Boolean",         values: ["true","false"],                                default: "false",     note: "Expanded state — reveals children in place." },
+    { name: "onExpand",    type: "function",        values: ["() => void"],                                  default: "undefined", note: "" },
+    { name: "children",    type: "node",            values: ["—"],                                      default: "undefined", note: "Slot shown when expanded — logs, payloads, per-step detail." },
+  ],
+  sizes: [
+    { element: "Status icon",  padding: "—", gap: "8px", radius: "50%", note: "16×16 inside a 32×32 slot" },
+    { element: "Number badge", padding: "—", gap: "8px", radius: "50%", note: "28×28 HighlightNumber, replaces the status icon" },
+    { element: "Text block",   padding: "—", gap: "2px", radius: "—",   note: "title · description · timestamp stacked" },
+  ],
+  typography: [
+    { element: "Title",       family: "Inter", size: "13px", weight: "SemiBold (600)", lineHeight: "1.4" },
+    { element: "Description", family: "Inter", size: "12px", weight: "Regular (400)",  lineHeight: "1.5" },
+    { element: "Timestamp",   family: "Inter", size: "11px", weight: "Regular (400)",  lineHeight: "1.4" },
+  ],
+  variants: [
+    { name: "done",    description: "Step finished. Check icon.",                    cssPrefix: "process", tokens: [] },
+    { name: "loading", description: "Step running now. Animated indicator.",         cssPrefix: "process", tokens: [] },
+    { name: "error",   description: "Step failed and needs attention.",              cssPrefix: "process", tokens: [] },
+    { name: "pending", description: "Step not started yet.",                         cssPrefix: "process", tokens: [] },
+    { name: "warning", description: "Step completed with something worth flagging.", cssPrefix: "process", tokens: [] },
+  ],
+}
 
 const BREADCRUMB_SPEC = {
   name: "Breadcrumb",

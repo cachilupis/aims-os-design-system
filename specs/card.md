@@ -2,7 +2,7 @@
 
 **Figma node:** [`5388:23473`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5388-23473)
 
-Semantic container for grouping related content. 11 color styles communicate intent at a glance — neutral, primary, status, or categorical. Use S for compact metadata, M for general content, L for featured sections.
+Semantic container for grouping related content — the DS default for any bordered, filled box. If a screen needs a container with a border and a background, this is it, never a hand-rolled div. 11 colour styles communicate intent at a glance, but Default is the right answer in the overwhelming majority of cases; reach for a colour only when the design genuinely calls for one. S for compact items — entity rows, selectable cards, and items with a CTA inside a SlideOut or Modal. M for general content, L for featured sections. Nothing visual that is not part of the component belongs inside it: no accent stripes, no coloured top borders, no dividers bolted on. EmptyState renders inside the dashed variant.
 
 ## Properties
 
