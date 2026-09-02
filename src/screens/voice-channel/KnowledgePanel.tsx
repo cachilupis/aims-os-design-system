@@ -241,7 +241,12 @@ export function KnowledgePanel({
           ) : (
             <div className="flex flex-col gap-3">
               {attachedDrives.map(d => (
-                <DriveCard key={d.id} drive={d} onDetach={() => detachDrive(d.id)}/>
+                <DriveCard
+                  key={d.id}
+                  drive={d}
+                  onDetach={() => detachDrive(d.id)}
+                  onBrowse={onOpenGovernance}
+                />
               ))}
             </div>
           )
@@ -414,7 +419,9 @@ function PackCard({
 
 // ─── Drive card ─────────────────────────────────────────────────────
 
-function DriveCard({ drive, onDetach }: { drive: SharedDrive; onDetach: () => void }) {
+function DriveCard({
+  drive, onDetach, onBrowse,
+}: { drive: SharedDrive; onDetach: () => void; onBrowse: () => void }) {
   return (
     <CardContainer variant="default" size="default">
       <div className="flex items-start gap-3">
@@ -434,7 +441,7 @@ function DriveCard({ drive, onDetach }: { drive: SharedDrive; onDetach: () => vo
           </div>
         </div>
         <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
-          <Button variant="secondary" size="sm">Browse</Button>
+          <Button variant="secondary" size="sm" onClick={onBrowse}>Browse</Button>
           <IconButton onClick={onDetach} aria-label="Disconnect drive" title="Disconnect drive">
             <X size={13}/>
           </IconButton>

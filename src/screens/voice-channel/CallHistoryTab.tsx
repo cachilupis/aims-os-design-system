@@ -2,7 +2,6 @@ import { useMemo, useState } from "react"
 import { PhoneCall, Search } from "lucide-react"
 import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
-import { Select } from "@/components/ui/select"
 import { CardContainer } from "@/components/ui/card-container"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Table, type TableColumn } from "@/components/ui/table"
@@ -23,7 +22,6 @@ interface CallHistoryTabProps {
 export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
   const [dirFilter, setDirFilter]     = useState<DirFilter>("all")
   const [search,    setSearch]        = useState("")
-  const [dateRange, setDateRange]     = useState("Last 7 days")
   const [previewId, setPreviewId]     = useState<string | null>(null)  // Slide-out preview
   const [detailId,  setDetailId]      = useState<string | null>(null)  // Full-page detail
 
@@ -141,11 +139,6 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
                 {k === "all" ? "All" : k === "inbound" ? "Inbound" : k === "outbound" ? "Outbound" : "HiL only"}
               </Chip>
             ))}
-            <Select
-              value={dateRange}
-              onClear={() => setDateRange("Last 7 days")}
-              size="sm"
-            />
           </div>
         </div>
 

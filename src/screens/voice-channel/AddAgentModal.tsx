@@ -21,7 +21,10 @@ export function AddAgentModal({ number, open, onClose, onConfirm }: AddAgentModa
   }, [open])
 
   const list = useMemo(() => {
-    return AGENTS.filter(a => a.name.toLowerCase().includes(query.toLowerCase()))
+    // AI agents (Sammy) are not routable human operators — filter them out.
+    return AGENTS
+      .filter(a => !a.isAi)
+      .filter(a => a.name.toLowerCase().includes(query.toLowerCase()))
   }, [query])
 
   const alreadyAssigned = new Set(number?.agents ?? [])

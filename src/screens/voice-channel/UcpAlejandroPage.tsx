@@ -53,9 +53,12 @@ interface UcpAlejandroPageProps {
   /** Called when a call activity row is clicked — lets the parent
    *  jump into the Call Detail slide-out or page. */
   onOpenCallDetail?: (callDetailId: string) => void
+  /** Called when the "Load older activity" CTA is clicked. Optional so
+   *  the button gracefully no-ops when the parent hasn't wired it. */
+  onLoadOlder?:     () => void
 }
 
-export function UcpAlejandroPage({ onOpenCallDetail }: UcpAlejandroPageProps) {
+export function UcpAlejandroPage({ onOpenCallDetail, onLoadOlder }: UcpAlejandroPageProps) {
   const [tab,    setTab]    = useState<UcpTab>("activity")
   const [kind,   setKind]   = useState<KindFilter>("all")
   const [agent,  setAgent]  = useState<string>("all")
@@ -110,8 +113,8 @@ export function UcpAlejandroPage({ onOpenCallDetail }: UcpAlejandroPageProps) {
           {UCP_ALEJANDRO.initials}
         </div>
         <div className="flex gap-5 flex-wrap">
-          <ContactLink icon={<Phone size={14}/>} label={UCP_ALEJANDRO.phone}/>
-          <ContactLink icon={<Mail  size={14}/>} label={UCP_ALEJANDRO.email}/>
+          <ContactLink icon={<Phone size={14}/>} label={UCP_ALEJANDRO.phone} href={`tel:${UCP_ALEJANDRO.phone}`}/>
+          <ContactLink icon={<Mail  size={14}/>} label={UCP_ALEJANDRO.email} href={`mailto:${UCP_ALEJANDRO.email}`}/>
         </div>
       </div>
 
@@ -134,6 +137,7 @@ export function UcpAlejandroPage({ onOpenCallDetail }: UcpAlejandroPageProps) {
             filteredCount={filteredCount}
             filteredGroups={filteredGroups}
             onOpenCallDetail={onOpenCallDetail}
+            onLoadOlder={onLoadOlder}
           />
         ) : (
           <TabStub tab={tab}/>
@@ -145,20 +149,20 @@ export function UcpAlejandroPage({ onOpenCallDetail }: UcpAlejandroPageProps) {
 
 // ─── Contact header link ──────────────────────────────────────────────
 
-function ContactLink({ icon, label }: { icon: React.ReactNode; label: string }) {
+function ContactLink({ icon, label, href }: { icon: React.ReactNode; label: string; href: string }) {
   return (
-    <div className="flex items-center gap-2" style={{ fontSize: 14 }}>
+    <a
+      href={href}
+      className="flex items-center gap-2"
+      style={{
+        fontSize: 14,
+        color: "var(--color-icon-primary-default)",
+        textDecoration: "underline",
+      }}
+    >
       <span style={{ color: "var(--color-text-caption)", display: "flex", alignItems: "center" }}>{icon}</span>
-      <span
-        style={{
-          color:       "var(--color-icon-primary-default)",
-          cursor:      "pointer",
-          textDecoration: "underline",
-        }}
-      >
-        {label}
-      </span>
-    </div>
+      {label}
+    </a>
   )
 }
 
@@ -166,7 +170,7 @@ function ContactLink({ icon, label }: { icon: React.ReactNode; label: string }) 
 
 function ActivityBody({
   kind, onKind, agent, onAgent, sort, onSort,
-  filteredCount, filteredGroups, onOpenCallDetail,
+  filteredCount, filteredGroups, onOpenCallDetail, onLoadOlder,
 }: {
   kind:            KindFilter
   onKind:          (v: KindFilter) => void
@@ -177,6 +181,7 @@ function ActivityBody({
   filteredCount:   number
   filteredGroups:  { key: string; label: string; items: ActivityItem[] }[]
   onOpenCallDetail?: (callDetailId: string) => void
+  onLoadOlder?:      () => void
 }) {
   const KIND_OPTIONS: { id: KindFilter; label: string }[] = [
     { id: "all",   label: "All"   },
@@ -269,10 +274,14 @@ function ActivityBody({
         </section>
       ))}
 
-      {/* Older activity CTA — mirrors the source's "Load older activity" */}
-      <div className="flex justify-center" style={{ padding: "16px 0 4px" }}>
-        <Button variant="secondary" size="sm">Load older activity</Button>
-      </div>
+      {/* Older activity CTA — mirrors the source's "Load older activity".
+          The button is hidden entirely when there is no older data to fetch
+          (a parent that leaves onLoadOlder unwired == no older data). */}
+      {onLoadOlder && (
+        <div className="flex justify-center" style={{ padding: "16px 0 4px" }}>
+          <Button variant="secondary" size="sm" onClick={onLoadOlder}>Load older activity</Button>
+        </div>
+      )}
     </div>
   )
 }
