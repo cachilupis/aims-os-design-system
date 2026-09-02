@@ -1,7 +1,7 @@
-# Toast
+# Toast (floating AlertBanner)
 
 
-Elevated transient notice for confirmation feedback (save/undo, background progress, non-blocking success or failure). Portals to <body>, stacks bottom-right and auto-dismisses after 3500ms. 3 semantic states — Success, Info, Error — pushed imperatively via ToastProvider + useToast().
+Not a separate component — a placement layer over AlertBanner. Each tile is a real &lt;AlertBanner&gt;, portalled to &lt;body&gt;, floated top-right with a 24px inset, auto-dismissed after 3500ms. One feedback language, two placements: in flow when the message should persist, floating when it confirms an action just taken. Stack grows downward, newest last, at z-index 10050 — above SlideOut (10010) and ModalDialog (10020).
 
 ## Properties
 
@@ -9,9 +9,9 @@ Elevated transient notice for confirmation feedback (save/undo, background progr
 | --- | --- | --- | --- | --- |
 | ToastProvider | Component | wraps a subtree | required | Renders the portal stack; descendants can call useToast() |
 | useToast() | Hook | { success, info, error, dismiss } | — | Imperative push handlers; no-op fallback outside a provider |
-| success/info/error | Method | (message, options?) => void | — | Push a toast of that variant |
+| success/info/error | Method | (title, options?) => void | — | Push a toast of that variant |
 | dismiss | Method | (id: number) => void | — | Remove a specific toast before it auto-dismisses |
-| variant | Variant | success,info,error | — | Sets the icon + left accent stripe |
+| variant | Variant | success,info,error | — | Maps 1:1 onto AlertBanner state — no separate visual vocabulary. Sets the icon + left accent stripe |
 | duration | Option | number (ms) | 3500 | Auto-dismiss delay; pass 0 to persist until dismissed |
 
 ## Sizes / scale

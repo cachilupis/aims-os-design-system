@@ -2292,9 +2292,9 @@ const ALERT_BANNER_SPEC = {
   name: "Alert Banner",
   figmaNodeId: "119:5867",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=119-5867",
-  description: "Full-width contextual notice for system-level feedback. 3 semantic states — Error, Success, Alert — with optional CTA text button and dismiss (×) button.",
+  description: "Contextual notice for system-level feedback. 4 semantic states — Error, Success, Alert, Info — with optional CTA text button and dismiss (×) button.",
   properties: [
-    { name: "state",       type: "Variant", values: ["error","success","alert"],            default: "error",     note: "Sets background, icon, and text tokens" },
+    { name: "state",       type: "Variant", values: ["error","success","alert","info"],     default: "error",     note: "Sets background, icon, and text tokens" },
     { name: "title",       type: "Prop",    values: ["string"],                             default: "required",  note: "14px SemiBold — always required" },
     { name: "description", type: "Prop",    values: ["string","undefined"],                 default: "undefined", note: "14px Medium, same state color as title" },
     { name: "cta",         type: "Prop",    values: ["string","undefined"],                 default: "undefined", note: "CTA button label — shown when provided" },
@@ -2359,16 +2359,16 @@ const ALERT_BANNER_SPEC = {
 }
 
 const TOAST_SPEC = {
-  name: "Toast",
+  name: "Toast (floating AlertBanner)",
   figmaNodeId: "—",
   figmaUrl: "",
-  description: "Elevated transient notice for confirmation feedback (save/undo, background progress, non-blocking success or failure). Portals to <body>, stacks bottom-right and auto-dismisses after 3500ms. 3 semantic states — Success, Info, Error — pushed imperatively via ToastProvider + useToast().",
+  description: "Not a separate component — a placement layer over AlertBanner. Each tile is a real &lt;AlertBanner&gt;, portalled to &lt;body&gt;, floated top-right with a 24px inset, auto-dismissed after 3500ms. One feedback language, two placements: in flow when the message should persist, floating when it confirms an action just taken. Stack grows downward, newest last, at z-index 10050 — above SlideOut (10010) and ModalDialog (10020).",
   properties: [
     { name: "ToastProvider",      type: "Component", values: ["wraps a subtree"],                   default: "required", note: "Renders the portal stack; descendants can call useToast()" },
     { name: "useToast()",         type: "Hook",      values: ["{ success, info, error, dismiss }"], default: "—",        note: "Imperative push handlers; no-op fallback outside a provider" },
-    { name: "success/info/error", type: "Method",    values: ["(message, options?) => void"],       default: "—",        note: "Push a toast of that variant" },
+    { name: "success/info/error", type: "Method",    values: ["(title, options?) => void"],         default: "—",        note: "Push a toast of that variant" },
     { name: "dismiss",            type: "Method",    values: ["(id: number) => void"],              default: "—",        note: "Remove a specific toast before it auto-dismisses" },
-    { name: "variant",            type: "Variant",   values: ["success","info","error"],            default: "—",        note: "Sets the icon + left accent stripe" },
+    { name: "variant",            type: "Variant",   values: ["success","info","error"],            default: "—",        note: "Maps 1:1 onto AlertBanner state — no separate visual vocabulary. Sets the icon + left accent stripe" },
     { name: "duration",           type: "Option",    values: ["number (ms)"],                       default: "3500",     note: "Auto-dismiss delay; pass 0 to persist until dismissed" },
   ],
   sizes: [
@@ -7808,9 +7808,9 @@ function ToastPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         {/* Header */}
         <div className="flex items-start justify-between gap-[16px] mb-[28px]">
           <div>
-            <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Toast</h1>
+            <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Toast (floating AlertBanner)</h1>
             <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
-              Elevated transient notice for confirmation feedback. Portals to the page, stacks in the bottom-right corner, and auto-dismisses after 3500ms. Three semantic states — Success, Info, Error — pushed imperatively via <code className="text-[13px] font-mono">useToast()</code>.
+              Not a second component — a placement layer. Each tile is a real <strong>AlertBanner</strong>, floated top-right, auto-dismissed after 3500ms. One feedback language, two placements: in flow when it should persist, floating when it confirms an action just taken.
             </p>
           </div>
           <SpecButton onClick={() => openSpec("toast")} />
@@ -7818,10 +7818,10 @@ function ToastPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 
         {/* Live states */}
         <section className="flex flex-col gap-[16px]">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Live states — click to push a toast (bottom-right)</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Live states — click to push one (top-right)</p>
           <ToastDemo />
           <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5] max-w-[560px]">
-            Each toast auto-dismisses after 3500ms, or click its × to dismiss early. Toasts stack upward and sit above SlideOut and ModalDialog (z-index 10050).
+            Auto-dismisses after 3500ms, or click × to dismiss early. Pass <code>duration: 0</code> to keep one until dismissed, and <code>cta</code> for an inline action such as Undo or Retry. The stack sits top-right above SlideOut and ModalDialog (z-index 10050) and grows downward, newest last.
           </p>
         </section>
       </div>
@@ -7838,24 +7838,27 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pgDesc, setPgDesc]   = useState(true)
   const [dismissed, setDismissed] = useState(false)
 
-  const STATES: AlertBannerState[] = ["error", "success", "alert"]
+  const STATES: AlertBannerState[] = ["error", "success", "alert", "info"]
 
   const OVERVIEW_ROWS: { state: AlertBannerState; title: string; description: string }[] = [
     { state: "error",   title: "Unable to save changes",       description: "Your session may have expired. Please try again or refresh the page." },
     { state: "success", title: "Changes saved successfully",   description: "All your updates have been applied and are now live." },
     { state: "alert",   title: "Action required before July 8", description: "Your subscription expires soon. Renew now to avoid service interruption." },
+    { state: "info",    title: "Syncing with Salesforce",        description: "Neutral feedback — neither a success nor a problem. Nothing for the user to fix." },
   ]
 
   const pgTitle = {
     error:   "Unable to save changes",
     success: "Changes saved successfully",
     alert:   "Action required before July 8",
+    info:    "Syncing with Salesforce",
   }[pgState]
 
   const pgDescription = {
     error:   "Your session may have expired. Please try again or refresh the page.",
     success: "All your updates have been applied and are now live.",
     alert:   "Your subscription expires soon. Renew now to avoid service interruption.",
+    info:    "Neutral feedback — neither a success nor a problem. Nothing for the user to fix.",
   }[pgState]
 
   return (
@@ -7865,7 +7868,7 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Alert Banner</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
-            Full-width contextual notice for system-level feedback. Three semantic states — Error, Success, Alert — with an optional CTA action and dismiss button.
+            Contextual notice for system-level feedback. Four semantic states — Error, Success, Alert, Info — with an optional CTA action and dismiss button. Two placements: in flow when the message should persist, or floating top-right when it confirms an action just taken (see Toast).
           </p>
         </div>
         <SpecButton onClick={() => openSpec("alert-banner")} />
@@ -7972,7 +7975,7 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   state={pgState}
                   title={pgTitle}
                   description={pgDesc ? pgDescription : undefined}
-                  cta={pgCta ? (pgState === "success" ? "Review" : pgState === "error" ? "Retry" : "Renew") : undefined}
+                  cta={pgCta ? ({ success: "Review", error: "Retry", alert: "Renew", info: "View log" }[pgState]) : undefined}
                   onCta={() => {}}
                   onClose={() => setDismissed(true)}
                 />
@@ -13496,19 +13499,38 @@ function PatternFeedbackPage() {
 
 PRIORITY_HIERARCHY
   CRITICAL (blocking)     → Modal (ModalDialog)
-  PERSISTENT (contextual) → AlertBanner
   FIELD_VALIDATION        → Inline error under field
-  EPHEMERAL (transient)   → Toast
+  EVERYTHING ELSE         → AlertBanner, in one of two placements
+
+ALERT_BANNER — ONE COMPONENT, TWO PLACEMENTS
+  This is the whole decision. Same component, same states, same tokens.
+  What changes is where it sits and how long it lives.
+
+  IN FLOW    <AlertBanner … />
+    persistent · occupies layout · user dismisses it
+    for: a state of the page or section that stays true until something changes
+    e.g. "Salesforce sync failed", "10 members have not enrolled in MFA"
+
+  FLOATING   useToast().success(…)   ← the "toast"
+    transient · top-right, 24px inset · auto-dismisses after 3500ms
+    for: confirming an action the user just took
+    e.g. "Changes saved", "Export queued", "Invitation sent"
+
+  the test: would this still be worth showing in 10 minutes?
+    yes → in flow     no → floating
 
 ALERT_BANNER_USAGE
-  state=informative → general info, tips, non-critical system notices
-  state=success     → action completed successfully
-  state=alert       → warning requiring attention (not yet critical)
-  state=error       → action failed OR error threshold reached
+  state=success → action completed successfully
+  state=error   → action failed OR error threshold reached
+  state=alert   → warning requiring attention (not yet critical)
+  state=info    → neutral feedback, neither success nor problem
+                  e.g. "Syncing…", "Queued", "Will send in 5 minutes"
+                  NOTE: info is a STATE of AlertBanner. InformativeCard is a
+                  different component — do not confuse the two.
 
-  placement rules:
-    page-level   → top of main content area
-    section-level → inside a card or section that caused the event
+  in-flow placement rules:
+    page-level    → top of main content area
+    section-level → inside the card or section that caused the event
     never global for field-level errors
 
 FIELD_ERRORS
@@ -13526,11 +13548,15 @@ STACKING_RULES
   IF multiple events → use most specific/critical message only
   never stack overlapping feedback for the same trigger
 
-TOAST
-  use for: transient success / info after a non-blocking action
-  variants: success · info · error
-  auto-dismiss: 3500ms default (pass duration:0 to persist)
-  do NOT use for errors that require a user decision → use Modal`} />
+FLOATING ALERT_BANNER ("TOAST")
+  not a separate component — AlertBanner, portalled and positioned
+  use for: confirming an action the user just took
+  states: success · error · info (AlertBanner's own, 1:1)
+  placement: top-right, 24px inset · stack grows downward, newest last
+  auto-dismiss: 3500ms default (pass duration:0 to keep until dismissed)
+  optional cta: for an inline Undo / Retry
+  do NOT use for errors that require a user decision → use Modal
+  do NOT use for a state that stays true → use the in-flow placement`} />
           </PatternCard>
         </div>
       )}
