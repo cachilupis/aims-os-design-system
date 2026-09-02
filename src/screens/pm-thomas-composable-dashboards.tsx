@@ -28,7 +28,7 @@ type Skeleton    = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Fun
 type TabId       = "data" | "widget" | "appearance"
 type BuilderStep = "Placement" | "Start point"
 // Widget library types
-type LibHealth   = "active" | "review"
+type LibHealth   = "active" | "inactive" | "unused" | "review"
 type LibCategory = "AIMS OS" | "Operational" | "Engagement" | "Intelligence"
 type LibProfile  = "All" | "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
 type LibWidget   = {
@@ -89,12 +89,12 @@ const LIB_WIDGETS: LibWidget[] = [
   { id:"w-013", name:"Onboarding Checklist",         source:"AIMS OS — Platform",         skeleton:"Feed",     category:"Operational",    health:"active", freshness:"live",  governed:true,  system:false, usedIn:4,  placement:"Employee",   description:"Checklist of onboarding tasks with completion status per new hire." },
   { id:"w-014", name:"Email Engagement Rate",        source:"HubSpot",                    skeleton:"Chart",    category:"Engagement",     health:"active", freshness:"fresh", governed:false, system:false, usedIn:7,  placement:"Contact",    description:"Open rate, click rate, and reply rate for outbound sequences targeting this contact." },
   { id:"w-015", name:"Deal Velocity",                source:"Salesforce",                 skeleton:"Gauge",    category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:5,  placement:"Deal",       description:"Speed from stage entry to close compared to team median, per deal." },
-  { id:"w-016", name:"NPS Trend",                    source:"Qualtrics",                  skeleton:"Chart",    category:"Engagement",     health:"active", freshness:"stale", governed:false, system:false, usedIn:3,  placement:"Company",    description:"Net Promoter Score trend over the past 12 months for this account." },
+  { id:"w-016", name:"NPS Trend",                    source:"Qualtrics",                  skeleton:"Chart",    category:"Engagement",     health:"inactive", freshness:"stale", governed:false, system:false, usedIn:3,  placement:"Company",    description:"Net Promoter Score trend over the past 12 months for this account." },
   { id:"w-017", name:"Contact Interaction Timeline", source:"HubSpot",                    skeleton:"Feed",     category:"Engagement",     health:"active", freshness:"live",  governed:false, system:false, usedIn:4,  placement:"Contact",    description:"Chronological feed of emails, calls, meetings, and notes for this contact." },
   { id:"w-018", name:"Risk Score Breakdown",         source:"AIMS OS — Intelligence",     skeleton:"Gauge",    category:"Intelligence",   health:"active", freshness:"fresh", governed:true,  system:false, usedIn:4,  placement:"Company",    description:"Composite churn/risk score with contributing signals and recommended actions." },
   { id:"w-019", name:"Next Best Action",             source:"AIMS OS — Intelligence",     skeleton:"KPI",      category:"Intelligence",   health:"active", freshness:"live",  governed:true,  system:false, usedIn:6,  placement:"Company",    description:"AI-recommended next action for this account with confidence score and reasoning." },
   { id:"w-020", name:"Revenue Attribution",          source:"Salesforce",                 skeleton:"Chart",    category:"Intelligence",   health:"review", freshness:"stale", governed:false, system:false, usedIn:2,  placement:"Deal",       description:"First-touch and multi-touch attribution by channel for this deal." },
-  { id:"w-021", name:"Certification Tracker",        source:"Workday",                    skeleton:"Feed",     category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:3,  placement:"Employee",   description:"Required certifications, completion status, and expiry dates per employee." },
+  { id:"w-021", name:"Certification Tracker",        source:"Workday",                    skeleton:"Feed",     category:"Operational",    health:"unused", freshness:"fresh", governed:true,  system:false, usedIn:0,  placement:"Employee",   description:"Required certifications, completion status, and expiry dates per employee." },
   { id:"w-022", name:"Credit Spend Trend",           source:"AIMS OS — Credits",          skeleton:"Cost KPI", category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:1,  placement:"Standalone", description:"Daily and monthly AI credit spend with projected end-of-cycle balance." },
 ]
 
@@ -103,6 +103,7 @@ const LIB_SKELETONS: Skeleton[]     = ["KPI", "Chart", "Feed", "Gauge", "Donut",
 const LIB_FRESHNESS: Freshness[]    = ["live", "fresh", "stale"]
 const LIB_PROFILES: LibProfile[]    = ["All", "Company", "Contact", "Employee", "Deal", "Standalone"]
 const LIB_PAGE_SIZE                 = 18
+const LIB_GOVERNED_COUNT            = LIB_WIDGETS.filter(w => w.governed).length
 
 // ── Marketplace data ──────────────────────────────────────────────────────────
 
@@ -253,27 +254,63 @@ function StatusBadge({ status }: { status: DashStatus }) {
 }
 
 function FreshnessBadge({ status }: { status: Freshness }) {
-  const map: Record<Freshness, { label: string; variant: "success" | "informative" | "neutral" }> = {
-    live:   { label: "Live",   variant: "success" },
-    fresh:  { label: "Fresh",  variant: "informative" },
-    stale:  { label: "Stale", variant: "neutral" },
-  }
-  return <Tag variant={map[status].variant} size="sm">{map[status].label}</Tag>
+  if (status === "fresh") return null
+  if (status === "live")  return <Tag variant="success" size="sm">Live</Tag>
+  return <Tag variant="neutral" size="sm">Stale</Tag>
 }
 
-function WidgetGlyph({ skeleton }: { skeleton: Skeleton }) {
+// DS-GAP: SourceAvatar — brand-colour circle with source initials. Closest DS: Avatar (not in repo).
+const SOURCE_COLORS: Record<string, [string, string]> = { // [bg, fg] — audit-ignore: source brand colours
+  "salesforce": ["#00A1E0","#fff"], "hubspot":   ["#FF7A59","#fff"], "zendesk":  ["#03363D","#fff"],
+  "workday":    ["#F68B1F","#fff"], "bamboohr":  ["#73C41D","#fff"], "qualtrics":["#002A5C","#fff"],
+  "netsuite":   ["#009DDC","#fff"], "stripe":    ["#635BFF","#fff"], "intercom": ["#286EFA","#fff"],
+  "google":     ["#4285F4","#fff"], "snowflake": ["#29B5E8","#fff"], "greenhouse":["#24A47F","#fff"],
+}
+const SKELETON_COLORS: Record<string, string> = { // audit-ignore: skeleton palette (no DS token)
+  KPI:"#2B7FFF", Chart:"#8B5CF6", Feed:"#0EA5E9", Gauge:"#22C55E", Donut:"#F59E0B",
+  Board:"#EC4899", Funnel:"#F97316", "Stat Row":"#14B8A6", Alerts:"#EF4444", "Cost KPI":"#10B981",
+}
+
+function WidgetGlyph({ skeleton, source }: { skeleton: Skeleton; source: string }) {
+  const lsrc = source.toLowerCase()
+  const isAims = lsrc.includes("aims")
+
+  if (isAims) {
+    return (
+      <div style={{ width: 36, height: 36, borderRadius: 9, background: "#0B1120", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1px solid rgba(43,127,255,.25)" }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color: "#2B7FFF", letterSpacing: "-0.5px", lineHeight: 1 }}>A</span>
+      </div>
+    )
+  }
+
+  // Check known brand
+  const key = Object.keys(SOURCE_COLORS).find(k => lsrc.includes(k))
+  if (key) {
+    const [bg, fg] = SOURCE_COLORS[key]
+    const abbr = key.slice(0, 2).toUpperCase()
+    return (
+      <div style={{ width: 36, height: 36, borderRadius: 9, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: fg, lineHeight: 1 }}>{abbr}</span>
+      </div>
+    )
+  }
+
+  // Skeleton-type fallback (colored square)
   const iconKey = SKELETON_ICON[skeleton] ?? "BarChart2"
   const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
+  const bg = SKELETON_COLORS[skeleton] ?? "#6B7280"
   return (
-    <div style={{ width: 36, height: 36, borderRadius: 9, background: "color-mix(in srgb,var(--primary) 12%,transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      {Icon && <Icon size={16} style={{ color: "var(--primary)" }} />}
+    <div style={{ width: 36, height: 36, borderRadius: 9, background: `${bg}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      {Icon && <Icon size={16} style={{ color: bg }} />}
     </div>
   )
 }
 
-// DS-GAP: HealthBadge — active/review indicator. Closest DS: Tag.
+// DS-GAP: HealthBadge — 4-state indicator. Closest DS: Tag.
 function HealthBadge({ health }: { health: LibHealth }) {
-  if (health === "active") return null
+  if (health === "active")   return <Tag variant="success" size="sm">Active</Tag>
+  if (health === "inactive") return <Tag variant="alert" size="sm">Inactive</Tag>
+  if (health === "unused")   return <Tag variant="neutral" size="sm">Not in use</Tag>
   return <Tag variant="alert" size="sm">Needs remap</Tag>
 }
 
@@ -282,8 +319,8 @@ function MiniPreview({ skeleton }: { skeleton: Skeleton }) {
   const iconKey = SKELETON_ICON[skeleton] ?? "Square"
   const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
   return (
-    <div style={{ height: 56, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-      <Icon size={13} style={{ color: "var(--field-supporting)" }} />
+    <div style={{ height: 64, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, overflow: "hidden", pointerEvents: "none" }}>
+      <Icon size={13} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />
       <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{skeleton} preview</span>
     </div>
   )
@@ -338,7 +375,7 @@ function LibOverflowMenu({ items, onClose }: { items: LibOItem[]; onClose: () =>
   )
 }
 
-// DS-GAP: LibFilterToolbar — 4-filter toolbar for widget library. Closest DS: Filters.
+// DS-GAP: LibFilterToolbar — search + Category + Profile + All Filters slideout + sort. Closest DS: Filters.
 type LibFTProps = {
   search: string; onSearch: (v: string) => void
   cat: string; onCat: (v: string) => void
@@ -349,17 +386,20 @@ type LibFTProps = {
   sortDir: "asc" | "desc"; onToggleDir: () => void
 }
 function LibFilterToolbar({ search, onSearch, cat, onCat, profile, onProfile, skeleton, onSkeleton, freshness, onFreshness, sortBy, onSortBy, sortDir, onToggleDir }: LibFTProps) {
-  const [open, setOpen] = useState<string | null>(null)
+  const [ddOpen, setDd]         = useState<"cat" | "profile" | "sort" | null>(null)
+  const [filtersOpen, setFOpen] = useState(false)
 
-  function LPill({ id, label, active, children }: { id: string; label: string; active: boolean; children: React.ReactNode }) {
+  const activeCount = [cat !== "All", skeleton !== "All", freshness !== "All"].filter(Boolean).length
+
+  function LDrop({ id, label, active, children }: { id: "cat" | "profile" | "sort"; label: string; active: boolean; children: React.ReactNode }) {
     return (
       <div style={{ position: "relative" }}>
-        <button onClick={() => setOpen(open === id ? null : id)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 8, border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}`, background: active ? "color-mix(in srgb,var(--primary) 12%,transparent)" : "var(--surface)", color: active ? "var(--primary)" : "var(--foreground)", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>
+        <button onClick={() => setDd(ddOpen === id ? null : id)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 8, border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}`, background: active ? "color-mix(in srgb,var(--primary) 12%,transparent)" : "var(--surface)", color: active ? "var(--primary)" : "var(--foreground)", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>
           {label}<LucideIcons.ChevronDown size={11} />
         </button>
-        {open === id && (
+        {ddOpen === id && (
           <>
-            <div onClick={() => setOpen(null)} style={{ position: "fixed", inset: 0, zIndex: 198 }} />
+            <div onClick={() => setDd(null)} style={{ position: "fixed", inset: 0, zIndex: 198 }} />
             <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 199, boxShadow: "var(--shadow-elevation-3)", minWidth: 168 }}>
               <CardContainer size="sm" className="!p-1">
                 {children}
@@ -374,7 +414,7 @@ function LibFilterToolbar({ search, onSearch, cat, onCat, profile, onProfile, sk
   function LOpt({ val, cur, onSet, display }: { val: string; cur: string; onSet: (v: string) => void; display?: string }) {
     const active = cur === val
     return (
-      <button onClick={() => { onSet(val); setOpen(null) }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", background: "none", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12, color: active ? "var(--primary)" : "var(--foreground)", fontWeight: active ? 600 : 400, textAlign: "left" }}>
+      <button onClick={() => { onSet(val); setDd(null) }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", background: "none", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12, color: active ? "var(--primary)" : "var(--foreground)", fontWeight: active ? 600 : 400, textAlign: "left" }}>
         {active ? <LucideIcons.Check size={12} style={{ flexShrink: 0 }} /> : <span style={{ width: 12, flexShrink: 0 }} />}
         {display ?? val}
       </button>
@@ -382,40 +422,73 @@ function LibFilterToolbar({ search, onSearch, cat, onCat, profile, onProfile, sk
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 12, flexWrap: "wrap" }}>
-      <div style={{ position: "relative", flex: "1 1 180px", minWidth: 160, maxWidth: 260 }}>
-        <LucideIcons.Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)", pointerEvents: "none" }} />
-        <Input value={search} onChange={e => onSearch(e.target.value)} placeholder="Search widgets…" style={{ paddingLeft: 30, fontSize: 12 }} />
-      </div>
-      <LPill id="cat" label={cat === "All" ? "Category" : cat} active={cat !== "All"}>
-        <LOpt val="All" cur={cat} onSet={onCat} display="All categories" />
-        {LIB_CATEGORIES.map(c => <LOpt key={c} val={c} cur={cat} onSet={onCat} />)}
-      </LPill>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-        {LIB_PROFILES.map(p => (
-          <button key={p} onClick={() => onProfile(profile === p ? "All" : p)} style={{ padding: "5px 10px", borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: "pointer", border: `1px solid ${profile === p ? "var(--primary)" : "var(--field-border)"}`, background: profile === p ? "color-mix(in srgb,var(--primary) 12%,transparent)" : "transparent", color: profile === p ? "var(--primary)" : "var(--field-supporting)" }}>
-            {p}
-          </button>
-        ))}
-      </div>
-      <LPill id="type" label={skeleton === "All" ? "Type" : skeleton} active={skeleton !== "All"}>
-        <LOpt val="All" cur={skeleton} onSet={onSkeleton} display="All types" />
-        {LIB_SKELETONS.map(s => <LOpt key={s} val={s} cur={skeleton} onSet={onSkeleton} />)}
-      </LPill>
-      <LPill id="fresh" label={freshness === "All" ? "Freshness" : freshness.charAt(0).toUpperCase() + freshness.slice(1)} active={freshness !== "All"}>
-        <LOpt val="All" cur={freshness} onSet={onFreshness} display="All freshness" />
-        {LIB_FRESHNESS.map(f => <LOpt key={f} val={f} cur={freshness} onSet={onFreshness} display={f.charAt(0).toUpperCase() + f.slice(1)} />)}
-      </LPill>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
-        <LPill id="sort" label={sortBy === "usage" ? "Most used" : "Name"} active={false}>
-          <LOpt val="name"  cur={sortBy} onSet={onSortBy} display="Name"      />
-          <LOpt val="usage" cur={sortBy} onSet={onSortBy} display="Most used" />
-        </LPill>
-        <button onClick={onToggleDir} style={{ background: "none", border: "1px solid var(--field-border)", borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: "var(--field-supporting)", display: "flex" }}>
-          {sortDir === "desc" ? <LucideIcons.ArrowDown size={13} /> : <LucideIcons.ArrowUp size={13} />}
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 12, flexWrap: "wrap" }}>
+        {/* Search */}
+        <div style={{ position: "relative", flex: "1 1 180px", minWidth: 160, maxWidth: 280 }}>
+          <LucideIcons.Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)", pointerEvents: "none" }} />
+          <Input value={search} onChange={e => onSearch(e.target.value)} placeholder="Search widgets…" style={{ paddingLeft: 30, fontSize: 12 }} />
+        </div>
+
+        {/* Category */}
+        <LDrop id="cat" label={cat === "All" ? "Category" : cat} active={cat !== "All"}>
+          <LOpt val="All" cur={cat} onSet={onCat} display="All categories" />
+          {LIB_CATEGORIES.map(c => <LOpt key={c} val={c} cur={cat} onSet={onCat} />)}
+        </LDrop>
+
+        {/* Profile */}
+        <LDrop id="profile" label={profile === "All" ? "Profile" : profile} active={profile !== "All"}>
+          <LOpt val="All" cur={profile} onSet={onProfile} display="All profiles" />
+          {LIB_PROFILES.filter(p => p !== "All").map(p => <LOpt key={p} val={p} cur={profile} onSet={onProfile} />)}
+        </LDrop>
+
+        {/* All filters button */}
+        <button onClick={() => setFOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, border: `1px solid ${activeCount > 0 ? "var(--primary)" : "var(--field-border)"}`, background: activeCount > 0 ? "color-mix(in srgb,var(--primary) 12%,transparent)" : "var(--surface)", color: activeCount > 0 ? "var(--primary)" : "var(--foreground)", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>
+          <LucideIcons.SlidersHorizontal size={13} />
+          All filters
+          {activeCount > 0 && (
+            <span style={{ minWidth: 16, height: 16, borderRadius: 99, background: "var(--primary)", color: "var(--on-primary)", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{activeCount}</span>
+          )}
         </button>
+
+        {/* Sort + direction */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
+          <button onClick={onToggleDir} style={{ background: "none", border: "1px solid var(--field-border)", borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: "var(--field-supporting)", display: "flex" }}>
+            {sortDir === "desc" ? <LucideIcons.ArrowDown size={13} /> : <LucideIcons.ArrowUp size={13} />}
+          </button>
+          <LDrop id="sort" label={sortBy === "usage" ? "Most used" : "Name"} active={false}>
+            <LOpt val="name"  cur={sortBy} onSet={onSortBy} display="Name"      />
+            <LOpt val="usage" cur={sortBy} onSet={onSortBy} display="Most used" />
+          </LDrop>
+        </div>
       </div>
-    </div>
+
+      {/* All filters SlideOut */}
+      <SlideOut title="All filters" open={filtersOpen} onClose={() => setFOpen(false)}
+        ctaPrimaryLabel="Apply"
+        ctaSecondaryLabel="Clear all"
+        onCtaPrimary={() => setFOpen(false)}
+        onCtaSecondary={() => { onCat("All"); onProfile("All"); onSkeleton("All"); onFreshness("All"); setFOpen(false) }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Type */}
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "var(--field-supporting)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Widget type</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <LOpt val="All" cur={skeleton} onSet={onSkeleton} display="All types" />
+              {LIB_SKELETONS.map(s => <LOpt key={s} val={s} cur={skeleton} onSet={onSkeleton} />)}
+            </div>
+          </div>
+          {/* Freshness */}
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "var(--field-supporting)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Freshness</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <LOpt val="All" cur={freshness} onSet={onFreshness} display="All" />
+              {LIB_FRESHNESS.map(f => <LOpt key={f} val={f} cur={freshness} onSet={onFreshness} display={f.charAt(0).toUpperCase() + f.slice(1)} />)}
+            </div>
+          </div>
+        </div>
+      </SlideOut>
+    </>
   )
 }
 
@@ -603,8 +676,8 @@ function WidgetLibraryView({ onCreateWidget }: { onCreateWidget: () => void }) {
                   </div>
 
                   {/* Name + source */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, paddingRight: w.health === "review" ? 110 : 68 }}>
-                    <WidgetGlyph skeleton={w.skeleton} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, paddingRight: 96 }}>
+                    <WidgetGlyph skeleton={w.skeleton} source={w.source} />
                     <div style={{ minWidth: 0 }}>
                       <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.name}</p>
                       <p style={{ fontSize: 11, color: "var(--field-supporting)", margin: "1px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.source}</p>
@@ -1078,7 +1151,7 @@ export default function PMThomasComposableDashboardsScreen() {
     headerPrimary = <Button variant="main" size="sm" onClick={() => setOverlay("new-dashboard")}>Create dashboard</Button>
   } else if (subView === "library") {
     headerTitle = "Widget Library"
-    headerDesc  = "Governed and custom widgets available for your dashboards."
+    headerDesc  = `${LIB_WIDGETS.length} widgets · ${LIB_GOVERNED_COUNT} governed`
     headerPrimary = <Button variant="main" size="sm" onClick={() => setOverlay("builder")}>Create widget</Button>
   } else {
     headerTitle = "Widget Marketplace"
