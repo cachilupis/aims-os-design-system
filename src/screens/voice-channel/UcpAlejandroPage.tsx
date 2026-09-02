@@ -83,36 +83,31 @@ export function UcpAlejandroPage({ onOpenCallDetail }: UcpAlejandroPageProps) {
   return (
     <div className="flex flex-col" style={{ minHeight: "70vh" }}>
 
-      {/* ── Contact header ────────────────────────────────────── */}
+      {/* ── Contact identity strip ──────────────────────────────
+          The DS Header (outer ScreenLayout) already carries the email
+          as title and "Contact · Last interaction Xd ago" as subtitle,
+          so this row drops the duplicated text. It keeps the avatar as
+          a visual identity anchor and exposes the actionable contact
+          methods (phone + email) as clickable chips. */}
       <div
-        className="flex flex-col gap-3"
+        className="flex items-center gap-4 flex-wrap"
         style={{
-          padding: "20px 24px",
+          padding: "16px 24px",
           borderBottom: "1px solid var(--color-border-neutral-default)",
         }}
       >
-        <div className="flex items-center gap-4">
-          <div
-            aria-hidden
-            style={{
-              width: 56, height: 56, borderRadius: "50%",
-              background: "var(--color-surface-purple-subtle)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 18, fontWeight: 700,
-              color: "var(--color-icon-purple-default, var(--color-text-title))",
-              flexShrink: 0,
-            }}
-          >
-            {UCP_ALEJANDRO.initials}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-title)" }}>
-              {UCP_ALEJANDRO.displayName}
-            </div>
-            <div style={{ fontSize: 14, color: "var(--color-text-caption)", marginTop: 2 }}>
-              Last interaction: {UCP_ALEJANDRO.lastInteraction}
-            </div>
-          </div>
+        <div
+          aria-hidden
+          style={{
+            width: 40, height: 40, borderRadius: "50%",
+            background: "var(--color-surface-purple-subtle)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 15, fontWeight: 700,
+            color: "var(--color-icon-purple-default, var(--color-text-title))",
+            flexShrink: 0,
+          }}
+        >
+          {UCP_ALEJANDRO.initials}
         </div>
         <div className="flex gap-5 flex-wrap">
           <ContactLink icon={<Phone size={14}/>} label={UCP_ALEJANDRO.phone}/>
