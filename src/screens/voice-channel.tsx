@@ -33,6 +33,8 @@ import { SettingsTab } from "./voice-channel/SettingsTab"
 import { SecurityTab } from "./voice-channel/SecurityTab"
 import { VoiceAgentsTab } from "./voice-channel/VoiceAgentsTab"
 import { VoiceAgentDetailPage } from "./voice-channel/VoiceAgentDetailPage"
+import { UcpAlejandroPage } from "./voice-channel/UcpAlejandroPage"
+import { UCP_ALEJANDRO } from "./voice-channel/ucp-data"
 import { VOICE_AI_AGENTS, type VoiceAIAgent } from "./voice-channel/voice-agents-data"
 import { ToastProvider, useToast } from "./voice-channel/toast"
 
@@ -95,7 +97,7 @@ function renderSidebarFooter(collapsed: boolean) {
 // the top tabs strip only lists Voice-channel tabs. The Configure
 // Voice slide-out and Agent detail page continue to live inside the
 // Agents section.
-type Screen       = "voice" | "agents"
+type Screen       = "voice" | "agents" | "contacts"
 type TopTab       = "numbers" | "history" | "security" | "settings"
 type NumberFilter = "all" | "active" | "suspended"
 
@@ -236,12 +238,18 @@ function VoiceChannelScreenInner() {
     <>
       <ScreenLayout
         sidebarItems={VOICE_SIDEBAR}
-        activeSidebarId={screen === "agents" ? "agents" : "voice"}
+        activeSidebarId={
+          screen === "agents"   ? "agents"   :
+          screen === "contacts" ? "contacts" :
+                                  "voice"
+        }
         onSidebarItemClick={(id) => {
           if (id === "agents") {
-            setScreen("agents"); setDetailId(null); setPreviewId(null)
+            setScreen("agents");   setDetailId(null); setPreviewId(null)
           } else if (id === "voice") {
-            setScreen("voice"); setAgentDetailId(null)
+            setScreen("voice");    setAgentDetailId(null)
+          } else if (id === "contacts") {
+            setScreen("contacts"); setDetailId(null); setPreviewId(null); setAgentDetailId(null)
           }
           // Other sidebar ids are illustrative stubs — no route wired yet.
         }}
@@ -252,25 +260,37 @@ function VoiceChannelScreenInner() {
             title={
               screen === "agents" && agentDetailAgent ? `${agentDetailAgent.name} — ${agentDetailAgent.purpose}` :
               screen === "agents"                     ? "Agents" :
+              screen === "contacts"                   ? UCP_ALEJANDRO.displayName :
               detailNumber                            ? detailNumber.number :
                                                         "Voice Channel"
             }
             description={
               screen === "agents" && agentDetailAgent ? `AI voice agent · ${agentDetailAgent.status}` :
               screen === "agents"                     ? "AI voice agents that answer, route and act across channels." :
+              screen === "contacts"                   ? `Contact · Last interaction ${UCP_ALEJANDRO.lastInteraction}` :
               detailNumber                            ? `${detailNumber.label || "No label"} · ${detailNumber.type} · Full configuration` :
                                                         "Phone numbers, activity, security policies and defaults for the Voice channel."
             }
           />
         )}
       >
-        <div className="flex flex-col gap-4" style={{ minHeight: (agentDetailAgent || screen === "agents") ? "70vh" : undefined }}>
+        <div className="flex flex-col gap-4" style={{ minHeight: (agentDetailAgent || screen === "agents" || screen === "contacts") ? "70vh" : undefined }}>
           {/* Screen routing:
+              screen === "contacts"                  → UCP (Alejandro contact detail)
               screen === "agents" && agentDetailAgent → full-page Agent detail
               screen === "agents"                    → Agents list
               detailNumber                           → full-page Number detail
               else                                   → Voice tabs + tab body */}
-          {screen === "agents" && agentDetailAgent ? (
+          {screen === "contacts" ? (
+            <UcpAlejandroPage
+              onOpenCallDetail={() => {
+                // The Call Detail slide-out lives in the Voice section's
+                // Call History tab — a follow-up PR will lift it into the
+                // shared shell so a UCP click can jump into it directly.
+                toast.info("Call detail will open once wired to the Voice call history slide-out.")
+              }}
+            />
+          ) : screen === "agents" && agentDetailAgent ? (
             <VoiceAgentDetailPage
               agent={agentDetailAgent}
               onBack={() => setAgentDetailId(null)}
