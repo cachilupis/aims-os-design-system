@@ -260,15 +260,15 @@ function FreshnessBadge({ status }: { status: Freshness }) {
 }
 
 // DS-GAP: SourceAvatar — brand-colour circle with source initials. Closest DS: Avatar (not in repo).
-const SOURCE_COLORS: Record<string, [string, string]> = { // [bg, fg] — audit-ignore: source brand colours
-  "salesforce": ["#00A1E0","#fff"], "hubspot":   ["#FF7A59","#fff"], "zendesk":  ["#03363D","#fff"],
-  "workday":    ["#F68B1F","#fff"], "bamboohr":  ["#73C41D","#fff"], "qualtrics":["#002A5C","#fff"],
-  "netsuite":   ["#009DDC","#fff"], "stripe":    ["#635BFF","#fff"], "intercom": ["#286EFA","#fff"],
-  "google":     ["#4285F4","#fff"], "snowflake": ["#29B5E8","#fff"], "greenhouse":["#24A47F","#fff"],
+const SOURCE_COLORS: Record<string, [string, string]> = { // [bg, fg]
+  "salesforce": ["#00A1E0","#fff"], "hubspot":   ["#FF7A59","#fff"], "zendesk":  ["#03363D","#fff"], // audit-ignore: third-party brand colours
+  "workday":    ["#F68B1F","#fff"], "bamboohr":  ["#73C41D","#fff"], "qualtrics":["#002A5C","#fff"], // audit-ignore: third-party brand colours
+  "netsuite":   ["#009DDC","#fff"], "stripe":    ["#635BFF","#fff"], "intercom": ["#286EFA","#fff"], // audit-ignore: third-party brand colours
+  "google":     ["#4285F4","#fff"], "snowflake": ["#29B5E8","#fff"], "greenhouse":["#24A47F","#fff"], // audit-ignore: third-party brand colours
 }
-const SKELETON_COLORS: Record<string, string> = { // audit-ignore: skeleton palette (no DS token)
-  KPI:"#2B7FFF", Chart:"#8B5CF6", Feed:"#0EA5E9", Gauge:"#22C55E", Donut:"#F59E0B",
-  Board:"#EC4899", Funnel:"#F97316", "Stat Row":"#14B8A6", Alerts:"#EF4444", "Cost KPI":"#10B981",
+const SKELETON_COLORS: Record<string, string> = {
+  KPI:"#2B7FFF", Chart:"#8B5CF6", Feed:"#0EA5E9", Gauge:"#22C55E", Donut:"#F59E0B", // audit-ignore: skeleton palette has no DS token
+  Board:"#EC4899", Funnel:"#F97316", "Stat Row":"#14B8A6", Alerts:"#EF4444", "Cost KPI":"#10B981", // audit-ignore: skeleton palette has no DS token
 }
 
 function WidgetGlyph({ skeleton, source }: { skeleton: Skeleton; source: string }) {
@@ -277,8 +277,8 @@ function WidgetGlyph({ skeleton, source }: { skeleton: Skeleton; source: string 
 
   if (isAims) {
     return (
-      <div style={{ width: 36, height: 36, borderRadius: 9, background: "#0B1120", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1px solid rgba(43,127,255,.25)" }}>
-        <span style={{ fontSize: 10, fontWeight: 800, color: "#2B7FFF", letterSpacing: "-0.5px", lineHeight: 1 }}>A</span>
+      <div style={{ width: 36, height: 36, borderRadius: 9, background: "#0B1120", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1px solid rgba(43,127,255,.25)" }}> {/* audit-ignore: AIMS OS brand glyph */}
+        <span style={{ fontSize: 10, fontWeight: 800, color: "#2B7FFF", letterSpacing: "-0.5px", lineHeight: 1 }}>A</span> {/* audit-ignore: AIMS OS brand glyph */}
       </div>
     )
   }
@@ -298,7 +298,7 @@ function WidgetGlyph({ skeleton, source }: { skeleton: Skeleton; source: string 
   // Skeleton-type fallback (colored square)
   const iconKey = SKELETON_ICON[skeleton] ?? "BarChart2"
   const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
-  const bg = SKELETON_COLORS[skeleton] ?? "#6B7280"
+  const bg = SKELETON_COLORS[skeleton] ?? "#6B7280" // audit-ignore: skeleton fallback grey
   return (
     <div style={{ width: 36, height: 36, borderRadius: 9, background: `${bg}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
       {Icon && <Icon size={16} style={{ color: bg }} />}
