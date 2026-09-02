@@ -313,8 +313,8 @@ function HealthBadge({ health }: { health: LibHealth }) {
 }
 
 // DS-GAP: WidgetMiniPreview — visual mini render per skeleton. Closest DS: CardContainer (variant=sunken).
-function WidgetMiniPreview({ skeleton, seed }: { skeleton: Skeleton; seed: number }) {
-  const wrap: React.CSSProperties = { height: 64, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", overflow: "hidden", pointerEvents: "none", display: "flex", alignItems: "center" }
+function WidgetMiniPreview({ skeleton, seed, height = 64 }: { skeleton: Skeleton; seed: number; height?: number }) {
+  const wrap: React.CSSProperties = { height, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", overflow: "hidden", pointerEvents: "none", display: "flex", alignItems: "center" }
 
   if (skeleton === "KPI" || skeleton === "Cost KPI") {
     const vals = [86.4, 12.8, 540, 1284, 3.2, 48.2, 920, 7.6]
@@ -706,10 +706,12 @@ function WidgetLibraryView({ onCreateWidget }: { onCreateWidget: () => void }) {
   const [sortBy,    setSortBy]    = useState("name")
   const [sortDir,   setSortDir]   = useState<"asc" | "desc">("asc")
   const [shown,     setShown]     = useState(LIB_PAGE_SIZE)
-  const [menuId,    setMenuId]    = useState<string | null>(null)
-  const [detailW,   setDetailW]   = useState<LibWidget | null>(null)
-  const [deleteW,   setDeleteW]   = useState<LibWidget | null>(null)
-  const [widgets,   setWidgets]   = useState<LibWidget[]>(LIB_WIDGETS)
+  const [menuId,           setMenuId]           = useState<string | null>(null)
+  const [detailW,          setDetailW]          = useState<LibWidget | null>(null)
+  const [deleteW,          setDeleteW]          = useState<LibWidget | null>(null)
+  const [deleteStage,      setDeleteStage]      = useState<1 | 2 | 3>(1)
+  const [deleteConfirm,    setDeleteConfirm]    = useState("")
+  const [widgets,          setWidgets]          = useState<LibWidget[]>(LIB_WIDGETS)
 
   const governedCount = widgets.filter(w => w.governed).length
 
@@ -825,44 +827,149 @@ function WidgetLibraryView({ onCreateWidget }: { onCreateWidget: () => void }) {
 
       {/* Widget Detail SlideOut */}
       {detailW && (
-        <SlideOut title={detailW.name} open={true} onClose={() => setDetailW(null)}
-          ctaPrimaryLabel="Add to dashboard"
-          ctaSecondaryLabel={!detailW.system ? "Edit widget" : undefined}
+        <SlideOut
+          title={detailW.name}
+          subtitle={detailW.source}
+          showIcon={false}
+          showStatus={false}
+          showTopButton={false}
+          showTabs={false}
+          showSearchBar={false}
+          showChips={false}
+          open={true}
+          onClose={() => setDetailW(null)}
+          ctaPrimaryLabel={detailW.health === "review" ? "Remap widget" : "Add to dashboard"}
+          ctaSecondaryLabel={!detailW.system ? "Edit widget" : "Close"}
           onCtaPrimary={() => setDetailW(null)}
-          onCtaSecondary={!detailW.system ? () => { setDetailW(null); onCreateWidget() } : undefined}>
+          onCtaSecondary={() => setDetailW(null)}
+        >
           <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "4px 0" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              <FreshnessBadge status={detailW.freshness} />
-              <Tag variant="neutral" size="sm">{detailW.skeleton}</Tag>
-              <Tag variant={detailW.category === "AIMS OS" ? "informative" : "neutral"} size="sm">{detailW.category}</Tag>
-              {!detailW.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
-              {detailW.system   && <Tag variant="informative" size="sm">System</Tag>}
+            {/* Identity row: glyph + health */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <WidgetGlyph skeleton={detailW.skeleton} source={detailW.source} />
+              <HealthBadge health={detailW.health} />
             </div>
-            {[["Source", detailW.source], ["Placement", detailW.placement], ["Used on", `${detailW.usedIn} dashboard${detailW.usedIn === 1 ? "" : "s"}`]].map(([label, value]) => (
-              <div key={label} style={{ display: "flex", gap: 12, fontSize: 13 }}>
-                <span style={{ width: 88, flexShrink: 0, color: "var(--field-supporting)", fontWeight: 500 }}>{label}</span>
-                <span style={{ color: "var(--foreground)" }}>{value}</span>
-              </div>
-            ))}
+
+            {/* Type chips */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              <Tag variant="neutral" size="sm">{detailW.skeleton}</Tag>
+              {detailW.governed  && <Tag variant="informative" size="sm">Truth</Tag>}
+              {!detailW.governed && <Tag variant="alert"       size="sm">Ungoverned</Tag>}
+              <FreshnessBadge status={detailW.freshness} />
+              {detailW.system    && <Tag variant="neutral"     size="sm">System</Tag>}
+            </div>
+
+            {/* Medium preview */}
+            <WidgetMiniPreview
+              skeleton={detailW.skeleton}
+              seed={parseInt(detailW.id.replace(/\D/g, "")) || 0}
+              height={120}
+            />
+
+            {/* About */}
             {detailW.description && (
               <div>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--field-supporting)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 6px" }}>Description</p>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "var(--field-supporting)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 6px" }}>About</p>
                 <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--foreground)", margin: 0 }}>{detailW.description}</p>
+              </div>
+            )}
+
+            {/* Metadata fields */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {([["Category", detailW.category], ["Placement", detailW.placement]] as [string, string][]).map(([l, v]) => (
+                <div key={l} style={{ display: "flex", gap: 12, fontSize: 13 }}>
+                  <span style={{ width: 88, flexShrink: 0, color: "var(--field-supporting)", fontWeight: 500 }}>{l}</span>
+                  <span style={{ color: "var(--foreground)" }}>{v}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Used on */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--field-supporting)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 4px" }}>
+                Used on {detailW.usedIn} dashboard{detailW.usedIn !== 1 ? "s" : ""}
+              </p>
+              {detailW.usedIn === 0 && (
+                <p style={{ fontSize: 12, color: "var(--field-supporting)", fontStyle: "italic", margin: 0 }}>Not placed on any dashboard yet</p>
+              )}
+            </div>
+
+            {/* Delete danger zone */}
+            {!detailW.system && (
+              <div style={{ marginTop: 8, paddingTop: 16, borderTop: "1px solid var(--field-border)" }}>
+                <Button variant="warning" size="sm" onClick={() => {
+                  setDetailW(null)
+                  setDeleteW(detailW)
+                  setDeleteStage(1)
+                  setDeleteConfirm("")
+                }}>
+                  Delete widget
+                </Button>
               </div>
             )}
           </div>
         </SlideOut>
       )}
 
-      {/* Delete confirmation */}
-      {deleteW && (
+      {/* 3-stage delete dialog */}
+      {deleteW && deleteStage === 1 && (
         <ModalDialog
           isOpen={true}
           onClose={() => setDeleteW(null)}
           tone="error"
           title={`Delete "${deleteW.name}"?`}
-          description={`This widget will be removed from your library${deleteW.usedIn > 0 ? ` and from ${deleteW.usedIn} dashboard${deleteW.usedIn === 1 ? "" : "s"} where it is currently placed` : ""}. This action cannot be undone.`}
-          ctaPrimary={{ label: "Delete widget", destructive: true, onClick: () => handleDelete(deleteW.id) }}
+          description="You're about to permanently remove this widget from the library. Let's make sure you know the impact before continuing."
+          ctaPrimary={{ label: "Yes, I want to delete it", destructive: true, onClick: () => setDeleteStage(2) }}
+          ctaSecondary={{ label: "Cancel", onClick: () => setDeleteW(null) }}
+        />
+      )}
+      {deleteW && deleteStage === 2 && (
+        <ModalDialog
+          isOpen={true}
+          onClose={() => setDeleteW(null)}
+          variant="content"
+          tone="warning"
+          title="Review the impact"
+          description={
+            deleteW.usedIn > 0
+              ? `This widget is currently placed on ${deleteW.usedIn} dashboard${deleteW.usedIn !== 1 ? "s" : ""}. Deleting it will remove it from all of them — anyone relying on it will lose visibility.`
+              : "This widget is not placed on any dashboard yet, so no dashboards will be affected."
+          }
+          informativeCard={deleteW.usedIn > 0 ? "Affected dashboards will lose this widget immediately upon deletion." : undefined}
+          ctaPrimary={{ label: "I understand, continue", onClick: () => { setDeleteStage(3); setDeleteConfirm("") } }}
+          ctaSecondary={{ label: "Go back", onClick: () => setDeleteStage(1) }}
+        />
+      )}
+      {deleteW && deleteStage === 3 && (
+        <ModalDialog
+          isOpen={true}
+          onClose={() => setDeleteW(null)}
+          variant="content"
+          tone="error"
+          showIcon={false}
+          title="Confirm deletion"
+          description={`Type the widget name to confirm: "${deleteW.name}"`}
+          slot={
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <input
+                autoFocus
+                value={deleteConfirm}
+                onChange={e => setDeleteConfirm(e.target.value)}
+                placeholder={deleteW.name}
+                style={{
+                  width: "100%", padding: "8px 12px", fontSize: 13, borderRadius: 8,
+                  border: "1px solid var(--field-border)", background: "var(--canvas)",
+                  color: "var(--foreground)", outline: "none", boxSizing: "border-box",
+                }}
+              />
+              {deleteConfirm.length > 0 && deleteConfirm !== deleteW.name && (
+                <p style={{ fontSize: 12, color: "var(--error)", margin: 0 }}>Name doesn't match — check spelling</p>
+              )}
+            </div>
+          }
+          ctaPrimary={{ label: "Delete widget", destructive: true, onClick: () => {
+            if (deleteConfirm === deleteW.name) handleDelete(deleteW.id)
+          }}}
           ctaSecondary={{ label: "Cancel", onClick: () => setDeleteW(null) }}
         />
       )}
