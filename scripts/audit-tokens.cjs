@@ -436,7 +436,15 @@ screenFiles.forEach((file) => {
 // (or a DS-GAP comment) makes that call, not this script.
 const CARD_LIKE_BORDER_RE = /\bborder\s*:\s*["'][^"']*var\(--(?:border|field-border)/
 const CARD_LIKE_BG_RE = /\bbackground\s*:\s*["']?var\(--(?:surface|surface-raised)\b/
-const TOP_LEVEL_DEF_RE = /^(?:function\s+([A-Z]\w*)\s*\(|const\s+([A-Z]\w*)\s*(?::[^=]*)?=\s*\()/
+// `export` prefixes matter here even though this check never reports an
+// exported component: the list is what marks where one definition's body
+// ENDS. Miss `export default function` and the helper above it absorbs the
+// rest of the file, so the check tests that whole screen's markup instead of
+// the helper's own — and any bordered <input> further down makes a correct
+// CardContainer wrapper look like a hand-rolled card. Real false positive:
+// pm-thomas-new-dashboard.tsx's FormSection (a 4-line CardContainer wrapper)
+// was flagged because of two input styles 200 lines below it.
+const TOP_LEVEL_DEF_RE = /^(?:export\s+default\s+|export\s+)?(?:function\s+([A-Z]\w*)\s*\(|const\s+([A-Z]\w*)\s*(?::[^=]*)?=\s*\()/
 
 screenFiles.forEach((file) => {
   const text = fs.readFileSync(file, "utf8")
