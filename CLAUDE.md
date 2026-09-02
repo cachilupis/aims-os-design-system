@@ -265,14 +265,28 @@ The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs ba
 
 **Never show both** — if breadcrumbs are present, omit `backButton`. If it's L2, omit breadcrumbs.
 
-**Breadcrumb component status: DS-GAP** — not yet in `src/components/ui/`. When a screen requires L3+ navigation, add a `// DS-GAP: Breadcrumbs` comment and use a placeholder text trail until the component ships. Do NOT improvise a custom breadcrumb without flagging the gap.
+**`Breadcrumb` exists — import it, never hand-roll one.** `src/components/ui/breadcrumb.tsx`, in the catalog under Components → Breadcrumb.
+
+```tsx
+import { Breadcrumb } from "@/components/ui/breadcrumb"
+
+<Breadcrumb
+  depth={3}                                    // L1=1, L2=2, L3=3… renders nothing below 2
+  items={[
+    { label: "Workers", href: "workers" },     // ancestors carry href
+    { label: "Meridian", href: "workers/1" },
+    { label: "Run history" },                  // current page: no href
+  ]}
+  onNavigate={(href) => go(href)}
+/>
+```
 
 ```tsx
 // ✅ Level 2 — single item detail, use back button
 <Header title="Meridian" backButton={true} size={isScrolled ? "compress" : "size-l"} />
 
-// ✅ Level 3+ — nested detail, use breadcrumbs (component pending)
-// DS-GAP: Breadcrumbs — needed for L3+ navigation. Waiting on DS component.
+// ✅ Level 3+ — nested detail, use the DS Breadcrumb
+<Breadcrumb depth={3} items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]} onNavigate={go} />
 
 // ❌ Never both at once
 <Header title="Meridian" backButton={true} breadcrumbs={[...]} />
