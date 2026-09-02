@@ -642,19 +642,28 @@ Rules:
 
 ## Dropdown menus (filter slots)
 
-Dropdowns must appear **centered below the clicked slot button**, not at the mouse position.
-Pattern:
+A dropdown's **left edge aligns with its trigger's left edge, 4px below** — never centred on the trigger, never at the mouse position. If the panel would run off the right of the viewport it **flips**: right edges align instead. The flip is automatic, measured before paint, not a per-screen decision.
+
+Do not reimplement this. `src/lib/dropdown-anchor.ts` is the one implementation:
+
 ```tsx
-onClickCapture={(e: React.MouseEvent) => {
-  const btn = (e.target as HTMLElement).closest('button')
-  const left = btn
-    ? btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2
-    : e.clientX
-  setAnchor({ left, top: (e.currentTarget as HTMLElement).getBoundingClientRect().bottom })
-}}
-// Dropdown div:
-style={{ position: "fixed", left: anchor.left, top: anchor.top + 4, transform: "translateX(-50%)", zIndex: 10001 }}
+import { anchorFromEvent, useDropdownPosition, type DropdownAnchor } from "@/lib/dropdown-anchor"
+
+const [anchor, setAnchor] = useState<DropdownAnchor | null>(null)
+const dropdown = useDropdownPosition(anchor)
+
+<div onClickCapture={(e) => setAnchor(anchorFromEvent(e))}>
+  <Filters … />
+</div>
+
+{anchor && (
+  <div ref={dropdown.ref} style={{ position: "fixed", zIndex: 10001, ...dropdown.style }}>
+    <Menu>…</Menu>
+  </div>
+)}
 ```
+
+Applies to every dropdown — filter slots, `Select` panels, kebab menus. **Tooltips and the Slider thumb are the exception**: those centre on their anchor, which is correct for them.
 
 ---
 
