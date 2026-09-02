@@ -70,9 +70,11 @@ export function ToolsPanel({
         ? { label: "Configured", variant: "success" }
         : { label: "Inactive",   variant: "neutral" },
       tags: voiceCapabilities.map(c => ({ label: c })),
+      // Omit `icon` so EntityList renders the label ("Configure" /
+      // "Set up") instead of collapsing to an icon-only button.
       actions: isVoiceConfigured
-        ? [{ label: "Configure", variant: "secondary", icon: "Settings", onClick: onConfigureVoice }]
-        : [{ label: "Set up",    variant: "primary",   icon: "Plus",     onClick: onConfigureVoice }],
+        ? [{ label: "Configure", variant: "secondary", onClick: onConfigureVoice }]
+        : [{ label: "Set up",    variant: "primary",   onClick: onConfigureVoice }],
       onClick: primaryNumberRecord && onOpenNumber
         ? () => onOpenNumber(primaryNumberRecord.id)
         : undefined,
@@ -84,7 +86,7 @@ export function ToolsPanel({
       title:       "Send Email",
       description: "Send emails to communicate information or interact with other people.",
       state:       { label: "Ready to use", variant: "success" },
-      actions:     [{ label: "Configure", variant: "secondary", icon: "Settings", onClick: () => stubConfigure("Send Email") }],
+      actions:     [{ label: "Configure", variant: "secondary", onClick: () => stubConfigure("Send Email") }],
     },
     {
       // EntityList's iconVariant vocabulary uses "yellow" for the
@@ -95,7 +97,7 @@ export function ToolsPanel({
       title:       "Human in the Loop Alert",
       description: "Sends notifications or alerts to involve a human operator when manual intervention is required.",
       state:       { label: "Ready to use", variant: "alert" },
-      actions:     [{ label: "Configure", variant: "secondary", icon: "Settings", onClick: () => stubConfigure("Human in the Loop Alert") }],
+      actions:     [{ label: "Configure", variant: "secondary", onClick: () => stubConfigure("Human in the Loop Alert") }],
     },
     {
       id:          "web-search",
@@ -104,7 +106,7 @@ export function ToolsPanel({
       title:       "Web Search",
       description: "Search the internet for up-to-date information to answer questions or assist with research tasks.",
       state:       { label: "Ready to use", variant: "informative" },
-      actions:     [{ label: "Configure", variant: "secondary", icon: "Settings", onClick: () => stubConfigure("Web Search") }],
+      actions:     [{ label: "Configure", variant: "secondary", onClick: () => stubConfigure("Web Search") }],
     },
   ]
 

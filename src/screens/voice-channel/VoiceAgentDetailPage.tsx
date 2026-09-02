@@ -123,12 +123,17 @@ export function VoiceAgentDetailPage({
           <ArrowLeft size={14}/>
           Agents
         </button>
-        <NativeSelect
-          value={agent.status}
-          onChange={(v) => onChange({ ...agent, status: v as AIAgentStatus })}
-          options={AGENT_STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
-          size="sm"
-        />
+        {/* Status picker — fixed compact width so it reads as a pill,
+            not a full-width form field. Matches the source prototype's
+            "Published ▾" chip next to the title. */}
+        <div style={{ width: 140 }}>
+          <NativeSelect
+            value={agent.status}
+            onChange={(v) => onChange({ ...agent, status: v as AIAgentStatus })}
+            options={AGENT_STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
+            size="sm"
+          />
+        </div>
         <div className="ml-auto">
           <Button variant="secondary" size="sm" icon={<MoreHorizontal size={14}/>} iconPosition="right">
             Actions
@@ -290,10 +295,12 @@ function ChannelsPanel({
         ...numberRecords.map(n => ({ label: n.number })),
         ...ch.pills.map(p => ({ label: p })),
       ],
+      // EntityList collapses an `icon`-bearing action to icon-only, so
+      // we omit `icon` here on purpose — the labels "Configure" / "Set up"
+      // need to read as text buttons, matching the source prototype.
       actions: [{
         label:   isConfigured ? "Configure" : "Set up",
         variant: isConfigured ? "secondary" : "primary",
-        icon:    isConfigured ? "Settings"  : "Plus",
         onClick: () => onConfigure(ch.kind),
       }],
       onClick: primaryNumber && onOpenNumber
