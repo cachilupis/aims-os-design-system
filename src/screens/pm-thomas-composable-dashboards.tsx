@@ -273,35 +273,33 @@ const SKELETON_COLORS: Record<string, string> = {
 
 function WidgetGlyph({ skeleton, source }: { skeleton: Skeleton; source: string }) {
   const lsrc = source.toLowerCase()
-  const isAims = lsrc.includes("aims")
+  const SZ = 28
+  const circle: React.CSSProperties = { width: SZ, height: SZ, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }
 
-  if (isAims) {
+  if (lsrc.includes("aims")) {
     return (
-      <div style={{ width: 36, height: 36, borderRadius: 9, background: "#0B1120", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1px solid rgba(43,127,255,.25)" }}> {/* audit-ignore: AIMS OS brand glyph */}
-        <span style={{ fontSize: 10, fontWeight: 800, color: "#2B7FFF", letterSpacing: "-0.5px", lineHeight: 1 }}>A</span> {/* audit-ignore: AIMS OS brand glyph */}
+      <div style={{ ...circle, background: "#0B1120", border: "1px solid rgba(43,127,255,.3)" }}> {/* audit-ignore: AIMS OS brand glyph */}
+        <span style={{ fontSize: 9, fontWeight: 800, color: "#2B7FFF", letterSpacing: "-0.3px", lineHeight: 1 }}>A</span> {/* audit-ignore: AIMS OS brand glyph */}
       </div>
     )
   }
 
-  // Check known brand
   const key = Object.keys(SOURCE_COLORS).find(k => lsrc.includes(k))
   if (key) {
     const [bg, fg] = SOURCE_COLORS[key]
-    const abbr = key.slice(0, 2).toUpperCase()
     return (
-      <div style={{ width: 36, height: 36, borderRadius: 9, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: fg, lineHeight: 1 }}>{abbr}</span>
+      <div style={{ ...circle, background: bg }}>
+        <span style={{ fontSize: 9, fontWeight: 700, color: fg, lineHeight: 1 }}>{key.slice(0,2).toUpperCase()}</span>
       </div>
     )
   }
 
-  // Skeleton-type fallback (colored square)
-  const iconKey = SKELETON_ICON[skeleton] ?? "BarChart2"
-  const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
+  // Skeleton-type fallback: 2-char abbrev on skeleton colour
+  const abbr = skeleton.replace(/\s+/g,"").slice(0,2).toUpperCase()
   const bg = SKELETON_COLORS[skeleton] ?? "#6B7280" // audit-ignore: skeleton fallback grey
   return (
-    <div style={{ width: 36, height: 36, borderRadius: 9, background: `${bg}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      {Icon && <Icon size={16} style={{ color: bg }} />}
+    <div style={{ ...circle, background: `${bg}33` }}>
+      <span style={{ fontSize: 8, fontWeight: 700, color: bg, lineHeight: 1 }}>{abbr}</span>
     </div>
   )
 }
@@ -314,16 +312,125 @@ function HealthBadge({ health }: { health: LibHealth }) {
   return <Tag variant="alert" size="sm">Needs remap</Tag>
 }
 
-// DS-GAP: MiniPreview — sunken widget preview surface. Closest DS: CardContainer (variant=sunken).
-function MiniPreview({ skeleton }: { skeleton: Skeleton }) {
-  const iconKey = SKELETON_ICON[skeleton] ?? "Square"
+// DS-GAP: WidgetMiniPreview — visual mini render per skeleton. Closest DS: CardContainer (variant=sunken).
+function WidgetMiniPreview({ skeleton, seed }: { skeleton: Skeleton; seed: number }) {
+  const wrap: React.CSSProperties = { height: 64, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", overflow: "hidden", pointerEvents: "none", display: "flex", alignItems: "center" }
+
+  if (skeleton === "KPI" || skeleton === "Cost KPI") {
+    const vals = [86.4, 12.8, 540, 1284, 3.2, 48.2, 920, 7.6]
+    const n   = vals[seed % vals.length]
+    const lbl = skeleton === "Cost KPI" ? `$${n < 10 ? n + "K" : Math.round(n) + "K"}` : n >= 100 ? String(Math.round(n)) : `${n}K`
+    return <div style={{ ...wrap, justifyContent: "center" }}><span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px", color: "var(--foreground)" }}>{lbl}</span></div>
+  }
+
+  if (skeleton === "Chart") {
+    const BARS = ["#2B7FFF","#8B5CF6","#0EA5E9","#22C55E","#F59E0B"] // audit-ignore: chart demo palette
+    const hs   = [65,40,80,55,35,70,50].map((h,i) => (h + seed * 11 + i * 7) % 70 + 20)
+    return (
+      <div style={{ ...wrap, justifyContent: "center", alignItems: "flex-end", padding: "0 14px", gap: 4 }}>
+        {hs.slice(0,5).map((h,i) => <div key={i} style={{ flex:1, height:`${h}%`, borderRadius:"3px 3px 0 0", background: BARS[i % BARS.length] }} />)}
+      </div>
+    )
+  }
+
+  if (skeleton === "Feed") {
+    return (
+      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", gap:5, padding:"10px 12px" }}>
+        {[0,1,2].map(i => (
+          <div key={i} style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <div style={{ width:5, height:5, borderRadius:"50%", background:"var(--primary)", flexShrink:0 }} />
+            <div style={{ height:6, borderRadius:4, background:"var(--field-border)", flex:1, opacity: 1 - i * 0.25 }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (skeleton === "Donut") {
+    const pct = 0.55 + (seed % 4) * 0.1
+    const r = 21, circ = 2 * Math.PI * r
+    return (
+      <div style={{ ...wrap, justifyContent:"center", padding:0 }}>
+        <svg width={64} height={64} viewBox="0 0 64 64">
+          <circle cx={32} cy={32} r={r} fill="none" stroke="var(--field-border)" strokeWidth={7} />
+          <circle cx={32} cy={32} r={r} fill="none" stroke="#F59E0B" strokeWidth={7} // audit-ignore: donut demo colour
+            strokeDasharray={`${circ*pct} ${circ}`} strokeLinecap="round" transform="rotate(-90 32 32)" />
+        </svg>
+      </div>
+    )
+  }
+
+  if (skeleton === "Gauge") {
+    const pct = 0.45 + (seed % 5) * 0.1
+    return (
+      <div style={{ ...wrap, justifyContent:"center", padding:0 }}>
+        <svg width={84} height={46} viewBox="0 0 84 46">
+          <path d="M 10 42 A 32 32 0 0 1 74 42" fill="none" stroke="var(--field-border)" strokeWidth={7} strokeLinecap="round" />
+          <path d="M 10 42 A 32 32 0 0 1 74 42" fill="none" stroke="#22C55E" strokeWidth={7} strokeLinecap="round" // audit-ignore: gauge demo colour
+            strokeDasharray={`${100*pct} 100`} />
+        </svg>
+      </div>
+    )
+  }
+
+  if (skeleton === "Board") {
+    const rows: [string,string,number][] = [["#22C55E","Active",3],["#94A3B8","Idle",1],["#F59E0B","Paused",1]] // audit-ignore: board status colours
+    return (
+      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", gap:4, padding:"8px 12px" }}>
+        {rows.map(([c,l,n]) => (
+          <div key={l} style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:c, flexShrink:0 }} />
+              <span style={{ fontSize:10, color:"var(--field-supporting)" }}>{l}</span>
+            </div>
+            <span style={{ fontSize:10, fontWeight:600, color:"var(--foreground)" }}>{n}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (skeleton === "Funnel") {
+    const widths = [95,70,50,32]
+    const COLS = ["#2B7FFF","#8B5CF6","#0EA5E9","#22C55E"] // audit-ignore: funnel demo palette
+    return (
+      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", alignItems:"center", gap:3, padding:"8px 14px" }}>
+        {widths.map((w,i) => <div key={i} style={{ width:`${w}%`, height:9, borderRadius:3, background:COLS[i] }} />)}
+      </div>
+    )
+  }
+
+  if (skeleton === "Stat Row") {
+    const vals = [["1.2K","Conv."],["87%","Rate"],["4.3","Avg"]]
+    return (
+      <div style={{ ...wrap, justifyContent:"space-around", padding:"0 8px" }}>
+        {vals.map(([v,l]) => (
+          <div key={l} style={{ textAlign:"center" }}>
+            <div style={{ fontSize:14, fontWeight:700, color:"var(--foreground)" }}>{v}</div>
+            <div style={{ fontSize:9, color:"var(--field-supporting)", marginTop:1 }}>{l}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (skeleton === "Alerts") {
+    const items: [string,string][] = [["#EF4444","Critical · 2"],["#F59E0B","Warning · 5"]] // audit-ignore: alert demo colours
+    return (
+      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", gap:6, padding:"10px 12px" }}>
+        {items.map(([c,l]) => (
+          <div key={l} style={{ display:"flex", alignItems:"center", gap:7 }}>
+            <div style={{ width:6, height:6, borderRadius:2, background:c, flexShrink:0 }} />
+            <span style={{ fontSize:10, color:"var(--field-supporting)" }}>{l}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const iconKey = SKELETON_ICON[skeleton] ?? "BarChart2"
   const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
-  return (
-    <div style={{ height: 64, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, overflow: "hidden", pointerEvents: "none" }}>
-      <Icon size={13} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />
-      <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{skeleton} preview</span>
-    </div>
-  )
+  return <div style={{ ...wrap, justifyContent:"center" }}>{Icon && <Icon size={20} style={{ color:"var(--field-supporting)" }} />}</div>
 }
 
 // DS-GAP: LibStudioWelcome — contextual library banner. Closest DS: CardContainer.
@@ -646,23 +753,30 @@ function WidgetLibraryView({ onCreateWidget }: { onCreateWidget: () => void }) {
         <EmptyState icon={LucideIcons.Search} title="No widgets found" description="Try a different search or filter." />
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(264px,100%), 1fr))", gap: 12 }}>
-            {page.map(w => (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(200px,100%), 1fr))", gap: 12 }}>
+            {page.map(w => {
+              const seed = parseInt(w.id.replace(/\D/g,"")) || 0
+              return (
               <div key={w.id} style={{ position: "relative" }}>
                 <CardContainer
                   onClick={e => { if (!(e.target as HTMLElement).closest("button")) setDetailW(w) }}
-                  className="flex flex-col gap-[10px] cursor-pointer h-full"
+                  className="flex flex-col gap-[8px] cursor-pointer h-full"
                 >
-                  {/* Top-right: health badge + ⋯ menu */}
-                  <div style={{ position: "absolute", top: 12, right: 12, display: "flex", alignItems: "center", gap: 6, zIndex: 1 }}>
+                  {/* Header row: glyph + name/source + health + ⋯ */}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <WidgetGlyph skeleton={w.skeleton} source={w.source} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.name}</p>
+                      <p style={{ fontSize: 10, color: "var(--field-supporting)", margin: "1px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.source}</p>
+                    </div>
                     <HealthBadge health={w.health} />
-                    <div style={{ position: "relative" }}>
+                    <div style={{ position: "relative", flexShrink: 0 }}>
                       <button
                         onClick={e => { e.stopPropagation(); setMenuId(menuId === w.id ? null : w.id) }}
                         aria-label={`Actions for ${w.name}`}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: "2px 4px", borderRadius: 6, display: "flex" }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: "1px 2px", borderRadius: 6, display: "flex" }}
                       >
-                        <LucideIcons.MoreHorizontal size={15} />
+                        <LucideIcons.MoreHorizontal size={14} />
                       </button>
                       {menuId === w.id && (
                         <LibOverflowMenu onClose={() => setMenuId(null)} items={[
@@ -675,27 +789,18 @@ function WidgetLibraryView({ onCreateWidget }: { onCreateWidget: () => void }) {
                     </div>
                   </div>
 
-                  {/* Name + source */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, paddingRight: 96 }}>
-                    <WidgetGlyph skeleton={w.skeleton} source={w.source} />
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.name}</p>
-                      <p style={{ fontSize: 11, color: "var(--field-supporting)", margin: "1px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.source}</p>
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {/* Tags: skeleton type + Truth (governed) */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                     <Tag variant="neutral" size="sm">{w.skeleton}</Tag>
-                    {!w.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
-                    {w.system   && <Tag variant="informative" size="sm">System</Tag>}
+                    {w.governed && <Tag variant="informative" size="sm">Truth</Tag>}
+                    {w.system   && <Tag variant="neutral"      size="sm">System</Tag>}
                   </div>
 
-                  {/* Mini preview */}
-                  <MiniPreview skeleton={w.skeleton} />
+                  {/* Mini preview — real visual */}
+                  <WidgetMiniPreview skeleton={w.skeleton} seed={seed} />
 
                   {/* Footer */}
-                  <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 10 }}>
+                  <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 8 }}>
                     <span style={{ fontSize: 11, color: w.health === "review" ? "var(--alert)" : "var(--field-supporting)", fontWeight: w.health === "review" ? 600 : 400 }}>
                       {w.health === "review" ? "Remap needed →" : `Used on ${w.usedIn} dashboard${w.usedIn === 1 ? "" : "s"}`}
                     </span>
@@ -703,7 +808,8 @@ function WidgetLibraryView({ onCreateWidget }: { onCreateWidget: () => void }) {
                   </div>
                 </CardContainer>
               </div>
-            ))}
+            )})}
+
           </div>
 
           {hasMore && (
