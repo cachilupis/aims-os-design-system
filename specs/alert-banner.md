@@ -2,13 +2,13 @@
 
 **Figma node:** [`119:5867`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=119-5867)
 
-Full-width contextual notice for system-level feedback. 3 semantic states — Error, Success, Alert — with optional CTA text button and dismiss (×) button.
+Contextual notice for system-level feedback. 4 semantic states — Error, Success, Alert, Info — with optional CTA text button and dismiss (×) button.
 
 ## Properties
 
 | Name | Type | Values | Default | Note |
 | --- | --- | --- | --- | --- |
-| state | Variant | error,success,alert | error | Sets background, icon, and text tokens |
+| state | Variant | error,success,alert,info | error | Sets background, icon, and text tokens |
 | title | Prop | string | required | 14px SemiBold — always required |
 | description | Prop | string,undefined | undefined | 14px Medium, same state color as title |
 | cta | Prop | string,undefined | undefined | CTA button label — shown when provided |
