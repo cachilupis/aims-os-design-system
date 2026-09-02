@@ -26,6 +26,7 @@ type Freshness   = "live" | "fresh" | "stale"
 type BizCat      = "all" | "aims-os" | "sales" | "finance" | "customer-service" | "hr" | "marketing"
 type Skeleton    = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel" | "Stat Row" | "Alerts" | "Cost KPI"
 type TabId       = "data" | "widget" | "appearance"
+type OpType      = "aggregate" | "record_set"
 type BuilderStep = "Placement" | "Start point"
 // Widget library types
 type LibHealth   = "active" | "inactive" | "unused" | "review"
@@ -159,12 +160,52 @@ const WIZARD_STEPS: BuilderStep[] = ["Placement", "Start point"]
 // ── Widget builder data ───────────────────────────────────────────────────────
 
 const ENTITY_SOURCES = [
-  { id: "contacts_hubspot",   label: "Contacts",  integration: "HubSpot",  governed: true },
-  { id: "companies_hubspot",  label: "Companies", integration: "HubSpot",  governed: true },
-  { id: "deals_hubspot",      label: "Deals",     integration: "HubSpot",  governed: true },
-  { id: "tickets_zendesk",    label: "Tickets",   integration: "Zendesk",  governed: true },
-  { id: "employees_bamboohr", label: "Employees", integration: "BambooHR", governed: true },
-  { id: "workflows_aims",     label: "Workflows", integration: "AIMS OS",  governed: true },
+  { id: "contacts_hubspot",      label: "Contacts",      integration: "HubSpot",  governed: true,  hasPII: true },
+  { id: "companies_hubspot",     label: "Companies",     integration: "HubSpot",  governed: true,  hasPII: false },
+  { id: "deals_hubspot",         label: "Deals",         integration: "HubSpot",  governed: true,  hasPII: false },
+  { id: "tickets_zendesk",       label: "Tickets",       integration: "Zendesk",  governed: true,  hasPII: false },
+  { id: "conversations_zendesk", label: "Conversations", integration: "Zendesk",  governed: false, hasPII: true },
+  { id: "employees_bamboohr",    label: "Employees",     integration: "BambooHR", governed: true,  hasPII: true },
+  { id: "workflows_aims",        label: "Workflows",     integration: "AIMS OS",  governed: true,  hasPII: false },
+  { id: "ai_workers_aims",       label: "AI Workers",    integration: "AIMS OS",  governed: true,  hasPII: false },
+]
+const PRESET_DATASETS = [
+  { id: "ds-total-mrr",        name: "Total MRR",          description: "Month-to-date closed revenue across all deals.", integration: "HubSpot",  governed: true },
+  { id: "ds-active-contacts",  name: "Active Contacts",    description: "Contacts with at least one interaction in the last 30 days.", integration: "HubSpot",  governed: true },
+  { id: "ds-open-deals",       name: "Open Deals",         description: "All deals currently in an open pipeline stage.", integration: "HubSpot",  governed: true },
+  { id: "ds-ticket-volume",    name: "Ticket Volume",      description: "Total support tickets opened in the current period.", integration: "Zendesk",  governed: true },
+  { id: "ds-csat-score",       name: "CSAT Score",         description: "Average satisfaction rating across closed tickets.", integration: "Zendesk",  governed: true },
+  { id: "ds-headcount",        name: "Headcount",          description: "Active employee count by department.", integration: "BambooHR", governed: true },
+  { id: "ds-workflow-success", name: "Workflow Success Rate", description: "Percentage of workflow runs completed without errors.", integration: "AIMS OS",  governed: true },
+]
+const SOURCE_COLUMNS: Record<string, string[]> = {
+  contacts_hubspot:      ["Name", "Email", "Company", "Lifecycle Stage", "Owner", "Created At"],
+  companies_hubspot:     ["Name", "Domain", "Industry", "Annual Revenue", "Employees", "Owner"],
+  deals_hubspot:         ["Name", "Stage", "Amount", "Close Date", "Pipeline", "Owner"],
+  tickets_zendesk:       ["Title", "Status", "Priority", "Assignee", "Created At", "Updated At"],
+  conversations_zendesk: ["Subject", "Status", "Channel", "Agent", "CSAT Score", "Created At"],
+  employees_bamboohr:    ["Name", "Department", "Title", "Manager", "Start Date", "Status"],
+  workflows_aims:        ["Name", "Status", "Run Count", "Success Rate", "Last Run", "Owner"],
+  ai_workers_aims:       ["Name", "Category", "Status", "Tasks Today", "Accuracy", "Created At"],
+}
+const FRESHNESS_OPTIONS = [
+  { value: "realtime", label: "Real-time (live)" },
+  { value: "15m",      label: "Every 15 minutes (fresh)" },
+  { value: "1h",       label: "Every hour (fresh)" },
+  { value: "24h",      label: "Every day (aging)" },
+]
+const WIDGET_SIZES = [{ id: "sm", label: "S" }, { id: "md", label: "M" }, { id: "lg", label: "L" }]
+const STYLE_VARIANTS = [
+  { id: "",         label: "Default" },
+  { id: "compact",  label: "Compact" },
+  { id: "outlined", label: "Outlined" },
+  { id: "minimal",  label: "Minimal" },
+]
+const DESCRIBE_EXAMPLES = [
+  "Win Rate gauge",
+  "Workflow Runs over time",
+  "Human-in-the-Loops by team",
+  "Contacts by status as a donut",
 ]
 const WIDGET_TYPES = [
   { id: "kpi",    label: "KPI",    icon: "TrendingUp", bestFor: "At-a-glance status and headline numbers." },
@@ -1195,138 +1236,439 @@ function NewDashboardOverlay({ onClose }: { onClose: () => void }) {
 
 // ── Widget Builder overlay ────────────────────────────────────────────────────
 
-function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
-  const [tab, setTab]             = useState<TabId>("data")
-  const [dataMode, setDataMode]   = useState<"source" | "preset">("source")
-  const [sourceId, setSourceId]   = useState("")
-  const [widgetType, setWType]    = useState("")
-  const [widgetName, setWName]    = useState("")
-  const [accentColor, setAccent]  = useState("")
+// ── Widget Playground sub-components ─────────────────────────────────────────
 
-  const TABS: { id: TabId; label: string }[] = [
-    { id: "data",       label: "1 · Data" },
-    { id: "widget",     label: "2 · Widget" },
-    { id: "appearance", label: "3 · Appearance" },
-  ]
-
+function WBSectionChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Overlay header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 0 16px 0", borderBottom: "1px solid var(--field-border)", marginBottom: 20 }}>
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-subtitle)", display: "flex", alignItems: "center", gap: 4, fontSize: 13 }}>
-          <LucideIcons.ArrowLeft size={14} /> Widgets
+    <button onClick={onClick} style={{
+      height: 30, padding: "0 12px", borderRadius: 15, border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}`,
+      background: active ? "color-mix(in srgb, var(--primary) 12%, transparent)" : "transparent",
+      color: active ? "var(--primary)" : "var(--text-subtitle)",
+      fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const, display: "inline-flex", alignItems: "center",
+    }}>{children}</button>
+  )
+}
+
+function WBSectionLabel({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--primary)", color: "var(--canvas)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{n}</div>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{children}</span>
+    </div>
+  )
+}
+
+function WBBuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: TabId; setTab: (t: TabId) => void; dataComplete: boolean; widgetComplete: boolean }) {
+  const CheckIcon = LucideIcons.Check as React.FC<{ size?: number }>
+  const tabs: { id: TabId; label: string; n: number; done: boolean; enabled: boolean }[] = [
+    { id: "data",       label: "Data",       n: 1, done: dataComplete,   enabled: true },
+    { id: "widget",     label: "Widget",     n: 2, done: widgetComplete, enabled: dataComplete },
+    { id: "appearance", label: "Appearance", n: 3, done: false,          enabled: widgetComplete },
+  ]
+  return (
+    <div style={{ display: "flex", gap: 4, padding: 4, borderRadius: 12, background: "var(--field-border)", opacity: 0.9 }}>
+      {tabs.map(t => (
+        <button key={t.id} onClick={() => t.enabled && setTab(t.id)} disabled={!t.enabled} style={{
+          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "7px 4px",
+          borderRadius: 8, border: "none", cursor: t.enabled ? "pointer" : "not-allowed",
+          background: tab === t.id ? "var(--surface)" : "transparent",
+          opacity: t.enabled ? 1 : 0.35, transition: "all 0.15s",
+        }}>
+          <div style={{ width: 18, height: 18, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700,
+            background: t.done ? "var(--success)" : tab === t.id ? "var(--primary)" : "var(--field-supporting)", color: "var(--canvas)" }}>
+            {t.done ? <CheckIcon size={10} /> : t.n}
+          </div>
+          <span style={{ fontSize: 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "var(--foreground)" : "var(--field-supporting)" }}>{t.label}</span>
         </button>
-        <span style={{ fontSize: 13, color: "var(--field-border)" }}>/</span>
-        <span style={{ fontSize: 13, color: "var(--text-body)", fontWeight: 500 }}>Widget Builder</span>
-        {/* Tab pills */}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 2, background: "var(--surface)", border: "1px solid var(--field-border)", borderRadius: 8, padding: 2 }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500,
-                background: tab === t.id ? "var(--primary)" : "transparent",
-                color: tab === t.id ? "var(--on-primary)" : "var(--text-subtitle)" }}>
-              {t.label}
-            </button>
+      ))}
+    </div>
+  )
+}
+
+function WBEntitySourceCard({ source, selected, onSelect }: { source: typeof ENTITY_SOURCES[0]; selected: boolean; onSelect: () => void }) {
+  return (
+    <div onClick={onSelect} style={{ cursor: "pointer" }}>
+      <CardContainer selected={selected} className="h-full">
+        <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{source.label}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Tag variant="informative">{source.integration}</Tag>
+            {!source.governed && <Tag variant="alert">Ungoverned</Tag>}
+            {source.hasPII && <Tag variant="alert">PII</Tag>}
+          </div>
+        </div>
+      </CardContainer>
+    </div>
+  )
+}
+
+function WBDatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_DATASETS[0]; selected: boolean; onSelect: () => void }) {
+  return (
+    <div onClick={onSelect} style={{ cursor: "pointer" }}>
+      <CardContainer selected={selected} className="h-full">
+        <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{dataset.name}</div>
+          <p style={{ fontSize: 11, color: "var(--field-supporting)", margin: 0, lineHeight: 1.4 }}>{dataset.description}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Tag variant="informative">{dataset.integration}</Tag>
+            <Tag variant="success">Governed</Tag>
+          </div>
+        </div>
+      </CardContainer>
+    </div>
+  )
+}
+
+function WBTypeTile({ type, selected, onSelect }: { type: typeof WIDGET_TYPES[0]; selected: boolean; onSelect: () => void }) {
+  const Icon = (LucideIcons as Record<string, unknown>)[type.icon] as React.FC<{ size?: number; style?: React.CSSProperties }>
+  return (
+    <div onClick={onSelect} style={{ cursor: "pointer" }}>
+      <CardContainer selected={selected} className="h-full">
+        <div style={{ padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" as const }}>
+          <Icon size={18} style={{ color: selected ? "var(--primary)" : "var(--field-supporting)" }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: selected ? "var(--primary)" : "var(--foreground)" }}>{type.label}</span>
+        </div>
+      </CardContainer>
+    </div>
+  )
+}
+
+function WBSkeletonShape({ typeId, color }: { typeId: string | null; color: string }) {
+  const c = color || "var(--primary)"
+  const bars = [55, 75, 45, 80, 60, 70, 50, 65]
+  if (!typeId) return <div style={{ height: 120, background: "var(--field-border)", borderRadius: 8, opacity: 0.4 }} />
+  if (typeId === "kpi") return (
+    <div style={{ height: 120, display: "flex", flexDirection: "column", justifyContent: "center", gap: 8, padding: "0 20px" }}>
+      <div style={{ fontSize: 32, fontWeight: 800, color: c, opacity: 0.7 }}>—</div>
+      <div style={{ height: 8, width: "40%", background: c, borderRadius: 4, opacity: 0.25 }} />
+      <div style={{ height: 24, width: "100%", background: c, borderRadius: 4, opacity: 0.08 }} />
+    </div>
+  )
+  if (typeId === "bar" || typeId === "line") return (
+    <div style={{ height: 120, display: "flex", alignItems: "flex-end", gap: 5, padding: "16px 16px 8px" }}>
+      {bars.map((h, i) => <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 6 ? c : "var(--field-supporting)", borderRadius: "2px 2px 0 0", opacity: i === 6 ? 0.75 : 0.18 }} />)}
+    </div>
+  )
+  if (typeId === "gauge") return (
+    <div style={{ height: 120, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 6, paddingBottom: 24 }}>
+      <div style={{ width: 100, height: 50, borderRadius: "100px 100px 0 0", background: `conic-gradient(from 180deg, ${c} 0deg 110deg, var(--field-border) 110deg 180deg)`, opacity: 0.7 }} />
+    </div>
+  )
+  return (
+    <div style={{ height: 120, display: "flex", flexDirection: "column", gap: 7, padding: "12px 16px" }}>
+      {[100, 80, 65, 90, 55].map((w, i) => <div key={i} style={{ height: 10, width: `${w}%`, background: i === 0 ? c : "var(--field-border)", borderRadius: 3, opacity: i === 0 ? 0.5 : 0.25 }} />)}
+    </div>
+  )
+}
+
+function WBPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previewSize, setPreviewSize, saveHint }: {
+  typeId: string | null; name: string; sourceId: string | null; freshness: string; accentColor: string;
+  previewSize: string; setPreviewSize: (s: string) => void; saveHint: string
+}) {
+  const entitySrc  = ENTITY_SOURCES.find(s => s.id === sourceId)
+  const datasetSrc = PRESET_DATASETS.find(d => d.id === sourceId)
+  const srcLabel   = entitySrc?.label ?? datasetSrc?.name ?? null
+  const typeInfo   = WIDGET_TYPES.find(t => t.id === typeId)
+  const maxW       = previewSize === "sm" ? 240 : previewSize === "md" ? 420 : undefined
+  const freshnessLabel = freshness === "realtime" ? "Live" : freshness === "15m" ? "15m" : freshness === "1h" ? "1h" : "24h"
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 1, color: "var(--field-supporting)" }}>Live preview</span>
+        <div style={{ display: "flex", border: "1px solid var(--field-border)", borderRadius: 6, overflow: "hidden" }}>
+          {WIDGET_SIZES.map(s => (
+            <button key={s.id} onClick={() => setPreviewSize(s.id)} style={{
+              padding: "4px 10px", border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
+              background: previewSize === s.id ? "var(--primary)" : "transparent",
+              color: previewSize === s.id ? "var(--canvas)" : "var(--field-supporting)",
+            }}>{s.label}</button>
           ))}
         </div>
       </div>
-
-      {/* Tab: Data */}
-      {tab === "data" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <CardContainer className="flex flex-col gap-4">
-            <div style={{ display: "flex", gap: 4, background: "var(--surface)", border: "1px solid var(--field-border)", borderRadius: 8, padding: 2, alignSelf: "flex-start" }}>
-              {(["source", "preset"] as const).map(m => (
-                <button key={m} onClick={() => setDataMode(m)}
-                  style={{ padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500,
-                    background: dataMode === m ? "var(--primary)" : "transparent",
-                    color: dataMode === m ? "var(--on-primary)" : "var(--text-subtitle)" }}>
-                  {m === "source" ? "Raw source" : "Governed dataset"}
-                </button>
-              ))}
+      <div style={{ maxWidth: maxW, transition: "max-width 0.2s" }}>
+        <CardContainer>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--field-border)" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{name || "Untitled widget"}</span>
+              <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
             </div>
-            {dataMode === "source" ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-title)" }}>Select a data source</div>
-                {ENTITY_SOURCES.map(s => (
-                  <button key={s.id} onClick={() => setSourceId(s.id)}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8,
-                      border: `1px solid ${sourceId === s.id ? "var(--primary)" : "var(--field-border)"}`,
-                      background: sourceId === s.id ? "var(--primary-muted, var(--surface))" : "var(--surface)", cursor: "pointer" }}>
-                    <div style={{ fontSize: 13, color: "var(--text-body)", fontWeight: sourceId === s.id ? 600 : 400 }}>
-                      {s.label} <span style={{ fontSize: 11, color: "var(--text-subtitle)", fontWeight: 400 }}>({s.integration})</span>
-                    </div>
-                    {s.governed && <Tag variant="success" size="sm">Governed</Tag>}
+            <WBSkeletonShape typeId={typeId} color={accentColor} />
+            <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid var(--field-border)" }}>
+              {srcLabel && <Tag variant="informative">{srcLabel}</Tag>}
+              {typeInfo  && <Tag variant="neutral">{typeInfo.label}</Tag>}
+            </div>
+          </div>
+        </CardContainer>
+      </div>
+      {typeInfo && (
+        <div style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid var(--field-border)", background: "color-mix(in srgb, var(--primary) 5%, transparent)" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>Best for</div>
+          <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: 0 }}>{typeInfo.bestFor}</p>
+        </div>
+      )}
+      {!typeInfo && !srcLabel && (
+        <p style={{ fontSize: 12, color: "var(--field-supporting)", textAlign: "center" as const, margin: 0 }}>
+          Pick a source, metric, and widget type to preview it live.
+        </p>
+      )}
+      {saveHint && <p style={{ fontSize: 11, color: "var(--field-supporting)", textAlign: "center" as const, margin: 0 }}>{saveHint}</p>}
+    </div>
+  )
+}
+
+// ── Widget Playground overlay ─────────────────────────────────────────────────
+
+function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
+  const [tab, setTab]               = useState<TabId>("data")
+  const [dataMode, setDataMode]     = useState<"source" | "preset">("source")
+  const [opType, setOpType]         = useState<OpType>("aggregate")
+  const [sourceId, setSourceId]     = useState<string | null>(null)
+  const [metric, setMetric]         = useState("")
+  const [freshness, setFreshness]   = useState("1h")
+  const [typeId, setTypeId]         = useState<string | null>(null)
+  const [widgetName, setWName]      = useState("")
+  const [accentColor, setAccent]    = useState("")
+  const [styleVariant, setStyle]    = useState("")
+  const [previewSize, setPrvSize]   = useState("md")
+  const [describePrompt, setDescPr] = useState("")
+  const [saved, setSaved]           = useState(false)
+
+  const accentHex  = ACCENT_COLORS.find(a => a.id === accentColor)?.hex ?? "var(--primary)"
+  const dataComplete   = !!(sourceId && metric)
+  const widgetComplete = !!(typeId && widgetName)
+
+  const srcLabel = dataMode === "source"
+    ? ENTITY_SOURCES.find(s => s.id === sourceId)?.label
+    : PRESET_DATASETS.find(d => d.id === sourceId)?.name
+
+  const saveHint = !dataComplete   ? "Complete the Data tab to see a live preview."
+    : !widgetComplete ? "Pick a type and name to finalize the preview."
+    : ""
+
+  function handleSave() {
+    if (!widgetName) return
+    setSaved(true)
+  }
+
+  if (saved) {
+    const CheckCircle = LucideIcons.CheckCircle2 as React.FC<{ size?: number; style?: React.CSSProperties }>
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, height: "100%", padding: 40, textAlign: "center" as const }}>
+        <CheckCircle size={48} style={{ color: "var(--success)" }} />
+        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)" }}>"{widgetName}" saved to catalog</div>
+        <p style={{ fontSize: 14, color: "var(--field-supporting)", maxWidth: 360, margin: 0 }}>
+          Your widget is now available in the Widget Library and can be added to any dashboard.
+        </p>
+        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <Button variant="secondary" size="sm" onClick={onClose}>Back to Library</Button>
+          <Button variant="main" size="sm" onClick={() => { setSaved(false); setSourceId(null); setMetric(""); setTypeId(null); setWName(""); setAccent(""); setStyle(""); setTab("data") }}>Build another</Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+
+      {/* ── Left: build panel ───────────────────────────────────────────── */}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+
+        {/* Describe it */}
+        <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--field-border)", background: "var(--surface)", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid var(--field-border)", background: "var(--canvas)" }}>
+              {(() => { const Sparkle = LucideIcons.Sparkles as React.FC<{ size?: number; style?: React.CSSProperties }>; return <Sparkle size={14} style={{ color: "var(--primary)", flexShrink: 0 }} /> })()}
+              <input
+                value={describePrompt} onChange={e => setDescPr(e.target.value)}
+                placeholder="Describe your widget…"
+                style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--foreground)" }}
+              />
+            </div>
+            <Button variant="secondary" size="sm">Generate</Button>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+            {DESCRIBE_EXAMPLES.map(ex => (
+              <WBSectionChip key={ex} active={describePrompt === ex} onClick={() => setDescPr(ex)}>{ex}</WBSectionChip>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab nav */}
+        <WBBuilderTabNav tab={tab} setTab={setTab} dataComplete={dataComplete} widgetComplete={widgetComplete} />
+
+        {/* ── Tab: Data ─────────────────────────────────────── */}
+        {tab === "data" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+            {/* Source selector */}
+            <div>
+              <WBSectionLabel n={1}>Data source</WBSectionLabel>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div
+                  onClick={() => setDataMode("source")}
+                  style={{ cursor: "pointer", padding: "14px 16px", borderRadius: 10, border: `2px solid ${dataMode === "source" ? "var(--primary)" : "var(--field-border)"}`,
+                    background: dataMode === "source" ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(() => { const Db = LucideIcons.Database as React.FC<{ size?: number; style?: React.CSSProperties }>; return <Db size={18} style={{ color: dataMode === "source" ? "var(--primary)" : "var(--field-supporting)" }} /> })()}
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Entity</span>
+                  <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Choose any governed or raw entity from your integrations.</span>
+                </div>
+                <div
+                  onClick={() => setDataMode("preset")}
+                  style={{ cursor: "pointer", padding: "14px 16px", borderRadius: 10, border: `2px solid ${dataMode === "preset" ? "var(--primary)" : "var(--field-border)"}`,
+                    background: dataMode === "preset" ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(() => { const Lay = LucideIcons.Layers as React.FC<{ size?: number; style?: React.CSSProperties }>; return <Lay size={18} style={{ color: dataMode === "preset" ? "var(--primary)" : "var(--field-supporting)" }} /> })()}
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Existing Dataset</span>
+                  <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Pick a governed, pre-joined dataset curated by your data team.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Entity picker */}
+            {dataMode === "source" && (
+              <div>
+                <WBSectionLabel n={2}>Choose an entity</WBSectionLabel>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {ENTITY_SOURCES.map(s => (
+                    <WBEntitySourceCard key={s.id} source={s} selected={sourceId === s.id} onSelect={() => { setSourceId(s.id); setMetric("") }} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dataset picker */}
+            {dataMode === "preset" && (
+              <div>
+                <WBSectionLabel n={2}>Choose a dataset</WBSectionLabel>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {PRESET_DATASETS.map(d => (
+                    <WBDatasetCard key={d.id} dataset={d} selected={sourceId === d.id} onSelect={() => { setSourceId(d.id); setMetric("") }} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Operation + metric */}
+            {sourceId && (
+              <div>
+                <WBSectionLabel n={3}>Operation & metric</WBSectionLabel>
+                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                  {(["aggregate", "record_set"] as OpType[]).map(op => (
+                    <button key={op} onClick={() => setOpType(op)} style={{
+                      flex: 1, padding: "7px 0", borderRadius: 8, border: `1px solid ${opType === op ? "var(--primary)" : "var(--field-border)"}`,
+                      background: opType === op ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "transparent",
+                      color: opType === op ? "var(--primary)" : "var(--field-supporting)",
+                      fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      {op === "aggregate" ? "Aggregation" : "Record set"}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(SOURCE_COLUMNS[sourceId] ?? []).map(col => (
+                    <button key={col} onClick={() => setMetric(col)} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px",
+                      borderRadius: 8, border: `1px solid ${metric === col ? "var(--primary)" : "var(--field-border)"}`,
+                      background: metric === col ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)", cursor: "pointer" }}>
+                      <span style={{ fontSize: 13, color: "var(--foreground)", fontWeight: metric === col ? 600 : 400 }}>{col}</span>
+                      {metric === col && (() => { const Chk = LucideIcons.Check as React.FC<{ size?: number; style?: React.CSSProperties }>; return <Chk size={14} style={{ color: "var(--primary)" }} /> })()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Freshness */}
+            {metric && (
+              <div>
+                <WBSectionLabel n={4}>Refresh cadence</WBSectionLabel>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {FRESHNESS_OPTIONS.map(f => (
+                    <button key={f.value} onClick={() => setFreshness(f.value)} style={{
+                      flex: 1, padding: "7px 0", borderRadius: 8, border: `1px solid ${freshness === f.value ? "var(--primary)" : "var(--field-border)"}`,
+                      background: freshness === f.value ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "transparent",
+                      color: freshness === f.value ? "var(--primary)" : "var(--field-supporting)",
+                      fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {dataComplete && (
+              <Button variant="main" size="sm" onClick={() => setTab("widget")}>
+                Continue to Widget →
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* ── Tab: Widget ───────────────────────────────────── */}
+        {tab === "widget" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <WBSectionLabel n={1}>Widget name</WBSectionLabel>
+              <Input value={widgetName} onChange={e => setWName(e.target.value)} placeholder={srcLabel ? `e.g. ${srcLabel} count` : "e.g. Open Deals by Stage"} />
+            </div>
+            <div>
+              <WBSectionLabel n={2}>Visualization type</WBSectionLabel>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {WIDGET_TYPES.map(wt => (
+                  <WBTypeTile key={wt.id} type={wt} selected={typeId === wt.id} onSelect={() => setTypeId(wt.id)} />
+                ))}
+              </div>
+            </div>
+            {widgetComplete && (
+              <Button variant="main" size="sm" onClick={() => setTab("appearance")}>
+                Continue to Appearance →
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* ── Tab: Appearance ───────────────────────────────── */}
+        {tab === "appearance" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <WBSectionLabel n={1}>Accent color</WBSectionLabel>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
+                {ACCENT_COLORS.map(ac => (
+                  <button key={ac.id} onClick={() => setAccent(ac.id)} title={ac.label} style={{
+                    width: 32, height: 32, borderRadius: "50%", border: `2px solid ${accentColor === ac.id ? "var(--foreground)" : "var(--field-border)"}`,
+                    // audit-ignore: ac.hex is a runtime value from ACCENT_COLORS constant, not a hardcoded hex
+                    background: ac.hex === "transparent" ? "var(--surface)" : ac.hex, cursor: "pointer",
+                    outline: accentColor === ac.id ? "2px solid var(--primary)" : "none", outlineOffset: 2 }}>
+                    {ac.hex === "transparent" && <span style={{ fontSize: 9, color: "var(--field-supporting)" }}>Def</span>}
                   </button>
                 ))}
               </div>
-            ) : (
-              <div style={{ fontSize: 13, color: "var(--text-subtitle)", padding: "8px 0" }}>
-                Governed datasets coming soon in this prototype view.
-              </div>
-            )}
-          </CardContainer>
-        </div>
-      )}
-
-      {/* Tab: Widget */}
-      {tab === "widget" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <CardContainer className="flex flex-col gap-4">
-            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)" }}>Widget name</div>
-            <Input value={widgetName} onChange={e => setWName(e.target.value)} placeholder="e.g. Open Deals by Stage" style={{ fontSize: 13 }} />
-          </CardContainer>
-          <CardContainer className="flex flex-col gap-4">
-            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)" }}>Visualization type</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-              {WIDGET_TYPES.map(wt => {
-                const Icon = LucideIcons[wt.icon as keyof typeof LucideIcons] as React.FC<{ size?: number }>
-                const selected = widgetType === wt.id
-                return (
-                  <button key={wt.id} onClick={() => setWType(wt.id)}
-                    style={{ padding: "10px 8px", borderRadius: 8, border: `2px solid ${selected ? "var(--primary)" : "var(--field-border)"}`,
-                      background: selected ? "var(--primary-muted, var(--surface))" : "var(--surface)", cursor: "pointer",
-                      display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                    {Icon && <Icon size={18} />}
-                    <span style={{ fontSize: 12, fontWeight: 600, color: selected ? "var(--primary)" : "var(--text-body)" }}>{wt.label}</span>
-                    <span style={{ fontSize: 10, color: "var(--text-subtitle)", textAlign: "center", lineHeight: 1.3 }}>{wt.bestFor}</span>
+            </div>
+            <div>
+              <WBSectionLabel n={2}>Style variant</WBSectionLabel>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                {STYLE_VARIANTS.map(sv => (
+                  <button key={sv.id} onClick={() => setStyle(sv.id)} style={{
+                    padding: "8px 12px", borderRadius: 8, border: `1px solid ${styleVariant === sv.id ? "var(--primary)" : "var(--field-border)"}`,
+                    background: styleVariant === sv.id ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)",
+                    cursor: "pointer", fontSize: 12, fontWeight: 600,
+                    color: styleVariant === sv.id ? "var(--primary)" : "var(--foreground)" }}>
+                    {sv.label}
                   </button>
-                )
-              })}
+                ))}
+              </div>
             </div>
-          </CardContainer>
-        </div>
-      )}
+            <Button variant="main" size="sm" disabled={!widgetComplete} onClick={handleSave}>
+              Save to catalog
+            </Button>
+          </div>
+        )}
+      </div>
 
-      {/* Tab: Appearance */}
-      {tab === "appearance" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <CardContainer className="flex flex-col gap-4">
-            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)" }}>Accent color</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {ACCENT_COLORS.map(ac => (
-                <button key={ac.id} onClick={() => setAccent(ac.id)}
-                  title={ac.label}
-                  style={{ width: 32, height: 32, borderRadius: "50%", border: `2px solid ${accentColor === ac.id ? "var(--text-body)" : "var(--field-border)"}`,
-                    background: ac.hex === "transparent" ? "var(--surface)" : ac.hex, cursor: "pointer",
-                    outline: accentColor === ac.id ? "2px solid var(--primary)" : "none", outlineOffset: 2 }}>
-                  {ac.hex === "transparent" && (
-                    <span style={{ fontSize: 9, color: "var(--text-subtitle)", lineHeight: 1 }}>Def</span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-subtitle)" }}>
-              Selected: <strong>{ACCENT_COLORS.find(a => a.id === accentColor)?.label ?? "Default"}</strong>
-            </div>
-          </CardContainer>
-        </div>
-      )}
-
-      {/* Footer */}
-      <div style={{ marginTop: "auto", paddingTop: 20, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-        <Button variant="main" size="sm" onClick={onClose}>Save to catalog</Button>
+      {/* ── Right: sticky preview ───────────────────────────────────────── */}
+      <div style={{ width: "42%", flexShrink: 0, position: "sticky" as const, top: 0 }}>
+        <WBPreviewPanel
+          typeId={typeId} name={widgetName} sourceId={sourceId} freshness={freshness}
+          accentColor={accentHex} previewSize={previewSize} setPreviewSize={setPrvSize} saveHint={saveHint}
+        />
       </div>
     </div>
   )
@@ -1357,9 +1699,9 @@ export default function PMThomasComposableDashboardsScreen() {
     headerTitle = "New dashboard"
     headerDesc  = "Configure placement, audience, and starting point."
   } else if (overlayView === "builder") {
-    headerTitle = "Widget Builder"
-    headerDesc  = "Define data, visualization type, and appearance."
-    headerPrimary = <Button variant="main" size="sm" onClick={() => setOverlay(null)}>Save to catalog</Button>
+    headerTitle = "Widget Playground"
+    headerDesc  = "Map an entity and metric, pick a widget type, and preview it live."
+    headerPrimary = <Button variant="secondary" size="sm" onClick={() => setOverlay(null)}>Cancel</Button>
   } else if (mainView === "dashboards") {
     headerPrimary = <Button variant="main" size="sm" onClick={() => setOverlay("new-dashboard")}>Create dashboard</Button>
   } else if (subView === "library") {
