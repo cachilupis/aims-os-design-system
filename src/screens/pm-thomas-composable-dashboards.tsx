@@ -164,7 +164,7 @@ function Pill({ label, value, options, onSelect }: { label: string; value: strin
         style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6,
           fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap",
           background: active ? "var(--primary)" : "var(--surface)",
-          color: active ? "var(--on-primary, #fff)" : "var(--text-subtitle)",
+          color: active ? "var(--on-primary)" : "var(--text-subtitle)",
           border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}` }}
       >
         {active ? value : label}
@@ -516,8 +516,8 @@ function NewDashboardOverlay({ onClose }: { onClose: () => void }) {
           {WIZARD_STEPS.map((s, i) => (
             <div key={s} style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <div style={{ width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700,
-                background: i === step ? "var(--primary)" : i < step ? "var(--success, #22c55e)" : "var(--field-border)",
-                color: i <= step ? "var(--on-primary, #fff)" : "var(--text-subtitle)" }}>
+                background: i === step ? "var(--primary)" : i < step ? "var(--success)" : "var(--field-border)",
+                color: i <= step ? "var(--on-primary)" : "var(--text-subtitle)" }}>
                 {i < step ? <LucideIcons.Check size={10} /> : i + 1}
               </div>
               <span style={{ fontSize: 11, color: i === step ? "var(--text-body)" : "var(--text-subtitle)" }}>{s}</span>
@@ -562,7 +562,7 @@ function NewDashboardOverlay({ onClose }: { onClose: () => void }) {
                   <button key={t} onClick={() => setTab(t)}
                     style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${selectedTab === t ? "var(--primary)" : "var(--field-border)"}`,
                       background: selectedTab === t ? "var(--primary)" : "transparent", cursor: "pointer",
-                      fontSize: 12, fontWeight: 500, color: selectedTab === t ? "var(--on-primary, #fff)" : "var(--text-body)" }}>
+                      fontSize: 12, fontWeight: 500, color: selectedTab === t ? "var(--on-primary)" : "var(--text-body)" }}>
                     {t}
                   </button>
                 ))}
@@ -573,7 +573,7 @@ function NewDashboardOverlay({ onClose }: { onClose: () => void }) {
                   <button key={a.id} onClick={() => setAudience(a.id)}
                     style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${audience === a.id ? "var(--primary)" : "var(--field-border)"}`,
                       background: audience === a.id ? "var(--primary)" : "transparent", cursor: "pointer",
-                      fontSize: 12, fontWeight: 500, color: audience === a.id ? "var(--on-primary, #fff)" : "var(--text-body)" }}>
+                      fontSize: 12, fontWeight: 500, color: audience === a.id ? "var(--on-primary)" : "var(--text-body)" }}>
                     {a.label}
                   </button>
                 ))}
@@ -650,7 +650,7 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
             <button key={t.id} onClick={() => setTab(t.id)}
               style={{ padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500,
                 background: tab === t.id ? "var(--primary)" : "transparent",
-                color: tab === t.id ? "var(--on-primary, #fff)" : "var(--text-subtitle)" }}>
+                color: tab === t.id ? "var(--on-primary)" : "var(--text-subtitle)" }}>
               {t.label}
             </button>
           ))}
@@ -666,7 +666,7 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
                 <button key={m} onClick={() => setDataMode(m)}
                   style={{ padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500,
                     background: dataMode === m ? "var(--primary)" : "transparent",
-                    color: dataMode === m ? "var(--on-primary, #fff)" : "var(--text-subtitle)" }}>
+                    color: dataMode === m ? "var(--on-primary)" : "var(--text-subtitle)" }}>
                   {m === "source" ? "Raw source" : "Governed dataset"}
                 </button>
               ))}
