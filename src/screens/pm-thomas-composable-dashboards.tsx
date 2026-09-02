@@ -48,14 +48,22 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 // ── Dashboard data ────────────────────────────────────────────────────────────
 
 const DASHBOARDS = [
-  { id: "d1",  name: "Company Overview",       status: "published" as DashStatus, entity: "Company"    as EntityKind, placement: "Profile — Overview tab", owner: "Maria Chen",     widgetCount: 8,  audience: "Everyone",    updated: "2h ago",    description: "Executive overview of key company metrics across CRM, support, and workforce." },
-  { id: "d2",  name: "Deal Pipeline Tracker",  status: "published" as DashStatus, entity: "Deal"       as EntityKind, placement: "Profile — Overview tab", owner: "James Park",     widgetCount: 6,  audience: "Sales team",  updated: "Yesterday", description: "Real-time pipeline health and stage velocity for active deals." },
-  { id: "d3",  name: "Contact Engagement",     status: "draft"     as DashStatus, entity: "Contact"    as EntityKind, placement: "Profile — Activity tab",  owner: "Sofia Reyes",    widgetCount: 4,  audience: "By role",     updated: "3d ago",    description: "Contact-level touchpoint history across email, chat, and support." },
-  { id: "d4",  name: "Employee Performance",   status: "published" as DashStatus, entity: "Employee"   as EntityKind, placement: "Profile — Overview tab", owner: "David Lim",      widgetCount: 7,  audience: "By team",     updated: "1h ago",    description: "KPIs and goal tracking per employee linked to BambooHR data." },
-  { id: "d5",  name: "Support Ticket Volume",  status: "published" as DashStatus, entity: "Standalone" as EntityKind, placement: "Report collection",      owner: "Ana Kovacs",     widgetCount: 5,  audience: "Everyone",    updated: "4h ago",    description: "Inbound ticket trends, SLA adherence, and CSAT scores from Zendesk." },
-  { id: "d6",  name: "AI Worker Summary",      status: "pending"   as DashStatus, entity: "Standalone" as EntityKind, placement: "Home — Workspace",       owner: "Thomas G.",      widgetCount: 9,  audience: "Everyone",    updated: "Just now",  description: "Live AIMS OS worker status, task throughput, and error rates." },
-  { id: "d7",  name: "Deals Won This Month",   status: "published" as DashStatus, entity: "Deal"       as EntityKind, placement: "Report collection",      owner: "James Park",     widgetCount: 3,  audience: "Sales team",  updated: "2d ago",    description: "Closed-won breakdown by rep, industry, and deal size for the current month." },
-  { id: "d8",  name: "New Hire Onboarding",    status: "draft"     as DashStatus, entity: "Employee"   as EntityKind, placement: "Profile — Overview tab", owner: "David Lim",      widgetCount: 4,  audience: "HR team",     updated: "5d ago",    description: "Onboarding progress tracker with milestone completion and manager notes." },
+  { id: "d1",  name: "Company Overview",        status: "published" as DashStatus, entity: "Company"    as EntityKind, placement: "Profile — Overview tab",  owner: "Maria Chen",     widgetCount: 8,  audience: "Everyone",    updated: "2h ago",    description: "Executive overview of key company metrics across CRM, support, and workforce." },
+  { id: "d2",  name: "Deal Pipeline Tracker",   status: "published" as DashStatus, entity: "Deal"       as EntityKind, placement: "Profile — Overview tab",  owner: "James Park",     widgetCount: 6,  audience: "Sales team",  updated: "Yesterday", description: "Real-time pipeline health and stage velocity for active deals." },
+  { id: "d3",  name: "Contact Engagement",      status: "draft"     as DashStatus, entity: "Contact"    as EntityKind, placement: "Profile — Activity tab",  owner: "Sofia Reyes",    widgetCount: 4,  audience: "By role",     updated: "3d ago",    description: "Contact-level touchpoint history across email, chat, and support." },
+  { id: "d4",  name: "Employee Performance",    status: "published" as DashStatus, entity: "Employee"   as EntityKind, placement: "Profile — Overview tab",  owner: "David Lim",      widgetCount: 7,  audience: "By team",     updated: "1h ago",    description: "KPIs and goal tracking per employee linked to BambooHR data." },
+  { id: "d5",  name: "Support Ticket Volume",   status: "published" as DashStatus, entity: "Standalone" as EntityKind, placement: "Report collection",       owner: "Ana Kovacs",     widgetCount: 5,  audience: "Everyone",    updated: "4h ago",    description: "Inbound ticket trends, SLA adherence, and CSAT scores from Zendesk." },
+  { id: "d6",  name: "AI Worker Summary",       status: "pending"   as DashStatus, entity: "Standalone" as EntityKind, placement: "Home — Workspace",        owner: "Thomas G.",      widgetCount: 9,  audience: "Everyone",    updated: "Just now",  description: "Live AIMS OS worker status, task throughput, and error rates." },
+  { id: "d7",  name: "Deals Won This Month",    status: "published" as DashStatus, entity: "Deal"       as EntityKind, placement: "Report collection",       owner: "James Park",     widgetCount: 3,  audience: "Sales team",  updated: "2d ago",    description: "Closed-won breakdown by rep, industry, and deal size for the current month." },
+  { id: "d8",  name: "New Hire Onboarding",     status: "draft"     as DashStatus, entity: "Employee"   as EntityKind, placement: "Profile — Overview tab",  owner: "David Lim",      widgetCount: 4,  audience: "HR team",     updated: "5d ago",    description: "Onboarding progress tracker with milestone completion and manager notes." },
+  { id: "d9",  name: "Renewal Risk Monitor",    status: "published" as DashStatus, entity: "Company"    as EntityKind, placement: "Profile — Risk tab",      owner: "Maria Chen",     widgetCount: 5,  audience: "CS team",     updated: "6h ago",    description: "Churn signals and renewal probability scores for at-risk accounts." },
+  { id: "d10", name: "Contact Activity Feed",   status: "published" as DashStatus, entity: "Contact"    as EntityKind, placement: "Profile — Overview tab",  owner: "Sofia Reyes",    widgetCount: 3,  audience: "Everyone",    updated: "12h ago",   description: "Real-time feed of all interactions with a contact: emails, calls, and notes." },
+  { id: "d11", name: "Sales Rep Leaderboard",   status: "draft"     as DashStatus, entity: "Standalone" as EntityKind, placement: "Home — Workspace",        owner: "James Park",     widgetCount: 6,  audience: "Sales team",  updated: "1d ago",    description: "Weekly performance ranking across reps by closed revenue and activity score." },
+  { id: "d12", name: "Governance Violations",   status: "pending"   as DashStatus, entity: "Standalone" as EntityKind, placement: "Report collection",       owner: "Thomas G.",      widgetCount: 4,  audience: "Admin only",  updated: "3h ago",    description: "Policy breach log with severity levels, owner attribution, and remediation status." },
+  { id: "d13", name: "Employee Headcount",      status: "published" as DashStatus, entity: "Employee"   as EntityKind, placement: "Profile — Overview tab",  owner: "David Lim",      widgetCount: 5,  audience: "HR team",     updated: "8h ago",    description: "Headcount by department, location, and employment type with trend lines." },
+  { id: "d14", name: "Deal Stage Velocity",     status: "published" as DashStatus, entity: "Deal"       as EntityKind, placement: "Profile — Activity tab",  owner: "James Park",     widgetCount: 4,  audience: "Sales team",  updated: "30m ago",   description: "Time-in-stage analysis and forecast for deals in active pipeline stages." },
+  { id: "d15", name: "Marketing Attribution",   status: "draft"     as DashStatus, entity: "Contact"    as EntityKind, placement: "Profile — Overview tab",  owner: "Ana Kovacs",     widgetCount: 7,  audience: "Marketing",   updated: "2d ago",    description: "First and multi-touch attribution for leads generated this quarter." },
+  { id: "d16", name: "Credit Usage Forecast",   status: "published" as DashStatus, entity: "Standalone" as EntityKind, placement: "Home — Workspace",        owner: "Thomas G.",      widgetCount: 3,  audience: "Admin only",  updated: "20m ago",   description: "Projected AI credit spend through end of billing cycle with runway indicator." },
 ]
 
 // ── Widget library data ───────────────────────────────────────────────────────
@@ -102,7 +110,6 @@ const LIB_CATEGORIES: LibCategory[] = ["AIMS OS", "Operational", "Engagement", "
 const LIB_SKELETONS: Skeleton[]     = ["KPI", "Chart", "Feed", "Gauge", "Donut", "Board", "Funnel", "Stat Row", "Alerts", "Cost KPI"]
 const LIB_FRESHNESS: Freshness[]    = ["live", "fresh", "stale"]
 const LIB_PROFILES: LibProfile[]    = ["All", "Company", "Contact", "Employee", "Deal", "Standalone"]
-const LIB_PAGE_SIZE                 = 18
 const LIB_GOVERNED_COUNT            = LIB_WIDGETS.filter(w => w.governed).length
 
 // ── Marketplace data ──────────────────────────────────────────────────────────
@@ -623,14 +630,21 @@ function LibFilterToolbar({ search, onSearch, cat, onCat, profile, onProfile, sk
 
 // ── Dashboard List view ───────────────────────────────────────────────────────
 
+const DASH_PAGE_SIZE = 6
+const WIDG_PAGE_SIZE = 12
+
 type DashRecord = typeof DASHBOARDS[0]
 
-function DashboardsView({ onOpenCanvas }: { onOpenCanvas: (d: DashRecord) => void }) {
+function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
+  onOpenCanvas: (d: DashRecord) => void
+  page: number
+  onPageChange: (p: number) => void
+  onTotalChange: (n: number) => void
+}) {
   const [search, setSearch]         = useState("")
   const [statusFilter, setStatus]   = useState("All")
   const [entityFilter, setEntity]   = useState("All")
   const [sortBy, setSortBy]         = useState<"name" | "updated">("name")
-  const [page, setPage]             = useState(1)
   const [detail, setDetail]         = useState<DashRecord | null>(null)
   const [deleteTarget, setDelete]   = useState<DashRecord | null>(null)
   const [dupTarget, setDupTarget]   = useState<DashRecord | null>(null)
@@ -638,7 +652,6 @@ function DashboardsView({ onOpenCanvas }: { onOpenCanvas: (d: DashRecord) => voi
   const [cardMenu, setCardMenu]     = useState<string | null>(null)
   const [bannerDismissed, dismiss]  = useState(false)
   const [dashboards, setDashboards] = useState(DASHBOARDS)
-  const PAGE_SIZE = 6
 
   const filtered = dashboards.filter(d => {
     if (search && !d.name.toLowerCase().includes(search.toLowerCase())) return false
@@ -646,7 +659,15 @@ function DashboardsView({ onOpenCanvas }: { onOpenCanvas: (d: DashRecord) => voi
     if (entityFilter !== "All" && d.entity !== entityFilter) return false
     return true
   }).sort((a, b) => sortBy === "name" ? a.name.localeCompare(b.name) : a.updated.localeCompare(b.updated))
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  // Report total to parent for footer pagination
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { onTotalChange(filtered.length) }, [filtered.length])
+
+  // Reset page when filters change
+  useEffect(() => { onPageChange(1) }, [search, statusFilter, entityFilter, sortBy])
+
+  const paged = filtered.slice((page - 1) * DASH_PAGE_SIZE, page * DASH_PAGE_SIZE)
 
   return (
     <>
@@ -667,10 +688,10 @@ function DashboardsView({ onOpenCanvas }: { onOpenCanvas: (d: DashRecord) => voi
       )}
 
       <FilterBar
-        search={search} onSearch={v => { setSearch(v); setPage(1) }}
+        search={search} onSearch={v => setSearch(v)}
         pills={[
-          { label: "Status", value: statusFilter, options: ["All", "Published", "Draft", "Pending"], onSelect: v => { setStatus(v); setPage(1) } },
-          { label: "Entity", value: entityFilter, options: ["All", "Company", "Contact", "Employee", "Deal", "Standalone"], onSelect: v => { setEntity(v); setPage(1) } },
+          { label: "Status", value: statusFilter, options: ["All", "Published", "Draft", "Pending"], onSelect: v => setStatus(v) },
+          { label: "Entity", value: entityFilter, options: ["All", "Company", "Contact", "Employee", "Deal", "Standalone"], onSelect: v => setEntity(v) },
           { label: "Sort", value: sortBy === "name" ? "Name" : "Updated", options: ["Name", "Updated"], onSelect: v => setSortBy(v === "Name" ? "name" : "updated") },
         ]}
       />
@@ -714,10 +735,6 @@ function DashboardsView({ onOpenCanvas }: { onOpenCanvas: (d: DashRecord) => voi
           )
         })}
       </div>
-
-      {filtered.length > PAGE_SIZE && (
-        <Pagination currentPage={page} totalItems={filtered.length} itemsPerPage={PAGE_SIZE} onPageChange={setPage} />
-      )}
 
       {detail && (
         <SlideOut open title={detail.name} subtitle={detail.placement} onClose={() => setDetail(null)}
@@ -773,7 +790,10 @@ function DashboardsView({ onOpenCanvas }: { onOpenCanvas: (d: DashRecord) => voi
 
 // ── Widget Library view ───────────────────────────────────────────────────────
 
-function WidgetLibraryView({ onCreateWidget, onEditWidget }: { onCreateWidget: () => void; onEditWidget: (w: LibWidget) => void }) {
+function WidgetLibraryView({ onCreateWidget, onEditWidget, page, onPageChange, onTotalChange }: {
+  onCreateWidget: () => void; onEditWidget: (w: LibWidget) => void
+  page: number; onPageChange: (p: number) => void; onTotalChange: (n: number) => void
+}) {
   const [search,    setSearch]    = useState("")
   const [cat,       setCat]       = useState("All")
   const [profile,   setProfile]   = useState<LibProfile>("All")
@@ -781,7 +801,6 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget }: { onCreateWidget: (
   const [freshness, setFreshness] = useState("All")
   const [sortBy,    setSortBy]    = useState("name")
   const [sortDir,   setSortDir]   = useState<"asc" | "desc">("asc")
-  const [shown,     setShown]     = useState(LIB_PAGE_SIZE)
   const [menuId,           setMenuId]           = useState<string | null>(null)
   const [detailW,          setDetailW]          = useState<LibWidget | null>(null)
   const [deleteW,          setDeleteW]          = useState<LibWidget | null>(null)
@@ -805,8 +824,13 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget }: { onCreateWidget: (
     return sortDir === "asc" ? d : -d
   })
 
-  const page    = sorted.slice(0, shown)
-  const hasMore = shown < sorted.length
+  // Report total to parent
+  useEffect(() => { onTotalChange(sorted.length) }, [sorted.length])
+
+  // Reset page when filters change
+  useEffect(() => { onPageChange(1) }, [search, cat, profile, skeleton, freshness, sortBy, sortDir])
+
+  const pageWidgets = sorted.slice((page - 1) * WIDG_PAGE_SIZE, page * WIDG_PAGE_SIZE)
 
   function handleDelete(id: string) {
     setWidgets(prev => prev.filter(w => w.id !== id))
@@ -818,11 +842,11 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget }: { onCreateWidget: (
       <LibStudioWelcome count={widgets.length} onCta={onCreateWidget} />
 
       <LibFilterToolbar
-        search={search}     onSearch={v => { setSearch(v); setShown(LIB_PAGE_SIZE) }}
-        cat={cat}           onCat={v => { setCat(v); setShown(LIB_PAGE_SIZE) }}
-        profile={profile}   onProfile={v => { setProfile(v as LibProfile); setShown(LIB_PAGE_SIZE) }}
-        skeleton={skeleton} onSkeleton={v => { setSkeleton(v); setShown(LIB_PAGE_SIZE) }}
-        freshness={freshness} onFreshness={v => { setFreshness(v); setShown(LIB_PAGE_SIZE) }}
+        search={search}     onSearch={v => setSearch(v)}
+        cat={cat}           onCat={v => setCat(v)}
+        profile={profile}   onProfile={v => setProfile(v as LibProfile)}
+        skeleton={skeleton} onSkeleton={v => setSkeleton(v)}
+        freshness={freshness} onFreshness={v => setFreshness(v)}
         sortBy={sortBy}     onSortBy={setSortBy}
         sortDir={sortDir}   onToggleDir={() => setSortDir(d => d === "asc" ? "desc" : "asc")}
       />
@@ -832,7 +856,7 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget }: { onCreateWidget: (
       ) : (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(200px,100%), 1fr))", gap: 12 }}>
-            {page.map(w => {
+            {pageWidgets.map(w => {
               const seed = parseInt(w.id.replace(/\D/g,"")) || 0
               return (
               <div key={w.id} style={{ position: "relative" }}>
@@ -890,14 +914,6 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget }: { onCreateWidget: (
 
           </div>
 
-          {hasMore && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 20 }}>
-              <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Showing {page.length} of {sorted.length}</span>
-              <Button variant="secondary" size="sm" onClick={() => setShown(n => n + LIB_PAGE_SIZE)}>
-                Load {Math.min(sorted.length - shown, LIB_PAGE_SIZE)} more
-              </Button>
-            </div>
-          )}
         </>
       )}
 
@@ -1832,6 +1848,11 @@ export default function PMThomasComposableDashboardsScreen() {
   const [overlayView, setOverlay]     = useState<OverlayView>(null)
   const [canvasDash, setCanvasDash]   = useState<DashRecord | null>(null)
 
+  const [dashPage, setDashPage]   = useState(1)
+  const [dashTotal, setDashTotal] = useState(DASHBOARDS.length)
+  const [widgPage, setWidgPage]   = useState(1)
+  const [widgTotal, setWidgTotal] = useState(LIB_WIDGETS.length)
+
   // Builder state lifted so header buttons can read/drive it
   const [builderTab, setBuilderTab]       = useState<TabId>("data")
   const [builderDataDone, setBDDone]      = useState(false)
@@ -1848,7 +1869,12 @@ export default function PMThomasComposableDashboardsScreen() {
     setOverlay("builder")
   }
 
-  function switchMain(v: MainView) { setMainView(v); setOverlay(null) }
+  function switchMain(v: MainView) {
+    setMainView(v)
+    setOverlay(null)
+    setDashPage(1)
+    setWidgPage(1)
+  }
 
   const sidebarActive = mainView === "dashboards" ? "dashboards" : "widgets"
 
@@ -1966,6 +1992,13 @@ export default function PMThomasComposableDashboardsScreen() {
           />
         </div>
       )}
+      pagination={
+        !overlayView && mainView === "dashboards" && dashTotal > DASH_PAGE_SIZE
+          ? <Pagination currentPage={dashPage} totalItems={dashTotal} itemsPerPage={DASH_PAGE_SIZE} onPageChange={setDashPage} />
+          : !overlayView && mainView === "widgets" && widgTotal > WIDG_PAGE_SIZE
+          ? <Pagination currentPage={widgPage} totalItems={widgTotal} itemsPerPage={WIDG_PAGE_SIZE} onPageChange={setWidgPage} />
+          : undefined
+      }
     >
       {overlayView === "new-dashboard" && (
         <NewDashboardOverlay onClose={() => setOverlay(null)} onCreated={d => { setOverlay(null); setCanvasDash(d) }} />
@@ -1982,7 +2015,7 @@ export default function PMThomasComposableDashboardsScreen() {
         />
       )}
       {!overlayView && mainView === "dashboards" && (
-        <DashboardsView onOpenCanvas={d => setCanvasDash(d)} />
+        <DashboardsView onOpenCanvas={d => setCanvasDash(d)} page={dashPage} onPageChange={setDashPage} onTotalChange={setDashTotal} />
       )}
       {overlayView === "marketplace" && (
         <div>
@@ -1998,7 +2031,7 @@ export default function PMThomasComposableDashboardsScreen() {
         </div>
       )}
       {!overlayView && mainView === "widgets" && (
-        <WidgetLibraryView onCreateWidget={() => openBuilder()} onEditWidget={w => openBuilder(w)} />
+        <WidgetLibraryView onCreateWidget={() => openBuilder()} onEditWidget={w => openBuilder(w)} page={widgPage} onPageChange={setWidgPage} onTotalChange={setWidgTotal} />
       )}
     </ScreenLayout>
   )
