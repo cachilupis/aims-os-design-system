@@ -47,6 +47,17 @@ Read the description and silently resolve:
 | "form to create/edit X", "settings", "configuración" | Form/wizard — `patterns-forms` page: 16px field gap, 24px section gap, validate on blur |
 | "historial", "audit log", "activity", "logs" | `Table` + `Filters` (Search · Status) + `Pagination` — Logs Table pattern |
 
+**The complete inventory lives in `ds-index.json` — read it, do not rely on the tables below alone.**
+
+Regenerate it first (`npm run generate:ds-index`), then read it. It lists every component in `src/components/` with the description from its catalog spec, its import path, and how many screens use it today. The tables in this file are curated shortcuts for the common cases; the index is the full set.
+
+Search the index before writing a single component of your own. The tables below have covered roughly a quarter of the DS, and everything outside that quarter got improvised — `Stepper`, `Breadcrumb` and `SwitchTab` were each rebuilt by hand in prototypes while the real component sat unused. If a description in the index matches what you need, import it.
+
+Two fields worth reading carefully:
+
+- `usedInScreens: 0` does **not** mean "not needed". `Avatar`, `ProgressBar` and `Badge` are all at zero and all three are hand-rolled across half a dozen screens. Zero usage plus a matching description means invisible, not useless — that is exactly the component you should be importing.
+- `description: null` means nobody has written what the component is for. Do not guess from its name. Open the source, and say so in your final report so it gets a description.
+
 **Intent → component (resolved silently, never asked):**
 
 | PM says | Resolved to |
