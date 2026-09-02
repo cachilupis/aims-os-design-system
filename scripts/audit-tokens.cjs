@@ -389,6 +389,7 @@ screenFiles.forEach((file) => {
         type: "shadow-component",
         file: rel(file),
         line: idx + 1,
+        name,
         message: `local "${name}" shadows a real src/components/ui or layouts export of the same name. This check matches NAMES, not behaviour — pick the fix that applies: if it does the same job, delete it and import the DS one; if it is a genuinely different component that happens to share the name, rename the local one to something specific to what it does. Either way the collision has to go.`,
       })
     }
@@ -413,6 +414,8 @@ screenFiles.forEach((file) => {
       type: "main-overuse",
       file: rel(file),
       line: hits[hits.length - 1],
+      count: hits.length,
+      lines: hits,
       message: `variant="main" used ${hits.length} times in this file (lines ${hits.join(", ")}) — max 1 per screen, header CTA only`,
     })
   }
@@ -456,6 +459,7 @@ screenFiles.forEach((file) => {
         type: "possible-card-reimpl",
         file: rel(file),
         line: def.line + 1,
+        name: def.name,
         message: `local "${def.name}" takes children and renders a bordered/background div with card-like tokens — check whether this should be CardContainer instead`,
       })
     }
@@ -468,6 +472,16 @@ function printSection(title, items, formatter) {
   console.log(`\n${title} (${items.length})`)
   console.log("-".repeat(title.length + 6))
   items.forEach((i) => console.log("  " + formatter(i)))
+}
+
+// `--json` dumps every finding as structured data and prints nothing else, so
+// generate-ds-health.cjs can build the DS Health page from the same run that
+// CI and the pre-push hook use. One source of findings, three consumers — the
+// page can never disagree with what actually blocks a push. Handled before the
+// human report so stdout stays parseable.
+if (process.argv.includes("--json")) {
+  process.stdout.write(JSON.stringify({ errors, warnings }, null, 2) + "\n")
+  process.exit(0)
 }
 
 console.log("AIMS OS — token audit\n" + "=".repeat(22))
