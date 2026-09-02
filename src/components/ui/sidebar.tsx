@@ -26,6 +26,16 @@ export type SidebarProps = {
   onItemClick?: (id: string) => void
   defaultCollapsed?: boolean
   onCollapseChange?: (collapsed: boolean) => void
+  /**
+   * Optional pinned footer slot — rendered at the bottom of the sidebar
+   * container, below the nav items. Common uses: user identity row
+   * (avatar + name + role), workspace switcher, help/status links.
+   *
+   * Accepts either a static ReactNode or a render function that receives
+   * the current `collapsed` state so callers can render icon-only in the
+   * collapsed width (56px) and full content when expanded (250px).
+   */
+  footer?: React.ReactNode | ((collapsed: boolean) => React.ReactNode)
   className?: string
 }
 
@@ -194,6 +204,7 @@ export function Sidebar({
   onItemClick,
   defaultCollapsed = false,
   onCollapseChange,
+  footer,
   className = "",
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
@@ -246,6 +257,15 @@ export function Sidebar({
             onItemClick={() => onItemClick?.(item.id)}
           />
         ))}
+
+        {/* Pinned footer slot — pushed to the bottom of the sidebar column.
+            mt-auto claims the remaining vertical space so nav items stay
+            grouped at the top and the footer hugs the bottom edge. */}
+        {footer && (
+          <div className="mt-auto shrink-0 w-full">
+            {typeof footer === "function" ? footer(collapsed) : footer}
+          </div>
+        )}
       </div>
     </div>
   )
