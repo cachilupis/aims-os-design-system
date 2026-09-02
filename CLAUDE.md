@@ -60,6 +60,7 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER** hardcode `#hex` / `rgba()` in `.tsx` — always `var(--token-name)`.
 - **NEVER** build a custom version of a DS component that exists in `src/components/ui/` — import it.
 - **NEVER** add `borderBottom` on a `<Tabs>` wrapper — the component manages its own active indicator.
+- **NEVER add anything visual to a `CardContainer` that is not part of the component** — no accent stripes, no coloured top borders, no dividers bolted on. If the card needs to signal something, that is a `Tag`, a `Chip` or a colour variant, not a decoration drawn on top. Use `variant="default"` unless the design genuinely calls for a colour, `size="sm"` for small items (entity rows, selectable cards, items with a CTA inside a SlideOut or Modal), and `variant="dashed"` for empty regions.
 
 ### Navigation & headers
 - **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
@@ -176,7 +177,7 @@ Stack in this exact order:
 2. `Sidebar` — left nav (use `AppBackground` as page wrapper)
 3. Content area:
    - `Tabs` — "Where am I?" (e.g. All Workers / Teams)
-   - `SwitchTab` — "How am I viewing?" (e.g. List / Grid) — only when needed
+   - `SwitchTab` — secondary navigation, one level below Tabs — only when Tabs alone is not enough
    - `Filters` — "What do I see?" (always present when there's a filterable dataset)
    - `EntityList` inside `CardContainer` — one card per item, 12px gap
    - `Pagination` — only when `total_results > rows_per_page`
@@ -248,7 +249,7 @@ Rules:
 ### Navigation depth (multiple layers)
 Maximum 2 navigation layers:
 - `Tabs` — primary navigation (Where am I?)
-- `SwitchTab` — secondary view toggle (How am I viewing?)
+- `SwitchTab` — secondary navigation, one level below Tabs
 - `Filters` — dataset control (What do I see?)
 
 **24px gap between every navigation layer** — Tabs → SwitchTab → Filters → Chips (nav). Confirmed from Figma DS node 14660-136237.

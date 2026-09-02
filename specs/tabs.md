@@ -2,7 +2,7 @@
 
 **Figma node:** [`856:11281`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=856-11281)
 
-Horizontal tab bar for switching between related views within the same context. Sits directly on any surface — no CardContainer needed. Active state: primary-blue 2px indicator + label. Supports leading icon, disabled state, and two sizes (M/S).
+Primary navigation inside a screen — answers "where am I?". Horizontal bar with a 2px indicator under the active tab only. It manages its own indicator, so never add a borderBottom to the wrapper: that draws a line under ALL tabs, which the DS spec forbids. Sits directly on the surface, no CardContainer needed. Top of the navigation hierarchy — when a second level is needed below it, that is SwitchTab. Size M only on L screens; S everywhere else, to save space and stay consistent.
 
 ## Properties
 
