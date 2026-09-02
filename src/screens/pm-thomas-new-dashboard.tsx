@@ -5,6 +5,7 @@ import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
+import { Stepper, type StepItem } from "@/components/ui/stepper"
 import type { SidebarItem } from "@/components/ui/sidebar"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -100,32 +101,6 @@ function OptionCard({ selected, onClick, iconName, title, desc }: {
   )
 }
 
-// DS-GAP: StepIndicator — linear progress dots with step labels. Closest DS component: none.
-function StepIndicator({ steps, current }: { steps: string[]; current: number }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
-      {steps.map((s, i) => (
-        <div key={s} style={{ display: "flex", alignItems: "center", flex: i < steps.length - 1 ? 1 : 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{
-              width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
-              background: i <= current ? "var(--primary)" : "var(--field-border)",
-              color: i <= current ? "var(--canvas)" : "var(--color-text-subtitle)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700,
-            }}>
-              {i < current ? "✓" : i + 1}
-            </div>
-            <span style={{ fontSize: 12, fontWeight: i === current ? 600 : 400, color: i === current ? "var(--color-text-title)" : "var(--color-text-subtitle)", whiteSpace: "nowrap" as const }}>
-              {s}
-            </span>
-          </div>
-          {i < steps.length - 1 && <div style={{ flex: 1, height: 1, background: "var(--field-border)", margin: "0 12px" }} />}
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // DS-GAP: FieldLabel — section label for form groups. Closest DS component: none.
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)", marginBottom: 8 }}>{children}</div>
@@ -189,6 +164,18 @@ export default function PMThomasNewDashboardScreen() {
 
   const canNext0 = dashName.trim().length > 0 && placementValid
   const canCreate = startMode === "blank" || !!templateId
+
+  // Step 2 stays `locked` until placement is valid — the screen already knew
+  // this (canNext0 gates the Next button) but the hand-rolled indicator had no
+  // way to show it. The DS Stepper does, so the lock icon now says out loud
+  // what the disabled button only implied.
+  const wizardSteps: StepItem[] = STEPS.map((label, i) => ({
+    label,
+    state: i === step ? "active"
+         : i <  step ? "completed"
+         : canNext0  ? "default"
+         : "locked",
+  }))
 
   const blockingHint = step === 0 && !canNext0
     ? dashName.trim() === "" ? "Name your dashboard to continue" : "Complete placement settings to continue"
@@ -262,7 +249,7 @@ export default function PMThomasNewDashboardScreen() {
       {/* ── Wizard ── */}
       {!created && (
         <div style={{ maxWidth: 672, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
-          <StepIndicator steps={STEPS} current={step} />
+          <Stepper steps={wizardSteps} onStepClick={(i) => { if (i < step) setStep(i) }} />
 
           {/* ── Step 0: Placement ── */}
           {step === 0 && (
