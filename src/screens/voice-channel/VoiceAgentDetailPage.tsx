@@ -1,11 +1,10 @@
 import { useState } from "react"
 import {
   ArrowLeft,
-  Plus, Settings, MoreHorizontal,
+  Plus, MoreHorizontal,
 } from "lucide-react"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { EmptyState } from "@/components/ui/empty-state"
 import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
 import type { PhoneNumberRecord } from "./data"
 import type {
@@ -28,10 +27,10 @@ import { useToast } from "./toast"
 // VoiceAgentDetailPage — 1:1 port of the Agent detail page in
 // voice-channel-ux.html.
 //
-// Six sub-tabs (Create · Configuration · Knowledge · Instructions ·
-// Tools · Channels). Only Channels is populated in this iteration —
-// the other five render an EmptyState with "Coming soon" copy, in
-// preparation for follow-up ports.
+// All six sub-tabs are populated: Create, Configuration, Knowledge,
+// Instructions, Tools, and Channels — each delegated to its own panel
+// component. Every panel receives `agent` + `onChange` so edits flow
+// back through the top-level VoiceAgents reducer.
 //
 // The Channels body is a two-column layout: left has the list of
 // Communication Channels (Voice / Email / SMS / Web Chat), each with
@@ -178,10 +177,8 @@ export function VoiceAgentDetailPage({
           <CreatePanel        agent={agent} onChange={(patch) => { onChange(patch); toast.success("Agent identity saved") }}/>
         ) : subTab === "configuration" ? (
           <ConfigurationPanel agent={agent} onChange={(patch) => { onChange(patch); toast.success("Runtime configuration saved") }}/>
-        ) : subTab === "instructions" ? (
-          <InstructionsPanel  agent={agent} onChange={(patch) => { onChange(patch); toast.success("Instructions saved") }}/>
         ) : (
-          <PlaceholderPanel subTab={subTab} agentName={agent.name}/>
+          <InstructionsPanel  agent={agent} onChange={(patch) => { onChange(patch); toast.success("Instructions saved") }}/>
         )}
       </div>
 
@@ -338,27 +335,3 @@ function ChannelsPanel({
   )
 }
 
-// ─── Placeholder for the other 5 sub-tabs ───────────────────────────
-
-function PlaceholderPanel({ subTab, agentName }: { subTab: AgentSubTab; agentName: string }) {
-  const map: Record<AgentSubTab, { title: string; desc: string }> = {
-    create:        { title: "Create",        desc: "Basic identity, purpose and lifecycle of the agent." },
-    configuration: { title: "Configuration", desc: "Model, temperature, guardrails and other runtime settings." },
-    knowledge:     { title: "Knowledge",     desc: "Knowledge Packs, Shared Drives and Own Documents the agent can read." },
-    instructions:  { title: "Instructions",  desc: "System prompt, persona and behavioural rules." },
-    tools:         { title: "Tools",         desc: "Callable tools this agent can use — Voice, Send Email, HiL Alert, Web Search." },
-    channels:      { title: "Channels",      desc: "Communication channels this agent uses." },
-  }
-  const info = map[subTab]
-  return (
-    <div className="flex items-center justify-center h-full" style={{ padding: 24 }}>
-      <div style={{ maxWidth: 480 }}>
-        <EmptyState
-          icon={Settings}
-          title={`${info.title} — coming soon`}
-          description={`${info.desc} This tab will be ported for ${agentName} in the next iteration.`}
-        />
-      </div>
-    </div>
-  )
-}
