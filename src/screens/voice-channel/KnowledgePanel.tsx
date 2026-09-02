@@ -9,6 +9,7 @@ import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/ui/empty-state"
 import { AgentTestPanel } from "./AgentTestPanel"
+import { KpMarketplaceModal } from "./KpMarketplaceModal"
 import {
   KNOWLEDGE_PACKS,
   SHARED_DRIVES,
@@ -45,7 +46,6 @@ type DaTab = "packs" | "shared" | "uploaded"
 interface KnowledgePanelProps {
   agentName: string
   onOpenGovernance: () => void   // "Governance Studio" pill
-  onBrowseLibrary:  () => void   // Add → open KP marketplace (stub for now)
   onEditPack:       (packId: string) => void
   onPreviewPack:    (packId: string) => void
   onUploadFile:     () => void
@@ -55,7 +55,6 @@ interface KnowledgePanelProps {
 export function KnowledgePanel({
   agentName,
   onOpenGovernance,
-  onBrowseLibrary,
   onEditPack,
   onPreviewPack,
   onUploadFile,
@@ -67,6 +66,10 @@ export function KnowledgePanel({
   const [attachedPackIds,  setAttachedPackIds]  = useState<string[]>(DEFAULT_ATTACHED_PACK_IDS)
   const [attachedDriveIds, setAttachedDriveIds] = useState<string[]>(DEFAULT_ATTACHED_DRIVE_IDS)
   const [files,            setFiles]            = useState<UploadedFile[]>(UPLOADED_FILES)
+
+  // KP Library marketplace is mounted here (not lifted to the parent)
+  // because it needs to read + write attachedPackIds directly.
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false)
 
   // Per-card expansion + planes state, keyed by pack id.
   const [packState, setPackState] = useState<Record<string, { expanded: boolean; planes: Set<PackPlaneId> }>>(() => {
@@ -119,8 +122,9 @@ export function KnowledgePanel({
                     : "Upload file"
 
   const onAdd = () => {
-    if (tab === "uploaded") onUploadFile()
-    else onBrowseLibrary()
+    if (tab === "uploaded")    onUploadFile()
+    else if (tab === "packs")  setMarketplaceOpen(true)
+    else                       onUploadFile()  // shared drives — reuse stub until that marketplace ships
   }
 
   return (
@@ -180,7 +184,7 @@ export function KnowledgePanel({
                   ? "Browse the workspace library to give this agent curated knowledge."
                   : "Try a different keyword or clear the search."}
                 ctaLabel={attachedPackIds.length === 0 ? "Browse library" : "Clear search"}
-                onCta={attachedPackIds.length === 0 ? onBrowseLibrary : () => setSearch("")}
+                onCta={attachedPackIds.length === 0 ? () => setMarketplaceOpen(true) : () => setSearch("")}
               />
             </CardContainer>
           ) : (
@@ -211,7 +215,7 @@ export function KnowledgePanel({
                   ? "Connect shared drives so this agent can search files in your workspace."
                   : "Try a different keyword or clear the search."}
                 ctaLabel={attachedDriveIds.length === 0 ? "Browse drives" : "Clear search"}
-                onCta={attachedDriveIds.length === 0 ? onBrowseLibrary : () => setSearch("")}
+                onCta={attachedDriveIds.length === 0 ? () => setMarketplaceOpen(true) : () => setSearch("")}
               />
             </CardContainer>
           ) : (
@@ -255,6 +259,14 @@ export function KnowledgePanel({
       <AgentTestPanel
         description={`Use this simulated chat to see how ${agentName} uses these knowledge sources to answer.`}
         placeholder="Ask the agent something…"
+      />
+
+      {/* ── Knowledge Pack Library marketplace ─────────────────── */}
+      <KpMarketplaceModal
+        open={marketplaceOpen}
+        onClose={() => setMarketplaceOpen(false)}
+        attachedIds={attachedPackIds}
+        onCommit={setAttachedPackIds}
       />
     </div>
   )

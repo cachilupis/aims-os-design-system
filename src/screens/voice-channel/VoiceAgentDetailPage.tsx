@@ -161,7 +161,6 @@ export function VoiceAgentDetailPage({
           <KnowledgePanel
             agentName={agent.name}
             onOpenGovernance={() => toast.info("Open Governance Studio → Knowledge Library")}
-            onBrowseLibrary={()  => toast.info("Open Knowledge Pack Library (marketplace) — coming soon")}
             onEditPack={(id)     => toast.info(`Open pack editor for ${id}`)}
             onPreviewPack={(id)  => toast.info(`Preview pack ${id}`)}
             onUploadFile={()     => toast.info("Open file uploader")}
