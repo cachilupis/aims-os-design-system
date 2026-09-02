@@ -1147,10 +1147,10 @@ function WBSectionLabel({ children }: { children: React.ReactNode }) {
 
 function WBBuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: TabId; setTab: (t: TabId) => void; dataComplete: boolean; widgetComplete: boolean }) {
   const CheckIcon = LucideIcons.Check as React.FC<{ size?: number }>
-  const tabs: { id: TabId; label: string; n: number; done: boolean; enabled: boolean }[] = [
-    { id: "data",       label: "Data",       n: 1, done: dataComplete,   enabled: true },
-    { id: "widget",     label: "Widget",     n: 2, done: widgetComplete, enabled: dataComplete },
-    { id: "appearance", label: "Appearance", n: 3, done: false,          enabled: widgetComplete },
+  const tabs: { id: TabId; label: string; done: boolean; enabled: boolean }[] = [
+    { id: "data",       label: "Data",       done: dataComplete,   enabled: true },
+    { id: "widget",     label: "Widget",     done: widgetComplete, enabled: dataComplete },
+    { id: "appearance", label: "Appearance", done: false,          enabled: widgetComplete },
   ]
   return (
     <div style={{ display: "flex", gap: 4, padding: 4, borderRadius: 12, background: "var(--field-border)", opacity: 0.9 }}>
@@ -1161,10 +1161,11 @@ function WBBuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: T
           background: tab === t.id ? "var(--surface)" : "transparent",
           opacity: t.enabled ? 1 : 0.35, transition: "all 0.15s",
         }}>
-          <div style={{ width: 18, height: 18, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700,
-            background: t.done ? "var(--success)" : tab === t.id ? "var(--primary)" : "var(--field-supporting)", color: "var(--canvas)" }}>
-            {t.done ? <CheckIcon size={10} /> : t.n}
-          </div>
+          {t.done && (
+            <div style={{ width: 16, height: 16, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--success)" }}>
+              <CheckIcon size={10} />
+            </div>
+          )}
           <span style={{ fontSize: 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "var(--foreground)" : "var(--field-supporting)" }}>{t.label}</span>
         </button>
       ))}
