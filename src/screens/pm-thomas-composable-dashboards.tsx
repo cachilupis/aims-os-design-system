@@ -9,6 +9,7 @@ import { Tag } from "@/components/ui/tag"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Pagination } from "@/components/ui/pagination"
+import { EmptyState } from "@/components/ui/empty-state"
 import type { SidebarItem } from "@/components/ui/sidebar"
 
 // ── Routing state ─────────────────────────────────────────────────────────────
@@ -23,9 +24,19 @@ type DashStatus  = "published" | "draft" | "pending"
 type EntityKind  = "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
 type Freshness   = "live" | "fresh" | "stale"
 type BizCat      = "all" | "aims-os" | "sales" | "finance" | "customer-service" | "hr" | "marketing"
-type Skeleton    = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel" | "Stat Row"
+type Skeleton    = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel" | "Stat Row" | "Alerts" | "Cost KPI"
 type TabId       = "data" | "widget" | "appearance"
 type BuilderStep = "Placement" | "Start point"
+// Widget library types
+type LibHealth   = "active" | "review"
+type LibCategory = "AIMS OS" | "Operational" | "Engagement" | "Intelligence"
+type LibProfile  = "All" | "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
+type LibWidget   = {
+  id: string; name: string; source: string; skeleton: Skeleton
+  category: LibCategory; health: LibHealth; freshness: Freshness
+  governed: boolean; system: boolean; usedIn: number
+  placement: LibProfile; description: string
+}
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -50,22 +61,48 @@ const DASHBOARDS = [
 // ── Widget library data ───────────────────────────────────────────────────────
 
 const SKELETON_ICON: Record<string, keyof typeof LucideIcons> = {
-  KPI: "Hash", Chart: "BarChart2", Feed: "List", Gauge: "Gauge",
-  Donut: "PieChart", Board: "LayoutGrid", Funnel: "TrendingDown", "Stat Row": "Rows3",
+  KPI:        "Hash",
+  Chart:      "BarChart2",
+  Feed:       "List",
+  Gauge:      "Gauge",
+  Donut:      "PieChart",
+  Board:      "LayoutGrid",
+  Funnel:     "TrendingDown",
+  "Stat Row": "Rows3",
+  Alerts:     "Bell",
+  "Cost KPI": "DollarSign",
 }
 
-const LIB_WIDGETS = [
-  { id: "w1",  name: "Total MRR",          source: "HubSpot",  skeleton: "KPI"      as Skeleton, freshness: "live"  as Freshness, governed: true,  usedIn: 6,  description: "Month-to-date closed revenue across all HubSpot deals." },
-  { id: "w2",  name: "Pipeline by Stage",  source: "HubSpot",  skeleton: "Chart"    as Skeleton, freshness: "live"  as Freshness, governed: true,  usedIn: 4,  description: "Deal count and value grouped by pipeline stage." },
-  { id: "w3",  name: "Ticket Volume",      source: "Zendesk",  skeleton: "Chart"    as Skeleton, freshness: "fresh" as Freshness, governed: true,  usedIn: 3,  description: "Support tickets opened per day with SLA status breakdown." },
-  { id: "w4",  name: "CSAT Score",         source: "Zendesk",  skeleton: "Gauge"    as Skeleton, freshness: "fresh" as Freshness, governed: true,  usedIn: 5,  description: "Rolling 30-day average satisfaction score from closed tickets." },
-  { id: "w5",  name: "Headcount by Dept",  source: "BambooHR", skeleton: "Donut"    as Skeleton, freshness: "fresh" as Freshness, governed: true,  usedIn: 2,  description: "Active employee count segmented by department." },
-  { id: "w6",  name: "Worker Success Rate",source: "AIMS OS",  skeleton: "KPI"      as Skeleton, freshness: "live"  as Freshness, governed: true,  usedIn: 7,  description: "Percentage of AI Worker runs completed without errors." },
-  { id: "w7",  name: "Recent Activity Feed",source:"HubSpot",  skeleton: "Feed"     as Skeleton, freshness: "live"  as Freshness, governed: false, usedIn: 8,  description: "Live stream of contact and deal activity from HubSpot CRM." },
-  { id: "w8",  name: "Deal Funnel",        source: "HubSpot",  skeleton: "Funnel"   as Skeleton, freshness: "fresh" as Freshness, governed: true,  usedIn: 2,  description: "Conversion rates at each stage of the primary sales funnel." },
-  { id: "w9",  name: "Open Deals Board",   source: "HubSpot",  skeleton: "Board"    as Skeleton, freshness: "live"  as Freshness, governed: true,  usedIn: 3,  description: "Kanban-style view of all open deals by owner and stage." },
-  { id: "w10", name: "HR Metrics Row",     source: "BambooHR", skeleton: "Stat Row" as Skeleton, freshness: "fresh" as Freshness, governed: true,  usedIn: 1,  description: "Key workforce KPIs: headcount, tenure, time-to-hire, turnover." },
+const LIB_WIDGETS: LibWidget[] = [
+  { id:"w-001", name:"Human-in-the-Loop Queue",      source:"AIMS OS — Agentic Studio",   skeleton:"Feed",     category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:true,  usedIn:5,  placement:"Standalone", description:"Live queue of all conversations waiting for a human agent to pick up or review." },
+  { id:"w-002", name:"Workflow Runs",                source:"AIMS OS — Agentic Studio",   skeleton:"Chart",    category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:4,  placement:"Standalone", description:"Daily run volume trend for all active workflows, broken down by status." },
+  { id:"w-003", name:"Credits Consumed",             source:"AIMS OS — Credits",          skeleton:"KPI",      category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:5,  placement:"Standalone", description:"Total AI credits consumed this billing cycle vs. your plan limit." },
+  { id:"w-004", name:"SLA Compliance Rate",          source:"AIMS OS — HTL",              skeleton:"Gauge",    category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:3,  placement:"Standalone", description:"Percentage of human-touch interactions resolved within the defined SLA window." },
+  { id:"w-005", name:"Council Outcomes",             source:"AIMS OS — Governance",       skeleton:"Donut",    category:"AIMS OS",        health:"active", freshness:"fresh", governed:true,  system:false, usedIn:2,  placement:"Standalone", description:"Breakdown of governance council decisions: Approved, Escalated, Rejected." },
+  { id:"w-006", name:"Agent Status Board",           source:"AIMS OS — Agents",           skeleton:"Board",    category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:1,  placement:"Standalone", description:"Real-time status grid for all deployed agents: Running, Idle, Error, Paused." },
+  { id:"w-007", name:"Conversion Funnel",            source:"AIMS OS — Data Studio",      skeleton:"Funnel",   category:"AIMS OS",        health:"active", freshness:"fresh", governed:true,  system:false, usedIn:1,  placement:"Company",    description:"Stage-by-stage funnel from lead to closed-won for the selected entity scope." },
+  { id:"w-008", name:"Platform Snapshot",            source:"AIMS OS — Platform",         skeleton:"Stat Row", category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:2,  placement:"Standalone", description:"At-a-glance row of key platform metrics: DAU, agents active, workflows running." },
+  { id:"w-009", name:"Governance Alerts",            source:"AIMS OS — Governance",       skeleton:"Alerts",   category:"AIMS OS",        health:"review", freshness:"stale", governed:true,  system:false, usedIn:2,  placement:"Standalone", description:"Active policy violations and blocked actions requiring admin review." },
+  { id:"w-010", name:"Account Revenue Health",       source:"Salesforce",                 skeleton:"KPI",      category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:8,  placement:"Company",    description:"ARR, churn risk score, and renewal date for the selected account." },
+  { id:"w-011", name:"Open Tickets",                 source:"Zendesk",                    skeleton:"KPI",      category:"Operational",    health:"active", freshness:"live",  governed:true,  system:false, usedIn:6,  placement:"Company",    description:"Count of open support tickets by priority for this account." },
+  { id:"w-012", name:"Pipeline Stage Funnel",        source:"Salesforce",                 skeleton:"Funnel",   category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:5,  placement:"Deal",       description:"Opportunity stage progression with time-in-stage and velocity metrics." },
+  { id:"w-013", name:"Onboarding Checklist",         source:"AIMS OS — Platform",         skeleton:"Feed",     category:"Operational",    health:"active", freshness:"live",  governed:true,  system:false, usedIn:4,  placement:"Employee",   description:"Checklist of onboarding tasks with completion status per new hire." },
+  { id:"w-014", name:"Email Engagement Rate",        source:"HubSpot",                    skeleton:"Chart",    category:"Engagement",     health:"active", freshness:"fresh", governed:false, system:false, usedIn:7,  placement:"Contact",    description:"Open rate, click rate, and reply rate for outbound sequences targeting this contact." },
+  { id:"w-015", name:"Deal Velocity",                source:"Salesforce",                 skeleton:"Gauge",    category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:5,  placement:"Deal",       description:"Speed from stage entry to close compared to team median, per deal." },
+  { id:"w-016", name:"NPS Trend",                    source:"Qualtrics",                  skeleton:"Chart",    category:"Engagement",     health:"active", freshness:"stale", governed:false, system:false, usedIn:3,  placement:"Company",    description:"Net Promoter Score trend over the past 12 months for this account." },
+  { id:"w-017", name:"Contact Interaction Timeline", source:"HubSpot",                    skeleton:"Feed",     category:"Engagement",     health:"active", freshness:"live",  governed:false, system:false, usedIn:4,  placement:"Contact",    description:"Chronological feed of emails, calls, meetings, and notes for this contact." },
+  { id:"w-018", name:"Risk Score Breakdown",         source:"AIMS OS — Intelligence",     skeleton:"Gauge",    category:"Intelligence",   health:"active", freshness:"fresh", governed:true,  system:false, usedIn:4,  placement:"Company",    description:"Composite churn/risk score with contributing signals and recommended actions." },
+  { id:"w-019", name:"Next Best Action",             source:"AIMS OS — Intelligence",     skeleton:"KPI",      category:"Intelligence",   health:"active", freshness:"live",  governed:true,  system:false, usedIn:6,  placement:"Company",    description:"AI-recommended next action for this account with confidence score and reasoning." },
+  { id:"w-020", name:"Revenue Attribution",          source:"Salesforce",                 skeleton:"Chart",    category:"Intelligence",   health:"review", freshness:"stale", governed:false, system:false, usedIn:2,  placement:"Deal",       description:"First-touch and multi-touch attribution by channel for this deal." },
+  { id:"w-021", name:"Certification Tracker",        source:"Workday",                    skeleton:"Feed",     category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:3,  placement:"Employee",   description:"Required certifications, completion status, and expiry dates per employee." },
+  { id:"w-022", name:"Credit Spend Trend",           source:"AIMS OS — Credits",          skeleton:"Cost KPI", category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:1,  placement:"Standalone", description:"Daily and monthly AI credit spend with projected end-of-cycle balance." },
 ]
+
+const LIB_CATEGORIES: LibCategory[] = ["AIMS OS", "Operational", "Engagement", "Intelligence"]
+const LIB_SKELETONS: Skeleton[]     = ["KPI", "Chart", "Feed", "Gauge", "Donut", "Board", "Funnel", "Stat Row", "Alerts", "Cost KPI"]
+const LIB_FRESHNESS: Freshness[]    = ["live", "fresh", "stale"]
+const LIB_PROFILES: LibProfile[]    = ["All", "Company", "Contact", "Employee", "Deal", "Standalone"]
+const LIB_PAGE_SIZE                 = 18
 
 // ── Marketplace data ──────────────────────────────────────────────────────────
 
@@ -215,22 +252,169 @@ function StatusBadge({ status }: { status: DashStatus }) {
   return <Tag variant={map[status].variant} size="sm">{map[status].label}</Tag>
 }
 
-function FreshnessBadge({ f }: { f: Freshness }) {
-  const map: Record<Freshness, { label: string; variant: "success" | "informative" | "alert" }> = {
+function FreshnessBadge({ status }: { status: Freshness }) {
+  const map: Record<Freshness, { label: string; variant: "success" | "informative" | "neutral" }> = {
     live:   { label: "Live",   variant: "success" },
     fresh:  { label: "Fresh",  variant: "informative" },
-    stale:  { label: "Stale", variant: "alert" },
+    stale:  { label: "Stale", variant: "neutral" },
   }
-  return <Tag variant={map[f].variant} size="sm">{map[f].label}</Tag>
+  return <Tag variant={map[status].variant} size="sm">{map[status].label}</Tag>
 }
 
 function WidgetGlyph({ skeleton }: { skeleton: Skeleton }) {
   const iconKey = SKELETON_ICON[skeleton] ?? "BarChart2"
   const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
   return (
-    <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--surface-raised, var(--surface))",
-      border: "1px solid var(--field-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+    <div style={{ width: 36, height: 36, borderRadius: 9, background: "color-mix(in srgb,var(--primary) 12%,transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
       {Icon && <Icon size={16} style={{ color: "var(--primary)" }} />}
+    </div>
+  )
+}
+
+// DS-GAP: HealthBadge — active/review indicator. Closest DS: Tag.
+function HealthBadge({ health }: { health: LibHealth }) {
+  if (health === "active") return null
+  return <Tag variant="alert" size="sm">Needs remap</Tag>
+}
+
+// DS-GAP: MiniPreview — sunken widget preview surface. Closest DS: CardContainer (variant=sunken).
+function MiniPreview({ skeleton }: { skeleton: Skeleton }) {
+  const iconKey = SKELETON_ICON[skeleton] ?? "Square"
+  const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
+  return (
+    <div style={{ height: 56, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+      <Icon size={13} style={{ color: "var(--field-supporting)" }} />
+      <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{skeleton} preview</span>
+    </div>
+  )
+}
+
+// DS-GAP: LibStudioWelcome — contextual library banner. Closest DS: CardContainer.
+function LibStudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {
+  const [dismissed, setDismissed] = useState(false)
+  if (dismissed) return null
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <CardContainer variant="default">
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: "color-mix(in srgb,var(--primary) 12%,transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <LucideIcons.PieChart size={16} style={{ color: "var(--primary)" }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
+              {count} widgets in your library
+            </p>
+            <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: "2px 0 0" }}>
+              Widgets connect to your data sources and live inside dashboards on entity profiles or standalone reports.
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={onCta}>Create widget</Button>
+          <button onClick={() => setDismissed(true)} aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: 4, flexShrink: 0, display: "flex" }}>
+            <LucideIcons.X size={14} />
+          </button>
+        </div>
+      </CardContainer>
+    </div>
+  )
+}
+
+// DS-GAP: LibOverflowMenu — per-card ⋯ actions. Closest DS: Menu + MenuItem.
+type LibOItem = { label: string; icon: keyof typeof LucideIcons; danger?: boolean; onClick: () => void }
+function LibOverflowMenu({ items, onClose }: { items: LibOItem[]; onClose: () => void }) {
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+      <div style={{ position: "absolute", top: "calc(100% + 2px)", right: 0, zIndex: 100, background: "var(--surface)", border: "1px solid var(--field-border)", borderRadius: 10, boxShadow: "var(--shadow-elevation-3)", minWidth: 160, padding: 4 }}>
+        {items.map(({ label, icon, danger, onClick }) => {
+          const Icon = LucideIcons[icon] as React.FC<{ size?: number; style?: React.CSSProperties }>
+          return (
+            <button key={label} onClick={e => { e.stopPropagation(); onClick(); onClose() }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", background: "none", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12, color: danger ? "var(--error)" : "var(--foreground)", textAlign: "left" }}>
+              <Icon size={13} />{label}
+            </button>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+// DS-GAP: LibFilterToolbar — 4-filter toolbar for widget library. Closest DS: Filters.
+type LibFTProps = {
+  search: string; onSearch: (v: string) => void
+  cat: string; onCat: (v: string) => void
+  profile: string; onProfile: (v: string) => void
+  skeleton: string; onSkeleton: (v: string) => void
+  freshness: string; onFreshness: (v: string) => void
+  sortBy: string; onSortBy: (v: string) => void
+  sortDir: "asc" | "desc"; onToggleDir: () => void
+}
+function LibFilterToolbar({ search, onSearch, cat, onCat, profile, onProfile, skeleton, onSkeleton, freshness, onFreshness, sortBy, onSortBy, sortDir, onToggleDir }: LibFTProps) {
+  const [open, setOpen] = useState<string | null>(null)
+
+  function LPill({ id, label, active, children }: { id: string; label: string; active: boolean; children: React.ReactNode }) {
+    return (
+      <div style={{ position: "relative" }}>
+        <button onClick={() => setOpen(open === id ? null : id)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 8, border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}`, background: active ? "color-mix(in srgb,var(--primary) 12%,transparent)" : "var(--surface)", color: active ? "var(--primary)" : "var(--foreground)", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>
+          {label}<LucideIcons.ChevronDown size={11} />
+        </button>
+        {open === id && (
+          <>
+            <div onClick={() => setOpen(null)} style={{ position: "fixed", inset: 0, zIndex: 198 }} />
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 199, boxShadow: "var(--shadow-elevation-3)", minWidth: 168 }}>
+              <CardContainer size="sm" className="!p-1">
+                {children}
+              </CardContainer>
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  function LOpt({ val, cur, onSet, display }: { val: string; cur: string; onSet: (v: string) => void; display?: string }) {
+    const active = cur === val
+    return (
+      <button onClick={() => { onSet(val); setOpen(null) }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", background: "none", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12, color: active ? "var(--primary)" : "var(--foreground)", fontWeight: active ? 600 : 400, textAlign: "left" }}>
+        {active ? <LucideIcons.Check size={12} style={{ flexShrink: 0 }} /> : <span style={{ width: 12, flexShrink: 0 }} />}
+        {display ?? val}
+      </button>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ position: "relative", flex: "1 1 180px", minWidth: 160, maxWidth: 260 }}>
+        <LucideIcons.Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)", pointerEvents: "none" }} />
+        <Input value={search} onChange={e => onSearch(e.target.value)} placeholder="Search widgets…" style={{ paddingLeft: 30, fontSize: 12 }} />
+      </div>
+      <LPill id="cat" label={cat === "All" ? "Category" : cat} active={cat !== "All"}>
+        <LOpt val="All" cur={cat} onSet={onCat} display="All categories" />
+        {LIB_CATEGORIES.map(c => <LOpt key={c} val={c} cur={cat} onSet={onCat} />)}
+      </LPill>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        {LIB_PROFILES.map(p => (
+          <button key={p} onClick={() => onProfile(profile === p ? "All" : p)} style={{ padding: "5px 10px", borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: "pointer", border: `1px solid ${profile === p ? "var(--primary)" : "var(--field-border)"}`, background: profile === p ? "color-mix(in srgb,var(--primary) 12%,transparent)" : "transparent", color: profile === p ? "var(--primary)" : "var(--field-supporting)" }}>
+            {p}
+          </button>
+        ))}
+      </div>
+      <LPill id="type" label={skeleton === "All" ? "Type" : skeleton} active={skeleton !== "All"}>
+        <LOpt val="All" cur={skeleton} onSet={onSkeleton} display="All types" />
+        {LIB_SKELETONS.map(s => <LOpt key={s} val={s} cur={skeleton} onSet={onSkeleton} />)}
+      </LPill>
+      <LPill id="fresh" label={freshness === "All" ? "Freshness" : freshness.charAt(0).toUpperCase() + freshness.slice(1)} active={freshness !== "All"}>
+        <LOpt val="All" cur={freshness} onSet={onFreshness} display="All freshness" />
+        {LIB_FRESHNESS.map(f => <LOpt key={f} val={f} cur={freshness} onSet={onFreshness} display={f.charAt(0).toUpperCase() + f.slice(1)} />)}
+      </LPill>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
+        <LPill id="sort" label={sortBy === "usage" ? "Most used" : "Name"} active={false}>
+          <LOpt val="name"  cur={sortBy} onSet={onSortBy} display="Name"      />
+          <LOpt val="usage" cur={sortBy} onSet={onSortBy} display="Most used" />
+        </LPill>
+        <button onClick={onToggleDir} style={{ background: "none", border: "1px solid var(--field-border)", borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: "var(--field-supporting)", display: "flex" }}>
+          {sortDir === "desc" ? <LucideIcons.ArrowDown size={13} /> : <LucideIcons.ArrowUp size={13} />}
+        </button>
+      </div>
     </div>
   )
 }
@@ -334,74 +518,178 @@ function DashboardsView() {
 // ── Widget Library view ───────────────────────────────────────────────────────
 
 function WidgetLibraryView({ onCreateWidget }: { onCreateWidget: () => void }) {
-  const [search, setSearch]       = useState("")
-  const [srcFilter, setSrc]       = useState("All")
-  const [freshFilter, setFresh]   = useState("All")
-  const [page, setPage]           = useState(1)
-  const [detail, setDetail]       = useState<typeof LIB_WIDGETS[0] | null>(null)
-  const PAGE_SIZE = 6
+  const [search,    setSearch]    = useState("")
+  const [cat,       setCat]       = useState("All")
+  const [profile,   setProfile]   = useState<LibProfile>("All")
+  const [skeleton,  setSkeleton]  = useState("All")
+  const [freshness, setFreshness] = useState("All")
+  const [sortBy,    setSortBy]    = useState("name")
+  const [sortDir,   setSortDir]   = useState<"asc" | "desc">("asc")
+  const [shown,     setShown]     = useState(LIB_PAGE_SIZE)
+  const [menuId,    setMenuId]    = useState<string | null>(null)
+  const [detailW,   setDetailW]   = useState<LibWidget | null>(null)
+  const [deleteW,   setDeleteW]   = useState<LibWidget | null>(null)
+  const [widgets,   setWidgets]   = useState<LibWidget[]>(LIB_WIDGETS)
 
-  const filtered = LIB_WIDGETS.filter(w => {
+  const governedCount = widgets.filter(w => w.governed).length
+
+  const filtered = widgets.filter(w => {
+    if (cat      !== "All" && w.category  !== cat)      return false
+    if (profile  !== "All" && w.placement !== profile)  return false
+    if (skeleton !== "All" && w.skeleton  !== skeleton) return false
+    if (freshness !== "All" && w.freshness !== freshness) return false
     if (search && !w.name.toLowerCase().includes(search.toLowerCase())) return false
-    if (srcFilter !== "All" && w.source !== srcFilter) return false
-    if (freshFilter !== "All" && w.freshness !== freshFilter.toLowerCase()) return false
     return true
   })
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const sorted = [...filtered].sort((a, b) => {
+    const d = sortBy === "usage" ? a.usedIn - b.usedIn : a.name.localeCompare(b.name)
+    return sortDir === "asc" ? d : -d
+  })
+
+  const page    = sorted.slice(0, shown)
+  const hasMore = shown < sorted.length
+
+  function handleDelete(id: string) {
+    setWidgets(prev => prev.filter(w => w.id !== id))
+    setDeleteW(null)
+  }
 
   return (
     <>
-      <FilterBar
-        search={search} onSearch={v => { setSearch(v); setPage(1) }}
-        pills={[
-          { label: "Source", value: srcFilter, options: ["All", "HubSpot", "Zendesk", "BambooHR", "AIMS OS"], onSelect: v => { setSrc(v); setPage(1) } },
-          { label: "Freshness", value: freshFilter, options: ["All", "Live", "Fresh", "Stale"], onSelect: v => { setFresh(v); setPage(1) } },
-        ]}
+      <LibStudioWelcome count={widgets.length} onCta={onCreateWidget} />
+
+      <LibFilterToolbar
+        search={search}     onSearch={v => { setSearch(v); setShown(LIB_PAGE_SIZE) }}
+        cat={cat}           onCat={v => { setCat(v); setShown(LIB_PAGE_SIZE) }}
+        profile={profile}   onProfile={v => { setProfile(v as LibProfile); setShown(LIB_PAGE_SIZE) }}
+        skeleton={skeleton} onSkeleton={v => { setSkeleton(v); setShown(LIB_PAGE_SIZE) }}
+        freshness={freshness} onFreshness={v => { setFreshness(v); setShown(LIB_PAGE_SIZE) }}
+        sortBy={sortBy}     onSortBy={setSortBy}
+        sortDir={sortDir}   onToggleDir={() => setSortDir(d => d === "asc" ? "desc" : "asc")}
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, marginBottom: 16 }}>
-        {paged.map(w => (
-          <CardContainer key={w.id} size="sm" className="flex flex-col gap-2 cursor-pointer" onClick={() => setDetail(w)}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <WidgetGlyph skeleton={w.skeleton} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-title)" }}>{w.name}</div>
-                <div style={{ fontSize: 11, color: "var(--text-subtitle)" }}>{w.source} · {w.skeleton}</div>
-              </div>
-              <FreshnessBadge f={w.freshness} />
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-muted, var(--text-subtitle))" }}>{w.description}</div>
-            <div style={{ fontSize: 11, color: "var(--text-subtitle)", marginTop: 2 }}>Used in {w.usedIn} dashboards{w.governed ? " · Governed" : ""}</div>
-          </CardContainer>
-        ))}
-      </div>
+      {sorted.length === 0 ? (
+        <EmptyState icon={LucideIcons.Search} title="No widgets found" description="Try a different search or filter." />
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(264px,100%), 1fr))", gap: 12 }}>
+            {page.map(w => (
+              <div key={w.id} style={{ position: "relative" }}>
+                <CardContainer
+                  onClick={e => { if (!(e.target as HTMLElement).closest("button")) setDetailW(w) }}
+                  className="flex flex-col gap-[10px] cursor-pointer h-full"
+                >
+                  {/* Top-right: health badge + ⋯ menu */}
+                  <div style={{ position: "absolute", top: 12, right: 12, display: "flex", alignItems: "center", gap: 6, zIndex: 1 }}>
+                    <HealthBadge health={w.health} />
+                    <div style={{ position: "relative" }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); setMenuId(menuId === w.id ? null : w.id) }}
+                        aria-label={`Actions for ${w.name}`}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: "2px 4px", borderRadius: 6, display: "flex" }}
+                      >
+                        <LucideIcons.MoreHorizontal size={15} />
+                      </button>
+                      {menuId === w.id && (
+                        <LibOverflowMenu onClose={() => setMenuId(null)} items={[
+                          { label: "Open",             icon: "Eye",       onClick: () => setDetailW(w) },
+                          { label: "Add to dashboard", icon: "Plus",      onClick: () => {} },
+                          ...(!w.system ? [{ label: "Edit",  icon: "Pencil" as keyof typeof LucideIcons, onClick: () => {} }] : []),
+                          ...(!w.system ? [{ label: "Delete", icon: "Trash2" as keyof typeof LucideIcons, danger: true, onClick: () => setDeleteW(w) }] : []),
+                        ]} />
+                      )}
+                    </div>
+                  </div>
 
-      {filtered.length > PAGE_SIZE && (
-        <Pagination currentPage={page} totalItems={filtered.length} itemsPerPage={PAGE_SIZE} onPageChange={setPage} />
-      )}
+                  {/* Name + source */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, paddingRight: w.health === "review" ? 110 : 68 }}>
+                    <WidgetGlyph skeleton={w.skeleton} />
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.name}</p>
+                      <p style={{ fontSize: 11, color: "var(--field-supporting)", margin: "1px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.source}</p>
+                    </div>
+                  </div>
 
-      {detail && (
-        <SlideOut open title={detail.name} onClose={() => setDetail(null)}
-          ctaPrimaryLabel="Add to dashboard"
-          ctaSecondaryLabel="Edit widget"
-          onCtaPrimary={() => setDetail(null)}
-          onCtaSecondary={() => { setDetail(null); onCreateWidget() }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <WidgetGlyph skeleton={detail.skeleton} />
-              <FreshnessBadge f={detail.freshness} />
-              {detail.governed && <Tag variant="success" size="sm">Governed</Tag>}
-            </div>
-            <div style={{ fontSize: 13, color: "var(--text-body)" }}>{detail.description}</div>
-            {[["Source", detail.source], ["Type", detail.skeleton], ["Used in", `${detail.usedIn} dashboards`]].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--field-border)", paddingBottom: 8 }}>
-                <span style={{ fontSize: 12, color: "var(--text-subtitle)" }}>{k}</span>
-                <span style={{ fontSize: 12, color: "var(--text-body)", fontWeight: 500 }}>{v}</span>
+                  {/* Tags */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    <Tag variant="neutral" size="sm">{w.skeleton}</Tag>
+                    {!w.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
+                    {w.system   && <Tag variant="informative" size="sm">System</Tag>}
+                  </div>
+
+                  {/* Mini preview */}
+                  <MiniPreview skeleton={w.skeleton} />
+
+                  {/* Footer */}
+                  <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 10 }}>
+                    <span style={{ fontSize: 11, color: w.health === "review" ? "var(--alert)" : "var(--field-supporting)", fontWeight: w.health === "review" ? 600 : 400 }}>
+                      {w.health === "review" ? "Remap needed →" : `Used on ${w.usedIn} dashboard${w.usedIn === 1 ? "" : "s"}`}
+                    </span>
+                    <FreshnessBadge status={w.freshness} />
+                  </div>
+                </CardContainer>
               </div>
             ))}
           </div>
+
+          {hasMore && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 20 }}>
+              <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Showing {page.length} of {sorted.length}</span>
+              <Button variant="secondary" size="sm" onClick={() => setShown(n => n + LIB_PAGE_SIZE)}>
+                Load {Math.min(sorted.length - shown, LIB_PAGE_SIZE)} more
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Widget Detail SlideOut */}
+      {detailW && (
+        <SlideOut title={detailW.name} open={true} onClose={() => setDetailW(null)}
+          ctaPrimaryLabel="Add to dashboard"
+          ctaSecondaryLabel={!detailW.system ? "Edit widget" : undefined}
+          onCtaPrimary={() => setDetailW(null)}
+          onCtaSecondary={!detailW.system ? () => { setDetailW(null); onCreateWidget() } : undefined}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "4px 0" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              <FreshnessBadge status={detailW.freshness} />
+              <Tag variant="neutral" size="sm">{detailW.skeleton}</Tag>
+              <Tag variant={detailW.category === "AIMS OS" ? "informative" : "neutral"} size="sm">{detailW.category}</Tag>
+              {!detailW.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
+              {detailW.system   && <Tag variant="informative" size="sm">System</Tag>}
+            </div>
+            {[["Source", detailW.source], ["Placement", detailW.placement], ["Used on", `${detailW.usedIn} dashboard${detailW.usedIn === 1 ? "" : "s"}`]].map(([label, value]) => (
+              <div key={label} style={{ display: "flex", gap: 12, fontSize: 13 }}>
+                <span style={{ width: 88, flexShrink: 0, color: "var(--field-supporting)", fontWeight: 500 }}>{label}</span>
+                <span style={{ color: "var(--foreground)" }}>{value}</span>
+              </div>
+            ))}
+            {detailW.description && (
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--field-supporting)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 6px" }}>Description</p>
+                <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--foreground)", margin: 0 }}>{detailW.description}</p>
+              </div>
+            )}
+          </div>
         </SlideOut>
       )}
+
+      {/* Delete confirmation */}
+      {deleteW && (
+        <ModalDialog
+          isOpen={true}
+          onClose={() => setDeleteW(null)}
+          tone="error"
+          title={`Delete "${deleteW.name}"?`}
+          description={`This widget will be removed from your library${deleteW.usedIn > 0 ? ` and from ${deleteW.usedIn} dashboard${deleteW.usedIn === 1 ? "" : "s"} where it is currently placed` : ""}. This action cannot be undone.`}
+          ctaPrimary={{ label: "Delete widget", destructive: true, onClick: () => handleDelete(deleteW.id) }}
+          ctaSecondary={{ label: "Cancel", onClick: () => setDeleteW(null) }}
+        />
+      )}
+
+      {/* Track governed count in header description (passed via parent) */}
+      <span data-governed={governedCount} style={{ display: "none" }} />
     </>
   )
 }
