@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/ui/empty-state"
 import { AgentTestPanel } from "./AgentTestPanel"
 import { KpMarketplaceModal } from "./KpMarketplaceModal"
+import { SourceDriveMarketplaceModal } from "./SourceDriveMarketplaceModal"
 import {
   KNOWLEDGE_PACKS,
   SHARED_DRIVES,
@@ -67,9 +68,10 @@ export function KnowledgePanel({
   const [attachedDriveIds, setAttachedDriveIds] = useState<string[]>(DEFAULT_ATTACHED_DRIVE_IDS)
   const [files,            setFiles]            = useState<UploadedFile[]>(UPLOADED_FILES)
 
-  // KP Library marketplace is mounted here (not lifted to the parent)
-  // because it needs to read + write attachedPackIds directly.
-  const [marketplaceOpen, setMarketplaceOpen] = useState(false)
+  // Both marketplaces are mounted here (not lifted to the parent)
+  // because they read + write the attached* state directly.
+  const [marketplaceOpen,       setMarketplaceOpen]       = useState(false)
+  const [drivesMarketplaceOpen, setDrivesMarketplaceOpen] = useState(false)
 
   // Per-card expansion + planes state, keyed by pack id.
   const [packState, setPackState] = useState<Record<string, { expanded: boolean; planes: Set<PackPlaneId> }>>(() => {
@@ -122,9 +124,9 @@ export function KnowledgePanel({
                     : "Upload file"
 
   const onAdd = () => {
-    if (tab === "uploaded")    onUploadFile()
-    else if (tab === "packs")  setMarketplaceOpen(true)
-    else                       onUploadFile()  // shared drives — reuse stub until that marketplace ships
+    if (tab === "uploaded")     onUploadFile()
+    else if (tab === "packs")   setMarketplaceOpen(true)
+    else                        setDrivesMarketplaceOpen(true)
   }
 
   return (
@@ -215,7 +217,7 @@ export function KnowledgePanel({
                   ? "Connect shared drives so this agent can search files in your workspace."
                   : "Try a different keyword or clear the search."}
                 ctaLabel={attachedDriveIds.length === 0 ? "Browse drives" : "Clear search"}
-                onCta={attachedDriveIds.length === 0 ? () => setMarketplaceOpen(true) : () => setSearch("")}
+                onCta={attachedDriveIds.length === 0 ? () => setDrivesMarketplaceOpen(true) : () => setSearch("")}
               />
             </CardContainer>
           ) : (
@@ -267,6 +269,14 @@ export function KnowledgePanel({
         onClose={() => setMarketplaceOpen(false)}
         attachedIds={attachedPackIds}
         onCommit={setAttachedPackIds}
+      />
+
+      {/* ── Source Drive Library marketplace ───────────────────── */}
+      <SourceDriveMarketplaceModal
+        open={drivesMarketplaceOpen}
+        onClose={() => setDrivesMarketplaceOpen(false)}
+        attachedIds={attachedDriveIds}
+        onCommit={setAttachedDriveIds}
       />
     </div>
   )

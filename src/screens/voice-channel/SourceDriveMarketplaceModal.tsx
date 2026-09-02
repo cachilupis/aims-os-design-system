@@ -1,33 +1,31 @@
 import { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
-import { X, Search, Package, Check, Plus } from "lucide-react"
+import { X, Search, Folder, Check, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { NativeSelect } from "./configure-shared"
 import { SidebarLabel, PillGroup, CheckRow } from "./marketplace-shared"
 import {
-  KNOWLEDGE_PACKS,
-  PACK_PLANES,
-  type KnowledgePack,
-  type PackCategory,
-  type PackPlaneId,
+  SHARED_DRIVES,
+  type SharedDrive,
+  type DriveCategory,
 } from "./knowledge-data"
 
 // ─────────────────────────────────────────────────────────────────────
-// KpMarketplaceModal — port of the "Knowledge Pack Library" marketplace
-// (`.kml-ov`) from voice-channel-ux.html.
+// SourceDriveMarketplaceModal — port of the "Source Drive Library"
+// marketplace (`#kmlDrives`) from voice-channel-ux.html.
 //
-// Layout is wider than the DS ModalDialog would allow (~1080px) so
-// this uses a custom portal + backdrop + dialog rather than DS
-// ModalDialog. Every surface still resolves through DS tokens
-// (--slide-out-bg, --field-*, --color-surface-* etc.) so dark and
-// light mode adapt automatically.
+// Sibling of KpMarketplaceModal: same portal + backdrop shell, same
+// pending-set commit model, same footer semantics. Differences:
+//   – Icon set to Folder (not Package)
+//   – No Planes rail (drives don't have planes)
+//   – Categories are the full DriveCategory union (Governance / Product
+//     / Sales / Legal / HR / Finance) driven off the live catalog
+//   – Cards show docs + agents (no version / plane dots)
 //
-// State model matches the source: `pending: Set<string>` holds
-// add-then-undo operations, plus "<id>:detach" pseudo-ids for already
-// attached packs the user clicked to remove. `Done` commits pending
-// as one batch; `Cancel` throws it away.
+// Marketplace-shared.tsx supplies SidebarLabel + PillGroup + CheckRow
+// so the two rails stay in visual lockstep.
 // ─────────────────────────────────────────────────────────────────────
 
 type ShowFilter = "all" | "new" | "added"
@@ -39,30 +37,22 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "recent",  label: "Recently updated" },
 ]
 
-const ALL_CATEGORIES: PackCategory[] = [
-  "Customer Service",
-  "Legal",
-  "Operations",
-  "Sales & Revenue",
-]
-
-interface KpMarketplaceModalProps {
-  open:          boolean
-  onClose:       () => void
-  /** Ids currently attached to the agent's Knowledge Data Access. */
-  attachedIds:   string[]
+interface SourceDriveMarketplaceModalProps {
+  open:        boolean
+  onClose:     () => void
+  /** Ids currently attached to the agent's Shared Drives. */
+  attachedIds: string[]
   /** Called on Done with the new attachedIds after applying pending. */
-  onCommit:      (nextIds: string[]) => void
+  onCommit:    (nextIds: string[]) => void
 }
 
-export function KpMarketplaceModal({
+export function SourceDriveMarketplaceModal({
   open, onClose, attachedIds, onCommit,
-}: KpMarketplaceModalProps) {
+}: SourceDriveMarketplaceModalProps) {
   const [show,    setShow]    = useState<ShowFilter>("all")
   const [sort,    setSort]    = useState<SortKey>("name")
   const [search,  setSearch]  = useState("")
-  const [cats,    setCats]    = useState<Set<PackCategory>>(new Set())
-  const [planes,  setPlanes]  = useState<Set<PackPlaneId>>(new Set())
+  const [cats,    setCats]    = useState<Set<DriveCategory>>(new Set())
   const [pending, setPending] = useState<Set<string>>(new Set())
 
   // Reset every time the modal reopens — no stale filter/pending state
@@ -70,13 +60,12 @@ export function KpMarketplaceModal({
   useEffect(() => {
     if (open) {
       setShow("all"); setSort("name"); setSearch("")
-      setCats(new Set()); setPlanes(new Set())
+      setCats(new Set())
       setPending(new Set())
     }
   }, [open])
 
-  // Lock body scroll while the modal is open — feels wrong when the
-  // page underneath keeps scrolling on wheel.
+  // Lock body scroll while the modal is open.
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
@@ -93,19 +82,18 @@ export function KpMarketplaceModal({
   }, [open, onClose])
 
   // ── Filter + sort ───────────────────────────────────────────────
-  const filtered = useMemo<KnowledgePack[]>(() => {
-    let result = KNOWLEDGE_PACKS.slice()
+  const filtered = useMemo<SharedDrive[]>(() => {
+    let result = SHARED_DRIVES.slice()
 
-    if (show === "new")   result = result.filter(p => !attachedIds.includes(p.id) && !pending.has(p.id))
-    if (show === "added") result = result.filter(p => attachedIds.includes(p.id) || pending.has(p.id))
-    if (cats.size > 0)    result = result.filter(p => cats.has(p.cat))
-    if (planes.size > 0)  result = result.filter(p => p.planes.some(pl => planes.has(pl)))
+    if (show === "new")   result = result.filter(d => !attachedIds.includes(d.id) && !pending.has(d.id))
+    if (show === "added") result = result.filter(d => attachedIds.includes(d.id) || pending.has(d.id))
+    if (cats.size > 0)    result = result.filter(d => cats.has(d.cat))
     if (search.trim()) {
       const q = search.trim().toLowerCase()
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(q)
-        || p.desc.toLowerCase().includes(q)
-        || p.cat.toLowerCase().includes(q)
+      result = result.filter(d =>
+        d.name.toLowerCase().includes(q)
+        || d.desc.toLowerCase().includes(q)
+        || d.cat.toLowerCase().includes(q)
       )
     }
 
@@ -114,16 +102,16 @@ export function KpMarketplaceModal({
     if (sort === "recent")  result.sort((a, b) => a.updated.localeCompare(b.updated))
 
     return result
-  }, [attachedIds, show, sort, cats, planes, search, pending])
+  }, [attachedIds, show, sort, cats, search, pending])
 
-  // Category counts across the full catalog (ignore other filters so
-  // the sidebar remains a stable navigation surface).
-  const catCounts = useMemo(() => {
-    const counts: Record<PackCategory, number> = {
-      "Customer Service": 0, "Legal": 0, "Operations": 0, "Sales & Revenue": 0,
-    }
-    for (const p of KNOWLEDGE_PACKS) counts[p.cat]++
-    return counts
+  // Category counts across the full catalog — derived so a future
+  // catalog change lights up new sections without touching this file.
+  const categoryEntries = useMemo(() => {
+    const counts = new Map<DriveCategory, number>()
+    for (const d of SHARED_DRIVES) counts.set(d.cat, (counts.get(d.cat) ?? 0) + 1)
+    return Array.from(counts.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, count]) => ({ name, count }))
   }, [])
 
   // Row toggle: already attached → queue detach; not attached → queue add.
@@ -137,7 +125,6 @@ export function KpMarketplaceModal({
       const next    = new Set(prev)
       const isAttached = attachedIds.includes(id)
       if (isAttached) {
-        // Toggle the detach marker.
         if (next.has(id + ":detach")) next.delete(id + ":detach")
         else                          next.add(id + ":detach")
       } else {
@@ -147,13 +134,11 @@ export function KpMarketplaceModal({
       return next
     })
   }
-  const toggleCat = (c: PackCategory) =>
+  const toggleCat = (c: DriveCategory) =>
     setCats(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n })
-  const togglePlane = (pl: PackPlaneId) =>
-    setPlanes(prev => { const n = new Set(prev); n.has(pl) ? n.delete(pl) : n.add(pl); return n })
 
-  const attachedCount = attachedIds.length
-  const pendingAdds   = Array.from(pending).filter(id => !id.endsWith(":detach") && !attachedIds.includes(id)).length
+  const attachedCount  = attachedIds.length
+  const pendingAdds    = Array.from(pending).filter(id => !id.endsWith(":detach") && !attachedIds.includes(id)).length
   const pendingRemoves = Array.from(pending).filter(id => id.endsWith(":detach")).length
 
   const commit = () => {
@@ -177,7 +162,7 @@ export function KpMarketplaceModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Knowledge Pack Library"
+      aria-label="Source Drive Library"
       onClick={onClose}
       style={{
         position: "fixed", inset: 0,
@@ -213,13 +198,13 @@ export function KpMarketplaceModal({
           }}
         >
           <div className="flex items-center gap-3">
-            <HighlightIcon icon={<Package size={20}/>} variant="purple" size="lg" iconColor="dark"/>
+            <HighlightIcon icon={<Folder size={20}/>} variant="informative" size="lg" iconColor="dark"/>
             <div>
               <div style={{ fontSize: 18, fontWeight: 700, color: "var(--color-text-title)" }}>
-                Knowledge Pack Library
+                Source Drive Library
               </div>
               <div style={{ fontSize: 12, color: "var(--color-text-caption)", marginTop: 2 }}>
-                Browse and add knowledge packs to this agent
+                Connect shared drives to this agent's knowledge base
               </div>
             </div>
           </div>
@@ -242,7 +227,7 @@ export function KpMarketplaceModal({
         {/* ── Body: side rail + grid ─────────────────────────── */}
         <div className="flex flex-1" style={{ minHeight: 0, overflow: "hidden" }}>
 
-          {/* Left rail — SHOW / SORT / CATEGORIES / PLANES */}
+          {/* Left rail — SHOW / SORT / CATEGORIES */}
           <div
             style={{
               width: 220, flexShrink: 0,
@@ -274,26 +259,13 @@ export function KpMarketplaceModal({
             <div style={{ height: 1, background: "var(--color-border-neutral-default)", margin: "4px 0" }}/>
 
             <SidebarLabel>Categories</SidebarLabel>
-            {ALL_CATEGORIES.map(c => (
+            {categoryEntries.map(({ name, count }) => (
               <CheckRow
-                key={c}
-                label={c}
-                count={catCounts[c]}
-                checked={cats.has(c)}
-                onToggle={() => toggleCat(c)}
-              />
-            ))}
-
-            <div style={{ height: 1, background: "var(--color-border-neutral-default)", margin: "4px 0" }}/>
-
-            <SidebarLabel>Planes</SidebarLabel>
-            {PACK_PLANES.map(pl => (
-              <CheckRow
-                key={pl.id}
-                label={pl.label}
-                dot={pl.color}
-                checked={planes.has(pl.id)}
-                onToggle={() => togglePlane(pl.id)}
+                key={name}
+                label={name}
+                count={count}
+                checked={cats.has(name)}
+                onToggle={() => toggleCat(name)}
               />
             ))}
           </div>
@@ -306,10 +278,10 @@ export function KpMarketplaceModal({
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search packs by name or topic…"
+                placeholder="Search drives by name or topic…"
                 size="sm"
                 leftIcon={<Search size={13}/>}
-                aria-label="Search knowledge packs"
+                aria-label="Search shared drives"
               />
             </div>
 
@@ -333,14 +305,14 @@ export function KpMarketplaceModal({
                   textAlign: "center",
                   fontStyle: "italic",
                 }}>
-                  No packs match the current filters.
+                  No drives match the current filters.
                 </div>
-              ) : filtered.map(p => (
-                <PackCard
-                  key={p.id}
-                  pack={p}
-                  isAdded={isEffectivelyAttached(p.id)}
-                  onToggle={() => toggleAdd(p.id)}
+              ) : filtered.map(d => (
+                <DriveCard
+                  key={d.id}
+                  drive={d}
+                  isAdded={isEffectivelyAttached(d.id)}
+                  onToggle={() => toggleAdd(d.id)}
                 />
               ))}
             </div>
@@ -365,7 +337,7 @@ export function KpMarketplaceModal({
                   {" · "}
                   {attachedCount} currently attached
                 </>
-              : <>{attachedCount} pack{attachedCount === 1 ? "" : "s"} currently attached</>}
+              : <>{attachedCount} drive{attachedCount === 1 ? "" : "s"} currently attached</>}
           </div>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="default" onClick={onClose}>Cancel</Button>
@@ -378,11 +350,11 @@ export function KpMarketplaceModal({
   )
 }
 
-// ─── Pack card ──────────────────────────────────────────────────────
+// ─── Drive card ─────────────────────────────────────────────────────
 
-function PackCard({
-  pack, isAdded, onToggle,
-}: { pack: KnowledgePack; isAdded: boolean; onToggle: () => void }) {
+function DriveCard({
+  drive, isAdded, onToggle,
+}: { drive: SharedDrive; isAdded: boolean; onToggle: () => void }) {
   return (
     <div
       style={{
@@ -396,47 +368,34 @@ function PackCard({
     >
       {/* Header — icon + name + category */}
       <div className="flex items-start gap-3">
-        <HighlightIcon icon={<Package size={16}/>} variant="purple" size="md" iconColor="dark"/>
+        <HighlightIcon icon={<Folder size={16}/>} variant="informative" size="md" iconColor="dark"/>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-title)" }}>
-            {pack.name}
+            {drive.name}
           </div>
           <div style={{
             fontSize: 10, fontWeight: 600, textTransform: "uppercase",
             letterSpacing: "0.06em", color: "var(--color-text-caption)",
             marginTop: 2,
           }}>
-            {pack.cat}
+            {drive.cat}
           </div>
         </div>
       </div>
 
       {/* Description */}
       <div style={{ fontSize: 12, color: "var(--color-text-caption)", lineHeight: 1.5 }}>
-        {pack.desc}
+        {drive.desc}
       </div>
 
-      {/* Stats row: docs · version · plane dots */}
+      {/* Stats row: docs · agents */}
       <div className="flex items-center gap-3" style={{ fontSize: 11, color: "var(--color-text-caption)" }}>
         <span>
-          <strong style={{ color: "var(--color-text-title)" }}>{pack.docs}</strong> docs
+          <strong style={{ color: "var(--color-text-title)" }}>{drive.docs.toLocaleString()}</strong> docs
         </span>
-        <span>{pack.version}</span>
-        <div className="flex items-center gap-1">
-          {pack.planes.map(planeId => {
-            const def = PACK_PLANES.find(pl => pl.id === planeId)
-            return def ? (
-              <span
-                key={planeId}
-                title={def.label}
-                style={{
-                  width: 8, height: 8, borderRadius: "50%",
-                  background: def.color,
-                }}
-              />
-            ) : null
-          })}
-        </div>
+        <span>
+          <strong style={{ color: "var(--color-text-title)" }}>{drive.agents}</strong> agents
+        </span>
       </div>
 
       {/* Footer — Updated + Add/Added toggle */}
@@ -445,7 +404,7 @@ function PackCard({
         style={{ paddingTop: 8, borderTop: "1px solid var(--color-border-neutral-default)" }}
       >
         <span style={{ fontSize: 11, color: "var(--color-text-caption)" }}>
-          Updated {pack.updated}
+          Updated {drive.updated}
         </span>
         <button
           type="button"
