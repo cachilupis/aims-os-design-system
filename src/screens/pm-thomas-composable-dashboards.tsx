@@ -1175,23 +1175,14 @@ const PLACEMENT_TABS: Record<string, string[]> = {
   Deal:       ["Overview", "Activity", "Pipeline"],
   Standalone: ["Report collection", "Home — Workspace", "Home — Personal"],
 }
-const DASHBOARD_TEMPLATES = [
-  { id: "blank",    name: "Blank canvas",   desc: "Start from scratch with an empty grid." },
-  { id: "kpi-row",  name: "KPI Row",        desc: "3 headline KPIs with a trend chart below." },
-  { id: "pipeline", name: "Pipeline view",  desc: "Stage funnel + table of active records." },
-  { id: "activity", name: "Activity feed",  desc: "Recent events + engagement summary." },
-]
-
 function NewDashboardOverlay({ onClose, onCreated }: { onClose: () => void; onCreated: (d: DashRecord) => void }) {
-  const [step, setStep]             = useState<1 | 2>(1)
   const [dashName, setDashName]     = useState("")
   const [entity, setEntity]         = useState<EntityKind | null>(null)
   const [placement, setPlacement]   = useState("")
   const [audience, setAudience]     = useState("Everyone")
-  const [template, setTemplate]     = useState("blank")
 
   const tabs = entity ? PLACEMENT_TABS[entity] ?? [] : []
-  const step1Valid = !!(dashName.trim() && entity && placement)
+  const formValid = !!(dashName.trim() && entity && placement)
   const conflict = DASHBOARDS.find(d => d.entity === entity && d.placement === placement)
 
   function handleCreate() {
@@ -1212,23 +1203,7 @@ function NewDashboardOverlay({ onClose, onCreated }: { onClose: () => void; onCr
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 560 }}>
-      {/* Step indicator */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
-        {[{ n: 1, label: "Placement" }, { n: 2, label: "Start point" }].map(({ n, label }) => (
-          <div key={n} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{
-              width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 11, fontWeight: 700,
-              background: step >= n ? "var(--primary)" : "var(--field-border)",
-              color: step >= n ? "var(--on-primary, white)" : "var(--field-supporting)",
-            }}>{n < step ? "✓" : n}</div>
-            <span style={{ fontSize: 12, fontWeight: step === n ? 600 : 400, color: step === n ? "var(--foreground)" : "var(--field-supporting)" }}>{label}</span>
-            {n < 2 && <div style={{ width: 28, height: 1, background: "var(--field-border)", marginLeft: 4 }} />}
-          </div>
-        ))}
-      </div>
-
-      {step === 1 && (
+      {(
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Name */}
           <div>
@@ -1306,43 +1281,7 @@ function NewDashboardOverlay({ onClose, onCreated }: { onClose: () => void; onCr
           {/* Footer */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, paddingTop: 8, borderTop: "1px solid var(--field-border)" }}>
             <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-            <Button variant="main" size="sm" disabled={!step1Valid} onClick={() => setStep(2)}>Next →</Button>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--field-supporting)" }}>
-            <LucideIcons.MapPin size={12} />
-            <span>Creating in <strong style={{ color: "var(--foreground)" }}>{entity} — {placement}</strong></span>
-          </div>
-
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--field-supporting)", marginBottom: 8 }}>Start point</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {DASHBOARD_TEMPLATES.map(t => (
-                <button key={t.id} onClick={() => setTemplate(t.id)} style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 8, cursor: "pointer", textAlign: "left",
-                  border: `1px solid ${template === t.id ? "var(--primary)" : "var(--field-border)"}`,
-                  background: template === t.id ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)", // audit-ignore: color-mix no hex
-                }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: template === t.id ? "var(--primary)" : "var(--field-border)", flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{t.name}</div>
-                    <div style={{ fontSize: 12, color: "var(--field-supporting)" }}>{t.desc}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid var(--field-border)" }}>
-            <Button variant="secondary" size="sm" onClick={() => setStep(1)}>← Back</Button>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-              <Button variant="main" size="sm" onClick={handleCreate}>Create dashboard →</Button>
-            </div>
+            <Button variant="main" size="sm" disabled={!formValid} onClick={handleCreate}>Create dashboard →</Button>
           </div>
         </div>
       )}
@@ -1639,7 +1578,8 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
             </div>
             <Button variant="secondary" size="sm">Generate</Button>
           </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: "var(--field-supporting)", flexShrink: 0 }}>e.g.</span>
             {DESCRIBE_EXAMPLES.map(ex => (
               <WBSectionChip key={ex} onClick={() => setDescPr(ex)}>{ex}</WBSectionChip>
             ))}
