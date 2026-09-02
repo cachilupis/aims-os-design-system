@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react"
 import {
   FileText, Folder, Package, Eye, X, ChevronRight,
-  Plus, Search, Download,
+  Plus, Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CardContainer } from "@/components/ui/card-container"
+import { Chip } from "@/components/ui/chip"
+import { Filters } from "@/components/ui/filters"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
-import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/ui/empty-state"
 import { AgentTestPanel } from "./AgentTestPanel"
 import { KpMarketplaceModal } from "./KpMarketplaceModal"
@@ -160,19 +161,36 @@ export function KnowledgePanel({
           </Button>
         </div>
 
-        {/* Toolbar */}
+        {/* Toolbar — DS Filters for search + DS Chip pills for the
+            data-source tab switch. Matches CallHistoryTab / VoiceAgentsTab. */}
         <div className="flex items-center gap-2 flex-wrap mb-4">
           <div style={{ flex: 1, minWidth: 200 }}>
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search drives and documents…"
-              size="sm"
-              leftIcon={<Search size={13}/>}
-              aria-label="Search data sources"
+            <Filters
+              showSearch
+              searchPlaceholder="Search drives and documents…"
+              searchValue={search}
+              onSearchChange={setSearch}
+              showAllFilters={false}
+              showSort={false}
+              showViewToggle={false}
             />
           </div>
-          <TabToggle value={tab} onChange={setTab}/>
+          <div className="flex items-center gap-2">
+            {([
+              { id: "packs",    label: "Knowledge Packs" },
+              { id: "shared",   label: "Shared Drives"   },
+              { id: "uploaded", label: "Own Documents"   },
+            ] as const).map(o => (
+              <Chip
+                key={o.id}
+                variant={tab === o.id ? "primary" : "secondary"}
+                size="s"
+                onClick={() => setTab(o.id)}
+              >
+                {o.label}
+              </Chip>
+            ))}
+          </div>
         </div>
 
         {/* Content */}
@@ -278,54 +296,6 @@ export function KnowledgePanel({
         attachedIds={attachedDriveIds}
         onCommit={setAttachedDriveIds}
       />
-    </div>
-  )
-}
-
-// ─── Sub-toggle (Knowledge Packs / Shared Drives / Own Documents) ───
-
-function TabToggle({ value, onChange }: { value: DaTab; onChange: (v: DaTab) => void }) {
-  const opts: { id: DaTab; label: string }[] = [
-    { id: "packs",    label: "Knowledge Packs" },
-    { id: "shared",   label: "Shared Drives"   },
-    { id: "uploaded", label: "Own Documents"   },
-  ]
-  return (
-    <div
-      role="tablist"
-      aria-label="Data source type"
-      style={{
-        display: "inline-flex",
-        padding: 2,
-        background: "var(--color-surface-neutral-subtle)",
-        border: "1px solid var(--color-border-neutral-default)",
-        borderRadius: "var(--radius-md)",
-      }}
-    >
-      {opts.map(o => {
-        const active = o.id === value
-        return (
-          <button
-            key={o.id}
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(o.id)}
-            style={{
-              padding: "4px 12px",
-              fontSize: 12,
-              fontWeight: active ? 600 : 500,
-              color:      active ? "var(--primary)" : "var(--color-text-caption)",
-              background: active ? "var(--color-surface-primary-more-subtle)" : "transparent",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              cursor: "pointer",
-              transition: "all 150ms ease",
-            }}
-          >
-            {o.label}
-          </button>
-        )
-      })}
     </div>
   )
 }
