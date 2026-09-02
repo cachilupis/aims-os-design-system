@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, Fragment, useRef, type CSSProperties, type ReactNode } from "react"
 import { createPortal } from "react-dom"
+import { Popover } from "@base-ui/react/popover"
 import { usePageTab, useScrollToHash } from "@/lib/use-page-tab"
 import * as LucideIcons from "lucide-react"
 import PMMichaelTestV1Screen      from "./screens/pm-michael-test-v1"
@@ -84,7 +85,7 @@ import PMChatWidgetScreen               from "./screens/pm-chat-widget"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-create" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
 type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -212,11 +213,11 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   // Patterns — behavioral guides for PMs and engineers
   { id: "patterns-guardrails",  label: "Guardrails",         group: "Patterns", description: "Consolidated rules for AI-generated views · Tokens · Headers · Buttons · 3-dot menu · Sidebar sub-nav · SlideOut composition" },
   { id: "patterns-forms",       label: "Forms",              group: "Patterns", description: "Form composition: when to use wizard vs modal vs slideout · field spacing 16px / section gap 24px · validate on blur · Next disabled while required fields are empty" },
+  { id: "patterns-create",      label: "Create",             group: "Patterns", description: "Which surface a Create flow uses — ModalDialog, SlideOut, or a dedicated view — decided by a 5-step cascade, plus create modes, confirmation, and landing rules" },
   { id: "patterns-slideout",    label: "SlideOut / SidePanel",   group: "Patterns", description: "SlideOut vs SidePanel: when to use each · Shell anatomy · 4 header variants · real examples for detail view, form, and node config · content types · tabs · footer · guardrails" },
   { id: "patterns-panel-content", label: "SlideOut/SidePanel — Content", group: "Patterns", description: "Content vocabulary for panels — AI Summary (8 variants) · Insights (HighlightCard grid) · List Sections · Form fields: Input, Textarea, Select, Toggle · Section Headers" },
   { id: "patterns-list-view",  label: "List View Layout",  group: "Patterns", description: "Mandatory stack: Topbar + Sidebar + EntityList + Pagination · AppBackground always · Side Panel for details · Filters as the single source of truth for the dataset" },
   { id: "patterns-filter",     label: "Filter System",     group: "Patterns", description: "3 layers: Visible Filters → All Filters button → Slideout (full) → Chips (optional) · draft/applied state · Apply resets pagination" },
-  { id: "patterns-overlay",    label: "Overlay Decision",  group: "Patterns", description: "Modal when the user must stop and decide · Slide-out when they can keep exploring · only 1 of each type active at a time" },
   { id: "patterns-header",     label: "Header Sticky",     group: "Patterns", description: "Scroll > 16px → COMPRESSED (60px) · hover 0–24px idle 800ms → filters visible (130px) · 200ms ease-in-out transition" },
   { id: "patterns-nav-depth",  label: "Navigation Depth",  group: "Patterns", description: "Up to 4 layers: Tabs (where?) + SwitchTab (how?) + Filters (what?) + Chips (which quick filter?) · in the max-depth edge case, SwitchTab sits left of Filters (12px gap) to save vertical space · use only when each layer adds real differentiation" },
   { id: "patterns-loading",    label: "Loading States",    group: "Patterns", description: "Spinner → unknown duration · Progress Bar → known progress (%) · Skeleton → known layout · <300ms show nothing · only 1 indicator per view" },
@@ -3522,7 +3523,7 @@ function CtrlGroup<T extends string>({ label, options, value, onChange }: {
         {options.map(o => (
           <button key={o.value} onClick={() => onChange(o.value)}
             className={["px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors",
-              value === o.value ? "bg-[#2173ff] text-white" : "bg-[var(--ctrl-inactive-bg)] border border-[var(--field-border)] text-[var(--field-label)] hover:border-[var(--field-border-hover)]",
+              value === o.value ? "bg-[var(--primary)] text-white" : "bg-[var(--ctrl-inactive-bg)] border border-[var(--field-border)] text-[var(--field-label)] hover:border-[var(--field-border-hover)]",
             ].join(" ")}>
             {o.label}
           </button>
@@ -11800,261 +11801,6 @@ SECTION_LOGIC
   )
 }
 
-// ── PatternOverlayPage ────────────────────────────────────────────────────────
-
-function PatternOverlayPage() {
-  const [tab, setTab] = useState<string>("when-to-use")
-  const [modalOpen, setModalOpen] = useState(false)
-  const [slideoutOpen, setSlideoutOpen] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-
-  return (
-    <div>
-      <div className="flex flex-col gap-[4px] mb-[28px]">
-        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
-        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Overlay Decision</h1>
-        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
-          Choose between Modal and Slide-out based on the level of interruption required. The wrong choice breaks user flow or under-communicates urgency.
-        </p>
-      </div>
-
-      <PatternTabRow tab={tab} setTab={setTab} />
-
-      {tab === "when-to-use" && (
-        <div className="flex flex-col gap-[24px]">
-          <div className="grid grid-cols-2 gap-[16px]">
-            <PatternCard>
-              <SectionLabel>Modal — Blocking</SectionLabel>
-              <AlertBanner state="error" title="Requires user attention before continuing" className="mb-[4px]" />
-              <div className="flex flex-col gap-[6px]">
-                {["Destructive or irreversible actions (delete, remove)", "Critical confirmations that cannot be ignored", "Forms requiring focused completion (multi-step)", "Actions where background interaction must be disabled"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]"><span style={{ color: "var(--color-surface-success-default)" }}>✓</span><span className="text-[13px] text-[var(--foreground)]">{u}</span></div>
-                ))}
-              </div>
-            </PatternCard>
-            <PatternCard>
-              <SectionLabel>Slide-out — Non-blocking</SectionLabel>
-              <AlertBanner state="success" title="User can continue exploring in background" className="mb-[4px]" />
-              <div className="flex flex-col gap-[6px]">
-                {["Entity detail views (user can switch between records)", "Filter configuration panels", "Secondary actions (comments, history, settings)", "Progressive exploration — no decision required"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]"><span style={{ color: "var(--color-surface-success-default)" }}>✓</span><span className="text-[13px] text-[var(--foreground)]">{u}</span></div>
-                ))}
-              </div>
-            </PatternCard>
-          </div>
-          <PatternCard>
-            <SectionLabel>Quick Decision Rule</SectionLabel>
-            <div className="flex flex-col gap-[12px]">
-              <div className="flex items-center gap-[12px] p-[16px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
-                <span className="text-[28px]">❓</span>
-                <div>
-                  <p className="text-[15px] font-semibold text-[var(--foreground)]">Can the user safely ignore this and keep working?</p>
-                  <div className="flex gap-[16px] mt-[6px]">
-                    <span className="text-[13px]"><span style={{ color: "var(--color-surface-error-default)", fontWeight: 700 }}>NO</span> → Modal</span>
-                    <span className="text-[13px]"><span style={{ color: "var(--color-surface-success-default)", fontWeight: 700 }}>YES</span> → Slide-out</span>
-                  </div>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
-                  <thead><tr style={{ borderBottom: "1px solid var(--table-border)" }}>{["Property", "Modal", "Slide-out"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}</tr></thead>
-                  <tbody>
-                    {[
-                      ["Background interaction", "Disabled", "Allowed"],
-                      ["Focus trap", "Yes", "No"],
-                      ["Dismiss without action", "Requires explicit action", "Close button / ESC / click outside"],
-                      ["Priority", "High — blocking", "Medium — contextual"],
-                      ["Max active simultaneously", "1", "1"],
-                      ["Can open on top of other", "Yes, over Slide-out", "No, not over Modal"],
-                    ].map(([prop, modal, slideout]) => (
-                      <tr key={prop} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
-                        <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{prop}</td>
-                        <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{modal}</td>
-                        <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{slideout}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </PatternCard>
-          <PatternCard>
-            <SectionLabel>Do / Don't</SectionLabel>
-            <div className="grid grid-cols-2 gap-[12px]">
-              {[
-                { type: "do",   text: "Escalate to a confirmation Modal when the user tries to close a Slide-out that has unsaved changes." },
-                { type: "dont", text: "Don't open a Slide-out on top of an active Modal — Modal always wins the stacking order, never the reverse." },
-                { type: "do",   text: "Let a Modal open on top of an active Slide-out when a blocking decision interrupts the flow mid-task." },
-                { type: "dont", text: "Don't let a Slide-out close silently when it holds unsaved changes — always confirm first via Modal." },
-                { type: "do",   text: "Keep exactly one Modal and one Slide-out open at a time — never stack two of the same overlay type." },
-                { type: "dont", text: "Don't use Modal for progressive or exploratory content the user can safely ignore — that's what Slide-out is for." },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
-                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
-                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
-                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
-                </div>
-              ))}
-            </div>
-          </PatternCard>
-        </div>
-      )}
-
-      {tab === "anatomy" && (
-        <div className="flex flex-col gap-[24px]">
-          <div className="grid grid-cols-2 gap-[16px]">
-            <PatternCard>
-              <SectionLabel>Modal — Blocking Overlay</SectionLabel>
-              <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
-                Interrupts the workflow. Background interaction is disabled. User must explicitly confirm or cancel.
-              </p>
-              <div className="flex flex-col gap-[6px] mb-[16px]">
-                {["Destructive or irreversible actions", "Critical confirmations", "Multi-step forms requiring focus", "Error states that block flow"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]">
-                    <span style={{ color: "var(--color-surface-error-default)", fontWeight: 700 }}>✕</span>
-                    <span className="text-[13px] text-[var(--foreground)]">{u}</span>
-                  </div>
-                ))}
-              </div>
-              <Button size="sm" onClick={() => setModalOpen(true)}>
-                <LucideIcons.Play size={12} />
-                Try Modal
-              </Button>
-            </PatternCard>
-            <PatternCard>
-              <SectionLabel>Slide-out — Non-blocking Panel</SectionLabel>
-              <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
-                Appears from the right without interrupting. User can still interact with content behind it.
-              </p>
-              <div className="flex flex-col gap-[6px] mb-[16px]">
-                {["Entity detail views", "Filter configuration", "Comments, history, settings", "Progressive exploration — no decision required"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]">
-                    <span style={{ color: "var(--color-surface-success-default)", fontWeight: 700 }}>✓</span>
-                    <span className="text-[13px] text-[var(--foreground)]">{u}</span>
-                  </div>
-                ))}
-              </div>
-              <Button size="sm" variant="secondary" onClick={() => setSlideoutOpen(true)}>
-                <LucideIcons.Play size={12} />
-                Try Slide-out
-              </Button>
-            </PatternCard>
-          </div>
-
-          <PatternCard>
-            <SectionLabel>Escalation Pattern — Slide-out → Modal</SectionLabel>
-            <div className="flex gap-[8px] items-center mb-[14px]">
-              <div className="flex-1 p-[10px] rounded-[6px] text-[13px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
-                User edits inside Slide-out with unsaved changes
-              </div>
-              <span className="text-[18px]" style={{ color: "var(--primary)" }}>→</span>
-              <div className="flex-1 p-[10px] rounded-[6px] text-[13px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
-                User tries to close Slide-out
-              </div>
-              <span className="text-[18px]" style={{ color: "var(--primary)" }}>→</span>
-              <div className="flex-1 p-[10px] rounded-[6px] text-[13px] font-semibold" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)", color: "var(--primary)" }}>
-                Confirmation Modal appears on top
-              </div>
-            </div>
-            <Button size="sm" variant="secondary" onClick={() => setConfirmOpen(true)}>
-              <LucideIcons.Play size={12} />
-              Try escalation pattern
-            </Button>
-          </PatternCard>
-
-          {/* Real ModalDialog — delete confirmation */}
-          <ModalDialog
-            isOpen={modalOpen}
-            onClose={() => setModalOpen(false)}
-            variant="confirmation"
-            tone="error"
-            title="Delete workspace member?"
-            description="Sarah Chen will immediately lose access to all workspace resources. This action cannot be undone."
-            ctaPrimary={{ label: "Delete member", destructive: true, onClick: () => setModalOpen(false) }}
-            ctaSecondary={{ label: "Cancel", onClick: () => setModalOpen(false) }}
-          />
-
-          {/* Real ModalDialog — escalation confirmation */}
-          <ModalDialog
-            isOpen={confirmOpen}
-            onClose={() => setConfirmOpen(false)}
-            variant="confirmation"
-            tone="alert"
-            title="Discard unsaved changes?"
-            description="You have unsaved changes in this panel. Closing will discard them permanently."
-            ctaPrimary={{ label: "Discard changes", onClick: () => setConfirmOpen(false) }}
-            ctaSecondary={{ label: "Keep editing", onClick: () => setConfirmOpen(false) }}
-          />
-
-          {/* Real SlideOut — member details */}
-          <SlideOut
-            open={slideoutOpen}
-            onClose={() => setSlideoutOpen(false)}
-            title="Sarah Chen"
-            subtitle="Admin · Platform Team"
-            type="with-variants"
-            size="m"
-          />
-
-        </div>
-      )}
-
-      {tab === "rules" && (
-        <div className="flex flex-col gap-[24px]">
-          <PatternCard>
-            <SectionLabel>Technical Spec (from Figma)</SectionLabel>
-            <PatternRules code={`MODAL_SLIDEOUT_PATTERN
-
-MODAL
-  blocking                = true
-  background_interaction  = disabled
-  focus_trap              = required
-
-  USE when:
-    action_requires_confirmation == true
-    action_is_destructive        == true
-    user_must_complete_flow      == true
-    interaction_complexity == high AND requires_focus == true
-
-SLIDE_OUT
-  blocking                = false
-  background_interaction  = allowed
-  focus_trap              = not required (unless specified)
-
-  USE when:
-    user_views_details              == true
-    interaction_priority            == secondary
-    content_is_contextual           == true
-    interaction_can_be_interrupted  == true
-
-DECISION_LOGIC
-  IF blocking_interaction_required == true → USE MODAL
-  ELSE IF contextual AND non_blocking → USE SLIDE_OUT
-
-STACKING_RULES
-  max simultaneous MODAL    = 1
-  max simultaneous SLIDE_OUT = 1
-  Modal CAN appear on top of Slide-out
-  Slide-out CANNOT open on top of Modal
-
-DISMISS_RULES
-  MODAL:     requires explicit CTA or close action
-  SLIDE_OUT: Close button / ESC / click outside (if non-critical)
-
-UNSAVED_STATE_RULE
-  IF slide_out has unsaved changes AND user attempts close
-  → trigger CONFIRMATION MODAL before closing
-
-ESC_BEHAVIOR
-  MODAL:     closes if safe (no unsaved data); else show confirmation
-  SLIDE_OUT: closes by default; if unsaved → show confirmation modal`} />
-          </PatternCard>
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── PatternHeaderPage ─────────────────────────────────────────────────────────
 
 function PatternHeaderPage() {
@@ -15261,43 +15007,18 @@ function PatternFormsPage() {
         <div className="flex flex-col gap-[24px]">
 
           <PatternCard>
-            <SectionLabel>Form Context Decision Table</SectionLabel>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
-                    {["Situation", "Form context", "Container"].map(h => (
-                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ["Dedicated page — create or edit a single record", "Full-page form", "ScreenLayout · Header CTAs"],
-                    ["Multi-step process (3+ steps, 8+ total fields)", "Full-page wizard", "ScreenLayout + StepperNavFooter"],
-                    ["Destructive or must-stop action requiring input", "Blocking form", "ModalDialog"],
-                    ["Contextual create / edit (user can continue later)", "Side panel form", "SlideOut"],
-                    ["Quick single-field inline edit", "Inline edit", "Input (no container)"],
-                  ].map(([sit, ctx, comp]) => (
-                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
-                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
-                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ctx}</td>
-                      <td className="px-[12px] py-[10px]">
-                        <span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{comp}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SectionLabel>Which container for which situation?</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[640px]">
+              Surface selection — full-page, wizard, ModalDialog, or SlideOut — now lives entirely in the <strong className="text-[var(--foreground)]">Create</strong> pattern page (see "Patterns" in the sidebar), including the exact cascade for a Create flow and when a form belongs in a modal versus a panel. This page covers everything else about composing a form once its container is already chosen: field and section spacing, validation, and CTA placement, below.
+            </p>
           </PatternCard>
 
           <PatternCard>
             <SectionLabel>Do / Don't</SectionLabel>
             <div className="grid grid-cols-2 gap-[12px]">
               {[
-                { type: "do",   text: "Use StepperNavFooter for wizards with 3+ steps — distributes cognitive load and keeps each step focused." },
-                { type: "dont", text: "Don't open a ModalDialog for forms with more than 5 fields — the user needs room. Use SlideOut instead." },
+                { type: "do",   text: "Use StepperNavFooter for wizards — see the Create pattern page's own staged-flows table for exactly which stage/branching shape earns it, rather than a flat step count repeated here." },
+                { type: "dont", text: "Don't apply \"more than 5 fields → SlideOut\" to a Create flow — it's wrong in both directions: a standalone create over 5 fields goes to a dedicated view, and a contextual create goes to SlideOut regardless of field count. See the Create pattern page's own cascade." },
                 { type: "do",   text: "Group related fields into named sections with a 24px gap between groups and a 4px gap between the section label and the first field." },
                 { type: "dont", text: "Don't show validation errors on each keystroke — validate on blur. Clear errors immediately once the field becomes valid." },
                 { type: "do",   text: "Disable Next/Submit when any required field is empty. This pattern is mandatory for all multi-step forms." },
@@ -15916,6 +15637,1211 @@ const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>
             </div>
           </PatternCard>
 
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternCreatePage ─────────────────────────────────────────────────────────
+// Structure mirrors PatternFormsPage on purpose — same header block, same 4
+// hand-rolled tabs (When to Use / Anatomy / Examples / Rules). Content is
+// derived from docs/patterns/create.md, the single source of truth for this
+// pattern; keep the two in sync when the rule changes. The audit that fed
+// that rule lives in docs/patterns/create-audit.md.
+
+// ── Create examples gallery — 6 previewable scenes, built from
+// docs/create-examples.md §2. Tours are 3 or 4 steps depending on whether
+// the scene's own surface is genuinely more than one screen (a two-stage
+// SlideOut, a wizard's confirmation, the catalogue's two sequential modals).
+
+const PG_CTX_TOPBAR_ACTIONS: TopbarAction[] = [
+  { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
+  { icon: <LucideIcons.Bell size={16} />, label: "Notifications" },
+  { icon: <LucideIcons.Settings size={16} />, label: "Settings" },
+]
+
+const PG_CTX_WORKERS: EntityListItemData[] = [
+  { id: "w1", title: "Data Sync Worker", iconVariant: "info", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Active", variant: "success" }, timestamp: "Ran 12m ago" },
+  { id: "w2", title: "Invoice Reconciliation Worker", iconVariant: "purple", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Active", variant: "success" }, timestamp: "Ran 1h ago" },
+  { id: "w3", title: "Lead Enrichment Worker", iconVariant: "neutral", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Paused", variant: "neutral" }, timestamp: "Ran 2d ago" },
+]
+const PG_CTX_WORKERS_LANDING: EntityListItemData[] = [
+  { id: "w0", title: "Meridian Response Bot", iconVariant: "success", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Active", variant: "success" }, timestamp: "Just now" },
+  ...PG_CTX_WORKERS,
+]
+
+const PG_CTX_AUTOMATIONS: EntityListItemData[] = [
+  { id: "a1", title: "New lead → CRM sync", iconVariant: "info", iconName: "Zap", state: { label: "Active", variant: "success" }, timestamp: "Last run 8m ago" },
+  { id: "a2", title: "Invoice overdue reminder", iconVariant: "yellow", iconName: "Zap", state: { label: "Active", variant: "success" }, timestamp: "Last run 3h ago" },
+  { id: "a3", title: "Weekly digest email", iconVariant: "neutral", iconName: "Zap", state: { label: "Draft", variant: "neutral" }, timestamp: "Never run" },
+]
+const PG_CTX_AUTOMATIONS_LANDING: EntityListItemData[] = [
+  { id: "a0", title: "Lead follow-up", iconVariant: "success", iconName: "Zap", state: { label: "Active", variant: "success" }, timestamp: "Just now" },
+  ...PG_CTX_AUTOMATIONS,
+]
+
+const PG_CTX_USERS: EntityListItemData[] = [
+  { id: "u1", title: "Priya Shah", iconVariant: "info", iconName: "User", primaryMeta: [{ iconName: "Shield", label: "Admin" }], state: { label: "Active", variant: "success" }, timestamp: "Joined 2024" },
+  { id: "u2", title: "Marcus Tran", iconVariant: "purple", iconName: "User", primaryMeta: [{ iconName: "Shield", label: "Editor" }], state: { label: "Active", variant: "success" }, timestamp: "Joined 2024" },
+  { id: "u3", title: "Jordan Lee", iconVariant: "neutral", iconName: "User", primaryMeta: [{ iconName: "Shield", label: "Viewer" }], state: { label: "Invited", variant: "neutral" }, timestamp: "Invited 3d ago" },
+]
+
+const PG_CTX_POLICIES: EntityListItemData[] = [
+  { id: "p1", title: "Data Access Policy", iconVariant: "info", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 2w ago" },
+  { id: "p2", title: "Retention Policy", iconVariant: "purple", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 1mo ago" },
+  { id: "p3", title: "Export Approval Policy", iconVariant: "info", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 3mo ago" },
+  { id: "p4", title: "Vendor Access Policy", iconVariant: "yellow", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 4mo ago" },
+  { id: "p5", title: "API Rate Limit Policy", iconVariant: "neutral", iconName: "ShieldCheck", state: { label: "Draft", variant: "neutral" }, timestamp: "Never published" },
+  { id: "p6", title: "Third-Party Sharing Policy", iconVariant: "neutral", iconName: "ShieldCheck", state: { label: "Draft", variant: "neutral" }, timestamp: "Never published" },
+]
+
+const PG_CTX_TEMPLATES: { id: string; name: string; desc: string }[] = [
+  { id: "t1", name: "Lead follow-up", desc: "Sends a follow-up email 24h after a new lead is created." },
+  { id: "t2", name: "Invoice reminder", desc: "Notifies the account owner when an invoice is 7 days overdue." },
+  { id: "t3", name: "Weekly digest", desc: "Compiles workspace activity into a Friday summary email." },
+]
+
+const PG_CTX_API_KEYS: EntityListItemData[] = [
+  { id: "k1", title: "Production API Key", iconVariant: "info", iconName: "KeyRound", state: { label: "Active", variant: "success" }, timestamp: "Created 3mo ago" },
+  { id: "k2", title: "Staging API Key", iconVariant: "purple", iconName: "KeyRound", state: { label: "Active", variant: "success" }, timestamp: "Created 1mo ago" },
+  { id: "k3", title: "Analytics Read Key", iconVariant: "yellow", iconName: "KeyRound", state: { label: "Expiring soon", variant: "alert" }, timestamp: "Expires in 5d" },
+  { id: "k4", title: "Legacy Webhook Key", iconVariant: "neutral", iconName: "KeyRound", state: { label: "Revoked", variant: "neutral" }, timestamp: "Revoked 2mo ago" },
+]
+const PG_CTX_API_KEYS_LANDING: EntityListItemData[] = [
+  { id: "k0", title: "Reporting API Key", iconVariant: "success", iconName: "KeyRound", state: { label: "Active", variant: "success" }, timestamp: "Just now" },
+  ...PG_CTX_API_KEYS,
+]
+
+function PgRunRow({ status, time }: { status: "success" | "error"; time: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-[8px] p-[10px]" style={{ border: "0.5px solid var(--field-border)" }}>
+      <div className="flex items-center gap-[6px]">
+        <Tag variant={status === "success" ? "success" : "error"} size="sm">{status === "success" ? "Success" : "Failed"}</Tag>
+      </div>
+      <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{time}</span>
+    </div>
+  )
+}
+
+function PgNoteRow({ author, time, text, highlighted }: { author: string; time: string; text: string; highlighted?: boolean }) {
+  return (
+    <div className="rounded-[8px] p-[10px]" style={{
+      border: highlighted ? "0.5px solid var(--color-border-success-lighter)" : "0.5px solid var(--field-border)",
+      background: highlighted ? "var(--color-surface-success-more-subtle)" : "transparent",
+    }}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{author}</span>
+        <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{time}</span>
+      </div>
+      <p className="text-[11px] mt-[3px]" style={{ color: "var(--field-supporting)" }}>{text}</p>
+    </div>
+  )
+}
+
+// Gallery row — one case in the Examples gallery. "preview" gets a Launch
+// preview button; "pending" gets a muted tag (exists as a rule, not as a
+// component yet); "info" gets neither (nothing is pending — the pattern
+// deliberately doesn't specify anything further here).
+function PgGalleryRow({ label, surface, note, status, onLaunch }: {
+  label: string; surface: string; note: string
+  status: "preview" | "pending" | "info"
+  onLaunch?: () => void
+}) {
+  return (
+    <div className="flex items-start justify-between gap-[16px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+      <div className="min-w-0">
+        <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{label}</span>
+        <div className="mt-[4px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{surface}</span></div>
+        <p className="text-[12px] mt-[6px]" style={{ color: "var(--field-supporting)" }}>{note}</p>
+      </div>
+      {status === "preview" && <Button variant="primary" size="sm" className="shrink-0" onClick={onLaunch}>Launch preview</Button>}
+      {status === "pending" && <Tag variant="secondary" size="sm" className="shrink-0">Pending</Tag>}
+    </div>
+  )
+}
+
+// List-view content body — Filters pinned at the top, the entity list scrolling
+// in the middle, Pagination anchored outside that scroll area at the bottom.
+// The list fills the available width; only the view's own 32px padding limits
+// it — no arbitrary max-w. Shared by every list-view scene so this structure
+// (and its 3 recurring bugs — Pagination inside the scroll, a width cap on the
+// list, and mismatched item counts) can't drift independently per scene again.
+function PgListViewBody({ searchPlaceholder, filterSlots, items, visibleCount = 2 }: {
+  searchPlaceholder: string
+  filterSlots: { placeholder: string }[]
+  items: EntityListItemData[]
+  visibleCount?: number
+}) {
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden px-[32px] py-[28px] gap-[16px]">
+      <Filters searchPlaceholder={searchPlaceholder} slots={filterSlots} />
+      <div className="flex-1 overflow-y-auto flex flex-col gap-[12px]">
+        {items.slice(0, visibleCount).map(item => (
+          <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+            <EntityList items={[item]} />
+          </CardContainer>
+        ))}
+      </div>
+      <Pagination currentPage={1} totalItems={items.length} itemsPerPage={visibleCount} onPageChange={() => {}} />
+    </div>
+  )
+}
+
+// Forms pattern — section label (11px, uppercase) 4px above its fields, 16px
+// between fields within the section. 24px between sections is the caller's
+// own gap on the parent stack, not this component's concern.
+function PgFormSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-[4px]">
+      <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{label}</span>
+      <div className="flex flex-col gap-[16px]">{children}</div>
+    </div>
+  )
+}
+
+// Select is trigger-only — no built-in option list, so a working dropdown has
+// to be composed. Anchored with @base-ui/react's Popover instead of hand-computed
+// getBoundingClientRect() math: whether that math is correct depends on which
+// ancestor happens to carry a transform and whether the surrounding surface
+// portals (SlideOut does, ModalDialog does not always) — four combinations,
+// correct in some, wrong in the rest. Popover.Positioner's `anchor` ref resolves
+// the containing block itself through Floating UI, correctly through transforms
+// and portals alike, and also handles edge collision and flipping for free.
+// z-[10030] clears ModalDialog's z-[10020] and SlideOut's z-[10010] — the
+// popover portals to document.body as a sibling of both, not a descendant.
+function PgInteractiveSelect({ placeholder, options }: { placeholder: string; options: string[] }) {
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState<string | undefined>(undefined)
+  const triggerRef = useRef<HTMLDivElement>(null)
+
+  return (
+    <div ref={triggerRef}>
+      <Select
+        placeholder={placeholder}
+        value={value}
+        open={open}
+        onClick={() => setOpen(o => !o)}
+        onClear={() => setValue(undefined)}
+      />
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <Popover.Portal>
+          <Popover.Positioner anchor={triggerRef} side="bottom" align="start" sideOffset={4} style={{ zIndex: 10030 }}>
+            <Popover.Popup
+              className="flex flex-col rounded-[8px] overflow-hidden"
+              style={{
+                minWidth: 200,
+                background: "var(--surface-floating-default)",
+                border: "0.5px solid var(--color-border-neutral-subtle)",
+                boxShadow: "var(--shadow-elevation-5)",
+              }}
+            >
+              {options.map(opt => (
+                <MenuItem key={opt} label={opt} size="sm" onClick={() => { setValue(opt); setOpen(false) }} />
+              ))}
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
+  )
+}
+
+// TagInput is a controlled component — this just gives each scene instance its
+// own local tag list so the demo is genuinely interactive, not a static prop.
+function PgInteractiveTagInput({ placeholder }: { placeholder?: string }) {
+  const [tags, setTags] = useState<string[]>([])
+  return (
+    <TagInput
+      tags={tags}
+      onAddTag={t => setTags(ts => [...ts, t])}
+      onRemoveTag={t => setTags(ts => ts.filter(x => x !== t))}
+      placeholder={placeholder}
+    />
+  )
+}
+
+// Shared shell — Topbar + Sidebar, matching forms-create-page-example.tsx's
+// own composition exactly. `overlay` renders after the row so ModalDialog/
+// SlideOut (both position:fixed, SlideOut also portal-based) stack correctly
+// regardless of nesting — confirmed against modal-dialog.tsx / slide-out.tsx.
+function PgCreateContextShell({ sidebarId, overlay, children }: { sidebarId: string; overlay?: React.ReactNode; children: React.ReactNode }) {
+  const [activeSidebar, setActiveSidebar] = useState(sidebarId)
+  return (
+    <div className="flex flex-col h-full">
+      <AppBackground />
+      <Topbar workspaceName="Ops Team" companyName="AIMS OS" actions={PG_CTX_TOPBAR_ACTIONS} />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId={activeSidebar} onItemClick={setActiveSidebar} />
+        {children}
+      </div>
+      {overlay}
+    </div>
+  )
+}
+
+type PgTourStepDef = { label: string; note: string; content: React.ReactNode }
+type PgPreviewCaseId = "contextual-slideout" | "standalone-modal" | "standalone-modal-apikey" | "standalone-fullpage" | "staged-wizard" | "catalogue"
+
+// Section 1 · "the trigger lives where the collection lives" → SlideOut attaches to the record
+function pgSceneContextualSlideout(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const existingNotes = [
+    { author: "Priya S.", time: "2h ago", text: "Bumped the retry limit to 5 after last week's timeout." },
+    { author: "Marcus T.", time: "1d ago", text: "Confirmed the field mapping matches the new billing schema." },
+  ]
+  const frame = (overlay?: React.ReactNode, isLanding?: boolean) => (
+    <PgCreateContextShell sidebarId="agents" overlay={overlay}>
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <Header title="Data Sync Worker" description="Worker · Active" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l"
+          primaryAction={<Button variant="main" size="sm">Run now</Button>} />
+        <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+          <div className="grid grid-cols-[1fr_330px] gap-[20px] items-start max-w-[1040px]">
+            <div className="flex flex-col gap-[12px]">
+              <div className="rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
+                <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Syncs contact records between the CRM and the billing system every 15 minutes.</p>
+              </div>
+              <WidgetFather title="Recent Runs" widthClass="wide" showRefresh showMenu>
+                <div className="flex flex-col gap-[8px]">
+                  <PgRunRow status="success" time="12m ago" />
+                  <PgRunRow status="success" time="27m ago" />
+                  <PgRunRow status="error" time="42m ago" />
+                </div>
+              </WidgetFather>
+            </div>
+            <WidgetFather title="Notes" widthClass="narrow" cta={{ count: 1, type: "hug", primaryLabel: "+ Add note", onPrimary: next }}>
+              <div className="flex flex-col gap-[8px]">
+                {isLanding && <PgNoteRow author="You" time="Just now" text="Reached out to the vendor about the timeout — waiting on their reply." highlighted />}
+                {existingNotes.map(n => <PgNoteRow key={n.author} {...n} />)}
+              </div>
+            </WidgetFather>
+          </div>
+        </div>
+      </main>
+    </PgCreateContextShell>
+  )
+  return [
+    { label: "Trigger visible", note: "The trigger lives inside the Notes widget's own header — the collection it fills — not the page Header, which is reserved for the worker's own primary action, Run now.", content: frame() },
+    { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record and its existing notes stay visible behind it. Three fields, because that is what a note needs here — a note on a different object would carry different ones.", content: frame(
+      <SlideOut open onClose={back} type="full-slot" size="s" showScrollbar={false}>
+        <div className="flex flex-col gap-[16px] h-full">
+          <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
+          <PgFormSection label="Note">
+            <PgInteractiveSelect placeholder="Category" options={["Incident", "Configuration", "Follow-up"]} />
+            <PgInteractiveTagInput placeholder="Add a tag…" />
+            <Textarea placeholder="Write a note…" />
+          </PgFormSection>
+          <div className="flex-1" />
+          <div className="flex justify-end gap-[8px]">
+            <Button variant="secondary" size="sm" onClick={back}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={next}>Add note</Button>
+          </div>
+        </div>
+      </SlideOut>
+    ) },
+    { label: "Landing", note: "Closes. The new note is the first row of the Notes widget, briefly highlighted — no success banner, the note appearing is the confirmation.", content: frame(undefined, true) },
+  ]
+}
+
+// Section 2 · standalone, ≤5 fields → ModalDialog
+function pgSceneStandaloneModal(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_WORKERS) => {
+    const active = items.filter(w => w.state?.variant === "success").length
+    return (
+      <PgCreateContextShell sidebarId="agents" overlay={overlay}>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Workers" description={`${items.length} workers · ${active} active`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New worker</Button>} />
+          <PgListViewBody searchPlaceholder="Search workers…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Owner" }]} items={items} />
+        </main>
+      </PgCreateContextShell>
+    )
+  }
+  return [
+    { label: "Trigger visible", note: "A standalone entity, from its own list view — 4 fields, because that is what a worker needs. Field count is an input to the cascade, not an output of it.", content: frame() },
+    { label: "Surface open", note: "ModalDialog variant=\"content\" — the user can't ignore this and keep working; nothing on screen is this worker's parent. slotUnstyled: fields sit directly on the modal, no gray wrapper card. Four fields, because that is what a worker needs — see the API key scene for the same modal with two.", content: frame(
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
+        title="New Worker" description="Add a new AI worker to your team."
+        slot={
+          <PgFormSection label="Worker details">
+            <Input placeholder="Worker name" />
+            <PgInteractiveSelect placeholder="Role" options={["Operator", "Analyst", "Supervisor"]} />
+            <PgInteractiveSelect placeholder="Model" options={["GPT-class", "Claude-class", "Custom"]} />
+            <Input placeholder="Assigned team" />
+          </PgFormSection>
+        }
+        ctaPrimary={{ label: "Create", onClick: next }}
+        ctaSecondary={{ label: "Cancel", onClick: back }}
+      />
+    ) },
+    { label: "Landing", note: "Closes. The user returns to the list; the new worker appears there.", content: frame(undefined, PG_CTX_WORKERS_LANDING) },
+  ]
+}
+
+// Section 2 · the same surface as scene B, a different object — the container
+// is the constant, the content is the variable. See create.md §1b.
+function pgSceneStandaloneModalApiKey(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_API_KEYS) => {
+    const expiring = items.filter(k => k.state?.label === "Expiring soon").length
+    return (
+      <PgCreateContextShell sidebarId="settings" overlay={overlay}>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="API keys" description={`${items.length} keys · ${expiring} expiring`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New key</Button>} />
+          <PgListViewBody searchPlaceholder="Search keys…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={items} />
+        </main>
+      </PgCreateContextShell>
+    )
+  }
+  return [
+    { label: "Trigger visible", note: "The same ModalDialog as the Worker scene — but this object needs two fields, not four.", content: frame() },
+    { label: "Surface open", note: "Same modal, same slotUnstyled, same Forms-pattern spacing. Two fields, because that is what an API key needs. The pattern chose the container; the object chose the fields.", content: frame(
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
+        title="New API Key" description="Generate a new API key for this workspace."
+        slot={
+          <PgFormSection label="Key details">
+            <Input placeholder="Label" />
+            <PgInteractiveSelect placeholder="Scope" options={["Read", "Read and write", "Admin"]} />
+          </PgFormSection>
+        }
+        ctaPrimary={{ label: "Create", onClick: next }}
+        ctaSecondary={{ label: "Cancel", onClick: back }}
+      />
+    ) },
+    { label: "Landing", note: "Closes, back on the list, the new key as the first row, briefly highlighted.", content: frame(undefined, PG_CTX_API_KEYS_LANDING) },
+  ]
+}
+
+// Section 2 · standalone, >5 fields → Full-page create form
+function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  return [
+    { label: "Trigger visible", note: "Standalone, more than 5 fields — too much for a modal, but only one stage, so no Stepper.", content: (
+      <PgCreateContextShell sidebarId="contacts">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Users" description={`${PG_CTX_USERS.length} users · ${PG_CTX_USERS.filter(u => u.state?.label === "Invited").length} invited`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New user</Button>} />
+          <PgListViewBody searchPlaceholder="Search users…" filterSlots={[{ placeholder: "Role" }, { placeholder: "Status" }]} items={PG_CTX_USERS} />
+        </main>
+      </PgCreateContextShell>
+    ) },
+    { label: "Surface open", note: "A create page has no create CTA in its Header — title and backButton only. The action completes in StepperNavFooter at the bottom, the only place the flow can be finished.", content: (
+      <PgCreateContextShell sidebarId="contacts">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header title="New User" description="Add a teammate to this workspace" backButton size="size-l" />
+          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+            <div className="max-w-[680px] flex flex-col gap-[24px]">
+              <PgFormSection label="Basic information">
+                <Input placeholder="Full name" />
+                <Input placeholder="Email" />
+                <PgInteractiveSelect placeholder="Role" options={["Admin", "Editor", "Viewer"]} />
+                <PgInteractiveSelect placeholder="Team" options={["Growth", "Platform", "Support"]} />
+              </PgFormSection>
+              <PgFormSection label="Access & details">
+                <PgInteractiveSelect placeholder="Access level" options={["Full access", "Standard", "Restricted"]} />
+                <PgInteractiveSelect placeholder="Manager" options={["Priya Shah", "Marcus Tran", "Jordan Lee"]} />
+                <Input placeholder="Phone number" />
+                <Input placeholder="Location" />
+                <Textarea placeholder="Notes (optional)" />
+              </PgFormSection>
+            </div>
+          </div>
+          <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Create user" onNext={next} />
+        </div>
+      </PgCreateContextShell>
+    ) },
+    { label: "Landing", note: "Navigates to the created object.", content: (
+      <PgCreateContextShell sidebarId="contacts">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Alex Rivera" description="User · Editor" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l" />
+          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+            <div className="max-w-[680px] rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
+              <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Editor access, added to the Growth team.</p>
+            </div>
+          </div>
+        </main>
+      </PgCreateContextShell>
+    ) },
+  ]
+}
+
+// Section 3 · two or more stages, or any branching → Full-page wizard. Staged
+// flows never live in a panel — there is no Stepper inside a SlideOut.
+function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const draft = PG_CTX_POLICIES.filter(p => p.state?.label === "Draft").length
+  return [
+    { label: "Trigger visible", note: "Two or more stages — a full-page wizard, not a SlideOut. Staged flows never live in a panel.", content: (
+      <PgCreateContextShell sidebarId="knowledge">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Policies" description={`${PG_CTX_POLICIES.length} policies · ${draft} draft`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New policy</Button>} />
+          <PgListViewBody searchPlaceholder="Search policies…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={PG_CTX_POLICIES} />
+        </main>
+      </PgCreateContextShell>
+    ) },
+    { label: "Surface open", note: "Full-page wizard — Stepper + StepperNavFooter. The wizard never puts Cancel/Next in the Header; StepperNavFooter owns navigation.", content: (
+      <PgCreateContextShell sidebarId="knowledge">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l" />
+          <div className="px-[24px] pt-[16px] shrink-0">
+            <Stepper steps={[
+              { label: "Scope", state: "active" },
+              { label: "Rules", state: "default" },
+              { label: "Approvals", state: "default" },
+              { label: "Review", state: "default" },
+            ]} />
+          </div>
+          <div className="flex-1 overflow-y-auto px-[24px] pt-[16px]">
+            <div className="max-w-[680px] flex flex-col gap-[16px]">
+              <Input placeholder="Policy name" />
+              <PgInteractiveSelect placeholder="Applies to" options={["All tenant workspaces", "This workspace only", "Selected teams"]} />
+            </div>
+          </div>
+          <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Next" onNext={next} />
+        </div>
+      </PgCreateContextShell>
+    ) },
+    { label: "Confirm", note: "The creation is irreversible and tenant-wide — this earns a confirmation, independent of which surface built it.", content: (
+      <PgCreateContextShell sidebarId="knowledge"
+        overlay={
+          <ModalDialog isOpen onClose={back} variant="confirmation" tone="warning" iconName="AlertTriangle"
+            title="Publish this policy?"
+            description="This policy applies tenant-wide and cannot be undone once published."
+            ctaPrimary={{ label: "Publish", onClick: next }}
+            ctaSecondary={{ label: "Cancel", onClick: back }}
+          />
+        }>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l" />
+          <div className="px-[24px] pt-[16px] shrink-0">
+            <Stepper steps={[
+              { label: "Scope", state: "completed" },
+              { label: "Rules", state: "completed" },
+              { label: "Approvals", state: "completed" },
+              { label: "Review", state: "active" },
+            ]} />
+          </div>
+        </div>
+      </PgCreateContextShell>
+    ) },
+    { label: "Landing", note: "Navigates to the created object.", content: (
+      <PgCreateContextShell sidebarId="knowledge">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Data Retention Policy" description="Policy · Active" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l" />
+          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+            <div className="max-w-[680px] rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Scope</span>
+              <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Applies to all tenant workspaces. Requires approval before publishing.</p>
+            </div>
+          </div>
+        </main>
+      </PgCreateContextShell>
+    ) },
+  ]
+}
+
+// Section 4 · from a catalogue → selection modal, then the pre-filled form.
+// 4 steps, not 3 — the surface here is genuinely two connected screens.
+function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_AUTOMATIONS) => {
+    const draft = items.filter(a => a.state?.label === "Draft").length
+    return (
+      <PgCreateContextShell sidebarId="automations" overlay={overlay}>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Automations" description={`${items.length} automations · ${draft} draft`} size="size-l"
+            primaryAction={<Button variant="main" size="sm" onClick={next}>New automation</Button>} />
+          <PgListViewBody searchPlaceholder="Search automations…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Category" }]} items={items} />
+        </main>
+      </PgCreateContextShell>
+    )
+  }
+  return [
+    { label: "Trigger visible", note: "Browsing a catalogue — templates, marketplace, starting points.", content: frame() },
+    { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. It never becomes the form. slotUnstyled: bare MenuItem rows directly on the modal, no gray wrapper card.", content: frame(
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
+        title="Choose a template" description="Start from a template, or build from scratch."
+        slot={
+          <div className="flex flex-col">
+            {PG_CTX_TEMPLATES.map(t => (
+              <MenuItem key={t.id} label={t.name} subtext={t.desc}
+                trailingElement={<Button variant="secondary" size="sm" onClick={next}>Use template</Button>} />
+            ))}
+          </div>
+        }
+        ctaSecondary={{ label: "Cancel", onClick: back }}
+      />
+    ) },
+    { label: "Pre-filled form", note: "A list of the same object type on screen isn't a parent — this is standalone, same as the Worker case. Fields remain after selection, so the cascade resolves at step 5: ModalDialog, pre-filled. The two modals are sequential, never both open at once — the catalogue closes before this one opens.", content: frame(
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
+        title="New Automation" description='Pre-filled from the "Lead follow-up" template.'
+        slot={
+          <div className="flex flex-col gap-[16px]">
+            <Input defaultValue="Lead follow-up" />
+            <Textarea defaultValue="Sends a follow-up email 24h after a new lead is created." />
+          </div>
+        }
+        ctaPrimary={{ label: "Create", onClick: next }}
+        ctaSecondary={{ label: "Back", onClick: back }}
+      />
+    ) },
+    { label: "Landing", note: "Closes. The user returns to the list; the new automation appears there.", content: frame(undefined, PG_CTX_AUTOMATIONS_LANDING) },
+  ]
+}
+
+const PG_PREVIEW_SCENES: Record<PgPreviewCaseId, (next: () => void, back: () => void, onClose: () => void) => PgTourStepDef[]> = {
+  "contextual-slideout": pgSceneContextualSlideout,
+  "standalone-modal": pgSceneStandaloneModal,
+  "standalone-modal-apikey": pgSceneStandaloneModalApiKey,
+  "standalone-fullpage": pgSceneStandaloneFullPage,
+  "staged-wizard": pgSceneStagedWizard,
+  "catalogue": pgSceneCatalogue,
+}
+
+// The didactic bar is the ONLY place that explains the rule — it sits in its
+// own strip above the simulated frame, outside it, in normal flow (not
+// portaled, not floating on top). The simulated product's own copy never
+// explains why a surface was chosen. The single "Close Preview" button is
+// the only exit; the last tour step has no "Next".
+//
+// SlideOut and ModalDialog are `position: fixed` and would otherwise ignore
+// this flex layout entirely, covering the bar regardless of DOM order (they
+// portal to document.body). `transform` on the frame wrapper below gives it
+// a CSS containing block for fixed-position descendants — SlideOut/
+// ModalDialog's `inset-0` resolves against THIS box, which already starts
+// below the bar, instead of the true viewport. That's what keeps the bar in
+// its own strip; no z-index or portal juggling needed for it.
+function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onClose: () => void }) {
+  const [step, setStep] = useState(0)
+  const next = () => setStep(s => s + 1)
+  const back = () => setStep(s => Math.max(0, s - 1))
+  const steps = PG_PREVIEW_SCENES[caseId](next, back, onClose)
+  const i = Math.min(step, steps.length - 1)
+  const current = steps[i]
+
+  return (
+    <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+      <AppBackground />
+      <div className="shrink-0 flex items-center justify-between gap-[16px] px-[24px] pr-[170px] py-[14px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}>
+        <div className="min-w-0">
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Step {i + 1} of {steps.length} — {current.label}</span>
+          <p className="text-[13px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>{current.note}</p>
+        </div>
+        <div className="flex gap-[8px] shrink-0">
+          <Button variant="secondary" size="sm" disabled={i === 0} onClick={back}>Back</Button>
+          {i < steps.length - 1 && <Button variant="primary" size="sm" onClick={next}>Next</Button>}
+        </div>
+      </div>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ transform: "translateZ(0)" }}>
+        {current.content}
+      </div>
+      <button
+        onClick={onClose}
+        className="fixed flex items-center gap-[6px] rounded-[6px]"
+        style={{ top: 10, right: 12, zIndex: 10, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+      >
+        <LucideIcons.X size={12} /> Close Preview
+      </button>
+    </div>
+  )
+}
+
+function PatternCreatePage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+  const [pgPreviewCase, setPgPreviewCase] = useState<PgPreviewCaseId | null>(null)
+
+  return (
+    <div>
+      {pgPreviewCase && (
+        <PgCreatePreviewTour caseId={pgPreviewCase} onClose={() => setPgPreviewCase(null)} />
+      )}
+
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Create</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          Which surface to use when a new object comes into existence — ModalDialog, SlideOut, or a full-page form — decided by a cascade, not a single lookup.
+        </p>
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {([
+          { id: "when-to-use", label: "When to Use" },
+          { id: "anatomy",     label: "Anatomy"     },
+          { id: "examples",    label: "Examples"    },
+          { id: "rules",       label: "Rules"       },
+        ] as { id: string; label: string }[]).map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold transition-colors"
+            style={{ color: tab === t.id ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── When to Use ───────────────────────────────────────────────────── */}
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Scope</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
+              <strong className="text-[var(--foreground)]">Create</strong> brings a new object into existence. <strong className="text-[var(--foreground)]">Configure</strong> edits the properties of something that already exists. This pattern governs Create only — it never governs Configure.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>The pattern decides the container, never the fields</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px] mb-[12px]">
+              This is the single most misread thing about the pattern. <strong className="text-[var(--foreground)]">The fields belong to the object. The container belongs to the pattern.</strong> A create modal for a worker has the fields a worker needs; a create modal for an API key has the fields an API key needs. Neither is "what a create modal looks like."
+            </p>
+            <div className="overflow-x-auto mb-[12px]">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <tbody>
+                  <tr style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                    <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)] w-[220px]">Input to the cascade</td>
+                    <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">How many mandatory fields the object has, whether the flow has stages, whether it branches</td>
+                  </tr>
+                  <tr>
+                    <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">Output of the cascade</td>
+                    <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">Which container holds them</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
+              The fields determine the surface. The surface never determines the fields. Anyone reading an example and copying its field list has inverted the pattern — a prototype for a different object, in the same surface, will look different inside, and that is the pattern working correctly, not an inconsistency. See scenes B and B2 in the Examples tab for the same modal with different fields.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Gate 0 — does this pattern apply at all?</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">Run this first. If any row matches, no surface is selected here — a different pattern governs the case.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Condition", "Why it's excluded", "Governed by"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["The object is created by direct manipulation — drag, drop, draw", "Dropping the node onto the canvas already created it", "SidePanel (Configure)"],
+                    ["The object is created inside an ongoing agent conversation", "The chat is the container; there's no surface to choose", "Chat surface"],
+                    ["The action edits properties of an existing object", "Nothing new comes into existence", "Configure pattern"],
+                  ].map(([cond, why, gov]) => (
+                    <tr key={cond} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{cond}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{why}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{gov}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              <strong className="text-[var(--foreground)]">Control case.</strong> Dragging a node from the library onto the Workflow Builder canvas is not a create action under this pattern — the SidePanel that opens afterward configures the node that already exists.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Gate 1 — which create mode?</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">The mode is decided by the affordance the user activates — never inferred.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Trigger", "Mode", "Surface"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Any standard create affordance", "Manual", "Run the cascade below"],
+                    ["A \"Create with AI\" affordance", "Assisted", "ModalDialog hosting the chat component → success ModalDialog"],
+                    ["Browse a catalogue — templates, marketplace, presets, starting points", "From a source", "ModalDialog variant=\"content\" for the selection → then the cascade, pre-filled"],
+                  ].map(([trig, mode, surf]) => (
+                    <tr key={mode} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{trig}</td>
+                      <td className="px-[12px] py-[10px] font-semibold" style={{ color: "var(--primary)" }}>{mode}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{surf}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-col gap-[6px] mt-[12px]">
+              <p className="text-[12px] text-[var(--field-supporting)]"><strong className="text-[var(--foreground)]">Assisted create</strong> — the object is defined through conversation, not form fields; a success ModalDialog confirms what was created, with two exits: view the new object, or create another. The chat component exists in the Figma Design System but is not yet implemented in this repo — this branch is documented, not buildable, until it ships.</p>
+              <p className="text-[12px] text-[var(--field-supporting)]"><strong className="text-[var(--foreground)]">Create from a source</strong> — the catalogue modal is a selection surface only; it never becomes the form. If the source fully defines the object, the object is created directly. If fields remain, the cascade runs with the source's values pre-filled.</p>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>The cascade — manual create</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">A sequence, not a lookup table. Start at step 1. On a yes, stop and take that surface. On a no, move to the next step.</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]"><strong className="text-[var(--foreground)]">Step 1 is a hand-off, not a surface choice.</strong> Once the object type declares it owns a workspace, this pattern's job is done — Create navigates to that object's own creation section, and nothing past that point is specified here.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Step", "Test", "Yes", "No"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["1", "Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation?", "Hand-off — object's own creation section", "→ 2"],
+                    ["2", "Does the flow branch, or does it have two or more stages?", "Full-page wizard + Stepper + StepperNavFooter", "→ 3"],
+                    ["3", "Can the object be created from a single field, AND is a list of the same object type visible on screen?", "Inline create row", "→ 4"],
+                    ["4", "Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at?", "SlideOut type=\"full-slot\"", "→ 5"],
+                    ["5", "More than 5 fields?", "Full-page create form", "ModalDialog variant=\"content\""],
+                  ].map(([step, test, yes, no]) => (
+                    <tr key={step} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">{step}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{test}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{yes}</span></td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{no}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">Step 3's inline create row has no existing component to render it with yet — it would need to be built in <code>experimental/</code> before this row of the cascade can ship.</p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Steps 4–5 — contextual vs. standalone</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">The split that decides between a panel and a modal, and the one most often gotten wrong.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["", "Contextual create", "Standalone create"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Test", "The new object hangs off something on screen", "Nothing on screen is its parent"],
+                    ["Examples", "A note on a record · a vehicle inside a customer profile · a task in a project", "A new entity from its own list view · a user in Admin · an API key"],
+                    ["Surface", "SlideOut type=\"full-slot\"", "ModalDialog variant=\"content\" (≤5 fields) · full-page create form (6+)"],
+                  ].map(([label, ctx, standalone]) => (
+                    <tr key={label} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">{label}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ctx}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{standalone}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              A SlideOut grows — 350px → 450px → half screen → full screen — so no field-count rule is needed on the contextual side. A modal is capped at 900px and can only scroll, which is exactly why the 5-field threshold lives on the standalone side and nowhere else.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Staged flows — where the line sits</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[10px]">
+              Staged flows never live in a panel — there is no Stepper inside a SlideOut.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Shape of the flow", "Surface"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["One stage", "SlideOut"],
+                    ["Two or more stages, or any branching", "Full-page wizard + Stepper + StepperNavFooter"],
+                  ].map(([shape, surf]) => (
+                    <tr key={shape} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{shape}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{surf}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">StepperNavFooter is a page-level component — it never appears inside a SlideOut.</p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>When Create uses a modal</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">ModalDialog is not excluded from Create. It has 3 jobs, and 1 prohibition.</p>
+            <div className="overflow-x-auto mb-[12px]">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Job", "Variant", "Example"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Fill in a standalone create, 5 fields or fewer", "content", "A new entity from its own list view · a user in Admin"],
+                    ["Choose from a catalogue", "content", "Pick a template from the marketplace"],
+                    ["Converse with an agent", "content", "Create with AI"],
+                    ["Confirm before an irreversible save", "confirmation", "Publishing a tenant-wide policy"],
+                  ].map(([job, variant, ex]) => (
+                    <tr key={job} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{job}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{variant}</span></td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ex}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
+              <strong className="text-[var(--foreground)]">Prohibition.</strong> A modal never holds a form whose fields depend on what the modal is covering. If the user has to remember, compare against, or navigate the background to complete it, the surface is SlideOut — however few fields it has.
+            </p>
+            <p className="text-[12px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>The test: can the user ignore this and keep working in the background?</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Task", "Can it be ignored?", "Surface"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Filling in fields that relate to what's on screen", "Yes", "SlideOut"],
+                    ["Filling in fields for a standalone object, 5 or fewer", "No", "ModalDialog variant=\"content\""],
+                    ["Choosing from a catalogue", "No", "ModalDialog variant=\"content\""],
+                    ["Conversing with an agent", "No", "ModalDialog variant=\"content\""],
+                    ["Confirming", "No", "ModalDialog variant=\"confirmation\""],
+                  ].map(([task, ignorable, surf]) => (
+                    <tr key={task} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{task}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ignorable}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{surf}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Run the cascade top to bottom and stop at the first \"yes\" — never treat two steps as equally applicable." },
+                { type: "dont", text: "Don't open a ModalDialog for a form whose fields depend on the background it's covering — use SlideOut, regardless of field count." },
+                { type: "do",   text: "Treat \"can the user ignore this and keep working?\" as the real test between ModalDialog and SlideOut." },
+                { type: "dont", text: "Don't put StepperNavFooter inside a SlideOut — it's a page-level component, reserved for two or more stages or any branching." },
+                { type: "do",   text: "Put a child collection's create trigger in that collection's own widget header, never in the page Header — the page Header CTA is reserved for the screen's primary object." },
+                { type: "dont", text: "Don't add a global \"+\" affordance to the Topbar — Create is always contextual in v1, entered from a list Header, an EmptyState CTA, or an action in the collection's own widget header." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Anatomy ───────────────────────────────────────────────────────── */}
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>After create — confirmation and landing</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[6px]">Both are independent of the container chosen above — never merged into the cascade.</p>
+            <div className="overflow-x-auto mb-[14px]">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Condition", "Confirmation"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["The user can undo the creation themselves — delete or archive, no external effect", "None. Save directly."],
+                    ["The creation cannot be undone, has tenant-wide scope, or triggers effects outside the tenant", "ModalDialog variant=\"confirmation\" before saving"],
+                    ["Assisted create", "Always ends in a success ModalDialog"],
+                  ].map(([cond, conf]) => (
+                    <tr key={cond} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{cond}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{conf}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Surface", "After create"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Inline create row", "Stays in place. The new row appears in the list, ready to create the next one."],
+                    ["SlideOut", "Closes. The user returns to where they were; the new object appears in context."],
+                    ["ModalDialog — standalone create", "Closes. The user returns to the list they triggered it from; the new object appears there. It does not navigate away — a standalone create of five fields or fewer is short enough that a user often makes several in a row."],
+                    ["Full-page create form / wizard", "Navigates to the created object."],
+                    ["Catalogue modal — source fully defines the object", "Closes. Lands as the surface it would have used had the fields been filled by hand."],
+                    ["Assisted create", "Success modal → view the object, or create another."],
+                  ].map(([surf, after]) => (
+                    <tr key={surf} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{surf}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{after}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">Step 1's hand-off isn't in this table — landing for an object that owns its own workspace is decided by that object's own creation section, not by this pattern.</p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Confirming that it worked</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">Separate from the confirmation before saving above, which is about risk. This is about whether the user can tell the create succeeded.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Situation", "Feedback"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["The created object lands somewhere visible — a list, a widget, the page you return to", "The object appearing is the confirmation. Show it as the first row, briefly highlighted. No banner."],
+                    ["The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from", "A transient notice is needed. No component exists for this — see below."],
+                    ["The create was irreversible", "The confirmation modal before saving already carried the weight. The landing does the rest."],
+                  ].map(([sit, feedback]) => (
+                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{feedback}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              <strong style={{ color: "var(--foreground)" }}>AlertBanner is not the component for this.</strong> Its spec defines it as a full-width notice for system-level feedback, and the Feedback pattern page assigns it to persistent in-context state. A success banner for a routine create occupies space until dismissed and says less than the object itself does.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
+              <strong style={{ color: "var(--color-text-alert)" }}>DS-GAP — Date field.</strong> There is no <code style={{ fontSize: 11 }}>DatePicker</code> or <code style={{ fontSize: 11 }}>Calendar</code> component in the repo. Any create whose object needs a date is under-specified until one exists — do not improvise one.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
+              <strong style={{ color: "var(--color-text-alert)" }}>DS-GAP — Toast / Snackbar.</strong> The design system has no transient action-feedback component. Until it exists, the second row above cannot be built, and any create whose result is invisible is under-specified.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Entry points</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">Create is always contextual in v1 — there is no global create affordance.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Entry point", "Component"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["List view", "Header primaryAction, variant=\"main\" — max one per screen"],
+                    ["Empty state", "EmptyState CTA — \"Create your first [Entity]\""],
+                    ["Inside a record, collection held by a widget", "An action in that widget's own header"],
+                  ].map(([entry, comp]) => (
+                    <tr key={entry} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{entry}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{comp}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              <strong style={{ color: "var(--foreground)" }}>The trigger lives where the collection lives.</strong> If notes are held by a Notes widget, the affordance to add one belongs in that widget, not in the page Header. The page Header CTA is reserved for the primary object of that screen — on a Worker detail page that is Run now, not Add note.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">Not in v1: a global "+" in the Topbar. The Topbar accepts a maximum of 3 actions and all 3 are occupied — adding one is a change to the app shell, not to this pattern.</p>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Examples ──────────────────────────────────────────────────────── */}
+      {tab === "examples" && (
+        <div className="flex flex-col gap-[24px]">
+          <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
+            Every case below resolves by running the cascade — no exception required. Six cases open a full-screen walkthrough; the rest are documentation rows — they explain the rule in text and don't open a preview, either because the component doesn't exist yet or because this pattern deliberately doesn't specify anything further.
+          </p>
+
+          <PatternCard>
+            <SectionLabel>Creating something that hangs off what you're looking at</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="With the list on screen" surface="Inline create row" status="pending"
+                note="Step 3. No component renders this yet — it needs building in experimental/." />
+              <PgGalleryRow label="No list on screen" surface="SlideOut" status="preview"
+                note="Step 4 — attaches to the record."
+                onLaunch={() => setPgPreviewCase("contextual-slideout")} />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Creating something standalone</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="5 fields or fewer — a worker" surface="ModalDialog" status="preview"
+                note="Step 5 — nothing on screen is this object's parent. Four fields, because that is what a worker needs."
+                onLaunch={() => setPgPreviewCase("standalone-modal")} />
+              <PgGalleryRow label="Same modal, a different object — an API key" surface="ModalDialog" status="preview"
+                note="Step 5 — the same surface as the worker scene, with two fields instead of four. The pattern chose the container; the object chose the fields."
+                onLaunch={() => setPgPreviewCase("standalone-modal-apikey")} />
+              <PgGalleryRow label="More than 5" surface="Full-page create form" status="preview"
+                note="Step 5 — the 5-field threshold applies only on the standalone, modal-bound side."
+                onLaunch={() => setPgPreviewCase("standalone-fullpage")} />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Creating in stages</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="2 or more stages, or any branching" surface="Full-page wizard" status="preview"
+                note="Step 2 — Stepper + StepperNavFooter. Staged flows never live in a panel — there is no Stepper inside a SlideOut."
+                onLaunch={() => setPgPreviewCase("staged-wizard")} />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Creating from something else</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="From a catalogue" surface="Selection modal → pre-filled form" status="preview"
+                note="Gate 1 — from a source. The catalogue modal is a selection surface only; it never becomes the form."
+                onLaunch={() => setPgPreviewCase("catalogue")} />
+              <PgGalleryRow label="With AI" surface="Chat ModalDialog" status="pending"
+                note="Gate 1 — assisted. Exists in Figma, not yet implemented in this repo." />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>When this pattern doesn't pick a surface</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="The object has its own creation section" surface="Step 1 — hand-off" status="info"
+                note="Create navigates to the object's own creation section — a builder, canvas, or editor. Nothing about the surface, confirmation, or landing is specified past that point." />
+              <PgGalleryRow label="Dragging onto a canvas · inside an agent conversation · editing properties" surface="Gate 0 — rejected" status="info"
+                note="None of these are Create. Configure (SidePanel) owns the first and third; the chat is already the container for the second." />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Stress test</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Case", "Path", "Surface"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Create a note, notes list visible in an Overview widget", "Step 3", "Inline create row"],
+                    ["Create a note, no notes list on screen", "Step 4", "SlideOut — it attaches to the record"],
+                    ["Create an entity record from its own list view, 4 fields", "Step 5", "ModalDialog variant=\"content\""],
+                    ["Create an entity record from its own list view, 9 fields", "Step 5", "Full-page create form"],
+                    ["Create a secondary entity from inside its parent's profile", "Step 4", "SlideOut"],
+                    ["Create an entity record, two stages, no branching", "Step 2", "Full-page wizard"],
+                    ["Create a governance policy", "Step 2", "Full-page wizard + Stepper, + confirmation"],
+                    ["Create a workflow", "Step 1", "Hand-off → the workflow builder owns everything past this point"],
+                    ["Create an agent", "Step 1", "Hand-off → the agent's own workspace owns everything past this point"],
+                    ["Add a node to the canvas", "Gate 0", "Rejected — this is Configure"],
+                    ["Add a template from the marketplace, template fully defines the object", "Gate 1 — from a source", "ModalDialog variant=\"content\" → created"],
+                    ["Add a template from the marketplace, fields remain", "Gate 1 → Step 5", "Catalogue modal → ModalDialog, pre-filled — a list of the same type isn't a parent"],
+                    ["Create with AI", "Gate 1 — assisted", "Chat ModalDialog → success modal"],
+                  ].map(([caseName, path, surf], i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{caseName}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{path}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{surf}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Component inventory</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Surface in the cascade", "Status"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Full-page create form", "Exists — ScreenLayout + Header composition"],
+                    ["Full-page wizard", "Exists — Stepper + StepperNavFooter"],
+                    ["SlideOut", "Exists. A create panel uses type=\"full-slot\" — no entity header, no filters layout."],
+                    ["ModalDialog variant=\"confirmation\"", "Exists"],
+                    ["ModalDialog variant=\"content\" — catalogue slot, 900px max-width", "Exists. The slot prop already accepts arbitrary content."],
+                    ["Inline create row", "Does not exist yet — needs building in experimental/"],
+                    ["Popover / quick create", "Not emitted by the cascade — do not build"],
+                    ["Chat component (assisted create)", "Exists in Figma, not yet implemented in this repo"],
+                  ].map(([surf, status]) => (
+                    <tr key={surf} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{surf}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              The cascade never selects a popover: step 3 covers the single-field case, step 5's default covers 2–5 fields, and SlideOut size="m" opens at 350px — approximately the width a popover would have. Building one would produce a component no screen imports, which fails the repo's zero-import check.
+            </p>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Rules ─────────────────────────────────────────────────────────── */}
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Technical Spec</SectionLabel>
+            <PatternRules code={`CREATE_PATTERN
+
+GATE_0 — does this pattern apply?
+  IF created_by_direct_manipulation      → REJECT, use Configure (SidePanel)
+  IF created_inside_agent_conversation   → REJECT, use Chat surface
+  IF editing_an_existing_object          → REJECT, use Configure
+
+GATE_1 — which create mode?
+  IF trigger == "Create with AI"         → ASSISTED
+  IF trigger == browse_catalogue         → FROM_A_SOURCE
+  ELSE                                    → MANUAL → run CASCADE
+
+CASCADE (manual create — stop at first YES)
+  STEP 1  object_type.owns_workspace()          → HAND-OFF: navigate to the object's own creation section, nothing else specified
+  STEP 2  flow.branches OR flow.stages >= 2     → Full-page wizard + Stepper + StepperNavFooter (never a Stepper inside a SlideOut)
+  STEP 3  object_type.single_field_createable
+            AND list_of_same_type_on_screen     → Inline create row
+  STEP 4  new_object.attaches_to_visible_thing  → SlideOut type="full-slot"
+  STEP 5  field_count > 5                       → Full-page create form
+          ELSE                                  → ModalDialog variant="content"
+
+MODAL_PROHIBITION
+  NEVER host a form whose fields depend on the content it is covering
+  → if true, USE SlideOut regardless of field count
+
+CONFIRMATION (independent of container)
+  IF creation_is_undoable_by_user        → none, save directly
+  IF creation_is_irreversible
+     OR tenant_wide_scope
+     OR external_effects                 → ModalDialog variant="confirmation"
+  IF mode == ASSISTED                    → always ends in success ModalDialog
+
+LANDING (derived from container, not a separate decision)
+  Inline create row            → stays in place, ready for the next create
+  SlideOut                     → closes, user returns to where they were
+  ModalDialog (standalone)     → closes, user returns to the list, new object appears there
+  Full-page create form/wizard → navigates to the created object
+  Catalogue modal (source fully defines it) → closes, lands as if filled by hand
+  Assisted create               → success modal → view object OR create another
+  Hand-off (step 1)             → not this pattern's decision — the object's own creation section owns it`} />
+          </PatternCard>
         </div>
       )}
     </div>
@@ -39923,7 +40849,6 @@ export default function App() {
           {active === "stepper-nav-footer"  && <StepperNavFooterPage   openSpec={setSpecModal} />}
           {active === "patterns-list-view"  && <PatternListViewPage />}
           {active === "patterns-filter"     && <PatternFilterPage />}
-          {active === "patterns-overlay"    && <PatternOverlayPage />}
           {active === "patterns-header"     && <PatternHeaderPage />}
           {active === "patterns-nav-depth"  && <PatternNavDepthPage />}
           {active === "patterns-loading"    && <PatternLoadingPage />}
@@ -39932,6 +40857,7 @@ export default function App() {
           {active === "patterns-widget-canvas" && <PatternWidgetCanvasPage />}
           {active === "patterns-guardrails"   && <PatternGuardrailsPage />}
           {active === "patterns-forms"        && <PatternFormsPage />}
+          {active === "patterns-create"       && <PatternCreatePage />}
           {active === "patterns-panel-content" && <PatternPanelContentPage />}
           {active === "patterns-slideout"     && <PatternSlideOutPage />}
           {active === "widget-father"         && <WidgetFatherPage />}

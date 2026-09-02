@@ -278,13 +278,9 @@ The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs ba
 <Header title="Meridian" backButton={true} breadcrumbs={[...]} />
 ```
 
-### Overlays
-- **`ModalDialog`** — user MUST stop (destructive action, confirmation, critical form)
-- **`SlideOut`** — user can continue browsing (details, filters, context)
-- Rule: can the user ignore it? → SlideOut. Must they respond? → Modal.
-- Only 1 Modal + 1 SlideOut active at a time.
-
 ### Panel overlays — PM component selection guide
+
+The general `ModalDialog` vs. `SlideOut` question — and the multi-step-form case specifically — are now answered by the Create pattern section below, not here: `ModalDialog` when the user can't ignore the task and keep working, `SlideOut` when they can; a multi-step **create** flow follows Create's own staged-flows table (2 stages, no branching → `SlideOut`; 3+ or any branching → dedicated view + `Stepper`). This section covers the rest of panel selection — which is still `SlideOut` vs. `SidePanel`, a distinct axis that belongs to **Configure**, not Create (a `SidePanel` never appears in a Create flow — see the Create pattern's Gate 0).
 
 **Which panel component to use:**
 
@@ -292,16 +288,14 @@ The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs ba
 |---|---|---|
 | Entity detail preview from a list (Eye button) | `SlideOut` | Overlay on top of the list — user browses back quickly |
 | Node / item configuration within a canvas or builder | `SidePanel` | Inline with the canvas — no backdrop, user sees context while editing |
-| Filters panel (full filter set) | `SlideOut` type `"filters"` | Standard pattern, always overlays list |
-| Step-by-step guided form (multi-step) | `SlideOut` | Focused flow, backdrop keeps user on task |
+| Filters panel (full filter set) | `FiltersSlideout` | Its own dedicated component (checked directly — it doesn't wrap `SlideOut`), always overlays list |
 
-**SlideOut — which `type` variant to use:**
+**SlideOut — which `type` to use.** Only 2 values exist on the real component (checked directly against `slide-out.tsx` — `"filters"` and `"default"` are NOT valid `SlideOutType` values; filters use the separate `FiltersSlideout` component above instead):
 
-| Use case | `type` prop | When to add `showTabs` |
+| Use case | `type` prop | Notes |
 |---|---|---|
-| Entity preview (name, status, key metrics, AI summary, recent runs) | `"with-variants"` | Yes, when content splits into Overview / History / Config |
-| Filter set (full filter controls) | `"filters"` | No — filters panel has its own layout |
-| Generic content / form without entity header | `"default"` | Only if content naturally separates into sections |
+| Entity preview (name, status, key metrics, AI summary, recent runs) | `"with-variants"` | Add `showTabs` when content splits into Overview / History / Config |
+| Generic content — a form, a Create flow, anything without an entity header | `"full-slot"` | No built-in header, tabs, chips, or CTA footer — compose them yourself inside `children` |
 
 **SlideOut — mandatory props for `type="with-variants"` (entity detail):**
 
@@ -373,6 +367,80 @@ Structure content top-to-bottom in this order:
 - Always set `showCollapsedStrip` — the collapsed strip is the only affordance when the panel is closed; without it, there's no way to reopen it.
 
 **Quick decision:** Is the panel overlapping a browsable list? → `SlideOut`. Is it embedded alongside a canvas or builder where the user edits something in context? → `SidePanel`.
+
+### Create pattern — surface selection
+
+Full rule, reasoning, and open questions live in `docs/patterns/create.md`. This section is the enforceable subset — tables and hard rules only.
+
+**Create** brings a new object into existence. **Configure** edits the properties of something that already exists. This pattern governs Create only, never Configure.
+
+**The pattern decides the container, never the fields.** A create modal for a worker has the fields a worker needs; a create modal for an API key has the fields an API key needs — neither is "what a create modal looks like." Field count, stage count, and branching are **inputs** to the cascade below; the container is its **output**, never the reverse. Two prototypes for different objects landing on the same surface (e.g. two `ModalDialog` creates with different field counts) is the pattern working correctly, not an inconsistency to fix.
+
+**Gate 0 — does this pattern apply at all?**
+
+| Condition | Why it is excluded | What governs it instead |
+| --- | --- | --- |
+| The object is created by direct manipulation — drag, drop, draw | Dropping the node onto the canvas already created it | Configure pattern (`SidePanel`) |
+| The object is created inside an ongoing agent conversation | The chat is the container; there is no surface to choose | Chat surface |
+| The action edits properties of an existing object | Nothing new comes into existence | Configure pattern |
+
+**Gate 1 — which create mode?** The mode is decided by the affordance the user activates — never inferred.
+
+| Trigger | Mode | Surface |
+| --- | --- | --- |
+| Any standard create affordance | Manual | Run the cascade below |
+| A `Create with AI` affordance | Assisted | `ModalDialog` hosting the chat component → success `ModalDialog`. The chat component is `DS-GAP` — not implemented in this repo yet. |
+| Browse a catalogue — templates, marketplace, presets, starting points | From a source | `ModalDialog variant="content"` for the selection → then the cascade below, pre-filled |
+
+**When Create uses a modal.** `ModalDialog` is not excluded from Create — it has 3 jobs and 1 prohibition:
+
+| Job | Variant | Example |
+| --- | --- | --- |
+| Fill in a standalone create, 5 fields or fewer | `content` | A new entity from its own list view · a user in Admin |
+| Choose from a catalogue | `content` | Pick a template from the marketplace |
+| Converse with an agent | `content` | `Create with AI` |
+| Confirm before an irreversible save | `confirmation` | Publishing a tenant-wide policy |
+
+**Prohibition:** a modal never holds a form whose fields depend on what the modal is covering — if the user has to remember, compare against, or navigate the background to complete it, the surface is `SlideOut`, however few fields it has.
+
+The test that decides it: **can the user ignore this and keep working in the background?**
+
+| Task | Can it be ignored? | Surface |
+| --- | --- | --- |
+| Filling in fields that relate to what is on screen | Yes | `SlideOut` |
+| Filling in fields for a standalone object, 5 or fewer | No | `ModalDialog variant="content"` |
+| Choosing from a catalogue | No | `ModalDialog variant="content"` |
+| Conversing with an agent | No | `ModalDialog variant="content"` |
+| Confirming | No | `ModalDialog variant="confirmation"` |
+
+**The cascade — manual create.** A sequence, not a lookup table: start at step 1, stop at the first "yes."
+
+| Step | Test | Yes | No |
+| --- | --- | --- | --- |
+| 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | Hand-off — the object has its own creation section; Create just navigates there, nothing else is specified | → 2 |
+| 2 | Does the flow branch, or does it have two or more stages? | Full-page wizard + `Stepper` + `StepperNavFooter` | → 3 |
+| 3 | Can the object be created from a single field, AND is a list of the same object type visible on screen? | Inline create row — `DS-GAP`, does not exist in this repo yet | → 4 |
+| 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | `SlideOut type="full-slot"` | → 5 |
+| 5 | More than 5 fields? | Full-page create form | `ModalDialog variant="content"` |
+
+Step 1 is a hand-off, not a surface choice — once the object declares it owns a workspace, Create's job ends at navigating there. Nothing about confirmation, landing, or the surface itself is specified past that point; the object's own creation section owns all of it.
+
+Steps 4–5, stated as one rule: **contextual** (the new object hangs off something on screen) → `SlideOut type="full-slot"`. **Standalone** (nothing on screen is its parent) → `ModalDialog variant="content"` at 5 fields or fewer, a full-page create form above that. The 5-field threshold applies ONLY here (standalone, modal-bound) — never to a `SlideOut`, which grows with its content instead.
+
+**Staged flows — where the line sits.** Staged flows never live in a panel — there is no `Stepper` inside a `SlideOut`.
+
+| Shape of the flow | Surface |
+| --- | --- |
+| One stage | `SlideOut` |
+| Two or more stages, or any branching | Full-page wizard + `Stepper` + `StepperNavFooter` |
+
+`StepperNavFooter` is a page-level component — it never appears inside a `SlideOut`.
+
+**Entry points — the trigger lives where the collection lives.** If notes are held by a Notes widget, the affordance to add one belongs in that widget's own header, not in the page `Header`. The page `Header` CTA is reserved for the primary object of that screen — on a Worker detail page that is "Run now," not "Add note." A create page also carries no create CTA in its own `Header`: on a full-page create form or wizard, `Header` carries title and `backButton` only — the action completes in `StepperNavFooter`.
+
+**`DS-GAP` — no date field.** There is no `DatePicker` or `Calendar` component in `src/components/ui/`. Any create form whose object needs a date is under-specified until one exists — do not improvise one.
+
+**General overlay stacking rule (applies everywhere, not just Create):** only 1 `ModalDialog` + 1 `SlideOut` active at a time.
 
 ### Confirmation modals — standard composition
 Use `variant="confirmation"` (the default) on `ModalDialog`. Always set `tone` to match the severity of the action:
@@ -685,7 +753,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 - Showing two secondary buttons side by side — order is always primary → secondary → tertiary.
 - Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead (except `RecordHeader`'s AI agent trigger — see Button hierarchy rules).
 - Adding a filter chip before Apply is clicked.
-- Opening a Modal for non-destructive/non-blocking content — use SlideOut instead.
+- Opening a Modal for content the user can safely ignore and keep working in the background — use SlideOut instead. Destructiveness is NOT the test: a catalogue picker and the Create-with-AI chat are both non-destructive and still correctly Modal, because the user can't ignore either one either (see the Create pattern's "when Create uses a modal" test).
 - Showing a loading indicator for operations under 300ms.
 - Showing two loading indicators on the same view simultaneously.
 
