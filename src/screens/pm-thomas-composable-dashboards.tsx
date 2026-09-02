@@ -183,6 +183,9 @@ const FRESHNESS_OPTIONS = [
   { value: "24h",      label: "Every day (aging)" },
 ]
 const WIDGET_SIZES = [{ id: "sm", label: "S" }, { id: "md", label: "M" }, { id: "lg", label: "L" }]
+const FILTER_OPS = ["is", "is not", "contains", "starts with", "greater than", "less than", "is empty", "is not empty"] as const
+type FilterOp = typeof FILTER_OPS[number]
+type WBFilter = { id: string; field: string; op: FilterOp; value: string }
 const STYLE_VARIANTS = [
   { id: "",         label: "Default" },
   { id: "compact",  label: "Compact" },
@@ -231,7 +234,7 @@ function Pill({ label, value, options, onSelect }: { label: string; value: strin
         style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6,
           fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap",
           background: active ? "var(--primary)" : "var(--surface)",
-          color: active ? "var(--on-primary)" : "var(--text-subtitle)",
+          color: active ? "var(--on-primary)" : "var(--field-supporting)",
           border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}` }}
       >
         {active ? value : label}
@@ -245,8 +248,8 @@ function Pill({ label, value, options, onSelect }: { label: string; value: strin
               <button key={opt} onClick={() => { onSelect(opt); setOpen(false) }}
                 style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 10px",
                   fontSize: 12, cursor: "pointer", borderRadius: 4,
-                  background: value === opt ? "var(--primary-muted, var(--surface-raised))" : "transparent",
-                  color: "var(--text-body)" }}>
+                  background: value === opt ? "var(--surface-raised)" : "transparent",
+                  color: "var(--foreground)" }}>
                 {opt}
               </button>
             ))}
@@ -264,7 +267,7 @@ function FilterBar({ search, onSearch, pills }: {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
-        <LucideIcons.Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted, var(--text-subtitle))" }} />
+        <LucideIcons.Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)" }} />
         <Input value={search} onChange={e => onSearch(e.target.value)} placeholder="Search…"
           style={{ paddingLeft: 32, height: 32, fontSize: 13 }} />
       </div>
@@ -675,13 +678,13 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
         <CardContainer className="flex items-start gap-3 mb-4">
           <LucideIcons.LayoutDashboard size={18} style={{ color: "var(--primary)", marginTop: 2, flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)", marginBottom: 2 }}>Dashboard Studio</div>
-            <div style={{ fontSize: 13, color: "var(--text-subtitle)" }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--foreground)", marginBottom: 2 }}>Dashboard Studio</div>
+            <div style={{ fontSize: 13, color: "var(--field-supporting)" }}>
               Build and manage contextual dashboards that appear inside CRM profiles, reports, and the home screen.
               Widgets pull from governed datasets — no custom SQL needed.
             </div>
           </div>
-          <button onClick={() => dismiss(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted, var(--text-subtitle))", padding: 2 }}>
+          <button onClick={() => dismiss(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: 2 }}>
             <LucideIcons.X size={14} />
           </button>
         </CardContainer>
@@ -704,7 +707,7 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
               <CardContainer size="sm" className="flex flex-col gap-2 cursor-pointer">
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)", lineHeight: 1.3, marginBottom: 2 }}>{d.name}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: "var(--foreground)", lineHeight: 1.3, marginBottom: 2 }}>{d.name}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                       <Tag variant={isProfile ? "informative" : "neutral"} size="sm">{isProfile ? "Profile" : "Standalone"}</Tag>
                       <StatusBadge status={d.status} />
@@ -724,12 +727,12 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
                     )}
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text-subtitle)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--field-supporting)" }}>
                   <LucideIcons.MapPin size={11} style={{ flexShrink: 0 }} />
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.placement}</span>
                 </div>
-                <div style={{ fontSize: 12, color: "var(--text-subtitle)" }}>{d.widgetCount} widgets · {d.audience} · {d.updated}</div>
-                <div style={{ fontSize: 12, color: "var(--text-muted, var(--text-subtitle))", marginTop: 2 }}>{d.description}</div>
+                <div style={{ fontSize: 12, color: "var(--field-supporting)" }}>{d.widgetCount} widgets · {d.audience} · {d.updated}</div>
+                <div style={{ fontSize: 12, color: "var(--field-supporting)", marginTop: 2 }}>{d.description}</div>
               </CardContainer>
             </div>
           )
@@ -749,11 +752,11 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
               </Tag>
               <StatusBadge status={detail.status} />
             </div>
-            <div style={{ fontSize: 13, color: "var(--text-body)" }}>{detail.description}</div>
+            <div style={{ fontSize: 13, color: "var(--foreground)" }}>{detail.description}</div>
             {[["Entity", detail.entity], ["Placement", detail.placement], ["Audience", detail.audience], ["Owner", detail.owner], ["Widgets", `${detail.widgetCount} widgets`], ["Updated", detail.updated]].map(([k, v]) => (
               <div key={k} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--field-border)", paddingBottom: 8 }}>
-                <span style={{ fontSize: 12, color: "var(--text-subtitle)" }}>{k}</span>
-                <span style={{ fontSize: 12, color: "var(--text-body)", fontWeight: 500 }}>{v}</span>
+                <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{k}</span>
+                <span style={{ fontSize: 12, color: "var(--foreground)", fontWeight: 500 }}>{v}</span>
               </div>
             ))}
           </div>
@@ -1097,9 +1100,9 @@ function MarketplaceView({ onUseWidget }: { onUseWidget: () => void }) {
               <button key={cat.id} onClick={() => setCat(cat.id)}
                 style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left",
                   padding: "7px 10px", borderRadius: 6, cursor: "pointer",
-                  background: active ? "var(--primary-muted, var(--surface-raised))" : "transparent",
+                  background: active ? "var(--surface-raised)" : "transparent",
                   border: "none", fontSize: 13, fontWeight: active ? 600 : 400,
-                  color: active ? "var(--primary)" : "var(--text-body)" }}>
+                  color: active ? "var(--primary)" : "var(--foreground)" }}>
                 {color && <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />}
                 {cat.label}
               </button>
@@ -1112,7 +1115,7 @@ function MarketplaceView({ onUseWidget }: { onUseWidget: () => void }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ marginBottom: 12 }}>
           <div style={{ position: "relative", maxWidth: 280 }}>
-            <LucideIcons.Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-subtitle)" }} />
+            <LucideIcons.Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)" }} />
             <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search marketplace…"
               style={{ paddingLeft: 32, height: 32, fontSize: 13 }} />
           </div>
@@ -1123,12 +1126,12 @@ function MarketplaceView({ onUseWidget }: { onUseWidget: () => void }) {
             return (
               <CardContainer key={w.id} size="sm" className="flex flex-col gap-2 cursor-pointer" onClick={() => setDetail(w)}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-title)" }}>{w.name}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: "var(--foreground)" }}>{w.name}</div>
                   {color && <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, marginTop: 4 }} />}
                 </div>
-                <div style={{ fontSize: 11, color: "var(--text-subtitle)" }}>{w.source} · {w.complexity}</div>
-                <div style={{ fontSize: 12, color: "var(--text-muted, var(--text-subtitle))" }}>{w.description}</div>
-                <div style={{ fontSize: 11, color: "var(--text-subtitle)", marginTop: 2 }}>{w.tenantUsage} tenants using this</div>
+                <div style={{ fontSize: 11, color: "var(--field-supporting)" }}>{w.source} · {w.complexity}</div>
+                <div style={{ fontSize: 12, color: "var(--field-supporting)" }}>{w.description}</div>
+                <div style={{ fontSize: 11, color: "var(--field-supporting)", marginTop: 2 }}>{w.tenantUsage} tenants using this</div>
               </CardContainer>
             )
           })}
@@ -1142,11 +1145,11 @@ function MarketplaceView({ onUseWidget }: { onUseWidget: () => void }) {
           onCtaPrimary={() => { setDetail(null); onUseWidget() }}
           onCtaSecondary={() => setDetail(null)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 0" }}>
-            <div style={{ fontSize: 13, color: "var(--text-body)" }}>{detail.description}</div>
+            <div style={{ fontSize: 13, color: "var(--foreground)" }}>{detail.description}</div>
             {[["Source", detail.source], ["Complexity", detail.complexity], ["Tenants using", `${detail.tenantUsage}`]].map(([k, v]) => (
               <div key={k} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--field-border)", paddingBottom: 8 }}>
-                <span style={{ fontSize: 12, color: "var(--text-subtitle)" }}>{k}</span>
-                <span style={{ fontSize: 12, color: "var(--text-body)", fontWeight: 500 }}>{v}</span>
+                <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{k}</span>
+                <span style={{ fontSize: 12, color: "var(--foreground)", fontWeight: 500 }}>{v}</span>
               </div>
             ))}
           </div>
@@ -1571,6 +1574,7 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
   const [styleVariant, setStyle]    = useState("")
   const [previewSize, setPrvSize]   = useState("md")
   const [describePrompt, setDescPr] = useState("")
+  const [filterRows, setFilterRows] = useState<WBFilter[]>([])
   const [saved, setSaved]           = useState(false)
 
   const accentHex  = ACCENT_COLORS.find(a => a.id === accentColor)?.hex ?? "var(--primary)"
@@ -1737,9 +1741,50 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
 
             {/* Filters */}
             {sourceId && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <WBSectionLabel>Filters</WBSectionLabel>
-                <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--primary)", fontWeight: 500, padding: 0 }}>+ Add filter</button>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: filterRows.length > 0 ? 8 : 0 }}>
+                  <WBSectionLabel>Filters</WBSectionLabel>
+                  <button
+                    onClick={() => setFilterRows(prev => [...prev, { id: String(Date.now()), field: (SOURCE_COLUMNS[sourceId] ?? [])[0] ?? "", op: "is" as FilterOp, value: "" }])}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--primary)", fontWeight: 500, padding: 0 }}>
+                    + Add filter
+                  </button>
+                </div>
+                {filterRows.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {filterRows.map((row, idx) => {
+                      const showValue = row.op !== "is empty" && row.op !== "is not empty"
+                      return (
+                        <div key={row.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <select
+                            value={row.field}
+                            onChange={e => setFilterRows(prev => prev.map((r, i) => i === idx ? { ...r, field: e.target.value } : r))}
+                            style={{ height: 30, borderRadius: 6, border: "1px solid var(--field-border)", background: "var(--surface)", color: "var(--foreground)", fontSize: 12, padding: "0 6px", cursor: "pointer" }}>
+                            {(SOURCE_COLUMNS[sourceId] ?? []).map(col => <option key={col} value={col}>{col}</option>)}
+                          </select>
+                          <select
+                            value={row.op}
+                            onChange={e => setFilterRows(prev => prev.map((r, i) => i === idx ? { ...r, op: e.target.value as FilterOp } : r))}
+                            style={{ height: 30, borderRadius: 6, border: "1px solid var(--field-border)", background: "var(--surface)", color: "var(--foreground)", fontSize: 12, padding: "0 6px", cursor: "pointer" }}>
+                            {FILTER_OPS.map(op => <option key={op} value={op}>{op}</option>)}
+                          </select>
+                          {showValue && (
+                            <input
+                              value={row.value}
+                              onChange={e => setFilterRows(prev => prev.map((r, i) => i === idx ? { ...r, value: e.target.value } : r))}
+                              placeholder="Value…"
+                              style={{ flex: 1, minWidth: 0, height: 30, borderRadius: 6, border: "1px solid var(--field-border)", background: "var(--surface)", color: "var(--foreground)", fontSize: 12, padding: "0 8px", outline: "none" }} />
+                          )}
+                          <button
+                            onClick={() => setFilterRows(prev => prev.filter((_, i) => i !== idx))}
+                            style={{ flexShrink: 0, background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: 2, display: "flex", alignItems: "center" }}>
+                            {(() => { const X = LucideIcons.X as React.FC<{ size?: number }>; return <X size={13} /> })()}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
