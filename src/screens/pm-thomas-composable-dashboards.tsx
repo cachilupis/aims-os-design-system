@@ -27,7 +27,6 @@ type BizCat      = "all" | "aims-os" | "sales" | "finance" | "customer-service" 
 type Skeleton    = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel" | "Stat Row" | "Alerts" | "Cost KPI"
 type TabId       = "data" | "widget" | "appearance"
 type OpType      = "aggregate" | "record_set"
-type BuilderStep = "Placement" | "Start point"
 // Widget library types
 type LibHealth   = "active" | "inactive" | "unused" | "review"
 type LibCategory = "AIMS OS" | "Operational" | "Engagement" | "Intelligence"
@@ -139,24 +138,6 @@ const MKT_WIDGETS = [
   { id: "m10", name: "Time-to-Hire Trend",   source: "BambooHR", cat: "hr",               complexity: "moderate", tenantUsage: 112, description: "Average days from job post to offer acceptance, rolling 6 months." },
 ]
 
-// ── New Dashboard wizard data ─────────────────────────────────────────────────
-
-type ProfileTypeId = "Company" | "Contact" | "Employee" | "Deal"
-type AudType       = "global" | "role" | "team" | "individual"
-type Surface       = "profile" | "report" | "home"
-
-const PROFILE_TYPES: { id: ProfileTypeId; label: string; tabs: string[] }[] = [
-  { id: "Company",  label: "Company",  tabs: ["Overview", "Activity", "Contacts", "Deals", "Documents"] },
-  { id: "Contact",  label: "Contact",  tabs: ["Overview", "Activity", "Deals", "Documents"] },
-  { id: "Employee", label: "Employee", tabs: ["Overview", "Activity", "Performance", "Documents"] },
-  { id: "Deal",     label: "Deal",     tabs: ["Overview", "Activity", "Timeline", "Documents"] },
-]
-const AUDIENCE_TYPES: { id: AudType; label: string }[] = [
-  { id: "global", label: "Everyone" }, { id: "role", label: "By role" },
-  { id: "team",   label: "By team" }, { id: "individual", label: "Specific user" },
-]
-const WIZARD_STEPS: BuilderStep[] = ["Placement", "Start point"]
-
 // ── Widget builder data ───────────────────────────────────────────────────────
 
 const ENTITY_SOURCES = [
@@ -170,13 +151,13 @@ const ENTITY_SOURCES = [
   { id: "ai_workers_aims",       label: "AI Workers",    integration: "AIMS OS",  governed: true,  hasPII: false },
 ]
 const PRESET_DATASETS = [
-  { id: "ds-total-mrr",        name: "Total MRR",          description: "Month-to-date closed revenue across all deals.", integration: "HubSpot",  governed: true },
-  { id: "ds-active-contacts",  name: "Active Contacts",    description: "Contacts with at least one interaction in the last 30 days.", integration: "HubSpot",  governed: true },
-  { id: "ds-open-deals",       name: "Open Deals",         description: "All deals currently in an open pipeline stage.", integration: "HubSpot",  governed: true },
-  { id: "ds-ticket-volume",    name: "Ticket Volume",      description: "Total support tickets opened in the current period.", integration: "Zendesk",  governed: true },
-  { id: "ds-csat-score",       name: "CSAT Score",         description: "Average satisfaction rating across closed tickets.", integration: "Zendesk",  governed: true },
-  { id: "ds-headcount",        name: "Headcount",          description: "Active employee count by department.", integration: "BambooHR", governed: true },
-  { id: "ds-workflow-success", name: "Workflow Success Rate", description: "Percentage of workflow runs completed without errors.", integration: "AIMS OS",  governed: true },
+  { id: "ds-contacts-tier",  name: "Contacts by Tier",  description: "Count of contacts grouped by tier.",                     type: "GROUPED",      integration: "HubSpot" },
+  { id: "ds-deals-pipeline", name: "Deals Pipeline",    description: "Sum of deal value grouped by stage.",                    type: "GROUPED",      integration: "HubSpot" },
+  { id: "ds-total-mrr",      name: "Total MRR",         description: "Sum of MRR across all active accounts.",                 type: "SINGLE VALUE", integration: "HubSpot" },
+  { id: "ds-all-contacts",   name: "All Contacts",      description: "Full contact record set — name, email, city, tier.",     type: "RECORD SET",   integration: "HubSpot" },
+  { id: "ds-ticket-volume",  name: "Ticket Volume",     description: "Total support tickets opened in the current period.",    type: "GROUPED",      integration: "Zendesk" },
+  { id: "ds-csat-score",     name: "CSAT Score",        description: "Average satisfaction rating across closed tickets.",     type: "SINGLE VALUE", integration: "Zendesk" },
+  { id: "ds-headcount",      name: "Headcount",         description: "Active employee count by department.",                   type: "GROUPED",      integration: "BambooHR" },
 ]
 const SOURCE_COLUMNS: Record<string, string[]> = {
   contacts_hubspot:      ["Name", "Email", "Company", "Lifecycle Stage", "Owner", "Created At"],
@@ -1107,128 +1088,36 @@ function MarketplaceView({ onUseWidget }: { onUseWidget: () => void }) {
 
 // ── New Dashboard overlay ─────────────────────────────────────────────────────
 
-function NewDashboardOverlay({ onClose }: { onClose: () => void }) {
-  const [step, setStep]           = useState(0)
-  const [surface, setSurface]     = useState<Surface>("profile")
-  const [profileType, setPT]      = useState<ProfileTypeId>("Company")
-  const [selectedTab, setTab]     = useState("Overview")
-  const [audience, setAudience]   = useState<AudType>("global")
-  const [startMode, setStart]     = useState<"blank" | "template">("blank")
-  const [name, setName]           = useState("")
+function NewDashboardOverlay({ onClose: _onClose }: { onClose: () => void }) {
 
-  const pt = PROFILE_TYPES.find(p => p.id === profileType)!
-
+  const MapPin    = LucideIcons.MapPin    as React.FC<{ size?: number; style?: React.CSSProperties }>
+  const Grid2x2   = LucideIcons.Grid2x2   as React.FC<{ size?: number; style?: React.CSSProperties }>
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%" }}>
-      {/* Overlay header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 0 16px 0", borderBottom: "1px solid var(--field-border)", marginBottom: 20 }}>
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-subtitle)", display: "flex", alignItems: "center", gap: 4, fontSize: 13 }}>
-          <LucideIcons.ArrowLeft size={14} /> Dashboards
-        </button>
-        <span style={{ fontSize: 13, color: "var(--field-border)" }}>/</span>
-        <span style={{ fontSize: 13, color: "var(--text-body)", fontWeight: 500 }}>New dashboard</span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-          {WIZARD_STEPS.map((s, i) => (
-            <div key={s} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <div style={{ width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700,
-                background: i === step ? "var(--primary)" : i < step ? "var(--success)" : "var(--field-border)",
-                color: i <= step ? "var(--on-primary)" : "var(--text-subtitle)" }}>
-                {i < step ? <LucideIcons.Check size={10} /> : i + 1}
-              </div>
-              <span style={{ fontSize: 11, color: i === step ? "var(--text-body)" : "var(--text-subtitle)" }}>{s}</span>
-              {i < WIZARD_STEPS.length - 1 && <LucideIcons.ChevronRight size={12} style={{ color: "var(--field-border)" }} />}
-            </div>
-          ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Canvas header */}
+      <div style={{ paddingBottom: 16, borderBottom: "1px solid var(--field-border)" }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)" }}>Untitled dashboard</div>
+        <div style={{ fontSize: 12, color: "var(--field-supporting)", marginTop: 4 }}>
+          Standalone · Manager · Role · <Tag variant="neutral">Draft</Tag>&nbsp; All changes saved
         </div>
       </div>
-
-      {/* Step 0: Placement */}
-      {step === 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <CardContainer className="flex flex-col gap-4">
-            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)" }}>Where will this dashboard appear?</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {(["profile", "report", "home"] as Surface[]).map(s => (
-                <button key={s} onClick={() => setSurface(s)}
-                  style={{ flex: 1, padding: "10px 8px", borderRadius: 8, border: `2px solid ${surface === s ? "var(--primary)" : "var(--field-border)"}`,
-                    background: surface === s ? "var(--primary-muted, var(--surface))" : "var(--surface)", cursor: "pointer",
-                    fontSize: 13, fontWeight: 600, color: surface === s ? "var(--primary)" : "var(--text-body)" }}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
-              ))}
-            </div>
-          </CardContainer>
-          {surface === "profile" && (
-            <CardContainer className="flex flex-col gap-4">
-              <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)" }}>Which entity type?</div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {PROFILE_TYPES.map(p => (
-                  <button key={p.id} onClick={() => { setPT(p.id); setTab(p.tabs[0]) }}
-                    style={{ padding: "6px 14px", borderRadius: 6, border: `2px solid ${profileType === p.id ? "var(--primary)" : "var(--field-border)"}`,
-                      background: profileType === p.id ? "var(--primary-muted, var(--surface))" : "var(--surface)", cursor: "pointer",
-                      fontSize: 13, fontWeight: 500, color: profileType === p.id ? "var(--primary)" : "var(--text-body)" }}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-title)", marginTop: 4 }}>Which tab?</div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {pt.tabs.map(t => (
-                  <button key={t} onClick={() => setTab(t)}
-                    style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${selectedTab === t ? "var(--primary)" : "var(--field-border)"}`,
-                      background: selectedTab === t ? "var(--primary)" : "transparent", cursor: "pointer",
-                      fontSize: 12, fontWeight: 500, color: selectedTab === t ? "var(--on-primary)" : "var(--text-body)" }}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-title)", marginTop: 4 }}>Audience</div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {AUDIENCE_TYPES.map(a => (
-                  <button key={a.id} onClick={() => setAudience(a.id)}
-                    style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${audience === a.id ? "var(--primary)" : "var(--field-border)"}`,
-                      background: audience === a.id ? "var(--primary)" : "transparent", cursor: "pointer",
-                      fontSize: 12, fontWeight: 500, color: audience === a.id ? "var(--on-primary)" : "var(--text-body)" }}>
-                    {a.label}
-                  </button>
-                ))}
-              </div>
-            </CardContainer>
-          )}
-        </div>
-      )}
-
-      {/* Step 1: Start point */}
-      {step === 1 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <CardContainer className="flex flex-col gap-4">
-            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)" }}>Dashboard name</div>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Company Overview" style={{ fontSize: 13 }} />
-          </CardContainer>
-          <CardContainer className="flex flex-col gap-4">
-            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-title)" }}>How do you want to start?</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {(["blank", "template"] as const).map(m => (
-                <button key={m} onClick={() => setStart(m)}
-                  style={{ flex: 1, padding: "10px 8px", borderRadius: 8, border: `2px solid ${startMode === m ? "var(--primary)" : "var(--field-border)"}`,
-                    background: startMode === m ? "var(--primary-muted, var(--surface))" : "var(--surface)", cursor: "pointer",
-                    fontSize: 13, fontWeight: 600, color: startMode === m ? "var(--primary)" : "var(--text-body)" }}>
-                  {m === "blank" ? "Blank canvas" : "Start from template"}
-                </button>
-              ))}
-            </div>
-          </CardContainer>
-        </div>
-      )}
-
-      {/* Footer */}
-      <div style={{ marginTop: "auto", paddingTop: 20, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <Button variant="secondary" size="sm" onClick={step === 0 ? onClose : () => setStep(0)}>
-          {step === 0 ? "Cancel" : "Back"}
-        </Button>
-        <Button variant="primary" size="sm" onClick={step === 0 ? () => setStep(1) : onClose}>
-          {step === 0 ? "Continue" : "Create dashboard"}
-        </Button>
+      {/* Choose section card */}
+      <div style={{ padding: "40px 24px", borderRadius: 12, border: "1px solid var(--field-border)", background: "var(--surface)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center" as const }}>
+        <MapPin size={28} style={{ color: "var(--field-supporting)" }} />
+        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--foreground)" }}>Choose section</div>
+        <p style={{ fontSize: 13, color: "var(--field-supporting)", maxWidth: 320, margin: 0, lineHeight: 1.5 }}>
+          The widgets you can add depend on where this dashboard will be displayed.
+        </p>
+        <Button variant="main" size="sm">Choose +</Button>
+      </div>
+      {/* Start adding widgets card (disabled) */}
+      <div style={{ padding: "40px 24px", borderRadius: 12, border: "1px solid var(--field-border)", background: "var(--surface)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center" as const, opacity: 0.45 }}>
+        <Grid2x2 size={28} style={{ color: "var(--field-supporting)" }} />
+        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--foreground)" }}>Start adding widgets</div>
+        <p style={{ fontSize: 13, color: "var(--field-supporting)", maxWidth: 320, margin: 0, lineHeight: 1.5 }}>
+          Customize your dashboard with widgets that assist your team.
+        </p>
+        <Button variant="secondary" size="sm" disabled>Add +</Button>
       </div>
     </div>
   )
@@ -1238,22 +1127,20 @@ function NewDashboardOverlay({ onClose }: { onClose: () => void }) {
 
 // ── Widget Playground sub-components ─────────────────────────────────────────
 
-function WBSectionChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function WBSectionChip({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
     <button onClick={onClick} style={{
-      height: 30, padding: "0 12px", borderRadius: 15, border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}`,
-      background: active ? "color-mix(in srgb, var(--primary) 12%, transparent)" : "transparent",
-      color: active ? "var(--primary)" : "var(--text-subtitle)",
-      fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const, display: "inline-flex", alignItems: "center",
+      height: 28, padding: "0 12px", borderRadius: 14, border: "1px solid var(--field-border)",
+      background: "transparent", color: "var(--field-supporting)",
+      fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" as const, display: "inline-flex", alignItems: "center",
     }}>{children}</button>
   )
 }
 
-function WBSectionLabel({ n, children }: { n: number; children: React.ReactNode }) {
+function WBSectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--primary)", color: "var(--canvas)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{n}</div>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{children}</span>
+    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" as const, color: "var(--field-supporting)", marginBottom: 10 }}>
+      {children}
     </div>
   )
 }
@@ -1302,19 +1189,21 @@ function WBEntitySourceCard({ source, selected, onSelect }: { source: typeof ENT
   )
 }
 
-function WBDatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_DATASETS[0]; selected: boolean; onSelect: () => void }) {
+function WBDatasetRow({ dataset, selected, onSelect, isLast }: { dataset: typeof PRESET_DATASETS[0]; selected: boolean; onSelect: () => void; isLast?: boolean }) {
+  const Db = LucideIcons.Database as React.FC<{ size?: number; style?: React.CSSProperties }>
+  const typeVariant = dataset.type === "GROUPED" ? "informative" : dataset.type === "SINGLE VALUE" ? "purple" : "neutral"
   return (
-    <div onClick={onSelect} style={{ cursor: "pointer" }}>
-      <CardContainer selected={selected} className="h-full">
-        <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{dataset.name}</div>
-          <p style={{ fontSize: 11, color: "var(--field-supporting)", margin: 0, lineHeight: 1.4 }}>{dataset.description}</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Tag variant="informative">{dataset.integration}</Tag>
-            <Tag variant="success">Governed</Tag>
-          </div>
-        </div>
-      </CardContainer>
+    <div onClick={onSelect} style={{
+      cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px",
+      borderBottom: isLast ? "none" : "1px solid var(--field-border)",
+      background: selected ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "transparent",
+    }}>
+      <Db size={14} style={{ color: "var(--field-supporting)", marginTop: 2, flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{dataset.name}</div>
+        <div style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.4 }}>{dataset.description}</div>
+      </div>
+      <Tag variant={typeVariant}>{dataset.type}</Tag>
     </div>
   )
 }
@@ -1386,30 +1275,31 @@ function WBPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previe
         </div>
       </div>
       <div style={{ maxWidth: maxW, transition: "max-width 0.2s" }}>
-        <CardContainer>
+        <div style={{ borderRadius: 10, border: "1.5px dashed var(--field-border)", background: "var(--surface)", overflow: "hidden" }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--field-border)" }}>
+            <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px dashed var(--field-border)" }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{name || "Untitled widget"}</span>
               <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
             </div>
-            <WBSkeletonShape typeId={typeId} color={accentColor} />
-            <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid var(--field-border)" }}>
+            {!typeId && !srcLabel ? (
+              <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 24px", textAlign: "center" as const }}>
+                <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.5 }}>Pick a source, metric, and widget type to preview it live.</span>
+              </div>
+            ) : (
+              <WBSkeletonShape typeId={typeId} color={accentColor} />
+            )}
+            <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px dashed var(--field-border)" }}>
               {srcLabel && <Tag variant="informative">{srcLabel}</Tag>}
               {typeInfo  && <Tag variant="neutral">{typeInfo.label}</Tag>}
             </div>
           </div>
-        </CardContainer>
+        </div>
       </div>
       {typeInfo && (
         <div style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid var(--field-border)", background: "color-mix(in srgb, var(--primary) 5%, transparent)" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>Best for</div>
           <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: 0 }}>{typeInfo.bestFor}</p>
         </div>
-      )}
-      {!typeInfo && !srcLabel && (
-        <p style={{ fontSize: 12, color: "var(--field-supporting)", textAlign: "center" as const, margin: 0 }}>
-          Pick a source, metric, and widget type to preview it live.
-        </p>
       )}
       {saveHint && <p style={{ fontSize: 11, color: "var(--field-supporting)", textAlign: "center" as const, margin: 0 }}>{saveHint}</p>}
     </div>
@@ -1418,8 +1308,13 @@ function WBPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previe
 
 // ── Widget Playground overlay ─────────────────────────────────────────────────
 
-function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
-  const [tab, setTab]               = useState<TabId>("data")
+function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef }: {
+  onClose: () => void
+  tab: TabId
+  setTab: (t: TabId) => void
+  onProgressChange: (dataComplete: boolean, widgetComplete: boolean) => void
+  saveRef: React.MutableRefObject<(() => void) | null>
+}) {
   const [dataMode, setDataMode]     = useState<"source" | "preset">("source")
   const [opType, setOpType]         = useState<OpType>("aggregate")
   const [sourceId, setSourceId]     = useState<string | null>(null)
@@ -1437,6 +1332,9 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
   const dataComplete   = !!(sourceId && metric)
   const widgetComplete = !!(typeId && widgetName)
 
+  // Sync progress flags up to parent for header button state
+  useEffect(() => { onProgressChange(dataComplete, widgetComplete) }, [dataComplete, widgetComplete])
+
   const srcLabel = dataMode === "source"
     ? ENTITY_SOURCES.find(s => s.id === sourceId)?.label
     : PRESET_DATASETS.find(d => d.id === sourceId)?.name
@@ -1450,6 +1348,12 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
     setSaved(true)
   }
 
+  // Expose handleSave to parent header button via ref
+  useEffect(() => {
+    saveRef.current = handleSave
+    return () => { saveRef.current = null }
+  })
+
   if (saved) {
     const CheckCircle = LucideIcons.CheckCircle2 as React.FC<{ size?: number; style?: React.CSSProperties }>
     return (
@@ -1461,7 +1365,7 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
         </p>
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
           <Button variant="secondary" size="sm" onClick={onClose}>Back to Library</Button>
-          <Button variant="main" size="sm" onClick={() => { setSaved(false); setSourceId(null); setMetric(""); setTypeId(null); setWName(""); setAccent(""); setStyle(""); setTab("data") }}>Build another</Button>
+          <Button variant="main" size="sm" onClick={() => { setSaved(false); setSourceId(null); setMetric(""); setTypeId(null); setWName(""); setAccent(""); setStyle(""); setTab("data"); onProgressChange(false, false) }}>Build another</Button>
         </div>
       </div>
     )
@@ -1488,7 +1392,7 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
             {DESCRIBE_EXAMPLES.map(ex => (
-              <WBSectionChip key={ex} active={describePrompt === ex} onClick={() => setDescPr(ex)}>{ex}</WBSectionChip>
+              <WBSectionChip key={ex} onClick={() => setDescPr(ex)}>{ex}</WBSectionChip>
             ))}
           </div>
         </div>
@@ -1502,23 +1406,23 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
 
             {/* Source selector */}
             <div>
-              <WBSectionLabel n={1}>Data source</WBSectionLabel>
+              <WBSectionLabel>Data source</WBSectionLabel>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                <div
-                  onClick={() => setDataMode("source")}
-                  style={{ cursor: "pointer", padding: "14px 16px", borderRadius: 10, border: `2px solid ${dataMode === "source" ? "var(--primary)" : "var(--field-border)"}`,
-                    background: dataMode === "source" ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)", display: "flex", flexDirection: "column", gap: 6 }}>
-                  {(() => { const Db = LucideIcons.Database as React.FC<{ size?: number; style?: React.CSSProperties }>; return <Db size={18} style={{ color: dataMode === "source" ? "var(--primary)" : "var(--field-supporting)" }} /> })()}
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Entity</span>
-                  <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Choose any governed or raw entity from your integrations.</span>
-                </div>
                 <div
                   onClick={() => setDataMode("preset")}
                   style={{ cursor: "pointer", padding: "14px 16px", borderRadius: 10, border: `2px solid ${dataMode === "preset" ? "var(--primary)" : "var(--field-border)"}`,
                     background: dataMode === "preset" ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)", display: "flex", flexDirection: "column", gap: 6 }}>
                   {(() => { const Lay = LucideIcons.Layers as React.FC<{ size?: number; style?: React.CSSProperties }>; return <Lay size={18} style={{ color: dataMode === "preset" ? "var(--primary)" : "var(--field-supporting)" }} /> })()}
                   <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Existing Dataset</span>
-                  <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Pick a governed, pre-joined dataset curated by your data team.</span>
+                  <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Use a pre-built query as your starting point.</span>
+                </div>
+                <div
+                  onClick={() => setDataMode("source")}
+                  style={{ cursor: "pointer", padding: "14px 16px", borderRadius: 10, border: `2px solid ${dataMode === "source" ? "var(--primary)" : "var(--field-border)"}`,
+                    background: dataMode === "source" ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "var(--surface)", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(() => { const Db = LucideIcons.Database as React.FC<{ size?: number; style?: React.CSSProperties }>; return <Db size={18} style={{ color: dataMode === "source" ? "var(--primary)" : "var(--field-supporting)" }} /> })()}
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Entity</span>
+                  <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Start from a raw entity and configure from scratch.</span>
                 </div>
               </div>
             </div>
@@ -1526,7 +1430,7 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
             {/* Entity picker */}
             {dataMode === "source" && (
               <div>
-                <WBSectionLabel n={2}>Choose an entity</WBSectionLabel>
+                <WBSectionLabel>Choose entity</WBSectionLabel>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {ENTITY_SOURCES.map(s => (
                     <WBEntitySourceCard key={s.id} source={s} selected={sourceId === s.id} onSelect={() => { setSourceId(s.id); setMetric("") }} />
@@ -1538,11 +1442,21 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
             {/* Dataset picker */}
             {dataMode === "preset" && (
               <div>
-                <WBSectionLabel n={2}>Choose a dataset</WBSectionLabel>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {PRESET_DATASETS.map(d => (
-                    <WBDatasetCard key={d.id} dataset={d} selected={sourceId === d.id} onSelect={() => { setSourceId(d.id); setMetric("") }} />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <WBSectionLabel>Choose dataset</WBSectionLabel>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--primary)", fontWeight: 500, padding: 0 }}>All datasets →</button>
+                </div>
+                <div style={{ borderRadius: 10, border: "1px solid var(--field-border)", overflow: "hidden", background: "var(--surface)" }}>
+                  {PRESET_DATASETS.slice(0, 4).map((d) => (
+                    <WBDatasetRow key={d.id} dataset={d} selected={sourceId === d.id} onSelect={() => { setSourceId(d.id); setMetric("") }} isLast={false} />
                   ))}
+                  {(() => { const Ch = LucideIcons.ChevronRight as React.FC<{ size?: number; style?: React.CSSProperties }>; return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "var(--field-supporting)", fontSize: 12, cursor: "pointer", borderTop: "1px solid var(--field-border)" }}>
+                      <span style={{ width: 14, height: 14, borderRadius: "50%", border: "1px solid var(--field-border)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>○</span>
+                      Browse {PRESET_DATASETS.length - 4} more datasets...
+                      <Ch size={12} style={{ marginLeft: "auto" }} />
+                    </div>
+                  )})()}
                 </div>
               </div>
             )}
@@ -1550,7 +1464,7 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
             {/* Operation + metric */}
             {sourceId && (
               <div>
-                <WBSectionLabel n={3}>Operation & metric</WBSectionLabel>
+                <WBSectionLabel>Operation & metric</WBSectionLabel>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                   {(["aggregate", "record_set"] as OpType[]).map(op => (
                     <button key={op} onClick={() => setOpType(op)} style={{
@@ -1576,10 +1490,18 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
+            {/* Filters */}
+            {sourceId && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <WBSectionLabel>Filters</WBSectionLabel>
+                <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--primary)", fontWeight: 500, padding: 0 }}>+ Add filter</button>
+              </div>
+            )}
+
             {/* Freshness */}
             {metric && (
               <div>
-                <WBSectionLabel n={4}>Refresh cadence</WBSectionLabel>
+                <WBSectionLabel>Refresh cadence</WBSectionLabel>
                 <div style={{ display: "flex", gap: 8 }}>
                   {FRESHNESS_OPTIONS.map(f => (
                     <button key={f.value} onClick={() => setFreshness(f.value)} style={{
@@ -1606,11 +1528,11 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
         {tab === "widget" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
-              <WBSectionLabel n={1}>Widget name</WBSectionLabel>
+              <WBSectionLabel>Widget name</WBSectionLabel>
               <Input value={widgetName} onChange={e => setWName(e.target.value)} placeholder={srcLabel ? `e.g. ${srcLabel} count` : "e.g. Open Deals by Stage"} />
             </div>
             <div>
-              <WBSectionLabel n={2}>Visualization type</WBSectionLabel>
+              <WBSectionLabel>Visualization type</WBSectionLabel>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                 {WIDGET_TYPES.map(wt => (
                   <WBTypeTile key={wt.id} type={wt} selected={typeId === wt.id} onSelect={() => setTypeId(wt.id)} />
@@ -1629,7 +1551,7 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
         {tab === "appearance" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
-              <WBSectionLabel n={1}>Accent color</WBSectionLabel>
+              <WBSectionLabel>Accent color</WBSectionLabel>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
                 {ACCENT_COLORS.map(ac => (
                   <button key={ac.id} onClick={() => setAccent(ac.id)} title={ac.label} style={{
@@ -1643,7 +1565,7 @@ function WidgetBuilderOverlay({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <div>
-              <WBSectionLabel n={2}>Style variant</WBSectionLabel>
+              <WBSectionLabel>Style variant</WBSectionLabel>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
                 {STYLE_VARIANTS.map(sv => (
                   <button key={sv.id} onClick={() => setStyle(sv.id)} style={{
@@ -1681,6 +1603,17 @@ export default function PMThomasComposableDashboardsScreen() {
   const [subView, setSubView]         = useState<WidgetSubView>("library")
   const [overlayView, setOverlay]     = useState<OverlayView>(null)
 
+  // Builder state lifted so header buttons can read/drive it
+  const [builderTab, setBuilderTab]       = useState<TabId>("data")
+  const [builderDataDone, setBDDone]      = useState(false)
+  const [builderWidgetDone, setBWDone]    = useState(false)
+  const builderSaveRef                    = useRef<(() => void) | null>(null)
+
+  function openBuilder() {
+    setBuilderTab("data"); setBDDone(false); setBWDone(false)
+    setOverlay("builder")
+  }
+
   function switchMain(v: MainView) { setMainView(v); setOverlay(null) }
 
   const sidebarActive = mainView === "dashboards" ? "dashboards" : "widgets"
@@ -1701,17 +1634,33 @@ export default function PMThomasComposableDashboardsScreen() {
   } else if (overlayView === "builder") {
     headerTitle = "Widget Playground"
     headerDesc  = "Map an entity and metric, pick a widget type, and preview it live."
-    headerPrimary = <Button variant="secondary" size="sm" onClick={() => setOverlay(null)}>Cancel</Button>
+    const canAdvance = (builderTab === "data" && builderDataDone) || (builderTab === "widget" && builderWidgetDone)
+    headerPrimary = (
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <Button variant="secondary" size="sm" onClick={() => setOverlay(null)}>Cancel</Button>
+        <Button variant="secondary" size="sm" disabled={!canAdvance}
+          onClick={() => {
+            if (builderTab === "data" && builderDataDone)        setBuilderTab("widget")
+            else if (builderTab === "widget" && builderWidgetDone) setBuilderTab("appearance")
+          }}>
+          Widget →
+        </Button>
+        <Button variant="main" size="sm" disabled={!builderWidgetDone}
+          onClick={() => builderSaveRef.current?.()}>
+          ✓ Save to catalog
+        </Button>
+      </div>
+    )
   } else if (mainView === "dashboards") {
     headerPrimary = <Button variant="main" size="sm" onClick={() => setOverlay("new-dashboard")}>Create dashboard</Button>
   } else if (subView === "library") {
     headerTitle = "Widget Library"
     headerDesc  = `${LIB_WIDGETS.length} widgets · ${LIB_GOVERNED_COUNT} governed`
-    headerPrimary = <Button variant="main" size="sm" onClick={() => setOverlay("builder")}>Create widget</Button>
+    headerPrimary = <Button variant="main" size="sm" onClick={openBuilder}>Create widget</Button>
   } else {
     headerTitle = "Widget Marketplace"
     headerDesc  = "Browse community and integration widgets by category."
-    headerPrimary = <Button variant="main" size="sm" onClick={() => setOverlay("builder")}>Create with AI assist</Button>
+    headerPrimary = <Button variant="main" size="sm" onClick={openBuilder}>Create with AI assist</Button>
   }
 
   return (
@@ -1728,7 +1677,7 @@ export default function PMThomasComposableDashboardsScreen() {
             size={isScrolled ? "compress" : "size-l"}
             title={headerTitle}
             description={overlayView ? undefined : headerDesc}
-            primaryAction={overlayView === "builder" ? undefined : headerPrimary}
+            primaryAction={headerPrimary}
           />
           {/* Sub-tabs for Widgets view */}
           {mainView === "widgets" && !overlayView && (
@@ -1750,7 +1699,13 @@ export default function PMThomasComposableDashboardsScreen() {
         <NewDashboardOverlay onClose={() => setOverlay(null)} />
       )}
       {overlayView === "builder" && (
-        <WidgetBuilderOverlay onClose={() => setOverlay(null)} />
+        <WidgetBuilderOverlay
+          onClose={() => setOverlay(null)}
+          tab={builderTab}
+          setTab={setBuilderTab}
+          onProgressChange={(dc, wc) => { setBDDone(dc); setBWDone(wc) }}
+          saveRef={builderSaveRef}
+        />
       )}
       {!overlayView && mainView === "dashboards" && (
         <DashboardsView />
