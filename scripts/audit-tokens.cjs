@@ -482,11 +482,35 @@ function printSection(title, items, formatter) {
   items.forEach((i) => console.log("  " + formatter(i)))
 }
 
+// ── Accepted findings ──────────────────────────────────────────────────
+// A verdict of "accepted" in ds-decisions.json means a human looked at the
+// finding and ruled it a false positive or a deliberate exception. All three
+// of these checks have real false-positive modes — Check 6 matches names not
+// behaviour, Check 7 counts per file when one file can hold several screens,
+// Check 8 guesses from markup shape — so without this, recording a verdict
+// would be decorative: the DS Health page would say "accepted" while the
+// ratchet went on blocking every push. The decision has to actually count.
+//
+// Accepted findings stay visible in the report, marked, so nobody forgets
+// they were waived. They are excluded only from the counts the ratchet reads.
+const DECISIONS_PATH = path.join(ROOT, "ds-decisions.json")
+let acceptedKeys = new Set()
+try {
+  const d = JSON.parse(fs.readFileSync(DECISIONS_PATH, "utf8")).decisions || {}
+  acceptedKeys = new Set(Object.keys(d).filter((k) => d[k].verdict === "accepted"))
+} catch { /* no decisions file — nothing is waived */ }
+
+// Same key shape generate-ds-health.cjs builds: type:file:name, never a line
+// number, so a verdict survives edits above it.
+const findingKey = (w) => [w.type, w.file, w.name].filter(Boolean).join(":")
+const isAccepted = (w) => acceptedKeys.has(findingKey(w))
+
 // `--json` dumps every finding as structured data and prints nothing else, so
 // generate-ds-health.cjs can build the DS Health page from the same run that
 // CI and the pre-push hook use. One source of findings, three consumers — the
 // page can never disagree with what actually blocks a push. Handled before the
-// human report so stdout stays parseable.
+// human report so stdout stays parseable. Emits every finding, accepted or
+// not — the page needs them all in order to show the verdict column.
 if (process.argv.includes("--json")) {
   process.stdout.write(JSON.stringify({ errors, warnings }, null, 2) + "\n")
   process.exit(0)
@@ -506,11 +530,29 @@ const shadowWarnings = warnings.filter((w) => w.type === "shadow-component")
 const mainOveruseWarnings = warnings.filter((w) => w.type === "main-overuse")
 const cardReimplWarnings = warnings.filter((w) => w.type === "possible-card-reimpl")
 
-printSection("⚠️  WARNING — possible orphaned components", orphanWarnings, (w) => `${w.file} — ${w.message}`)
+// Accepted findings still print — with a marker — so a waiver stays visible
+// instead of quietly disappearing from the report.
+const fmt = (w) => `${w.file}:${w.line}  ${isAccepted(w) ? "[accepted] " : ""}${w.message}`
+
+printSection("⚠️  WARNING — possible orphaned components", orphanWarnings, (w) => `${w.file} — ${isAccepted(w) ? "[accepted] " : ""}${w.message}`)
 printSection("⚠️  WARNING — off-scale spacing (informational only)", spacingWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
-printSection("⚠️  WARNING — hand-rolled component shadows a real DS export", shadowWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
-printSection("⚠️  WARNING — variant=\"main\" overused (CLAUDE.md: max 1/screen)", mainOveruseWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
-printSection("⚠️  WARNING — possible hand-rolled CardContainer reimplementation", cardReimplWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
+printSection("⚠️  WARNING — hand-rolled component shadows a real DS export", shadowWarnings, fmt)
+printSection("⚠️  WARNING — variant=\"main\" overused (CLAUDE.md: max 1/screen)", mainOveruseWarnings, fmt)
+printSection("⚠️  WARNING — possible hand-rolled CardContainer reimplementation", cardReimplWarnings, fmt)
+
+// The ratchet reads these. Accepted findings are subtracted here and nowhere
+// else: they stay in the report above, and in the DS Health page, but they no
+// longer block a push.
+const open = (list) => list.filter((w) => !isAccepted(w))
+const openOrphan = open(orphanWarnings)
+const openShadow = open(shadowWarnings)
+const openMainOveruse = open(mainOveruseWarnings)
+const openCardReimpl = open(cardReimplWarnings)
+const acceptedCount =
+  (orphanWarnings.length - openOrphan.length) +
+  (shadowWarnings.length - openShadow.length) +
+  (mainOveruseWarnings.length - openMainOveruse.length) +
+  (cardReimplWarnings.length - openCardReimpl.length)
 
 // `--counts` prints one machine-readable line so CI can ratchet: run the audit
 // on main, run it on the PR, and fail if any category went UP. Warnings stay
@@ -520,12 +562,15 @@ printSection("⚠️  WARNING — possible hand-rolled CardContainer reimplement
 // 4 shadow + 6 main-overuse warnings sit unnoticed for three days.
 if (process.argv.includes("--counts")) {
   console.log(
-    `AUDIT_COUNTS errors=${errors.length} orphan=${orphanWarnings.length} shadow=${shadowWarnings.length} main_overuse=${mainOveruseWarnings.length} card_reimpl=${cardReimplWarnings.length}`
+    `AUDIT_COUNTS errors=${errors.length} orphan=${openOrphan.length} shadow=${openShadow.length} main_overuse=${openMainOveruse.length} card_reimpl=${openCardReimpl.length}`
   )
 }
 
 console.log(
-  `\nSummary: ${errors.length} error(s), ${orphanWarnings.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${shadowWarnings.length} shadow-component warning(s), ${mainOveruseWarnings.length} main-overuse warning(s), ${cardReimplWarnings.length} possible-card-reimpl warning(s).`
+  `\nSummary: ${errors.length} error(s), ${openOrphan.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${openShadow.length} shadow-component warning(s), ${openMainOveruse.length} main-overuse warning(s), ${openCardReimpl.length} possible-card-reimpl warning(s)` +
+    (acceptedCount > 0
+      ? `\n         plus ${acceptedCount} accepted and waived in ds-decisions.json — shown above marked [accepted], not counted here.`
+      : ".")
 )
 
 if (errors.length > 0) {
