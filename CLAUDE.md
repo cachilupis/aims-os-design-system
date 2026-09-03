@@ -60,6 +60,9 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER** hardcode `#hex` / `rgba()` in `.tsx` — always `var(--token-name)`.
 - **NEVER** build a custom version of a DS component that exists in `src/components/ui/` — import it.
 - **NEVER** add `borderBottom` on a `<Tabs>` wrapper — the component manages its own active indicator.
+- **`ModalDialog`'s `slot` wraps content in a grey surface (`--modal-slot-bg`) by default** — pass `slotUnstyled` for content that sits directly on the modal. A dialog never puts all of its content in one card; if cards are needed, one per item.
+- **`Input`/`Textarea` have a `label` prop, but the floating label is mobile-only** — on desktop, structure comes from grouping fields under a section label, never a per-field label.
+- **`Select` is a trigger only — it has no options list.** Compose a working dropdown with `@base-ui/react`'s `Popover` (already a dependency), anchored to the trigger — never with hand-computed coordinates.
 
 ### Navigation & headers
 - **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
@@ -435,6 +438,41 @@ Steps 4–5, stated as one rule: **contextual** (the new object hangs off someth
 | Two or more stages, or any branching | Full-page wizard + `Stepper` + `StepperNavFooter` |
 
 `StepperNavFooter` is a page-level component — it never appears inside a `SlideOut`.
+
+**Second output — is a confirmation required?** Independent of the container, never merged into the cascade above.
+
+| Condition | Confirmation |
+| --- | --- |
+| The user can undo the creation themselves — delete or archive, no external effect | None. Save directly. |
+| The creation cannot be undone, has tenant-wide scope, or triggers effects outside the tenant | `ModalDialog variant="confirmation"` before saving |
+| Assisted create | Always ends in a success `ModalDialog` |
+
+**Confirming that it worked** — separate from the confirmation above, which is about risk. This is about whether the user can tell the create succeeded.
+
+| Situation | Feedback |
+| --- | --- |
+| The created object lands somewhere visible — a list, a widget, the page you return to | The object appearing is the confirmation. Show it as the first row, briefly highlighted. No banner. |
+| The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from | A transient notice is needed. No component exists for this. |
+| The create was irreversible | The confirmation modal before saving already carried the weight. The landing does the rest. |
+
+`AlertBanner` is not the component for this — it's a full-width notice for system-level feedback, not "the thing you just asked for was created."
+
+**`DS-GAP` — Toast / Snackbar.** The design system has no transient action-feedback component. Any create whose result is invisible is under-specified until one exists.
+
+**Third output — where the user lands afterwards.** Derived from the container, not a separate decision.
+
+| Surface | After create |
+| --- | --- |
+| Inline create row | Stays in place. The new row appears in the list, ready to create the next one. |
+| `SlideOut` | Closes. The user returns to where they were; the new object appears in context. |
+| `ModalDialog` — standalone create | Closes. The user returns to the list they triggered it from; the new object appears there. |
+| Full-page create form / wizard | Navigates to the created object. |
+| Catalogue modal — source fully defines the object | Closes. Lands as the surface it would have used had the fields been filled by hand. |
+| Assisted create | Success modal → view the object, or create another. |
+
+**Accessibility.** While a create surface is open: focus is trapped inside the `ModalDialog` or `SlideOut`, returns to the trigger element on close, and Esc closes the surface. The primary CTA stays disabled until required fields are filled.
+
+**`DS-GAP` — not yet implemented.** Verified against the component source: `ModalDialog` has no Esc-to-close handler at all, and neither `ModalDialog` nor `SlideOut` trap or return focus today. Until they do, a screen that relies on this behavior gets it by accident, not by contract.
 
 **Entry points — the trigger lives where the collection lives.** If notes are held by a Notes widget, the affordance to add one belongs in that widget's own header, not in the page `Header`. The page `Header` CTA is reserved for the primary object of that screen — on a Worker detail page that is "Run now," not "Add note." A create page also carries no create CTA in its own `Header`: on a full-page create form or wizard, `Header` carries title and `backButton` only — the action completes in `StepperNavFooter`.
 

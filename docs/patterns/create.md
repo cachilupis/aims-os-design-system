@@ -3,7 +3,7 @@
 > Single source of truth for how any create action picks its surface in AIMS OS.
 > Everything else — the `CLAUDE.md` table, the `patterns-create` doc page, the playground screens — is derived from this file.
 >
-> Status: **draft v0.9 — pending validation**
+> Status: **draft v0.10 — pending validation**
 >
 > v0.2 — volume threshold removed; step 1 rewritten as a declared property rather than an enumerated list.
 > v0.3 — cascade rewritten as an explicit sequence; the two-stage flow named instead of falling through to the default.
@@ -13,6 +13,7 @@
 > v0.7 — step 1 reframed as a hand-off rather than a surface; "dedicated view" split into the two distinct outputs it was conflating.
 > v0.8 — staged flows never live in a panel (no Stepper in a SlideOut); page-level create completes in `StepperNavFooter`, not the Header; the trigger lives where the collection lives; §4b defines success feedback by visibility and names the missing Toast component.
 > v0.9 — §1b added: the pattern decides the container, never the fields; field count is an input to the cascade, not an output. DatePicker named as a second `DS-GAP`.
+> v0.10 — §5b added: focus trap, focus return, Esc-to-close, and CTA-disabled-until-valid while a create surface is open. Verified against the component source: `ModalDialog` has no Esc handler, and neither `ModalDialog` nor `SlideOut` trap or return focus — named as a third `DS-GAP`.
 
 ---
 
@@ -258,6 +259,14 @@ Derived from the container. Not a separate decision.
 | Full-page create form / wizard | Navigates to the created object. |
 | Catalogue modal — source fully defines the object | Closes. Lands as the surface it would have used had the fields been filled by hand. |
 | Assisted create | Success modal → view the object, or create another. |
+
+---
+
+## 5b · Accessibility
+
+While a create surface is open: focus is trapped inside the `ModalDialog` or `SlideOut`, returns to the trigger element on close, and Esc closes the surface. The primary CTA stays disabled until required fields are filled — a user should never be able to submit an incomplete create and discover the missing field from an error after the fact.
+
+**`DS-GAP` — not yet implemented.** Verified against the component source: `ModalDialog` has no Esc-to-close handler at all, and neither `ModalDialog` nor `SlideOut` trap or return focus today. Until they do, a screen that relies on this behavior gets it by accident, not by contract.
 
 ---
 
