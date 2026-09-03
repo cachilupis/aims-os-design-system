@@ -1833,12 +1833,13 @@ const HEADER_SPEC = {
   name: "Header",
   figmaNodeId: "7995:4268",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7995-4268",
-  description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + CTAs, plus the back button when showBackInCompress is set).",
+  description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + tag + CTAs, plus the breadcrumb row above the title when one is set; the breadcrumb and tag both survive compress so scrolling never costs you your place or the record's status).",
   properties: [
     { name: "title",           type: "string",  values: ["any string"],                                                                       default: "—",             note: "Required. Always visible in all sizes." },
     { name: "size",            type: "Variant", values: ["size-l", "size-m", "compress"],                                                     default: "size-l" },
     { name: "description",     type: "string",  values: ["any string"],                                                                       default: "undefined",     note: "Hidden in compress." },
-    { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after title. Hidden in compress." },
+    { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after the title. Survives compress — a detail page's status is exactly what you still want to see once you have scrolled." },
+    { name: "breadcrumb",      type: "node",    values: ["<Breadcrumb />"],                                                                   default: "undefined",     note: "Trail above the title. From L2 onwards this is how a page states where it sits: parent plus current page (Workers › Meridian), not the whole path. Survives compress. Never combine with backButton — at L2 the first crumb IS the way back." },
     { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. The ONLY prop that controls back-button visibility. Hidden in compress unless showBackInCompress is also true. Use only in drill-down pages." },
     { name: "onBack",          type: "function", values: ["() => void"],                                                                      default: "undefined",     note: "Click handler for the back button. Never affects visibility — use backButton for that." },
     { name: "showBackInCompress", type: "Boolean", values: ["true", "false"],                                                                 default: "false",         note: "Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user." },
@@ -1850,7 +1851,7 @@ const HEADER_SPEC = {
   sizes: [
     { size: "Size L",   padding: "12px 24px", titleSize: "24px", height: "auto (~48px)", notes: "Default. Full slots visible." },
     { size: "Size M",   padding: "10px 24px", titleSize: "18px", height: "auto (~38px)", notes: "Compact. Full slots visible." },
-    { size: "Compress", padding: "8px 24px",  titleSize: "18px", height: "60px (fixed)", notes: "Scroll state. Title + CTAs, plus the back button when showBackInCompress is set." },
+    { size: "Compress", padding: "8px 24px",  titleSize: "18px", height: "auto — ~48px, ~62px with a breadcrumb", notes: "Scroll state. Title + tag + CTAs, plus the breadcrumb row when one is set. Height is content-driven, not fixed." },
   ],
   typography: [
     { element: "Title — Size L",          family: "Inter", size: "24px", weight: "600 SemiBold", lineHeight: "tight (1.2)" },
@@ -34530,7 +34531,7 @@ const BREADCRUMB_SPEC = {
   name: "Breadcrumb",
   figmaNodeId: "18352:45",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18352-45",
-  description: "Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
+  description: "Hierarchical navigation trail, used from L2 onwards inside Header.breadcrumb. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
   properties: [
     { name: "depth",      type: "number",             values: ["2","3","4","4+"],               default: "3",   note: "depth<2 → no breadcrumb · depth=2 → Depth=2 variant · depth=3 → Depth=3 · depth≥4 → Depth=4 (middle items truncated with …)" },
     { name: "items",      type: "BreadcrumbItem[]",   values: ["{ label: string; href?: string }[]"], default: "[]",  note: "items[0] is always 'Home' with href='/'. items[last] is the Selected item (no href)." },
@@ -34585,7 +34586,7 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Breadcrumb</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
-            Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to current page with all ancestors clickable. At L2, use Header <code className="text-[11px] px-[4px] py-[1px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>backButton</code> instead.
+            Hierarchical navigation trail, used from L2 onwards inside <code>Header.breadcrumb</code>. Shows parent plus current page — ancestors clickable, current page not. Never paired with a backButton: from L2 the first crumb IS the way back.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("breadcrumb")} />
@@ -34625,8 +34626,8 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <tbody>
                     {[
                       { depth: "L1 — Root list",    pattern: "No back navigation",          code: null,                       example: "AI Workers list" },
-                      { depth: "L2 — Item detail",   pattern: "Header backButton only",      code: "backButton={true}",        example: "AI Workers → Meridian" },
-                      { depth: "L3 — Nested detail", pattern: "Breadcrumb + Header back",    code: "depth={3}",                example: "AI Workers → Meridian → Run #42" },
+                      { depth: "L2 — Item detail",   pattern: "Breadcrumb in Header.breadcrumb", code: "depth={2}",             example: "AI Workers → Meridian" },
+                      { depth: "L3 — Nested detail", pattern: "Breadcrumb, parent + current",    code: "depth={3}",             example: "AI Workers → Meridian → Run #42" },
                       { depth: "L4+ — Deep nested",  pattern: "Breadcrumb truncates middle", code: "depth={4+} → shows …",     example: "Home → … → Run #42 → Log entry" },
                     ].map(({ depth, pattern, code, example }, i, arr) => (
                       <tr key={i} style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
@@ -34696,12 +34697,14 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <LucideIcons.X size={12} /> Close Preview
                 </button>
 
-                {/* L2 / L3 toggle — centered at top */}
+                {/* L1 / L2+ toggle — centered at top. Under the current pattern the
+                    breadcrumb appears from L2, not L3, so the two states are
+                    "root list, nothing to trace" and "anything deeper". */}
                 <div className="fixed" style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001 }}>
                   <SwitchTab
                     items={[
-                      { id: "l2", label: "L2 — Section view"  },
-                      { id: "l3", label: "L3+ — Detail view" },
+                      { id: "l2", label: "L1 — Root list"    },
+                      { id: "l3", label: "L2+ — Detail view" },
                     ]}
                     value={bcPreviewL3 ? "l3" : "l2"}
                     onChange={(v: string) => setBcPreviewL3(v === "l3")}

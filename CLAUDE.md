@@ -64,7 +64,7 @@ These are the rules most often violated in AI-generated views. Scan this block e
 
 ### Navigation & headers
 - **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
-- **NEVER** show both `backButton` and breadcrumbs — pick based on depth (L2 → backButton, L3+ → breadcrumbs).
+- **NEVER** combine `Header.breadcrumb` and `backButton` — from L2 it is the breadcrumb; the first crumb IS the way back. `backButton` is only for pages with no hierarchy to express (a creation wizard).
 - **NEVER** use `WidgetCanvasSection` or a hand-rolled grid for Overview tabs — always `WidgetCanvasView`.
 - **NEVER** pass the `label` prop to `Input` or `Textarea` in desktop screen files.
 
@@ -203,7 +203,7 @@ Every entity detail page follows this structure — tabs always in this order:
 3. **Logs** → always the `Table` component following the Logs Table pattern. (See PatternLogsPage.)
 
 Header rules on detail pages:
-- `backButton={true}` if L2 depth (arrived from a list). Breadcrumbs if L3+.
+- `breadcrumb` with parent + current page — a detail page is L2 or deeper. Never `backButton` alongside it.
 - Always show status `tag` — detail view = one entity, one state.
 - Primary action in `Header.primaryAction` (`variant="main"`).
 
@@ -212,7 +212,7 @@ Header rules on detail pages:
 <Header
   title="Meridian"
   tag={<Tag variant="success" size="s">Active</Tag>}
-  backButton={true}
+  breadcrumb={<Breadcrumb depth={2} items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]} onNavigate={go} />}
   size={isScrolled ? "compress" : "size-l"}
   primaryAction={<Button variant="main" size="sm">Edit</Button>}
 />
@@ -255,43 +255,51 @@ Maximum 2 navigation layers:
 **24px gap between every navigation layer** — Tabs → SwitchTab → Filters → Chips (nav). Confirmed from Figma DS node 14660-136237.
 24px gap from the last nav element to the first entity card. 12px gap between entity cards.
 
-### Back navigation and breadcrumbs — which to use
+### Navigation depth — the breadcrumb pattern
 
-The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs based on depth level:
+**From L2 onwards, a page states where it sits with a breadcrumb inside the `Header`. Not a back arrow.**
 
-| Depth level | Pattern | When |
-|---|---|---|
-| Level 2 (one step below a list) | `backButton={true}` on `Header` | User is inside a single item detail — one tap gets them back |
-| Level 3+ (e.g. item → sub-section → detail) | Breadcrumb trail | User needs to see and jump to any ancestor level, not just "back one" |
+Confirmed by Michael (2026-09-02) after checking how Carbon and Atlassian handle it. Back and breadcrumb answer different questions — back is *chronological* ("where did I come from"), breadcrumb is *hierarchical* ("where am I") — and that distinction only earns its keep from L3, where "up one level" and "back" are genuinely different destinations. **At L2 they are the same place**: the first crumb IS the way back, so an arrow beside it is two affordances pointing at one target, in a 62px header.
 
-**Never show both** — if breadcrumbs are present, omit `backButton`. If it's L2, omit breadcrumbs.
-
-**`Breadcrumb` exists — import it, never hand-roll one.** `src/components/ui/breadcrumb.tsx`, in the catalog under Components → Breadcrumb.
+| Depth | Pattern |
+|---|---|
+| L1 (a list, a home) | No breadcrumb, no back. `Breadcrumb` renders nothing below `depth={2}` anyway |
+| **L2+** | `Breadcrumb` in `Header.breadcrumb` — **parent plus current page only**, not the whole path |
 
 ```tsx
 import { Breadcrumb } from "@/components/ui/breadcrumb"
 
-<Breadcrumb
-  depth={3}                                    // L1=1, L2=2, L3=3… renders nothing below 2
-  items={[
-    { label: "Workers", href: "workers" },     // ancestors carry href
-    { label: "Meridian", href: "workers/1" },
-    { label: "Run history" },                  // current page: no href
-  ]}
-  onNavigate={(href) => go(href)}
+<Header
+  size={isScrolled ? "compress" : "size-l"}
+  title="Meridian"
+  tag={<Tag variant="success" size="sm">Active</Tag>}
+  breadcrumb={
+    <Breadcrumb
+      depth={2}
+      items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]}
+      onNavigate={go}
+    />
+  }
+  primaryAction={{ label: "Run now", onClick: run }}
 />
 ```
 
-```tsx
-// ✅ Level 2 — single item detail, use back button
-<Header title="Meridian" backButton={true} size={isScrolled ? "compress" : "size-l"} />
+`Breadcrumb` lives at `src/components/ui/breadcrumb.tsx` — **import it, never hand-roll one.** Ancestors carry `href`; the current page does not.
 
-// ✅ Level 3+ — nested detail, use the DS Breadcrumb
-<Breadcrumb depth={3} items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]} onNavigate={go} />
+**What happens on scroll.** The breadcrumb and the tag both survive compress, stacked above the title:
 
-// ❌ Never both at once
-<Header title="Meridian" backButton={true} breadcrumbs={[...]} />
 ```
+size-l    Workers › Meridian          ← breadcrumb
+          Meridian  [Active]          ← title + tag
+          Manages … (description)     ← hidden in compress
+
+compress  Workers › Meridian          ← still there
+          Meridian  [Active]          ← still there
+```
+
+Compress is **content-driven, not a fixed 60px** — about 48px normally, about 62px with a breadcrumb. That is deliberate: scrolling should never cost you your place in the hierarchy or the record's status. The 4px between the two rows is what keeps them reading as *path + page* instead of one wrapped title.
+
+**Never combine `breadcrumb` and `backButton`.** `backButton` remains for pages with no hierarchy to express — a creation wizard, a standalone flow — where there is a "back" but no "up".
 
 ### Overlays
 - **`ModalDialog`** — user MUST stop (destructive action, confirmation, critical form)

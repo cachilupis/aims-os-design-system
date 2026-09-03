@@ -2,7 +2,7 @@
 
 **Figma node:** [`18352:45`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18352-45)
 
-Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.
+Hierarchical navigation trail, used from L2 onwards inside Header.breadcrumb. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.
 
 ## Properties
 

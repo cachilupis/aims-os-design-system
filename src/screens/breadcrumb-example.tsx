@@ -126,26 +126,26 @@ export function BreadcrumbExampleScreen({ showBreadcrumb }: { showBreadcrumb: bo
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-          {/* Fixed zone: breadcrumb (L3+) + Header */}
+          {/* Fixed zone: Header with the breadcrumb inside it. The trail used to
+              sit in its own div above the Header, with a backButton beside the
+              title — the pattern this replaces. From L2 the breadcrumb lives in
+              Header.breadcrumb and there is no back arrow: the first crumb is
+              the way back. */}
           <div style={{ flexShrink: 0 }}>
-            {showBreadcrumb && (
-              <div style={{ padding: "6px 24px" }}>
-                <Breadcrumb
-                  depth={3}
-                  items={[
-                    { label: "Home",                    href: "/"           },
-                    { label: "AI Workers",              href: "/ai-workers" },
-                    { label: "Churn Risk Intervention"                      },
-                  ]}
-                  onNavigate={() => {}}
-                />
-              </div>
-            )}
             <Header
               title="Title section"
               description="Securely store, manage, and organize your documents and folders"
               size="size-l"
-              backButton
+              breadcrumb={showBreadcrumb ? (
+                <Breadcrumb
+                  depth={2}
+                  items={[
+                    { label: "AI Workers", href: "/ai-workers" },
+                    { label: "Churn Risk Intervention"          },
+                  ]}
+                  onNavigate={() => {}}
+                />
+              ) : undefined}
               tag={<Tag variant="informative" size="sm">Status</Tag>}
               primaryAction={
                 <Button variant="main" size="sm" style={{ display: "flex", alignItems: "center", gap: 4 }}>
