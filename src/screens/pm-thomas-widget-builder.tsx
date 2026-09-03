@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
 import { Tag } from "@/components/ui/tag"
 import { ModalDialog } from "@/components/ui/modal-dialog"
+import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
+import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import type { SidebarItem } from "@/components/ui/sidebar"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -120,37 +122,6 @@ function SectionLabel({ n, children }: { n: number; children: React.ReactNode })
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
       <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--primary)", color: "var(--canvas)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{n}</div>
       <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{children}</span>
-    </div>
-  )
-}
-
-// DS-GAP: BuilderTabNav — 3-step tab bar with completion dots and enable/disable gating. Closest DS component: Tabs.
-function BuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: TabId; setTab: (t: TabId) => void; dataComplete: boolean; widgetComplete: boolean }) {
-  const tabs: { id: TabId; label: string; n: number; done: boolean; enabled: boolean }[] = [
-    { id: "data",       label: "Data",       n: 1, done: dataComplete,   enabled: true },
-    { id: "widget",     label: "Widget",     n: 2, done: widgetComplete, enabled: dataComplete },
-    { id: "appearance", label: "Appearance", n: 3, done: false,          enabled: widgetComplete },
-  ]
-  const CheckIcon = LucideIcons.Check as React.FC<{ size?: number }>
-  return (
-    <div style={{ display: "flex", gap: 4, padding: 4, borderRadius: 12, background: "var(--field-border)", opacity: 0.9 }}>
-      {tabs.map(t => (
-        <button key={t.id} onClick={() => t.enabled && setTab(t.id)} disabled={!t.enabled} style={{
-          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "7px 4px",
-          borderRadius: 8, border: "none", cursor: t.enabled ? "pointer" : "not-allowed",
-          background: tab === t.id ? "var(--surface)" : "transparent",
-          opacity: t.enabled ? 1 : 0.35, transition: "all 0.15s",
-        }}>
-          <div style={{
-            width: 18, height: 18, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700,
-            background: t.done ? "var(--success)" : tab === t.id ? "var(--primary)" : "var(--color-text-subtitle)",
-            color: "var(--canvas)",
-          }}>
-            {t.done ? <CheckIcon size={10} /> : t.n}
-          </div>
-          <span style={{ fontSize: 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "var(--color-text-title)" : "var(--color-text-subtitle)" }}>{t.label}</span>
-        </button>
-      ))}
     </div>
   )
 }
@@ -398,8 +369,19 @@ export default function PMThomasWidgetBuilderScreen() {
     setAccentColor(""); setStyleVariant(""); setSaved(false)
   }
 
-  const CheckIcon        = LucideIcons.Check        as React.FC<{ size?: number; style?: React.CSSProperties }>
-  const ChevronRightIcon = LucideIcons.ChevronRight as React.FC<{ size?: number }>
+  const CheckIcon = LucideIcons.Check as React.FC<{ size?: number; style?: React.CSSProperties }>
+
+  const stepItems: StepItem[] = [
+    { label: "Data",       state: (tab === "data"       ? "active" : dataComplete   ? "completed" : "default") as StepState },
+    { label: "Widget",     state: (tab === "widget"     ? "active" : widgetComplete ? "completed" : dataComplete ? "default" : "locked") as StepState },
+    { label: "Appearance", state: (tab === "appearance" ? "active" : widgetComplete ? "default"   : "locked") as StepState },
+  ]
+
+  const footerProps = tab === "data"
+    ? { variant: "cancel-next" as const, onCancel: () => { if (hasUnsaved) setShowLeave(true) }, nextLabel: "Continue to Widget", nextDisabled: !dataComplete, onNext: () => setTab("widget") }
+    : tab === "widget"
+    ? { variant: "back-next"   as const, onBack:   () => setTab("data"),      nextLabel: "Continue to Appearance", nextDisabled: !widgetComplete, onNext: () => setTab("appearance") }
+    : { variant: "back-next"   as const, onBack:   () => setTab("widget"),    nextLabel: "Save to catalog",        nextDisabled: !canSave,        onNext: () => setSaved(true) }
 
   const selectStyle = { width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--field-border)", background: "var(--surface)", color: "var(--color-text-title)", fontSize: 13 }
 
@@ -418,8 +400,6 @@ export default function PMThomasWidgetBuilderScreen() {
           primaryAction={!saved ? (
             <div style={{ display: "flex", gap: 8 }}>
               <Button variant="secondary" size="sm" onClick={() => hasUnsaved ? setShowLeave(true) : undefined}>Cancel</Button>
-              {tab === "data" && <Button variant="secondary" size="sm" disabled={!dataComplete} onClick={() => setTab("widget")}>Widget <ChevronRightIcon size={14} /></Button>}
-              {tab === "widget" && <Button variant="secondary" size="sm" disabled={!widgetComplete} onClick={() => setTab("appearance")}>Appearance <ChevronRightIcon size={14} /></Button>}
               <Button variant="main" size="sm" disabled={!canSave} onClick={() => setSaved(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
             </div>
           ) : undefined}
@@ -431,7 +411,21 @@ export default function PMThomasWidgetBuilderScreen() {
 
       {/* ── Builder ── */}
       {!saved && (
-        <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+        <>
+          {/* Step progress indicator */}
+          <Stepper
+            steps={stepItems}
+            onStepClick={(i) => {
+              const order: TabId[] = ["data", "widget", "appearance"]
+              const target = order[i]
+              if (target === "data" || (target === "widget" && dataComplete) || (target === "appearance" && widgetComplete)) {
+                setTab(target)
+              }
+            }}
+            className="mb-5"
+          />
+
+          <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
           {/* Left: build panel */}
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
             {/* DS-GAP: DescribeComposer — natural-language widget setup generator. Using simplified Input bar. */}
@@ -439,8 +433,6 @@ export default function PMThomasWidgetBuilderScreen() {
               <Input placeholder='Describe your widget… e.g. "Win Rate gauge by team"' />
               <Button variant="secondary" size="sm">Generate</Button>
             </div>
-
-            <BuilderTabNav tab={tab} setTab={setTab} dataComplete={dataComplete} widgetComplete={widgetComplete} />
 
             {/* ── Tab 1: Data ── */}
             {tab === "data" && (
@@ -511,9 +503,6 @@ export default function PMThomasWidgetBuilderScreen() {
                   </div>
                 )}
 
-                {dataComplete && (
-                  <Button variant="primary" onClick={() => setTab("widget")}>Continue to Widget →</Button>
-                )}
               </div>
             )}
 
@@ -549,9 +538,6 @@ export default function PMThomasWidgetBuilderScreen() {
                   </div>
                 </div>
 
-                {widgetComplete && (
-                  <Button variant="secondary" onClick={() => setTab("appearance")}>Configure Appearance →</Button>
-                )}
               </div>
             )}
 
@@ -579,9 +565,6 @@ export default function PMThomasWidgetBuilderScreen() {
                   </div>
                 </div>
 
-                {canSave && (
-                  <Button variant="primary" onClick={() => setSaved(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
-                )}
               </div>
             )}
           </div>
@@ -600,6 +583,9 @@ export default function PMThomasWidgetBuilderScreen() {
             />
           </div>
         </div>
+
+        <StepperNavFooter {...footerProps} />
+      </>
       )}
 
       {/* ── Leave confirmation modal ── */}
