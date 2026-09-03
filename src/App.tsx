@@ -1846,8 +1846,8 @@ const HEADER_SPEC = {
     { name: "showBackInCompress", type: "Boolean", values: ["true", "false"],                                                                 default: "false",         note: "Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user." },
     { name: "icon",            type: "node",    values: ["LucideIcon"],                                                                       default: "undefined",     note: "Rendered inside a HighlightIcon (sm). Hidden in compress." },
     { name: "iconVariant",     type: "Variant", values: ["informative","success","alert","error","neutral","yellow","lime","purple","light-blue"], default: "informative", note: "HighlightIcon color variant. Only applies when icon is set." },
-    { name: "primaryAction",   type: "node",    values: ["<Button variant=\"main\" size=\"sm\" />"],                                          default: "undefined" },
-    { name: "secondaryAction", type: "node",    values: ["<Button variant=\"secondary\" size=\"sm\" />"],                                     default: "undefined" },
+    { name: "primaryAction",   type: "HeaderAction", values: ["{ label, icon?, onClick?, disabled?, priority? }"],                            default: "undefined",     note: "An action object, not JSX — Header picks the Button variant so no screen names one. Defaults to priority \"primary\" (variant=\"main\")." },
+    { name: "secondaryAction", type: "HeaderAction", values: ["{ label, icon?, onClick?, disabled?, priority? }"],                            default: "undefined",     note: "Same shape, rendered before primary. Defaults to priority \"secondary\". Two actions is the maximum — a third belongs in an overflow menu." },
   ],
   sizes: [
     { size: "Size L",   padding: "12px 24px", titleSize: "24px", height: "auto (~48px)", notes: "Default. Full slots visible." },
@@ -11028,12 +11028,8 @@ function PatternListViewPage() {
                       title="AI Workers"
                       description="Manage and monitor your AI workers across all categories."
                       tag={<Tag variant="success" size="sm">24 Active</Tag>}
-                      primaryAction={
-                        <Button variant="main" size="sm">
-                          <LucideIcons.Plus size={13} /> New Worker
-                        </Button>
-                      }
-                      secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                      primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                      secondaryAction={{ label: "Export" }}
                       style={{ transition: "padding 200ms ease-in-out" }}
                     />
 
@@ -11577,12 +11573,8 @@ function PatternFilterPage() {
                         title="AI Workers"
                         description="Manage and monitor your AI workers across all categories."
                         tag={<Tag variant="success" size="sm">24 Published</Tag>}
-                        primaryAction={
-                          <Button variant="main" size="sm">
-                            <LucideIcons.Plus size={13} /> New Worker
-                          </Button>
-                        }
-                        secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                        primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                        secondaryAction={{ label: "Export" }}
                         style={{ transition: "padding 200ms ease-in-out" }}
                       />
 
@@ -12373,12 +12365,8 @@ function PatternHeaderPage() {
                         title="AI Workers"
                         description="Manage and monitor your AI workers across all categories."
                         tag={<Tag variant="success" size="sm">24 Published</Tag>}
-                        primaryAction={
-                          <Button variant="main" size="sm">
-                            <LucideIcons.Plus size={13} /> New Worker
-                          </Button>
-                        }
-                        secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                        primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                        secondaryAction={{ label: "Export" }}
                         style={{ transition: "padding 200ms ease-in-out" }}
                       />
 
@@ -12882,12 +12870,8 @@ function PatternNavDepthPage() {
                     title="AI Workers"
                     description="Manage and monitor your AI workers across all categories."
                     tag={<Tag variant="success" size="sm">24 Active</Tag>}
-                    primaryAction={
-                      <Button variant="main" size="sm">
-                        <LucideIcons.Plus size={13} /> New Worker
-                      </Button>
-                    }
-                    secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                    primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                    secondaryAction={{ label: "Export" }}
                     style={{ transition: "padding 200ms ease-in-out" }}
                   />
 
@@ -13970,11 +13954,7 @@ function PatternLogsPage() {
                     title="Logs"
                     description="System events, errors, and execution history across all workers."
                     tag={<Tag variant="neutral" size="sm">{filteredLogs.length} events</Tag>}
-                    primaryAction={
-                      <Button variant="main" size="sm">
-                        <LucideIcons.Download size={13} /> Export
-                      </Button>
-                    }
+                    primaryAction={{ label: "Export", icon: LucideIcons.Download }}
                     style={{ transition: "padding 200ms ease-in-out", flexShrink: 0 }}
                   />
 
@@ -14800,8 +14780,8 @@ function showTip(e: React.MouseEvent, text: string) {
                 title="Dashboard"
                 description="Real-time overview of your AI workforce performance."
                 tag={<Tag variant="success" size="sm">24 Active</Tag>}
-                primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> Add Widget</Button>}
-                secondaryAction={<Button variant="secondary" size="sm">Edit Layout</Button>}
+                primaryAction={{ label: "Add Widget", icon: LucideIcons.Plus }}
+                secondaryAction={{ label: "Edit Layout" }}
                 style={{ transition: "padding 200ms ease-in-out", flexShrink: 0 }}
               />
 
@@ -17384,8 +17364,8 @@ function PatternPanelContentPage() {
                 description="Workflow builder — SidePanel playground preview"
                 backButton
                 size="size-l"
-                primaryAction={<Button variant="main" size="sm">Save workflow</Button>}
-                secondaryAction={<Button variant="secondary" size="sm" onClick={() => setGpSidePanelOpen(false)}>Close preview</Button>}
+                primaryAction={{ label: "Save workflow" }}
+                secondaryAction={{ label: "Close preview", onClick: () => setGpSidePanelOpen(false) }}
               />
               <div className="flex flex-1 overflow-hidden">
                 {/* Canvas */}
@@ -35196,19 +35176,20 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   title="AIMS Drive"
                   description="Securely store, manage, and organize your documents and folders."
                   tag={<Tag variant="primary" size="sm">Active</Tag>}
-                  primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New File</Button>}
-                  secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                  primaryAction={{ label: "New File", icon: LucideIcons.Plus }}
+                  secondaryAction={{ label: "Export" }}
                 />
               </div>
               <div className="flex flex-col gap-[6px]">
                 {([
                   ["Title",         "Always visible. 24px in Size L, 18px in Size M and Compress."],
                   ["Description",   "Optional subtitle below the title. Hidden in Compress."],
-                  ["Status Tag",    "Optional inline chip after the title. Hidden in Compress."],
-                  ["Back Button",   "Optional ArrowLeft — for inner-page drill-down contexts. Hidden in Compress."],
+                  ["Status Tag",    "Optional inline chip after the title. Survives Compress — a detail view keeps its state visible while scrolled."],
+                  ["Breadcrumb",    "Optional trail above the title, for L2+ depth. Survives Compress. Never together with Back Button."],
+                  ["Back Button",   "Optional ArrowLeft — for inner-page drill-down contexts. Hidden in Compress unless showBackInCompress."],
                   ["Icon",          "Optional 24×24 icon in a primary-tint box. Hidden in Compress."],
-                  ["Primary CTA",   "Right-side primary action. Use Button variant=\"main\"."],
-                  ["Secondary CTA", "Right-side secondary action. Use Button variant=\"secondary\"."],
+                  ["Primary CTA",   "Right-side primary action. Pass an action object — { label, icon?, onClick? } — not a Button. Header applies variant=\"main\" itself."],
+                  ["Secondary CTA", "Right-side secondary action, rendered before primary. Same object shape. Two actions is the maximum."],
                 ] as [string, string][]).map(([name, desc]) => (
                   <div key={name} className="flex gap-[10px] items-start text-[13px]">
                     <span className="shrink-0 font-semibold text-[var(--foreground)] w-[120px]">{name}</span>
@@ -35232,8 +35213,8 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                       title="Meridian"
                       description="AI Worker · Customer support automation · Lexington HTL"
                       tag={<Tag variant="success" size="sm">Active</Tag>}
-                      primaryAction={<Button variant="main" size="sm"><LucideIcons.Settings2 size={13} /> Configure</Button>}
-                      secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                      primaryAction={{ label: "Configure", icon: LucideIcons.Settings2 }}
+                      secondaryAction={{ label: "Export" }}
                     />
                   </div>
                 </div>
@@ -35254,7 +35235,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     <span className="text-[11px] font-semibold" style={{ color: "var(--color-feedback-success)" }}>Detail view — correct</span>
                   </div>
                   <div className="rounded-[8px] border overflow-hidden" style={{ borderColor: "var(--color-feedback-success)", opacity: 0.9 }}>
-                    <Header size="size-l" title="Meridian" tag={<Tag variant="success" size="sm">Active</Tag>} primaryAction={<Button variant="main" size="sm">Configure</Button>} />
+                    <Header size="size-l" title="Meridian" tag={<Tag variant="success" size="sm">Active</Tag>} primaryAction={{ label: "Configure" }} />
                   </div>
                   <p className="text-[12px] text-[var(--field-supporting)]">One item open → one state → tag makes sense.</p>
                 </div>
@@ -35265,7 +35246,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     <span className="text-[11px] font-semibold" style={{ color: "var(--color-feedback-error)" }}>List view — never use tag here</span>
                   </div>
                   <div className="rounded-[8px] border overflow-hidden" style={{ borderColor: "var(--color-feedback-error)", opacity: 0.9 }}>
-                    <Header size="size-l" title="AI Workers" tag={<Tag variant="primary" size="sm">24 Active</Tag>} primaryAction={<Button variant="main" size="sm">New Worker</Button>} />
+                    <Header size="size-l" title="AI Workers" tag={<Tag variant="primary" size="sm">24 Active</Tag>} primaryAction={{ label: "New Worker" }} />
                   </div>
                   <p className="text-[12px] text-[var(--field-supporting)]">A list has many states simultaneously — one tag is misleading. Remove it.</p>
                 </div>
@@ -35388,8 +35369,8 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 backButton={pgBackButton}
                 icon={pgIcon ? (LucideIcons as unknown as Record<string, LucideIcons.LucideIcon>)[pgIconName] : undefined}
                 iconVariant={pgIconVariant}
-                primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New Worker</Button>}
-                secondaryAction={pgSecondaryCta ? <Button variant="secondary" size="sm">Export</Button> : undefined}
+                primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                secondaryAction={pgSecondaryCta ? { label: "Export" } : undefined}
               />
             </div>
           </div>
@@ -35453,11 +35434,12 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     { prop: "title",           type: "string",     def: "—",         desc: "Page title. Required. Always visible." },
                     { prop: "size",            type: "HeaderSize", def: '"size-l"',   desc: '"size-l" | "size-m" | "compress"' },
                     { prop: "description",     type: "string",     def: "undefined",  desc: "Subtitle below the title. Hidden in compress." },
-                    { prop: "tag",             type: "ReactNode",  def: "undefined",  desc: "Status chip (Tag component). Renders inline after title. Hidden in compress." },
-                    { prop: "backButton",      type: "boolean",    def: "false",      desc: "Shows an ArrowLeft back button. Hidden in compress." },
+                    { prop: "tag",             type: "ReactNode",  def: "undefined",  desc: "Status chip (Tag component). Renders inline after title. Survives compress — a detail view keeps its state visible while scrolled." },
+                    { prop: "breadcrumb",      type: "ReactNode",  def: "undefined",  desc: "Breadcrumb trail above the title, for L2+ depth. Survives compress. Never pass this together with backButton — the audit blocks it." },
+                    { prop: "backButton",      type: "boolean",    def: "false",      desc: "Shows an ArrowLeft back button. Hidden in compress unless showBackInCompress." },
                     { prop: "icon",            type: "LucideIcon", def: "undefined",  desc: "Lucide icon shown in a 24×24 primary-tint box. Hidden in compress." },
-                    { prop: "primaryAction",   type: "ReactNode",  def: "undefined",  desc: 'Primary CTA — right zone. Use Button variant="main".' },
-                    { prop: "secondaryAction", type: "ReactNode",  def: "undefined",  desc: 'Secondary CTA — right zone, before primary. Use Button variant="secondary".' },
+                    { prop: "primaryAction",   type: "HeaderAction", def: "undefined", desc: 'An action object — { label, icon?, onClick?, disabled?, priority? }. Header picks the Button variant, so no screen names one. Defaults to priority "primary" (variant="main").' },
+                    { prop: "secondaryAction", type: "HeaderAction", def: "undefined", desc: 'Same shape, rendered before primary. Defaults to priority "secondary". Header takes at most these two actions — a third belongs in an overflow menu.' },
                   ].map(row => (
                     <tr key={row.prop} className="border-b border-[var(--field-border)] last:border-0">
                       <td className="py-[10px] pr-[16px] font-mono text-[12px] text-[var(--primary)]">{row.prop}</td>
@@ -35484,12 +35466,8 @@ import { Plus } from "lucide-react"
   title="AI Workers"
   description="Manage and monitor your AI workers."
   tag={<Tag variant="success" size="sm">24 Published</Tag>}
-  primaryAction={
-    <Button variant="main" size="sm">
-      <Plus size={13} /> New Worker
-    </Button>
-  }
-  secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+  primaryAction={{ label: "New Worker", icon: Plus }}
+  secondaryAction={{ label: "Export" }}
 />
 
 // Scroll-triggered compress (driven by scroll state in parent)
@@ -35498,7 +35476,7 @@ import { Plus } from "lucide-react"
   title="AI Workers"
   description="Manage and monitor your AI workers."
   tag={<Tag variant="success" size="sm">24 Published</Tag>}
-  primaryAction={<Button variant="main" size="sm"><Plus size={13} /> New Worker</Button>}
+  primaryAction={{ label: "New Worker", icon: Plus }}
   style={{ transition: "padding 200ms ease-in-out" }}
 />`}
               </pre>
@@ -35542,7 +35520,7 @@ useEffect(() => {
     title="AI Workers"
     description="Manage and monitor your AI workers."
     tag={<Tag variant="success" size="sm">24 Published</Tag>}
-    primaryAction={<Button variant="main" size="sm">New Worker</Button>}
+    primaryAction={{ label: "New Worker" }}
     style={{ transition: "padding 200ms ease-in-out" }}
   />
 </div>`}

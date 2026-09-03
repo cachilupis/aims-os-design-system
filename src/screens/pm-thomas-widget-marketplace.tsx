@@ -5,6 +5,7 @@ import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tag } from "@/components/ui/tag"
+import { WidgetGlyph, WidgetFreshnessBadge, WidgetMiniPreview } from "@/components/experimental/widget-parts"
 import { CardContainer } from "@/components/ui/card-container"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { SlideOut } from "@/components/ui/slide-out"
@@ -56,12 +57,6 @@ const CATEGORIES: { id: BizCat; label: string }[] = [
   { id: "operations",       label: "Operations" },
 ]
 
-const SKELETON_ICON: Record<string, string> = {
-  KPI: "TrendingUp", Chart: "BarChart2", Feed: "Rss", Gauge: "Gauge",
-  Donut: "PieChart", Board: "Kanban", Funnel: "Filter", "Stat Row": "AlignLeft",
-  Alerts: "Bell", "Cost KPI": "DollarSign",
-}
-
 const WIDGETS: MarketplaceWidget[] = [
   // AIMS OS
   { id: "mw-01", name: "AI Worker Activity", source: "AIMS OS — Core", skeleton: "Chart", freshness: "live", description: "Real-time chart of AI worker tasks, completions, and errors across your automation fleet.", businessCategory: "aims-os", complexity: "Intermediate", entityCount: 6, tenantUsage: 1420 },
@@ -103,71 +98,7 @@ const PAGE_SIZE = 12
 
 // ── DS-GAP Components ─────────────────────────────────────────────────────────
 
-// DS-GAP: WidgetGlyph — icon representation for widget skeleton types. Closest DS component: HighlightIcon.
-function WidgetGlyph({ skeleton, size = 32 }: { skeleton: string; size?: number }) {
-  const iconKey = SKELETON_ICON[skeleton] ?? "Square"
-  const Icon = (LucideIcons as Record<string, unknown>)[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: 8, flexShrink: 0,
-      background: "var(--surface)", border: "1px solid var(--field-border)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <Icon size={Math.round(size * 0.5)} style={{ color: "var(--primary)" }} />
-    </div>
-  )
-}
-
-// DS-GAP: FreshnessBadge — pill showing data freshness state. Closest DS component: Tag.
-const FRESHNESS_META: Record<string, { label: string; color: string }> = {
-  live:  { label: "Live",  color: "var(--success)" },
-  fresh: { label: "Fresh", color: "var(--primary)" },
-  stale: { label: "Stale", color: "var(--alert)" },
-}
-function FreshnessBadge({ freshness }: { freshness: string }) {
-  const meta = FRESHNESS_META[freshness] ?? FRESHNESS_META.fresh
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, color: meta.color, flexShrink: 0 }}>
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color }} />
-      {meta.label}
-    </span>
-  )
-}
-
 // DS-GAP: MiniPreview — skeleton-appropriate miniature chart placeholder. Closest DS component: none.
-function MiniPreview({ skeleton }: { skeleton: string }) {
-  if (skeleton === "Donut") {
-    return (
-      <div style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ width: 38, height: 38, borderRadius: "50%", border: "10px solid var(--primary)", opacity: 0.3 }} />
-      </div>
-    )
-  }
-  if (skeleton === "Gauge") {
-    return (
-      <div style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ width: 44, height: 22, borderRadius: "22px 22px 0 0", border: "9px solid var(--primary)", borderBottom: "none", opacity: 0.3 }} />
-      </div>
-    )
-  }
-  if (skeleton === "Feed" || skeleton === "Alerts" || skeleton === "Board") {
-    return (
-      <div style={{ height: 52, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 5 }}>
-        {[100, 78, 55].map((w, i) => (
-          <div key={i} style={{ height: 8, borderRadius: 4, background: "var(--primary)", opacity: 0.18 + i * 0.1, width: `${w}%` }} />
-        ))}
-      </div>
-    )
-  }
-  return (
-    <div style={{ height: 52, display: "flex", alignItems: "flex-end", gap: 3, padding: "6px 8px 0" }}>
-      {[45, 65, 40, 85, 55, 70].map((h, i) => (
-        <div key={i} style={{ flex: 1, height: `${h}%`, borderRadius: "3px 3px 0 0", background: "var(--primary)", opacity: 0.18 + i * 0.09 }} />
-      ))}
-    </div>
-  )
-}
-
 // DS-GAP: MarketplaceCard — widget listing card with category stripe, preview, and action buttons. Closest DS component: CardContainer.
 function MarketplaceCard({ widget, catColor, onView, onUse }: {
   widget: MarketplaceWidget
@@ -181,7 +112,7 @@ function MarketplaceCard({ widget, catColor, onView, onUse }: {
       <div style={{ height: 3, background: catColor, flexShrink: 0 }} />
       <div style={{ padding: 12, flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <WidgetGlyph skeleton={widget.skeleton} size={32} />
+          <WidgetGlyph skeleton={widget.skeleton} size="md" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {widget.name}
@@ -190,10 +121,10 @@ function MarketplaceCard({ widget, catColor, onView, onUse }: {
               {widget.source}
             </div>
           </div>
-          <FreshnessBadge freshness={widget.freshness} />
+          <WidgetFreshnessBadge status={widget.freshness} />
         </div>
         <div style={{ borderRadius: 6, background: "var(--canvas)", border: "1px solid var(--field-border)", overflow: "hidden" }}>
-          <MiniPreview skeleton={widget.skeleton} />
+          <WidgetMiniPreview skeleton={widget.skeleton} />
         </div>
         <p style={{
           fontSize: 12, color: "var(--color-text-subtitle)", lineHeight: 1.5, margin: 0,
@@ -338,12 +269,8 @@ export default function PMThomasWidgetMarketplaceScreen() {
           size={isScrolled ? "compress" : "size-l"}
           title="Widget Marketplace"
           description="Browse and add pre-built widgets to your dashboards."
-          primaryAction={
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm">Start from scratch</Button>
-              <Button variant="main" size="sm">Create with AI assist</Button>
-            </div>
-          }
+          secondaryAction={{ label: "Start from scratch" }}
+          primaryAction={{ label: "Create with AI assist" }}
         />
       )}
       pagination={
@@ -435,14 +362,14 @@ export default function PMThomasWidgetMarketplaceScreen() {
         >
           <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <WidgetGlyph skeleton={viewWidget.skeleton} size={48} />
+              <WidgetGlyph skeleton={viewWidget.skeleton} size="lg" />
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-title)" }}>{viewWidget.name}</div>
                 <div style={{ fontSize: 13, color: "var(--color-text-subtitle)", marginTop: 2 }}>{viewWidget.source}</div>
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "center" }}>
-              <FreshnessBadge freshness={viewWidget.freshness} />
+              <WidgetFreshnessBadge status={viewWidget.freshness} />
               <Tag variant="neutral" size="sm">{viewWidget.skeleton}</Tag>
               <Tag variant="neutral" size="sm">{viewWidget.complexity}</Tag>
             </div>

@@ -381,9 +381,7 @@ export default function PMChatWidgetScreen() {
             size={isScrolled ? "compress" : "size-l"}
             title="Chat Widgets"
             description="Embeddable AI chat widgets connected to your Agentic Workflows"
-            primaryAction={<Button variant="main" size="sm" onClick={() => { setCreateStep(0); setNewName(""); setNewDesc(""); setView("create") }}>
-              <Icons.Plus size={14} style={{ marginRight: 4 }} />New Widget
-            </Button>}
+            primaryAction={{ label: "New Widget", icon: Icons.Plus, onClick: () => { setCreateStep(0); setNewName(""); setNewDesc(""); setView("create") } }}
           />
         ) : view === "create" ? (
           <Header
@@ -393,56 +391,58 @@ export default function PMChatWidgetScreen() {
             backButton
           />
         ) : (
+          <>
           <Header
             size={isScrolled ? "compress" : "size-l"}
             title={activeWidget.name}
             description="Customer-facing support and lead qualification widget embedded on acme.com."
             tag={<Tag variant="success" size="sm">Active</Tag>}
             backButton
-            primaryAction={
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {/* Notifications bell — layered on top of ScreenLayout's own actions for prototype clarity */}
-                <div ref={notifRef} style={{ position: "relative" }}>
-                  <button onClick={() => setNotifPanelOpen(p => !p)}
-                    style={{ width: 32, height: 32, borderRadius: 8, background: "transparent", border: "1px solid var(--color-border-neutral-default)", color: "var(--color-text-subtitle)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                    <Icons.Bell size={15} />
-                    {notifs.length > 0 && (
-                      <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, background: "var(--destructive)", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}> {/* audit-ignore: #fff on destructive badge — no token for white-on-red contrast */}
-                        {notifs.length}
-                      </span>
-                    )}
-                  </button>
-                  {notifPanelOpen && (
-                    <CardContainer size="sm" className="!p-0 absolute top-[calc(100%+8px)] right-0 w-80 overflow-hidden z-[500] [box-shadow:0_16px_40px_rgba(0,0,0,0.6)]"> {/* audit-ignore: rgba shadow — no token */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px 10px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>Notifications</span>
-                        <button onClick={clearNotifs} style={{ background: "none", border: "none", fontSize: 11, color: "var(--color-text-disabled)", cursor: "pointer", fontFamily: "inherit" }}>Clear all</button>
-                      </div>
-                      <div style={{ maxHeight: 300, overflowY: "auto" }}>
-                        {notifs.length === 0 ? (
-                          <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 12, color: "var(--color-text-disabled)" }}>No notifications yet</div>
-                        ) : notifs.map(n => (
-                          <div key={n.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 14px", borderBottom: "1px solid var(--color-border-neutral-default)", background: "var(--card-primary-bg)" }}>
-                            <span style={{ width: 28, height: 28, borderRadius: 8, background: "var(--card-primary-bg)", border: "1px solid var(--color-border-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                              <Icons.Send size={12} color="var(--primary)" />
-                            </span>
-                            <span style={{ flex: 1 }}>
-                              <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1.35 }}>{n.title}</span>
-                              <span style={{ display: "block", fontSize: 11, color: "var(--color-text-subtitle)", marginTop: 2 }}>{n.sub}</span>
-                            </span>
-                            <span style={{ fontSize: 10, color: "var(--color-text-disabled)", whiteSpace: "nowrap", marginTop: 2 }}>{n.time}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContainer>
-                  )}
-                </div>
-                <Button variant="primary" size="sm" onClick={handleDeploy}>
-                  <Icons.Send size={13} style={{ marginRight: 4 }} />Deploy
-                </Button>
-              </div>
-            }
+            primaryAction={{ label: "Deploy", icon: Icons.Send, onClick: handleDeploy }}
           />
+          {/* DS-GAP: Header has no slot for standing controls like a notification
+              bell — primaryAction takes an action object, not arbitrary JSX.
+              AdminIntegrations (kebab) and pm-thomas-universal-profile need the
+              same slot. Until it exists, the bell renders in this row. */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 32px 8px" }}>
+            {/* Notifications bell — layered on top of ScreenLayout's own actions for prototype clarity */}
+            <div ref={notifRef} style={{ position: "relative" }}>
+              <button onClick={() => setNotifPanelOpen(p => !p)}
+                style={{ width: 32, height: 32, borderRadius: 8, background: "transparent", border: "1px solid var(--color-border-neutral-default)", color: "var(--color-text-subtitle)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                <Icons.Bell size={15} />
+                {notifs.length > 0 && (
+                  <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, background: "var(--destructive)", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}> {/* audit-ignore: #fff on destructive badge — no token for white-on-red contrast */}
+                    {notifs.length}
+                  </span>
+                )}
+              </button>
+              {notifPanelOpen && (
+                <CardContainer size="sm" className="!p-0 absolute top-[calc(100%+8px)] right-0 w-80 overflow-hidden z-[500] [box-shadow:0_16px_40px_rgba(0,0,0,0.6)]"> {/* audit-ignore: rgba shadow — no token */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px 10px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>Notifications</span>
+                    <button onClick={clearNotifs} style={{ background: "none", border: "none", fontSize: 11, color: "var(--color-text-disabled)", cursor: "pointer", fontFamily: "inherit" }}>Clear all</button>
+                  </div>
+                  <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                    {notifs.length === 0 ? (
+                      <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 12, color: "var(--color-text-disabled)" }}>No notifications yet</div>
+                    ) : notifs.map(n => (
+                      <div key={n.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 14px", borderBottom: "1px solid var(--color-border-neutral-default)", background: "var(--card-primary-bg)" }}>
+                        <span style={{ width: 28, height: 28, borderRadius: 8, background: "var(--card-primary-bg)", border: "1px solid var(--color-border-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Icons.Send size={12} color="var(--primary)" />
+                        </span>
+                        <span style={{ flex: 1 }}>
+                          <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1.35 }}>{n.title}</span>
+                          <span style={{ display: "block", fontSize: 11, color: "var(--color-text-subtitle)", marginTop: 2 }}>{n.sub}</span>
+                        </span>
+                        <span style={{ fontSize: 10, color: "var(--color-text-disabled)", whiteSpace: "nowrap", marginTop: 2 }}>{n.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContainer>
+              )}
+            </div>
+          </div>
+          </>
         )}
       >
         {/* ── LIST VIEW ── */}

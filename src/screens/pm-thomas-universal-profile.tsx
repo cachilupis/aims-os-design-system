@@ -557,54 +557,52 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
             title={profile.name}
             description={profile.subtitle}
             tag={<Tag variant={STATUS_TAG[profile.status]} size="sm">{profile.status}</Tag>}
-            primaryAction={
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Button variant="secondary" size="sm" onClick={() => {}}>
-                  <LucideIcons.Download size={13} /> Export
+            secondaryAction={{ label: "Export", icon: LucideIcons.Download, onClick: () => {} }}
+            primaryAction={{ label: "Edit Profile", icon: LucideIcons.Pencil, onClick: () => {} }}
+          />
+          {/* DS-GAP: Header has no slot for non-CTA controls. The kebab used to be
+              crammed into primaryAction alongside the two buttons; primaryAction now
+              takes an action object, so it sits here instead. A Header slot for menus
+              and notification bells is the real fix — pm-chat-widget needs the same. */}
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 24px 8px" }}>
+{/* Kebab — Archive only for person + employee, not company */}
+            {/* DS-GAP: RBAC — archive visibility should depend on user role */}
+            {profile.type !== "company" && (
+              <div style={{ position: "relative" }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setMenuOpen(o => !o)}
+                >
+                  <LucideIcons.MoreHorizontal size={14} />
                 </Button>
-                <Button variant="main" size="sm" onClick={() => {}}>
-                  <LucideIcons.Pencil size={13} /> Edit Profile
-                </Button>
-                {/* Kebab — Archive only for person + employee, not company */}
-                {/* DS-GAP: RBAC — archive visibility should depend on user role */}
-                {profile.type !== "company" && (
-                  <div style={{ position: "relative" }}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setMenuOpen(o => !o)}
-                    >
-                      <LucideIcons.MoreHorizontal size={14} />
-                    </Button>
-                    {menuOpen && (
-                      <div
-                        style={{
-                          position: "fixed",
-                          zIndex: 10001,
-                          minWidth: 180,
-                          background: "var(--surface)",
-                          border: "0.5px solid var(--field-border)",
-                          boxShadow: "var(--shadow-elevation-3)",
-                          borderRadius: 8,
-                          padding: "4px 0",
-                        }}
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        <Menu>
-                          <MenuItem
-                            leadingIcon={<LucideIcons.Archive size={14} />}
-                            label="Archive"
-                            size="sm"
-                            onClick={() => { setMenuOpen(false); setShowArchive(true) }}
-                          />
-                        </Menu>
-                      </div>
-                    )}
+                {menuOpen && (
+                  <div
+                    style={{
+                      position: "fixed",
+                      zIndex: 10001,
+                      minWidth: 180,
+                      background: "var(--surface)",
+                      border: "0.5px solid var(--field-border)",
+                      boxShadow: "var(--shadow-elevation-3)",
+                      borderRadius: 8,
+                      padding: "4px 0",
+                    }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <Menu>
+                      <MenuItem
+                        leadingIcon={<LucideIcons.Archive size={14} />}
+                        label="Archive"
+                        size="sm"
+                        onClick={() => { setMenuOpen(false); setShowArchive(true) }}
+                      />
+                    </Menu>
                   </div>
                 )}
               </div>
-            }
-          />
+            )}
+          </div>
         </div>
       )}
       pagination={

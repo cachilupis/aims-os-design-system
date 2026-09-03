@@ -1176,37 +1176,29 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       activeSidebarId="integrations"
       onSidebarItemClick={onNavigate}
       header={(isScrolled) => detailView ? (
-        <Header
-          size={isScrolled ? "compress" : "size-m"}
-          title={detailView.name}
-          description="Integrations"
-          backButton
-          showBackInCompress
-          onBack={() => setDetailView(null)}
-          primaryAction={
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm">
-                <Icons.Sparkles size={14} style={{ marginRight: 4 }} />
-                Ask AI
-              </Button>
-              {detailView.status === "error" ? (
-                <Button variant="primary" size="sm" onClick={() => handleAction(detailView.id, "reauth")}>
-                  <Icons.RefreshCw size={14} style={{ marginRight: 4 }} />
-                  Re-authenticate
-                </Button>
-              ) : (
-                <Button variant="secondary" size="sm">
-                  <Icons.KeyRound size={14} style={{ marginRight: 4 }} />
-                  Rotate credentials
-                </Button>
-              )}
-              <Button variant="secondary" size="sm" style={{ color: "var(--badge-error)" }}
-                onClick={() => { handleAction(detailView.id, "disconnect"); setDetailView(null) }}>
-                Disconnect
-              </Button>
-            </div>
-          }
-        />
+        <>
+          <Header
+            size={isScrolled ? "compress" : "size-m"}
+            title={detailView.name}
+            description="Integrations"
+            backButton
+            showBackInCompress
+            onBack={() => setDetailView(null)}
+            secondaryAction={{ label: "Ask AI", icon: Icons.Sparkles }}
+            primaryAction={detailView.status === "error"
+              ? { label: "Re-authenticate", icon: Icons.RefreshCw, onClick: () => handleAction(detailView.id, "reauth") }
+              : { label: "Rotate credentials", icon: Icons.KeyRound, priority: "secondary" }}
+          />
+          {/* DS-GAP: Header has no overflow (kebab) slot, so Disconnect — a
+              destructive action that should sit behind "···" — renders in this
+              row instead. Third action of three; Header takes only two. */}
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 32px 8px" }}>
+            <Button variant="tertiary" size="sm" style={{ color: "var(--badge-error)" }}
+              onClick={() => { handleAction(detailView.id, "disconnect"); setDetailView(null) }}>
+              Disconnect
+            </Button>
+          </div>
+        </>
       ) : tab === "catalog" ? (
         <Header
           size={isScrolled ? "compress" : "size-m"}
@@ -1221,12 +1213,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
           size={isScrolled ? "compress" : "size-l"}
           title="Integrations"
           description={`${connectedList.length} connected · ${CATALOG.length} available in catalog`}
-          primaryAction={
-            <Button variant="main" size="sm" onClick={() => setTab("catalog")}>
-              <Icons.LayoutGrid size={14} style={{ marginRight: 4 }} />
-              Browse catalog
-            </Button>
-          }
+          primaryAction={{ label: "Browse catalog", icon: Icons.LayoutGrid, onClick: () => setTab("catalog") }}
         />
       )}
       pagination={

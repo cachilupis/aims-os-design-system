@@ -1392,12 +1392,8 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
           backButton
           showBackInCompress
           onBack={onBack}
-          primaryAction={!role.system ? (
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm">Edit role</Button>
-              <Button variant="secondary" size="sm">Delete role</Button>
-            </div>
-          ) : undefined}
+          secondaryAction={!role.system ? { label: "Edit role" } : undefined}
+          primaryAction={!role.system ? { label: "Delete role", priority: "secondary" } : undefined}
         />
       )}
     >
@@ -1560,12 +1556,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
           backButton
           showBackInCompress
           onBack={onBack}
-          primaryAction={
-            <Button variant="primary" size="sm">
-              <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
-              Add member
-            </Button>
-          }
+          primaryAction={{ label: "Add member", icon: Icons.UserPlus }}
         />
       )}
     >
@@ -2920,22 +2911,11 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             : `${GROUPS.length} groups · manage shared access across the workspace`
           }
           primaryAction={
-            mainTab === "members" ? (
-              <Button variant="main" size="sm" onClick={() => setShowInvite(true)}>
-                <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
-                Invite member
-              </Button>
-            ) : mainTab === "roles" ? (
-              <Button variant="primary" size="sm" onClick={() => { setCreateName(""); setCreateDesc(""); setCreateColor("#f97316"); setShowCreateRole(true) }}> {/* audit-ignore: default role color */}
-                <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
-                New role
-              </Button>
-            ) : (
-              <Button variant="primary" size="sm">
-                <Icons.FolderPlus size={14} style={{ marginRight: 4 }} />
-                New group
-              </Button>
-            )
+            mainTab === "members"
+              ? { label: "Invite member", icon: Icons.UserPlus, onClick: () => setShowInvite(true) }
+              : mainTab === "roles"
+              ? { label: "New role", icon: Icons.ShieldPlus, onClick: () => { setCreateName(""); setCreateDesc(""); setCreateColor("#f97316"); setShowCreateRole(true) } } // audit-ignore: default role color
+              : { label: "New group", icon: Icons.FolderPlus }
           }
         />
       )}

@@ -179,9 +179,7 @@ export function AdminMySettingsScreen({ onNavigate }: { onNavigate?: (id: string
           size={isScrolled ? "compress" : "size-l"}
           title="My Settings"
           description="Manage your personal profile, notifications, API tokens, and active sessions."
-          primaryAction={
-            <Button variant="main" size="sm">Save changes</Button>
-          }
+          primaryAction={{ label: "Save changes" }}
         />
       )}
     >

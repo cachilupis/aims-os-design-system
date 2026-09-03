@@ -495,12 +495,7 @@ export function AdminSecurityScreen({ onNavigate }: { onNavigate?: (id: string) 
           size={isScrolled ? "compress" : "size-l"}
           title="Security"
           description="Authentication, session, and access policies for Avance Financial"
-          primaryAction={
-            <Button variant="main" size="sm">
-              <Icons.Save size={14} style={{ marginRight: 4 }} />
-              Save changes
-            </Button>
-          }
+          primaryAction={{ label: "Save changes", icon: Icons.Save }}
         />
       )}
     >

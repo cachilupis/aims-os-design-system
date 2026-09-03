@@ -324,12 +324,7 @@ export function AdminMyIntegrationsScreen({ onNavigate }: { onNavigate?: (id: st
           size={isScrolled ? "compress" : "size-l"}
           title="My Integrations"
           description={`${counts.all} requests · ${counts.approved} approved · ${counts.active} in review`}
-          primaryAction={
-            <Button variant="main" size="sm" onClick={() => setShowNewForm(true)}>
-              <Icons.Plus size={14} style={{ marginRight: 4 }} />
-              New request
-            </Button>
-          }
+          primaryAction={{ label: "New request", icon: Icons.Plus, onClick: () => setShowNewForm(true) }}
         />
       )}
     >

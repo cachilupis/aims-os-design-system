@@ -7,7 +7,6 @@ import { Header }           from "@/components/ui/header"
 import { Input }            from "@/components/ui/input"
 import { Select }           from "@/components/ui/select"
 import { Textarea }         from "@/components/ui/textarea"
-import { Button }           from "@/components/ui/button"
 import { ModalDialog }      from "@/components/ui/modal-dialog"
 import type { TopbarAction } from "@/components/ui/topbar"
 
@@ -53,16 +52,8 @@ export function FormsCreatePageExampleScreen({ onClose }: Props) {
             description="Configure a new automation for your team"
             backButton
             size="size-l"
-            primaryAction={
-              <Button variant="primary" size="sm" disabled={!canCreate} onClick={() => setSuccessOpen(true)}>
-                Create automation
-              </Button>
-            }
-            secondaryAction={
-              <Button variant="secondary" size="sm" onClick={onClose}>
-                Cancel
-              </Button>
-            }
+            primaryAction={{ label: "Create automation", onClick: () => setSuccessOpen(true), disabled: !canCreate }}
+            secondaryAction={{ label: "Cancel", onClick: onClose }}
           />
 
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">

@@ -7,7 +7,6 @@ import { Header }           from "@/components/ui/header"
 import { Input }            from "@/components/ui/input"
 import { Select }           from "@/components/ui/select"
 import { Textarea }         from "@/components/ui/textarea"
-import { Button }           from "@/components/ui/button"
 import { ModalDialog }      from "@/components/ui/modal-dialog"
 import type { TopbarAction } from "@/components/ui/topbar"
 
@@ -52,16 +51,8 @@ export function FormsSettingsExampleScreen({ onClose }: Props) {
             description="Configure behavior, thresholds, and notification preferences"
             backButton
             size="size-l"
-            primaryAction={
-              <Button variant="primary" size="sm" disabled={!canSave} onClick={() => setSuccessOpen(true)}>
-                Save changes
-              </Button>
-            }
-            secondaryAction={
-              <Button variant="secondary" size="sm" onClick={onClose}>
-                Discard
-              </Button>
-            }
+            primaryAction={{ label: "Save changes", onClick: () => setSuccessOpen(true), disabled: !canSave }}
+            secondaryAction={{ label: "Discard", onClick: onClose }}
           />
 
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
