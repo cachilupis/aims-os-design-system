@@ -475,6 +475,36 @@ screenFiles.forEach((file) => {
 })
 
 // ── Report ───────────────────────────────────────────────────────────────
+// ── Check 9: backButton and Breadcrumb on the same Header (ERROR) ────────
+// From L2 a page states where it sits with a breadcrumb; the first crumb IS
+// the way back, so an arrow beside it is two affordances pointing at one
+// place. Unlike checks 6-8 this is not a heuristic — a Header carrying both
+// props is unambiguously wrong, so it blocks rather than warns.
+//
+// Matches a `<Header` tag that carries both `breadcrumb` and `backButton`, and
+// the older shape where a hand-rolled trail sat next to a Header with a back
+// arrow. Reads the JSX per opening tag rather than per file, so a screen with
+// several Headers is judged one at a time.
+const HEADER_TAG_RE = /<Header\b[\s\S]{0,1200}?\/>|<Header\b[\s\S]{0,1200}?>/g
+const navConflicts = []
+
+screenFiles.forEach((file) => {
+  const text = fs.readFileSync(file, "utf8")
+  let m
+  while ((m = HEADER_TAG_RE.exec(text))) {
+    const tag = m[0]
+    const hasCrumb = /\bbreadcrumb\s*=/.test(tag)
+    const hasBack  = /\bbackButton\b/.test(tag)
+    if (hasCrumb && hasBack) {
+      navConflicts.push({
+        file: rel(file),
+        line: text.slice(0, m.index).split("\n").length,
+        message: "carries both breadcrumb and backButton — from L2 the first crumb IS the way back. Drop backButton.",
+      })
+    }
+  }
+})
+
 function printSection(title, items, formatter) {
   if (items.length === 0) return
   console.log(`\n${title} (${items.length})`)
@@ -534,6 +564,12 @@ const cardReimplWarnings = warnings.filter((w) => w.type === "possible-card-reim
 // instead of quietly disappearing from the report.
 const fmt = (w) => `${w.file}:${w.line}  ${isAccepted(w) ? "[accepted] " : ""}${w.message}`
 
+printSection(
+  "❌ ERRORS — Header with both breadcrumb and backButton",
+  navConflicts,
+  (e) => `${e.file}:${e.line}  <Header> ${e.message}`
+)
+
 printSection("⚠️  WARNING — possible orphaned components", orphanWarnings, (w) => `${w.file} — ${isAccepted(w) ? "[accepted] " : ""}${w.message}`)
 printSection("⚠️  WARNING — off-scale spacing (informational only)", spacingWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
 printSection("⚠️  WARNING — hand-rolled component shadows a real DS export", shadowWarnings, fmt)
@@ -567,13 +603,13 @@ if (process.argv.includes("--counts")) {
 }
 
 console.log(
-  `\nSummary: ${errors.length} error(s), ${openOrphan.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${openShadow.length} shadow-component warning(s), ${openMainOveruse.length} main-overuse warning(s), ${openCardReimpl.length} possible-card-reimpl warning(s)` +
+  `\nSummary: ${errors.length + navConflicts.length} error(s), ${openOrphan.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${openShadow.length} shadow-component warning(s), ${openMainOveruse.length} main-overuse warning(s), ${openCardReimpl.length} possible-card-reimpl warning(s)` +
     (acceptedCount > 0
       ? `\n         plus ${acceptedCount} accepted and waived in ds-decisions.json — shown above marked [accepted], not counted here.`
       : ".")
 )
 
-if (errors.length > 0) {
+if (errors.length + navConflicts.length > 0) {
   console.log("\nFix errors above, or mark a genuine exception with `// audit-ignore: <reason>` on the same line.")
   process.exitCode = 1
 } else {

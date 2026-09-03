@@ -16,7 +16,18 @@ export interface HeaderProps {
   size?: HeaderSize
   /** Tag node rendered inline after the title. Hidden in compress. */
   tag?: React.ReactNode
-  /** Shows an ArrowLeft back-navigation button. This is the ONLY thing that controls visibility. Hidden in compress unless showBackInCompress is also true. */
+  /**
+   * Breadcrumb trail, rendered above the title. From L2 onwards this is how a
+   * page states where it sits — `Workers › Meridian`, parent plus current page,
+   * not the whole path. It survives compress on purpose: losing the way back
+   * the moment someone scrolls is the failure this replaces.
+   *
+   * A page with a breadcrumb does not also take a `backButton`: at L2 the first
+   * crumb IS the way back, so an arrow beside it is two affordances pointing at
+   * the same place.
+   */
+  breadcrumb?: React.ReactNode
+  /** Shows an ArrowLeft back-navigation button. This is the ONLY thing that controls visibility. Hidden in compress unless showBackInCompress is also true. Do not combine with `breadcrumb`. */
   backButton?: boolean
   /** Click handler for the back button. Never affects visibility — use backButton for that. */
   onBack?: () => void
@@ -57,6 +68,7 @@ export function Header({
   description,
   size = "size-l",
   tag,
+  breadcrumb,
   backButton = false,
   onBack,
   showBackInCompress = false,
@@ -101,6 +113,10 @@ export function Header({
             />
           )}
           <div className="flex flex-col gap-[4px] min-w-0">
+            {/* Breadcrumb row — above the title, visible in every size including
+                compress. 4px of separation is what keeps the two rows reading as
+                path + page rather than as one wrapped title. */}
+            {breadcrumb && <div className="min-w-0">{breadcrumb}</div>}
             <div className="flex items-center gap-[8px]">
               <h1
                 className="font-semibold leading-tight m-0"
@@ -108,7 +124,7 @@ export function Header({
               >
                 {title}
               </h1>
-              {!isCompress && tag}
+              {tag}
             </div>
             {!isCompress && description && (
               <p className="text-sm leading-[20px] m-0" style={{ color: "var(--header-desc)" }}>

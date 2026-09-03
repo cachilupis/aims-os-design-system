@@ -99,7 +99,7 @@
       "name": "Breadcrumb",
       "import": "@/components/ui/breadcrumb",
       "group": "Components",
-      "description": "Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
+      "description": "Hierarchical navigation trail, used from L2 onwards inside Header.breadcrumb. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
       "usedInScreens": 1,
       "hasSpec": true,
       "hasCatalogPage": true
@@ -189,7 +189,7 @@
       "name": "Header",
       "import": "@/components/ui/header",
       "group": "Components",
-      "description": "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + CTAs, plus the back button when showBackInCompress is set).",
+      "description": "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + tag + CTAs, plus the breadcrumb row above the title when one is set; the breadcrumb and tag both survive compress so scrolling never costs you your place or the record's status).",
       "usedInScreens": 30,
       "hasSpec": true,
       "hasCatalogPage": true
