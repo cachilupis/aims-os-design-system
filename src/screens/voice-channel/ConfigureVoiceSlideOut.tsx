@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Phone, Play, Plus, Info, Minus, ChevronDown } from "lucide-react"
+import { Phone, Play, Plus, Info, Minus } from "lucide-react"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Input } from "@/components/ui/input"
 import { Toggle } from "@/components/ui/toggle"
@@ -18,6 +18,7 @@ import {
   type VoiceModel,
   type VoiceName,
 } from "./voice-agents-data"
+import { NativeSelect } from "./configure-shared"
 import type { PhoneNumberRecord } from "./data"
 
 // ─────────────────────────────────────────────────────────────────────
@@ -589,57 +590,6 @@ function VoicePills({
       >
         + More
       </button>
-    </div>
-  )
-}
-
-// NativeSelect — a real <select> styled with DS tokens. The DS Select
-// primitive only renders a trigger; the actual dropdown/options is a
-// caller concern. For a form-heavy slide-out with many enum choices,
-// a native select is the simplest solid working control and matches
-// the source prototype's <select class="input"> pattern.
-function NativeSelect({
-  value, onChange, options, size = "default",
-}: {
-  value:    string
-  onChange: (v: string) => void
-  options:  { value: string; label: string }[]
-  size?:    "default" | "sm"
-}) {
-  const height = size === "sm" ? 32 : 40
-  return (
-    <div style={{ position: "relative", width: "100%" }}>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          appearance: "none",
-          width: "100%",
-          height,
-          padding: "0 32px 0 12px",
-          fontSize: 13,
-          color: "var(--color-text-title)",
-          background: "var(--field-bg)",
-          border: "0.5px solid var(--field-border)",
-          borderRadius: "var(--radius-md)",
-          cursor: "pointer",
-          fontFamily: "inherit",
-        }}
-      >
-        {options.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-      <ChevronDown
-        size={13}
-        style={{
-          position: "absolute",
-          right: 10, top: "50%",
-          transform: "translateY(-50%)",
-          pointerEvents: "none",
-          color: "var(--color-text-caption)",
-        }}
-      />
     </div>
   )
 }
