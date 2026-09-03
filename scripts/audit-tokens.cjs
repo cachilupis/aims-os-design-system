@@ -512,6 +512,92 @@ screenFiles.forEach((file) => {
   }
 })
 
+// ── Check 10: the same component name defined in two screen files ─────────
+// Check 6 asks "does this name collide with a real DS export". This asks the
+// other question: two screens defining the same component, neither of them the
+// DS. Nobody wins that collision — there is no canonical copy, so the two drift
+// silently and the same thing renders differently depending on which screen you
+// are looking at.
+//
+// Real case (2026-09-03): `WidgetGlyph` in widget-library was a 36px borderless
+// tile on a 12%-primary tint; in widget-marketplace it was a 32px bordered tile
+// on --surface. Same name, same job, four visual differences. `FreshnessBadge`
+// had drifted semantically in the same pair — "stale" was neutral grey in one
+// and alert yellow in the other.
+//
+// Unlike checks 6-8 this one has no heuristic in it: either a name is defined
+// twice or it is not. That is why it reports every hit rather than hedging.
+const localDefs = new Map()
+
+screenFiles
+  .filter((f) => f.endsWith(".tsx"))
+  .forEach((file) => {
+    const lines = stripComments(fs.readFileSync(file, "utf8"))
+    lines.forEach(({ code }, idx) => {
+      const m = code.match(
+        /^\s*(?:export\s+)?(?:function\s+([A-Z]\w*)\s*\(|const\s+([A-Z]\w*)\s*(?::[^=]*)?=\s*(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>)/
+      )
+      if (!m) return
+      const name = m[1] || m[2]
+      if (!localDefs.has(name)) localDefs.set(name, [])
+      localDefs.get(name).push({ file: rel(file), line: idx + 1 })
+    })
+  })
+
+for (const [name, hits] of localDefs) {
+  const files = [...new Set(hits.map((h) => h.file))]
+  if (files.length < 2) continue
+  warnings.push({
+    type: "duplicate-component",
+    file: files[0],
+    line: hits[0].line,
+    name,
+    message:
+      `\`${name}\` is defined separately in ${files.length} screens ` +
+      `(${files.map((f) => f.replace("src/screens/", "")).join(", ")}) — ` +
+      `no copy is canonical, so they drift. Extract one shared version, or rename if they are unrelated`,
+  })
+}
+
+// ── Check 11: a screen declaring its own widget-type vocabulary ───────────
+// There is exactly one widget catalog — WIDGET_DEFS in src/App.tsx, 14 entries,
+// each with a size class, grid widths, states, use cases and a dontUse list,
+// surfaced as Patterns → Widgets. A screen that declares WIDGET_TYPES or
+// SKELETONS is declaring a second one, and the two cannot be reconciled because
+// neither references the other.
+//
+// Real case (2026-09-03): three parallel vocabularies existed at once — the
+// builder could create 12 types, the library listed 10, WIDGET_DEFS defined 14,
+// and all three agreed on two (kpi, table). A "heatmap" created in the builder
+// had no category in the library.
+//
+// The finding is the declaration itself, not which of its entries diverge:
+// counting divergent entries needs to parse array literals out of a screen and
+// gets fooled by neighbouring constants (freshness values, categories, sort
+// keys). The existence of a second vocabulary is the reliable signal and the
+// one worth acting on.
+const WIDGET_VOCAB_RE =
+  /^[ \t]*(?:export[ \t]+)?(?:const|type)[ \t]+(WIDGET_TYPES|WIDGET_KINDS|WIDGET_CATEGORIES|SKELETONS|Skeleton)\b/
+
+screenFiles
+  .filter((f) => f.endsWith(".tsx"))
+  .forEach((file) => {
+    const lines = stripComments(fs.readFileSync(file, "utf8"))
+    lines.forEach(({ code }, idx) => {
+      const m = code.match(WIDGET_VOCAB_RE)
+      if (!m) return
+      warnings.push({
+        type: "widget-vocab",
+        file: rel(file),
+        line: idx + 1,
+        name: m[1],
+        message:
+          `declares \`${m[1]}\` — a second widget vocabulary. The catalog is ` +
+          `WIDGET_DEFS in src/App.tsx (Patterns → Widgets); read from it instead`,
+      })
+    })
+  })
+
 function printSection(title, items, formatter) {
   if (items.length === 0) return
   console.log(`\n${title} (${items.length})`)
@@ -566,6 +652,8 @@ const spacingWarnings = warnings.filter((w) => w.type === "spacing")
 const shadowWarnings = warnings.filter((w) => w.type === "shadow-component")
 const mainOveruseWarnings = warnings.filter((w) => w.type === "main-overuse")
 const cardReimplWarnings = warnings.filter((w) => w.type === "possible-card-reimpl")
+const duplicateWarnings = warnings.filter((w) => w.type === "duplicate-component")
+const widgetVocabWarnings = warnings.filter((w) => w.type === "widget-vocab")
 
 // Accepted findings still print — with a marker — so a waiver stays visible
 // instead of quietly disappearing from the report.
@@ -582,6 +670,8 @@ printSection("⚠️  WARNING — off-scale spacing (informational only)", spaci
 printSection("⚠️  WARNING — hand-rolled component shadows a real DS export", shadowWarnings, fmt)
 printSection("⚠️  WARNING — variant=\"main\" in a screen file (Header applies it from primaryAction)", mainOveruseWarnings, fmt)
 printSection("⚠️  WARNING — possible hand-rolled CardContainer reimplementation", cardReimplWarnings, fmt)
+printSection("⚠️  WARNING — same component defined in two screens", duplicateWarnings, fmt)
+printSection("⚠️  WARNING — a second widget vocabulary (the catalog is WIDGET_DEFS)", widgetVocabWarnings, fmt)
 
 // The ratchet reads these. Accepted findings are subtracted here and nowhere
 // else: they stay in the report above, and in the DS Health page, but they no
@@ -591,6 +681,8 @@ const openOrphan = open(orphanWarnings)
 const openShadow = open(shadowWarnings)
 const openMainOveruse = open(mainOveruseWarnings)
 const openCardReimpl = open(cardReimplWarnings)
+const openDuplicate = open(duplicateWarnings)
+const openWidgetVocab = open(widgetVocabWarnings)
 const acceptedCount =
   (orphanWarnings.length - openOrphan.length) +
   (shadowWarnings.length - openShadow.length) +
@@ -603,6 +695,24 @@ const acceptedCount =
 // is never allowed to add more. Without this, checks 6-8 print their findings
 // into the CI log and the job still goes green — which is what let PR #55's
 // 4 shadow + 6 main-overuse warnings sit unnoticed for three days.
+// Checks 10 and 11 are deliberately NOT in AUDIT_COUNTS, so they report but do
+// not gate. A ratchet compares head against base, and `base[k] ?? 0` means a
+// category the base script does not know about starts at 0 — so adding these to
+// the counts would fail the very PR that introduces them, and every PR after it
+// until the backlog reached zero. That is the wrong order: you can only lock a
+// door you have already closed.
+//
+// Nor can the current 22 findings be waived to get around it. Only an "accepted"
+// verdict subtracts from these counts, and accepted means "a human looked and
+// there is nothing to do" — untrue here. The duplicate components are real work
+// (verdict: promote, they become shared DS components) and the widget
+// vocabularies are pending a product decision about what a widget type even is.
+// Marking either as accepted would make the DS Health page lie.
+//
+// So: they surface on DS Health now, collect verdicts there, and get added to
+// the counts below once their open count is driven to zero. Whoever does that
+// should add `duplicate=${openDuplicate.length} widget_vocab=${openWidgetVocab.length}`
+// to the line below and the matching LABELS entries in audit-ratchet.cjs.
 if (process.argv.includes("--counts")) {
   console.log(
     `AUDIT_COUNTS errors=${errors.length} orphan=${openOrphan.length} shadow=${openShadow.length} main_overuse=${openMainOveruse.length} card_reimpl=${openCardReimpl.length}`
@@ -610,7 +720,7 @@ if (process.argv.includes("--counts")) {
 }
 
 console.log(
-  `\nSummary: ${errors.length + navConflicts.length} error(s), ${openOrphan.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${openShadow.length} shadow-component warning(s), ${openMainOveruse.length} main-overuse warning(s), ${openCardReimpl.length} possible-card-reimpl warning(s)` +
+  `\nSummary: ${errors.length + navConflicts.length} error(s), ${openOrphan.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${openShadow.length} shadow-component warning(s), ${openMainOveruse.length} main-overuse warning(s), ${openCardReimpl.length} possible-card-reimpl warning(s), ${openDuplicate.length} duplicate-component warning(s), ${openWidgetVocab.length} widget-vocab warning(s)` +
     (acceptedCount > 0
       ? `\n         plus ${acceptedCount} accepted and waived in ds-decisions.json — shown above marked [accepted], not counted here.`
       : ".")

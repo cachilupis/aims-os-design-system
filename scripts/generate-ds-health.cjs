@@ -52,6 +52,20 @@ const TRACKED = {
     label: "Orphaned component",
     blurb: "Committed to src/components/ but imported nowhere. Either wire it into a screen or remove it.",
   },
+  "duplicate-component": {
+    label: "Same component in two screens",
+    blurb:
+      "Two screens define a component with the same name, and neither of them is the DS. No copy is canonical, " +
+      "so they drift — WidgetGlyph was a 36px borderless tile in one screen and a 32px bordered one in the other. " +
+      "Unlike the checks above this one has no heuristic: either a name is defined twice or it is not.",
+  },
+  "widget-vocab": {
+    label: "Second widget vocabulary",
+    blurb:
+      "A screen declares its own list of widget types. There is one catalog — WIDGET_DEFS in src/App.tsx, " +
+      "surfaced as Patterns → Widgets, 14 entries each with a size class, grid widths, states and a dontUse list. " +
+      "Three parallel vocabularies existed at once and agreed on two entries.",
+  },
 }
 
 const raw = execFileSync("node", [path.join(ROOT, "scripts/audit-tokens.cjs"), "--json"], {
