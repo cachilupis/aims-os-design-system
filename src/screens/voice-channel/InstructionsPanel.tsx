@@ -123,7 +123,9 @@ export function InstructionsPanel({ agent, onChange }: InstructionsPanelProps) {
             <div className="flex flex-col gap-2">
               {draft.dos.map((s, i) => (
                 <div key={i} className="flex items-center gap-1">
-                  <Input value={s} onChange={(e) => setDo(i, e.target.value)} size="sm"/>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Input value={s} onChange={(e) => setDo(i, e.target.value)} size="sm"/>
+                  </div>
                   <IconButton onClick={() => rmDo(i)} ariaLabel="Remove"><X size={12}/></IconButton>
                 </div>
               ))}
@@ -142,7 +144,9 @@ export function InstructionsPanel({ agent, onChange }: InstructionsPanelProps) {
             <div className="flex flex-col gap-2">
               {draft.donts.map((s, i) => (
                 <div key={i} className="flex items-center gap-1">
-                  <Input value={s} onChange={(e) => setDont(i, e.target.value)} size="sm"/>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Input value={s} onChange={(e) => setDont(i, e.target.value)} size="sm"/>
+                  </div>
                   <IconButton onClick={() => rmDont(i)} ariaLabel="Remove"><X size={12}/></IconButton>
                 </div>
               ))}

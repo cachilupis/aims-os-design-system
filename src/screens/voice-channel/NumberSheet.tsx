@@ -1,4 +1,4 @@
-import { Settings, ArrowRight, Users, Shield, PhoneCall, Zap } from "lucide-react"
+import { Settings, ArrowRight, Users, Shield, PhoneCall, Zap, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Tag } from "@/components/ui/tag"
 import { CardContainer } from "@/components/ui/card-container"
@@ -172,9 +172,10 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
                   background: recentCall.direction === "inbound" ? "var(--color-surface-primary-more-subtle)" : "var(--color-surface-neutral-more-subtle)",
                   color: recentCall.direction === "inbound" ? "var(--primary)" : "var(--color-text-caption)",
-                  fontSize: 13, fontWeight: 700,
                 }}>
-                  {recentCall.direction === "inbound" ? "↙" : "↗"}
+                  {recentCall.direction === "inbound"
+                    ? <ArrowDownLeft size={13} strokeWidth={2.5}/>
+                    : <ArrowUpRight  size={13} strokeWidth={2.5}/>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="font-mono" style={{ fontSize: 12, color: "var(--color-text-title)", whiteSpace: "nowrap" }}>{recentCall.caller}</div>

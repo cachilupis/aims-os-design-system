@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { PhoneCall, Search } from "lucide-react"
+import { PhoneCall, Search, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
 import { CardContainer } from "@/components/ui/card-container"
@@ -89,12 +89,23 @@ export function CallHistoryTab({
     {
       key: "direction", header: "Dir", width: "110px",
       render: (c) => c.direction === "inbound"
-        ? <Tag variant="success"     size="sm">↙ Inbound</Tag>
-        : <Tag variant="informative" size="sm">↗ Outbound</Tag>,
+        ? <Tag variant="success"     size="sm" leadingIcon={<ArrowDownLeft size={10} strokeWidth={2.5}/>}>Inbound</Tag>
+        : <Tag variant="informative" size="sm" leadingIcon={<ArrowUpRight size={10} strokeWidth={2.5}/>}>Outbound</Tag>,
     },
     {
       key: "caller", header: "Caller", width: "160px",
-      render: (c) => <span className="font-mono text-[12px]" style={{ color: "var(--color-text-title)" }}>{c.caller}</span>,
+      render: (c) => (
+        <span
+          className="font-mono text-[12px]"
+          style={{
+            color: "var(--color-text-title)",
+            whiteSpace: "nowrap",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {c.caller}
+        </span>
+      ),
     },
     {
       key: "agent", header: "Operator", width: "160px",

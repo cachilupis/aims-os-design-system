@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowLeft, Download, FileText, Sparkles, BarChart3, PhoneCall, User, Shield } from "lucide-react"
+import { ArrowLeft, Download, FileText, Sparkles, BarChart3, PhoneCall, User, Shield, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { Tabs } from "@/components/ui/tabs"
 import { Tag } from "@/components/ui/tag"
 import { Button } from "@/components/ui/button"
@@ -65,8 +65,8 @@ export function CallDetailPage({ call, number, onBack }: CallDetailPageProps) {
                 {call.caller}
               </h2>
               {call.direction === "inbound"
-                ? <Tag variant="success"     size="sm">↙ Inbound</Tag>
-                : <Tag variant="informative" size="sm">↗ Outbound</Tag>}
+                ? <Tag variant="success"     size="sm" leadingIcon={<ArrowDownLeft size={10} strokeWidth={2.5}/>}>Inbound</Tag>
+                : <Tag variant="informative" size="sm" leadingIcon={<ArrowUpRight size={10} strokeWidth={2.5}/>}>Outbound</Tag>}
               <Tag variant="neutral" size="sm">Ended</Tag>
               {call.hil && <Tag variant="purple" size="sm">HiL Handoff</Tag>}
               <SentimentTag s={call.sentiment}/>

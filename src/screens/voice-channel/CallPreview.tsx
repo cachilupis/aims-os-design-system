@@ -1,4 +1,4 @@
-import { PhoneCall, ArrowRight, User, MessageSquare } from "lucide-react"
+import { PhoneCall, ArrowRight, User, MessageSquare, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Tag } from "@/components/ui/tag"
 import { CardContainer } from "@/components/ui/card-container"
@@ -81,8 +81,8 @@ export function CallPreview({ call, number, open, onClose, onOpenFull }: CallPre
         {/* Meta chips row */}
         <div className="flex flex-wrap gap-2">
           {call.direction === "inbound"
-            ? <Tag variant="success"     size="sm">↙ Inbound</Tag>
-            : <Tag variant="informative" size="sm">↗ Outbound</Tag>}
+            ? <Tag variant="success"     size="sm" leadingIcon={<ArrowDownLeft size={10} strokeWidth={2.5}/>}>Inbound</Tag>
+            : <Tag variant="informative" size="sm" leadingIcon={<ArrowUpRight size={10} strokeWidth={2.5}/>}>Outbound</Tag>}
           <Tag variant="neutral" size="sm">Ended</Tag>
           {call.hil && <HilBadge hil={true}/>}
           <SentimentTag s={call.sentiment}/>

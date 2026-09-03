@@ -37,7 +37,7 @@ export function AgentTestPanel({ description, placeholder }: AgentTestPanelProps
 
   return (
     <div
-      className="flex-1 min-w-0 flex flex-col"
+      className="w-[380px] shrink-0 flex flex-col"
       style={{ borderLeft: "1px solid var(--color-border-neutral-default)", overflow: "hidden" }}
     >
       <div

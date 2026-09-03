@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeft, Settings, Users, Clock, PhoneCall, Plus, Shield, Trash2 } from "lucide-react"
+import { ArrowLeft, Settings, Users, Clock, PhoneCall, Plus, Shield, Trash2, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { Tabs } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Toggle } from "@/components/ui/toggle"
@@ -546,8 +546,11 @@ function CallsSubTab({ numberId, allCalls }: { numberId: string; allCalls: Call[
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
                   background: c.direction === "inbound" ? "var(--color-surface-primary-more-subtle)" : "var(--color-surface-neutral-more-subtle)",
                   color: c.direction === "inbound" ? "var(--primary)" : "var(--color-text-caption)",
-                  fontSize: 14, fontWeight: 700,
-                }}>{c.direction === "inbound" ? "↙" : "↗"}</div>
+                }}>
+                  {c.direction === "inbound"
+                    ? <ArrowDownLeft size={14} strokeWidth={2.5}/>
+                    : <ArrowUpRight  size={14} strokeWidth={2.5}/>}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="font-mono" style={{ fontSize: 13, color: "var(--color-text-title)" }}>{c.caller}</div>
                   <div style={{ fontSize: 11, color: "var(--color-text-caption)" }}>{agent?.name} · {c.time}</div>
