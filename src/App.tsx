@@ -92,7 +92,7 @@ import VoiceChannelScreen               from "./screens/voice-channel"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "ds-health" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SectionId = "home" | "ds-health" | "process-item" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
 type SpecModal = "process-item" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -196,6 +196,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "notification-center", label: "Notification Center", group: "Components", description: "420px floating panel · header with count + Mark all read + overflow · filter chips · date-grouped Notification Item list · footer View all · 5 states: Default, Empty, Loading, Error, Offline" },
   { id: "notification-item",   label: "Notification Item",   group: "Components", description: "Single-row notification · lead icon + title/timestamp + description + tags/actions · unread indicator dot · 5 states × Read/Unread: Default, Hover, Pressed, Focus, Disabled" },
   { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
+  { id: "process-item",    label: "Process Item",      group: "Components",  description: "One step of a running process, with its state · 5 statuses (done/loading/error/pending/warning) · number-badge and expand variants · ProcessList wrapper adds the title, View all CTA, and empty/loading states" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
   { id: "record-header",   label: "Record Header",     group: "Components",  description: "Entity profile header for Employee/Customer/Client records · avatar + name + context chips + up to 3 actions · Next Best Action signal bar · expandable Details grid · one shared layout across all 3 variants" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
@@ -16207,7 +16208,6 @@ function PatternPanelContentPage() {
   const [showSpecAi, setShowSpecAi]   = useState(false)
   const [showSpecIns, setShowSpecIns] = useState(false)
   const [showSpecLs, setShowSpecLs]   = useState(false)
-  const [showSpecPi, setShowSpecPi]   = useState(false)
   const [showSpecBl, setShowSpecBl]   = useState(false)
   const [showSpecDt, setShowSpecDt]   = useState(false)
   const [showSpecTi, setShowSpecTi]   = useState(false)
@@ -18711,165 +18711,7 @@ function PatternPanelContentPage() {
               Shows the step-by-step status of a workflow or pipeline run. Each item represents a single stage with a status icon, title, optional tag, description, timestamp, and an expand slot. Use a vertical connector line between consecutive items.
             </p>
 
-            {/* ── Statuses — Default state ── */}
-            <div className="mb-[16px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>All statuses — Default state</p>
-              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                {([
-                  { status: "done",    title: "Data enrichment",     description: "Fetched from Clearbit — 4 fields added",   timestamp: "2 min ago",  tag: "Completed" },
-                  { status: "loading", title: "AI analysis running",  description: "Scoring customer health signal",            timestamp: "Just now"                        },
-                  { status: "error",   title: "CRM sync failed",      description: "Connection timeout — retrying in 60s",      timestamp: "1 min ago"                       },
-                  { status: "pending", title: "Notification queued",  description: "Waiting for AI step to finish",             timestamp: "Pending"                         },
-                  { status: "warning", title: "Low confidence score", description: "Below threshold — manual review recommended",timestamp: "5 min ago", tag: "Review"     },
-                ] as { status: ProcessStatus; title: string; description: string; timestamp: string; tag?: string }[]).map((item, i, arr) => (
-                  <ProcessItem
-                    key={item.status}
-                    status={item.status}
-                    title={item.title}
-                    description={item.description}
-                    timestamp={item.timestamp}
-                    tag={item.tag}
-                    showLine={i < arr.length - 1}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* ── Selected state ── */}
-            <div className="mb-[16px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Selected state</p>
-              <div className="flex flex-col gap-[4px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                <ProcessItem
-                  status="done"
-                  state="selected"
-                  title="Data enrichment"
-                  description="Fetched from Clearbit — 4 fields added"
-                  timestamp="2 min ago"
-                  tag="Completed"
-                  showLine={false}
-                />
-              </div>
-            </div>
-
-            {/* ── Number badge variant ── */}
-            <div className="mb-[16px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Number badge (step indicator)</p>
-              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                {([
-                  { status: "done" as ProcessStatus,    number: "1", title: "Trigger received",  description: "Health score dropped below 50" },
-                  { status: "done" as ProcessStatus,    number: "2", title: "Playbook executed",  description: "Sent alert to CSM team" },
-                  { status: "loading" as ProcessStatus, number: "3", title: "CRM update",         description: "Writing risk flag to Salesforce" },
-                  { status: "pending" as ProcessStatus, number: "4", title: "Notification",        description: "Queued — waiting for step 3" },
-                ]).map((item, i, arr) => (
-                  <ProcessItem
-                    key={item.number}
-                    status={item.status}
-                    number={item.number}
-                    title={item.title}
-                    description={item.description}
-                    showLine={i < arr.length - 1}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* ── With expand slot ── */}
-            <div className="mb-[20px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>With expand slot</p>
-              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                <ProcessItemExpandDemo />
-              </div>
-            </div>
-
-            {/* ── ProcessList states ── */}
-            <div className="mb-[4px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>ProcessList — all 3 states</p>
-              <div className="grid grid-cols-3 gap-[12px]">
-                {/* Empty */}
-                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>EMPTY</p>
-                  <ProcessList
-                    title="Process"
-                    state="empty"
-                    emptyTitle="No activity yet"
-                    emptyDescription="Steps appear when the workflow runs."
-                  />
-                </div>
-                {/* Loading */}
-                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>LOADING</p>
-                  <ProcessList title="Process" state="loading" />
-                </div>
-                {/* Populated */}
-                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>POPULATED</p>
-                  <ProcessList
-                    title="Process"
-                    state="populated"
-                    onViewAll={() => {}}
-                    items={[
-                      { id: "p1", title: "Data enrichment",  status: "done",    description: "4 fields added", timestamp: "2m ago" },
-                      { id: "p2", title: "AI scoring",        status: "loading", description: "Running…" },
-                      { id: "p3", title: "CRM update",        status: "pending", description: "Waiting" },
-                    ]}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ── Usage rules ── */}
-            <div className="mt-[20px] flex flex-col gap-[12px]">
-              {[
-                { type: "do",   text: "Use showLine=true on all items except the last — the connector visually chains steps." },
-                { type: "do",   text: "Use status='loading' only for the currently active step — never for future steps." },
-                { type: "do",   text: "Combine with ProcessList to get the section title, CTA, and empty/loading states for free." },
-                { type: "dont", text: "Don't mix number badges and status icons in the same list — use one pattern consistently." },
-                { type: "dont", text: "Don't show more than 5–6 items without a 'View all' CTA in the ProcessList header." },
-              ].map((rule, i) => (
-                <div key={i} className="flex items-start gap-[8px]">
-                  <span
-                    className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
-                    style={{
-                      background: rule.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
-                      color: rule.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
-                    }}
-                  >
-                    {rule.type === "do" ? "Do" : "Don't"}
-                  </span>
-                  <span className="text-[12px] text-[var(--foreground)]">{rule.text}</span>
-                </div>
-              ))}
-            </div>
-              <div className="mt-[16px]">
-                <button onClick={() => setShowSpecPi(v => !v)}
-                  className="flex items-center gap-[6px] text-[11px] font-semibold"
-                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
-                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecPi ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
-                  Design Spec
-                </button>
-                {showSpecPi && (
-                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
-                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
-                    {[
-                        { token: "--color-surface-success-default", usage: "done icon bg" },
-                        { token: "--color-surface-error-default", usage: "error icon bg" },
-                        { token: "--color-border-neutral-lighter", usage: "connector line" },
-                    ].map(row => (
-                      <div key={row.token} className="flex items-start gap-[8px]">
-                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
-                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
-                          {row.token}
-                        </code>
-                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
-                      </div>
-                    ))}
-                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
-                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
-                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 13501-28579</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <ProcessItemShowcase />
           </PatternCard>}
 
           {activeSlideoutItem === "by-layers" && <PatternCard>
@@ -34487,6 +34329,393 @@ function FiltersInteractivePlayground() {
   )
 }
 
+// ── ProcessItemShowcase — the component's full visual documentation ──────────
+// Rendered in two places: its own catalog page (Components → Process Item) and,
+// as step 5, inside the SlideOut/SidePanel Content pattern page. It lives here
+// once so the two can never drift apart. Two copies of the truth is what kept
+// Breadcrumb getting rebuilt by hand for a month while it sat in the repo —
+// do not inline a second copy of these examples anywhere.
+function ProcessItemShowcase() {
+  const [showSpec, setShowSpec] = useState(false)
+  return (
+    <>
+        {/* ── Statuses — Default state ── */}
+        <div className="mb-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>All statuses — Default state</p>
+          <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            {([
+              { status: "done",    title: "Data enrichment",     description: "Fetched from Clearbit — 4 fields added",   timestamp: "2 min ago",  tag: "Completed" },
+              { status: "loading", title: "AI analysis running",  description: "Scoring customer health signal",            timestamp: "Just now"                        },
+              { status: "error",   title: "CRM sync failed",      description: "Connection timeout — retrying in 60s",      timestamp: "1 min ago"                       },
+              { status: "pending", title: "Notification queued",  description: "Waiting for AI step to finish",             timestamp: "Pending"                         },
+              { status: "warning", title: "Low confidence score", description: "Below threshold — manual review recommended",timestamp: "5 min ago", tag: "Review"     },
+            ] as { status: ProcessStatus; title: string; description: string; timestamp: string; tag?: string }[]).map((item, i, arr) => (
+              <ProcessItem
+                key={item.status}
+                status={item.status}
+                title={item.title}
+                description={item.description}
+                timestamp={item.timestamp}
+                tag={item.tag}
+                showLine={i < arr.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── Selected state ── */}
+        <div className="mb-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Selected state</p>
+          <div className="flex flex-col gap-[4px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <ProcessItem
+              status="done"
+              state="selected"
+              title="Data enrichment"
+              description="Fetched from Clearbit — 4 fields added"
+              timestamp="2 min ago"
+              tag="Completed"
+              showLine={false}
+            />
+          </div>
+        </div>
+
+        {/* ── Number badge variant ── */}
+        <div className="mb-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Number badge (step indicator)</p>
+          <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            {([
+              { status: "done" as ProcessStatus,    number: "1", title: "Trigger received",  description: "Health score dropped below 50" },
+              { status: "done" as ProcessStatus,    number: "2", title: "Playbook executed",  description: "Sent alert to CSM team" },
+              { status: "loading" as ProcessStatus, number: "3", title: "CRM update",         description: "Writing risk flag to Salesforce" },
+              { status: "pending" as ProcessStatus, number: "4", title: "Notification",        description: "Queued — waiting for step 3" },
+            ]).map((item, i, arr) => (
+              <ProcessItem
+                key={item.number}
+                status={item.status}
+                number={item.number}
+                title={item.title}
+                description={item.description}
+                showLine={i < arr.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── With expand slot ── */}
+        <div className="mb-[20px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>With expand slot</p>
+          <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <ProcessItemExpandDemo />
+          </div>
+        </div>
+
+        {/* ── ProcessList states ── */}
+        <div className="mb-[4px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>ProcessList — all 3 states</p>
+          <div className="grid grid-cols-3 gap-[12px]">
+            {/* Empty */}
+            <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>EMPTY</p>
+              <ProcessList
+                title="Process"
+                state="empty"
+                emptyTitle="No activity yet"
+                emptyDescription="Steps appear when the workflow runs."
+              />
+            </div>
+            {/* Loading */}
+            <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>LOADING</p>
+              <ProcessList title="Process" state="loading" />
+            </div>
+            {/* Populated */}
+            <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>POPULATED</p>
+              <ProcessList
+                title="Process"
+                state="populated"
+                onViewAll={() => {}}
+                items={[
+                  { id: "p1", title: "Data enrichment",  status: "done",    description: "4 fields added", timestamp: "2m ago" },
+                  { id: "p2", title: "AI scoring",        status: "loading", description: "Running…" },
+                  { id: "p3", title: "CRM update",        status: "pending", description: "Waiting" },
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Usage rules ── */}
+        <div className="mt-[20px] flex flex-col gap-[12px]">
+          {[
+            { type: "do",   text: "Use showLine=true on all items except the last — the connector visually chains steps." },
+            { type: "do",   text: "Use status='loading' only for the currently active step — never for future steps." },
+            { type: "do",   text: "Combine with ProcessList to get the section title, CTA, and empty/loading states for free." },
+            { type: "dont", text: "Don't mix number badges and status icons in the same list — use one pattern consistently." },
+            { type: "dont", text: "Don't show more than 5–6 items without a 'View all' CTA in the ProcessList header." },
+          ].map((rule, i) => (
+            <div key={i} className="flex items-start gap-[8px]">
+              <span
+                className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
+                style={{
+                  background: rule.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                  color: rule.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
+                }}
+              >
+                {rule.type === "do" ? "Do" : "Don't"}
+              </span>
+              <span className="text-[12px] text-[var(--foreground)]">{rule.text}</span>
+            </div>
+          ))}
+        </div>
+          <div className="mt-[16px]">
+            <button onClick={() => setShowSpec(v => !v)}
+              className="flex items-center gap-[6px] text-[11px] font-semibold"
+              style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+              <LucideIcons.ChevronRight size={12} style={{ transform: showSpec ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+              Design Spec
+            </button>
+            {showSpec && (
+              <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                {[
+                    { token: "--color-surface-success-default", usage: "done icon bg" },
+                    { token: "--color-surface-error-default", usage: "error icon bg" },
+                    { token: "--color-border-neutral-lighter", usage: "connector line" },
+                ].map(row => (
+                  <div key={row.token} className="flex items-start gap-[8px]">
+                    <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                      style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                      {row.token}
+                    </code>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                  <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 13501-28579</span>
+                </div>
+              </div>
+            )}
+          </div>
+    </>
+  )
+}
+
+// ── ProcessItemPage ──────────────────────────────────────────────────────────
+// The component and its documentation both already existed — the documentation
+// was just buried as step 5 of the SlideOut Content pattern page, with no
+// catalog entry, so searching "process" in the sidebar found nothing. That is
+// the same reason Breadcrumb got rebuilt by hand for a month while sitting in
+// the repo. This page is the entry; the content itself is shared, not copied.
+function ProcessItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "reference">("overview")
+  const spec = PROCESS_ITEM_SPEC
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Process Item</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            One step of a running process, with its state. Reach for it wherever the progress of a workflow,
+            pipeline or agent run has to be visible — <code className="font-mono text-[13px] text-[var(--primary)]">SlideOut</code> and{" "}
+            <code className="font-mono text-[13px] text-[var(--primary)]">SidePanel</code> content, widgets, run detail views.
+            Pair it with <code className="font-mono text-[13px] text-[var(--primary)]">ProcessList</code> to get the section
+            title, the “View all” CTA and the empty/loading states for free.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("process-item")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",  label: "Overview"  },
+          { id: "reference", label: "Reference" },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* ── ProcessItem vs Stepper — the question every PM hits ── */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">ProcessItem or Stepper?</h2>
+              <p className="text-[13px]" style={{ color: "var(--field-supporting)" }}>
+                Both render a sequence of steps, and picking the wrong one is the most common mistake with this
+                component. The test is <strong>who is doing the work</strong>.
+              </p>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-subtle)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-success)" }}>
+                    ProcessItem — the system is working
+                  </span>
+                  <p className="text-[12px] text-[var(--foreground)]">
+                    The user is <strong>watching</strong>. Steps advance on their own, can fail, and the user does not
+                    control the order. A workflow run, an agent executing a playbook, a sync pipeline.
+                  </p>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    Statuses exist because a step can fail: <code className="font-mono">done · loading · error · pending · warning</code>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-informative-more-subtle)", border: "1px solid var(--color-border-informative-subtle)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-info)" }}>
+                    Stepper — the user is working
+                  </span>
+                  <p className="text-[12px] text-[var(--foreground)]">
+                    The user is <strong>advancing</strong>. They move between stages themselves, and nothing progresses
+                    until they act. A multi-stage create flow, a wizard.
+                  </p>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    There is no “failed” stage in a wizard — it pairs with <code className="font-mono">StepperNavFooter</code>, not statuses.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── The component itself — shared with the SlideOut Content page ── */}
+            <ProcessItemShowcase />
+          </div>
+        )}
+
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Props — rendered from PROCESS_ITEM_SPEC so this table can never drift from the spec modal */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Generated from the component's own spec — this table and the “View DS spec” modal read the same source.
+              </p>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Prop", "Type", "Default", "Notes"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.properties.map((row, i, arr) => (
+                      <tr key={row.name} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.name}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                          {/* Only an enum gets expanded into its union — the spec marks those
+                              as "Variant". Everything else shows its declared type, because a
+                              spec's `values` are examples there, not the full domain. */}
+                          {row.type === "Variant" ? row.values.join(" | ") : row.type}
+                        </td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.default}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.note || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Statuses — also from the spec */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Statuses</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["status", "Meaning"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.variants.map((v, i, arr) => (
+                      <tr key={v.name} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{v.name}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{v.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Typography — from the spec */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Typography</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Element", "Size", "Weight", "Line height"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.typography.map((row, i, arr) => (
+                      <tr key={row.element} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.element}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.size}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.weight}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.lineHeight}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Usage */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
+              <pre className="text-[12px] font-mono bg-[var(--field-bg)] p-[16px] rounded-[8px] overflow-x-auto text-[var(--foreground)]">{`import { ProcessItem, ProcessList } from "@/components/ui/process-item"
+
+// A run's steps — showLine on every item except the last
+{steps.map((s, i, arr) => (
+  <ProcessItem
+    key={s.id}
+    status={s.status}          // done | loading | error | pending | warning
+    title={s.title}
+    description={s.description}
+    timestamp={s.timestamp}
+    showLine={i < arr.length - 1}
+  />
+))}
+
+// Inside a widget or panel — ProcessList adds the title, CTA and
+// empty/loading states, so you don't compose them per screen
+<ProcessList
+  title="Process"
+  state={steps.length ? "populated" : "empty"}
+  items={steps}
+  onViewAll={() => setShowAll(true)}
+/>`}
+              </pre>
+            </div>
+
+            {/* Where else this appears */}
+            <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+              style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Also documented in</span>
+              <p className="text-[12px] text-[var(--foreground)]">
+                <strong>Patterns → SlideOut/SidePanel — Content</strong>, as step 5 of the content vocabulary. That page
+                covers <em>where</em> a process list sits relative to the other content blocks; this page covers the
+                component. Both render the same examples from one source.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── BreadcrumbPage ────────────────────────────────────────────────────────────
 
 const PROCESS_ITEM_SPEC = {
@@ -40144,6 +40373,7 @@ export default function App() {
           {active === "notification-center" && <NotificationCenterPage openSpec={setSpecModal} />}
           {active === "record-header"       && <RecordHeaderPage      openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
+          {active === "process-item"   && <ProcessItemPage openSpec={setSpecModal} />}
           {active === "breadcrumb"      && <BreadcrumbPage openSpec={setSpecModal} />}
           {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}
           {active === "pagination"      && <PaginationPage      openSpec={setSpecModal} />}

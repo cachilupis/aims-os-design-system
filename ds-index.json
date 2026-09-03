@@ -25,7 +25,6 @@
       "add-fields",
       "filters-slideout",
       "highlight-number",
-      "process-item",
       "slider",
       "tag-input",
       "list-view-section",
@@ -296,13 +295,13 @@
     },
     {
       "id": "process-item",
-      "name": "process-item",
+      "name": "Process Item",
       "import": "@/components/ui/process-item",
       "group": "Components",
       "description": "One step of a process or workflow, with its state. Use it wherever the current state of a running process needs to be visible — SlideOut and SidePanel content, workflow views, threads. Each item can expand in place to reveal its detail. Not a Stepper: Stepper shows where the user is in a flow they advance themselves; Process Item shows what the system is doing.",
       "usedInScreens": 2,
       "hasSpec": true,
-      "hasCatalogPage": false
+      "hasCatalogPage": true
     },
     {
       "id": "progress-bar",
