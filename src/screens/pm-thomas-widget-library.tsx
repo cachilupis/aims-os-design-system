@@ -2,9 +2,11 @@ import { useState } from "react"
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout }  from "@/components/layouts/screen-layout"
 import type { SidebarItem } from "@/components/ui/sidebar"
+import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
 import { Tag }           from "@/components/ui/tag"
+import { WidgetGlyph, WidgetFreshnessBadge, WidgetMiniPreview } from "@/components/experimental/widget-parts"
 import { Input }         from "@/components/ui/input"
 import { EmptyState }    from "@/components/ui/empty-state"
 import { CardContainer } from "@/components/ui/card-container"
@@ -65,39 +67,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 ]
 
 // ── DS-GAP: WidgetGlyph — skeleton-type icon badge. Closest DS: HighlightIcon.
-const SKELETON_ICON: Record<string, keyof typeof LucideIcons> = {
-  KPI:        "Hash",
-  Chart:      "BarChart2",
-  Feed:       "List",
-  Gauge:      "Gauge",
-  Donut:      "PieChart",
-  Board:      "LayoutGrid",
-  Funnel:     "TrendingDown",
-  "Stat Row": "Rows3",
-  Alerts:     "Bell",
-  "Cost KPI": "DollarSign",
-}
-function WidgetGlyph({ skeleton }: { skeleton: string }) {
-  const iconKey = SKELETON_ICON[skeleton] ?? "Square"
-  const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties; className?: string }>
-  return (
-    <div style={{ width: 36, height: 36, borderRadius: 9, background: "color-mix(in srgb,var(--primary) 12%,transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      <Icon size={16} style={{ color: "var(--primary)" }} />
-    </div>
-  )
-}
-
-// ── DS-GAP: FreshnessBadge — live/fresh/stale indicator. Closest DS: Tag.
-const FRESH_CONFIG: Record<Freshness, { variant: "success" | "informative" | "neutral"; label: string }> = {
-  live:  { variant: "success",     label: "Live"  },
-  fresh: { variant: "informative", label: "Fresh" },
-  stale: { variant: "neutral",     label: "Stale" },
-}
-function FreshnessBadge({ status }: { status: Freshness }) {
-  const cfg = FRESH_CONFIG[status]
-  return <Tag variant={cfg.variant} size="sm">{cfg.label}</Tag>
-}
-
 // ── DS-GAP: HealthBadge — active/review indicator. Closest DS: Tag.
 function HealthBadge({ health }: { health: Health }) {
   if (health === "active") return null
@@ -105,17 +74,6 @@ function HealthBadge({ health }: { health: Health }) {
 }
 
 // ── DS-GAP: MiniPreview — sunken widget preview surface. Closest DS: CardContainer (variant=sunken).
-function MiniPreview({ skeleton }: { skeleton: string }) {
-  const iconKey = SKELETON_ICON[skeleton] ?? "Square"
-  const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties; className?: string }>
-  return (
-    <div style={{ height: 56, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-      <Icon size={13} style={{ color: "var(--field-supporting)" }} />
-      <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{skeleton} preview</span>
-    </div>
-  )
-}
-
 // ── DS-GAP: StudioWelcome — contextual banner. Closest DS: CardContainer.
 function StudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {
   const [dismissed, setDismissed] = useState(false)
@@ -124,9 +82,7 @@ function StudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {
     <div style={{ marginBottom: 16 }}>
     <CardContainer variant="default">
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, background: "color-mix(in srgb,var(--primary) 12%,transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <LucideIcons.PieChart size={16} style={{ color: "var(--primary)" }} />
-        </div>
+        <HighlightIcon iconName="PieChart" variant="informative" size="lg" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
             {count} widgets in your library
@@ -370,14 +326,14 @@ export default function PMThomasWidgetLibrary() {
                 </div>
 
                 {/* Mini preview */}
-                <MiniPreview skeleton={w.skeleton} />
+                <WidgetMiniPreview skeleton={w.skeleton} />
 
                 {/* Footer */}
                 <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 10 }}>
                   <span style={{ fontSize: 11, color: w.health === "review" ? "var(--alert)" : "var(--field-supporting)", fontWeight: w.health === "review" ? 600 : 400 }}>
                     {w.health === "review" ? "Remap needed →" : `Used on ${w.usedIn} dashboard${w.usedIn === 1 ? "" : "s"}`}
                   </span>
-                  <FreshnessBadge status={w.freshness} />
+                  <WidgetFreshnessBadge status={w.freshness} />
                 </div>
               </CardContainer>
               </div>
@@ -400,7 +356,7 @@ export default function PMThomasWidgetLibrary() {
         <SlideOut title={detailW.name} open={true} onClose={() => setDetailW(null)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "4px 0" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              <FreshnessBadge status={detailW.freshness} />
+              <WidgetFreshnessBadge status={detailW.freshness} />
               <Tag variant="neutral" size="sm">{detailW.skeleton}</Tag>
               <Tag variant={detailW.category === "AIMS OS" ? "informative" : "neutral"} size="sm">{detailW.category}</Tag>
               {!detailW.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
