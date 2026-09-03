@@ -36,16 +36,6 @@ interface MarketplaceWidget {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 // DS-GAP: CategoryColors — business-function palette; no DS tokens for these. Needs tokenization.
-const CAT_COLOR: Record<string, string> = {
-  "aims-os":          "#2B7FFF", // audit-ignore: prototype category colours
-  "sales":            "#22C55E", // audit-ignore: prototype category colours
-  "finance":          "#0EA5E9", // audit-ignore: prototype category colours
-  "customer-service": "#F97316", // audit-ignore: prototype category colours
-  "hr":               "#A78BFA", // audit-ignore: prototype category colours
-  "marketing":        "#EC4899", // audit-ignore: prototype category colours
-  "operations":       "#64748B", // audit-ignore: prototype category colours
-}
-
 const CATEGORIES: { id: BizCat; label: string }[] = [
   { id: "all",              label: "All categories" },
   { id: "aims-os",          label: "AIMS OS" },
@@ -100,16 +90,14 @@ const PAGE_SIZE = 12
 
 // DS-GAP: MiniPreview — skeleton-appropriate miniature chart placeholder. Closest DS component: none.
 // DS-GAP: MarketplaceCard — widget listing card with category stripe, preview, and action buttons. Closest DS component: CardContainer.
-function MarketplaceCard({ widget, catColor, onView, onUse }: {
+function MarketplaceCard({ widget, onView, onUse }: {
   widget: MarketplaceWidget
-  catColor: string
   onView: () => void
   onUse: () => void
 }) {
   const complexityColor = widget.complexity === "Simple" ? "var(--success)" : widget.complexity === "Advanced" ? "var(--alert)" : "var(--color-text-subtitle)"
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ height: 3, background: catColor, flexShrink: 0 }} />
       <div style={{ padding: 12, flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
           <WidgetGlyph skeleton={widget.skeleton} size="md" />
@@ -172,7 +160,6 @@ function CategoryRail({ categories, counts, selected, onSelect, activeFilters, o
             cursor: "pointer", textAlign: "left" as const, width: "100%",
           }}
         >
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: CAT_COLOR[cat.id] ?? "transparent", flexShrink: 0 }} />
           <span style={{ flex: 1, fontSize: 13, color: selected === cat.id ? "var(--color-text-title)" : "var(--color-text-subtitle)", fontWeight: selected === cat.id ? 500 : 400 }}>
             {cat.label}
           </span>
@@ -337,7 +324,6 @@ export default function PMThomasWidgetMarketplaceScreen() {
                   <CardContainer className="h-full overflow-hidden">
                     <MarketplaceCard
                       widget={w}
-                      catColor={CAT_COLOR[w.businessCategory] ?? "#64748B"} // audit-ignore: prototype category colours
                       onView={() => setViewWidget(w)}
                       onUse={() => setUseWidget(w)}
                     />
