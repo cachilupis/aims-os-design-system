@@ -1,4 +1,4 @@
-import { Sparkles, Bell, Settings, ChevronDown, User } from "lucide-react"
+import { Sparkles, Bell, Settings, User } from "lucide-react"
 import { AppBackground }    from "@/components/ui/app-background"
 import { Topbar }           from "@/components/ui/topbar"
 import { Sidebar }          from "@/components/ui/sidebar"
@@ -146,7 +146,12 @@ export function BreadcrumbExampleScreen({ showBreadcrumb }: { showBreadcrumb: bo
                 />
               ) : undefined}
               tag={<Tag variant="informative" size="sm">Status</Tag>}
-              primaryAction={{ label: "CTA", icon: ChevronDown }}
+              // The chevron this example used to carry sat AFTER the label — a CTA that
+              // opens a menu. HeaderAction has no trailing-icon option on purpose: a menu
+              // trigger is a different control from an action button, and the DS has no
+              // such component yet. This example only needs a generic CTA.
+              // DS-GAP: Header has no menu-trigger action.
+              primaryAction={{ label: "CTA" }}
             />
           </div>
 
