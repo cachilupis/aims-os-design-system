@@ -21,28 +21,10 @@
   },
   "totals": {
     "hardcodedColourErrors": 0,
-    "findings": 1,
-    "accepted": 1
+    "findings": 0
   },
-  "staleDecisions": [],
-  "findings": [
-    {
-      "key": "main-overuse:src/screens/pm-michael-test-v1.tsx",
-      "type": "main-overuse",
-      "typeLabel": "variant=\"main\" overuse",
-      "file": "src/screens/pm-michael-test-v1.tsx",
-      "line": 562,
-      "name": null,
-      "count": 2,
-      "lines": [
-        360,
-        562
-      ],
-      "message": "variant=\"main\" used 2 times in this file (lines 360, 562) — max 1 per screen, header CTA only",
-      "verdict": "accepted",
-      "why": "Both hits (lines 360, 562) are legitimate Header primaryActions — one for the worker detail view, one for the list view. Only one renders at a time. Check 7 counts per file, not per screen, so this is a false positive. Demoting either would break the real rule to satisfy the heuristic.",
-      "decidedBy": "Michael",
-      "decidedOn": "2026-09-01"
-    }
-  ]
+  "staleDecisions": [
+    "main-overuse:src/screens/pm-michael-test-v1.tsx"
+  ],
+  "findings": []
 }

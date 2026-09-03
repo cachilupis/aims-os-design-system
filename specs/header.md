@@ -18,8 +18,8 @@ Page-level header with title, description, status tag, back button, icon highlig
 | showBackInCompress | Boolean | true,false | false | Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user. |
 | icon | node | LucideIcon | undefined | Rendered inside a HighlightIcon (sm). Hidden in compress. |
 | iconVariant | Variant | informative,success,alert,error,neutral,yellow,lime,purple,light-blue | informative | HighlightIcon color variant. Only applies when icon is set. |
-| primaryAction | node | <Button variant="main" size="sm" /> | undefined | — |
-| secondaryAction | node | <Button variant="secondary" size="sm" /> | undefined | — |
+| primaryAction | HeaderAction | { label, icon?, onClick?, disabled?, priority? } | undefined | An action object, not JSX — Header picks the Button variant so no screen names one. Defaults to priority "primary" (variant="main"). |
+| secondaryAction | HeaderAction | { label, icon?, onClick?, disabled?, priority? } | undefined | Same shape, rendered before primary. Defaults to priority "secondary". Two actions is the maximum — a third belongs in an overflow menu. |
 
 ## Sizes / scale
 

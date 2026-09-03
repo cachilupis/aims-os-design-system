@@ -110,7 +110,7 @@
       "import": "@/components/ui/button",
       "group": "Components",
       "description": "6 variants that communicate action hierarchy. Each one signals a different level of visual weight and semantic intent. Max 1–2 Primary or Main Action per screen.",
-      "usedInScreens": 33,
+      "usedInScreens": 26,
       "hasSpec": true,
       "hasCatalogPage": true
     },

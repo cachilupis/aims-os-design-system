@@ -124,7 +124,7 @@ export function SlideOutDetailExampleScreen(_props: Props) {
             title="Automations"
             description="Monitoring and response automations for your customer accounts"
             size="size-l"
-            primaryAction={<Button variant="main" size="sm">New Automation</Button>}
+            primaryAction={{ label: "New Automation" }}
           />
 
           <div className="flex-1 overflow-y-auto px-[32px] py-[24px]">

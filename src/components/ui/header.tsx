@@ -7,6 +7,26 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
 export type HeaderSize = "size-l" | "size-m" | "compress"
 export type { HighlightIconVariant }
 
+/**
+ * Rank of a Header action. The DS maps it to a Button variant — screens never
+ * name the variant themselves.
+ *
+ *   primary   → variant="main"       the one action the screen is for
+ *   secondary → variant="secondary"  a supporting action
+ *   tertiary  → variant="tertiary"   low-emphasis, e.g. a debug toggle
+ */
+export type HeaderActionPriority = "primary" | "secondary" | "tertiary"
+
+export interface HeaderAction {
+  label: string
+  /** Lucide icon rendered before the label. */
+  icon?: LucideIcon
+  onClick?: () => void
+  disabled?: boolean
+  /** Defaults to "primary" on primaryAction and "secondary" on secondaryAction. */
+  priority?: HeaderActionPriority
+}
+
 export interface HeaderProps {
   /** Page title — always required, always visible */
   title: string
@@ -37,10 +57,25 @@ export interface HeaderProps {
   icon?: LucideIcon
   /** HighlightIcon color variant for the icon slot. Defaults to "informative". */
   iconVariant?: HighlightIconVariant
-  /** Primary CTA slot — use <Button variant="main" size="sm"> */
-  primaryAction?: React.ReactNode
-  /** Secondary CTA slot — use <Button variant="secondary" size="sm"> */
-  secondaryAction?: React.ReactNode
+  /**
+   * The screen's one prioritised action. Declare WHAT the action is; the DS
+   * decides how it looks.
+   *
+   * This used to take a ReactNode, which meant every screen wrote
+   * `<Button variant="main">` itself — and nothing stopped it writing that
+   * variant anywhere else. "One main per screen, only in the Header" lived in
+   * CLAUDE.md and was broken 6 times in one PR and 7 in another. Screens no
+   * longer choose the variant, so the rule cannot be broken.
+   *
+   * `priority` is about rank, not appearance: "primary" is the one action this
+   * screen is for, and the DS renders it as main. Measured before this change,
+   * 60% of Headers were NOT passing main — plenty of screens have a lower-rank
+   * action or none at all — so the prop has to express that rather than force
+   * the top variant on everyone.
+   */
+  primaryAction?: HeaderAction
+  /** A second, lower-rank action beside the primary one. Defaults to "secondary" priority. */
+  secondaryAction?: HeaderAction
   /**
    * Sticky filters row — shown only in compress mode, directly below the title row.
    * No border between the title row and this row. Renders after the gradient fade.
@@ -61,6 +96,29 @@ const PADDING: Record<HeaderSize, string> = {
   "size-l": "12px 24px",
   "size-m": "10px 24px",
   "compress": "8px 24px",
+}
+
+/** priority → Button variant. The one place this mapping lives. */
+const VARIANT_BY_PRIORITY: Record<HeaderActionPriority, "main" | "secondary" | "tertiary"> = {
+  primary:   "main",
+  secondary: "secondary",
+  tertiary:  "tertiary",
+}
+
+function renderAction(action: HeaderAction, fallback: HeaderActionPriority) {
+  const { label, icon: Icon, onClick, disabled, priority = fallback } = action
+  return (
+    <Button
+      variant={VARIANT_BY_PRIORITY[priority]}
+      size="sm"
+      onClick={onClick}
+      disabled={disabled}
+      icon={Icon ? <Icon size={13} strokeWidth={1.75} /> : undefined}
+      iconPosition={Icon ? "left" : undefined}
+    >
+      {label}
+    </Button>
+  )
 }
 
 export function Header({
@@ -134,11 +192,12 @@ export function Header({
           </div>
         </div>
 
-        {/* Right zone: secondary + primary CTAs */}
+        {/* Right zone: secondary + primary CTAs. The Header builds the buttons,
+            so no screen has to name a variant — see HeaderAction. */}
         {(primaryAction || secondaryAction) && (
           <div className="flex items-center gap-[8px] shrink-0">
-            {secondaryAction}
-            {primaryAction}
+            {secondaryAction && renderAction(secondaryAction, "secondary")}
+            {primaryAction && renderAction(primaryAction, "primary")}
           </div>
         )}
       </div>

@@ -396,10 +396,15 @@ screenFiles.forEach((file) => {
   })
 })
 
-// ── Check 7: variant="main" used more than once in one screen file ────────
-// CLAUDE.md: max 1 per screen, header CTA only. RecordHeader's one named
-// exception lives inside record-header.tsx itself, so a screen that renders
-// <RecordHeader/> never writes the literal string and never trips this.
+// ── Check 7: variant="main" written in a screen file at all ───────────────
+// This used to allow one per screen — the header CTA. It no longer allows
+// any: Header.primaryAction takes an action object ({ label, icon?, onClick? })
+// and Header applies variant="main" itself, so the one legitimate reason a
+// screen had to type the string is gone. Anything left is a content-area
+// button wearing the header's variant.
+// RecordHeader's one named exception lives inside record-header.tsx, so a
+// screen that renders <RecordHeader/> never writes the literal and never
+// trips this.
 const MAIN_VARIANT_RE = /variant=["']main["']/
 
 screenFiles.forEach((file) => {
@@ -409,14 +414,16 @@ screenFiles.forEach((file) => {
   lines.forEach(({ code }, idx) => {
     if (MAIN_VARIANT_RE.test(code)) hits.push(idx + 1)
   })
-  if (hits.length > 1) {
+  if (hits.length > 0) {
     warnings.push({
       type: "main-overuse",
       file: rel(file),
-      line: hits[hits.length - 1],
+      line: hits[0],
       count: hits.length,
       lines: hits,
-      message: `variant="main" used ${hits.length} times in this file (lines ${hits.join(", ")}) — max 1 per screen, header CTA only`,
+      message: hits.length === 1
+        ? `variant="main" on line ${hits[0]} — screens no longer write it. A header CTA goes in Header.primaryAction as { label, icon? }; anything else is variant="primary"`
+        : `variant="main" written ${hits.length} times (lines ${hits.join(", ")}) — screens no longer write it. Header applies it from primaryAction; content-area buttons are variant="primary"`,
     })
   }
 })
@@ -573,7 +580,7 @@ printSection(
 printSection("⚠️  WARNING — possible orphaned components", orphanWarnings, (w) => `${w.file} — ${isAccepted(w) ? "[accepted] " : ""}${w.message}`)
 printSection("⚠️  WARNING — off-scale spacing (informational only)", spacingWarnings, (w) => `${w.file}:${w.line}  ${w.message}`)
 printSection("⚠️  WARNING — hand-rolled component shadows a real DS export", shadowWarnings, fmt)
-printSection("⚠️  WARNING — variant=\"main\" overused (CLAUDE.md: max 1/screen)", mainOveruseWarnings, fmt)
+printSection("⚠️  WARNING — variant=\"main\" in a screen file (Header applies it from primaryAction)", mainOveruseWarnings, fmt)
 printSection("⚠️  WARNING — possible hand-rolled CardContainer reimplementation", cardReimplWarnings, fmt)
 
 // The ratchet reads these. Accepted findings are subtracted here and nowhere

@@ -340,12 +340,7 @@ export function AdminBillingScreen({ onNavigate }: { onNavigate?: (id: string) =
           size={isScrolled ? "compress" : "size-l"}
           title="Billing"
           description="Enterprise plan · Next invoice Sep 1, 2026 · Billing contact: billing@avance.com"
-          primaryAction={
-            <Button variant="secondary" size="sm">
-              <Icons.ExternalLink size={13} style={{ marginRight: 4 }} />
-              Billing portal
-            </Button>
-          }
+          primaryAction={{ label: "Billing portal", icon: Icons.ExternalLink, priority: "secondary" }}
         />
       )}
     >

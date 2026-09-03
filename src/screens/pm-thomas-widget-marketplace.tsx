@@ -338,12 +338,8 @@ export default function PMThomasWidgetMarketplaceScreen() {
           size={isScrolled ? "compress" : "size-l"}
           title="Widget Marketplace"
           description="Browse and add pre-built widgets to your dashboards."
-          primaryAction={
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm">Start from scratch</Button>
-              <Button variant="main" size="sm">Create with AI assist</Button>
-            </div>
-          }
+          secondaryAction={{ label: "Start from scratch" }}
+          primaryAction={{ label: "Create with AI assist" }}
         />
       )}
       pagination={
