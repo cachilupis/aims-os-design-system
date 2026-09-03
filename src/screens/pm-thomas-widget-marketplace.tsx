@@ -112,7 +112,7 @@ function MarketplaceCard({ widget, catColor, onView, onUse }: {
       <div style={{ height: 3, background: catColor, flexShrink: 0 }} />
       <div style={{ padding: 12, flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <WidgetGlyph skeleton={widget.skeleton} size="md" />
+          <WidgetGlyph skeleton={widget.skeleton} size="sm" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {widget.name}
@@ -362,7 +362,7 @@ export default function PMThomasWidgetMarketplaceScreen() {
         >
           <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <WidgetGlyph skeleton={viewWidget.skeleton} size="lg" />
+              <WidgetGlyph skeleton={viewWidget.skeleton} size="md" />
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-title)" }}>{viewWidget.name}</div>
                 <div style={{ fontSize: 13, color: "var(--color-text-subtitle)", marginTop: 2 }}>{viewWidget.source}</div>
