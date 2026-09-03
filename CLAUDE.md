@@ -205,7 +205,7 @@ Every entity detail page follows this structure — tabs always in this order:
 Header rules on detail pages:
 - `breadcrumb` with parent + current page — a detail page is L2 or deeper. Never `backButton` alongside it.
 - Always show status `tag` — detail view = one entity, one state.
-- Primary action in `Header.primaryAction` (`variant="main"`).
+- Primary action in `Header.primaryAction` — an **action object**, not a `Button`: `{ label, icon?, onClick?, disabled?, priority? }`. Header picks the variant, so a screen never names one.
 
 ```tsx
 // ✅ Standard detail page structure
@@ -214,7 +214,7 @@ Header rules on detail pages:
   tag={<Tag variant="success" size="s">Active</Tag>}
   breadcrumb={<Breadcrumb depth={2} items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]} onNavigate={go} />}
   size={isScrolled ? "compress" : "size-l"}
-  primaryAction={<Button variant="main" size="sm">Edit</Button>}
+  primaryAction={{ label: "Edit", icon: Pencil }}
 />
 <Tabs items={[
   { id: "overview", label: "Overview" },   // always first
@@ -699,7 +699,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 
 ## Button hierarchy rules
 
-- `variant="main"` — **header-level CTA only** (the one action in the `Header` component's `primaryAction` prop). Maximum 1 per screen. Examples: "Export", "New Worker", "Create".
+- `variant="main"` — **header-level CTA only**, and screens no longer write it: `Header` applies it itself from `primaryAction`, which takes an action object (`{ label, icon?, onClick?, disabled?, priority? }`), never a `Button`. Maximum 1 per screen. If you find yourself typing `variant="main"` in a screen file, the action is in the wrong place.
 - `variant="primary"` — content-area actions inside cards, widgets, SlideOuts, or table rows. Use when an action is the clear recommended next step within a contained context.
 - **Never repeat `main` more than once per view.** If a widget or card needs a call-to-action, use `primary`, not `main`.
 - **No more than 2 `primary` buttons visible at the same time** in a single scrolled viewport. If more actions compete, demote lower-priority ones to `secondary`.
@@ -758,7 +758,7 @@ export default function MyScreen() {
           size={isScrolled ? "compress" : "size-l"}
           title="Page Title"
           description="Page description."
-          primaryAction={<Button variant="main" size="sm">New Item</Button>}
+          primaryAction={{ label: "New Item", icon: Plus }}
         />
       )}
       pagination={

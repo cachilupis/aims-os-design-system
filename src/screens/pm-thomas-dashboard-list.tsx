@@ -232,11 +232,7 @@ export default function PMThomasDashboardList() {
           size={isScrolled ? "compress" : "size-l"}
           title="Dashboards"
           description={`${dbs.length} dashboards · ${publishedCount} published`}
-          primaryAction={
-            <Button variant="main" size="sm" icon={<LucideIcons.Sparkles size={14} />} iconPosition="left">
-              Create dashboard
-            </Button>
-          }
+          primaryAction={{ label: "Create dashboard", icon: LucideIcons.Sparkles }}
         />
       )}
     >

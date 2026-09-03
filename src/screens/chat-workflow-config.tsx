@@ -768,16 +768,13 @@ export function ChatWorkflowConfigScreen() {
           title="Workflow configuration"
           description="Helix Agentic Studio · conversational governance gates"
           tag={<Tag variant="informative" size="sm">{STAGE_LABELS[substage]}</Tag>}
-          primaryAction={
-            <Button
-              variant={showDebug ? "secondary" : "tertiary"}
-              size="sm"
-              onClick={() => setShowDebug(d => !d)}
-            >
-              <Icons.Bug size={14} style={{ marginRight: 4 }} />
-              Debug
-            </Button>
-          }
+          primaryAction={{
+            label: "Debug",
+            icon: Icons.Bug,
+            onClick: () => setShowDebug(d => !d),
+            // Rank, not appearance: the toggle is louder while the panel is open.
+            priority: showDebug ? "secondary" : "tertiary",
+          }}
         />
       )}
     >

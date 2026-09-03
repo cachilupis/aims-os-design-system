@@ -2,7 +2,6 @@ import { useState, useMemo } from "react"
 import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
-import { Button }       from "@/components/ui/button"
 import { Input }        from "@/components/ui/input"
 import { Chip }         from "@/components/ui/chip"
 import type { SidebarItem } from "@/components/ui/sidebar"
@@ -334,16 +333,7 @@ export function WorkflowsListScreen() {
           size={isScrolled ? "compress" : "size-l"}
           title="Workflows"
           description="Governed automated workflows · Helix Agentic Studio"
-          primaryAction={
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => { window.location.href = "?proto=proto-chat-workflow-config" }}
-            >
-              <Icons.Plus size={14} style={{ marginRight: 4 }} />
-              New workflow
-            </Button>
-          }
+          primaryAction={{ label: "New workflow", icon: Icons.Plus, onClick: () => { window.location.href = "?proto=proto-chat-workflow-config" } }}
         />
       )}
     >

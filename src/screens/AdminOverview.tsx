@@ -360,12 +360,7 @@ export function AdminOverviewScreen({ onNavigate }: { onNavigate?: (id: string) 
           size={isScrolled ? "compress" : "size-l"}
           title="Overview"
           description="Avance Financial · Enterprise plan · 50 members · US East"
-          primaryAction={
-            <Button variant="main" size="sm">
-              <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
-              Invite member
-            </Button>
-          }
+          primaryAction={{ label: "Invite member", icon: Icons.UserPlus }}
         />
       )}
     >

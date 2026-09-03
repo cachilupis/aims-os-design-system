@@ -411,19 +411,25 @@ export default function PMThomasWidgetBuilderScreen() {
       sidebarItems={SIDEBAR_ITEMS}
       activeSidebarId="widget-library"
       header={(isScrolled) => (
-        <Header
-          size={isScrolled ? "compress" : "size-l"}
-          title={saved ? "Widget saved" : "Widget Playground"}
-          description={saved ? "Your widget is now in the library." : "Map an entity and metric, pick a type, and preview it live."}
-          primaryAction={!saved ? (
-            <div style={{ display: "flex", gap: 8 }}>
+        <>
+          <Header
+            size={isScrolled ? "compress" : "size-l"}
+            title={saved ? "Widget saved" : "Widget Playground"}
+            description={saved ? "Your widget is now in the library." : "Map an entity and metric, pick a type, and preview it live."}
+          />
+          {/* DS-GAP: Header takes at most 2 actions (primaryAction + secondaryAction),
+              and per the Create pattern a create page's actions belong in
+              StepperNavFooter — not the Header. Until that footer is wired into this
+              screen, the 3 wizard actions live in this row below the Header. */}
+          {!saved && (
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "0 32px 8px" }}>
               <Button variant="secondary" size="sm" onClick={() => hasUnsaved ? setShowLeave(true) : undefined}>Cancel</Button>
               {tab === "data" && <Button variant="secondary" size="sm" disabled={!dataComplete} onClick={() => setTab("widget")}>Widget <ChevronRightIcon size={14} /></Button>}
               {tab === "widget" && <Button variant="secondary" size="sm" disabled={!widgetComplete} onClick={() => setTab("appearance")}>Appearance <ChevronRightIcon size={14} /></Button>}
-              <Button variant="main" size="sm" disabled={!canSave} onClick={() => setSaved(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
+              <Button variant="primary" size="sm" disabled={!canSave} onClick={() => setSaved(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
             </div>
-          ) : undefined}
-        />
+          )}
+        </>
       )}
     >
       {/* ── Success view ── */}

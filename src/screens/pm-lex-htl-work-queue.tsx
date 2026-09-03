@@ -1169,7 +1169,7 @@ export default function PMLexHTLWorkQueueScreen() {
             size={isScrolled ? "compress" : "size-l"}
             title="Work Queue"
             description="Human Touch Layer — review and resolve events that require your attention."
-            primaryAction={<Button variant="main" size="sm">Export</Button>}
+            primaryAction={{ label: "Export" }}
             filters={isScrolled && mainTab === "queues" ? (
               <div
                 onClickCapture={(e: React.MouseEvent) => {

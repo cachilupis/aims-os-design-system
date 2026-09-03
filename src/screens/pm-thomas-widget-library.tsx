@@ -256,11 +256,7 @@ export default function PMThomasWidgetLibrary() {
           size={isScrolled ? "compress" : "size-l"}
           title="Widget Library"
           description={`${widgets.length} widgets · ${governedCount} governed`}
-          primaryAction={
-            <Button variant="main" size="sm" icon={<LucideIcons.Sparkles size={14} />} iconPosition="left">
-              Create widget
-            </Button>
-          }
+          primaryAction={{ label: "Create widget", icon: LucideIcons.Sparkles }}
         />
       )}
     >

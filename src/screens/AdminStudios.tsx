@@ -449,7 +449,7 @@ function StudioDetailPage({ studio }: { studio: Studio }) {
           </div>
 
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <Button variant="main" size="sm">Save settings</Button>
+            <Button variant="primary" size="sm">Save settings</Button>
             {settingsTab === "compliance" && config.compliance.exportLabel && (
               <Button variant="secondary" size="sm">
                 <Icons.Download size={13} style={{ marginRight: 4 }} />
@@ -520,21 +520,13 @@ export function AdminStudiosScreen({ onNavigate }: { onNavigate?: (id: string) =
           title={detailView.name}
           description="Studios"
           onBack={() => setDetailView(null)}
-          primaryAction={
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm">
-                <Icons.Settings size={14} style={{ marginRight: 4 }} />
-                Configure
-              </Button>
-              <Button
-                variant={detailView.status === "active" ? "secondary" : "main"}
-                size="sm"
-                onClick={() => toggleStatus(detailView.id)}
-              >
-                {detailView.status === "active" ? "Disable studio" : "Enable studio"}
-              </Button>
-            </div>
-          }
+          secondaryAction={{ label: "Configure", icon: Icons.Settings }}
+          primaryAction={{
+            label: detailView.status === "active" ? "Disable studio" : "Enable studio",
+            onClick: () => toggleStatus(detailView.id),
+            // Disabling is not the action the page is for; enabling is.
+            priority: detailView.status === "active" ? "secondary" : "primary",
+          }}
         />
       ) : (
         <Header

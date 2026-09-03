@@ -3,7 +3,6 @@ import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
 import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
-import { Button }       from "@/components/ui/button"
 import { Tabs }         from "@/components/ui/tabs"
 import { Filters }      from "@/components/ui/filters"
 import { SlideOut }     from "@/components/ui/slide-out"
@@ -330,12 +329,7 @@ const failureCount = EVENTS.filter(e => e.result === "failure").length
           size={isScrolled ? "compress" : "size-l"}
           title="Audit Log"
           description={`${EVENTS.length} events · Avance Financial workspace · Retained for 12 months`}
-          primaryAction={
-            <Button variant="secondary" size="sm">
-              <Icons.Download size={14} style={{ marginRight: 4 }} />
-              Export
-            </Button>
-          }
+          primaryAction={{ label: "Export", icon: Icons.Download, priority: "secondary" }}
         />
       )}
     >
