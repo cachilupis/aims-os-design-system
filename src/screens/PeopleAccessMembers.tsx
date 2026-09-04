@@ -1011,33 +1011,23 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
             </div>
 
             {!isInvited && (
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
-                {!confirmReset ? (
-                  <button
-                    onClick={() => setConfirmReset(true)}
-                    style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface-raised)", color: "var(--foreground)", cursor: "pointer" }}
-                  >
-                    Reset MFA enrollment
-                  </button>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 12, color: "var(--badge-error)", fontWeight: 600 }}>
-                      Remove their MFA device? They'll re-enroll on next login.
-                    </span>
-                    <button
-                      onClick={() => { onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined }); setConfirmReset(false) }}
-                      style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "1px solid var(--badge-error)", color: "var(--badge-error)", background: "transparent", cursor: "pointer" }}
-                    >
-                      Yes, reset
-                    </button>
-                    <button
-                      onClick={() => setConfirmReset(false)}
-                      style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "1px solid var(--border)", color: "var(--muted-foreground)", background: "transparent", cursor: "pointer" }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                <button
+                  onClick={() => setConfirmReset(true)}
+                  style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface-raised)", color: "var(--foreground)", cursor: "pointer" }}
+                >
+                  Reset MFA enrollment
+                </button>
+                <ModalDialog
+                  isOpen={confirmReset}
+                  onClose={() => setConfirmReset(false)}
+                  tone="warning"
+                  iconName="ShieldOff"
+                  title="Reset MFA enrollment?"
+                  description="This will remove their MFA device. They'll be prompted to re-enroll on next login."
+                  ctaPrimary={{ label: "Yes, reset", onClick: () => { onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined }); setConfirmReset(false) } }}
+                  ctaSecondary={{ label: "Cancel", onClick: () => setConfirmReset(false) }}
+                />
               </div>
             )}
           </div>
@@ -1284,38 +1274,13 @@ function MemberDetailPage({
                 onClick={() => alert(`Invite resent to ${member.email}`)}
               />
             )}
-            {!confirmRemove ? (
-              <DangerRow
+            <DangerRow
                 icon={<Icons.Trash2 size={14} />}
                 label="Remove from workspace"
                 desc="Permanently removes access. Cannot be undone."
                 destructive
                 onClick={() => setConfirmRemove(true)}
               />
-            ) : (
-              <div style={{ padding: "14px", background: "color-mix(in srgb, var(--badge-error) 8%, transparent)" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--badge-error)", marginBottom: 6 }}>
-                  Remove {member.name}?
-                </div>
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
-                  They will lose all access immediately. This cannot be undone.
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={() => { onRemove(member.id); onBack() }}
-                    style={{ flex: 1, padding: "7px 0", border: "1px solid var(--badge-error)", borderRadius: 7, fontSize: 12, fontWeight: 600, color: "var(--badge-error)", background: "none", cursor: "pointer" }}
-                  >
-                    Yes, remove
-                  </button>
-                  <button
-                    onClick={() => setConfirmRemove(false)}
-                    style={{ flex: 1, padding: "7px 0", border: "1px solid var(--border)", borderRadius: 7, fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -1329,6 +1294,17 @@ function MemberDetailPage({
           </div>
         </div>
       </div>
+
+      <ModalDialog
+        isOpen={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        tone="error"
+        iconName="Trash2"
+        title={`Remove ${member.name}?`}
+        description="They will lose all access immediately. This action cannot be undone."
+        ctaPrimary={{ label: "Remove", destructive: true, onClick: () => { onRemove(member.id); onBack() } }}
+        ctaSecondary={{ label: "Cancel", onClick: () => setConfirmRemove(false) }}
+      />
     </ScreenLayout>
   )
 }
@@ -1702,26 +1678,12 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
               <div style={{ fontSize: 13, color: "var(--muted-foreground)", marginBottom: 16 }}>
                 Deleting this group removes it permanently. Members are not removed from the workspace.
               </div>
-              {!confirmDelete ? (
-                <button
+              <button
                   onClick={() => setConfirmDelete(true)}
                   style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "var(--badge-error)", background: "transparent", cursor: "pointer" }}
                 >
                   Delete group
                 </button>
-              ) : (
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--badge-error)", marginBottom: 10 }}>Are you sure? This cannot be undone.</div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={onBack} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "#fff", /* audit-ignore: prototype fixture data */ background: "var(--badge-error)", cursor: "pointer" }}>
-                      Delete
-                    </button>
-                    <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -1753,6 +1715,17 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
           )
         )}
       </div>
+
+      <ModalDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        tone="error"
+        iconName="Trash2"
+        title="Delete group?"
+        description="Deleting this group removes it permanently. Members are not removed from the workspace."
+        ctaPrimary={{ label: "Delete", destructive: true, onClick: onBack }}
+        ctaSecondary={{ label: "Cancel", onClick: () => setConfirmDelete(false) }}
+      />
     </ScreenLayout>
   )
 }
@@ -1994,7 +1967,8 @@ const ROLE_PERM_PREVIEW: Record<MemberRole, Record<string, PermState>> = {
   "Billing Admin": { "adm-members":"g-inh" },
 }
 
-function InviteModal({ onClose, onSend }: {
+function InviteModal({ isOpen, onClose, onSend }: {
+  isOpen: boolean
   onClose: () => void
   onSend: (emails: string[], role: MemberRole) => void
 }) {
@@ -2040,13 +2014,17 @@ function InviteModal({ onClose, onSend }: {
   })
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999,  // audit-ignore: prototype fixture data
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <ModalDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      variant="content"
+      showIcon={false}
+      showClose={false}
+      slotUnstyled
+      slot={
       <div style={{
         width: 780, maxHeight: "90vh", background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",  // audit-ignore: prototype fixture data
+        borderRadius: 16, overflow: "hidden",
         display: "flex", flexDirection: "column",
       }}>
         {/* Header */}
@@ -2440,7 +2418,8 @@ function InviteModal({ onClose, onSend }: {
           </>
         )}
       </div>
-    </div>
+      }
+    />
   )
 }
 
@@ -3298,8 +3277,8 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       })()}
 
       {/* Invite modal */}
-      {showInvite && (
-        <InviteModal
+      <InviteModal
+          isOpen={showInvite}
           onClose={() => setShowInvite(false)}
           onSend={(emails, role) => {
             const newMembers: Member[] = emails.map((email, i) => ({
@@ -3317,7 +3296,6 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             setMembers(ms => [...ms, ...newMembers])
           }}
         />
-      )}
     </ScreenLayout>
   )
 }
