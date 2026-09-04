@@ -1,0 +1,32 @@
+{
+  "_readme": [
+    "Decisions about DS Health findings. This is the ONE file here you edit by hand —",
+    "everything else on the DS Health page is generated from the audit.",
+    "",
+    "Its job is to stop the same finding being re-litigated every week. The Stepper case:",
+    "the audit flagged a local `Stepper` as shadowing the DS one, but they were unrelated",
+    "components that happened to share a word. Without a record of that call, the next",
+    "person to see it asks the same question again.",
+    "",
+    "Key format — type:file:name, never a line number, because lines move:",
+    "  shadow-component:src/screens/foo.tsx:Toggle",
+    "  possible-card-reimpl:src/screens/foo.tsx:SectionCard",
+    "  main-overuse:src/screens/foo.tsx",
+    "",
+    "verdict — one of:",
+    "  align    the DS already covers this; the screen should use the real component",
+    "  promote  a genuine gap; becomes a new DS component or a variant of an existing one",
+    "  accepted a false positive, or a deliberate exception. It stays as it is.",
+    "",
+    "Every entry needs a `why`. A verdict with no reasoning is how the next person ends up",
+    "reversing a decision that was right."
+  ],
+  "decisions": {
+    "main-overuse:src/screens/pm-michael-test-v1.tsx": {
+      "verdict": "accepted",
+      "why": "Both hits (lines 360, 562) are legitimate Header primaryActions — one for the worker detail view, one for the list view. Only one renders at a time. Check 7 counts per file, not per screen, so this is a false positive. Demoting either would break the real rule to satisfy the heuristic.",
+      "decidedBy": "Michael",
+      "decidedOn": "2026-09-01"
+    }
+  }
+}

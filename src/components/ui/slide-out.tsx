@@ -26,6 +26,16 @@ import { Chip } from "@/components/ui/chip"
 
 export type SlideOutType = "with-variants" | "full-slot"
 export type SlideOutSize = "m" | "s"
+/**
+ * Which edge of the viewport the panel is anchored to.
+ * - "right"  (default): full-height panel, slides in from the right edge.
+ *                       Rounded on the left corners only. Resizable.
+ * - "bottom": full-width bottom sheet, slides in from the bottom edge.
+ *                       Rounded on the top corners only. Fixed height (80vh
+ *                       capped at 720px). Not resizable — the drag-to-resize
+ *                       gesture is specific to the right-anchor.
+ */
+export type SlideOutAnchor = "right" | "bottom"
 
 export interface SlideOutProps {
   open: boolean
@@ -34,6 +44,8 @@ export interface SlideOutProps {
   type?: SlideOutType
   /** Width + radius variant. Default: "m" */
   size?: SlideOutSize
+  /** Viewport edge the panel is anchored to. Default: "right" */
+  anchor?: SlideOutAnchor
   /** Close panel when backdrop is clicked. Default: true */
   closeOnBackdrop?: boolean
   /**
@@ -43,7 +55,7 @@ export interface SlideOutProps {
   previewMode?: boolean
   /**
    * Whether the left edge drag-to-resize handle is shown.
-   * Only applies in portal mode. Default: true
+   * Only applies in portal mode, right-anchored. Default: true
    */
   resizable?: boolean
 
@@ -137,6 +149,7 @@ export function SlideOut({
   onClose,
   type = "with-variants",
   size = "m",
+  anchor = "right",
   closeOnBackdrop = true,
   previewMode = false,
   resizable = true,
@@ -174,6 +187,7 @@ export function SlideOut({
 }: SlideOutProps) {
   const isM = size === "m"
   const isWithVariants = type === "with-variants"
+  const isBottom = anchor === "bottom"
 
   // ── Drag-to-resize state ────────────────────────────────────────────────
   const [dragWidth, setDragWidth] = useState<number | null>(null)
@@ -280,34 +294,64 @@ export function SlideOut({
   ) : null
 
   // ── Panel aside ────────────────────────────────────────────────────────
+  // Anchor-specific geometry:
+  //   right-anchored (default): full-height, panelWidth wide, rounded-left,
+  //                             slides in via translate-x.
+  //   bottom-anchored:          full-width, ~80vh (max 720px) tall, rounded-top,
+  //                             slides in via translate-y. Not resizable — the
+  //                             drag handle is a right-anchor gesture.
+  const asideStyle: React.CSSProperties = isBottom
+    ? {
+        width:        "100%",
+        height:       "min(80vh, 720px)",
+        padding:      "24px 24px 32px",
+        gap:          isWithVariants ? 16 : isM ? 32 : 24,
+        background:   "var(--slide-out-bg)",
+        boxShadow:    "var(--slide-out-shadow)",
+        borderRadius: isM ? "24px 24px 0 0" : "16px 16px 0 0",
+        display:      "flex",
+        flexDirection: "column",
+        transition:   !previewMode
+          ? "transform 300ms ease-out"
+          : undefined,
+      }
+    : {
+        width:        panelWidth,
+        padding:      "32px 24px",
+        gap:          isWithVariants ? 16 : isM ? 32 : 24,
+        background:   "var(--slide-out-bg)",
+        boxShadow:    "var(--slide-out-shadow)",
+        borderRadius: isM ? "24px 0 0 24px" : "16px 0 0 16px",
+        display:      "flex",
+        flexDirection: "column",
+        transition:   !previewMode && !isActiveDrag
+          ? "width 220ms ease, transform 300ms ease-out"
+          : undefined,
+      }
+
   const aside = (
     <aside
       className={cn(
-        "relative flex flex-col shrink-0 h-full backdrop-blur-[30px]",
+        "relative flex flex-col shrink-0 backdrop-blur-[30px]",
+        // Height/width claim per anchor; the styles above pin the specific dimension
+        isBottom ? "w-full" : "h-full",
         !previewMode && !isActiveDrag && "transition-transform duration-300 ease-out",
-        !previewMode && (open ? "translate-x-0" : "translate-x-full"),
+        // Slide direction per anchor
+        !previewMode && (
+          isBottom
+            ? (open ? "translate-y-0" : "translate-y-full")
+            : (open ? "translate-x-0" : "translate-x-full")
+        ),
         showScrollbar ? "overflow-y-auto" : "overflow-hidden",
         className,
       )}
-      style={{
-        width: panelWidth,
-        padding: "32px 24px",
-        gap: isWithVariants ? 16 : isM ? 32 : 24,
-        background: "var(--slide-out-bg)",
-        boxShadow: "var(--slide-out-shadow)",
-        borderRadius: isM ? "24px 0 0 24px" : "16px 0 0 16px",
-        display: "flex",
-        flexDirection: "column",
-        transition: !previewMode && !isActiveDrag
-          ? "width 220ms ease, transform 300ms ease-out"
-          : undefined,
-      }}
+      style={asideStyle}
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? "slide-out-title" : undefined}
     >
-      {/* ── Drag-to-resize handle (portal mode only) ────────────────────── */}
-      {!previewMode && resizable && (
+      {/* ── Drag-to-resize handle (portal mode, right-anchor only) ─────── */}
+      {!previewMode && resizable && !isBottom && (
         <div
           className="absolute left-0 top-0 bottom-0 z-10 group/rz flex items-center"
           style={{ width: 12, cursor: "col-resize" }}
@@ -566,7 +610,10 @@ export function SlideOut({
         // screen might have, including full-screen "live preview" wrappers in
         // this very doc site that use up to z-index 9999-10002 for their own
         // floating controls. A plain z-50 got silently buried behind those.
-        "fixed inset-0 z-[10010] flex justify-end pointer-events-none",
+        "fixed inset-0 z-[10010] flex pointer-events-none",
+        // Anchor: right → right column (panel hugs right edge, full height)
+        //         bottom → bottom row (panel hugs bottom edge, full width)
+        isBottom ? "items-end" : "justify-end",
         open && "pointer-events-auto",
       )}
       aria-hidden={!open}

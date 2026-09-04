@@ -36,15 +36,26 @@ Non-editable trigger field that opens a Menu/Dropdown panel. Shares all visual t
 
 ## States / token groups
 
+### Base (all states)
+
+Border width: `0`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Background | --field-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Label | --field-label |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Leading icon | --field-icon |  | #bababa | rgba(255,255,255,0.30) |
+
 ### default
 
 Border width: `0.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Border | Border/Neutral/Default |  | #5c5c5c | rgba(255,255,255,0.10) |
-| Background | Surface/Neutral/White |  | #ffffff | rgba(255,255,255,0.10) |
-| Right icon | ChevronDown |  | – | – |
+| Border | --field-border |  | #5c5c5c | rgba(255,255,255,0.10) |
+| Border hover | --color-border-neutral-black |  | #000000 | rgba(255,255,255,0.30) |
+| Right icon (reused) | --field-icon |  | #bababa | rgba(255,255,255,0.30) |
+| Placeholder text | --field-placeholder |  | #bababa | rgba(255,255,255,0.30) |
 
 ### selected
 
@@ -52,8 +63,9 @@ Border width: `1px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Border | Border/Primary/Default |  | #2173ff | #2b7fff |
-| Right icon | X (clear) |  | – | – |
+| Border | --field-border-focus |  | #2173ff | #2b7fff |
+| Right icon (reused) | --field-border-focus |  | #2173ff | #2b7fff |
+| Value text | --field-text |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ### open
 
@@ -61,8 +73,8 @@ Border width: `1px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Border | Border/Primary/Default |  | #2173ff | #2b7fff |
-| Right icon | ChevronUp |  | – | – |
+| Border (reused) | --field-border-focus |  | #2173ff | #2b7fff |
+| Right icon (reused) | --field-border-focus |  | #2173ff | #2b7fff |
 
 ### error
 
@@ -70,9 +82,9 @@ Border width: `0.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Border | Border/Error/Default |  | #d32f2f | #fb2c36 |
-| Right icon | CircleAlert |  | – | – |
-| Supporting | Text/Error |  | #5f2120 | #ff6467 |
+| Border | --field-border-error |  | #d32f2f | #fb2c36 |
+| Right icon (reused) | --field-text-error |  | #5f2120 | #ff6467 |
+| Supporting text | --field-text-error |  | #5f2120 | #ff6467 |
 
 ### disabled
 
@@ -80,8 +92,8 @@ Border width: `1px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| All text + icons | Text/Disabled |  | #bababa | rgba(255,255,255,0.30) |
-| Opacity | – |  | 40% | 40% |
+| Label (reused) | --field-placeholder |  | #bababa | rgba(255,255,255,0.30) |
+| Opacity | — |  | 40% | 40% |
 
 ---
 

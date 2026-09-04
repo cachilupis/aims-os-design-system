@@ -40,11 +40,11 @@ CSS prefix: `--btn-primary`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Border/Primary/Default | — | #2173ff | #2b7fff |
-| Text | Text/White | — | #ffffff | #ffffff |
-| Background hover | — | — | #002f80 | #002f80 |
-| Background active | — | — | #001a5c | #001a5c |
-| Focus ring | Border/Primary/Default | — | #2173ff | #2b7fff |
+| Background | --btn-primary-bg | — | #2173ff | #2b7fff |
+| Text | — | — | #ffffff | #ffffff |
+| Background hover | --btn-primary-hover-bg | — | #002f80 | #002f80 |
+| Background active | --btn-primary-active-bg | — | #001a5c | #001a5c |
+| Focus ring | --btn-primary-ring | — | #2173ff | #2b7fff |
 
 ### Secondary
 
@@ -54,14 +54,17 @@ CSS prefix: `--btn-secondary`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/White | — | #ffffff | rgba(255,255,255,0.1) |
-| Border | Border/Neutral/Default | — | #5c5c5c | rgba(255,255,255,0.1) |
-| Text | Text/Label | — | #2a2a2a | rgba(255,255,255,0.6) |
-| Background hover | Surface/Neutral/Default | — | #f2f2f2 | rgba(255,255,255,0.08) |
-| Border hover | Surface/Neutral/Emphasis | — | #d9d9d9 | rgba(255,255,255,0.2) |
-| Border focus | Border/Neutral/Lighter | — | #bababa | rgba(255,255,255,0.15) |
-| Background disabled | Surface/Neutral/Subtle | — | #fafafa | rgba(255,255,255,0.05) |
-| Text disabled | Text/Disabled | — | #bababa | rgba(255,255,255,0.3) |
+| Background | --btn-secondary-bg | — | #ffffff | rgba(255,255,255,0.1) |
+| Border | --btn-secondary-border | — | #5c5c5c | rgba(255,255,255,0.1) |
+| Text | --btn-secondary-fg | — | #2a2a2a | rgba(255,255,255,0.8) |
+| Background hover | --btn-secondary-hover-bg | — | #f2f2f2 | rgba(255,255,255,0.08) |
+| Border hover | --btn-secondary-hover-bd | — | #d9d9d9 | rgba(255,255,255,0.2) |
+| Border focus | --btn-secondary-focus-bd | — | #bababa | rgba(255,255,255,0.15) |
+| Background active | --btn-secondary-active-bg | — | rgba(0,0,0,0.078) | rgba(255,255,255,0.2) |
+| Focus ring | --btn-secondary-ring | — | rgba(0,0,0,0.15) | rgba(255,255,255,0.25) |
+| Background disabled | --btn-secondary-disabled-bg | — | #fafafa | rgba(255,255,255,0.05) |
+| Border disabled | --btn-secondary-disabled-bd | — | #bababa | rgba(255,255,255,0.15) |
+| Text disabled | --btn-secondary-disabled-fg | — | #bababa | rgba(255,255,255,0.3) |
 
 ### Tertiary
 
@@ -72,9 +75,11 @@ CSS prefix: `--btn-tertiary`
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
 | Background | — | — | transparent | transparent |
-| Text | Text/Label | — | #2a2a2a | rgba(255,255,255,0.6) |
-| Background hover | Surface/Neutral/Subtle | — | #fafafa | rgba(255,255,255,0.05) |
-| Background focus | Surface/Neutral/Default | — | #f2f2f2 | rgba(255,255,255,0.08) |
+| Text | --btn-tertiary-fg | — | #2a2a2a | rgba(255,255,255,0.8) |
+| Background hover | --btn-tertiary-hover-bg | — | #fafafa | rgba(255,255,255,0.05) |
+| Background focus | --btn-tertiary-focus-bg | — | #f2f2f2 | rgba(255,255,255,0.08) |
+| Background active | --btn-tertiary-active-bg | — | #ebebeb | rgba(255,255,255,0.149) |
+| Focus ring (reused from Secondary) | --btn-secondary-ring | — | rgba(0,0,0,0.15) | rgba(255,255,255,0.25) |
 
 ### Warning
 
@@ -84,11 +89,11 @@ CSS prefix: `--btn-warning`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Color/Destructive | — | #d32f2f | #e05252 |
-| Text | Text/White | — | #ffffff | #ffffff |
-| Background hover | — | — | #b91c1c | #ff6467 |
-| Background active | — | — | #991b1b | #c03030 |
-| Focus ring | Color/Destructive | — | #d32f2f | #e05252 |
+| Background | --btn-warning-bg | — | #d32f2f | #e05252 |
+| Text | — | — | #ffffff | #ffffff |
+| Background hover | --btn-warning-hover-bg | — | #b91c1c | #ff6467 |
+| Background active | --btn-warning-active-bg | — | #991b1b | #c03030 |
+| Focus ring | --btn-warning-ring | — | #d32f2f | #e05252 |
 
 ### Positive
 
@@ -98,15 +103,15 @@ CSS prefix: `--btn-positive`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Border/Success/Default | — | #00a07e | #00a07e |
-| Text | Text/White | — | #ffffff | #ffffff |
-| Background hover | — | — | #003328 | #003328 |
-| Background active | — | — | #001f18 | #001f18 |
-| Focus ring | Border/Success/Default | — | #00a07e | #00a07e |
+| Background | --btn-positive-bg | — | #00a07e | #00a07e |
+| Text | — | — | #ffffff | #ffffff |
+| Background hover | --btn-positive-hover-bg | — | #003328 | #003328 |
+| Background active | --btn-positive-active-bg | — | #001f18 | #001f18 |
+| Focus ring | --btn-positive-ring | — | #00a07e | #00a07e |
 
 ### Main Action
 
-High-conversion hero CTA. Used once per screen at the point of maximum attention.
+High-conversion hero CTA. Used once per screen at the point of maximum attention. Gradient stops and hover shadow are intentionally hardcoded in the component — CSS vars can't be interpolated inside Tailwind arbitrary gradient strings — only the resting shadow and focus ring are real tokens.
 
 CSS prefix: `gradient (hardcoded)`
 
@@ -114,9 +119,9 @@ CSS prefix: `gradient (hardcoded)`
 | --- | --- | --- | --- | --- |
 | Gradient start | — | — | #2173ff | #2173ff |
 | Gradient end | — | — | #09e2ab | #09e2ab |
-| Shadow default | — | — | #09e2ab29 | #09e2ab29 |
-| Shadow hover | — | — | #00c94f59 | #00c94f59 |
-| Focus ring | — | — | #cbfff4 | #cbfff4 |
+| Shadow default | --shadow-glow-ai | — | 4px 8px 12px 8px rgba(9,226,171,0.16) | 4px 8px 12px 8px rgba(9,226,171,0.16) |
+| Shadow hover | — | — | 8px 8px 20px 0px #00c94f59 | 8px 8px 20px 0px #00c94f59 |
+| Focus ring | --btn-main-ring | — | #cbfff4 | #09e2ab |
 | Hover grad start | — | — | #002f80 | #002f80 |
 
 ---

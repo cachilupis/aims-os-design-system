@@ -1,0 +1,15 @@
+# Runs before every push, so DS problems surface here — in your own terminal,
+# inside the session that wrote the code — instead of in a review comment a day
+# later. The same three checks run in CI, so a clean push is a green PR.
+#
+# The ratchet compares against your local origin/main, so `git fetch origin`
+# occasionally keeps the baseline honest. It skips itself rather than blocking
+# when it cannot read the base.
+#
+# To push anyway (a work-in-progress branch you want to share, or a finding you
+# believe is a false positive — say so in the PR description):
+#   git push --no-verify
+
+npx tsc -b --noEmit || exit 1
+npm run audit:tokens || exit 1
+node scripts/audit-ratchet.cjs || exit 1

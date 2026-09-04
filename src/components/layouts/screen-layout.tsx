@@ -99,6 +99,16 @@ export interface ScreenLayoutProps {
   sidebarItems: SidebarItem[]
   /** ID of the active sidebar item */
   activeSidebarId?: string
+  /** Called when a sidebar item is clicked — use to implement inter-screen navigation */
+  onSidebarItemClick?: (id: string) => void
+  /**
+   * Optional pinned footer slot for the Sidebar (bottom edge). Passes
+   * straight through to `<Sidebar footer={...} />` — accepts a ReactNode
+   * or a render function that receives the current `collapsed` state so
+   * callers can render icon-only when collapsed. Common use: user
+   * identity row (avatar + name + role).
+   */
+  sidebarFooter?: React.ReactNode | ((collapsed: boolean) => React.ReactNode)
   /**
    * Header render prop — receives isScrolled (true when content scrollTop > 16px).
    * Use it to switch between Header size="size-l" (default) and size="compress".
@@ -140,6 +150,8 @@ export function ScreenLayout({
   bgVariant = "default",
   sidebarItems,
   activeSidebarId,
+  onSidebarItemClick,
+  sidebarFooter,
   header,
   children,
   pagination,
@@ -173,6 +185,8 @@ export function ScreenLayout({
           items={sidebarItems}
           activeId={activeSidebarId}
           defaultCollapsed={true}
+          onItemClick={onSidebarItemClick}
+          footer={sidebarFooter}
         />
 
         {/* Main column */}

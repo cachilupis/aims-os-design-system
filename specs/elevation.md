@@ -2,7 +2,7 @@
 
 **Figma:** [Design System file](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS)
 
-5-level shadow scale for communicating depth and layer hierarchy. Use only `var(--shadow-elevation-N)` — never hardcode rgba() in box-shadow. Dark mode shadows are proportionally stronger to compensate for the dark canvas.
+5-level shadow scale for communicating depth and layer hierarchy. Use only `var(--shadow-elevation-N)` — never hardcode rgba() in box-shadow. Figma defines these as a single mode-agnostic scale — light and dark share the same values (2026-08 audit: this page previously showed fabricated, different light/dark numbers that didn't match the real tokens).
 
 ## Properties
 
@@ -31,11 +31,11 @@ CSS prefix: `--shadow-elevation-*`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Elevation-1 Micro | --shadow-elevation-1 | Elevation-1 | 0 1px 4px rgba(0,0,0,0.06) | 0 1px 4px rgba(0,0,0,0.16) |
-| Elevation-2 Low | --shadow-elevation-2 | Elevation-2 | 0 2px 8px rgba(0,0,0,0.10) | 0 2px 8px rgba(0,0,0,0.24) |
-| Elevation-3 Mid | --shadow-elevation-3 | Elevation-3 | 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06) | 0 4px 24px rgba(0,0,0,0.32), 0 1px 4px rgba(0,0,0,0.16) |
-| Elevation-4 High | --shadow-elevation-4 | Elevation-4 | 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10) | 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.24) |
-| Elevation-5 Float | --shadow-elevation-5 | Elevation-5 | 8px 8px 16px rgba(0,0,0,0.08) | 8px 8px 24px rgba(0,0,0,0.32) |
+| Elevation-1 Micro | --shadow-elevation-1 | Elevation-1 | 2px 2px 8px 1px rgba(0,0,0,0.06) | 2px 2px 8px 1px rgba(0,0,0,0.06) |
+| Elevation-2 Low | --shadow-elevation-2 | Elevation-2 | 4px 4px 12px 2px rgba(0,0,0,0.08) | 4px 4px 12px 2px rgba(0,0,0,0.08) |
+| Elevation-3 Mid | --shadow-elevation-3 | Elevation-3 | 4px 4px 12px 2px rgba(0,0,0,0.12) | 4px 4px 12px 2px rgba(0,0,0,0.12) |
+| Elevation-4 High | --shadow-elevation-4 | Elevation-4 | 8px 8px 16px 8px rgba(0,0,0,0.08) | 8px 8px 16px 8px rgba(0,0,0,0.08) |
+| Elevation-5 Float | --shadow-elevation-5 | Elevation-5 | 8px 8px 16px 0px rgba(0,0,0,0.08) | 8px 8px 16px 0px rgba(0,0,0,0.08) |
 
 ### Component mapping
 

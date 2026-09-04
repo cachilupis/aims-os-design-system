@@ -28,6 +28,7 @@ On/Off switch with sliding thumb animation. Used for binary settings where the c
 | Element | Family | Size | Weight | Line height |
 | --- | --- | --- | --- | --- |
 | Label | Inter | 14px | Medium (500) | 1.4 |
+| Label (disabled) | Inter | 14px | Medium (500) | 1.4 |
 | Description | Inter | 12px | Regular (400) | 1.5 |
 
 ## States / token groups
@@ -38,9 +39,10 @@ Border width: `2px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Track bg | Surface/Neutral/Subtle |  | rgba(242,242,242,1) | rgba(255,255,255,0.08) |
-| Track border | Border/Neutral/Default |  | #5c5c5c | rgba(255,255,255,0.30) |
-| Thumb | Text/Subtitle |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Track bg | --toggle-track-off |  | rgba(242,242,242,1) | rgba(255,255,255,0.08) |
+| Track border | --toggle-border-off |  | #5c5c5c | rgba(255,255,255,0.30) |
+| Track border hover | --field-border-hover |  | #2a2a2a | rgba(255,255,255,0.2) |
+| Thumb | --toggle-thumb-off |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ### On  · Enabled
 
@@ -48,8 +50,8 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Track bg | Border/Primary/Default |  | #2173ff | #2b7fff |
-| Thumb | Text/White |  | #ffffff | #ffffff |
+| Track bg | --toggle-track-on |  | #2173ff | #2b7fff |
+| Thumb | --toggle-thumb-on |  | #ffffff | #ffffff |
 
 ### Off · Disabled
 
@@ -57,8 +59,9 @@ Border width: `2px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Track border | Border/Neutral/Lighter |  | #bababa | rgba(255,255,255,0.15) |
-| Thumb | Text/Disabled |  | #bababa | rgba(255,255,255,0.20) |
+| Track bg | --toggle-track-off-disabled |  | rgba(242,242,242,1) | rgba(255,255,255,0.05) |
+| Track border | --toggle-border-off-disabled |  | #bababa | rgba(255,255,255,0.15) |
+| Thumb | --toggle-thumb-disabled |  | #bababa | rgba(255,255,255,0.20) |
 
 ### On  · Disabled
 
@@ -66,8 +69,8 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Track bg | Primary/200 |  | #80afff | rgba(43,127,255,0.40) |
-| Thumb | Text/White |  | #ffffff | #ffffff |
+| Track bg | --toggle-track-on-disabled |  | #80afff | rgba(43,127,255,0.40) |
+| Thumb (reused) | --toggle-thumb-on |  | #ffffff | #ffffff |
 
 ---
 

@@ -7,7 +7,12 @@ import PMLexHTLWorkQueueScreen    from "./screens/pm-lex-htl-work-queue"
 import PMHomeCanvasScreen         from "./screens/pm-home-canvas"
 import PMMichaelAttentionRoomScreen from "./screens/pm-michael-attention-room"
 import PMMichaelLoginScreen         from "./screens/pm-michael-login"
-import PMThomasUniversalProfileScreen from "./screens/pm-thomas-universal-profile"
+import PMThomasUniversalProfileScreen  from "./screens/pm-thomas-universal-profile"
+import PMThomasDashboardListScreen     from "./screens/pm-thomas-dashboard-list"
+import PMThomasWidgetLibraryScreen     from "./screens/pm-thomas-widget-library"
+import PMThomasWidgetMarketplaceScreen from "./screens/pm-thomas-widget-marketplace"
+import PMThomasNewDashboardScreen      from "./screens/pm-thomas-new-dashboard"
+import PMThomasWidgetBuilderScreen     from "./screens/pm-thomas-widget-builder"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AvatarCircle, AVATAR_SIZE_SPECS, AVATAR_COLOR_KEYS, type AvatarSizeKey, type AvatarColorKey } from "@/components/ui/avatar"
@@ -49,6 +54,8 @@ import { InformativeCard, type InformativeCardState, type InformativeCardSize } 
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
 import { AlertBanner, type AlertBannerState } from "@/components/ui/alert-banner"
+import { ToastProvider, useToast } from "@/components/ui/toast"
+import { DsHealthPage } from "@/components/ds-health-page"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -76,11 +83,17 @@ import { FormsCreatePageExampleScreen }       from "./screens/forms-create-page-
 import { SlideOutDetailExampleScreen }        from "./screens/slideout-detail-example"
 import { SlideOutFormExampleScreen }          from "./screens/slideout-form-example"
 import { SidePanelExampleScreen }             from "./screens/sidepanel-example"
+import { ChatWorkflowConfigScreen }           from "./screens/chat-workflow-config"
+import { WorkflowsListScreen }               from "./screens/workflows-list"
+import { PeopleAccessMembersScreen }         from "./screens/PeopleAccessMembers"
+import { AdminConsoleScreen }           from "./screens/AdminConsole"
+import PMChatWidgetScreen               from "./screens/pm-chat-widget"
+import VoiceChannelScreen               from "./screens/voice-channel"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "ds-health" | "process-item" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SpecModal = "process-item" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -141,12 +154,24 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-lex-htl-work-queue",    label: "HTL Work Queue",                description: "Human Touch Layer Work Queue — Act Now / Critical / Action / Heads-up severity tiers, multi-studio filter, event detail SlideOut with blast radius, Studio Health overview, activity log", author: "Lex", component: PMLexHTLWorkQueueScreen },
   { id: "proto-michael-attention-room",label: "Attention Room",                description: "Master-detail attention queue — Overdue/Today/Next groups, Approvals/Work/Tasks/Messages filter, search, EntityList queue (left) + decision detail panel (right) with blast radius, comment composer and Approve/Decline actions", author: "Michael", component: PMMichaelAttentionRoomScreen },
   { id: "proto-michael-login",         label: "Login View",                    description: "Sign-in screen — email/password with inline validation and show/hide toggle, Google one-click sign-in, Remember me, Forgot password SlideOut, and a signed-in confirmation state for both auth paths", author: "Michael", component: PMMichaelLoginScreen },
-  { id: "proto-thomas-universal-profile", label: "Universal Profile — Thomas", description: "Unified entity profile (Person, Employee, Company) aggregating Governance, Risk, and Connections studies — Overview canvas with adaptive study widgets (hidden when empty, error+retry when failed), Activity feed (last 20), paginated Logs, Edit + Export for all types, Archive for Person/Employee only", author: "Thomas", component: PMThomasUniversalProfileScreen },
+  { id: "proto-thomas-dashboard-list",     label: "Dashboard List — Thomas",      description: "Dashboard catalog — filterable by status, entity type, and owner; staggered card grid with per-card ⋯ menu (Open/Edit/Duplicate/Delete); detail SlideOut; Delete confirm modal; Duplicate with rename; load-more pagination", author: "Thomas", component: PMThomasDashboardListScreen },
+  { id: "proto-thomas-widget-library",    label: "Widget Library — Thomas",      description: "Widget catalog — filterable by category, profile type, skeleton type, freshness; grid with WidgetGlyph + mini preview + freshness badge + health badge; detail SlideOut; Delete modal with cascade warning", author: "Thomas", component: PMThomasWidgetLibraryScreen },
+  { id: "proto-thomas-widget-marketplace",label: "Widget Marketplace — Thomas",  description: "Two-panel marketplace: left CategoryRail with business-function color dots, right FilterToolbar + widget card grid with category stripe, MiniPreview, View/Use actions, detail SlideOut, and Add-to-dashboard modal.", author: "Thomas", component: PMThomasWidgetMarketplaceScreen },
+  { id: "proto-thomas-new-dashboard",     label: "New Dashboard — Thomas",       description: "Two-step wizard for creating a dashboard: Step 0 placement form (kind, profile type, surface, audience, name) + destination summary; Step 1 start-point picker (blank canvas or pre-built template). DS-GAP components: StepIndicator, SectionChip, OptionCard, FormSection, FieldLabel.", author: "Thomas", component: PMThomasNewDashboardScreen },
+  { id: "proto-thomas-widget-builder",    label: "Widget Builder — Thomas",      description: "Three-tab builder (Data → Widget → Appearance) with sticky live preview. Data tab: entity source picker (8 sources), operation chips (Aggregate / Record set), calc + column or exposed columns. Widget tab: 12-type gallery, name/description/freshness/filter settings. Appearance tab: accent color swatches + style variants. DS-GAP: AccentColorPalette, BuilderTabNav, EntitySourceCard, TypeTile, SkeletonShape, WidgetPreviewPanel.", author: "Thomas", component: PMThomasWidgetBuilderScreen },
+  { id: "proto-thomas-universal-profile", label: "Universal Profile — Thomas",   description: "Unified entity profile (Person, Employee, Company) aggregating Governance, Risk, and Connections studies — Overview canvas with adaptive study widgets (hidden when empty, error+retry when failed), Activity feed (last 20), paginated Logs, Edit + Export for all types, Archive for Person/Employee only", author: "Thomas", component: PMThomasUniversalProfileScreen },
+  { id: "proto-chat-workflow-config",     label: "Chat Workflow Config",         description: "Conversational governance gates — 4-stage sequence (Intent → Classification → Data Sources → Systems) producing a governed workflow draft with node-vocabulary enforcement, SVG canvas view, and instrumentation panel", author: "Thomas", component: ChatWorkflowConfigScreen },
+  { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", component: WorkflowsListScreen },
+  { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", component: PeopleAccessMembersScreen },
+  { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", component: AdminConsoleScreen },
+  { id: "pm-chat-widget",              label: "Chat Widget Manager",          description: "Chat widget manager — widget list (Active/Draft/Inactive), detail view with 5 tabs (Overview, Appearance, Agentic Network, Preferences, Embed), browse-all modal with replacement warning, deploy flow with progress steps, bell notification panel", author: "Thomas", component: PMChatWidgetScreen },
+  { id: "proto-voice-channel",         label: "Voice Channel",                description: "Faithful port of aims-voice-prototype: Numbers table (Agents · Distribution · HiL · Cost MTD) + Call History with Call Detail (Transcript / AI Summary / Metrics) + Workspace Voice Defaults + per-number sheet with 4 sub-tabs (Overview / Agents & Routing incl. HiL config / Business Hours / Call History) + Acquire Number 4-step wizard + Release confirmation with last-4-digit input + multi-select Add Agent modal. Only the visual layer is DS-native; every screen, flow, and mock data value is preserved from the source prototype.", author: "Thomas", component: VoiceChannelScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: string }[] = [
+  { id: "ds-health",       label: "DS Health",          group: "Overview",    description: "Consistency inventory — every place a screen rebuilds something the DS already covers, and what we decided about each one. Generated from the same audit that runs in CI and before every push." },
   { id: "home",            label: "DS Strategy",        group: "Overview",    description: "Alignment doc: why a component repository is the foundation for consistent AI prototypes" },
   // Components — alphabetical by label
   // Components — keep sorted A→Z by label so new entries stay predictable in the sidebar
@@ -171,6 +196,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "notification-center", label: "Notification Center", group: "Components", description: "420px floating panel · header with count + Mark all read + overflow · filter chips · date-grouped Notification Item list · footer View all · 5 states: Default, Empty, Loading, Error, Offline" },
   { id: "notification-item",   label: "Notification Item",   group: "Components", description: "Single-row notification · lead icon + title/timestamp + description + tags/actions · unread indicator dot · 5 states × Read/Unread: Default, Hover, Pressed, Focus, Disabled" },
   { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
+  { id: "process-item",    label: "Process Item",      group: "Components",  description: "One step of a running process, with its state · 5 statuses (done/loading/error/pending/warning) · number-badge and expand variants · ProcessList wrapper adds the title, View all CTA, and empty/loading states" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
   { id: "record-header",   label: "Record Header",     group: "Components",  description: "Governed entity card for Work Surfaces (UEP/UCP/UVP) · identity (truncates, never breaks layout) · expandable Agentic System / Your Intervention / Record zones · every field carries an origin-system badge and reachable provenance · one shared skeleton across all 3 variants" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
@@ -187,6 +213,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · inside card or standalone · active indicator · icon · 2 sizes (M/S) · disabled state · use for in-context view switching, not page navigation" },
   { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
   { id: "textarea",        label: "Text Description",  group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
+  { id: "toast",           label: "Toast",             group: "Components",  description: "Transient confirmation feedback · 3 states (Success · Info · Error) · portals bottom-right · auto-dismiss 3500ms · imperative useToast() API · z-index 10050." },
   { id: "toggle",          label: "Toggle",            group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
   { id: "tooltip",         label: "Tooltip",           group: "Components",  description: "Informational overlay on hover/focus · always dark · plain or arrow variant · 4 sides · max 300px width · 2 lines max" },
   { id: "topbar",          label: "Topbar",            group: "Components",  description: "App header · global navigation bar · 2 variants (Default/Tablet) · workspace selector, search, action buttons, profile avatar" },
@@ -547,7 +574,7 @@ const CARD_SPEC = {
   name: "Card Container",
   figmaNodeId: "5388:23473",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5388-23473",
-  description: "Semantic container for grouping related content. 11 color styles communicate intent at a glance — neutral, primary, status, or categorical. Use S for compact metadata, M for general content, L for featured sections.",
+  description: "Semantic container for grouping related content — the DS default for any bordered, filled box. If a screen needs a container with a border and a background, this is it, never a hand-rolled div. 11 colour styles communicate intent at a glance, but Default is the right answer in the overwhelming majority of cases; reach for a colour only when the design genuinely calls for one. S for compact items — entity rows, selectable cards, and items with a CTA inside a SlideOut or Modal. M for general content, L for featured sections. Nothing visual that is not part of the component belongs inside it: no accent stripes, no coloured top borders, no dividers bolted on. EmptyState renders inside the dashed variant.",
   properties: [
     { name: "Style",    type: "Variant",  values: ["Default","White Opacity","Primary","Green","Reed","Orange","Yellow","Purple","Light Blue","Lime Green","Dashed"], default: "Default" },
     { name: "Size",     type: "Variant",  values: ["S","M","L"], default: "M" },
@@ -1001,7 +1028,7 @@ const MENU_SPEC = {
   name: "Menu / Dropdown",
   figmaNodeId: "4762:7152",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4762-7152",
-  description: "Floating list of selectable options. Used inside dropdowns, context menus, command palettes, and select fields. Supports icons, subtext, dividers, and section headers.",
+  description: "Floating list of selectable options. Used inside dropdowns, context menus, command palettes, and select fields. Supports icons, subtext, dividers, and section headers. Placement is not the caller's decision: the panel's left edge aligns with its trigger's left edge, 4px below, flipping to right-aligned only when it would cross the viewport edge — use src/lib/dropdown-anchor.ts, never centre it on the trigger and never open it away from the element that was clicked. In the 3-dot kebab menu, always the icon + text variant at size S.",
   properties: [
     { name: "State",          type: "Variant",  values: ["Default","Hover","Focus","Disabled","Skeleton"], default: "Default" },
     { name: "Size",           type: "Variant",  values: ["M","S"],                                         default: "M", note: "M/S: height auto (py-8px) · 40px single-line · 56px with subtext" },
@@ -1807,22 +1834,25 @@ const HEADER_SPEC = {
   name: "Header",
   figmaNodeId: "7995:4268",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7995-4268",
-  description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — only title + CTAs visible).",
+  description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + tag + CTAs, plus the breadcrumb row above the title when one is set; the breadcrumb and tag both survive compress so scrolling never costs you your place or the record's status).",
   properties: [
     { name: "title",           type: "string",  values: ["any string"],                                                                       default: "—",             note: "Required. Always visible in all sizes." },
     { name: "size",            type: "Variant", values: ["size-l", "size-m", "compress"],                                                     default: "size-l" },
     { name: "description",     type: "string",  values: ["any string"],                                                                       default: "undefined",     note: "Hidden in compress." },
-    { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after title. Hidden in compress." },
-    { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. Hidden in compress. Use only in drill-down pages." },
+    { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after the title. Survives compress — a detail page's status is exactly what you still want to see once you have scrolled." },
+    { name: "breadcrumb",      type: "node",    values: ["<Breadcrumb />"],                                                                   default: "undefined",     note: "Trail above the title. From L2 onwards this is how a page states where it sits: parent plus current page (Workers › Meridian), not the whole path. Survives compress. Never combine with backButton — at L2 the first crumb IS the way back." },
+    { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. The ONLY prop that controls back-button visibility. Hidden in compress unless showBackInCompress is also true. Use only in drill-down pages." },
+    { name: "onBack",          type: "function", values: ["() => void"],                                                                      default: "undefined",     note: "Click handler for the back button. Never affects visibility — use backButton for that." },
+    { name: "showBackInCompress", type: "Boolean", values: ["true", "false"],                                                                 default: "false",         note: "Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user." },
     { name: "icon",            type: "node",    values: ["LucideIcon"],                                                                       default: "undefined",     note: "Rendered inside a HighlightIcon (sm). Hidden in compress." },
     { name: "iconVariant",     type: "Variant", values: ["informative","success","alert","error","neutral","yellow","lime","purple","light-blue"], default: "informative", note: "HighlightIcon color variant. Only applies when icon is set." },
-    { name: "primaryAction",   type: "node",    values: ["<Button variant=\"main\" size=\"sm\" />"],                                          default: "undefined" },
-    { name: "secondaryAction", type: "node",    values: ["<Button variant=\"secondary\" size=\"sm\" />"],                                     default: "undefined" },
+    { name: "primaryAction",   type: "HeaderAction", values: ["{ label, icon?, onClick?, disabled?, priority? }"],                            default: "undefined",     note: "An action object, not JSX — Header picks the Button variant so no screen names one. Defaults to priority \"primary\" (variant=\"main\")." },
+    { name: "secondaryAction", type: "HeaderAction", values: ["{ label, icon?, onClick?, disabled?, priority? }"],                            default: "undefined",     note: "Same shape, rendered before primary. Defaults to priority \"secondary\". Two actions is the maximum — a third belongs in an overflow menu." },
   ],
   sizes: [
     { size: "Size L",   padding: "12px 24px", titleSize: "24px", height: "auto (~48px)", notes: "Default. Full slots visible." },
     { size: "Size M",   padding: "10px 24px", titleSize: "18px", height: "auto (~38px)", notes: "Compact. Full slots visible." },
-    { size: "Compress", padding: "8px 24px",  titleSize: "18px", height: "60px (fixed)", notes: "Scroll state. Only title + CTAs." },
+    { size: "Compress", padding: "8px 24px",  titleSize: "18px", height: "auto — ~48px, ~62px with a breadcrumb", notes: "Scroll state. Title + tag + CTAs, plus the breadcrumb row when one is set. Height is content-driven, not fixed." },
   ],
   typography: [
     { element: "Title — Size L",          family: "Inter", size: "24px", weight: "600 SemiBold", lineHeight: "tight (1.2)" },
@@ -2275,9 +2305,9 @@ const ALERT_BANNER_SPEC = {
   name: "Alert Banner",
   figmaNodeId: "119:5867",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=119-5867",
-  description: "Full-width contextual notice for system-level feedback. 3 semantic states — Error, Success, Alert — with optional CTA text button and dismiss (×) button.",
+  description: "Contextual notice for system-level feedback. 4 semantic states — Error, Success, Alert, Info — with optional CTA text button and dismiss (×) button.",
   properties: [
-    { name: "state",       type: "Variant", values: ["error","success","alert"],            default: "error",     note: "Sets background, icon, and text tokens" },
+    { name: "state",       type: "Variant", values: ["error","success","alert","info"],     default: "error",     note: "Sets background, icon, and text tokens" },
     { name: "title",       type: "Prop",    values: ["string"],                             default: "required",  note: "14px SemiBold — always required" },
     { name: "description", type: "Prop",    values: ["string","undefined"],                 default: "undefined", note: "14px Medium, same state color as title" },
     { name: "cta",         type: "Prop",    values: ["string","undefined"],                 default: "undefined", note: "CTA button label — shown when provided" },
@@ -2336,6 +2366,69 @@ const ALERT_BANNER_SPEC = {
       cssPrefix: "--ab-cta-*",
       tokens: [
         { role: "Text",       variable: "--ab-cta-text",  light: "rgba(0,0,0,0.55)",      dark: "rgba(255,255,255,0.60)" },
+      ],
+    },
+  ],
+}
+
+const TOAST_SPEC = {
+  name: "Toast (floating AlertBanner)",
+  figmaNodeId: "—",
+  figmaUrl: "",
+  description: "Not a separate component — a placement layer over AlertBanner. Each tile is a real &lt;AlertBanner&gt;, portalled to &lt;body&gt;, floated top-right with a 24px inset, auto-dismissed after 3500ms. One feedback language, two placements: in flow when the message should persist, floating when it confirms an action just taken. Stack grows downward, newest last, at z-index 10050 — above SlideOut (10010) and ModalDialog (10020).",
+  properties: [
+    { name: "ToastProvider",      type: "Component", values: ["wraps a subtree"],                   default: "required", note: "Renders the portal stack; descendants can call useToast()" },
+    { name: "useToast()",         type: "Hook",      values: ["{ success, info, error, dismiss }"], default: "—",        note: "Imperative push handlers; no-op fallback outside a provider" },
+    { name: "success/info/error", type: "Method",    values: ["(title, options?) => void"],         default: "—",        note: "Push a toast of that variant" },
+    { name: "dismiss",            type: "Method",    values: ["(id: number) => void"],              default: "—",        note: "Remove a specific toast before it auto-dismisses" },
+    { name: "variant",            type: "Variant",   values: ["success","info","error"],            default: "—",        note: "Maps 1:1 onto AlertBanner state — no separate visual vocabulary. Sets the icon + left accent stripe" },
+    { name: "duration",           type: "Option",    values: ["number (ms)"],                       default: "3500",     note: "Auto-dismiss delay; pass 0 to persist until dismissed" },
+  ],
+  sizes: [
+    { element: "Tile",          padding: "12×14px", gap: "12px", radius: "10px", note: "min-w 280px · max-w 380px" },
+    { element: "Accent border", padding: "—",       gap: "—",    radius: "—",    note: "4px left border · per-state color" },
+    { element: "Icon",          padding: "—",       gap: "—",    radius: "—",    note: "18px · state-colored" },
+    { element: "Close button",  padding: "—",       gap: "—",    radius: "—",    note: "14px × icon · Text/Caption" },
+    { element: "Stack",         padding: "24px",    gap: "8px",  radius: "—",    note: "Fixed bottom-right · grows upward · z-index 10050" },
+  ],
+  typography: [
+    { element: "Message", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.43" },
+  ],
+  variants: [
+    {
+      name: "Success",
+      description: "Completed saves · confirmed non-blocking actions (CheckCircle2 icon)",
+      cssPrefix: "--color-text-success",
+      tokens: [
+        { role: "Accent + Icon", variable: "--color-text-success", light: "#003328", dark: "#6ee7b7" },
+      ],
+    },
+    {
+      name: "Info",
+      description: "Neutral status · background progress · undo affordance (Info icon)",
+      cssPrefix: "--primary",
+      tokens: [
+        { role: "Accent + Icon", variable: "--primary", light: "#2b7fff", dark: "#2173ff" },
+      ],
+    },
+    {
+      name: "Error",
+      description: "Non-blocking failure feedback (XCircle icon) — errors needing a decision use Modal instead",
+      cssPrefix: "--color-text-error",
+      tokens: [
+        { role: "Accent + Icon", variable: "--color-text-error", light: "#5f2120", dark: "#ff6467" },
+      ],
+    },
+    {
+      name: "Shared chrome",
+      description: "Surface, border, message and elevation shared across all 3 states",
+      cssPrefix: "tile",
+      tokens: [
+        { role: "Background", variable: "--color-surface-neutral-white",  light: "#FFFFFF", dark: "#FFFFFF"                },
+        { role: "Border",     variable: "--color-border-neutral-default", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+        { role: "Message",    variable: "--color-text-title",             light: "#000000", dark: "rgba(255,255,255,0.80)" },
+        { role: "Close",      variable: "--color-text-caption",           light: "#5c5c5c", dark: "rgba(255,255,255,0.50)" },
+        { role: "Elevation",  variable: "--shadow-elevation-3",           light: "4px 4px 12px 2px rgba(0,0,0,0.12)", dark: "4px 4px 12px 2px rgba(0,0,0,0.12)" },
       ],
     },
   ],
@@ -2879,7 +2972,7 @@ const TABS_SPEC = {
   name: "Tabs",
   figmaNodeId: "856:11281",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=856-11281",
-  description: "Horizontal tab bar for switching between related views within the same context. Sits directly on any surface — no CardContainer needed. Active state: primary-blue 2px indicator + label. Supports leading icon, disabled state, and two sizes (M/S).",
+  description: "Primary navigation inside a screen — answers \"where am I?\". Horizontal bar with a 2px indicator under the active tab only. It manages its own indicator, so never add a borderBottom to the wrapper: that draws a line under ALL tabs, which the DS spec forbids. Sits directly on the surface, no CardContainer needed. Top of the navigation hierarchy — when a second level is needed below it, that is SwitchTab. Size M only on L screens; S everywhere else, to save space and stay consistent.",
   properties: [
     { name: "items",     type: "Array",    values: ["TabItem[]"],       default: "required",   note: "id · label · icon? · disabled?" },
     { name: "activeId",  type: "String",   values: ["string"],          default: "required",   note: "ID of the currently selected tab" },
@@ -2947,7 +3040,7 @@ const PROGRESS_BAR_SPEC = {
   name: "Progress Bar",
   figmaNodeId: "7091:37109",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7091-37109",
-  description: "Linear determinate loading bar that communicates known progress. Full-width track with a filled indicator that animates as value changes. 7 semantic styles, 2 track sizes, and full ARIA progressbar semantics.",
+  description: "Linear determinate bar for progress that is known and short — a file upload, a \"processing\" step. Also used purely informatively to show how far along something is: inside widgets, or as the visual state of an item in a SlideOut or SidePanel. Not for loading a view (that is Skeleton) and not for work of unknown duration (that is Spinner).",
   properties: [
     { name: "value",     type: "number",           values: ["0–100"],                                                                      default: "required", note: "Current progress percentage. Clamped to [0, 100] automatically." },
     { name: "style",     type: "ProgressBarStyle", values: ["primary", "success", "alert", "error", "yellow", "light-blue", "purple"],     default: "primary",  note: "Determines fill and track colors via Surface/* DS tokens." },
@@ -3000,7 +3093,7 @@ const SWITCH_TAB_SPEC = {
   name: "Switch Tab",
   figmaNodeId: "4591:349",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4591-349",
-  description: "Segmented tab switcher for top-level navigation within a contained view. White pill container (Elevation-5 shadow) with 2–7 equal-width tab items. Active tab shows a blue tinted fill and SemiBold label; inactive tabs are transparent with a Medium label.",
+  description: "Secondary navigation, one level below Tabs — for when Tabs alone is not enough. White pill container with 2-7 equal-width items. Two placements: in a main list view it sits to the LEFT of Filters (see the Navigation Depth pattern); on a detail page that already has Tabs above, it navigates the content below them when there are fewer than 4 options, so a single view never stacks two rows of Tabs. Not a List/Table view toggle — List View has its own section for that.",
   properties: [
     { name: "items",        type: "SwitchTabItem[]", values: ["{ id, label, icon? }[]"],           default: "required",  note: "Tab definitions. Each item needs a unique id and a label. Icon is optional." },
     { name: "value",        type: "string",          values: ["string"],                            default: "—",         note: "Controlled active tab id. Pair with onChange." },
@@ -3214,6 +3307,7 @@ const SLIDE_OUT_SPEC = {
 // ── Unified Spec Panel ─────────────────────────────────────────────────────
 
 function getSpec(id: NonNullable<SpecModal>): AnySpec {
+  if (id === "process-item")     return PROCESS_ITEM_SPEC     as AnySpec
   if (id === "breadcrumb")       return BREADCRUMB_SPEC       as AnySpec
   if (id === "button")           return BUTTON_SPEC           as AnySpec
   if (id === "input")            return INPUT_SPEC            as AnySpec
@@ -3233,6 +3327,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "topbar")           return TOPBAR_SPEC           as AnySpec
   if (id === "sidebar")          return SIDEBAR_SPEC          as AnySpec
   if (id === "alert-banner")     return ALERT_BANNER_SPEC     as AnySpec
+  if (id === "toast")            return TOAST_SPEC            as AnySpec
   if (id === "app-background")   return APP_BACKGROUND_SPEC   as AnySpec
   if (id === "entity-list")      return ENTITY_LIST_SPEC      as AnySpec
   if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
@@ -7706,6 +7801,48 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 // the real @/components/ui/avatar atom (imported above) — this section is
 // just the doc/playground page below.
 
+// ── ToastPage ────────────────────────────────────────────────────────────────
+
+function ToastDemo() {
+  const toast = useToast()
+  return (
+    <div className="flex flex-wrap gap-[8px]">
+      <Button variant="secondary" size="sm" onClick={() => toast.success("Changes saved successfully")}>Success toast</Button>
+      <Button variant="secondary" size="sm" onClick={() => toast.info("Export started — running in the background")}>Info toast</Button>
+      <Button variant="secondary" size="sm" onClick={() => toast.error("Couldn't reach the server — changes not saved")}>Error toast</Button>
+      <Button variant="tertiary" size="sm" onClick={() => { toast.success("Saved"); toast.info("Syncing…"); toast.error("Retrying…") }}>Push all three</Button>
+    </div>
+  )
+}
+
+function ToastPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  return (
+    <ToastProvider>
+      <div>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+          <div>
+            <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Toast (floating AlertBanner)</h1>
+            <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
+              Not a second component — a placement layer. Each tile is a real <strong>AlertBanner</strong>, floated top-right, auto-dismissed after 3500ms. One feedback language, two placements: in flow when it should persist, floating when it confirms an action just taken.
+            </p>
+          </div>
+          <SpecButton onClick={() => openSpec("toast")} />
+        </div>
+
+        {/* Live states */}
+        <section className="flex flex-col gap-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Live states — click to push one (top-right)</p>
+          <ToastDemo />
+          <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5] max-w-[560px]">
+            Auto-dismisses after 3500ms, or click × to dismiss early. Pass <code>duration: 0</code> to keep one until dismissed, and <code>cta</code> for an inline action such as Undo or Retry. The stack sits top-right above SlideOut and ModalDialog (z-index 10050) and grows downward, newest last.
+          </p>
+        </section>
+      </div>
+    </ToastProvider>
+  )
+}
+
 // ── AlertBannerPage ───────────────────────────────────────────────────────────
 
 function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
@@ -7715,24 +7852,27 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pgDesc, setPgDesc]   = useState(true)
   const [dismissed, setDismissed] = useState(false)
 
-  const STATES: AlertBannerState[] = ["error", "success", "alert"]
+  const STATES: AlertBannerState[] = ["error", "success", "alert", "info"]
 
   const OVERVIEW_ROWS: { state: AlertBannerState; title: string; description: string }[] = [
     { state: "error",   title: "Unable to save changes",       description: "Your session may have expired. Please try again or refresh the page." },
     { state: "success", title: "Changes saved successfully",   description: "All your updates have been applied and are now live." },
     { state: "alert",   title: "Action required before July 8", description: "Your subscription expires soon. Renew now to avoid service interruption." },
+    { state: "info",    title: "Syncing with Salesforce",        description: "Neutral feedback — neither a success nor a problem. Nothing for the user to fix." },
   ]
 
   const pgTitle = {
     error:   "Unable to save changes",
     success: "Changes saved successfully",
     alert:   "Action required before July 8",
+    info:    "Syncing with Salesforce",
   }[pgState]
 
   const pgDescription = {
     error:   "Your session may have expired. Please try again or refresh the page.",
     success: "All your updates have been applied and are now live.",
     alert:   "Your subscription expires soon. Renew now to avoid service interruption.",
+    info:    "Neutral feedback — neither a success nor a problem. Nothing for the user to fix.",
   }[pgState]
 
   return (
@@ -7742,7 +7882,7 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Alert Banner</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
-            Full-width contextual notice for system-level feedback. Three semantic states — Error, Success, Alert — with an optional CTA action and dismiss button.
+            Contextual notice for system-level feedback. Four semantic states — Error, Success, Alert, Info — with an optional CTA action and dismiss button. Two placements: in flow when the message should persist, or floating top-right when it confirms an action just taken (see Toast).
           </p>
         </div>
         <SpecButton onClick={() => openSpec("alert-banner")} />
@@ -7849,7 +7989,7 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   state={pgState}
                   title={pgTitle}
                   description={pgDesc ? pgDescription : undefined}
-                  cta={pgCta ? (pgState === "success" ? "Review" : pgState === "error" ? "Retry" : "Renew") : undefined}
+                  cta={pgCta ? ({ success: "Review", error: "Retry", alert: "Renew", info: "View log" }[pgState]) : undefined}
                   onCta={() => {}}
                   onClose={() => setDismissed(true)}
                 />
@@ -10883,12 +11023,8 @@ function PatternListViewPage() {
                       title="AI Workers"
                       description="Manage and monitor your AI workers across all categories."
                       tag={<Tag variant="success" size="sm">24 Active</Tag>}
-                      primaryAction={
-                        <Button variant="main" size="sm">
-                          <LucideIcons.Plus size={13} /> New Worker
-                        </Button>
-                      }
-                      secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                      primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                      secondaryAction={{ label: "Export" }}
                       style={{ transition: "padding 200ms ease-in-out" }}
                     />
 
@@ -11432,12 +11568,8 @@ function PatternFilterPage() {
                         title="AI Workers"
                         description="Manage and monitor your AI workers across all categories."
                         tag={<Tag variant="success" size="sm">24 Published</Tag>}
-                        primaryAction={
-                          <Button variant="main" size="sm">
-                            <LucideIcons.Plus size={13} /> New Worker
-                          </Button>
-                        }
-                        secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                        primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                        secondaryAction={{ label: "Export" }}
                         style={{ transition: "padding 200ms ease-in-out" }}
                       />
 
@@ -12228,12 +12360,8 @@ function PatternHeaderPage() {
                         title="AI Workers"
                         description="Manage and monitor your AI workers across all categories."
                         tag={<Tag variant="success" size="sm">24 Published</Tag>}
-                        primaryAction={
-                          <Button variant="main" size="sm">
-                            <LucideIcons.Plus size={13} /> New Worker
-                          </Button>
-                        }
-                        secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                        primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                        secondaryAction={{ label: "Export" }}
                         style={{ transition: "padding 200ms ease-in-out" }}
                       />
 
@@ -12737,12 +12865,8 @@ function PatternNavDepthPage() {
                     title="AI Workers"
                     description="Manage and monitor your AI workers across all categories."
                     tag={<Tag variant="success" size="sm">24 Active</Tag>}
-                    primaryAction={
-                      <Button variant="main" size="sm">
-                        <LucideIcons.Plus size={13} /> New Worker
-                      </Button>
-                    }
-                    secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                    primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                    secondaryAction={{ label: "Export" }}
                     style={{ transition: "padding 200ms ease-in-out" }}
                   />
 
@@ -13261,7 +13385,7 @@ function PatternFeedbackPage() {
                     ["Action resulted in error (non-blocking)", "Inline banner", "AlertBanner (Error)"],
                     ["Action succeeded (non-blocking)", "Inline banner", "AlertBanner (Success)"],
                     ["Form field validation failed", "Inline error under field", "Input / Textarea (error state)"],
-                    ["Ephemeral success / info after action", "Toast (when available)", "AlertBanner (auto-dismiss)"],
+                    ["Ephemeral success / info after action", "Transient toast", "Toast (auto-dismiss)"],
                   ].map(([sit, pat, comp]) => (
                     <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
                       <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
@@ -13373,19 +13497,38 @@ function PatternFeedbackPage() {
 
 PRIORITY_HIERARCHY
   CRITICAL (blocking)     → Modal (ModalDialog)
-  PERSISTENT (contextual) → AlertBanner
   FIELD_VALIDATION        → Inline error under field
-  EPHEMERAL (transient)   → Toast (use AlertBanner until Toast built)
+  EVERYTHING ELSE         → AlertBanner, in one of two placements
+
+ALERT_BANNER — ONE COMPONENT, TWO PLACEMENTS
+  This is the whole decision. Same component, same states, same tokens.
+  What changes is where it sits and how long it lives.
+
+  IN FLOW    <AlertBanner … />
+    persistent · occupies layout · user dismisses it
+    for: a state of the page or section that stays true until something changes
+    e.g. "Salesforce sync failed", "10 members have not enrolled in MFA"
+
+  FLOATING   useToast().success(…)   ← the "toast"
+    transient · top-right, 24px inset · auto-dismisses after 3500ms
+    for: confirming an action the user just took
+    e.g. "Changes saved", "Export queued", "Invitation sent"
+
+  the test: would this still be worth showing in 10 minutes?
+    yes → in flow     no → floating
 
 ALERT_BANNER_USAGE
-  state=informative → general info, tips, non-critical system notices
-  state=success     → action completed successfully
-  state=alert       → warning requiring attention (not yet critical)
-  state=error       → action failed OR error threshold reached
+  state=success → action completed successfully
+  state=error   → action failed OR error threshold reached
+  state=alert   → warning requiring attention (not yet critical)
+  state=info    → neutral feedback, neither success nor problem
+                  e.g. "Syncing…", "Queued", "Will send in 5 minutes"
+                  NOTE: info is a STATE of AlertBanner. InformativeCard is a
+                  different component — do not confuse the two.
 
-  placement rules:
-    page-level   → top of main content area
-    section-level → inside a card or section that caused the event
+  in-flow placement rules:
+    page-level    → top of main content area
+    section-level → inside the card or section that caused the event
     never global for field-level errors
 
 FIELD_ERRORS
@@ -13403,11 +13546,15 @@ STACKING_RULES
   IF multiple events → use most specific/critical message only
   never stack overlapping feedback for the same trigger
 
-TOAST (when available)
-  use for: transient success after non-blocking action
-  auto-dismiss: 3–5 seconds
-  do NOT use for errors that require user action
-  current workaround: AlertBanner with auto-dismiss behavior`} />
+FLOATING ALERT_BANNER ("TOAST")
+  not a separate component — AlertBanner, portalled and positioned
+  use for: confirming an action the user just took
+  states: success · error · info (AlertBanner's own, 1:1)
+  placement: top-right, 24px inset · stack grows downward, newest last
+  auto-dismiss: 3500ms default (pass duration:0 to keep until dismissed)
+  optional cta: for an inline Undo / Retry
+  do NOT use for errors that require a user decision → use Modal
+  do NOT use for a state that stays true → use the in-flow placement`} />
           </PatternCard>
         </div>
       )}
@@ -13802,11 +13949,7 @@ function PatternLogsPage() {
                     title="Logs"
                     description="System events, errors, and execution history across all workers."
                     tag={<Tag variant="neutral" size="sm">{filteredLogs.length} events</Tag>}
-                    primaryAction={
-                      <Button variant="main" size="sm">
-                        <LucideIcons.Download size={13} /> Export
-                      </Button>
-                    }
+                    primaryAction={{ label: "Export", icon: LucideIcons.Download }}
                     style={{ transition: "padding 200ms ease-in-out", flexShrink: 0 }}
                   />
 
@@ -14632,8 +14775,8 @@ function showTip(e: React.MouseEvent, text: string) {
                 title="Dashboard"
                 description="Real-time overview of your AI workforce performance."
                 tag={<Tag variant="success" size="sm">24 Active</Tag>}
-                primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> Add Widget</Button>}
-                secondaryAction={<Button variant="secondary" size="sm">Edit Layout</Button>}
+                primaryAction={{ label: "Add Widget", icon: LucideIcons.Plus }}
+                secondaryAction={{ label: "Edit Layout" }}
                 style={{ transition: "padding 200ms ease-in-out", flexShrink: 0 }}
               />
 
@@ -16040,7 +16183,6 @@ function PatternPanelContentPage() {
   const [showSpecAi, setShowSpecAi]   = useState(false)
   const [showSpecIns, setShowSpecIns] = useState(false)
   const [showSpecLs, setShowSpecLs]   = useState(false)
-  const [showSpecPi, setShowSpecPi]   = useState(false)
   const [showSpecBl, setShowSpecBl]   = useState(false)
   const [showSpecDt, setShowSpecDt]   = useState(false)
   const [showSpecTi, setShowSpecTi]   = useState(false)
@@ -17217,8 +17359,8 @@ function PatternPanelContentPage() {
                 description="Workflow builder — SidePanel playground preview"
                 backButton
                 size="size-l"
-                primaryAction={<Button variant="main" size="sm">Save workflow</Button>}
-                secondaryAction={<Button variant="secondary" size="sm" onClick={() => setGpSidePanelOpen(false)}>Close preview</Button>}
+                primaryAction={{ label: "Save workflow" }}
+                secondaryAction={{ label: "Close preview", onClick: () => setGpSidePanelOpen(false) }}
               />
               <div className="flex flex-1 overflow-hidden">
                 {/* Canvas */}
@@ -18544,165 +18686,7 @@ function PatternPanelContentPage() {
               Shows the step-by-step status of a workflow or pipeline run. Each item represents a single stage with a status icon, title, optional tag, description, timestamp, and an expand slot. Use a vertical connector line between consecutive items.
             </p>
 
-            {/* ── Statuses — Default state ── */}
-            <div className="mb-[16px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>All statuses — Default state</p>
-              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                {([
-                  { status: "done",    title: "Data enrichment",     description: "Fetched from Clearbit — 4 fields added",   timestamp: "2 min ago",  tag: "Completed" },
-                  { status: "loading", title: "AI analysis running",  description: "Scoring customer health signal",            timestamp: "Just now"                        },
-                  { status: "error",   title: "CRM sync failed",      description: "Connection timeout — retrying in 60s",      timestamp: "1 min ago"                       },
-                  { status: "pending", title: "Notification queued",  description: "Waiting for AI step to finish",             timestamp: "Pending"                         },
-                  { status: "warning", title: "Low confidence score", description: "Below threshold — manual review recommended",timestamp: "5 min ago", tag: "Review"     },
-                ] as { status: ProcessStatus; title: string; description: string; timestamp: string; tag?: string }[]).map((item, i, arr) => (
-                  <ProcessItem
-                    key={item.status}
-                    status={item.status}
-                    title={item.title}
-                    description={item.description}
-                    timestamp={item.timestamp}
-                    tag={item.tag}
-                    showLine={i < arr.length - 1}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* ── Selected state ── */}
-            <div className="mb-[16px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Selected state</p>
-              <div className="flex flex-col gap-[4px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                <ProcessItem
-                  status="done"
-                  state="selected"
-                  title="Data enrichment"
-                  description="Fetched from Clearbit — 4 fields added"
-                  timestamp="2 min ago"
-                  tag="Completed"
-                  showLine={false}
-                />
-              </div>
-            </div>
-
-            {/* ── Number badge variant ── */}
-            <div className="mb-[16px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Number badge (step indicator)</p>
-              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                {([
-                  { status: "done" as ProcessStatus,    number: "1", title: "Trigger received",  description: "Health score dropped below 50" },
-                  { status: "done" as ProcessStatus,    number: "2", title: "Playbook executed",  description: "Sent alert to CSM team" },
-                  { status: "loading" as ProcessStatus, number: "3", title: "CRM update",         description: "Writing risk flag to Salesforce" },
-                  { status: "pending" as ProcessStatus, number: "4", title: "Notification",        description: "Queued — waiting for step 3" },
-                ]).map((item, i, arr) => (
-                  <ProcessItem
-                    key={item.number}
-                    status={item.status}
-                    number={item.number}
-                    title={item.title}
-                    description={item.description}
-                    showLine={i < arr.length - 1}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* ── With expand slot ── */}
-            <div className="mb-[20px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>With expand slot</p>
-              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                <ProcessItemExpandDemo />
-              </div>
-            </div>
-
-            {/* ── ProcessList states ── */}
-            <div className="mb-[4px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>ProcessList — all 3 states</p>
-              <div className="grid grid-cols-3 gap-[12px]">
-                {/* Empty */}
-                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>EMPTY</p>
-                  <ProcessList
-                    title="Process"
-                    state="empty"
-                    emptyTitle="No activity yet"
-                    emptyDescription="Steps appear when the workflow runs."
-                  />
-                </div>
-                {/* Loading */}
-                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>LOADING</p>
-                  <ProcessList title="Process" state="loading" />
-                </div>
-                {/* Populated */}
-                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>POPULATED</p>
-                  <ProcessList
-                    title="Process"
-                    state="populated"
-                    onViewAll={() => {}}
-                    items={[
-                      { id: "p1", title: "Data enrichment",  status: "done",    description: "4 fields added", timestamp: "2m ago" },
-                      { id: "p2", title: "AI scoring",        status: "loading", description: "Running…" },
-                      { id: "p3", title: "CRM update",        status: "pending", description: "Waiting" },
-                    ]}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ── Usage rules ── */}
-            <div className="mt-[20px] flex flex-col gap-[12px]">
-              {[
-                { type: "do",   text: "Use showLine=true on all items except the last — the connector visually chains steps." },
-                { type: "do",   text: "Use status='loading' only for the currently active step — never for future steps." },
-                { type: "do",   text: "Combine with ProcessList to get the section title, CTA, and empty/loading states for free." },
-                { type: "dont", text: "Don't mix number badges and status icons in the same list — use one pattern consistently." },
-                { type: "dont", text: "Don't show more than 5–6 items without a 'View all' CTA in the ProcessList header." },
-              ].map((rule, i) => (
-                <div key={i} className="flex items-start gap-[8px]">
-                  <span
-                    className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
-                    style={{
-                      background: rule.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
-                      color: rule.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
-                    }}
-                  >
-                    {rule.type === "do" ? "Do" : "Don't"}
-                  </span>
-                  <span className="text-[12px] text-[var(--foreground)]">{rule.text}</span>
-                </div>
-              ))}
-            </div>
-              <div className="mt-[16px]">
-                <button onClick={() => setShowSpecPi(v => !v)}
-                  className="flex items-center gap-[6px] text-[11px] font-semibold"
-                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
-                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecPi ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
-                  Design Spec
-                </button>
-                {showSpecPi && (
-                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
-                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
-                    {[
-                        { token: "--color-surface-success-default", usage: "done icon bg" },
-                        { token: "--color-surface-error-default", usage: "error icon bg" },
-                        { token: "--color-border-neutral-lighter", usage: "connector line" },
-                    ].map(row => (
-                      <div key={row.token} className="flex items-start gap-[8px]">
-                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
-                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
-                          {row.token}
-                        </code>
-                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
-                      </div>
-                    ))}
-                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
-                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
-                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 13501-28579</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <ProcessItemShowcase />
           </PatternCard>}
 
           {activeSlideoutItem === "by-layers" && <PatternCard>
@@ -36026,13 +36010,438 @@ function FiltersInteractivePlayground() {
   )
 }
 
+// ── ProcessItemShowcase — the component's full visual documentation ──────────
+// Rendered in two places: its own catalog page (Components → Process Item) and,
+// as step 5, inside the SlideOut/SidePanel Content pattern page. It lives here
+// once so the two can never drift apart. Two copies of the truth is what kept
+// Breadcrumb getting rebuilt by hand for a month while it sat in the repo —
+// do not inline a second copy of these examples anywhere.
+function ProcessItemShowcase() {
+  const [showSpec, setShowSpec] = useState(false)
+  return (
+    <>
+        {/* ── Statuses — Default state ── */}
+        <div className="mb-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>All statuses — Default state</p>
+          <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            {([
+              { status: "done",    title: "Data enrichment",     description: "Fetched from Clearbit — 4 fields added",   timestamp: "2 min ago",  tag: "Completed" },
+              { status: "loading", title: "AI analysis running",  description: "Scoring customer health signal",            timestamp: "Just now"                        },
+              { status: "error",   title: "CRM sync failed",      description: "Connection timeout — retrying in 60s",      timestamp: "1 min ago"                       },
+              { status: "pending", title: "Notification queued",  description: "Waiting for AI step to finish",             timestamp: "Pending"                         },
+              { status: "warning", title: "Low confidence score", description: "Below threshold — manual review recommended",timestamp: "5 min ago", tag: "Review"     },
+            ] as { status: ProcessStatus; title: string; description: string; timestamp: string; tag?: string }[]).map((item, i, arr) => (
+              <ProcessItem
+                key={item.status}
+                status={item.status}
+                title={item.title}
+                description={item.description}
+                timestamp={item.timestamp}
+                tag={item.tag}
+                showLine={i < arr.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── Selected state ── */}
+        <div className="mb-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Selected state</p>
+          <div className="flex flex-col gap-[4px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <ProcessItem
+              status="done"
+              state="selected"
+              title="Data enrichment"
+              description="Fetched from Clearbit — 4 fields added"
+              timestamp="2 min ago"
+              tag="Completed"
+              showLine={false}
+            />
+          </div>
+        </div>
+
+        {/* ── Number badge variant ── */}
+        <div className="mb-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Number badge (step indicator)</p>
+          <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            {([
+              { status: "done" as ProcessStatus,    number: "1", title: "Trigger received",  description: "Health score dropped below 50" },
+              { status: "done" as ProcessStatus,    number: "2", title: "Playbook executed",  description: "Sent alert to CSM team" },
+              { status: "loading" as ProcessStatus, number: "3", title: "CRM update",         description: "Writing risk flag to Salesforce" },
+              { status: "pending" as ProcessStatus, number: "4", title: "Notification",        description: "Queued — waiting for step 3" },
+            ]).map((item, i, arr) => (
+              <ProcessItem
+                key={item.number}
+                status={item.status}
+                number={item.number}
+                title={item.title}
+                description={item.description}
+                showLine={i < arr.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── With expand slot ── */}
+        <div className="mb-[20px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>With expand slot</p>
+          <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <ProcessItemExpandDemo />
+          </div>
+        </div>
+
+        {/* ── ProcessList states ── */}
+        <div className="mb-[4px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>ProcessList — all 3 states</p>
+          <div className="grid grid-cols-3 gap-[12px]">
+            {/* Empty */}
+            <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>EMPTY</p>
+              <ProcessList
+                title="Process"
+                state="empty"
+                emptyTitle="No activity yet"
+                emptyDescription="Steps appear when the workflow runs."
+              />
+            </div>
+            {/* Loading */}
+            <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>LOADING</p>
+              <ProcessList title="Process" state="loading" />
+            </div>
+            {/* Populated */}
+            <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>POPULATED</p>
+              <ProcessList
+                title="Process"
+                state="populated"
+                onViewAll={() => {}}
+                items={[
+                  { id: "p1", title: "Data enrichment",  status: "done",    description: "4 fields added", timestamp: "2m ago" },
+                  { id: "p2", title: "AI scoring",        status: "loading", description: "Running…" },
+                  { id: "p3", title: "CRM update",        status: "pending", description: "Waiting" },
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Usage rules ── */}
+        <div className="mt-[20px] flex flex-col gap-[12px]">
+          {[
+            { type: "do",   text: "Use showLine=true on all items except the last — the connector visually chains steps." },
+            { type: "do",   text: "Use status='loading' only for the currently active step — never for future steps." },
+            { type: "do",   text: "Combine with ProcessList to get the section title, CTA, and empty/loading states for free." },
+            { type: "dont", text: "Don't mix number badges and status icons in the same list — use one pattern consistently." },
+            { type: "dont", text: "Don't show more than 5–6 items without a 'View all' CTA in the ProcessList header." },
+          ].map((rule, i) => (
+            <div key={i} className="flex items-start gap-[8px]">
+              <span
+                className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
+                style={{
+                  background: rule.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                  color: rule.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
+                }}
+              >
+                {rule.type === "do" ? "Do" : "Don't"}
+              </span>
+              <span className="text-[12px] text-[var(--foreground)]">{rule.text}</span>
+            </div>
+          ))}
+        </div>
+          <div className="mt-[16px]">
+            <button onClick={() => setShowSpec(v => !v)}
+              className="flex items-center gap-[6px] text-[11px] font-semibold"
+              style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+              <LucideIcons.ChevronRight size={12} style={{ transform: showSpec ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+              Design Spec
+            </button>
+            {showSpec && (
+              <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                {[
+                    { token: "--color-surface-success-default", usage: "done icon bg" },
+                    { token: "--color-surface-error-default", usage: "error icon bg" },
+                    { token: "--color-border-neutral-lighter", usage: "connector line" },
+                ].map(row => (
+                  <div key={row.token} className="flex items-start gap-[8px]">
+                    <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                      style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                      {row.token}
+                    </code>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                  <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 13501-28579</span>
+                </div>
+              </div>
+            )}
+          </div>
+    </>
+  )
+}
+
+// ── ProcessItemPage ──────────────────────────────────────────────────────────
+// The component and its documentation both already existed — the documentation
+// was just buried as step 5 of the SlideOut Content pattern page, with no
+// catalog entry, so searching "process" in the sidebar found nothing. That is
+// the same reason Breadcrumb got rebuilt by hand for a month while sitting in
+// the repo. This page is the entry; the content itself is shared, not copied.
+function ProcessItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "reference">("overview")
+  const spec = PROCESS_ITEM_SPEC
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Process Item</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            One step of a running process, with its state. Reach for it wherever the progress of a workflow,
+            pipeline or agent run has to be visible — <code className="font-mono text-[13px] text-[var(--primary)]">SlideOut</code> and{" "}
+            <code className="font-mono text-[13px] text-[var(--primary)]">SidePanel</code> content, widgets, run detail views.
+            Pair it with <code className="font-mono text-[13px] text-[var(--primary)]">ProcessList</code> to get the section
+            title, the “View all” CTA and the empty/loading states for free.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("process-item")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",  label: "Overview"  },
+          { id: "reference", label: "Reference" },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* ── ProcessItem vs Stepper — the question every PM hits ── */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">ProcessItem or Stepper?</h2>
+              <p className="text-[13px]" style={{ color: "var(--field-supporting)" }}>
+                Both render a sequence of steps, and picking the wrong one is the most common mistake with this
+                component. The test is <strong>who is doing the work</strong>.
+              </p>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-subtle)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-success)" }}>
+                    ProcessItem — the system is working
+                  </span>
+                  <p className="text-[12px] text-[var(--foreground)]">
+                    The user is <strong>watching</strong>. Steps advance on their own, can fail, and the user does not
+                    control the order. A workflow run, an agent executing a playbook, a sync pipeline.
+                  </p>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    Statuses exist because a step can fail: <code className="font-mono">done · loading · error · pending · warning</code>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-informative-more-subtle)", border: "1px solid var(--color-border-informative-subtle)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-info)" }}>
+                    Stepper — the user is working
+                  </span>
+                  <p className="text-[12px] text-[var(--foreground)]">
+                    The user is <strong>advancing</strong>. They move between stages themselves, and nothing progresses
+                    until they act. A multi-stage create flow, a wizard.
+                  </p>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    There is no “failed” stage in a wizard — it pairs with <code className="font-mono">StepperNavFooter</code>, not statuses.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── The component itself — shared with the SlideOut Content page ── */}
+            <ProcessItemShowcase />
+          </div>
+        )}
+
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Props — rendered from PROCESS_ITEM_SPEC so this table can never drift from the spec modal */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Generated from the component's own spec — this table and the “View DS spec” modal read the same source.
+              </p>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Prop", "Type", "Default", "Notes"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.properties.map((row, i, arr) => (
+                      <tr key={row.name} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.name}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                          {/* Only an enum gets expanded into its union — the spec marks those
+                              as "Variant". Everything else shows its declared type, because a
+                              spec's `values` are examples there, not the full domain. */}
+                          {row.type === "Variant" ? row.values.join(" | ") : row.type}
+                        </td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.default}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.note || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Statuses — also from the spec */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Statuses</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["status", "Meaning"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.variants.map((v, i, arr) => (
+                      <tr key={v.name} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{v.name}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{v.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Typography — from the spec */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Typography</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Element", "Size", "Weight", "Line height"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.typography.map((row, i, arr) => (
+                      <tr key={row.element} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.element}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.size}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.weight}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.lineHeight}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Usage */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
+              <pre className="text-[12px] font-mono bg-[var(--field-bg)] p-[16px] rounded-[8px] overflow-x-auto text-[var(--foreground)]">{`import { ProcessItem, ProcessList } from "@/components/ui/process-item"
+
+// A run's steps — showLine on every item except the last
+{steps.map((s, i, arr) => (
+  <ProcessItem
+    key={s.id}
+    status={s.status}          // done | loading | error | pending | warning
+    title={s.title}
+    description={s.description}
+    timestamp={s.timestamp}
+    showLine={i < arr.length - 1}
+  />
+))}
+
+// Inside a widget or panel — ProcessList adds the title, CTA and
+// empty/loading states, so you don't compose them per screen
+<ProcessList
+  title="Process"
+  state={steps.length ? "populated" : "empty"}
+  items={steps}
+  onViewAll={() => setShowAll(true)}
+/>`}
+              </pre>
+            </div>
+
+            {/* Where else this appears */}
+            <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+              style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Also documented in</span>
+              <p className="text-[12px] text-[var(--foreground)]">
+                <strong>Patterns → SlideOut/SidePanel — Content</strong>, as step 5 of the content vocabulary. That page
+                covers <em>where</em> a process list sits relative to the other content blocks; this page covers the
+                component. Both render the same examples from one source.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── BreadcrumbPage ────────────────────────────────────────────────────────────
+
+const PROCESS_ITEM_SPEC = {
+  name: "Process Item",
+  figmaNodeId: "13501:28579",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=13501-28579",
+  description: "One step of a process or workflow, with its state. Use it wherever the current state of a running process needs to be visible — SlideOut and SidePanel content, workflow views, threads. Each item can expand in place to reveal its detail. Not a Stepper: Stepper shows where the user is in a flow they advance themselves; Process Item shows what the system is doing.",
+  properties: [
+    { name: "title",       type: "string",          values: ["any string"],                                  default: "—",         note: "Required." },
+    { name: "description", type: "string",          values: ["any string"],                                  default: "undefined", note: "" },
+    { name: "timestamp",   type: "string",          values: ["any string"],                                  default: "undefined", note: "" },
+    { name: "tag",         type: "string",          values: ["any string"],                                  default: "undefined", note: "Renders an informative Tag when set." },
+    { name: "status",      type: "Variant",         values: ["done","loading","error","pending","warning"],  default: "pending",   note: "Drives the icon and its colour." },
+    { name: "state",       type: "Variant",         values: ["default","selected"],                          default: "default",   note: "" },
+    { name: "number",      type: "number | string", values: ["1","2","3"],                                   default: "undefined", note: "Shows a HighlightNumber badge instead of the status icon, for numbered sequences." },
+    { name: "showLine",    type: "Boolean",         values: ["true","false"],                                default: "false",     note: "Vertical connector to the next item. On for every item except the last." },
+    { name: "showExpand",  type: "Boolean",         values: ["true","false"],                                default: "false",     note: "Shows the expand chevron." },
+    { name: "expanded",    type: "Boolean",         values: ["true","false"],                                default: "false",     note: "Expanded state — reveals children in place." },
+    { name: "onExpand",    type: "function",        values: ["() => void"],                                  default: "undefined", note: "" },
+    { name: "children",    type: "node",            values: ["—"],                                      default: "undefined", note: "Slot shown when expanded — logs, payloads, per-step detail." },
+  ],
+  sizes: [
+    { element: "Status icon",  padding: "—", gap: "8px", radius: "50%", note: "16×16 inside a 32×32 slot" },
+    { element: "Number badge", padding: "—", gap: "8px", radius: "50%", note: "28×28 HighlightNumber, replaces the status icon" },
+    { element: "Text block",   padding: "—", gap: "2px", radius: "—",   note: "title · description · timestamp stacked" },
+  ],
+  typography: [
+    { element: "Title",       family: "Inter", size: "13px", weight: "SemiBold (600)", lineHeight: "1.4" },
+    { element: "Description", family: "Inter", size: "12px", weight: "Regular (400)",  lineHeight: "1.5" },
+    { element: "Timestamp",   family: "Inter", size: "11px", weight: "Regular (400)",  lineHeight: "1.4" },
+  ],
+  variants: [
+    { name: "done",    description: "Step finished. Check icon.",                    cssPrefix: "process", tokens: [] },
+    { name: "loading", description: "Step running now. Animated indicator.",         cssPrefix: "process", tokens: [] },
+    { name: "error",   description: "Step failed and needs attention.",              cssPrefix: "process", tokens: [] },
+    { name: "pending", description: "Step not started yet.",                         cssPrefix: "process", tokens: [] },
+    { name: "warning", description: "Step completed with something worth flagging.", cssPrefix: "process", tokens: [] },
+  ],
+}
 
 const BREADCRUMB_SPEC = {
   name: "Breadcrumb",
   figmaNodeId: "18352:45",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18352-45",
-  description: "Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
+  description: "Hierarchical navigation trail, used from L2 onwards inside Header.breadcrumb. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
   properties: [
     { name: "depth",      type: "number",             values: ["2","3","4","4+"],               default: "3",   note: "depth<2 → no breadcrumb · depth=2 → Depth=2 variant · depth=3 → Depth=3 · depth≥4 → Depth=4 (middle items truncated with …)" },
     { name: "items",      type: "BreadcrumbItem[]",   values: ["{ label: string; href?: string }[]"], default: "[]",  note: "items[0] is always 'Home' with href='/'. items[last] is the Selected item (no href)." },
@@ -36087,7 +36496,7 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Breadcrumb</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
-            Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to current page with all ancestors clickable. At L2, use Header <code className="text-[11px] px-[4px] py-[1px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>backButton</code> instead.
+            Hierarchical navigation trail, used from L2 onwards inside <code>Header.breadcrumb</code>. Shows parent plus current page — ancestors clickable, current page not. Never paired with a backButton: from L2 the first crumb IS the way back.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("breadcrumb")} />
@@ -36127,8 +36536,8 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <tbody>
                     {[
                       { depth: "L1 — Root list",    pattern: "No back navigation",          code: null,                       example: "AI Workers list" },
-                      { depth: "L2 — Item detail",   pattern: "Header backButton only",      code: "backButton={true}",        example: "AI Workers → Meridian" },
-                      { depth: "L3 — Nested detail", pattern: "Breadcrumb + Header back",    code: "depth={3}",                example: "AI Workers → Meridian → Run #42" },
+                      { depth: "L2 — Item detail",   pattern: "Breadcrumb in Header.breadcrumb", code: "depth={2}",             example: "AI Workers → Meridian" },
+                      { depth: "L3 — Nested detail", pattern: "Breadcrumb, parent + current",    code: "depth={3}",             example: "AI Workers → Meridian → Run #42" },
                       { depth: "L4+ — Deep nested",  pattern: "Breadcrumb truncates middle", code: "depth={4+} → shows …",     example: "Home → … → Run #42 → Log entry" },
                     ].map(({ depth, pattern, code, example }, i, arr) => (
                       <tr key={i} style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
@@ -36198,12 +36607,14 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <LucideIcons.X size={12} /> Close Preview
                 </button>
 
-                {/* L2 / L3 toggle — centered at top */}
+                {/* L1 / L2+ toggle — centered at top. Under the current pattern the
+                    breadcrumb appears from L2, not L3, so the two states are
+                    "root list, nothing to trace" and "anything deeper". */}
                 <div className="fixed" style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001 }}>
                   <SwitchTab
                     items={[
-                      { id: "l2", label: "L2 — Section view"  },
-                      { id: "l3", label: "L3+ — Detail view" },
+                      { id: "l2", label: "L1 — Root list"    },
+                      { id: "l3", label: "L2+ — Detail view" },
                     ]}
                     value={bcPreviewL3 ? "l3" : "l2"}
                     onChange={(v: string) => setBcPreviewL3(v === "l3")}
@@ -36466,19 +36877,20 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   title="AIMS Drive"
                   description="Securely store, manage, and organize your documents and folders."
                   tag={<Tag variant="primary" size="sm">Active</Tag>}
-                  primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New File</Button>}
-                  secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                  primaryAction={{ label: "New File", icon: LucideIcons.Plus }}
+                  secondaryAction={{ label: "Export" }}
                 />
               </div>
               <div className="flex flex-col gap-[6px]">
                 {([
                   ["Title",         "Always visible. 24px in Size L, 18px in Size M and Compress."],
                   ["Description",   "Optional subtitle below the title. Hidden in Compress."],
-                  ["Status Tag",    "Optional inline chip after the title. Hidden in Compress."],
-                  ["Back Button",   "Optional ArrowLeft — for inner-page drill-down contexts. Hidden in Compress."],
+                  ["Status Tag",    "Optional inline chip after the title. Survives Compress — a detail view keeps its state visible while scrolled."],
+                  ["Breadcrumb",    "Optional trail above the title, for L2+ depth. Survives Compress. Never together with Back Button."],
+                  ["Back Button",   "Optional ArrowLeft — for inner-page drill-down contexts. Hidden in Compress unless showBackInCompress."],
                   ["Icon",          "Optional 24×24 icon in a primary-tint box. Hidden in Compress."],
-                  ["Primary CTA",   "Right-side primary action. Use Button variant=\"main\"."],
-                  ["Secondary CTA", "Right-side secondary action. Use Button variant=\"secondary\"."],
+                  ["Primary CTA",   "Right-side primary action. Pass an action object — { label, icon?, onClick? } — not a Button. Header applies variant=\"main\" itself."],
+                  ["Secondary CTA", "Right-side secondary action, rendered before primary. Same object shape. Two actions is the maximum."],
                 ] as [string, string][]).map(([name, desc]) => (
                   <div key={name} className="flex gap-[10px] items-start text-[13px]">
                     <span className="shrink-0 font-semibold text-[var(--foreground)] w-[120px]">{name}</span>
@@ -36502,8 +36914,8 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                       title="Meridian"
                       description="AI Worker · Customer support automation · Lexington HTL"
                       tag={<Tag variant="success" size="sm">Active</Tag>}
-                      primaryAction={<Button variant="main" size="sm"><LucideIcons.Settings2 size={13} /> Configure</Button>}
-                      secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                      primaryAction={{ label: "Configure", icon: LucideIcons.Settings2 }}
+                      secondaryAction={{ label: "Export" }}
                     />
                   </div>
                 </div>
@@ -36524,7 +36936,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     <span className="text-[11px] font-semibold" style={{ color: "var(--color-feedback-success)" }}>Detail view — correct</span>
                   </div>
                   <div className="rounded-[8px] border overflow-hidden" style={{ borderColor: "var(--color-feedback-success)", opacity: 0.9 }}>
-                    <Header size="size-l" title="Meridian" tag={<Tag variant="success" size="sm">Active</Tag>} primaryAction={<Button variant="main" size="sm">Configure</Button>} />
+                    <Header size="size-l" title="Meridian" tag={<Tag variant="success" size="sm">Active</Tag>} primaryAction={{ label: "Configure" }} />
                   </div>
                   <p className="text-[12px] text-[var(--field-supporting)]">One item open → one state → tag makes sense.</p>
                 </div>
@@ -36535,7 +36947,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     <span className="text-[11px] font-semibold" style={{ color: "var(--color-feedback-error)" }}>List view — never use tag here</span>
                   </div>
                   <div className="rounded-[8px] border overflow-hidden" style={{ borderColor: "var(--color-feedback-error)", opacity: 0.9 }}>
-                    <Header size="size-l" title="AI Workers" tag={<Tag variant="primary" size="sm">24 Active</Tag>} primaryAction={<Button variant="main" size="sm">New Worker</Button>} />
+                    <Header size="size-l" title="AI Workers" tag={<Tag variant="primary" size="sm">24 Active</Tag>} primaryAction={{ label: "New Worker" }} />
                   </div>
                   <p className="text-[12px] text-[var(--field-supporting)]">A list has many states simultaneously — one tag is misleading. Remove it.</p>
                 </div>
@@ -36658,8 +37070,8 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 backButton={pgBackButton}
                 icon={pgIcon ? (LucideIcons as unknown as Record<string, LucideIcons.LucideIcon>)[pgIconName] : undefined}
                 iconVariant={pgIconVariant}
-                primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New Worker</Button>}
-                secondaryAction={pgSecondaryCta ? <Button variant="secondary" size="sm">Export</Button> : undefined}
+                primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                secondaryAction={pgSecondaryCta ? { label: "Export" } : undefined}
               />
             </div>
           </div>
@@ -36723,11 +37135,12 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     { prop: "title",           type: "string",     def: "—",         desc: "Page title. Required. Always visible." },
                     { prop: "size",            type: "HeaderSize", def: '"size-l"',   desc: '"size-l" | "size-m" | "compress"' },
                     { prop: "description",     type: "string",     def: "undefined",  desc: "Subtitle below the title. Hidden in compress." },
-                    { prop: "tag",             type: "ReactNode",  def: "undefined",  desc: "Status chip (Tag component). Renders inline after title. Hidden in compress." },
-                    { prop: "backButton",      type: "boolean",    def: "false",      desc: "Shows an ArrowLeft back button. Hidden in compress." },
+                    { prop: "tag",             type: "ReactNode",  def: "undefined",  desc: "Status chip (Tag component). Renders inline after title. Survives compress — a detail view keeps its state visible while scrolled." },
+                    { prop: "breadcrumb",      type: "ReactNode",  def: "undefined",  desc: "Breadcrumb trail above the title, for L2+ depth. Survives compress. Never pass this together with backButton — the audit blocks it." },
+                    { prop: "backButton",      type: "boolean",    def: "false",      desc: "Shows an ArrowLeft back button. Hidden in compress unless showBackInCompress." },
                     { prop: "icon",            type: "LucideIcon", def: "undefined",  desc: "Lucide icon shown in a 24×24 primary-tint box. Hidden in compress." },
-                    { prop: "primaryAction",   type: "ReactNode",  def: "undefined",  desc: 'Primary CTA — right zone. Use Button variant="main".' },
-                    { prop: "secondaryAction", type: "ReactNode",  def: "undefined",  desc: 'Secondary CTA — right zone, before primary. Use Button variant="secondary".' },
+                    { prop: "primaryAction",   type: "HeaderAction", def: "undefined", desc: 'An action object — { label, icon?, onClick?, disabled?, priority? }. Header picks the Button variant, so no screen names one. Defaults to priority "primary" (variant="main").' },
+                    { prop: "secondaryAction", type: "HeaderAction", def: "undefined", desc: 'Same shape, rendered before primary. Defaults to priority "secondary". Header takes at most these two actions — a third belongs in an overflow menu.' },
                   ].map(row => (
                     <tr key={row.prop} className="border-b border-[var(--field-border)] last:border-0">
                       <td className="py-[10px] pr-[16px] font-mono text-[12px] text-[var(--primary)]">{row.prop}</td>
@@ -36754,12 +37167,8 @@ import { Plus } from "lucide-react"
   title="AI Workers"
   description="Manage and monitor your AI workers."
   tag={<Tag variant="success" size="sm">24 Published</Tag>}
-  primaryAction={
-    <Button variant="main" size="sm">
-      <Plus size={13} /> New Worker
-    </Button>
-  }
-  secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+  primaryAction={{ label: "New Worker", icon: Plus }}
+  secondaryAction={{ label: "Export" }}
 />
 
 // Scroll-triggered compress (driven by scroll state in parent)
@@ -36768,7 +37177,7 @@ import { Plus } from "lucide-react"
   title="AI Workers"
   description="Manage and monitor your AI workers."
   tag={<Tag variant="success" size="sm">24 Published</Tag>}
-  primaryAction={<Button variant="main" size="sm"><Plus size={13} /> New Worker</Button>}
+  primaryAction={{ label: "New Worker", icon: Plus }}
   style={{ transition: "padding 200ms ease-in-out" }}
 />`}
               </pre>
@@ -36812,7 +37221,7 @@ useEffect(() => {
     title="AI Workers"
     description="Manage and monitor your AI workers."
     tag={<Tag variant="success" size="sm">24 Published</Tag>}
-    primaryAction={<Button variant="main" size="sm">New Worker</Button>}
+    primaryAction={{ label: "New Worker" }}
     style={{ transition: "padding 200ms ease-in-out" }}
   />
 </div>`}
@@ -41538,6 +41947,11 @@ export default function App() {
     // drops any part of the URL it isn't explicitly given, so the hash must
     // be re-appended every time or it's lost before the target page can read it.
     const hash = window.location.hash
+    const params = new URLSearchParams(window.location.search)
+    // Guard: React StrictMode double-invokes mount effects. Without this, the
+    // URL sync fires with the initial active="home" and clobbers a ?proto= deep-link
+    // before the deep-link effect's second invocation can read it.
+    if (active === "home" && params.get("proto")) return
     const isProto = PROTOTYPE_PAGES.some(p => p.id === active)
     if (isProto) {
       window.history.replaceState(null, "", `?proto=${active}${hash}`)
@@ -41546,7 +41960,7 @@ export default function App() {
       // usePageTab in src/lib/use-page-tab.ts, or HomePage's hand-rolled
       // equivalent) so a page's Overview/Playground/Reference deep-link
       // survives sidebar navigation instead of always resetting to Overview.
-      const currentTab = new URLSearchParams(window.location.search).get("tab")
+      const currentTab = params.get("tab")
       const tabSuffix  = currentTab ? `&tab=${currentTab}` : ""
       window.history.replaceState(null, "", `?page=${active}${tabSuffix}${hash}`)
     }
@@ -41584,7 +41998,9 @@ export default function App() {
         <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
           {active === "proto-gallery"   && <PrototypeGalleryPage onOpen={(id) => setActive(id)} />}
+          {active === "ds-health"       && <DsHealthPage />}
           {active === "alert-banner"    && <AlertBannerPage      openSpec={setSpecModal} />}
+          {active === "toast"           && <ToastPage            openSpec={setSpecModal} />}
           {active === "app-background"  && <AppBackgroundPage   openSpec={setSpecModal} />}
           {active === "empty-state"     && <EmptyStatePage   openSpec={setSpecModal} />}
           {active === "avatar"          && <AvatarPage          openSpec={setSpecModal} />}
@@ -41637,6 +42053,7 @@ export default function App() {
           {active === "notification-center" && <NotificationCenterPage openSpec={setSpecModal} />}
           {active === "record-header"       && <RecordHeaderPage      openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
+          {active === "process-item"   && <ProcessItemPage openSpec={setSpecModal} />}
           {active === "breadcrumb"      && <BreadcrumbPage openSpec={setSpecModal} />}
           {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}
           {active === "pagination"      && <PaginationPage      openSpec={setSpecModal} />}

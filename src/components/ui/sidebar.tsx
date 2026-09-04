@@ -20,12 +20,46 @@ export type SidebarItem = {
   hasChildren?: boolean // shows chevron right in expanded mode
 }
 
+/**
+ * Section header for grouping sidebar items. Rendered as a small
+ * uppercase label above the following nav items, only when the sidebar
+ * is expanded (hidden in the 56px collapsed width to avoid noise).
+ *
+ * Section headers are non-interactive — no click handler, no icon, no
+ * active state. They also don't participate in `activeId` matching.
+ */
+export type SidebarSection = {
+  kind: "section"
+  label: string
+}
+
+/** Any entry accepted by the `items` prop — a clickable nav item or a
+ *  section header that groups the items that follow it. */
+export type SidebarEntry = SidebarItem | SidebarSection
+
+/** Type predicate — narrows a SidebarEntry to SidebarSection.
+ *  Extracted so the render loop and any external code can share the
+ *  same narrowing rule. */
+export function isSection(entry: SidebarEntry): entry is SidebarSection {
+  return (entry as { kind?: string }).kind === "section"
+}
+
 export type SidebarProps = {
-  items?: SidebarItem[]
+  items?: SidebarEntry[]
   activeId?: string
   onItemClick?: (id: string) => void
   defaultCollapsed?: boolean
   onCollapseChange?: (collapsed: boolean) => void
+  /**
+   * Optional pinned footer slot — rendered at the bottom of the sidebar
+   * container, below the nav items. Common uses: user identity row
+   * (avatar + name + role), workspace switcher, help/status links.
+   *
+   * Accepts either a static ReactNode or a render function that receives
+   * the current `collapsed` state so callers can render icon-only in the
+   * collapsed width (56px) and full content when expanded (250px).
+   */
+  footer?: React.ReactNode | ((collapsed: boolean) => React.ReactNode)
   className?: string
 }
 
@@ -194,6 +228,7 @@ export function Sidebar({
   onItemClick,
   defaultCollapsed = false,
   onCollapseChange,
+  footer,
   className = "",
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
@@ -237,15 +272,69 @@ export function Sidebar({
         {/* Toggle row — always at top, always visible */}
         <SidebarToggleRow collapsed={collapsed} onToggle={toggle} />
 
-        {items.map((item) => (
-          <SidebarNavItem
-            key={item.id}
-            item={item}
-            isActive={item.id === activeId}
-            collapsed={collapsed}
-            onItemClick={() => onItemClick?.(item.id)}
-          />
-        ))}
+        {items.map((entry, i) => {
+          if (isSection(entry)) {
+            // Section header — hidden in collapsed width to avoid noise
+            return (
+              <SidebarSectionHeader
+                key={`section-${i}-${entry.label}`}
+                label={entry.label}
+                collapsed={collapsed}
+              />
+            )
+          }
+          return (
+            <SidebarNavItem
+              key={entry.id}
+              item={entry}
+              isActive={entry.id === activeId}
+              collapsed={collapsed}
+              onItemClick={() => onItemClick?.(entry.id)}
+            />
+          )
+        })}
+
+        {/* Pinned footer slot — pushed to the bottom of the sidebar column.
+            mt-auto claims the remaining vertical space so nav items stay
+            grouped at the top and the footer hugs the bottom edge. */}
+        {footer && (
+          <div className="mt-auto shrink-0 w-full">
+            {typeof footer === "function" ? footer(collapsed) : footer}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Section header — small uppercase label above a group of nav items ──
+function SidebarSectionHeader({ label, collapsed }: { label: string; collapsed: boolean }) {
+  // Hidden entirely when collapsed — the 56px column has no room for text
+  // labels and the section grouping is inferred visually from the item
+  // stack anyway. Same 100/150ms fade the nav-item labels use.
+  return (
+    <div
+      className="shrink-0"
+      style={{
+        overflow: "hidden",
+        maxHeight: collapsed ? 0 : 24,
+        opacity: collapsed ? 0 : 1,
+        marginTop: collapsed ? 0 : 4,
+        transition: collapsed
+          ? "opacity 100ms ease, max-height 100ms ease, margin-top 100ms ease"
+          : "opacity 150ms ease 160ms, max-height 160ms ease 80ms, margin-top 160ms ease 80ms",
+      }}
+    >
+      <div
+        className="text-[10px] font-semibold uppercase leading-none whitespace-nowrap"
+        style={{
+          color:          "var(--sb-section-label, var(--sb-text))",
+          letterSpacing:  "0.08em",
+          opacity:        0.6,
+          padding:        "6px 4px 4px",
+        }}
+      >
+        {label}
       </div>
     </div>
   )

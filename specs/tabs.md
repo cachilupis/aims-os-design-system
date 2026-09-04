@@ -2,7 +2,7 @@
 
 **Figma node:** [`856:11281`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=856-11281)
 
-Horizontal tab bar for switching between related views within the same context. Sits directly on any surface — no CardContainer needed. Active state: primary-blue 2px indicator + label. Supports leading icon, disabled state, and two sizes (M/S).
+Primary navigation inside a screen — answers "where am I?". Horizontal bar with a 2px indicator under the active tab only. It manages its own indicator, so never add a borderBottom to the wrapper: that draws a line under ALL tabs, which the DS spec forbids. Sits directly on the surface, no CardContainer needed. Top of the navigation hierarchy — when a second level is needed below it, that is SwitchTab. Size M only on L screens; S everywhere else, to save space and stay consistent.
 
 ## Properties
 
@@ -37,21 +37,21 @@ Border width: `indicator 2px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Label | Border/Primary/Default |  | #2173ff | #2b7fff |
-| Indicator | Border/Primary/Default |  | #2173ff | #2b7fff |
+| Label | --primary |  | #2173ff | #2b7fff |
+| Indicator | --primary |  | #2173ff | #2b7fff |
 
 ### Default
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Label | Text/Body |  | #5c5c5c | rgba(255,255,255,0.60) |
+| Label | --color-text-subtitle |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ### Hover
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/Subtle |  | #fafafa | rgba(255,255,255,0.06) |
-| Label | Text/Title |  | #1a1a1a | rgba(255,255,255,0.80) |
+| Background | --tabs-hover-bg |  | #fafafa | rgba(255,255,255,0.06) |
+| Label | --foreground |  | #1a1a1a | #ffffffcc |
 
 ### Disabled
 
@@ -59,7 +59,7 @@ Border width: `opacity 40%`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Label ×0.4 | Text/Body |  | #5c5c5c | rgba(255,255,255,0.60) |
+| Label ×0.4 (reused) | --color-text-subtitle |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ---
 

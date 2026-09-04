@@ -26,9 +26,7 @@ Vertical navigation rail. Always renders on a dark background regardless of mode
 
 | Element | Family | Size | Weight | Line height |
 | --- | --- | --- | --- | --- |
-| Nav label | Inter | 13px | Medium (500) | 1 |
-| Section label | Inter | 10px | Semi Bold (600) | 1 |
-| Badge count | Inter | 10px | Semi Bold (600) | 1 |
+| Nav label | Inter | 12px | Semi Bold (600) | 1 |
 
 ## States / token groups
 
@@ -38,9 +36,9 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/Black |  | #1A1A1A | #1A1A1A |
-| Icon | Icon/Primary/Lighter |  | rgba(128,175,255,1) | rgba(128,175,255,1) |
-| Label | Text/Primary |  | rgba(255,255,255,0.70) | rgba(255,255,255,0.70) |
+| Container bg | --sb-bg |  | #000000 | #0f172b |
+| Icon | --sb-icon-default |  | rgba(128,175,255,1) | rgba(128,175,255,0.90) |
+| Label | --sb-text |  | #ffffff | #ffffff |
 
 ### Hover
 
@@ -48,8 +46,9 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Icon bg | Surface/Neutral/Black |  | var(--sb-bg) | var(--sb-bg) |
-| Icon | Icon/Neutral/Light |  | rgba(255,255,255,0.70) | rgba(255,255,255,0.70) |
+| Row bg (expanded only) | --sb-row-hover |  | #2a2a2a | rgba(255,255,255,0.20) |
+| Icon square bg | --sb-icon-hover-bg |  | #000000 | #0f172b |
+| Icon | --sb-icon-active |  | #ffffff | #ffffff |
 | Glow shadow | — |  | rgba(33,115,255,0.50) blur:20 | rgba(33,115,255,0.50) blur:20 |
 
 ### Active
@@ -58,8 +57,9 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Icon bg | Gradient/Main Action |  | radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%) | radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%) |
-| Icon | Text/White |  | #ffffff | #ffffff |
+| Icon bg | — |  | radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%) | radial-gradient(circle at 61% 68%, #2173FF 29%, #09E2AB 61%) |
+| Icon (reused) | --sb-icon-active |  | #ffffff | #ffffff |
+| Chevron | --sb-chevron-active |  | rgba(233,241,255,1) | rgba(233,241,255,1) |
 | Teal shadow | — |  | rgba(82,163,255,0.38) offset(8,8) blur:20 | rgba(82,163,255,0.38) offset(8,8) blur:20 |
 
 ---

@@ -60,10 +60,11 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER** hardcode `#hex` / `rgba()` in `.tsx` — always `var(--token-name)`.
 - **NEVER** build a custom version of a DS component that exists in `src/components/ui/` — import it.
 - **NEVER** add `borderBottom` on a `<Tabs>` wrapper — the component manages its own active indicator.
+- **NEVER add anything visual to a `CardContainer` that is not part of the component** — no accent stripes, no coloured top borders, no dividers bolted on. If the card needs to signal something, that is a `Tag`, a `Chip` or a colour variant, not a decoration drawn on top. Use `variant="default"` unless the design genuinely calls for a colour, `size="sm"` for small items (entity rows, selectable cards, items with a CTA inside a SlideOut or Modal), and `variant="dashed"` for empty regions.
 
 ### Navigation & headers
 - **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
-- **NEVER** show both `backButton` and breadcrumbs — pick based on depth (L2 → backButton, L3+ → breadcrumbs).
+- **NEVER** combine `Header.breadcrumb` and `backButton` — from L2 it is the breadcrumb; the first crumb IS the way back. `backButton` is only for pages with no hierarchy to express (a creation wizard).
 - **NEVER** use `WidgetCanvasSection` or a hand-rolled grid for Overview tabs — always `WidgetCanvasView`.
 - **NEVER** pass the `label` prop to `Input` or `Textarea` in desktop screen files.
 
@@ -178,7 +179,7 @@ Stack in this exact order:
 2. `Sidebar` — left nav (use `AppBackground` as page wrapper)
 3. Content area:
    - `Tabs` — "Where am I?" (e.g. All Workers / Teams)
-   - `SwitchTab` — "How am I viewing?" (e.g. List / Grid) — only when needed
+   - `SwitchTab` — secondary navigation, one level below Tabs — only when Tabs alone is not enough
    - `Filters` — "What do I see?" (always present when there's a filterable dataset)
    - `EntityList` inside `CardContainer` — one card per item, 12px gap
    - `Pagination` — only when `total_results > rows_per_page`
@@ -204,18 +205,18 @@ Every entity detail page follows this structure — tabs always in this order:
 3. **Logs** → always the `Table` component following the Logs Table pattern. (See PatternLogsPage.)
 
 Header rules on detail pages:
-- `backButton={true}` if L2 depth (arrived from a list). Breadcrumbs if L3+.
+- `breadcrumb` with parent + current page — a detail page is L2 or deeper. Never `backButton` alongside it.
 - Always show status `tag` — detail view = one entity, one state.
-- Primary action in `Header.primaryAction` (`variant="main"`).
+- Primary action in `Header.primaryAction` — an **action object**, not a `Button`: `{ label, icon?, onClick?, disabled?, priority? }`. Header picks the variant, so a screen never names one.
 
 ```tsx
 // ✅ Standard detail page structure
 <Header
   title="Meridian"
   tag={<Tag variant="success" size="s">Active</Tag>}
-  backButton={true}
+  breadcrumb={<Breadcrumb depth={2} items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]} onNavigate={go} />}
   size={isScrolled ? "compress" : "size-l"}
-  primaryAction={<Button variant="main" size="sm">Edit</Button>}
+  primaryAction={{ label: "Edit", icon: Pencil }}
 />
 <Tabs items={[
   { id: "overview", label: "Overview" },   // always first
@@ -250,35 +251,57 @@ Rules:
 ### Navigation depth (multiple layers)
 Maximum 2 navigation layers:
 - `Tabs` — primary navigation (Where am I?)
-- `SwitchTab` — secondary view toggle (How am I viewing?)
+- `SwitchTab` — secondary navigation, one level below Tabs
 - `Filters` — dataset control (What do I see?)
 
 **24px gap between every navigation layer** — Tabs → SwitchTab → Filters → Chips (nav). Confirmed from Figma DS node 14660-136237.
 24px gap from the last nav element to the first entity card. 12px gap between entity cards.
 
-### Back navigation and breadcrumbs — which to use
+### Navigation depth — the breadcrumb pattern
 
-The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs based on depth level:
+**From L2 onwards, a page states where it sits with a breadcrumb inside the `Header`. Not a back arrow.**
 
-| Depth level | Pattern | When |
-|---|---|---|
-| Level 2 (one step below a list) | `backButton={true}` on `Header` | User is inside a single item detail — one tap gets them back |
-| Level 3+ (e.g. item → sub-section → detail) | Breadcrumb trail | User needs to see and jump to any ancestor level, not just "back one" |
+Confirmed by Michael (2026-09-02) after checking how Carbon and Atlassian handle it. Back and breadcrumb answer different questions — back is *chronological* ("where did I come from"), breadcrumb is *hierarchical* ("where am I") — and that distinction only earns its keep from L3, where "up one level" and "back" are genuinely different destinations. **At L2 they are the same place**: the first crumb IS the way back, so an arrow beside it is two affordances pointing at one target, in a 62px header.
 
-**Never show both** — if breadcrumbs are present, omit `backButton`. If it's L2, omit breadcrumbs.
-
-**Breadcrumb component status: DS-GAP** — not yet in `src/components/ui/`. When a screen requires L3+ navigation, add a `// DS-GAP: Breadcrumbs` comment and use a placeholder text trail until the component ships. Do NOT improvise a custom breadcrumb without flagging the gap.
+| Depth | Pattern |
+|---|---|
+| L1 (a list, a home) | No breadcrumb, no back. `Breadcrumb` renders nothing below `depth={2}` anyway |
+| **L2+** | `Breadcrumb` in `Header.breadcrumb` — **parent plus current page only**, not the whole path |
 
 ```tsx
-// ✅ Level 2 — single item detail, use back button
-<Header title="Meridian" backButton={true} size={isScrolled ? "compress" : "size-l"} />
+import { Breadcrumb } from "@/components/ui/breadcrumb"
 
-// ✅ Level 3+ — nested detail, use breadcrumbs (component pending)
-// DS-GAP: Breadcrumbs — needed for L3+ navigation. Waiting on DS component.
-
-// ❌ Never both at once
-<Header title="Meridian" backButton={true} breadcrumbs={[...]} />
+<Header
+  size={isScrolled ? "compress" : "size-l"}
+  title="Meridian"
+  tag={<Tag variant="success" size="sm">Active</Tag>}
+  breadcrumb={
+    <Breadcrumb
+      depth={2}
+      items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]}
+      onNavigate={go}
+    />
+  }
+  primaryAction={{ label: "Run now", onClick: run }}
+/>
 ```
+
+`Breadcrumb` lives at `src/components/ui/breadcrumb.tsx` — **import it, never hand-roll one.** Ancestors carry `href`; the current page does not.
+
+**What happens on scroll.** The breadcrumb and the tag both survive compress, stacked above the title:
+
+```
+size-l    Workers › Meridian          ← breadcrumb
+          Meridian  [Active]          ← title + tag
+          Manages … (description)     ← hidden in compress
+
+compress  Workers › Meridian          ← still there
+          Meridian  [Active]          ← still there
+```
+
+Compress is **content-driven, not a fixed 60px** — about 48px normally, about 62px with a breadcrumb. That is deliberate: scrolling should never cost you your place in the hierarchy or the record's status. The 4px between the two rows is what keeps them reading as *path + page* instead of one wrapped title.
+
+**Never combine `breadcrumb` and `backButton`.** `backButton` remains for pages with no hierarchy to express — a creation wizard, a standalone flow — where there is a "back" but no "up".
 
 ### Overlays
 - **`ModalDialog`** — user MUST stop (destructive action, confirmation, critical form)
@@ -630,19 +653,28 @@ Rules:
 
 ## Dropdown menus (filter slots)
 
-Dropdowns must appear **centered below the clicked slot button**, not at the mouse position.
-Pattern:
+A dropdown's **left edge aligns with its trigger's left edge, 4px below** — never centred on the trigger, never at the mouse position. If the panel would run off the right of the viewport it **flips**: right edges align instead. The flip is automatic, measured before paint, not a per-screen decision.
+
+Do not reimplement this. `src/lib/dropdown-anchor.ts` is the one implementation:
+
 ```tsx
-onClickCapture={(e: React.MouseEvent) => {
-  const btn = (e.target as HTMLElement).closest('button')
-  const left = btn
-    ? btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2
-    : e.clientX
-  setAnchor({ left, top: (e.currentTarget as HTMLElement).getBoundingClientRect().bottom })
-}}
-// Dropdown div:
-style={{ position: "fixed", left: anchor.left, top: anchor.top + 4, transform: "translateX(-50%)", zIndex: 10001 }}
+import { anchorFromEvent, useDropdownPosition, type DropdownAnchor } from "@/lib/dropdown-anchor"
+
+const [anchor, setAnchor] = useState<DropdownAnchor | null>(null)
+const dropdown = useDropdownPosition(anchor)
+
+<div onClickCapture={(e) => setAnchor(anchorFromEvent(e))}>
+  <Filters … />
+</div>
+
+{anchor && (
+  <div ref={dropdown.ref} style={{ position: "fixed", zIndex: 10001, ...dropdown.style }}>
+    <Menu>…</Menu>
+  </div>
+)}
 ```
+
+Applies to every dropdown — filter slots, `Select` panels, kebab menus. **Tooltips and the Slider thumb are the exception**: those centre on their anchor, which is correct for them.
 
 ---
 
@@ -669,7 +701,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 
 ## Button hierarchy rules
 
-- `variant="main"` — **header-level CTA only** (the one action in the `Header` component's `primaryAction` prop). Maximum 1 per screen. Examples: "Export", "New Worker", "Create".
+- `variant="main"` — **header-level CTA only**, and screens no longer write it: `Header` applies it itself from `primaryAction`, which takes an action object (`{ label, icon?, onClick?, disabled?, priority? }`), never a `Button`. Maximum 1 per screen. If you find yourself typing `variant="main"` in a screen file, the action is in the wrong place.
 - `variant="primary"` — content-area actions inside cards, widgets, SlideOuts, or table rows. Use when an action is the clear recommended next step within a contained context.
 - **Never repeat `main` more than once per view.** If a widget or card needs a call-to-action, use `primary`, not `main`.
 - **No more than 2 `primary` buttons visible at the same time** in a single scrolled viewport. If more actions compete, demote lower-priority ones to `secondary`.
@@ -728,7 +760,7 @@ export default function MyScreen() {
           size={isScrolled ? "compress" : "size-l"}
           title="Page Title"
           description="Page description."
-          primaryAction={<Button variant="main" size="sm">New Item</Button>}
+          primaryAction={{ label: "New Item", icon: Plus }}
         />
       )}
       pagination={
