@@ -1155,7 +1155,7 @@ function NewDashboardOverlay({ onClose, onCreated }: { onClose: () => void; onCr
           {/* Footer */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, paddingTop: 8, borderTop: "1px solid var(--field-border)" }}>
             <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-            <Button variant="main" size="sm" disabled={!formValid} onClick={handleCreate}>Create dashboard →</Button>
+            <Button variant="primary" size="sm" disabled={!formValid} onClick={handleCreate}>Create dashboard →</Button>
           </div>
         </div>
       )}
@@ -1438,7 +1438,7 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
         </p>
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
           <Button variant="secondary" size="sm" onClick={onClose}>Back to Library</Button>
-          <Button variant="main" size="sm" onClick={() => { setSaved(false); setSourceId(null); setMetric(""); setTypeId(null); setWName(""); setAccent(""); setStyle(""); setTab("data"); onProgressChange(false, false) }}>Build another</Button>
+          <Button variant="primary" size="sm" onClick={() => { setSaved(false); setSourceId(null); setMetric(""); setTypeId(null); setWName(""); setAccent(""); setStyle(""); setTab("data"); onProgressChange(false, false) }}>Build another</Button>
         </div>
       </div>
     )
@@ -1632,7 +1632,7 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
             )}
 
             {dataComplete && (
-              <Button variant="main" size="sm" onClick={() => setTab("widget")}>
+              <Button variant="primary" size="sm" onClick={() => setTab("widget")}>
                 Continue to Widget →
               </Button>
             )}
@@ -1655,7 +1655,7 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
               </div>
             </div>
             {widgetComplete && (
-              <Button variant="main" size="sm" onClick={() => setTab("appearance")}>
+              <Button variant="primary" size="sm" onClick={() => setTab("appearance")}>
                 Continue to Appearance →
               </Button>
             )}
@@ -1693,7 +1693,7 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
                 ))}
               </div>
             </div>
-            <Button variant="main" size="sm" disabled={!widgetComplete} onClick={handleSave}>
+            <Button variant="primary" size="sm" disabled={!widgetComplete} onClick={handleSave}>
               Save to catalog
             </Button>
           </div>
@@ -1800,7 +1800,7 @@ export default function PMThomasComposableDashboardsScreen() {
     headerAux = (
       <div style={{ position: "relative" as const }}>
         <div style={{ display: "flex", alignItems: "stretch", borderRadius: 8, overflow: "hidden" }}>
-          <Button variant="main" size="sm" onClick={() => openBuilder()}
+          <Button variant="primary" size="sm" onClick={() => openBuilder()}
             style={{ borderRadius: "8px 0 0 8px", borderRight: "1px solid color-mix(in srgb, var(--on-primary, white) 25%, transparent)" }}> {/* audit-ignore: color-mix fallback uses keyword not hex */}
             Create widget
           </Button>

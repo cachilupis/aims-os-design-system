@@ -515,7 +515,7 @@ export default function DashboardCanvasScreen({ dash, onBack }: {
           background: "var(--surface)", border: "1px solid var(--alert)", boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }}> {/* audit-ignore: standard elevation shadow */}
           <LucideIcons.AlertCircle size={14} style={{ color: "var(--alert)" }} />
           <span style={{ fontSize: 13, color: "var(--foreground)" }}>You have unpublished changes.</span>
-          <Button variant="main" size="sm" onClick={() => setPublishOpen(true)}>Re-publish</Button>
+          <Button variant="primary" size="sm" onClick={() => setPublishOpen(true)}>Re-publish</Button>
         </div>
       )}
 
