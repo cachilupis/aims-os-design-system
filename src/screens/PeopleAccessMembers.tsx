@@ -207,11 +207,11 @@ const GROUPS: Group[] = [
   { id: "external",     name: "External Consultants", color: "#84cc16", desc: "Limited scoped access for contracted third-party consultants.",            memberIds: [],                   studios: [] },  // audit-ignore: prototype fixture data
 ]
 
-const STUDIO_META: Record<string, { label: string; color: string }> = {
-  governance: { label: "Governance",  color: "#10b981" },  // audit-ignore: prototype fixture data
-  datastudio:  { label: "Data Studio", color: "#8b5cf6" },  // audit-ignore: prototype fixture data
-  agentic:    { label: "Agentic",     color: "#06b6d4" },  // audit-ignore: prototype fixture data
-  admin:      { label: "Admin",       color: "#6366f1" },  // audit-ignore: prototype fixture data
+const STUDIO_META: Record<string, { label: string; color: string; icon: React.ReactNode; desc: string }> = {
+  governance: { label: "Governance Studio",  color: "#10b981", icon: <Icons.ShieldCheck size={16} />,  desc: "Policy management, data lineage, and compliance workflows" },  // audit-ignore
+  datastudio:  { label: "Data Studio",        color: "#8b5cf6", icon: <Icons.Database size={16} />,     desc: "Model authoring, dataset management, and schema design" },     // audit-ignore
+  agentic:    { label: "Agentic Studio",     color: "#06b6d4", icon: <Icons.Bot size={16} />,          desc: "AI worker configuration and agentic network management" },      // audit-ignore
+  admin:      { label: "Admin Console",      color: "#6366f1", icon: <Icons.Settings size={16} />,     desc: "Platform settings, members, billing, and integrations" },       // audit-ignore
 }
 
 const GROUP_ACTIVITY: Record<string, Array<{ type: string; msg: string; time: string }>> = {
@@ -971,15 +971,256 @@ function MemberDetailPage({
 
         {/* Right: tabs */}
         <div>
-          <DetailTabs tabs={["Permissions", "Activity", "Security"]} active={activeTab} onChange={setActiveTab} />
+          <DetailTabs
+            tabs={["Apps", "Roles", "Groups", "Resources", "Security", "Activity"]}
+            active={activeTab}
+            onChange={setActiveTab}
+          />
           <div style={{ marginTop: 20 }}>
-            {activeTab === 0 && <PermissionsPanel />}
-            {activeTab === 1 && <ActivityPanel />}
-            {activeTab === 2 && <SecurityPanel member={member} onUpdate={onUpdate} />}
+            {activeTab === 0 && <AppsPanel member={member} />}
+            {activeTab === 1 && <MemberRolesPanel member={member} />}
+            {activeTab === 2 && <MemberGroupsPanel member={member} />}
+            {activeTab === 3 && <ResourcesPanel member={member} />}
+            {activeTab === 4 && <SecurityPanel member={member} onUpdate={onUpdate} />}
+            {activeTab === 5 && <ActivityPanel />}
           </div>
         </div>
       </div>
     </ScreenLayout>
+  )
+}
+
+// ─── Apps tab ─────────────────────────────────────────────────────────────────
+
+function AppsPanel({ member }: { member: Member }) {
+  const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
+  const studioSet = new Set<string>(member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : [])
+  memberGroups.forEach(g => g.studios.forEach(s => studioSet.add(s)))
+  const studios = Array.from(studioSet)
+
+  if (studios.length === 0) {
+    return (
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+        <Icons.AppWindow size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No apps assigned</div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Add this member to a group with studio access, or assign a role that includes studio permissions.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {studios.map(s => {
+        const meta = STUDIO_META[s]
+        if (!meta) return null
+        const via = memberGroups.filter(g => g.studios.includes(s)).map(g => g.name)
+        return (
+          <div key={s} style={{
+            display: "flex", alignItems: "center", gap: 16,
+            padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
+            background: "var(--surface)",
+          }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+              background: "var(--surface-raised)", border: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "var(--primary)",
+            }}>{meta.icon}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{meta.label}</div>
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{meta.desc}</div>
+            </div>
+            <div style={{ flexShrink: 0, textAlign: "right" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--badge-success)", marginBottom: 3 }}>Active</div>
+              {via.length > 0 && (
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                  via {via.slice(0, 2).join(", ")}{via.length > 2 ? ` +${via.length - 2}` : ""}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Roles tab ────────────────────────────────────────────────────────────────
+
+function MemberRolesPanel({ member }: { member: Member }) {
+  const assignedRoles = ROLES.filter(r => r.memberIds.includes(member.id))
+
+  if (assignedRoles.length === 0) {
+    return (
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+        <Icons.Shield size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No roles assigned</div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Permissions are inherited from the member's user type only.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {assignedRoles.map(role => {
+        const perms = ROLE_PERM_COUNTS[role.id] ?? { total: 0 }
+        return (
+          <div key={role.id} style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
+            background: "var(--surface)",
+          }}>
+            <div style={{
+              width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
+              background: role.color,
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{role.label}</span>
+                {role.system && (
+                  <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>System</span>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{role.desc}</div>
+            </div>
+            <div style={{ flexShrink: 0, fontSize: 12, color: "var(--muted-foreground)", textAlign: "right" }}>
+              {perms.total} permission{perms.total !== 1 ? "s" : ""}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Groups tab ───────────────────────────────────────────────────────────────
+
+function MemberGroupsPanel({ member }: { member: Member }) {
+  const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
+
+  if (memberGroups.length === 0) {
+    return (
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+        <Icons.Users size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>Not in any groups</div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Groups define shared studio access and can be used to batch-assign permissions.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {memberGroups.map(group => (
+        <div key={group.id} style={{
+          display: "flex", alignItems: "center", gap: 14,
+          padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
+          background: "var(--surface)",
+        }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+            background: `${group.color}22`, border: `1px solid ${group.color}44`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: group.color, fontWeight: 700, fontSize: 12,
+          }}>
+            {group.name.slice(0, 2).toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{group.name}</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+              {group.memberIds.length} member{group.memberIds.length !== 1 ? "s" : ""} · {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 180 }}>
+            {group.studios.slice(0, 3).map(s => (
+              <span key={s} style={{
+                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                background: "var(--surface-raised)", color: "var(--muted-foreground)",
+                border: "1px solid var(--border)",
+              }}>{STUDIO_META[s]?.label ?? s}</span>
+            ))}
+            {group.studios.length > 3 && (
+              <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>+{group.studios.length - 3}</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Resources tab ────────────────────────────────────────────────────────────
+
+const MEMBER_RESOURCES: Record<string, Array<{ name: string; type: string; scope: string; access: string }>> = {
+  tg: [
+    { name: "customer_360",     type: "Dataset",   scope: "Tenant",       access: "Owner" },
+    { name: "fraud_signals_v2", type: "Model",     scope: "Tenant",       access: "Owner" },
+    { name: "platform_events",  type: "Event Bus", scope: "Tenant",       access: "Owner" },
+  ],
+  mg: [
+    { name: "employee_directory", type: "Dataset", scope: "IT",           access: "Manager" },
+    { name: "access_audit_log",   type: "Dataset", scope: "IT",           access: "Read" },
+  ],
+  es: [
+    { name: "revenue_pipeline",   type: "Model",   scope: "Analytics",    access: "Contributor" },
+    { name: "churn_predictions",  type: "Model",   scope: "Analytics",    access: "Read" },
+  ],
+}
+
+const RESOURCE_TYPE_COLOR: Record<string, string> = {
+  Dataset:   "var(--badge-info)",
+  Model:     "var(--badge-success)",
+  "Event Bus": "var(--badge-alert)",
+}
+
+function ResourcesPanel({ member }: { member: Member }) {
+  const resources = MEMBER_RESOURCES[member.id] ?? []
+
+  if (resources.length === 0) {
+    return (
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+        <Icons.Package size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No resources assigned</div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Resources are datasets, models, and event buses accessible to this member.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "1fr 90px 100px 80px",
+        padding: "10px 18px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
+        fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)",
+      }}>
+        <span>Resource</span>
+        <span>Type</span>
+        <span>Scope</span>
+        <span style={{ textAlign: "right" }}>Access</span>
+      </div>
+      {resources.map((r, i) => {
+        const typeColor = RESOURCE_TYPE_COLOR[r.type] ?? "var(--muted-foreground)"
+        return (
+          <div key={i} style={{
+            display: "grid", gridTemplateColumns: "1fr 90px 100px 80px",
+            padding: "12px 18px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
+            alignItems: "center",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Icons.Layers size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", fontFamily: "monospace" }}>{r.name}</span>
+            </div>
+            <span style={{
+              fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
+              background: `${typeColor}18`, color: typeColor, border: `1px solid ${typeColor}33`,
+              width: "fit-content",
+            }}>{r.type}</span>
+            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{r.scope}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", textAlign: "right" }}>{r.access}</span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
