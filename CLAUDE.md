@@ -515,7 +515,7 @@ import { HighlightIcon }    from "@/components/ui/highlight-icon"
 // KpiContent helper — use for every KPI widget slot:
 function KpiContent({ value, feedback, iconName, iconVariant }) {
   return (
-    <div style={{ padding: "4px 16px 16px" }}>
+    <div>
       <div className="flex items-center justify-between">
         <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: "var(--color-text-title)" }}>{value}</span>
         <HighlightIcon size="lg" variant={iconVariant} iconName={iconName} />
@@ -535,7 +535,7 @@ function KpiContent({ value, feedback, iconName, iconVariant }) {
     {
       uid: "recent-activity", title: "Recent Activity", colSpan: 2, widthClass: "wide",
       content: (
-        <div style={{ padding: "0 16px 16px" }}>
+        <div>
           <Table columns={...} data={...} size="sm" />
         </div>
       ),
@@ -553,7 +553,8 @@ Rules:
 - `colSpan` drives the initial column span. `widthClass` defaults automatically from `colSpan` if omitted.
 - `content` is rendered INSIDE `WidgetFather`. Pass only the inner content — `WidgetFather` chrome (title, drag handle, resize handles) is added by `WidgetCanvasView`.
 - Do NOT wrap `content` in another `WidgetFather` — that would double the card shell.
-- KPI padding: `"4px 16px 16px"`. Table/feed padding: `"0 16px 16px"`.
+- **Do NOT add horizontal padding to widget `content`.** `WidgetFather` already insets its card by 24px; adding 16 here lands the content at 40 while the widget title stays at 24. The two halves each look fine alone, so the misalignment only shows with both on screen — which is how it survived until 2026-09-04. This guide used to prescribe `"4px 16px 16px"`, and that is where the double padding came from.
+- A little vertical breathing room is fine — a `gap` between rows, or `paddingBottom` on a dense list. Horizontal, never.
 - HighlightIcon variants: `informative` (blue), `success` (green), `neutral` (grey), `alert` (yellow), `error` (red).
 - Reactive values (counts, live rows) in `content` update automatically — the slot array is rebuilt on each render.
 

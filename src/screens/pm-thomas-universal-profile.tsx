@@ -330,7 +330,18 @@ function MetricRow({
       }}
     >
       <HighlightIcon size="sm" variant={variant} iconName={icon} />
-      <span style={{ fontSize: 12, color: "var(--field-supporting)", flex: 1, minWidth: 0 }}>{label}</span>
+      {/* One line, always. A wrapped label turns a 37px row into 55px, and four
+          of those overflow the widget's fixed height — the content silently
+          disappears instead of the label politely truncating. */}
+      <span
+        title={label}
+        style={{
+          fontSize: 12, color: "var(--field-supporting)", flex: 1, minWidth: 0,
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}
+      >
+        {label}
+      </span>
       <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", whiteSpace: "nowrap" }}>{value}</span>
     </div>
   )
@@ -460,9 +471,10 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     const slots: CanvasSlot[] = [
       // Summary KPI — always shown
       {
-        // Compact. Its content is an icon, two lines and two chips — the default
-        // rowSpan of 5 (304px) left half the card empty under them.
-        uid: "entity-summary", title: "Profile Summary", colSpan: 1, rowSpan: 3,
+        // Compact-ish. The default rowSpan of 5 (304px) left half the card empty
+        // under the chips. 4 removes most of that and still holds when the
+        // subtitle wraps to three lines in a narrow column — 3 clipped the chips.
+        uid: "entity-summary", title: "Profile Summary", colSpan: 1, rowSpan: 4,
         content: (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -508,7 +520,10 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     // Connections — hide if empty, show error if failed
     if (profile.connections !== "empty") {
       slots.push({
-        uid: "connections", title: "Connections", colSpan: 1, rowSpan: 4,
+        // Stays at the default 5. Its normal content is a list of related records,
+          // and a widget is sized for what it usually shows — the error state is the
+          // exception, not the thing to size for.
+          uid: "connections", title: "Connections", colSpan: 1,
         content: (
           <StudyWidget title="Connections" status={profile.connections}>
             <ConnectionsContent />
