@@ -28,6 +28,21 @@ This applies everywhere a new file gets created — not just `src/screens/` (see
 
 If you ever find a component in `ui/` or `layouts/` with zero imports anywhere in the repo, that's a bug from a prior session — flag it for removal, don't leave it sitting.
 
+## Breaking changes to a DS component — no deprecation period
+
+While the DS has no external consumers, a breaking change to anything in `src/components/ui/` is applied **outright**: delete the old prop or export, and migrate every call site **in the same PR**. No compatibility shims, no props kept alive as deprecated, no two shapes for the same thing.
+
+The reason is arithmetic, not taste — a component here has one or two consumers and zero real users, so a compatibility layer costs maintenance and buys nobody anything. It also means `tsc` is the migration checklist: if the build is green, there are no stragglers.
+
+Consequences, all of them non-optional in the same PR:
+- Update the component's `[COMPONENT]_SPEC` in `App.tsx` — a spec documenting a prop that no longer exists is the same defect as stale code.
+- Update whatever CLAUDE.md says about it. This file instructing an API that was removed is worse than saying nothing.
+- Say plainly in the PR description that the change is breaking, and which call sites moved.
+
+This applies to PM prototypes in `src/screens/` too: normally they belong to their PM and aren't refactored unasked, but a screen that no longer compiles isn't a refactor — it's the other half of your own change, and it ships with it.
+
+When the DS does get external consumers, this policy is the first thing to revisit.
+
 ## Syncing a DS component with Figma (new component, new variant, new tokens)
 
 **Any time you're asked to add a component, add/update a variant, or bring a component's colors in line with the Figma DS file (`v6rmYKA2zmyXWOahlxLOeI`) — use the `/aims-ds-component [component] [Figma node ID]` skill (`.claude/commands/aims-ds-component.md`).** This applies even when the user doesn't type the slash command literally — phrases like "update the Chip with the new colors from Figma," "add the Error/Alert/Success variants," or "sync this component" all mean: follow that skill's 6-phase workflow (extract real token values from Figma via the plugin API → map to CSS variable names → write both the `:root/.dark` and `.light` blocks in `src/index.css` → implement the component with `cva` → update the `[COMPONENT]_SPEC` in `App.tsx` → visually verify against a Figma screenshot).
@@ -114,36 +129,41 @@ actions={[
 actions={[{ icon: "Eye", onClick: () => {} }]}
 ```
 
-### Record Header — entity profile header (Employee/Customer/Client)
-Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard view that summarizes a **single** Employee, Customer, or Client record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; RecordHeader sits inside the content area, typically the Overview tab).
+### Record Header — entity profile header
+Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; RecordHeader sits inside the content area, typically the Overview tab).
 
-**Picking the variant** — by which fields the record actually has, not by guessing:
-- Has manager/department/access role → `employee`
-- Has MRR/renewal date/tier (existing paying account) → `customer`
-- Has deal stage/value/expected close date (still in the pipeline) → `client`
-- None of the 3 shapes fit → don't force it; flag `// DS-GAP: RecordHeader has no variant for this record shape`
+**There are no variants.** The component models no entity types at all — Employee, Customer, Vendor, Patient, Borrower, anything the host defines tomorrow all use the same shape. `entityType` is a plain `{ icon, label }` the caller supplies. Never look for a `variant` prop, never flag a missing one as a DS-GAP: an entity type the DS has never heard of is the normal case, not a gap.
 
-**Identity chips are stable attributes ONLY — never a dynamic state or metric.** Role/department/location, tier/segment/industry, company/deal value/lead source — yes. Adoption level, deal stage, health score — no, those change and aren't a secondary action either (see below) — they're removed from the header entirely (see the `// TODO: pertenece al Overview/tab de detalle` comments in record-header.tsx) and surface via Signal instead when urgent.
+**One skeleton: an always-visible identity row plus 3 zones behind a chevron** (collapsed by default — predictable header height). Every zone prop is optional and **omitting it removes the zone entirely** for that entity type. Never fake a zone with placeholder content — an absent zone is a real, supported state.
 
-**RecordHeader is 3 content zones (Identity / Signal / Actions + secondary actions), not a fixed field list — see the Reference tab's "Content contract" section for the full framing.** Zone 3's secondary actions live in a disclosure (collapsed by default, chevron reveals it — predictable header height) and come in exactly 3 kinds, all rendered as the SAME primitive (`Button variant="tertiary"` with a leading icon, wrapped in `Tooltip`) — only the icon and wiring differ: **contact** (Email, Phone — wired to mailto:/tel: at the call site), **navigation** (a link to another record or view — Manager/Owner are wired; "view team," "manage access," etc. are `// TODO`, destination unconfirmed), **creation** (Add note, Create task, Schedule meeting — always `// TODO`, AIMS OS has no real users yet to route these to). A field with no click destination at all (Start date, MRR, Access role, ...) isn't a secondary action and isn't shown in the header — it belongs on the Overview/detail tab. "Log activity" is deliberately never one of these — activity history lives in the record's own Activity tab.
+| Prop | Zone | Shape |
+|---|---|---|
+| `name` | Identity | `string` — required |
+| `entityType` | Identity | `{ icon, label }` — required, host-defined |
+| `statusTag?` | Identity | `{ label, icon? }` — a temporary state on the contact ("On Leave · Returns Mar 15"). Neutral/amber only, never `error` |
+| `recordFields?` | RECORD | `RecordField[]` |
+| `nextBestActions?` | (protagonist block) | `NextBestAction[]` — N supported, each stacked |
+| `agenticSystem?` | AGENTIC SYSTEM | `AgenticSystemInfo` |
+| `intervention?` | YOUR INTERVENTION | `PendingIntervention` |
+| `assignedAgent` | Identity | `AssignedAgent \| null` — required as a prop |
+| `actions?` | Identity | `RecordAction[]` — `actions[0]` is the one CTA, `actions[1+]` go to the "···" overflow |
 
-**Don't invent chips, secondary actions, or action labels per screen** — pull them from the component's own exports so every instance stays predictable:
-- `getRecordFields(variant, data)` → which fields become the 3 identity chips vs. Zone 3's secondary actions (see record-header.tsx or the Reference tab for the exact per-variant list)
-- `RECORD_HEADER_RECOMMENDED_ACTIONS[variant]` → `actions[0]` is the one contextual CTA, `actions[1+]` land in the "···" overflow. Not always 2 — e.g. `employee` is just "Message," since RecordHeader always sits on that record's own profile page, so anything the page already shows below it (Overview/Activity/Log tabs) — like "View profile" or "Log activity" — is dead weight, not a valid action. Genuinely tab-duplicate actions (e.g. "Log call," which belongs to Activity) go in the overflow, not the header's one CTA slot.
+**`recordFields` is a flat array the caller builds — there is no per-entity field list inside the component.** Each `RecordField` is `{ label, icon, provenance, state, value, maskedValue?, hasDestination? }`:
+- `provenance` is mandatory on every field (`{ system, systemAbbr, modelVersion, syncedAgo }`) — a field with no visible origin is not renderable by design.
+- `state: "hydrated" | "masked"` is the same field in two entitlement states, not two field types. The component renders whichever it is given; it never resolves permissions itself.
+- `hasDestination: false` for a plain descriptive fact with nothing further to show (a pure date, a pure figure) — it renders as static text, no chevron.
 
-**`assignedAgent` is required, not optional** (`{ id, name, onOpenChat }`) — AIMS OS is agent-first, every record has one. Renders as an always-present, most-prominent (icon-only, `variant="main"`) button using the Topbar's own `Sparkle` glyph (the single 4-point one, not the 3-star `Sparkles`) — never omit it. This is the one confirmed exception to "never `main` inside a card" (see Button hierarchy rules below) — don't extend that exception to any other button in this file.
+**`assignedAgent` is required as a prop, but the value may be `null`** — AIMS OS is agent-first, so every caller must decide; `null` renders the same button, disabled, with a Tooltip explaining why. Never a silently missing button. Renders as an always-present, most-prominent (icon-only, `variant="main"`) button using the Topbar's own `Sparkle` glyph (the single 4-point one, not the 3-star `Sparkles`). This is the one confirmed exception to "never `main` inside a card" (see Button hierarchy rules below) — don't extend that exception to any other button in this file.
 
-**Signal is required, not optional decoration** — every RecordHeader needs a `NextBestAction` (`{ label, severity, dueContext?, aiGenerated?, actionLabel?, onAction? }`) — but **required-as-a-prop does not mean "always urgent."** Most records, most of the time, have nothing pressing; forcing an alert-colored Signal onto a record that's genuinely fine is as wrong as omitting Signal would be. Pick `severity` from what's actually true about THIS record right now, never from a fixed per-variant template — see the Record Header catalog page's "All 3 variants — nothing urgent to surface" (Overview) and the Playground's "Needs attention / All good" toggle for the concrete range:
-- `success`/`alert`/`error` — a real urgency or risk state (task counts, renewal risk, SLA breach) or a genuinely good milestone worth flagging. This is the exception, not the default.
-- `informative`/`neutral` — a calm, non-urgent status line ("No pending approvals," "Early discovery, no next step due yet"). This is the common case — reach for it whenever nothing warrants an alert color.
-- `aiGenerated: true` swaps to the purple/Sparkles treatment **only** for a genuine probabilistic recommendation (confidence-scored, inferred) — never for a plain count or a real risk state. Urgency should always win visually over "an AI produced this."
-- `actionLabel` — set it when the NBA engine names ONE specific action ("Send proposal," "Schedule renewal call"); it renders as a real inline button, not just an implicit click-through. Leave it unset when there are several distinct items to review (e.g. "2 tasks pending approval") rather than one thing to do, AND leave it unset for a calm/neutral status — there's nothing to act on.
+**`nextBestActions` has no severity and no colors.** Each entry is `{ id, title, description, onOpen, contextTag? }` — there is no `severity`, no `dueContext`, no `aiGenerated`, no `actionLabel`. Timing and urgency live in the copy (`description`), not in a token. Pass an empty array or omit the prop for a record with genuinely nothing to recommend — the block disappears, which is the correct "all good" state; never synthesize a filler recommendation.
 
-**Signal click destination** — same framework as Entity click behavior above, applied to `signal.onAction`:
-- Multiple items need reviewing one by one before deciding (e.g. several pending approvals) → `SlideOut`, no `actionLabel` (nothing single to name)
-- A risk/health state to investigate, with evidence to show before recommending a step → `SlideOut` + `actionLabel` (both the click-through and the named button lead here)
-- One immediate, reversible-by-Cancel decision ("do this specific thing now?") → `ModalDialog` + `actionLabel` (the named button is the only entry point — no separate click-through chevron)
-- Never Full Navigation from a Signal click — RecordHeader already lives on that record's own page.
+**Fallback copy comes from `RECORD_HEADER_FALLBACKS`** — never write fallback strings inline at the call site.
+
+**Zone click destinations** — same framework as Entity click behavior above:
+- Several items to review one by one before deciding → `SlideOut`
+- A risk/health state to investigate, with evidence to show first → `SlideOut`
+- One immediate, reversible-by-Cancel decision → `ModalDialog`
+- Never Full Navigation from inside the card — RecordHeader already lives on that record's own page.
 
 ### Empty states
 **ALWAYS** use `EmptyState` from `src/components/ui/empty-state.tsx` when a view, section, or search has no content to display. **NEVER** hardcode a custom div, illustration, or message — custom empty states break visual consistency and are invisible to the DS.
