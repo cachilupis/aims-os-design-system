@@ -12,6 +12,8 @@ import { Filters }     from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { Chip }        from "@/components/ui/chip"
 import { Toggle }      from "@/components/ui/toggle"
+import { Stepper, type StepItem } from "@/components/ui/stepper"
+import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -1546,49 +1548,90 @@ function filterGrantedTree(nodes: PermNode[]): PermNode[] {
 
 type PermMode = "audit" | "edit"
 type PermOverrides = Record<string, PermState>
-const PERM_CYCLE: PermState[] = ["", "g-direct", "g-denied"]
 
-function EditPermIcon({ base, override, locked, onCycle }: {
-  base: PermState; override: PermState | undefined; locked?: boolean; onCycle: () => void
-}) {
-  const effective = override !== undefined ? override : base
-  if (locked) return <PermIcon state={effective} />
-  return (
-    <button onClick={e => { e.stopPropagation(); onCycle() }} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-      <PermIcon state={effective} />
-      {override !== undefined && override !== base && (
-        <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.3 }}>OVERRIDE</span>
-      )}
-    </button>
-  )
-}
-
-function EditablePermTreeNode({ node, depth, overrides, onCycle }: {
-  node: PermNode; depth: number; overrides: PermOverrides; onCycle: (id: string, current: PermState) => void
+function EditablePermTreeNode({ node, depth, overrides, onToggle }: {
+  node: PermNode; depth: number; overrides: PermOverrides; onToggle: (id: string, on: boolean) => void
 }) {
   const effective = overrides[node.id] !== undefined ? overrides[node.id] : node.state
-  const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
-  const hasChildren = node.children && node.children.length > 0
+  // Toggle = "is directly granted?" — g-inh alone does NOT turn the toggle ON
+  const isDirect      = effective === "g-direct"
+  const isInheritedOnly = node.state === "g-inh" && effective !== "g-direct"
+  const isPinned      = node.state === "g-inh" && effective === "g-direct"
+  const hasOverride   = overrides[node.id] !== undefined && overrides[node.id] !== node.state
+  const [expanded, setExpanded] = useState(depth === 0)
+  const hasChildren   = node.children && node.children.length > 0
+
+  // Row background: pinned/override → primary tint; inherited-only → blue-ish surface hint
+  const rowBg = isPinned || (hasOverride && !isInheritedOnly)
+    ? "color-mix(in srgb, var(--primary) 4%, transparent)"
+    : isInheritedOnly
+      ? "color-mix(in srgb, var(--primary) 2%, transparent)"
+      : "transparent"
+  const rowBgHover = isPinned || (hasOverride && !isInheritedOnly)
+    ? "color-mix(in srgb, var(--primary) 6%, transparent)"
+    : isInheritedOnly
+      ? "color-mix(in srgb, var(--primary) 4%, transparent)"
+      : "var(--accent)"
+
   return (
     <div>
       <div
         onClick={() => hasChildren && setExpanded(e => !e)}
-        style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0 6px", paddingLeft: depth * 20, cursor: hasChildren ? "pointer" : "default", borderRadius: 6 }}
+        style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: `8px 16px 8px ${16 + depth * 20}px`,
+          borderBottom: "1px solid var(--border)",
+          cursor: hasChildren ? "pointer" : "default",
+          background: rowBg,
+        }}
+        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = rowBgHover }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = rowBg }}
       >
-        {hasChildren ? (
-          <span style={{ fontSize: 10, color: "var(--muted-foreground)", width: 12, textAlign: "center" }}>{expanded ? "▾" : "▸"}</span>
-        ) : (
-          <span style={{ width: 12 }} />
-        )}
-        <EditPermIcon base={node.state} override={overrides[node.id]} locked={node.locked} onCycle={() => onCycle(node.id, effective)} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</div>
-          {node.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{node.desc}</div>}
+        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {hasChildren
+            ? expanded
+              ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" />
+              : <Icons.ChevronRight size={12} color="var(--muted-foreground)" />
+            : null}
         </div>
-        {node.role && <span style={{ fontSize: 10, color: "var(--muted-foreground)", flexShrink: 0 }}>via {node.role}</span>}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
+            {/* "via role" badge — always shown when inherited, even after pinning */}
+            {node.role && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
+                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
+              }}>via {node.role}</span>
+            )}
+            {node.scope && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>}
+            {isPinned && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.4, textTransform: "uppercase" }}>Pinned</span>
+            )}
+            {hasOverride && !isPinned && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.4, textTransform: "uppercase" }}>Modified</span>
+            )}
+          </div>
+          {node.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{node.desc}</div>}
+          {/* Hint on inherited rows: guide the admin to pin */}
+          {isInheritedOnly && (
+            <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1, fontStyle: "italic" }}>
+              Inherited via role · toggle to confirm direct access
+            </div>
+          )}
+        </div>
+        <span onClick={e => e.stopPropagation()}>
+          <Toggle
+            checked={isDirect}
+            disabled={node.locked && !isInheritedOnly}
+            size="sm"
+            onChange={on => { onToggle(node.id, on) }}
+          />
+        </span>
       </div>
       {expanded && hasChildren && node.children!.map(child => (
-        <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onCycle={onCycle} />
+        <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onToggle={onToggle} />
       ))}
     </div>
   )
@@ -1603,40 +1646,66 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   const [studio, setStudio] = useState("governance")
   const [overrides, setOverrides] = useState<PermOverrides>({})
   const [saved, setSaved] = useState(false)
+  const [showDiscardModal, setShowDiscardModal] = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveStep, setSaveStep] = useState<0 | 1>(0)
 
   const nodes = PERM_TREE[studio] ?? []
   const isDirty = Object.keys(overrides).length > 0
 
-  function cyclePermission(id: string, current: PermState) {
-    const idx = PERM_CYCLE.indexOf(current)
-    const next = PERM_CYCLE[(idx + 1) % PERM_CYCLE.length]
+  function togglePermission(id: string, on: boolean) {
     setOverrides(prev => {
       const allNodes = nodes.flatMap(n => [n, ...(n.children ?? [])])
-      const node = allNodes.find(n => n.id === id)
-      if (node && next === node.state) {
+      const base = allNodes.find(n => n.id === id)
+      const baseState = base?.state ?? ""
+
+      if (on) {
+        // Granting direct: if already natively g-direct, clear override; otherwise pin
+        if (baseState === "g-direct") {
+          const copy = { ...prev }; delete copy[id]; return copy
+        }
+        return { ...prev, [id]: "g-direct" }
+      } else {
+        // Removing direct: always clear the override and let base state take over.
+        // For g-inh nodes this is an "unpin" (back to inherited-only).
+        // For g-direct nodes this restores native direct (same as clearing).
+        // For "" nodes this removes a previously granted override.
         const copy = { ...prev }; delete copy[id]; return copy
       }
-      return { ...prev, [id]: next }
     })
     setSaved(false)
   }
 
-  function handleDiscard() { setOverrides({}); setMode("audit"); setSaved(false) }
-  function handleSave() {
-    setOverrides({}); setMode("audit"); setSaved(true)
+  function confirmDiscard() { setShowDiscardModal(false); setOverrides({}); setMode("audit"); setSaved(false) }
+  function openSaveModal() { setSaveStep(0); setShowSaveModal(true) }
+  function confirmSave() {
+    setShowSaveModal(false); setOverrides({}); setMode("audit"); setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
+
+  // Compute changed permissions for the Review step
+  const allNodes    = nodes.flatMap(n => [n, ...(n.children ?? [])])
+  const changedNodes  = allNodes.filter(n => overrides[n.id] !== undefined && overrides[n.id] !== n.state)
+  // Pinned: base was g-inh, now promoted to g-direct
+  const pinnedNodes  = changedNodes.filter(n => n.state === "g-inh" && overrides[n.id] === "g-direct")
+  // New direct grants (base was "")
+  const addedNodes   = changedNodes.filter(n => n.state !== "g-inh" && GRANTED_STATES.includes(overrides[n.id]!))
+  const removedNodes = changedNodes.filter(n => !GRANTED_STATES.includes(overrides[n.id]!))
 
   const allGranted = nodes.flatMap(n => [n, ...(n.children ?? [])]).filter(n => GRANTED_STATES.includes(n.state))
   const directCount = allGranted.filter(n => n.state === "g-direct").length
   const inhCount    = allGranted.filter(n => n.state === "g-inh").length
   const visibleNodes = mode === "audit" ? filterGrantedTree(nodes) : nodes
 
+  const saveSteps: StepItem[] = [
+    { label: "Review changes", state: saveStep === 0 ? "active" : "completed" },
+    { label: "Confirm", state: saveStep === 1 ? "active" : "default" },
+  ]
+
   return (
     <div>
       {/* Header row: studio sub-tabs + action button */}
       <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
-        {/* Studio sub-tabs */}
         <div style={{ display: "flex", gap: 4, flex: 1 }}>
           {STUDIO_TABS.map(s => (
             <button key={s.id} onClick={() => setStudio(s.id)} style={{
@@ -1649,7 +1718,6 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
           ))}
         </div>
 
-        {/* Right-side actions — only for permitted users */}
         {mode === "audit" && CURRENT_USER_CAN_EDIT_PERMISSIONS && (
           <Button variant="secondary" size="sm" onClick={() => setMode("edit")}>
             <Icons.Pencil size={13} style={{ marginRight: 4 }} />
@@ -1659,12 +1727,12 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
         {mode === "edit" && (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {saved && (
-              <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */ , display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
                 <Icons.CheckCircle size={13} /> Saved
               </span>
             )}
-            <Button variant="secondary" size="sm" onClick={handleDiscard}>Discard</Button>
-            <Button variant="primary" size="sm" onClick={handleSave} disabled={!isDirty}>Save changes</Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowDiscardModal(true)}>Discard</Button>
+            <Button variant="primary" size="sm" onClick={openSaveModal} disabled={!isDirty}>Save changes</Button>
           </div>
         )}
       </div>
@@ -1684,7 +1752,7 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
       <div>
         {mode === "audit"
           ? visibleNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
-          : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onCycle={cyclePermission} />)
+          : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onToggle={togglePermission} />)
         }
         {visibleNodes.length === 0 && (
           <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>
@@ -1692,6 +1760,136 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
           </div>
         )}
       </div>
+
+      {/* ── Discard confirmation modal ─────────────────────────────────────── */}
+      <ModalDialog
+        isOpen={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        tone="warning"
+        iconName="AlertTriangle"
+        title="Discard changes?"
+        description="Your permission edits will be lost. This can't be undone."
+        ctaPrimary={{ label: "Discard changes", destructive: true, onClick: confirmDiscard }}
+        ctaSecondary={{ label: "Keep editing", onClick: () => setShowDiscardModal(false) }}
+      />
+
+      {/* ── Save changes modal (2-step) ────────────────────────────────────── */}
+      <ModalDialog
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        variant="content"
+        showIcon={false}
+        title={saveStep === 0 ? "Review permission changes" : "Confirm changes"}
+        description={saveStep === 0
+          ? "Check what will change before applying. You can go back to keep editing."
+          : "These changes will take effect immediately for this member."
+        }
+        slot={
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {/* Stepper */}
+            <div style={{ padding: "4px 0 20px" }}>
+              <Stepper steps={saveSteps} />
+            </div>
+
+            {/* Step 0: Review diff */}
+            {saveStep === 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {pinnedNodes.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                      Confirming direct access ({pinnedNodes.length})
+                    </div>
+                    {pinnedNodes.map(n => (
+                      <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6,
+                        background: "color-mix(in srgb, var(--primary) 8%, transparent)" }}>
+                        <Icons.Pin size={12} color="var(--primary)" />
+                        <span style={{ fontSize: 13, color: "var(--foreground)" }}>{n.label}</span>
+                        {n.scope && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {n.scope}</span>}
+                        <span style={{ fontSize: 10, color: "var(--muted-foreground)", marginLeft: "auto" }}>was: via role · now: direct</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {addedNodes.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                      Granting access ({addedNodes.length})
+                    </div>
+                    {addedNodes.map(n => (
+                      <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6,
+                        background: "color-mix(in srgb, var(--success, #22c55e) 8%, transparent)" }}>
+                        <Icons.Plus size={12} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />
+                        <span style={{ fontSize: 13, color: "var(--foreground)" }}>{n.label}</span>
+                        {n.scope && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {n.scope}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {removedNodes.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
+                      Revoking access ({removedNodes.length})
+                    </div>
+                    {removedNodes.map(n => (
+                      <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6,
+                        background: "color-mix(in srgb, var(--error, #ef4444) 8%, transparent)" }}>
+                        <Icons.Minus size={12} color="var(--error, #ef4444)" /* audit-ignore */ />
+                        <span style={{ fontSize: 13, color: "var(--foreground)" }}>{n.label}</span>
+                        {n.scope && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {n.scope}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {changedNodes.length === 0 && (
+                  <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>
+                    No changes to review.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 1: Confirm */}
+            {saveStep === 1 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 8,
+                  background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  <Icons.ShieldCheck size={16} color="var(--primary)" />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>
+                      {changedNodes.length} permission{changedNodes.length !== 1 ? "s" : ""} will change
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                      {pinnedNodes.length > 0 && `${pinnedNodes.length} pinned`}
+                      {pinnedNodes.length > 0 && (addedNodes.length > 0 || removedNodes.length > 0) && " · "}
+                      {addedNodes.length > 0 && `${addedNodes.length} granted`}
+                      {addedNodes.length > 0 && removedNodes.length > 0 && " · "}
+                      {removedNodes.length > 0 && `${removedNodes.length} revoked`}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "4px 2px" }}>
+                  Changes apply immediately. The member will see updated access on their next action.
+                </div>
+              </div>
+            )}
+
+            {/* StepperNavFooter */}
+            <div style={{ marginTop: 16 }}>
+              <StepperNavFooter
+                variant={saveStep === 0 ? "cancel-next" : "back-next"}
+                cancelLabel="Cancel"
+                onCancel={() => setShowSaveModal(false)}
+                onBack={() => setSaveStep(0)}
+                nextLabel={saveStep === 0 ? "Review & confirm" : "Apply changes"}
+                nextDisabled={changedNodes.length === 0}
+                onNext={saveStep === 0 ? () => setSaveStep(1) : confirmSave}
+              />
+            </div>
+          </div>
+        }
+        slotUnstyled
+        showClose
+      />
     </div>
   )
 }
