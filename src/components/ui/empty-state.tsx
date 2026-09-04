@@ -28,6 +28,7 @@ import { CardContainer } from "@/components/ui/card-container"
  *   Icon: 24×24px
  *   Container radius: Radius-L = 16px
  *   Default padding: 64px top/bottom · 24px sides
+ *   compact:         20px top/bottom · 24px sides — for fixed-height containers
  */
 
 export type EmptyStateProps = {
@@ -41,6 +42,10 @@ export type EmptyStateProps = {
   onCta2?:       () => void
   /** Skip the dashed CardContainer — only when the caller already supplies one. */
   bare?:         boolean
+  /** Tightens the vertical padding from 64px to 20px and the internal gap from
+   *  24 to 12. For an empty state inside a fixed-height container — a widget
+   *  slot, a small panel — where the default clips its own CTA. */
+  compact?:      boolean
   className?:    string
 }
 
@@ -54,6 +59,7 @@ export function EmptyState({
   cta2Label,
   onCta2,
   bare = false,
+  compact = false,
   className,
 }: EmptyStateProps) {
   const body = (
@@ -61,7 +67,8 @@ export function EmptyState({
       role="status"
       aria-live="polite"
       className={cn(
-        "flex flex-col items-center justify-center gap-[24px] text-center w-full py-[64px] px-[24px]",
+          "flex flex-col items-center justify-center text-center w-full px-[24px]",
+          compact ? "gap-[12px] py-[20px]" : "gap-[24px] py-[64px]",
         bare && "rounded-[16px]",
         bare && className
       )}

@@ -283,7 +283,7 @@ function StudyWidget({ title, status, children }: { title: string; status: Study
 
   if (status === "error") {
     return (
-      <div style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-text-error-default)" }}>
           <LucideIcons.AlertCircle size={14} />
           <span style={{ fontSize: 12, fontWeight: 500 }}>Failed to load</span>
@@ -306,25 +306,54 @@ function StudyWidget({ title, status, children }: { title: string; status: Study
   return <>{children}</>
 }
 
+// ── Metric row ────────────────────────────────────────────────────────────
+// Icon, then label, then value — reading left to right in the order you scan.
+// The earlier version put the icon next to the value on the right, which meant
+// the eye had to cross the row to find out what kind of thing the number was.
+//
+// No horizontal padding: WidgetFather already insets its card by 24px, and
+// adding 16 here landed the content at 40 while the widget title stayed at 24.
+// (CLAUDE.md's "KPI padding: 4px 16px 16px" predates that and double-pads —
+// corrected in the same change as this.)
+type MetricVariant = "success" | "alert" | "informative" | "neutral" | "error"
+
+function MetricRow({
+  label, value, icon, variant, last = false,
+}: {
+  label: string
+  value: string
+  icon: string
+  variant: MetricVariant
+  last?: boolean
+}) {
+  return (
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "8px 0",
+        borderBottom: last ? "none" : "1px solid var(--color-border-neutral-subtle)",
+      }}
+    >
+      <HighlightIcon size="sm" variant={variant} iconName={icon} />
+      <span style={{ fontSize: 12, color: "var(--field-supporting)", flex: 1, minWidth: 0 }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", whiteSpace: "nowrap" }}>{value}</span>
+    </div>
+  )
+}
+
 // ── Governance study widget content ──────────────────────────────────────────
 
 function GovernanceContent() {
   const items = [
-    { label: "Compliance Score",  value: "94 / 100",     icon: "ShieldCheck",   variant: "success"     as const },
-    { label: "Open Reviews",      value: "1",            icon: "ClipboardList", variant: "alert"       as const },
-    { label: "Policies Signed",   value: "12 of 12",     icon: "FileCheck2",    variant: "success"     as const },
-    { label: "Last Audit",        value: "Aug 10, 2026", icon: "CalendarCheck", variant: "informative" as const },
+    { label: "Compliance Score", value: "94 / 100",     icon: "ShieldCheck",   variant: "success"     as const },
+    { label: "Open Reviews",     value: "1",            icon: "ClipboardList", variant: "alert"       as const },
+    { label: "Policies Signed",  value: "12 of 12",     icon: "FileCheck2",    variant: "success"     as const },
+    { label: "Last Audit",       value: "Aug 10, 2026", icon: "CalendarCheck", variant: "informative" as const },
   ]
   return (
-    <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-      {items.map(item => (
-        <div key={item.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{item.label}</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <HighlightIcon size="sm" variant={item.variant} iconName={item.icon} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{item.value}</span>
-          </div>
-        </div>
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {items.map((item, i) => (
+        <MetricRow key={item.label} {...item} last={i === items.length - 1} />
       ))}
     </div>
   )
@@ -333,36 +362,17 @@ function GovernanceContent() {
 // ── Risk study widget content ─────────────────────────────────────────────────
 
 function RiskContent() {
+  const items = [
+    { label: "Risk Score",  value: "18 / 100",    icon: "TrendingDown",   variant: "success"     as const },
+    { label: "Open Flags",  value: "0",           icon: "Flag",           variant: "neutral"     as const },
+    { label: "Last Scan",   value: "Jul 27, 2026", icon: "ScanLine",      variant: "informative" as const },
+    { label: "Trend",       value: "↓ 24 → 18",   icon: "ArrowDownRight", variant: "success"     as const },
+  ]
   return (
-    <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Risk Score</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <HighlightIcon size="sm" variant="success" iconName="TrendingDown" />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>18 / 100</span>
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Open Flags</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <HighlightIcon size="sm" variant="neutral" iconName="Flag" />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>0</span>
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Last Scan</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <HighlightIcon size="sm" variant="informative" iconName="ScanLine" />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>Jul 27, 2026</span>
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Trend</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <HighlightIcon size="sm" variant="success" iconName="ArrowDownRight" />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>↓ 24 → 18</span>
-        </div>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {items.map((item, i) => (
+        <MetricRow key={item.label} {...item} last={i === items.length - 1} />
+      ))}
     </div>
   )
 }
@@ -376,7 +386,7 @@ function ConnectionsContent() {
     { name: "Operations Team", type: "Team",         icon: "Users"     },
   ]
   return (
-    <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {connections.map(c => (
         <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <HighlightIcon size="sm" variant="neutral" iconName={c.icon} />
@@ -455,9 +465,11 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     const slots: CanvasSlot[] = [
       // Summary KPI — always shown
       {
-        uid: "entity-summary", title: "Profile Summary", colSpan: 1,
+        // Compact. Its content is an icon, two lines and two chips — the default
+        // rowSpan of 5 (304px) left half the card empty under them.
+        uid: "entity-summary", title: "Profile Summary", colSpan: 1, rowSpan: 3,
         content: (
-          <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <HighlightIcon size="lg" variant="informative" iconName={profile.avatarIcon} />
               <div>
@@ -477,7 +489,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     // Governance — hide if empty, show error if failed
     if (profile.governance !== "empty") {
       slots.push({
-        uid: "governance", title: "Governance", colSpan: 1,
+        uid: "governance", title: "Governance", colSpan: 1, rowSpan: 4,
         content: (
           <StudyWidget title="Governance" status={profile.governance}>
             <GovernanceContent />
@@ -489,7 +501,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     // Risk — hide if empty, show error if failed
     if (profile.risk !== "empty") {
       slots.push({
-        uid: "risk", title: "Risk", colSpan: 1,
+        uid: "risk", title: "Risk", colSpan: 1, rowSpan: 4,
         content: (
           <StudyWidget title="Risk" status={profile.risk}>
             <RiskContent />
@@ -501,7 +513,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     // Connections — hide if empty, show error if failed
     if (profile.connections !== "empty") {
       slots.push({
-        uid: "connections", title: "Connections", colSpan: 1,
+        uid: "connections", title: "Connections", colSpan: 1, rowSpan: 4,
         content: (
           <StudyWidget title="Connections" status={profile.connections}>
             <ConnectionsContent />
