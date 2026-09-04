@@ -309,7 +309,7 @@ function BackBreadcrumb({ onBack }: { onBack: () => void }) {
 
 function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number; onChange: (i: number) => void }) {
   return (
-    <div style={{ display: "flex", borderBottom: "1px solid var(--border)", marginBottom: 0, overflowX: "auto", scrollbarWidth: "none" }}>
+    <div style={{ display: "flex", marginBottom: 0, overflowX: "auto", scrollbarWidth: "none" }}>
       {tabs.map((t, i) => (
         <button
           key={t}
@@ -1611,7 +1611,6 @@ function EditablePermTreeNode({ node, depth, overrides, onCycle }: {
 function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   const [mode, setMode] = useState<PermMode>("audit")
   const [studio, setStudio] = useState("governance")
-  const [filter, setFilter] = useState("")
   const [overrides, setOverrides] = useState<PermOverrides>({})
   const [saved, setSaved] = useState(false)
 
@@ -1638,11 +1637,7 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
     setTimeout(() => setSaved(false), 2500)
   }
 
-  const filterLower = filter.toLowerCase()
-  const baseNodes = mode === "audit" ? filterGrantedTree(nodes) : nodes
-  const visibleNodes = filter
-    ? baseNodes.filter(n => n.label.toLowerCase().includes(filterLower) || n.children?.some(c => c.label.toLowerCase().includes(filterLower)))
-    : baseNodes
+  const visibleNodes = mode === "audit" ? filterGrantedTree(nodes) : nodes
 
   return (
     <div>
@@ -1700,12 +1695,6 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom: 12 }}>
-        <input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter permissions…"
-          style={{ width: "100%", padding: "6px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" }} />
-      </div>
-
       {/* Tree */}
       <div>
         {mode === "audit"
@@ -1714,11 +1703,7 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
         }
         {visibleNodes.length === 0 && (
           <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>
-            {filter
-              ? `No permissions match "${filter}"`
-              : mode === "audit"
-                ? "No permissions granted in this studio."
-                : "No permissions available."}
+            {mode === "audit" ? "No permissions granted in this studio." : "No permissions available."}
           </div>
         )}
       </div>
