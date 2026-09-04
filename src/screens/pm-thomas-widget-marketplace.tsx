@@ -359,7 +359,10 @@ export default function PMThomasWidgetMarketplaceScreen() {
           showSearchBar={false}
           showCta={false}
         >
-          <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Vertical padding only. SlideOut already insets its panel by 24px, so a
+                horizontal padding here lands the content at 48px while the header
+                stays at 24 — the misalignment is only visible with both on screen. */}
+            <div style={{ padding: "4px 0 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <WidgetGlyph skeleton={viewWidget.skeleton} size="md" />
               <div>
