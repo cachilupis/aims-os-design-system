@@ -5,6 +5,8 @@ import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
+import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
+import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { WidgetShapePreview, SHAPE_FOR_BUILDER_TYPE } from "@/components/experimental/widget-parts"
 import { Tag } from "@/components/ui/tag"
 import { ModalDialog } from "@/components/ui/modal-dialog"
@@ -121,37 +123,6 @@ function SectionLabel({ n, children }: { n: number; children: React.ReactNode })
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
       <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--primary)", color: "var(--canvas)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{n}</div>
       <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{children}</span>
-    </div>
-  )
-}
-
-// DS-GAP: BuilderTabNav — 3-step tab bar with completion dots and enable/disable gating. Closest DS component: Tabs.
-function BuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: TabId; setTab: (t: TabId) => void; dataComplete: boolean; widgetComplete: boolean }) {
-  const tabs: { id: TabId; label: string; n: number; done: boolean; enabled: boolean }[] = [
-    { id: "data",       label: "Data",       n: 1, done: dataComplete,   enabled: true },
-    { id: "widget",     label: "Widget",     n: 2, done: widgetComplete, enabled: dataComplete },
-    { id: "appearance", label: "Appearance", n: 3, done: false,          enabled: widgetComplete },
-  ]
-  const CheckIcon = LucideIcons.Check as React.FC<{ size?: number }>
-  return (
-    <div style={{ display: "flex", gap: 4, padding: 4, borderRadius: 12, background: "var(--field-border)", opacity: 0.9 }}>
-      {tabs.map(t => (
-        <button key={t.id} onClick={() => t.enabled && setTab(t.id)} disabled={!t.enabled} style={{
-          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "7px 4px",
-          borderRadius: 8, border: "none", cursor: t.enabled ? "pointer" : "not-allowed",
-          background: tab === t.id ? "var(--surface)" : "transparent",
-          opacity: t.enabled ? 1 : 0.35, transition: "all 0.15s",
-        }}>
-          <div style={{
-            width: 18, height: 18, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700,
-            background: t.done ? "var(--success)" : tab === t.id ? "var(--primary)" : "var(--color-text-subtitle)",
-            color: "var(--canvas)",
-          }}>
-            {t.done ? <CheckIcon size={10} /> : t.n}
-          </div>
-          <span style={{ fontSize: 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "var(--color-text-title)" : "var(--color-text-subtitle)" }}>{t.label}</span>
-        </button>
-      ))}
     </div>
   )
 }
@@ -329,6 +300,33 @@ export default function PMThomasWidgetBuilderScreen() {
   const canSave        = widgetComplete
   const hasUnsaved     = !!(sourceId || typeId || name.trim())
 
+  // ── Wizard stages ─────────────────────────────────────────────────────────
+  // These were a hand-rolled tab strip: numbered dots, a check when complete,
+  // disabled until the previous stage was done. Tabs are non-linear by
+  // definition — the moment one can be locked behind another it is a stage, and
+  // stages are what Stepper is for. Its StepState covers every case the local
+  // version drew by hand.
+  const STEP_ORDER: TabId[] = ["data", "widget", "appearance"]
+
+  const stepState = (id: TabId): StepState => {
+    if (id === tab) return "active"
+    if (id === "data")   return dataComplete   ? "completed" : "default"
+    if (id === "widget") return widgetComplete ? "completed" : dataComplete   ? "default" : "locked"
+    return widgetComplete ? "default" : "locked"
+  }
+
+  const wizardSteps: StepItem[] = [
+    { label: "Data",       state: stepState("data")       },
+    { label: "Widget",     state: stepState("widget")     },
+    { label: "Appearance", state: stepState("appearance") },
+  ]
+
+  // The footer's shape follows the stage: Cancel on the first, Back after that,
+  // and the primary button becomes Save on the last one.
+  const isLast     = tab === "appearance"
+  const stepIndex  = STEP_ORDER.indexOf(tab)
+  const nextEnabled = tab === "data" ? dataComplete : tab === "widget" ? widgetComplete : canSave
+
   const saveHint = !sourceId
     ? (dataMode === "dataset" ? "Select a governed dataset on the Data tab." : "Select an entity source on the Data tab.")
     : !dataComplete
@@ -359,7 +357,6 @@ export default function PMThomasWidgetBuilderScreen() {
   }
 
   const CheckIcon        = LucideIcons.Check        as React.FC<{ size?: number; style?: React.CSSProperties }>
-  const ChevronRightIcon = LucideIcons.ChevronRight as React.FC<{ size?: number }>
 
   const selectStyle = { width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--field-border)", background: "var(--surface)", color: "var(--color-text-title)", fontSize: 13 }
 
@@ -377,18 +374,6 @@ export default function PMThomasWidgetBuilderScreen() {
             title={saved ? "Widget saved" : "Widget Playground"}
             description={saved ? "Your widget is now in the library." : "Map an entity and metric, pick a type, and preview it live."}
           />
-          {/* DS-GAP: Header takes at most 2 actions (primaryAction + secondaryAction),
-              and per the Create pattern a create page's actions belong in
-              StepperNavFooter — not the Header. Until that footer is wired into this
-              screen, the 3 wizard actions live in this row below the Header. */}
-          {!saved && (
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "0 32px 8px" }}>
-              <Button variant="secondary" size="sm" onClick={() => hasUnsaved ? setShowLeave(true) : undefined}>Cancel</Button>
-              {tab === "data" && <Button variant="secondary" size="sm" disabled={!dataComplete} onClick={() => setTab("widget")}>Widget <ChevronRightIcon size={14} /></Button>}
-              {tab === "widget" && <Button variant="secondary" size="sm" disabled={!widgetComplete} onClick={() => setTab("appearance")}>Appearance <ChevronRightIcon size={14} /></Button>}
-              <Button variant="primary" size="sm" disabled={!canSave} onClick={() => setSaved(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
-            </div>
-          )}
         </>
       )}
     >
@@ -406,7 +391,14 @@ export default function PMThomasWidgetBuilderScreen() {
               <Button variant="secondary" size="sm">Generate</Button>
             </div>
 
-            <BuilderTabNav tab={tab} setTab={setTab} dataComplete={dataComplete} widgetComplete={widgetComplete} />
+            <Stepper
+              steps={wizardSteps}
+              onStepClick={(i) => {
+                // Only backwards, and only into a stage that is already reachable.
+                const target = STEP_ORDER[i]
+                if (STEP_ORDER.indexOf(tab) > i || stepState(target) !== "locked") setTab(target)
+              }}
+            />
 
             {/* ── Tab 1: Data ── */}
             {tab === "data" && (
@@ -566,6 +558,30 @@ export default function PMThomasWidgetBuilderScreen() {
             />
           </div>
         </div>
+      )}
+
+      {/* StepperNavFooter is sticky, and it is 72px tall against ScreenLayout's
+          64px bottom padding — eight pixels short, so the last row of a stage
+          can sit under it mid-scroll. This spacer buys the clearance. */}
+      {!saved && <div style={{ height: 24 }} />}
+
+      {/* ── Wizard navigation ──────────────────────────────────────────────
+          Sticky at the foot of the page, which is where a staged create flow's
+          actions belong — not in the Header, and not in a loose row under it.
+          The three buttons that used to sit up there were the reason this
+          screen tripped the variant="main" check. */}
+      {!saved && (
+        <StepperNavFooter
+          variant={tab === "data" ? "cancel-next" : "back-next"}
+          onCancel={() => (hasUnsaved ? setShowLeave(true) : resetAll())}
+          onBack={() => setTab(STEP_ORDER[Math.max(0, stepIndex - 1)])}
+          nextLabel={isLast ? "Save to catalog" : "Next"}
+          nextDisabled={!nextEnabled}
+          onNext={() => {
+            if (isLast) { setSaved(true); return }
+            setTab(STEP_ORDER[stepIndex + 1])
+          }}
+        />
       )}
 
       {/* ── Leave confirmation modal ── */}
