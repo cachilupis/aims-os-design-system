@@ -3,10 +3,10 @@ import * as LucideIcons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Tag } from "@/components/ui/tag"
 import { WidgetGlyph, WidgetFreshnessBadge, WidgetMiniPreview } from "@/components/experimental/widget-parts"
 import { CardContainer } from "@/components/ui/card-container"
+import { Filters } from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Pagination } from "@/components/ui/pagination"
@@ -19,6 +19,9 @@ type Skeleton = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel
 type Freshness = "live" | "fresh" | "stale"
 type Complexity = "Simple" | "Intermediate" | "Advanced"
 type SortKey = "usage" | "name" | "type"
+
+// Filters carries one sort label and cycles it on click — it has no sort menu.
+const SORT_LABEL: Record<SortKey, string> = { usage: "Most used", name: "Name A–Z", type: "By type" }
 
 interface MarketplaceWidget {
   id: string
@@ -239,11 +242,6 @@ export default function PMThomasWidgetMarketplaceScreen() {
     setPage(1)
   }
 
-  const selectStyle: React.CSSProperties = {
-    padding: "6px 10px", borderRadius: 6, border: "1px solid var(--field-border)",
-    background: "var(--surface)", color: "var(--color-text-title)", fontSize: 13, cursor: "pointer",
-  }
-
   return (
     <ScreenLayout
       workspaceName="Acme Corp"
@@ -283,31 +281,46 @@ export default function PMThomasWidgetMarketplaceScreen() {
         {/* Right panel — Filter toolbar + card grid */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
 
-          {/* DS-GAP: FilterToolbar — search + dropdown filters for marketplace. Closest DS component: Filters. */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <Input placeholder="Search widgets…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} />
-            </div>
-            <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1) }} style={selectStyle}>
-              <option value="all">All types</option>
-              {skeletonOptions.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select value={sourceFilter} onChange={(e) => { setSourceFilter(e.target.value); setPage(1) }} style={selectStyle}>
-              <option value="all">All sources</option>
-              {sourceOptions.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select value={complexityFilter} onChange={(e) => { setComplexityFilter(e.target.value); setPage(1) }} style={selectStyle}>
-              <option value="all">All complexity</option>
-              <option value="Simple">Simple</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} style={selectStyle}>
-              <option value="usage">Most used</option>
-              <option value="name">Name A–Z</option>
-              <option value="type">By type</option>
-            </select>
-          </div>
+          <Filters
+            showSearch
+            searchPlaceholder="Search widgets…"
+            searchValue={search}
+            onSearchChange={(v) => { setSearch(v); setPage(1) }}
+            showAllFilters={false}
+            showViewToggle={false}
+            showClearFilters={typeFilter !== "all" || sourceFilter !== "all" || complexityFilter !== "all"}
+            onClearFilters={() => {
+              setTypeFilter("all"); setSourceFilter("all"); setComplexityFilter("all"); setPage(1)
+            }}
+            sortLabel={SORT_LABEL[sortBy]}
+            onSortClick={() => {
+              const order: SortKey[] = ["usage", "name", "type"]
+              setSortBy(order[(order.indexOf(sortBy) + 1) % order.length])
+            }}
+            slots={[
+              {
+                placeholder: "All types",
+                value: typeFilter === "all" ? undefined : typeFilter,
+                options: skeletonOptions,
+                onSelect: (v) => { setTypeFilter(v); setPage(1) },
+                onRemove: () => { setTypeFilter("all"); setPage(1) },
+              },
+              {
+                placeholder: "All sources",
+                value: sourceFilter === "all" ? undefined : sourceFilter,
+                options: sourceOptions,
+                onSelect: (v) => { setSourceFilter(v); setPage(1) },
+                onRemove: () => { setSourceFilter("all"); setPage(1) },
+              },
+              {
+                placeholder: "All complexity",
+                value: complexityFilter === "all" ? undefined : complexityFilter,
+                options: ["Simple", "Intermediate", "Advanced"],
+                onSelect: (v) => { setComplexityFilter(v); setPage(1) },
+                onRemove: () => { setComplexityFilter("all"); setPage(1) },
+              },
+            ]}
+          />
 
           <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>
             {filtered.length} widget{filtered.length !== 1 ? "s" : ""}
