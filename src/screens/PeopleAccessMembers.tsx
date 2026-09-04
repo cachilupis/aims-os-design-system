@@ -647,7 +647,7 @@ const ACTION_COLOR: Record<AuditAction, string> = {
   Login:      "var(--badge-info)",
   Update:     "var(--primary)",
   Create:     "var(--badge-success)",
-  Delete:     "var(--badge-error, #ef4444)",
+  Delete:     "var(--badge-error, #ef4444)", // audit-ignore: hex is CSS var fallback
   Permission: "var(--badge-alert)",
   Group:      "var(--muted-foreground)",
   Export:     "var(--muted-foreground)",
@@ -715,7 +715,7 @@ function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           {ev.result === "Success"
             ? <><Icons.Check size={11} color="var(--badge-success)" /><span style={{ fontSize: 11, color: "var(--badge-success)", fontWeight: 600 }}>Success</span></>
-            : <><Icons.X size={11} color="var(--badge-error, #ef4444)" /><span style={{ fontSize: 11, color: "var(--badge-error, #ef4444)", fontWeight: 600 }}>Failed</span></>
+            : <><Icons.X size={11} color="var(--badge-error, #ef4444)" /><span style={{ fontSize: 11, color: "var(--badge-error, #ef4444)", fontWeight: 600 }}>Failed</span></> // audit-ignore: hex is CSS var fallback
           }
         </div>
         {/* Source */}
@@ -750,7 +750,7 @@ function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 6 }}>CHANGE DIFF</div>
               <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", fontSize: 12, fontFamily: "monospace" }}>
-                <div style={{ padding: "8px 14px", background: "color-mix(in srgb, var(--badge-error, #ef4444) 8%, transparent)", borderBottom: "1px solid var(--border)" }}>
+                <div style={{ padding: "8px 14px", background: "color-mix(in srgb, var(--badge-error, #ef4444) 8%, transparent)", borderBottom: "1px solid var(--border)" }}> {/* audit-ignore: hex is CSS var fallback */}
                   <span style={{ color: "var(--muted-foreground)", marginRight: 8 }}>before</span>{ev.diff.before}
                 </div>
                 <div style={{ padding: "8px 14px", background: "color-mix(in srgb, var(--badge-success) 8%, transparent)" }}>
@@ -1260,7 +1260,7 @@ const DEFAULT_STUDIO_USAGE: StudioUsage[] = [
 
 function TokenBar({ used, limit }: { used: number; limit: number }) {
   const pct = Math.min(100, Math.round((used / limit) * 100))
-  const color = pct >= 90 ? "var(--badge-error, #ef4444)" : pct >= 70 ? "var(--badge-alert)" : "var(--badge-success)"
+  const color = pct >= 90 ? "var(--badge-error, #ef4444)" : pct >= 70 ? "var(--badge-alert)" : "var(--badge-success)" // audit-ignore: hex is CSS var fallback
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <div style={{ flex: 1, height: 5, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}>
@@ -2567,16 +2567,26 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
 
 // ─── Invite modal ─────────────────────────────────────────────────────────────
 
-const ALL_ROLES: UserType[] = ["Owner", "Admin", "Member"]
+const INVITE_STUDIO_OPTIONS = [
+  { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={13} /> },
+  { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={13} /> },
+  { id: "agentic",    label: "Agentic Studio",     icon: <Icons.Bot size={13} /> },
+  { id: "admin",      label: "Admin Console",      icon: <Icons.Settings size={13} /> },
+]
 
 function InviteModal({ onClose, onSend }: {
   onClose: () => void
   onSend: (emails: string[], role: MemberRole) => void
 }) {
-  const [emailInput, setEmailInput] = useState("")
-  const [emails, setEmails]         = useState<string[]>([])
-  const [role, setRole]             = useState<MemberRole>("Member")
-  const [note, setNote]             = useState("")
+  const [emailInput, setEmailInput]   = useState("")
+  const [emails, setEmails]           = useState<string[]>([])
+  const [role, setRole]               = useState<MemberRole>("Member")
+  const [studios, setStudios]         = useState<string[]>(["governance"])
+  const [groupIds, setGroupIds]       = useState<string[]>([])
+  const [note, setNote]               = useState("")
+  const [done, setDone]               = useState(false)
+
+  const recipientCount = emails.length + (emailInput.trim() ? 1 : 0)
 
   function addEmail() {
     const trimmed = emailInput.trim().toLowerCase()
@@ -2589,53 +2599,93 @@ function InviteModal({ onClose, onSend }: {
     if (e.key === "Backspace" && !emailInput && emails.length) setEmails(e => e.slice(0, -1))
   }
 
-  function submit() {
-    const all = emailInput.trim() ? [...emails, emailInput.trim()] : emails
-    if (all.length === 0) return
-    onSend(all, role)
-    onClose()
+  function toggleStudio(id: string) {
+    setStudios(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
   }
 
-  return (
+  function toggleGroup(id: string) {
+    setGroupIds(g => g.includes(id) ? g.filter(x => x !== id) : [...g, id])
+  }
+
+  function submit() {
+    const all = emailInput.trim() ? [...emails, emailInput.trim().toLowerCase()] : emails
+    if (all.length === 0) return
+    onSend(all, role)
+    setDone(true)
+    setTimeout(() => onClose(), 2200)
+  }
+
+  const inviteeCount = emails.length + (emailInput.trim() ? 1 : 0)
+
+  const Backdrop = (
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999,  // audit-ignore: prototype fixture data
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999,  // audit-ignore
       display: "flex", alignItems: "center", justifyContent: "center",
-    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    }} onClick={e => { if (e.target === e.currentTarget && !done) onClose() }} />
+  )
+
+  if (done) return (
+    <>
+      {Backdrop}
       <div style={{
-        width: 520, background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",  // audit-ignore: prototype fixture data
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 10000,
+        width: 420, background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 16, padding: "40px 32px", textAlign: "center",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.4)",  // audit-ignore
+      }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: "50%", margin: "0 auto 16px",
+          background: "color-mix(in srgb, var(--badge-success) 15%, transparent)",
+          border: "2px solid color-mix(in srgb, var(--badge-success) 30%, transparent)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "var(--badge-success)",
+        }}>
+          <Icons.Check size={24} />
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: "var(--foreground)", marginBottom: 8 }}>
+          {recipientCount} invitation{recipientCount !== 1 ? "s" : ""} sent
+        </div>
+        <div style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
+          {recipientCount === 1 ? "They'll" : "They'll each"} receive an email with a link to join Avance Financial. Invitations expire in 7 days.
+        </div>
+      </div>
+    </>
+  )
+
+  return (
+    <>
+      {Backdrop}
+      <div style={{
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 10000,
+        width: 560, maxHeight: "90vh", overflowY: "auto",
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.4)",  // audit-ignore
       }}>
         {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12, position: "sticky", top: 0, background: "var(--surface)", zIndex: 1 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10, flexShrink: 0,
             background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "var(--primary)",
+            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
           }}>
             <Icons.UserPlus size={17} />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Invite to Avance Financial</div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
-              Invitations are sent by email and expire after 7 days
-            </div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Invitations are sent by email and expire after 7 days.</div>
           </div>
           <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6 }}
             onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
             onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <Icons.X size={16} />
-          </button>
+          ><Icons.X size={16} /></button>
         </div>
 
         {/* Body */}
-        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Email chips input */}
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* 1 · Emails */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-              Email addresses
-            </label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>Email addresses</label>
             <div style={{
               minHeight: 44, border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px",
               display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center",
@@ -2650,104 +2700,169 @@ function InviteModal({ onClose, onSend }: {
                   fontSize: 12, color: "var(--primary)", fontWeight: 500,
                 }}>
                   {em}
-                  <button
-                    onClick={ev => { ev.stopPropagation(); setEmails(e => e.filter(x => x !== em)) }}
-                    style={{ border: "none", background: "none", cursor: "pointer", color: "var(--primary)", padding: 0, lineHeight: 1 }}
-                  >
+                  <button onClick={ev => { ev.stopPropagation(); setEmails(e => e.filter(x => x !== em)) }}
+                    style={{ border: "none", background: "none", cursor: "pointer", color: "var(--primary)", padding: 0, lineHeight: 1 }}>
                     <Icons.X size={11} />
                   </button>
                 </span>
               ))}
-              <input
-                value={emailInput}
-                onChange={e => setEmailInput(e.target.value)}
-                onKeyDown={handleKey}
-                onBlur={addEmail}
+              <input value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={handleKey} onBlur={addEmail}
                 placeholder={emails.length === 0 ? "name@company.com, another@company.com" : "Add another…"}
-                style={{
-                  flex: 1, minWidth: 180, border: "none", outline: "none", background: "transparent",
-                  fontSize: 13, color: "var(--foreground)",
-                }}
-              />
+                style={{ flex: 1, minWidth: 180, border: "none", outline: "none", background: "transparent", fontSize: 13, color: "var(--foreground)" }} />
             </div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5 }}>
-              Press Enter or comma to add multiple addresses
-            </div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>Press Enter or comma to add multiple addresses.</div>
           </div>
 
-          {/* Role */}
+          {/* 2 · Role */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-              Role
-            </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {ALL_ROLES.map(r => (
-                <button
-                  key={r}
-                  onClick={() => setRole(r)}
-                  style={{
-                    padding: "10px 14px", border: `1px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
-                    borderRadius: 8, background: role === r ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "var(--surface-raised)",
-                    cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8,
-                  }}
-                >
-                  <div style={{
-                    width: 14, height: 14, borderRadius: "50%", flexShrink: 0, border: `2px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
-                    background: role === r ? "var(--primary)" : "transparent",
-                  }} />
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: role === r ? "var(--primary)" : "var(--foreground)" }}>{r}</div>
-                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1 }}>
-                      {r === "Owner" ? "Full control — same as Admin, transferable" : r === "Admin" ? "Manage members, studios & settings" : "Access assigned studios only"}
-                    </div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 8 }}>Role</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              {(["Member", "Admin", "Owner"] as MemberRole[]).map(r => (
+                <button key={r} onClick={() => setRole(r)} style={{
+                  padding: "10px 12px", border: `1px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
+                  borderRadius: 8, background: role === r ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "var(--surface-raised)",
+                  cursor: "pointer", textAlign: "left",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <div style={{
+                      width: 12, height: 12, borderRadius: "50%", flexShrink: 0,
+                      border: `2px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
+                      background: role === r ? "var(--primary)" : "transparent",
+                    }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: role === r ? "var(--primary)" : "var(--foreground)" }}>{r}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", lineHeight: 1.4 }}>
+                    {r === "Owner" ? "Full admin + transferable ownership" : r === "Admin" ? "Manage members, studios & billing" : "Access assigned studios only"}
                   </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Optional note */}
+          {/* 3 · Studio access (shown for Member role) */}
+          {role === "Member" && (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 4 }}>
+                Studio access
+              </label>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8 }}>
+                Select which studios this member can access. Admins and Owners get all studios automatically.
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {INVITE_STUDIO_OPTIONS.map(s => {
+                  const on = studios.includes(s.id)
+                  return (
+                    <button key={s.id} onClick={() => toggleStudio(s.id)} style={{
+                      display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
+                      border: `1px solid ${on ? "var(--primary)" : "var(--border)"}`,
+                      borderRadius: 8,
+                      background: on ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "var(--surface-raised)",
+                      cursor: "pointer", textAlign: "left",
+                    }}>
+                      <div style={{
+                        width: 12, height: 12, borderRadius: 3, flexShrink: 0,
+                        border: `2px solid ${on ? "var(--primary)" : "var(--border)"}`,
+                        background: on ? "var(--primary)" : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        {on && <Icons.Check size={8} color="var(--background)" />}
+                      </div>
+                      <span style={{ color: on ? "var(--primary)" : "var(--muted-foreground)" }}>{s.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: on ? "var(--primary)" : "var(--foreground)" }}>{s.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 4 · Groups */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 4 }}>
+              Add to groups <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>(optional)</span>
+            </label>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8 }}>
+              Group membership grants additional studio access and permissions.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {GROUPS.map(g => {
+                const on = groupIds.includes(g.id)
+                return (
+                  <button key={g.id} onClick={() => toggleGroup(g.id)} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "8px 12px",
+                    border: `1px solid ${on ? "var(--primary)" : "var(--border)"}`,
+                    borderRadius: 8,
+                    background: on ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "var(--surface-raised)",
+                    cursor: "pointer", textAlign: "left",
+                  }}>
+                    <div style={{
+                      width: 12, height: 12, borderRadius: 3, flexShrink: 0,
+                      border: `2px solid ${on ? "var(--primary)" : "var(--border)"}`,
+                      background: on ? "var(--primary)" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {on && <Icons.Check size={8} color="var(--background)" />}
+                    </div>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: g.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: on ? "var(--primary)" : "var(--foreground)" }}>{g.name}</span>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 6 }}>{g.memberIds.length} members</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                      {g.studios.map(s => (
+                        <span key={s} style={{ fontSize: 10, color: "var(--muted-foreground)", padding: "1px 5px", border: "1px solid var(--border)", borderRadius: 4 }}>
+                          {s === "governance" ? "Gov" : s === "datastudio" ? "Data" : s === "agentic" ? "Agentic" : "Admin"}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* 5 · Personal note */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
               Personal note <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>(optional)</span>
             </label>
-            <textarea
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="Welcome to AIMS-OS! We're excited to have you…"
-              rows={3}
+            <textarea value={note} onChange={e => setNote(e.target.value)}
+              placeholder="Welcome to AIMS-OS! We're excited to have you on the team…"
+              rows={2}
               style={{
                 width: "100%", border: "1px solid var(--border)", borderRadius: 8,
                 padding: "10px 12px", background: "var(--surface-raised)", color: "var(--foreground)",
-                fontSize: 13, resize: "none", outline: "none", boxSizing: "border-box",
-                fontFamily: "inherit",
+                fontSize: 13, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit",
               }}
             />
           </div>
+
         </div>
 
         {/* Footer */}
         <div style={{
           padding: "14px 24px", borderTop: "1px solid var(--border)",
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          background: "var(--surface-raised)",
+          background: "var(--surface-raised)", position: "sticky", bottom: 0,
         }}>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            {emails.length + (emailInput.trim() ? 1 : 0)} recipient{(emails.length + (emailInput.trim() ? 1 : 0)) !== 1 ? "s" : ""}
+            {inviteeCount} recipient{inviteeCount !== 1 ? "s" : ""}
+            {role === "Member" && studios.length > 0 && (
+              <span> · {studios.length} studio{studios.length !== 1 ? "s" : ""}</span>
+            )}
+            {groupIds.length > 0 && (
+              <span> · {groupIds.length} group{groupIds.length !== 1 ? "s" : ""}</span>
+            )}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-            <Button
-              variant="main"
-              size="sm"
-              onClick={submit}
-            >
-              Send {emails.length + (emailInput.trim() ? 1 : 0) > 1 ? `${emails.length + (emailInput.trim() ? 1 : 0)} invitations` : "invitation"}
+            <Button variant="main" size="sm" onClick={submit} >
+              Send {inviteeCount > 1 ? `${inviteeCount} invitations` : "invitation"}
             </Button>
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
