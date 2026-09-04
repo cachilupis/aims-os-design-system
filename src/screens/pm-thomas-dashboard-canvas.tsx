@@ -461,9 +461,14 @@ export default function DashboardCanvasScreen({ dash, onBack }: {
           size="compress"
           title={editNameMode ? "" : dashName}
           tag={<StatusBadge status={status} />}
-          secondaryAction={
+          backButton
+          showBackInCompress
+          onBack={onBack}
+          // Inline rename and the saved-at indicator are not actions — they are
+          // state the canvas reports and a field it lets you edit in place.
+          aux={
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {editNameMode && (
+              {editNameMode ? (
                 <input
                   ref={nameRef}
                   value={dashName}
@@ -476,29 +481,22 @@ export default function DashboardCanvasScreen({ dash, onBack }: {
                     border: "none", borderBottom: "1px solid var(--primary)", outline: "none", minWidth: 180,
                   }}
                 />
-              )}
-              {!editNameMode && (
-                <button onClick={() => setEditNameMode(true)} style={{ background: "none", border: "none", cursor: "text", color: "var(--field-supporting)", display: "flex", padding: "2px 4px" }}>
+              ) : (
+                <button onClick={() => setEditNameMode(true)} aria-label="Rename dashboard" style={{ background: "none", border: "none", cursor: "text", color: "var(--field-supporting)", display: "flex", padding: "2px 4px" }}>
                   <LucideIcons.Pencil size={12} />
                 </button>
               )}
               <span style={{ fontSize: 11, color: saveLabelColor }}>{saveLabel}</span>
             </div>
           }
-          primaryAction={
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", display: "flex", alignItems: "center", gap: 4, fontSize: 12, padding: "4px 8px" }}>
-                <LucideIcons.ArrowLeft size={13} />
-                Dashboards
-              </button>
-              <div style={{ width: 1, height: 14, background: "var(--field-border)" }} />
-              <Button variant="secondary" size="sm" onClick={simulateSave}>Save</Button>
-              {status === "published"
-                ? <Button variant="secondary" size="sm" onClick={() => setPublishOpen(true)}>Re-publish</Button>
-                : <Button variant="main"      size="sm" onClick={() => setPublishOpen(true)}>Publish</Button>
-              }
-            </div>
-          }
+          secondaryAction={{ label: "Save", onClick: simulateSave }}
+          primaryAction={{
+            label: status === "published" ? "Re-publish" : "Publish",
+            onClick: () => setPublishOpen(true),
+            // Re-publishing an already-live dashboard is a lower-rank action
+            // than getting it live in the first place.
+            priority: status === "published" ? "secondary" : "primary",
+          }}
         />
       )}
     >

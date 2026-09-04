@@ -37,15 +37,16 @@ CSS prefix: `hc`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Card bg (default) | --hc-bg → Surface/Neutral/White |  | #FFFFFF | #131C2E (surface-raised) |
-| Label text | --hc-text-label → Text/Subtitle |  | #8C8C8C | rgba(255,255,255,0.40) |
-| Value text | --hc-text-value → Text/Body |  | #1A1A1A | rgba(255,255,255,0.80) |
-| Feedback + Unit | --hc-text-feedback → Text/Placeholder |  | #8C8C8C | rgba(255,255,255,0.40) |
-| Icon fill | --hc-icon-fill → Icon/Primary/Dark |  | #001740 | #2B7FFF |
-| Icon circle bg | --hc-icon-bg → Surface/Primary/Lighter |  | #E9F1FF | rgba(33,115,255,0.15) |
-| Card border | --color-border-neutral-lighter |  | #E8E8E8 | rgba(255,255,255,0.08) |
-| Positive feedback | --color-text-success → Text/Success |  | #003328 | #6ee7b7 |
-| Negative feedback | --color-text-error → Text/Error |  | #5f2120 | #ff6467 |
+| Card bg (default) | --hc-bg |  | #FFFFFF | #131C2E |
+| Label text | --hc-text-label |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Value text | --hc-text-value |  | #000000 | rgba(255,255,255,0.80) |
+| Unit text | --hc-text-unit |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Feedback text | --hc-text-feedback |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Icon fill | --hc-icon-fill |  | #001740 | #2B7FFF |
+| Icon circle bg | --hc-icon-bg |  | #E9F1FF | rgba(33,115,255,0.15) |
+| Card border | --color-border-neutral-lighter |  | #BABABA | rgba(255,255,255,0.08) |
+| Positive feedback (defined, not wired up) | --color-text-success |  | #003328 | #6ee7b7 |
+| Negative feedback (defined, not wired up) | --color-text-error |  | #5f2120 | #ff6467 |
 
 ### Style Variant BG + Border
 
@@ -53,8 +54,8 @@ CSS prefix: `hc`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Default BG | --hc-bg → Surface/Neutral/White |  | #FFFFFF | #131C2E |
-| Default border | --color-border-neutral-lighter |  | #E8E8E8 | rgba(255,255,255,0.08) |
+| Default BG | --hc-bg |  | #FFFFFF | #131C2E |
+| Default border | --color-border-neutral-lighter |  | #BABABA | rgba(255,255,255,0.08) |
 | Primary BG | --color-surface-primary-subtle |  | #E9F1FF | rgba(33,115,255,0.15) |
 | Primary border | --color-border-primary-default |  | #2173FF | #2B7FFF |
 | Green BG | --color-surface-success-subtle |  | #CBFFF4 | rgba(0,169,127,0.15) |
@@ -69,7 +70,7 @@ CSS prefix: `hc`
 | Light Blue border | --color-border-light-blue-default |  | #00B5D9 | #00B5D9 |
 | Lime BG | --color-surface-lime-subtle |  | #E7F9B5 | rgba(101,163,13,0.14) |
 | Lime border | --color-border-lime-green-default |  | #A0DA1D | #A0DA1D |
-| Red BG | --color-surface-error-subtle |  | #FDEDED | rgba(220,38,38,0.14) |
+| Red BG | --color-surface-error-subtle |  | #FDECED | rgba(220,38,38,0.14) |
 | Red border | --color-border-error-default |  | #992222 | #992222 |
 
 ---

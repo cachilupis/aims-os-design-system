@@ -2,6 +2,7 @@ import { useState } from "react"
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout }  from "@/components/layouts/screen-layout"
 import type { SidebarItem } from "@/components/ui/sidebar"
+import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
 import { Tag }           from "@/components/ui/tag"
@@ -63,9 +64,7 @@ function StudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {
     <div style={{ marginBottom: 16 }}>
     <CardContainer variant="default">
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--informative-bg)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <LucideIcons.LayoutDashboard size={16} style={{ color: "var(--informative)" }} />
-        </div>
+        <HighlightIcon iconName="LayoutDashboard" variant="informative" size="lg" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
             {count} dashboard{count !== 1 ? "s" : ""} in your workspace
@@ -233,11 +232,7 @@ export default function PMThomasDashboardList() {
           size={isScrolled ? "compress" : "size-l"}
           title="Dashboards"
           description={`${dbs.length} dashboards · ${publishedCount} published`}
-          primaryAction={
-            <Button variant="main" size="sm" icon={<LucideIcons.Sparkles size={14} />} iconPosition="left">
-              Create dashboard
-            </Button>
-          }
+          primaryAction={{ label: "Create dashboard", icon: LucideIcons.Sparkles }}
         />
       )}
     >

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { X, ChevronDown, ChevronUp, Search, Calendar, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Radio } from "@/components/ui/radio"
 import { AvatarCircle, type AvatarColorKey } from "@/components/ui/avatar"
 import { Toggle } from "@/components/ui/toggle"
 import { Button } from "@/components/ui/button"
@@ -36,23 +37,6 @@ function ActiveBadge({ count }: { count: number }) {
     <Tag variant="informative" size="sm">
       {count}
     </Tag>
-  )
-}
-
-function RadioButton({ selected, onChange }: { selected: boolean; onChange: () => void }) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onChange}
-      className="w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
-      style={{ borderColor: selected ? "var(--primary)" : "var(--field-border)" }}
-    >
-      {selected && (
-        <span className="w-[8px] h-[8px] rounded-full" style={{ background: "var(--primary)" }} />
-      )}
-    </button>
   )
 }
 
@@ -153,7 +137,7 @@ function SortSectionContent() {
       <div className="flex flex-col gap-[8px]">
         {SORT_OPTIONS.map(opt => (
           <label key={opt} className="flex items-center gap-[10px] cursor-pointer py-[2px]">
-            <RadioButton selected={selected === opt} onChange={() => setSelected(opt)} />
+            <Radio value={opt} label={opt} hideLabel size="sm" checked={selected === opt} onChange={() => setSelected(opt)} />
             <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{opt}</span>
           </label>
         ))}
@@ -289,7 +273,7 @@ function DatePresetsSectionContent() {
       <div className="flex flex-col gap-[4px]">
         {DATE_PRESET_OPTIONS.map(preset => (
           <label key={preset} className="flex items-center gap-[10px] cursor-pointer py-[4px]">
-            <RadioButton selected={selected === preset} onChange={() => setSelected(preset)} />
+            <Radio value={preset} label={preset} hideLabel size="sm" checked={selected === preset} onChange={() => setSelected(preset)} />
             <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{preset}</span>
           </label>
         ))}
@@ -430,7 +414,7 @@ function SingleSelectSectionContent({
       <div className="flex flex-col gap-[4px]">
         {options.map(opt => (
           <label key={opt} className="flex items-center gap-[10px] cursor-pointer py-[4px]">
-            <RadioButton selected={selected === opt} onChange={() => setSelected(opt)} />
+            <Radio value={opt} label={opt} hideLabel size="sm" checked={selected === opt} onChange={() => setSelected(opt)} />
             <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{opt}</span>
           </label>
         ))}
@@ -648,8 +632,12 @@ function AIInsightsSectionContent() {
           <div className="flex items-center gap-[16px]">
             {AI_ALERT_LEVELS.map(level => (
               <label key={level} className="flex items-center gap-[6px] cursor-pointer">
-                <RadioButton
-                  selected={alertLevel === level}
+                <Radio
+                  value={level}
+                  label={level}
+                  hideLabel
+                  size="sm"
+                  checked={alertLevel === level}
                   onChange={() => setAlertLevel(level)}
                 />
                 <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{level}</span>

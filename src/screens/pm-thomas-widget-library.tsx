@@ -2,12 +2,14 @@ import { useState } from "react"
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout }  from "@/components/layouts/screen-layout"
 import type { SidebarItem } from "@/components/ui/sidebar"
+import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
 import { Tag }           from "@/components/ui/tag"
-import { Input }         from "@/components/ui/input"
+import { WidgetGlyph, WidgetFreshnessBadge, WidgetMiniPreview } from "@/components/experimental/widget-parts"
 import { EmptyState }    from "@/components/ui/empty-state"
 import { CardContainer } from "@/components/ui/card-container"
+import { Filters } from "@/components/ui/filters"
 import { ModalDialog }   from "@/components/ui/modal-dialog"
 import { SlideOut }      from "@/components/ui/slide-out"
 
@@ -65,39 +67,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 ]
 
 // ── DS-GAP: WidgetGlyph — skeleton-type icon badge. Closest DS: HighlightIcon.
-const SKELETON_ICON: Record<string, keyof typeof LucideIcons> = {
-  KPI:        "Hash",
-  Chart:      "BarChart2",
-  Feed:       "List",
-  Gauge:      "Gauge",
-  Donut:      "PieChart",
-  Board:      "LayoutGrid",
-  Funnel:     "TrendingDown",
-  "Stat Row": "Rows3",
-  Alerts:     "Bell",
-  "Cost KPI": "DollarSign",
-}
-function WidgetGlyph({ skeleton }: { skeleton: string }) {
-  const iconKey = SKELETON_ICON[skeleton] ?? "Square"
-  const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties; className?: string }>
-  return (
-    <div style={{ width: 36, height: 36, borderRadius: 9, background: "color-mix(in srgb,var(--primary) 12%,transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      <Icon size={16} style={{ color: "var(--primary)" }} />
-    </div>
-  )
-}
-
-// ── DS-GAP: FreshnessBadge — live/fresh/stale indicator. Closest DS: Tag.
-const FRESH_CONFIG: Record<Freshness, { variant: "success" | "informative" | "neutral"; label: string }> = {
-  live:  { variant: "success",     label: "Live"  },
-  fresh: { variant: "informative", label: "Fresh" },
-  stale: { variant: "neutral",     label: "Stale" },
-}
-function FreshnessBadge({ status }: { status: Freshness }) {
-  const cfg = FRESH_CONFIG[status]
-  return <Tag variant={cfg.variant} size="sm">{cfg.label}</Tag>
-}
-
 // ── DS-GAP: HealthBadge — active/review indicator. Closest DS: Tag.
 function HealthBadge({ health }: { health: Health }) {
   if (health === "active") return null
@@ -105,17 +74,6 @@ function HealthBadge({ health }: { health: Health }) {
 }
 
 // ── DS-GAP: MiniPreview — sunken widget preview surface. Closest DS: CardContainer (variant=sunken).
-function MiniPreview({ skeleton }: { skeleton: string }) {
-  const iconKey = SKELETON_ICON[skeleton] ?? "Square"
-  const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties; className?: string }>
-  return (
-    <div style={{ height: 56, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-      <Icon size={13} style={{ color: "var(--field-supporting)" }} />
-      <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{skeleton} preview</span>
-    </div>
-  )
-}
-
 // ── DS-GAP: StudioWelcome — contextual banner. Closest DS: CardContainer.
 function StudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {
   const [dismissed, setDismissed] = useState(false)
@@ -124,9 +82,7 @@ function StudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {
     <div style={{ marginBottom: 16 }}>
     <CardContainer variant="default">
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, background: "color-mix(in srgb,var(--primary) 12%,transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <LucideIcons.PieChart size={16} style={{ color: "var(--primary)" }} />
-        </div>
+        <HighlightIcon iconName="PieChart" variant="informative" size="lg" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
             {count} widgets in your library
@@ -146,88 +102,6 @@ function StudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {
 }
 
 // ── DS-GAP: FilterToolbar — 4-filter toolbar. Closest DS: Filters.
-type FTProps = {
-  search: string; onSearch: (v: string) => void
-  cat: string; onCat: (v: string) => void
-  profile: string; onProfile: (v: string) => void
-  skeleton: string; onSkeleton: (v: string) => void
-  freshness: string; onFreshness: (v: string) => void
-  sortBy: string; onSortBy: (v: string) => void
-  sortDir: "asc" | "desc"; onToggleDir: () => void
-}
-function FilterToolbar({ search, onSearch, cat, onCat, profile, onProfile, skeleton, onSkeleton, freshness, onFreshness, sortBy, onSortBy, sortDir, onToggleDir }: FTProps) {
-  const [open, setOpen] = useState<string | null>(null)
-
-  function Pill({ id, label, active, children }: { id: string; label: string; active: boolean; children: React.ReactNode }) {
-    return (
-      <div style={{ position: "relative" }}>
-        <button onClick={() => setOpen(open === id ? null : id)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 8, border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}`, background: active ? "color-mix(in srgb,var(--primary) 12%,transparent)" : "var(--surface)", color: active ? "var(--primary)" : "var(--foreground)", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>
-          {label}<LucideIcons.ChevronDown size={11} />
-        </button>
-        {open === id && (
-          <>
-            <div onClick={() => setOpen(null)} style={{ position: "fixed", inset: 0, zIndex: 198 }} />
-            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 199, boxShadow: "var(--shadow-elevation-3)", minWidth: 168 }}>
-              <CardContainer size="sm" className="!p-1">
-                {children}
-              </CardContainer>
-            </div>
-          </>
-        )}
-      </div>
-    )
-  }
-
-  function Opt({ val, cur, onSet, display }: { val: string; cur: string; onSet: (v: string) => void; display?: string }) {
-    const active = cur === val
-    return (
-      <button onClick={() => { onSet(val); setOpen(null) }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", background: "none", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12, color: active ? "var(--primary)" : "var(--foreground)", fontWeight: active ? 600 : 400, textAlign: "left" }}>
-        {active ? <LucideIcons.Check size={12} style={{ flexShrink: 0 }} /> : <span style={{ width: 12, flexShrink: 0 }} />}
-        {display ?? val}
-      </button>
-    )
-  }
-
-  const PROFILES = ["All", "Company", "Contact", "Employee", "Deal", "Standalone"] as const
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 12, flexWrap: "wrap" }}>
-      <div style={{ position: "relative", flex: "1 1 180px", minWidth: 160, maxWidth: 260 }}>
-        <LucideIcons.Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)", pointerEvents: "none" }} />
-        <Input value={search} onChange={e => onSearch(e.target.value)} placeholder="Search widgets…" style={{ paddingLeft: 30, fontSize: 12 }} />
-      </div>
-      <Pill id="cat" label={cat === "All" ? "Category" : cat} active={cat !== "All"}>
-        <Opt val="All" cur={cat} onSet={onCat} display="All categories" />
-        {CATEGORIES.map(c => <Opt key={c} val={c} cur={cat} onSet={onCat} />)}
-      </Pill>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-        {PROFILES.map(p => (
-          <button key={p} onClick={() => onProfile(profile === p ? "All" : p)} style={{ padding: "5px 10px", borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: "pointer", border: `1px solid ${profile === p ? "var(--primary)" : "var(--field-border)"}`, background: profile === p ? "color-mix(in srgb,var(--primary) 12%,transparent)" : "transparent", color: profile === p ? "var(--primary)" : "var(--field-supporting)" }}>
-            {p}
-          </button>
-        ))}
-      </div>
-      <Pill id="type" label={skeleton === "All" ? "Type" : skeleton} active={skeleton !== "All"}>
-        <Opt val="All" cur={skeleton} onSet={onSkeleton} display="All types" />
-        {SKELETONS.map(s => <Opt key={s} val={s} cur={skeleton} onSet={onSkeleton} />)}
-      </Pill>
-      <Pill id="fresh" label={freshness === "All" ? "Freshness" : freshness.charAt(0).toUpperCase() + freshness.slice(1)} active={freshness !== "All"}>
-        <Opt val="All" cur={freshness} onSet={onFreshness} display="All freshness" />
-        {FRESHNESS_OPTIONS.map(f => <Opt key={f} val={f} cur={freshness} onSet={onFreshness} display={f.charAt(0).toUpperCase() + f.slice(1)} />)}
-      </Pill>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
-        <Pill id="sort" label={sortBy === "usage" ? "Most used" : "Name"} active={false}>
-          <Opt val="name"  cur={sortBy} onSet={onSortBy} display="Name"      />
-          <Opt val="usage" cur={sortBy} onSet={onSortBy} display="Most used" />
-        </Pill>
-        <button onClick={onToggleDir} style={{ background: "none", border: "1px solid var(--field-border)", borderRadius: 8, padding: "5px 7px", cursor: "pointer", color: "var(--field-supporting)", display: "flex" }}>
-          {sortDir === "desc" ? <LucideIcons.ArrowDown size={13} /> : <LucideIcons.ArrowUp size={13} />}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ── DS-GAP: OverflowMenu — per-card ⋯ actions. Closest DS: Menu + MenuItem.
 type OItem = { label: string; icon: keyof typeof LucideIcons; danger?: boolean; onClick: () => void }
 function OverflowMenu({ items, onClose }: { items: OItem[]; onClose: () => void }) {
@@ -256,7 +130,7 @@ export default function PMThomasWidgetLibrary() {
   const [profile,  setProfile]   = useState<Profile>("All")
   const [skeleton, setSkeleton]  = useState("All")
   const [freshness,setFreshness] = useState("All")
-  const [sortBy,   setSortBy]    = useState("name")
+  const [sortBy] = useState("name")
   const [sortDir,  setSortDir]   = useState<"asc" | "desc">("asc")
   const [shown,    setShown]     = useState(PAGE_SIZE)
   const [menuId,   setMenuId]    = useState<string | null>(null)
@@ -300,24 +174,55 @@ export default function PMThomasWidgetLibrary() {
           size={isScrolled ? "compress" : "size-l"}
           title="Widget Library"
           description={`${widgets.length} widgets · ${governedCount} governed`}
-          primaryAction={
-            <Button variant="main" size="sm" icon={<LucideIcons.Sparkles size={14} />} iconPosition="left">
-              Create widget
-            </Button>
-          }
+          primaryAction={{ label: "Create widget", icon: LucideIcons.Sparkles }}
         />
       )}
     >
       <StudioWelcome count={widgets.length} onCta={() => {}} />
 
-      <FilterToolbar
-        search={search}     onSearch={setSearch}
-        cat={cat}           onCat={v => { setCat(v); setShown(PAGE_SIZE) }}
-        profile={profile}   onProfile={v => { setProfile(v as Profile); setShown(PAGE_SIZE) }}
-        skeleton={skeleton} onSkeleton={v => { setSkeleton(v); setShown(PAGE_SIZE) }}
-        freshness={freshness} onFreshness={v => { setFreshness(v); setShown(PAGE_SIZE) }}
-        sortBy={sortBy}     onSortBy={setSortBy}
-        sortDir={sortDir}   onToggleDir={() => setSortDir(d => d === "asc" ? "desc" : "asc")}
+      <Filters
+        showSearch
+        searchPlaceholder="Search widgets…"
+        searchValue={search}
+        onSearchChange={setSearch}
+        showAllFilters={false}
+        showViewToggle={false}
+        showClearFilters={cat !== "All" || profile !== "All" || skeleton !== "All" || freshness !== "All"}
+        onClearFilters={() => {
+          setCat("All"); setProfile("All"); setSkeleton("All"); setFreshness("All"); setShown(PAGE_SIZE)
+        }}
+        sortLabel={sortBy}
+        onSortClick={() => setSortDir(d => (d === "asc" ? "desc" : "asc"))}
+        slots={[
+          {
+            placeholder: "Category",
+            value: cat === "All" ? undefined : cat,
+            options: [...CATEGORIES],
+            onSelect: v => { setCat(v as Category); setShown(PAGE_SIZE) },
+            onRemove: () => { setCat("All"); setShown(PAGE_SIZE) },
+          },
+          {
+            placeholder: "Profile",
+            value: profile === "All" ? undefined : profile,
+            options: ["Company", "Contact", "Employee", "Deal", "Standalone"],
+            onSelect: v => { setProfile(v as Profile); setShown(PAGE_SIZE) },
+            onRemove: () => { setProfile("All"); setShown(PAGE_SIZE) },
+          },
+          {
+            placeholder: "Type",
+            value: skeleton === "All" ? undefined : skeleton,
+            options: [...SKELETONS],
+            onSelect: v => { setSkeleton(v as Skeleton); setShown(PAGE_SIZE) },
+            onRemove: () => { setSkeleton("All"); setShown(PAGE_SIZE) },
+          },
+          {
+            placeholder: "Freshness",
+            value: freshness === "All" ? undefined : freshness,
+            options: [...FRESHNESS_OPTIONS],
+            onSelect: v => { setFreshness(v as Freshness); setShown(PAGE_SIZE) },
+            onRemove: () => { setFreshness("All"); setShown(PAGE_SIZE) },
+          },
+        ]}
       />
 
       {sorted.length === 0 ? (
@@ -370,14 +275,14 @@ export default function PMThomasWidgetLibrary() {
                 </div>
 
                 {/* Mini preview */}
-                <MiniPreview skeleton={w.skeleton} />
+                <WidgetMiniPreview skeleton={w.skeleton} />
 
                 {/* Footer */}
                 <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 10 }}>
                   <span style={{ fontSize: 11, color: w.health === "review" ? "var(--alert)" : "var(--field-supporting)", fontWeight: w.health === "review" ? 600 : 400 }}>
                     {w.health === "review" ? "Remap needed →" : `Used on ${w.usedIn} dashboard${w.usedIn === 1 ? "" : "s"}`}
                   </span>
-                  <FreshnessBadge status={w.freshness} />
+                  <WidgetFreshnessBadge status={w.freshness} />
                 </div>
               </CardContainer>
               </div>
@@ -400,7 +305,7 @@ export default function PMThomasWidgetLibrary() {
         <SlideOut title={detailW.name} open={true} onClose={() => setDetailW(null)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "4px 0" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              <FreshnessBadge status={detailW.freshness} />
+              <WidgetFreshnessBadge status={detailW.freshness} />
               <Tag variant="neutral" size="sm">{detailW.skeleton}</Tag>
               <Tag variant={detailW.category === "AIMS OS" ? "informative" : "neutral"} size="sm">{detailW.category}</Tag>
               {!detailW.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}

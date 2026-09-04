@@ -47,6 +47,17 @@ Read the description and silently resolve:
 | "form to create/edit X", "settings", "configuración" | Form/wizard — `patterns-forms` page: 16px field gap, 24px section gap, validate on blur |
 | "historial", "audit log", "activity", "logs" | `Table` + `Filters` (Search · Status) + `Pagination` — Logs Table pattern |
 
+**The complete inventory lives in `ds-index.json` — read it, do not rely on the tables below alone.**
+
+Regenerate it first (`npm run generate:ds-index`), then read it. It lists every component in `src/components/` with the description from its catalog spec, its import path, and how many screens use it today. The tables in this file are curated shortcuts for the common cases; the index is the full set.
+
+Search the index before writing a single component of your own. The tables below have covered roughly a quarter of the DS, and everything outside that quarter got improvised — `Stepper`, `Breadcrumb` and `SwitchTab` were each rebuilt by hand in prototypes while the real component sat unused. If a description in the index matches what you need, import it.
+
+Two fields worth reading carefully:
+
+- `usedInScreens: 0` does **not** mean "not needed". `Avatar`, `ProgressBar` and `Badge` are all at zero and all three are hand-rolled across half a dozen screens. Zero usage plus a matching description means invisible, not useless — that is exactly the component you should be importing.
+- `description: null` means nobody has written what the component is for. Do not guess from its name. Open the source, and say so in your final report so it gets a description.
+
 **Intent → component (resolved silently, never asked):**
 
 | PM says | Resolved to |
@@ -157,10 +168,17 @@ A one-word "sí" or "yes" is enough to proceed to Phase 1.
 
 ## Phase 1 — Compose
 
+**Start by running `aims-ds-search`** for every non-trivial element the spec
+calls for. Not as a formality: this repo has rebuilt Breadcrumb, ProcessItem,
+Stepper (twice), Filters and three separate WidgetGlyphs, every one of them
+because somebody searched badly rather than not at all. The skill also checks
+open PRs — a PM may be building the same thing right now.
+
+
 File: `src/screens/pm-[author]-[feature].tsx`, one default-exported component. A handful of things are non-negotiable, and here's the reasoning for each so it's clear these aren't arbitrary:
 
 - **Always wrap in `ScreenLayout`.** It bakes in the exact DS margin/scroll/sticky-header spec — hand-assembling Topbar + Sidebar + AppBackground yourself is how those values quietly drift screen to screen.
-- **Only components from `src/components/ui/` and `src/components/layouts/`.** A custom lookalike passes a glance but loses the real component's hover/focus states and stops updating when the DS token changes underneath it.
+- **Only components the design system already has** — `src/components/ui/`, `src/components/layouts/`, and `src/components/experimental/`. That last one is not a loophole, it is the point: a candidate is something a previous prototype needed and built properly, and reusing it is how it earns its way into the catalog. `ds-index.json` lists all three with a `tier` field. A custom lookalike passes a glance but loses the real component's hover states, token bindings and accessibility — and the bugs are invisible until runtime.
 - **Only `var(--token)` colors, zero hex/rgba.** If the token you need doesn't exist yet, say so rather than approximating with a raw value — a slightly-off color is a worse outcome than a flagged gap.
 - **`Pagination` lives on `ScreenLayout`'s `pagination` prop**, never inline in the list, and only when `total > pageSize` (enforced by the component itself now, not just convention).
 - **Realistic mock data** — real-sounding names, dates, IDs, statuses. "Item 1" and "Lorem ipsum" undercut the entire point, which is a prototype that looks real enough for a stakeholder to react to.
@@ -189,6 +207,29 @@ Passing `tsc` is necessary, not sufficient — a screen can type-check cleanly a
 
 1. `npx tsc -b --noEmit` → zero errors.
 2. Start/confirm the dev server and screenshot the screen in the browser — every tab and state the description implies, including the empty state if the dataset can legitimately be empty.
+
+**What to look for.** A screenshot only helps if you know what you are hunting.
+Every item below is something that shipped in this repo while `tsc` and the
+audit were both green:
+
+- **Content clipped by a fixed height.** A widget slot, a card, a panel. The
+  last row of a four-row list vanishing is invisible unless you count the rows.
+- **Double padding.** A container that insets its own children *and* sits inside
+  something that already inset it. The tell is a body that starts further in
+  than its own title — `WidgetFather` gives 24px and content added another 16.
+- **Labels wrapping to two lines.** Harmless-looking, but it grows a 37px row to
+  55, and four of those overflow a fixed-height container and eat a row.
+- **Content under a sticky footer.** `StepperNavFooter` is 72px against
+  ScreenLayout's 64px bottom padding.
+- **An empty state that does not fit its container.** The default `EmptyState`
+  is 64px of vertical padding and clips its own CTA inside a widget. Use
+  `compact`.
+- **The same thing looking different in two screens.** Open both. This is the
+  only way to catch drift — each screen is internally consistent, so nothing
+  looks wrong until they are side by side.
+
+Check at **1440px** (the DS baseline) and again in a **narrow column**, and in
+both themes.
 3. `grep -n 'rgba\|#[0-9a-fA-F]\{3,6\}' src/screens/pm-[author]-[feature].tsx` → must return nothing.
 4. Confirm by re-reading the file: every filter/tab/sort change resets pagination to page 1, `showAllFilters` has `onAllFiltersClick` wired to a real slideout, every `SlideOut`/`ModalDialog` has `onClose` wired and never a hardcoded `open`.
 

@@ -19,6 +19,7 @@ import { HighlightIcon }    from "@/components/ui/highlight-icon"
 import { Filters }         from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
 import type { EntityListItemData, ELMetaItem } from "@/components/ui/entity-list"
+import { anchorFromEvent, useDropdownPosition, type DropdownAnchor } from "@/lib/dropdown-anchor"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -1066,7 +1067,8 @@ export default function PMLexHTLWorkQueueScreen() {
   const [wqFiltersOpen,    setWqFiltersOpen]    = useState(false)
   const [wqFiltersApplied, setWqFiltersApplied] = useState(false)
   const [headerOpenSlot,   setHeaderOpenSlot]   = useState<string | null>(null)
-  const [headerAnchor,     setHeaderAnchor]     = useState<{ left: number; top: number } | null>(null)
+  const [headerAnchor,     setHeaderAnchor]     = useState<DropdownAnchor | null>(null)
+  const headerDropdown = useDropdownPosition(headerAnchor)
 
   // Pagination
   const [page,     setPage]     = useState(1)
@@ -1080,7 +1082,8 @@ export default function PMLexHTLWorkQueueScreen() {
   const [auditSearch,       setAuditSearch]       = useState("")
   const [auditDateRange,    setAuditDateRange]    = useState<"24h" | "7d" | "30d" | "all">("all")
   const [auditOpenSlot,   setAuditOpenSlot]   = useState<string | null>(null)
-  const [auditDropdownAnchor, setAuditDropdownAnchor] = useState<{ left: number; top: number } | null>(null)
+  const [auditDropdownAnchor, setAuditDropdownAnchor] = useState<DropdownAnchor | null>(null)
+  const auditDropdown = useDropdownPosition(auditDropdownAnchor)
   const [expandedAudit,  setExpandedAudit]  = useState<Set<string>>(new Set())
 
   const AUDIT_RANGE_LABEL: Record<"24h" | "7d" | "30d" | "all", string | undefined> = {
@@ -1166,15 +1169,11 @@ export default function PMLexHTLWorkQueueScreen() {
             size={isScrolled ? "compress" : "size-l"}
             title="Work Queue"
             description="Human Touch Layer — review and resolve events that require your attention."
-            primaryAction={<Button variant="main" size="sm">Export</Button>}
+            primaryAction={{ label: "Export" }}
             filters={isScrolled && mainTab === "queues" ? (
               <div
                 onClickCapture={(e: React.MouseEvent) => {
-                  const btn  = (e.target as HTMLElement).closest("button")
-                  const left = btn
-                    ? btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2
-                    : e.clientX
-                  setHeaderAnchor({ left, top: (e.currentTarget as HTMLElement).getBoundingClientRect().bottom })
+                  setHeaderAnchor(anchorFromEvent(e))
                 }}
               >
                 <Filters
@@ -1444,14 +1443,7 @@ export default function PMLexHTLWorkQueueScreen() {
                 {/* Filters bar — DS Filters component with search + Time range slot */}
                 <div
                   onClickCapture={(e: React.MouseEvent) => {
-                    const btn  = (e.target as HTMLElement).closest("button")
-                    const left = btn
-                      ? btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2
-                      : e.clientX
-                    setAuditDropdownAnchor({
-                      left,
-                      top: (e.currentTarget as HTMLElement).getBoundingClientRect().bottom,
-                    })
+                    setAuditDropdownAnchor(anchorFromEvent(e))
                   }}
                 >
                   <Filters
@@ -1485,11 +1477,9 @@ export default function PMLexHTLWorkQueueScreen() {
                         style={{ position: "fixed", inset: 0, zIndex: 10000 }}
                         onClick={() => setAuditOpenSlot(null)}
                       />
-                      <div style={{
+                      <div ref={auditDropdown.ref} style={{
                         position: "fixed",
-                        left:      auditDropdownAnchor.left,
-                        top:       auditDropdownAnchor.top + 4,
-                        transform: "translateX(-50%)",
+                        ...auditDropdown.style,
                         zIndex:    10001,
                         background:   "var(--surface)",
                         border:       "0.5px solid var(--field-border)",
@@ -1580,12 +1570,11 @@ export default function PMLexHTLWorkQueueScreen() {
               onClick={() => setHeaderOpenSlot(null)}
             />
             <div
+              ref={headerDropdown.ref}
               className="flex flex-col overflow-hidden"
               style={{
                 position:     "fixed",
-                left:         headerAnchor.left,
-                top:          headerAnchor.top + 4,
-                transform:    "translateX(-50%)",
+                ...headerDropdown.style,
                 zIndex:       10001,
                 background:   "var(--surface)",
                 border:       "0.5px solid var(--field-border)",

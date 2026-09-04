@@ -5,10 +5,11 @@ import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
-import { Tag } from "@/components/ui/tag"
-import { ModalDialog } from "@/components/ui/modal-dialog"
 import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
+import { WidgetShapePreview, SHAPE_FOR_BUILDER_TYPE } from "@/components/experimental/widget-parts"
+import { Tag } from "@/components/ui/tag"
+import { ModalDialog } from "@/components/ui/modal-dialog"
 import type { SidebarItem } from "@/components/ui/sidebar"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -178,51 +179,6 @@ function TypeTile({ type, selected, onSelect }: { type: typeof WIDGET_TYPES[0]; 
 }
 
 // DS-GAP: SkeletonShape — CSS-only skeleton preview shape keyed by widget type. Closest DS component: none.
-function SkeletonShape({ typeId, color }: { typeId: string | null; color: string }) {
-  const c = color || "var(--primary)"
-  const bars = [55, 75, 45, 80, 60, 70, 50, 65]
-  if (!typeId) return <div style={{ height: 120, background: "var(--field-border)", borderRadius: 8, opacity: 0.4 }} />
-  if (typeId === "kpi" || typeId === "costkpi") return (
-    <div style={{ height: 120, display: "flex", flexDirection: "column", justifyContent: "center", gap: 8, padding: "0 20px" }}>
-      <div style={{ fontSize: 32, fontWeight: 800, color: c, opacity: 0.7 }}>—</div>
-      <div style={{ height: 8, width: "40%", background: c, borderRadius: 4, opacity: 0.25 }} />
-      <div style={{ height: 24, width: "100%", background: c, borderRadius: 4, opacity: 0.08 }} />
-    </div>
-  )
-  if (typeId === "bar" || typeId === "line") return (
-    <div style={{ height: 120, display: "flex", alignItems: "flex-end", gap: 5, padding: "16px 16px 8px" }}>
-      {bars.map((h, i) => (
-        <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 6 ? c : "var(--color-text-subtitle)", borderRadius: "2px 2px 0 0", opacity: i === 6 ? 0.75 : 0.18 }} />
-      ))}
-    </div>
-  )
-  if (typeId === "pie") return (
-    <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 80, height: 80, borderRadius: "50%", background: `conic-gradient(${c} 0deg 145deg, color-mix(in srgb,${c} 50%, transparent) 145deg 255deg, var(--field-border) 255deg)`, opacity: 0.65 }} />
-    </div>
-  )
-  if (typeId === "gauge") return (
-    <div style={{ height: 120, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 6, paddingBottom: 24 }}>
-      <div style={{ width: 100, height: 50, borderRadius: "100px 100px 0 0", background: `conic-gradient(from 180deg, ${c} 0deg 110deg, var(--field-border) 110deg 180deg)`, opacity: 0.7 }} />
-    </div>
-  )
-  if (typeId === "heatmap" || typeId === "scatter" || typeId === "map") {
-    const cells = [0.8,0.2,0.5,0.9,0.3,0.6,0.1,0.7,0.4,0.8,0.6,0.2,0.9,0.5,0.3,0.7,0.1,0.8,0.4,0.6,0.2,0.9,0.5,0.3]
-    return (
-      <div style={{ height: 120, display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 3, padding: "12px 16px" }}>
-        {cells.map((o, i) => <div key={i} style={{ borderRadius: 2, background: o > 0.5 ? c : "var(--field-border)", opacity: o }} />)}
-      </div>
-    )
-  }
-  return (
-    <div style={{ height: 120, display: "flex", flexDirection: "column", gap: 7, padding: "12px 16px" }}>
-      {[100, 80, 65, 90, 55].map((w, i) => (
-        <div key={i} style={{ height: 10, width: `${w}%`, background: i === 0 ? c : "var(--field-border)", borderRadius: 3, opacity: i === 0 ? 0.5 : 0.25 }} />
-      ))}
-    </div>
-  )
-}
-
 // DS-GAP: WidgetPreviewPanel — sticky live preview panel with size switcher and widget info. Closest DS component: CardContainer.
 function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previewSize, setPreviewSize, saveHint }: {
   typeId: string | null; name: string; sourceId: string | null; freshness: string; accentColor: string;
@@ -255,7 +211,11 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, pr
               <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{name || "Untitled widget"}</span>
               <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
             </div>
-            <SkeletonShape typeId={typeId} color={accentColor} />
+            <WidgetShapePreview
+              shape={typeId ? SHAPE_FOR_BUILDER_TYPE[typeId] ?? "rows" : null}
+              height={120}
+              accent={accentColor}
+            />
             <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid var(--field-border)" }}>
               {srcLabel && <Tag variant="informative">{srcLabel}</Tag>}
               {typeInfo && <Tag variant="neutral">{typeInfo.label}</Tag>}
@@ -340,6 +300,33 @@ export default function PMThomasWidgetBuilderScreen() {
   const canSave        = widgetComplete
   const hasUnsaved     = !!(sourceId || typeId || name.trim())
 
+  // ── Wizard stages ─────────────────────────────────────────────────────────
+  // These were a hand-rolled tab strip: numbered dots, a check when complete,
+  // disabled until the previous stage was done. Tabs are non-linear by
+  // definition — the moment one can be locked behind another it is a stage, and
+  // stages are what Stepper is for. Its StepState covers every case the local
+  // version drew by hand.
+  const STEP_ORDER: TabId[] = ["data", "widget", "appearance"]
+
+  const stepState = (id: TabId): StepState => {
+    if (id === tab) return "active"
+    if (id === "data")   return dataComplete   ? "completed" : "default"
+    if (id === "widget") return widgetComplete ? "completed" : dataComplete   ? "default" : "locked"
+    return widgetComplete ? "default" : "locked"
+  }
+
+  const wizardSteps: StepItem[] = [
+    { label: "Data",       state: stepState("data")       },
+    { label: "Widget",     state: stepState("widget")     },
+    { label: "Appearance", state: stepState("appearance") },
+  ]
+
+  // The footer's shape follows the stage: Cancel on the first, Back after that,
+  // and the primary button becomes Save on the last one.
+  const isLast     = tab === "appearance"
+  const stepIndex  = STEP_ORDER.indexOf(tab)
+  const nextEnabled = tab === "data" ? dataComplete : tab === "widget" ? widgetComplete : canSave
+
   const saveHint = !sourceId
     ? (dataMode === "dataset" ? "Select a governed dataset on the Data tab." : "Select an entity source on the Data tab.")
     : !dataComplete
@@ -369,19 +356,6 @@ export default function PMThomasWidgetBuilderScreen() {
     setAccentColor(""); setStyleVariant(""); setSaved(false)
   }
 
-  const CheckIcon = LucideIcons.Check as React.FC<{ size?: number; style?: React.CSSProperties }>
-
-  const stepItems: StepItem[] = [
-    { label: "Data",       state: (tab === "data"       ? "active" : dataComplete   ? "completed" : "default") as StepState },
-    { label: "Widget",     state: (tab === "widget"     ? "active" : widgetComplete ? "completed" : dataComplete ? "default" : "locked") as StepState },
-    { label: "Appearance", state: (tab === "appearance" ? "active" : widgetComplete ? "default"   : "locked") as StepState },
-  ]
-
-  const footerProps = tab === "data"
-    ? { variant: "cancel-next" as const, onCancel: () => { if (hasUnsaved) setShowLeave(true) }, nextLabel: "Continue to Widget", nextDisabled: !dataComplete, onNext: () => setTab("widget") }
-    : tab === "widget"
-    ? { variant: "back-next"   as const, onBack:   () => setTab("data"),      nextLabel: "Continue to Appearance", nextDisabled: !widgetComplete, onNext: () => setTab("appearance") }
-    : { variant: "back-next"   as const, onBack:   () => setTab("widget"),    nextLabel: "Save to catalog",        nextDisabled: !canSave,        onNext: () => setSaved(true) }
 
   const selectStyle = { width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--field-border)", background: "var(--surface)", color: "var(--color-text-title)", fontSize: 13 }
 
@@ -393,17 +367,13 @@ export default function PMThomasWidgetBuilderScreen() {
       sidebarItems={SIDEBAR_ITEMS}
       activeSidebarId="widget-library"
       header={(isScrolled) => (
-        <Header
-          size={isScrolled ? "compress" : "size-l"}
-          title={saved ? "Widget saved" : "Widget Playground"}
-          description={saved ? "Your widget is now in the library." : "Map an entity and metric, pick a type, and preview it live."}
-          primaryAction={!saved ? (
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm" onClick={() => hasUnsaved ? setShowLeave(true) : undefined}>Cancel</Button>
-              <Button variant="main" size="sm" disabled={!canSave} onClick={() => setSaved(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
-            </div>
-          ) : undefined}
-        />
+        <>
+          <Header
+            size={isScrolled ? "compress" : "size-l"}
+            title={saved ? "Widget saved" : "Widget Playground"}
+            description={saved ? "Your widget is now in the library." : "Map an entity and metric, pick a type, and preview it live."}
+          />
+        </>
       )}
     >
       {/* ── Success view ── */}
@@ -414,13 +384,11 @@ export default function PMThomasWidgetBuilderScreen() {
         <div style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 160px)" }}>
           {/* Step progress indicator */}
           <Stepper
-            steps={stepItems}
+            steps={wizardSteps}
             onStepClick={(i) => {
-              const order: TabId[] = ["data", "widget", "appearance"]
-              const target = order[i]
-              if (target === "data" || (target === "widget" && dataComplete) || (target === "appearance" && widgetComplete)) {
-                setTab(target)
-              }
+              // Only backwards, and only into a stage that is already reachable.
+              const target = STEP_ORDER[i]
+              if (STEP_ORDER.indexOf(tab) > i || stepState(target) !== "locked") setTab(target)
             }}
             className="mb-5"
           />
@@ -584,9 +552,31 @@ export default function PMThomasWidgetBuilderScreen() {
           </div>
         </div>
 
-          <div style={{ flex: 1 }} />
-          <StepperNavFooter {...footerProps} />
         </div>
+      )}
+
+      {/* StepperNavFooter is sticky, and it is 72px tall against ScreenLayout's
+          64px bottom padding — eight pixels short, so the last row of a stage
+          can sit under it mid-scroll. This spacer buys the clearance. */}
+      {!saved && <div style={{ height: 24 }} />}
+
+      {/* ── Wizard navigation ──────────────────────────────────────────────
+          Sticky at the foot of the page, which is where a staged create flow's
+          actions belong — not in the Header, and not in a loose row under it.
+          The three buttons that used to sit up there were the reason this
+          screen tripped the variant="main" check. */}
+      {!saved && (
+        <StepperNavFooter
+          variant={tab === "data" ? "cancel-next" : "back-next"}
+          onCancel={() => (hasUnsaved ? setShowLeave(true) : resetAll())}
+          onBack={() => setTab(STEP_ORDER[Math.max(0, stepIndex - 1)])}
+          nextLabel={isLast ? "Save to catalog" : "Next"}
+          nextDisabled={!nextEnabled}
+          onNext={() => {
+            if (isLast) { setSaved(true); return }
+            setTab(STEP_ORDER[stepIndex + 1])
+          }}
+        />
       )}
 
       {/* ── Leave confirmation modal ── */}

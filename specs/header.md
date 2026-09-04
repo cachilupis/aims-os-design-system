@@ -2,7 +2,7 @@
 
 **Figma node:** [`7995:4268`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7995-4268)
 
-Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — only title + CTAs visible).
+Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + tag + CTAs, plus the breadcrumb row above the title when one is set; the breadcrumb and tag both survive compress so scrolling never costs you your place or the record's status).
 
 ## Properties
 
@@ -11,12 +11,15 @@ Page-level header with title, description, status tag, back button, icon highlig
 | title | string | any string | — | Required. Always visible in all sizes. |
 | size | Variant | size-l,size-m,compress | size-l | — |
 | description | string | any string | undefined | Hidden in compress. |
-| tag | node | <Tag /> | undefined | Renders inline after title. Hidden in compress. |
-| backButton | Boolean | true,false | false | ArrowLeft button. Hidden in compress. Use only in drill-down pages. |
+| tag | node | <Tag /> | undefined | Renders inline after the title. Survives compress — a detail page's status is exactly what you still want to see once you have scrolled. |
+| breadcrumb | node | <Breadcrumb /> | undefined | Trail above the title. From L2 onwards this is how a page states where it sits: parent plus current page (Workers › Meridian), not the whole path. Survives compress. Never combine with backButton — at L2 the first crumb IS the way back. |
+| backButton | Boolean | true,false | false | ArrowLeft button. The ONLY prop that controls back-button visibility. Hidden in compress unless showBackInCompress is also true. Use only in drill-down pages. |
+| onBack | function | () => void | undefined | Click handler for the back button. Never affects visibility — use backButton for that. |
+| showBackInCompress | Boolean | true,false | false | Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user. |
 | icon | node | LucideIcon | undefined | Rendered inside a HighlightIcon (sm). Hidden in compress. |
 | iconVariant | Variant | informative,success,alert,error,neutral,yellow,lime,purple,light-blue | informative | HighlightIcon color variant. Only applies when icon is set. |
-| primaryAction | node | <Button variant="main" size="sm" /> | undefined | — |
-| secondaryAction | node | <Button variant="secondary" size="sm" /> | undefined | — |
+| primaryAction | HeaderAction | { label, icon?, onClick?, disabled?, priority? } | undefined | An action object, not JSX — Header picks the Button variant so no screen names one. Defaults to priority "primary" (variant="main"). |
+| secondaryAction | HeaderAction | { label, icon?, onClick?, disabled?, priority? } | undefined | Same shape, rendered before primary. Defaults to priority "secondary". Two actions is the maximum — a third belongs in an overflow menu. |
 
 ## Sizes / scale
 
@@ -24,7 +27,7 @@ Page-level header with title, description, status tag, back button, icon highlig
 | --- | --- | --- | --- | --- |
 | Size L | 12px 24px | 24px | auto (~48px) | Default. Full slots visible. |
 | Size M | 10px 24px | 18px | auto (~38px) | Compact. Full slots visible. |
-| Compress | 8px 24px | 18px | 60px (fixed) | Scroll state. Only title + CTAs. |
+| Compress | 8px 24px | 18px | auto — ~48px, ~62px with a breadcrumb | Scroll state. Title + tag + CTAs, plus the breadcrumb row when one is set. Height is content-driven, not fixed. |
 
 ## Typography
 

@@ -40,9 +40,9 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Primary/Subtle |  | #E9F1FF | rgba(33,115,255,0.12) |
-| Icon | Icon/Primary/Default |  | #2173FF | #A8C8FF |
-| Text | Text/Info |  | #001740 | #A8C8FF |
+| Background | --ic-informative-bg |  | #E9F1FF | rgba(33,115,255,0.12) |
+| Icon | --ic-informative-icon |  | #2173FF | #A8C8FF |
+| Text | --ic-informative-text |  | #001740 | #A8C8FF |
 
 ### Alert
 
@@ -50,9 +50,9 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Warning/Subtle |  | #FFF4E5 | rgba(237,108,2,0.12) |
-| Icon | Icon/Alert/Default |  | #ED6C02 | #FFC070 |
-| Text | Text/Alert |  | #663C00 | #fcd34d |
+| Background | --ic-alert-bg |  | #FFF4E5 | rgba(237,108,2,0.12) |
+| Icon | --ic-alert-icon |  | #ED6C02 | #FFC070 |
+| Text | --ic-alert-text |  | #663C00 | #fcd34d |
 
 ### Error
 
@@ -60,9 +60,9 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Error/Subtle |  | #FDEDED | rgba(220,38,38,0.12) |
-| Icon | Icon/Error/Default |  | #992222 | #FF9898 |
-| Text | Text/Error |  | #5F2120 | #ff6467 |
+| Background | --ic-error-bg |  | #FDEDED | rgba(220,38,38,0.12) |
+| Icon | --ic-error-icon |  | #992222 | #FF9898 |
+| Text | --ic-error-text |  | #5F2120 | #ff6467 |
 
 ### Success
 
@@ -70,9 +70,9 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Success/Subtle |  | #E5FDF8 | rgba(0,169,127,0.12) |
-| Icon | Icon/Success/Default |  | #00A07E | #70EDD8 |
-| Text | Text/Success |  | #003328 | #70EDD8 |
+| Background | --ic-success-bg |  | #E5FDF8 | rgba(0,169,127,0.12) |
+| Icon | --ic-success-icon |  | #00A07E | #70EDD8 |
+| Text | --ic-success-text |  | #003328 | #70EDD8 |
 
 ### Neutral
 
@@ -80,9 +80,9 @@ Border width: `0`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/Default |  | #F2F2F2 | rgba(255,255,255,0.08) |
-| Icon | Icon/Neutral/Dark |  | #2A2A2A | rgba(255,255,255,0.50) |
-| Text | Text/Primary |  | #2A2A2A | rgba(255,255,255,0.70) |
+| Background | --ic-neutral-bg |  | #F2F2F2 | rgba(255,255,255,0.08) |
+| Icon | --ic-neutral-icon |  | #2A2A2A | rgba(255,255,255,0.70) |
+| Text | --ic-neutral-text |  | #2A2A2A | rgba(255,255,255,0.70) |
 
 ---
 

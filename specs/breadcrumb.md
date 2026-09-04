@@ -2,7 +2,7 @@
 
 **Figma node:** [`18352:45`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18352-45)
 
-Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.
+Hierarchical navigation trail, used from L2 onwards inside Header.breadcrumb. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.
 
 ## Properties
 
@@ -27,8 +27,8 @@ Ancestor links — clickable. Hover changes text to Text/Subtitle.
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Text (rest) | Text/Body | 4465:4469 | #5C5C5C | #94A3B8 |
-| Text (hover) | Text/Subtitle | 4465:4468 | #2a2a2a | rgba(255,255,255,0.60) |
+| Text (rest) | --color-text-body |  | #5C5C5C | #94A3B8 |
+| Text (hover) | --color-text-subtitle |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ### Selected item
 
@@ -36,7 +36,7 @@ Current page — last item, non-interactive.
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Text | Text/Subtitle | 4465:4468 | #2a2a2a | rgba(255,255,255,0.60) |
+| Text | --color-text-subtitle |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ### Separator
 
@@ -44,7 +44,7 @@ ChevronRight icon between items.
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Icon | Icon/Neutral/Light | 4465:4467 | #ffffff | #ffffff |
+| Icon | --color-icon-neutral-light |  | #ffffff | #ffffff |
 
 ---
 

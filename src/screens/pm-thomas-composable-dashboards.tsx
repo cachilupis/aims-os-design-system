@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, lazy, Suspense } from "react"
 const DashboardCanvasScreen = lazy(() => import("./pm-thomas-dashboard-canvas"))
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
-import { Header } from "@/components/ui/header"
+import { Header, type HeaderAction } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
@@ -367,7 +367,7 @@ function WidgetMiniPreview({ skeleton, seed, height = 64 }: { skeleton: Skeleton
 
   if (skeleton === "Feed") {
     return (
-      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", gap:5, padding:"10px 12px" }}>
+      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", alignItems:"stretch", gap:5, padding:"10px 12px" }}>
         {[0,1,2].map(i => (
           <div key={i} style={{ display:"flex", alignItems:"center", gap:6 }}>
             <div style={{ width:5, height:5, borderRadius:"50%", background:"var(--primary)", flexShrink:0 }} />
@@ -408,7 +408,7 @@ function WidgetMiniPreview({ skeleton, seed, height = 64 }: { skeleton: Skeleton
   if (skeleton === "Board") {
     const rows: [string,string,number][] = [["#22C55E","Active",3],["#94A3B8","Idle",1],["#F59E0B","Paused",1]] // audit-ignore: board status colours
     return (
-      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", gap:4, padding:"8px 12px" }}>
+      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", alignItems:"stretch", gap:4, padding:"8px 12px" }}>
         {rows.map(([c,l,n]) => (
           <div key={l} style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <div style={{ display:"flex", alignItems:"center", gap:5 }}>
@@ -449,7 +449,7 @@ function WidgetMiniPreview({ skeleton, seed, height = 64 }: { skeleton: Skeleton
   if (skeleton === "Alerts") {
     const items: [string,string][] = [["#EF4444","Critical · 2"],["#F59E0B","Warning · 5"]] // audit-ignore: alert demo colours
     return (
-      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", gap:6, padding:"10px 12px" }}>
+      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", alignItems:"stretch", gap:6, padding:"10px 12px" }}>
         {items.map(([c,l]) => (
           <div key={l} style={{ display:"flex", alignItems:"center", gap:7 }}>
             <div style={{ width:6, height:6, borderRadius:2, background:c, flexShrink:0 }} />
@@ -1882,7 +1882,14 @@ export default function PMThomasComposableDashboardsScreen() {
   // Dynamic header per view
   let headerTitle = "Dashboard Studio"
   let headerDesc  = "Build and manage contextual dashboards."
-  let headerPrimary: React.ReactNode = null
+  // Header slots, per view. `primary`/`secondary` are HeaderActions — the DS
+  // owns their variant. `aux` is for controls that are not a single action:
+  // here, the Widget Library's split button.
+  let headerPrimary:   HeaderAction | undefined
+  let headerSecondary: HeaderAction | undefined
+  let headerAux:       React.ReactNode = null
+  let headerBack       = false
+  let onHeaderBack: (() => void) | undefined
 
   if (overlayView === "new-dashboard") {
     headerTitle = "New dashboard"
@@ -1893,29 +1900,30 @@ export default function PMThomasComposableDashboardsScreen() {
       ? "Make your changes and save to update the widget in the catalog."
       : "Map an entity and metric, pick a widget type, and preview it live."
     const canAdvance = (builderTab === "data" && builderDataDone) || (builderTab === "widget" && builderWidgetDone)
-    headerPrimary = (
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <Button variant="secondary" size="sm" onClick={() => setOverlay(null)}>Cancel</Button>
-        <Button variant="secondary" size="sm" disabled={!canAdvance}
-          onClick={() => {
-            if (builderTab === "data" && builderDataDone)        setBuilderTab("widget")
-            else if (builderTab === "widget" && builderWidgetDone) setBuilderTab("appearance")
-          }}>
-          Widget →
-        </Button>
-        <Button variant="main" size="sm" disabled={!builderWidgetDone}
-          onClick={() => builderSaveRef.current?.()}>
-          Save to catalog
-        </Button>
-      </div>
-    )
+    // Cancel out of an overlay is back-navigation, not a third CTA — the
+    // Header has an affordance for exactly that.
+    headerBack   = true
+    onHeaderBack = () => setOverlay(null)
+    headerSecondary = {
+      label: "Widget \u2192",
+      disabled: !canAdvance,
+      onClick: () => {
+        if (builderTab === "data" && builderDataDone)          setBuilderTab("widget")
+        else if (builderTab === "widget" && builderWidgetDone) setBuilderTab("appearance")
+      },
+    }
+    headerPrimary = {
+      label: "Save to catalog",
+      disabled: !builderWidgetDone,
+      onClick: () => builderSaveRef.current?.(),
+    }
   } else if (mainView === "dashboards") {
-    headerPrimary = <Button variant="main" size="sm" onClick={() => setOverlay("new-dashboard")}>Create dashboard</Button>
+    headerPrimary = { label: "Create dashboard", onClick: () => setOverlay("new-dashboard") }
   } else {
     headerTitle = "Widget Library"
     headerDesc  = `${LIB_WIDGETS.length} widgets · ${LIB_GOVERNED_COUNT} governed`
     const ChevDown = LucideIcons.ChevronDown as React.FC<{ size?: number }>
-    headerPrimary = (
+    headerAux = (
       <div style={{ position: "relative" as const }}>
         <div style={{ display: "flex", alignItems: "stretch", borderRadius: 8, overflow: "hidden" }}>
           <Button variant="main" size="sm" onClick={() => openBuilder()}
@@ -1984,6 +1992,11 @@ export default function PMThomasComposableDashboardsScreen() {
             size={isScrolled ? "compress" : "size-l"}
             title={headerTitle}
             description={overlayView ? undefined : headerDesc}
+            backButton={headerBack}
+            showBackInCompress={headerBack}
+            onBack={onHeaderBack}
+            aux={headerAux}
+            secondaryAction={headerSecondary}
             primaryAction={headerPrimary}
           />
         </div>

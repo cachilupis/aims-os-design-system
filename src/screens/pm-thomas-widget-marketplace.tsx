@@ -3,9 +3,10 @@ import * as LucideIcons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Tag } from "@/components/ui/tag"
+import { WidgetGlyph, WidgetFreshnessBadge, WidgetMiniPreview } from "@/components/experimental/widget-parts"
 import { CardContainer } from "@/components/ui/card-container"
+import { Filters } from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Pagination } from "@/components/ui/pagination"
@@ -18,6 +19,9 @@ type Skeleton = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel
 type Freshness = "live" | "fresh" | "stale"
 type Complexity = "Simple" | "Intermediate" | "Advanced"
 type SortKey = "usage" | "name" | "type"
+
+// Filters carries one sort label and cycles it on click — it has no sort menu.
+const SORT_LABEL: Record<SortKey, string> = { usage: "Most used", name: "Name A–Z", type: "By type" }
 
 interface MarketplaceWidget {
   id: string
@@ -35,16 +39,6 @@ interface MarketplaceWidget {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 // DS-GAP: CategoryColors — business-function palette; no DS tokens for these. Needs tokenization.
-const CAT_COLOR: Record<string, string> = {
-  "aims-os":          "#2B7FFF", // audit-ignore: prototype category colours
-  "sales":            "#22C55E", // audit-ignore: prototype category colours
-  "finance":          "#0EA5E9", // audit-ignore: prototype category colours
-  "customer-service": "#F97316", // audit-ignore: prototype category colours
-  "hr":               "#A78BFA", // audit-ignore: prototype category colours
-  "marketing":        "#EC4899", // audit-ignore: prototype category colours
-  "operations":       "#64748B", // audit-ignore: prototype category colours
-}
-
 const CATEGORIES: { id: BizCat; label: string }[] = [
   { id: "all",              label: "All categories" },
   { id: "aims-os",          label: "AIMS OS" },
@@ -55,12 +49,6 @@ const CATEGORIES: { id: BizCat; label: string }[] = [
   { id: "marketing",        label: "Marketing" },
   { id: "operations",       label: "Operations" },
 ]
-
-const SKELETON_ICON: Record<string, string> = {
-  KPI: "TrendingUp", Chart: "BarChart2", Feed: "Rss", Gauge: "Gauge",
-  Donut: "PieChart", Board: "Kanban", Funnel: "Filter", "Stat Row": "AlignLeft",
-  Alerts: "Bell", "Cost KPI": "DollarSign",
-}
 
 const WIDGETS: MarketplaceWidget[] = [
   // AIMS OS
@@ -103,85 +91,19 @@ const PAGE_SIZE = 12
 
 // ── DS-GAP Components ─────────────────────────────────────────────────────────
 
-// DS-GAP: WidgetGlyph — icon representation for widget skeleton types. Closest DS component: HighlightIcon.
-function WidgetGlyph({ skeleton, size = 32 }: { skeleton: string; size?: number }) {
-  const iconKey = SKELETON_ICON[skeleton] ?? "Square"
-  const Icon = (LucideIcons as Record<string, unknown>)[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: 8, flexShrink: 0,
-      background: "var(--surface)", border: "1px solid var(--field-border)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <Icon size={Math.round(size * 0.5)} style={{ color: "var(--primary)" }} />
-    </div>
-  )
-}
-
-// DS-GAP: FreshnessBadge — pill showing data freshness state. Closest DS component: Tag.
-const FRESHNESS_META: Record<string, { label: string; color: string }> = {
-  live:  { label: "Live",  color: "var(--success)" },
-  fresh: { label: "Fresh", color: "var(--primary)" },
-  stale: { label: "Stale", color: "var(--alert)" },
-}
-function FreshnessBadge({ freshness }: { freshness: string }) {
-  const meta = FRESHNESS_META[freshness] ?? FRESHNESS_META.fresh
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, color: meta.color, flexShrink: 0 }}>
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color }} />
-      {meta.label}
-    </span>
-  )
-}
-
 // DS-GAP: MiniPreview — skeleton-appropriate miniature chart placeholder. Closest DS component: none.
-function MiniPreview({ skeleton }: { skeleton: string }) {
-  if (skeleton === "Donut") {
-    return (
-      <div style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ width: 38, height: 38, borderRadius: "50%", border: "10px solid var(--primary)", opacity: 0.3 }} />
-      </div>
-    )
-  }
-  if (skeleton === "Gauge") {
-    return (
-      <div style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ width: 44, height: 22, borderRadius: "22px 22px 0 0", border: "9px solid var(--primary)", borderBottom: "none", opacity: 0.3 }} />
-      </div>
-    )
-  }
-  if (skeleton === "Feed" || skeleton === "Alerts" || skeleton === "Board") {
-    return (
-      <div style={{ height: 52, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 5 }}>
-        {[100, 78, 55].map((w, i) => (
-          <div key={i} style={{ height: 8, borderRadius: 4, background: "var(--primary)", opacity: 0.18 + i * 0.1, width: `${w}%` }} />
-        ))}
-      </div>
-    )
-  }
-  return (
-    <div style={{ height: 52, display: "flex", alignItems: "flex-end", gap: 3, padding: "6px 8px 0" }}>
-      {[45, 65, 40, 85, 55, 70].map((h, i) => (
-        <div key={i} style={{ flex: 1, height: `${h}%`, borderRadius: "3px 3px 0 0", background: "var(--primary)", opacity: 0.18 + i * 0.09 }} />
-      ))}
-    </div>
-  )
-}
-
 // DS-GAP: MarketplaceCard — widget listing card with category stripe, preview, and action buttons. Closest DS component: CardContainer.
-function MarketplaceCard({ widget, catColor, onView, onUse }: {
+function MarketplaceCard({ widget, onView, onUse }: {
   widget: MarketplaceWidget
-  catColor: string
   onView: () => void
   onUse: () => void
 }) {
   const complexityColor = widget.complexity === "Simple" ? "var(--success)" : widget.complexity === "Advanced" ? "var(--alert)" : "var(--color-text-subtitle)"
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ height: 3, background: catColor, flexShrink: 0 }} />
       <div style={{ padding: 12, flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <WidgetGlyph skeleton={widget.skeleton} size={32} />
+          <WidgetGlyph skeleton={widget.skeleton} size="sm" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {widget.name}
@@ -190,10 +112,10 @@ function MarketplaceCard({ widget, catColor, onView, onUse }: {
               {widget.source}
             </div>
           </div>
-          <FreshnessBadge freshness={widget.freshness} />
+          <WidgetFreshnessBadge status={widget.freshness} />
         </div>
         <div style={{ borderRadius: 6, background: "var(--canvas)", border: "1px solid var(--field-border)", overflow: "hidden" }}>
-          <MiniPreview skeleton={widget.skeleton} />
+          <WidgetMiniPreview skeleton={widget.skeleton} />
         </div>
         <p style={{
           fontSize: 12, color: "var(--color-text-subtitle)", lineHeight: 1.5, margin: 0,
@@ -241,7 +163,6 @@ function CategoryRail({ categories, counts, selected, onSelect, activeFilters, o
             cursor: "pointer", textAlign: "left" as const, width: "100%",
           }}
         >
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: CAT_COLOR[cat.id] ?? "transparent", flexShrink: 0 }} />
           <span style={{ flex: 1, fontSize: 13, color: selected === cat.id ? "var(--color-text-title)" : "var(--color-text-subtitle)", fontWeight: selected === cat.id ? 500 : 400 }}>
             {cat.label}
           </span>
@@ -321,11 +242,6 @@ export default function PMThomasWidgetMarketplaceScreen() {
     setPage(1)
   }
 
-  const selectStyle: React.CSSProperties = {
-    padding: "6px 10px", borderRadius: 6, border: "1px solid var(--field-border)",
-    background: "var(--surface)", color: "var(--color-text-title)", fontSize: 13, cursor: "pointer",
-  }
-
   return (
     <ScreenLayout
       workspaceName="Acme Corp"
@@ -338,12 +254,8 @@ export default function PMThomasWidgetMarketplaceScreen() {
           size={isScrolled ? "compress" : "size-l"}
           title="Widget Marketplace"
           description="Browse and add pre-built widgets to your dashboards."
-          primaryAction={
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm">Start from scratch</Button>
-              <Button variant="main" size="sm">Create with AI assist</Button>
-            </div>
-          }
+          secondaryAction={{ label: "Start from scratch" }}
+          primaryAction={{ label: "Create with AI assist" }}
         />
       )}
       pagination={
@@ -369,31 +281,46 @@ export default function PMThomasWidgetMarketplaceScreen() {
         {/* Right panel — Filter toolbar + card grid */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
 
-          {/* DS-GAP: FilterToolbar — search + dropdown filters for marketplace. Closest DS component: Filters. */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <Input placeholder="Search widgets…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} />
-            </div>
-            <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1) }} style={selectStyle}>
-              <option value="all">All types</option>
-              {skeletonOptions.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select value={sourceFilter} onChange={(e) => { setSourceFilter(e.target.value); setPage(1) }} style={selectStyle}>
-              <option value="all">All sources</option>
-              {sourceOptions.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select value={complexityFilter} onChange={(e) => { setComplexityFilter(e.target.value); setPage(1) }} style={selectStyle}>
-              <option value="all">All complexity</option>
-              <option value="Simple">Simple</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} style={selectStyle}>
-              <option value="usage">Most used</option>
-              <option value="name">Name A–Z</option>
-              <option value="type">By type</option>
-            </select>
-          </div>
+          <Filters
+            showSearch
+            searchPlaceholder="Search widgets…"
+            searchValue={search}
+            onSearchChange={(v) => { setSearch(v); setPage(1) }}
+            showAllFilters={false}
+            showViewToggle={false}
+            showClearFilters={typeFilter !== "all" || sourceFilter !== "all" || complexityFilter !== "all"}
+            onClearFilters={() => {
+              setTypeFilter("all"); setSourceFilter("all"); setComplexityFilter("all"); setPage(1)
+            }}
+            sortLabel={SORT_LABEL[sortBy]}
+            onSortClick={() => {
+              const order: SortKey[] = ["usage", "name", "type"]
+              setSortBy(order[(order.indexOf(sortBy) + 1) % order.length])
+            }}
+            slots={[
+              {
+                placeholder: "All types",
+                value: typeFilter === "all" ? undefined : typeFilter,
+                options: skeletonOptions,
+                onSelect: (v) => { setTypeFilter(v); setPage(1) },
+                onRemove: () => { setTypeFilter("all"); setPage(1) },
+              },
+              {
+                placeholder: "All sources",
+                value: sourceFilter === "all" ? undefined : sourceFilter,
+                options: sourceOptions,
+                onSelect: (v) => { setSourceFilter(v); setPage(1) },
+                onRemove: () => { setSourceFilter("all"); setPage(1) },
+              },
+              {
+                placeholder: "All complexity",
+                value: complexityFilter === "all" ? undefined : complexityFilter,
+                options: ["Simple", "Intermediate", "Advanced"],
+                onSelect: (v) => { setComplexityFilter(v); setPage(1) },
+                onRemove: () => { setComplexityFilter("all"); setPage(1) },
+              },
+            ]}
+          />
 
           <div style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>
             {filtered.length} widget{filtered.length !== 1 ? "s" : ""}
@@ -410,7 +337,6 @@ export default function PMThomasWidgetMarketplaceScreen() {
                   <CardContainer className="h-full overflow-hidden">
                     <MarketplaceCard
                       widget={w}
-                      catColor={CAT_COLOR[w.businessCategory] ?? "#64748B"} // audit-ignore: prototype category colours
                       onView={() => setViewWidget(w)}
                       onUse={() => setUseWidget(w)}
                     />
@@ -433,16 +359,19 @@ export default function PMThomasWidgetMarketplaceScreen() {
           showSearchBar={false}
           showCta={false}
         >
-          <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Vertical padding only. SlideOut already insets its panel by 24px, so a
+                horizontal padding here lands the content at 48px while the header
+                stays at 24 — the misalignment is only visible with both on screen. */}
+            <div style={{ padding: "4px 0 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <WidgetGlyph skeleton={viewWidget.skeleton} size={48} />
+              <WidgetGlyph skeleton={viewWidget.skeleton} size="md" />
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-title)" }}>{viewWidget.name}</div>
                 <div style={{ fontSize: 13, color: "var(--color-text-subtitle)", marginTop: 2 }}>{viewWidget.source}</div>
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "center" }}>
-              <FreshnessBadge freshness={viewWidget.freshness} />
+              <WidgetFreshnessBadge status={viewWidget.freshness} />
               <Tag variant="neutral" size="sm">{viewWidget.skeleton}</Tag>
               <Tag variant="neutral" size="sm">{viewWidget.complexity}</Tag>
             </div>

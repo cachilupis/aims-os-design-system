@@ -444,6 +444,13 @@
     --ab-alert-icon:    #fcd34d;                  /* Text/Alert dark = tag-alert-fg    */
     --ab-alert-text:    #fcd34d;
 
+    /* Info — neutral, non-status feedback ("Syncing…", "Queued"). Values mirror
+       the existing --ic-informative-* family so the DS has one blue, not two. */
+    --ab-info-bg:       rgba(33,115,255,0.12);    /* = --ic-informative-bg dark        */
+    --ab-info-bd:       transparent;              /* solid bg is sufficient            */
+    --ab-info-icon:     #A8C8FF;                  /* = --ic-informative-icon dark      */
+    --ab-info-text:     #A8C8FF;                  /* = --ic-informative-text dark      */
+
     --ab-cta-text:      rgba(255,255,255,0.60);   /* Text/Label dark — CTA + close btn */
 
     /* ── Sidebar — dark ──────────────────────────────────────────────────── */
@@ -1131,6 +1138,13 @@
     --ab-alert-icon:    #b45309;                  /* Icon/Alert/Default light                        */
     --ab-alert-text:    #663c00;                  /* Text/Alert light = tag-alert-fg dark             */
 
+    /* Info — see the dark block. Border follows the same rule as the other three
+       light borders: a 25% tint of the icon colour. */
+    --ab-info-bg:       #E9F1FF;                  /* = --ic-informative-bg light                     */
+    --ab-info-bd:       rgba(33,115,255,0.25);    /* Border/Info tint — 25% of the icon colour       */
+    --ab-info-icon:     #2173FF;                  /* = --ic-informative-icon light                   */
+    --ab-info-text:     #001740;                  /* = --ic-informative-text light                   */
+
     --ab-cta-text:      rgba(0,0,0,0.55);         /* Text/Label light — CTA + close btn              */
 
     /* ── Sidebar — light ─────────────────────────────────────────────────── */
@@ -1513,4 +1527,13 @@
 @keyframes tooltip-in {
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1); }
+}
+
+/* Floating AlertBanner (toast) — slide in from the right edge on mount.
+   A CSS animation rather than a state flip in requestAnimationFrame: the
+   rAF version was cancelled by its own effect cleanup under StrictMode, so
+   every toast lived and died at opacity 0. CSS cannot be cancelled that way. */
+@keyframes alert-banner-toast-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
 }

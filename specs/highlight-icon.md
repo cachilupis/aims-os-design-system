@@ -30,8 +30,9 @@ CSS prefix: `hi-informative`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Primary/100 | 4461:2592 | #E9F1FF | rgba(33,115,255,0.14) |
-| Icon (dark) | Icon/Informative/Dark | 4465:4514 | #001740 | #A8C8FF |
+| Background | --hi-informative-bg | 4461:2592 | #E9F1FF | rgba(33,115,255,0.14) |
+| Icon (dark) | --hi-informative-icon | 4465:4514 | #001740 | #A8C8FF |
+| Icon (default) | --hi-informative-icon-soft |  | #2173FF | rgba(168,200,255,0.60) |
 
 ### success
 
@@ -41,8 +42,9 @@ CSS prefix: `hi-success`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Success/50 | 8541:11928 | #CBFFF4 | rgba(0,169,127,0.14) |
-| Icon (dark) | Icon/Success/Dark | 4567:4619 | #003328 | #70EDD8 |
+| Background | --hi-success-bg | 8541:11928 | #CBFFF4 | rgba(0,169,127,0.14) |
+| Icon (dark) | --hi-success-icon | 4567:4619 | #003328 | #70EDD8 |
+| Icon (default) | --hi-success-icon-soft |  | #059669 | rgba(112,237,216,0.60) |
 
 ### alert
 
@@ -52,8 +54,9 @@ CSS prefix: `hi-alert`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Alert/50 | 4465:2666 | #FFEEDB | rgba(217,119,6,0.14) |
-| Icon (dark) | Icon/Alert/Dark | 4567:4618 | #663C00 | #FFC070 |
+| Background | --hi-alert-bg | 4465:2666 | #FFEEDB | rgba(217,119,6,0.14) |
+| Icon (dark) | --hi-alert-icon | 4567:4618 | #663C00 | #FFC070 |
+| Icon (default) | --hi-alert-icon-soft |  | #D97706 | rgba(255,192,112,0.60) |
 
 ### error
 
@@ -63,8 +66,9 @@ CSS prefix: `hi-error`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Error/50 | 4465:2662 | #FDEDED | rgba(220,38,38,0.14) |
-| Icon (dark) | Icon/Error/Dark | 4567:4620 | #5F2120 | #FF9898 |
+| Background | --hi-error-bg | 4465:2662 | #FDEDED | rgba(220,38,38,0.14) |
+| Icon (dark) | --hi-error-icon | 4567:4620 | #5F2120 | #FF9898 |
+| Icon (default) | --hi-error-icon-soft |  | #DC2626 | rgba(255,152,152,0.60) |
 
 ### neutral
 
@@ -74,8 +78,9 @@ CSS prefix: `hi-neutral`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Gray/100 | 4465:4589 | #F2F2F2 | rgba(255,255,255,0.08) |
-| Icon (dark) | Text/Primary/Dark | 4465:4589 | #2A2A2A | rgba(255,255,255,0.70) |
+| Background | --hi-neutral-bg | 4465:4589 | #F2F2F2 | rgba(255,255,255,0.08) |
+| Icon (dark) | --hi-neutral-icon | 4465:4589 | #2A2A2A | rgba(255,255,255,0.70) |
+| Icon (default) | --hi-neutral-icon-soft |  | #6B7280 | rgba(255,255,255,0.40) |
 
 ### yellow
 
@@ -85,8 +90,9 @@ CSS prefix: `hi-yellow`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Yellow/50 | 8539:40814 | #FFEEDB | rgba(202,138,4,0.14) |
-| Icon (dark) | Icon/Yellow/Dark | 8539:40814 | #5C3500 | #FFE070 |
+| Background | --hi-yellow-bg | 8539:40814 | #FFEEDB | rgba(202,138,4,0.14) |
+| Icon (dark) | --hi-yellow-icon | 8539:40814 | #5C3500 | #FFE070 |
+| Icon (default) | --hi-yellow-icon-soft |  | #CA8A04 | rgba(255,224,112,0.60) |
 
 ### lime
 
@@ -96,8 +102,9 @@ CSS prefix: `hi-lime`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Lime/50 | 8539:40885 | #E7F9B5 | rgba(101,163,13,0.14) |
-| Icon (dark) | Icon/Lime/Dark | 8539:40885 | #3E5C0A | #C4F060 |
+| Background | --hi-lime-bg | 8539:40885 | #E7F9B5 | rgba(101,163,13,0.14) |
+| Icon (dark) | --hi-lime-icon | 8539:40885 | #3E5C0A | #C4F060 |
+| Icon (default) | --hi-lime-icon-soft |  | #65A30D | rgba(196,240,96,0.60) |
 
 ### purple
 
@@ -107,8 +114,9 @@ CSS prefix: `hi-purple`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Purple/100 | 8539:40955 | #E4CEFC | rgba(124,58,237,0.14) |
-| Icon (dark) | Icon/Purple/Dark | 8539:40955 | #2C075C | #D4A0FF |
+| Background | --hi-purple-bg | 8539:40955 | #E4CEFC | rgba(124,58,237,0.14) |
+| Icon (dark) | --hi-purple-icon | 8539:40955 | #2C075C | #D4A0FF |
+| Icon (default) | --hi-purple-icon-soft |  | #7C3AED | rgba(212,160,255,0.60) |
 
 ### light-blue
 
@@ -118,8 +126,9 @@ CSS prefix: `hi-lightblue`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | LightBlue/100 | 8540:41021 | #CCF1FF | rgba(2,132,199,0.14) |
-| Icon (dark) | Icon/LightBlue/Dark | 8540:41021 | #02445A | #80DCFF |
+| Background | --hi-lightblue-bg | 8540:41021 | #CCF1FF | rgba(2,132,199,0.14) |
+| Icon (dark) | --hi-lightblue-icon | 8540:41021 | #02445A | #80DCFF |
+| Icon (default) | --hi-lightblue-icon-soft |  | #0284C7 | rgba(128,220,255,0.60) |
 
 ---
 

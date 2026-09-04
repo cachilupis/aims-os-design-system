@@ -2,7 +2,7 @@
 
 **Figma node:** [`7091:37109`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7091-37109)
 
-Linear determinate loading bar that communicates known progress. Full-width track with a filled indicator that animates as value changes. 7 semantic styles, 2 track sizes, and full ARIA progressbar semantics.
+Linear determinate bar for progress that is known and short — a file upload, a "processing" step. Also used purely informatively to show how far along something is: inside widgets, or as the visual state of an item in a SlideOut or SidePanel. Not for loading a view (that is Skeleton) and not for work of unknown duration (that is Spinner).
 
 ## Properties
 

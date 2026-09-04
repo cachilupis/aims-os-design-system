@@ -1,4 +1,4 @@
-import { CircleX, CircleCheck, TriangleAlert, X } from "lucide-react"
+import { CircleX, CircleCheck, TriangleAlert, Info, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils"
  *   text → Text/{State}            (accessible label color)
  */
 
-export type AlertBannerState = "error" | "success" | "alert"
+export type AlertBannerState = "error" | "success" | "alert" | "info"
 
 export type AlertBannerProps = {
   state?:       AlertBannerState
@@ -50,6 +50,17 @@ const STATE_CONFIG = {
     bd:   "var(--ab-alert-bd)",
     icon: "var(--ab-alert-icon)",
     text: "var(--ab-alert-text)",
+  },
+  // Neutral feedback that is neither success nor a problem — "Syncing…",
+  // "Queued", "Will send in 5 minutes". Named `info` rather than
+  // `informative` on purpose: InformativeCard is a different component, and
+  // one word meaning two things is how the Stepper mix-up happened.
+  info: {
+    Icon: Info,
+    bg:   "var(--ab-info-bg)",
+    bd:   "var(--ab-info-bd)",
+    icon: "var(--ab-info-icon)",
+    text: "var(--ab-info-text)",
   },
 } as const
 

@@ -45,10 +45,23 @@ export type TableProps<T extends object> = {
   columns:            TableColumn<T>[]
   data:               T[]
   size?:              TableSize
+  // ── Checkbox selection (multi-select via the leading Checkbox column) ──
   selectable?:        boolean
   selectedRows?:      Set<number>
   onRowSelect?:       (index: number, checked: boolean) => void
   onSelectAll?:       (allChecked: boolean) => void
+  // ── Master-detail selection (single-select by key, no checkbox column) ──
+  /** Derive a stable key for each row. Only needed when `selectedRowKey`
+   *  is used. Recommended: `row => row.id`. */
+  rowKey?:            (row: T, i: number) => string | number
+  /** Highlight the row whose `rowKey(...)` equals this value with the same
+   *  `--table-row-selected-bg` tint used by the checkbox path. Independent
+   *  of `selectable`. */
+  selectedRowKey?:    string | number | null
+  /** Fires when a row body is clicked (outside the checkbox cell). Coexists
+   *  with `selectable`: when `selectable` is true, row click keeps toggling
+   *  the checkbox; when it's false, `onRowClick` handles the click. */
+  onRowClick?:        (row: T, i: number) => void
   className?:         string
   emptyIcon?:         LucideIcon
   emptyTitle?:        string
@@ -67,6 +80,9 @@ function Table<T extends object,>({
   selectedRows      = new Set<number>(),
   onRowSelect,
   onSelectAll,
+  rowKey,
+  selectedRowKey    = null,
+  onRowClick,
   emptyIcon,
   emptyTitle        = "No data yet",
   emptyDescription  = "Nothing to display here yet.",
@@ -149,14 +165,27 @@ function Table<T extends object,>({
             </tr>
           ) : (
             data.map((row, i) => {
-              const isSelected = selectedRows.has(i)
+              const isSelectedByCheckbox = selectedRows.has(i)
+              const isSelectedByKey      =
+                rowKey !== undefined && selectedRowKey != null && rowKey(row, i) === selectedRowKey
+              const isSelected           = isSelectedByCheckbox || isSelectedByKey
+
+              // Click precedence: checkbox mode wins (toggle the row); otherwise fire onRowClick.
+              const handleRowClick =
+                selectable
+                  ? () => onRowSelect?.(i, !isSelectedByCheckbox)
+                  : onRowClick
+                    ? () => onRowClick(row, i)
+                    : undefined
+
               return (
                 <tr
                   key={i}
-                  onClick={selectable ? () => onRowSelect?.(i, !isSelected) : undefined}
+                  onClick={handleRowClick}
+                  aria-selected={isSelectedByKey ? true : undefined}
                   className={cn(
                     "transition-colors duration-100",
-                    selectable && "cursor-pointer",
+                    (selectable || onRowClick) && "cursor-pointer",
                     isSelected
                       ? "bg-[var(--table-row-selected-bg)]"
                       : "bg-[var(--table-bg)] hover:bg-[var(--table-row-hover-bg)]",

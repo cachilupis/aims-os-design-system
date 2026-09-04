@@ -26,6 +26,16 @@ import { Chip } from "@/components/ui/chip"
 
 export type SlideOutType = "with-variants" | "full-slot"
 export type SlideOutSize = "m" | "s"
+/**
+ * Which edge of the viewport the panel is anchored to.
+ * - "right"  (default): full-height panel, slides in from the right edge.
+ *                       Rounded on the left corners only. Resizable.
+ * - "bottom": full-width bottom sheet, slides in from the bottom edge.
+ *                       Rounded on the top corners only. Fixed height (80vh
+ *                       capped at 720px). Not resizable — the drag-to-resize
+ *                       gesture is specific to the right-anchor.
+ */
+export type SlideOutAnchor = "right" | "bottom"
 
 export interface SlideOutProps {
   open: boolean
@@ -34,6 +44,8 @@ export interface SlideOutProps {
   type?: SlideOutType
   /** Width + radius variant. Default: "m" */
   size?: SlideOutSize
+  /** Viewport edge the panel is anchored to. Default: "right" */
+  anchor?: SlideOutAnchor
   /** Close panel when backdrop is clicked. Default: true */
   closeOnBackdrop?: boolean
   /**
@@ -43,7 +55,7 @@ export interface SlideOutProps {
   previewMode?: boolean
   /**
    * Whether the left edge drag-to-resize handle is shown.
-   * Only applies in portal mode. Default: true
+   * Only applies in portal mode, right-anchored. Default: true
    */
   resizable?: boolean
 
@@ -55,6 +67,14 @@ export interface SlideOutProps {
   showIcon?: boolean
   /** Custom content for the header icon container. Default: <Sparkles/> */
   iconContent?: React.ReactNode
+  /**
+   * Background of the header icon container. Default: purple (unchanged
+   * behavior for every existing caller). Set this whenever `iconContent`
+   * represents a specific colored source elsewhere in the UI (e.g. a
+   * workflow/agent item's own HighlightIcon) — the panel should read as
+   * "the same item, now in detail," not switch to an unrelated color.
+   */
+  iconBg?: string
   /** DS prop: status. Show green status tag. Default: true */
   showStatus?: boolean
   statusLabel?: string
@@ -66,7 +86,15 @@ export interface SlideOutProps {
    * Default: <Pencil size={14}/>
    */
   topButtonIcon?: React.ReactNode
-  onTopButtonClick?: () => void
+  /**
+   * Receives the native click event so callers can anchor a contextual
+   * menu (e.currentTarget.getBoundingClientRect()) — additive, backward
+   * compatible: existing `() => {...}` callbacks that ignore the argument
+   * still work unchanged.
+   */
+  onTopButtonClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
+  /** Optional Tooltip content for the top button — explains what it does before the click. Additive/optional; omitted = no Tooltip (unchanged default). */
+  topButtonTooltip?: string
   /** DS prop: close. Show X close button. Default: true */
   showClose?: boolean
 
@@ -97,6 +125,13 @@ export interface SlideOutProps {
   // ── CTA footer (with-variants only) ──────────────────────────────────────
   /** DS prop: cta. Show bottom action buttons. Default: true */
   showCta?: boolean
+  /**
+   * Additive — a footer with a single action (nothing to reject/skip,
+   * e.g. a read-only recommendation's own "Apply") omits the secondary
+   * button instead of forcing a placeholder one just to fill the pair.
+   * Default: true (unchanged 2-button footer).
+   */
+  showCtaSecondary?: boolean
   ctaPrimaryLabel?: string
   ctaSecondaryLabel?: string
   onCtaPrimary?: () => void
@@ -114,6 +149,7 @@ export function SlideOut({
   onClose,
   type = "with-variants",
   size = "m",
+  anchor = "right",
   closeOnBackdrop = true,
   previewMode = false,
   resizable = true,
@@ -121,11 +157,13 @@ export function SlideOut({
   subtitle = "Subtitle with a short description of what the user can do here",
   showIcon = true,
   iconContent,
+  iconBg = "var(--color-surface-purple-more-subtle)",
   showStatus = true,
   statusLabel = "Status",
   showTopButton = true,
   topButtonIcon,
   onTopButtonClick,
+  topButtonTooltip,
   showClose = true,
   showTabs = true,
   showTab3 = true,
@@ -139,6 +177,7 @@ export function SlideOut({
   onChipChange,
   children,
   showCta = true,
+  showCtaSecondary = true,
   ctaPrimaryLabel = "Button",
   ctaSecondaryLabel = "Button",
   onCtaPrimary,
@@ -148,6 +187,7 @@ export function SlideOut({
 }: SlideOutProps) {
   const isM = size === "m"
   const isWithVariants = type === "with-variants"
+  const isBottom = anchor === "bottom"
 
   // ── Drag-to-resize state ────────────────────────────────────────────────
   const [dragWidth, setDragWidth] = useState<number | null>(null)
@@ -228,16 +268,19 @@ export function SlideOut({
   )
 
   // ── Icon buttons (topButton + close) ──────────────────────────────────
-  const TopBtn = showTopButton ? (
+  const topBtnButton = showTopButton ? (
     <Button
       variant="tertiary"
       size="sm"
       iconPosition="alone"
       icon={topButtonIcon ?? <Pencil size={14} />}
       onClick={onTopButtonClick}
-      aria-label="Top action"
+      aria-label={topButtonTooltip ?? "Top action"}
     />
   ) : null
+  const TopBtn = topBtnButton && topButtonTooltip ? (
+    <Tooltip content={topButtonTooltip} side="cursor">{topBtnButton}</Tooltip>
+  ) : topBtnButton
 
   const CloseBtn = showClose ? (
     <Button
@@ -251,34 +294,64 @@ export function SlideOut({
   ) : null
 
   // ── Panel aside ────────────────────────────────────────────────────────
+  // Anchor-specific geometry:
+  //   right-anchored (default): full-height, panelWidth wide, rounded-left,
+  //                             slides in via translate-x.
+  //   bottom-anchored:          full-width, ~80vh (max 720px) tall, rounded-top,
+  //                             slides in via translate-y. Not resizable — the
+  //                             drag handle is a right-anchor gesture.
+  const asideStyle: React.CSSProperties = isBottom
+    ? {
+        width:        "100%",
+        height:       "min(80vh, 720px)",
+        padding:      "24px 24px 32px",
+        gap:          isWithVariants ? 16 : isM ? 32 : 24,
+        background:   "var(--slide-out-bg)",
+        boxShadow:    "var(--slide-out-shadow)",
+        borderRadius: isM ? "24px 24px 0 0" : "16px 16px 0 0",
+        display:      "flex",
+        flexDirection: "column",
+        transition:   !previewMode
+          ? "transform 300ms ease-out"
+          : undefined,
+      }
+    : {
+        width:        panelWidth,
+        padding:      "32px 24px",
+        gap:          isWithVariants ? 16 : isM ? 32 : 24,
+        background:   "var(--slide-out-bg)",
+        boxShadow:    "var(--slide-out-shadow)",
+        borderRadius: isM ? "24px 0 0 24px" : "16px 0 0 16px",
+        display:      "flex",
+        flexDirection: "column",
+        transition:   !previewMode && !isActiveDrag
+          ? "width 220ms ease, transform 300ms ease-out"
+          : undefined,
+      }
+
   const aside = (
     <aside
       className={cn(
-        "relative flex flex-col shrink-0 h-full backdrop-blur-[30px]",
+        "relative flex flex-col shrink-0 backdrop-blur-[30px]",
+        // Height/width claim per anchor; the styles above pin the specific dimension
+        isBottom ? "w-full" : "h-full",
         !previewMode && !isActiveDrag && "transition-transform duration-300 ease-out",
-        !previewMode && (open ? "translate-x-0" : "translate-x-full"),
+        // Slide direction per anchor
+        !previewMode && (
+          isBottom
+            ? (open ? "translate-y-0" : "translate-y-full")
+            : (open ? "translate-x-0" : "translate-x-full")
+        ),
         showScrollbar ? "overflow-y-auto" : "overflow-hidden",
         className,
       )}
-      style={{
-        width: panelWidth,
-        padding: "32px 24px",
-        gap: isWithVariants ? 16 : isM ? 32 : 24,
-        background: "var(--slide-out-bg)",
-        boxShadow: "var(--slide-out-shadow)",
-        borderRadius: isM ? "24px 0 0 24px" : "16px 0 0 16px",
-        display: "flex",
-        flexDirection: "column",
-        transition: !previewMode && !isActiveDrag
-          ? "width 220ms ease, transform 300ms ease-out"
-          : undefined,
-      }}
+      style={asideStyle}
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? "slide-out-title" : undefined}
     >
-      {/* ── Drag-to-resize handle (portal mode only) ────────────────────── */}
-      {!previewMode && resizable && (
+      {/* ── Drag-to-resize handle (portal mode, right-anchor only) ─────── */}
+      {!previewMode && resizable && !isBottom && (
         <div
           className="absolute left-0 top-0 bottom-0 z-10 group/rz flex items-center"
           style={{ width: 12, cursor: "col-resize" }}
@@ -314,7 +387,7 @@ export function SlideOut({
                 {showIcon && (
                   <div
                     className="flex items-center justify-center shrink-0 rounded-[8px]"
-                    style={{ width: 40, height: 40, padding: 8, background: "var(--color-surface-purple-more-subtle)" }}
+                    style={{ width: 40, height: 40, padding: 8, background: iconBg }}
                   >
                     {headerIcon}
                   </div>
@@ -374,7 +447,7 @@ export function SlideOut({
                 {showIcon && (
                   <div
                     className="flex items-center justify-center shrink-0 rounded-[8px]"
-                    style={{ width: 32, height: 32, padding: 8, background: "var(--color-surface-purple-more-subtle)" }}
+                    style={{ width: 32, height: 32, padding: 8, background: iconBg }}
                   >
                     {headerIcon}
                   </div>
@@ -504,13 +577,15 @@ export function SlideOut({
       {/* ── CTA footer — DS Button component for correct hover states ─────── */}
       {isWithVariants && showCta && (
         <div className="flex gap-[8px] items-center justify-end shrink-0 w-full">
-          <Button
-            variant="secondary"
-            size={isM ? "default" : "sm"}
-            onClick={onCtaSecondary}
-          >
-            {ctaSecondaryLabel}
-          </Button>
+          {showCtaSecondary && (
+            <Button
+              variant="secondary"
+              size={isM ? "default" : "sm"}
+              onClick={onCtaSecondary}
+            >
+              {ctaSecondaryLabel}
+            </Button>
+          )}
           <Button
             variant="primary"
             size={isM ? "default" : "sm"}
@@ -535,7 +610,10 @@ export function SlideOut({
         // screen might have, including full-screen "live preview" wrappers in
         // this very doc site that use up to z-index 9999-10002 for their own
         // floating controls. A plain z-50 got silently buried behind those.
-        "fixed inset-0 z-[10010] flex justify-end pointer-events-none",
+        "fixed inset-0 z-[10010] flex pointer-events-none",
+        // Anchor: right → right column (panel hugs right edge, full height)
+        //         bottom → bottom row (panel hugs bottom edge, full width)
+        isBottom ? "items-end" : "justify-end",
         open && "pointer-events-auto",
       )}
       aria-hidden={!open}

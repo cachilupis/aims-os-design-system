@@ -2,6 +2,10 @@ import { Search, X, ChevronDown, SlidersHorizontal, ArrowDown, LayoutGrid, Layou
 import { cn } from "@/lib/utils"
 import { Tag } from "@/components/ui/tag"
 import { Input } from "@/components/ui/input"
+import { Menu, MenuSection, MenuDivider, MenuItem } from "@/components/ui/menu-item"
+import { anchorFromEvent, useDropdownPosition, type DropdownAnchor } from "@/lib/dropdown-anchor"
+import { Check } from "lucide-react"
+import { useState } from "react"
 
 /**
  * Filters Bar — AIMS OS Design System
@@ -28,7 +32,20 @@ import { Input } from "@/components/ui/input"
 export type FilterSlot = {
   placeholder: string
   value?: string
+  /** When set, Filters renders and positions the menu itself — the screen only
+   *  supplies the options and receives the choice. Leave it unset to keep the
+   *  old behaviour, where onOpen fires and the screen owns the menu.
+   *
+   *  This exists because Filters used to be triggers only: every screen that
+   *  wanted a working filter had to wire Menu + dropdown-anchor by hand, about
+   *  thirty lines each. A raw <select> is three lines and works, so screens
+   *  reached for that instead — nineteen of them across eleven files. A rule
+   *  loses to that kind of effort gap every time; the fix is to close the gap. */
+  options?: string[]
+  /** Called with the chosen option. Only used alongside `options`. */
+  onSelect?: (option: string) => void
   onRemove?: () => void
+  /** Custom-menu escape hatch. Ignored when `options` is set. */
   onOpen?: () => void
 }
 
@@ -97,6 +114,20 @@ export function Filters({
 }: FiltersProps) {
   const isCompactActive = compact && compactCount > 0
   const isCompactEmpty  = compact && !compactCount
+
+  // Menu state for slots that carry their own options. Slots using the onOpen
+  // escape hatch never touch this — openIdx stays null for them.
+  const [openIdx, setOpenIdx] = useState<number | null>(null)
+  const [anchor,  setAnchor]  = useState<DropdownAnchor | null>(null)
+  const dropdown = useDropdownPosition(anchor)
+  const openSlot = openIdx === null ? null : slots[openIdx]
+
+  /** A slot click either opens the menu we own, or hands off to the screen. */
+  const handleSlotClick = (slot: FilterSlot, i: number) => (e: React.MouseEvent) => {
+    if (!slot.options) { slot.onOpen?.(); return }
+    setAnchor(anchorFromEvent(e))
+    setOpenIdx(prev => (prev === i ? null : i))
+  }
 
   return (
     <div
@@ -200,7 +231,7 @@ export function Filters({
                   <button
                     className="flex items-center justify-center w-[16px] h-[16px] shrink-0 transition-opacity hover:opacity-70"
                     style={{ color: "var(--fi-chip-active-icon)" }}
-                    onClick={slot.onOpen}
+                    onClick={handleSlotClick(slot, i)}
                     aria-label="Expand filter"
                   >
                     <ChevronDown className="w-[12px] h-[12px]" />
@@ -218,7 +249,7 @@ export function Filters({
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--field-border-hover)" }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--field-border)" }}
-                  onClick={slot.onOpen}
+                  onClick={handleSlotClick(slot, i)}
                 >
                   {slot.placeholder}
                   <ChevronDown className="w-[14px] h-[14px] shrink-0" style={{ color: "var(--field-icon)" }} />
@@ -301,6 +332,41 @@ export function Filters({
           </div>
         )}
       </div>
+
+      {/* The menu for slots that carry their own options. Fixed-positioned so it
+          escapes any overflow:hidden ancestor, with a full-screen click-catcher
+          behind it — the same shape ListViewSection had to assemble by hand. */}
+      {openSlot?.options && (
+        <>
+          <div
+            className="fixed inset-0"
+            style={{ zIndex: 10000 }}
+            onClick={() => setOpenIdx(null)}
+          />
+          <div ref={dropdown.ref} style={{ position: "fixed", zIndex: 10001, ...dropdown.style }}>
+            <Menu className="w-auto min-w-[200px]">
+              <MenuSection label={openSlot.placeholder} />
+              <MenuDivider />
+              {openSlot.options.map(option => {
+                const selected = openSlot.value === option
+                return (
+                  <MenuItem
+                    key={option}
+                    label={option}
+                    state={selected ? "focus" : "default"}
+                    trailingElement={
+                      selected
+                        ? <Check size={13} style={{ flexShrink: 0, color: "var(--primary)" }} />
+                        : undefined
+                    }
+                    onClick={() => { openSlot.onSelect?.(option); setOpenIdx(null) }}
+                  />
+                )
+              })}
+            </Menu>
+          </div>
+        </>
+      )}
     </div>
   )
 }

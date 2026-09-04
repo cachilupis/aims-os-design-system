@@ -5,7 +5,7 @@ import { Header }         from "@/components/ui/header"
 import { Button }         from "@/components/ui/button"
 import { Input }          from "@/components/ui/input"
 import { Checkbox }       from "@/components/ui/checkbox"
-import { SwitchTab }      from "@/components/ui/switch-tab"
+import { Tabs }           from "@/components/ui/tabs"
 import { Tag }            from "@/components/ui/tag"
 import type { SidebarItem } from "@/components/ui/sidebar"
 
@@ -768,16 +768,13 @@ export function ChatWorkflowConfigScreen() {
           title="Workflow configuration"
           description="Helix Agentic Studio · conversational governance gates"
           tag={<Tag variant="informative" size="sm">{STAGE_LABELS[substage]}</Tag>}
-          primaryAction={
-            <Button
-              variant={showDebug ? "secondary" : "tertiary"}
-              size="sm"
-              onClick={() => setShowDebug(d => !d)}
-            >
-              <Icons.Bug size={14} style={{ marginRight: 4 }} />
-              Debug
-            </Button>
-          }
+          primaryAction={{
+            label: "Debug",
+            icon: Icons.Bug,
+            onClick: () => setShowDebug(d => !d),
+            // Rank, not appearance: the toggle is louder while the panel is open.
+            priority: showDebug ? "secondary" : "tertiary",
+          }}
         />
       )}
     >
@@ -791,12 +788,12 @@ export function ChatWorkflowConfigScreen() {
         }}>
           {/* Tab bar */}
           <div style={{ padding: "12px 16px 0", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <SwitchTab
+            <Tabs
               items={[
                 { id: "conversation", label: "Conversation" },
-                { id: "canvas", label: "Canvas", icon: draft ? <Icons.CheckCircle2 size={12} /> : undefined },
+                { id: "canvas",       label: "Canvas"       },
               ]}
-              value={view}
+              activeId={view}
               onChange={id => setView(id as "conversation" | "canvas")}
               size="s"
             />
