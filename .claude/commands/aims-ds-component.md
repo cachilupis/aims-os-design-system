@@ -14,6 +14,18 @@ Guides the complete workflow to implement any AIMS OS Design System component in
 
 ---
 
+## PHASE 0 — Does it already exist? (run `aims-ds-search` first)
+
+Before Figma, before anything: run `aims-ds-search` for the component's name
+*and* for what it does. This repo has rebuilt Breadcrumb, ProcessItem, Stepper
+(twice), Filters and three separate WidgetGlyphs — every one of them because
+somebody searched badly rather than not at all.
+
+If it exists as a `candidate` in `experimental/`, this is not a new component:
+it is a promotion. Run `aims-ds-promote` instead.
+
+---
+
 ## PHASE 1 — Extract tokens from Figma (MANDATORY, always first)
 
 ### 1a. Verify the DS file is active in DevTools
@@ -300,6 +312,67 @@ tokens: [
 
 ---
 
+## PHASE 5b — The catalog page, and making it findable
+
+Absorbed from the former `aims-os-ds-documentation` skill, which duplicated this
+whole workflow against a repo path that no longer exists.
+
+### The extraction table — fill every row before implementing
+
+Mark each ✓ or **"Not specified in DS"**. Never leave one blank, and never fill
+one from memory:
+
+| Item | Where it comes from |
+|---|---|
+| Node ID | Figma URL `node-id=` |
+| Component name (exact) | Figma layer name |
+| Variants / states | Figma component properties panel |
+| Sizes | Frame sizes / auto-layout values |
+| Spacing (padding, gap) | Auto-layout inspector |
+| Typography | Text inspector — size, weight, line-height |
+| Radius | Corner radius inspector, in exact px |
+| Colors — fill, border, text | Fill / stroke inspector |
+| Design tokens | Right-click → Show bound variable |
+| Opacity / blend | Layer opacity |
+| Shadow / blur | Effects inspector |
+| Paint Styles | Fill → Style name |
+| Usage notes, do / don't | DS docs frame, if present |
+
+### Overview tab
+
+- **Anatomy** — the internal structure, and the switching mechanism if there is one
+- **Variants** — a visual grid of every variant, labelled, with what each *means*
+- **Do / Don't** — from the DS docs if they exist; otherwise derived and marked as such
+
+### Reference tab
+
+1. Design tokens table — CSS variable, mode, value
+2. Figma variables table, if any
+3. Paint Styles table, if any
+4. A minimal working JSX snippet
+5. Props table — name, type, default, description
+6. Figma usage steps, numbered, if the DS documents them
+
+### Make it findable — both edits, or it does not exist
+
+A component can be fully built, fully specified, and still invisible. Breadcrumb
+was documented as a `DS-GAP` for a month while sitting in `ui/`; ProcessItem had
+a spec, five statuses and a playground, and searching "process" returned nothing.
+
+1. **`SectionId`** — add the id to the union
+2. **`NAV_SECTIONS`** — add the entry, Components group, **alphabetical by label**
+
+Then regenerate and confirm:
+
+```bash
+node scripts/generate-specs.cjs && node scripts/generate-ds-index.cjs
+```
+
+**Search the sidebar for the component's name.** If it does not come up, this
+phase is not finished.
+
+---
+
 ## PHASE 6 — Verify against DS
 
 Run this in DevTools to take a screenshot of the DS component for comparison:
@@ -393,3 +466,26 @@ return { dimensions: info, typography: texts };
 ```
 
 This gives you exact px values for height, padding, radius, and gap — no measuring manually in Figma.
+
+---
+
+## Lessons carried over (from Highlight Card, 2026-07-02)
+
+**Exact px, never semantic classes.** `rounded-xl` and `p-4` are guesses. Read
+the corner-radius inspector and write `rounded-[Xpx]`, `p-[Xpx]`, `gap-[Xpx]`
+with the verified number.
+
+**Dark mode contrast, before committing.** Answer all three: what is
+`--component-bg` in dark? what is `--component-text-*` in dark? is there enough
+contrast? Rule: if the background is light in dark mode, the text tokens must
+use light-mode values too — dark text on a light surface.
+
+**Read a canonical SPEC before writing a new one.** `HIGHLIGHT_ICON_SPEC` is the
+template. Tokens go inside `variants[i].tokens[j]` with `role`, `variable`,
+`varId`, `light`, `dark`. Typography uses `element`, `family`, `size`, `weight`,
+`lineHeight` — not `role`, not `token`.
+
+**Common mistakes:** token prefix chains in spec tables (show the canonical name
+only) · components that do not exist in App.tsx · component-level tokens holding
+raw hex instead of aliasing a canonical token · skipping the Figma usage steps ·
+documenting only the default variant.

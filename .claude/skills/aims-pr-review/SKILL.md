@@ -69,6 +69,66 @@ This is the checklist CLAUDE.md's own "DS consistency health check" section name
 
 6. **Visual spot-check.** Pull the Vercel preview URL from the PR's bot comment (`gh pr view <number> --json comments`, or the `Vercel` check's target URL) and open it. Click through every tab/state the PR's own test plan lists. A build that compiles and passes the audit can still look visually wrong — screenshot anything that looks off.
 
+**What to look for.** A screenshot only helps if you know what you are hunting.
+Every item below is something that shipped in this repo while `tsc` and the
+audit were both green:
+
+- **Content clipped by a fixed height.** A widget slot, a card, a panel. The
+  last row of a four-row list vanishing is invisible unless you count the rows.
+- **Double padding.** A container that insets its own children *and* sits inside
+  something that already inset it. The tell is a body that starts further in
+  than its own title — `WidgetFather` gives 24px and content added another 16.
+- **Labels wrapping to two lines.** Harmless-looking, but it grows a 37px row to
+  55, and four of those overflow a fixed-height container and eat a row.
+- **Content under a sticky footer.** `StepperNavFooter` is 72px against
+  ScreenLayout's 64px bottom padding.
+- **An empty state that does not fit its container.** The default `EmptyState`
+  is 64px of vertical padding and clips its own CTA inside a widget. Use
+  `compact`.
+- **The same thing looking different in two screens.** Open both. This is the
+  only way to catch drift — each screen is internally consistent, so nothing
+  looks wrong until they are side by side.
+
+Check at **1440px** (the DS baseline) and again in a **narrow column**, and in
+both themes.
+
+## Step 4b — Before any merge, two checks that cost seconds
+
+Both of these were learned the expensive way on 2026-09-03.
+
+**Check the base branch.** Never assume a PR targets `main`.
+
+```bash
+gh pr view <number> --json baseRefName,headRefName
+```
+
+PR #70 targeted `feat/voice-channel`, not `main`. Merging it changed nothing on
+main, and `--delete-branch` removed the branch that PR #71 was stacked on —
+which closed #71 automatically. Recovering it meant recreating the deleted
+branch, reopening, retargeting, and resolving the conflicts the squash created.
+
+If the base is not `main`, say so before merging, and check whether that base
+has its own PR to `main`. If it does not, the work is not going anywhere.
+
+**Check for stacked PRs before `--delete-branch`.**
+
+```bash
+gh pr list --state open --base $(gh pr view <number> --json headRefName -q .headRefName)
+```
+
+Any result means deleting the branch will close that PR. Merge without
+`--delete-branch`, or retarget the dependent PR first.
+
+**Check for in-flight work in the same files.** Before reviewing — and before
+building anything yourself in that area:
+
+```bash
+gh pr list --state open --json number,author,files --jq '.[] | {n:.number, who:.author.login, files:[.files[].path]}'
+```
+
+An agent rebuilt a Stepper migration that the PM had already completed in an
+open PR, on the same day. Nobody had looked.
+
 ## Step 5 — Verdict
 
 State plainly: **approvable** or **not yet**. If not yet, produce two things, ready to hand off without further editing:
