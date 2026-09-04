@@ -1068,13 +1068,7 @@ function MemberDetailPage({
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={() => (
-        <Header
-          size="compress"
-          title={member.name}
-          description={`${member.title ?? ""}${member.title && member.department ? " · " : ""}${member.department ?? ""}`}
-        />
-      )}
+      header={() => <Header size="compress" title="" />}
     >
       <BackBreadcrumb onBack={onBack} />
 
