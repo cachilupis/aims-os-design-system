@@ -54,11 +54,13 @@ export const WIDGET_SKELETON_ICON: Record<string, string> = {
 export type WidgetGlyphSize = "sm" | "md" | "lg"
 
 /** The widget type's icon. A DS HighlightIcon, not a hand-rolled tile —
- *  md is 32×32 radius 8, which is what the marketplace copy already was;
- *  the library's 36×36 radius 9 was off the DS scale in both dimensions. */
+ *  sm is 24×24 radius 4. The first pass used md (32×32) because that is what
+ *  the marketplace copy already measured, but against a card title at this
+ *  density it read as the loudest thing on the card. Michael called it down to
+ *  sm on 2026-09-03 — the glyph is a type marker, not the subject. */
 export function WidgetGlyph({
   skeleton,
-  size = "md",
+  size = "sm",
   className,
 }: {
   skeleton: string
