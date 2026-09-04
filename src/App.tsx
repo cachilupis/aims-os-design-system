@@ -31,6 +31,7 @@ import { HighlightCard, type HighlightCardStyle, type HighlightCardFeedback } fr
 import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
 import { Select, type SelectState } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Radio, RadioGroup } from "@/components/ui/radio"
 import { Toggle } from "@/components/ui/toggle"
 import { AppBackground, type AppBgVariant } from "@/components/ui/app-background"
 import {
@@ -92,8 +93,8 @@ import VoiceChannelScreen               from "./screens/voice-channel"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "ds-health" | "process-item" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "process-item" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "ds-health" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SpecModal = "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -198,6 +199,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
   { id: "process-item",    label: "Process Item",      group: "Components",  description: "One step of a running process, with its state · 5 statuses (done/loading/error/pending/warning) · number-badge and expand variants · ProcessList wrapper adds the title, View all CTA, and empty/loading states" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
+  { id: "radio",           label: "Radio",             group: "Components",  description: "Single choice from a mutually exclusive set · 3 sizes (S/M/L) · unselect / select / disabled · RadioGroup owns the fieldset, legend and arrow-key navigation — a radio is never used alone" },
   { id: "record-header",   label: "Record Header",     group: "Components",  description: "Governed entity card for Work Surfaces (UEP/UCP/UVP) · identity (truncates, never breaks layout) · expandable Agentic System / Your Intervention / Record zones · every field carries an origin-system badge and reachable provenance · one shared skeleton across all 3 variants" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
@@ -1370,6 +1372,52 @@ const CHIP_SPEC = {
         { role: "Border disabled (reused)", variable: "--color-border-neutral-lighter", varId: "", light: "#bababa", dark: "rgba(255,255,255,0.15)" },
       ],
     },
+  ],
+}
+
+const RADIO_SPEC = {
+  name: "Radio",
+  figmaNodeId: "5045:52590",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5045-52590",
+  description: "Selects exactly one option from a set of two or more mutually exclusive choices — picking one deselects the rest. Never used alone: reach for RadioGroup, which renders the radios and owns the fieldset, the legend and arrow-key navigation. Use Checkbox when more than one option can be selected at once, and Select when there are more than about six.",
+  properties: [
+    { name: "legend",      type: "String",   values: ["any string"],                  default: "—",         note: "RadioGroup. Required — names what the set is choosing between. Use hideLegend to keep it for screen readers only." },
+    { name: "options",     type: "Array",    values: ["{ value, label, description?, disabled? }[]"], default: "[]", note: "RadioGroup." },
+    { name: "value",       type: "String",   values: ["any option value"],            default: "undefined", note: "The selected option." },
+    { name: "onChange",    type: "Function", values: ["(value: string) => void"],     default: "undefined" },
+    { name: "size",        type: "Variant",  values: ["sm (S)","md (M)","lg (L)"],    default: "md" },
+    { name: "orientation", type: "Variant",  values: ["vertical","horizontal"],       default: "vertical",  note: "Horizontal only suits two or three short options." },
+    { name: "disabled",    type: "Boolean",  values: ["true","false"],                default: "false",     note: "On the group, disables every option." },
+    { name: "label",       type: "String",   values: ["any string"],                  default: "—",         note: "Radio. Required — a radio without a label is not a radio." },
+    { name: "description", type: "String",   values: ["any string"],                  default: "undefined", note: "Radio. Secondary line under the label." },
+  ],
+  sizes: [
+    { size: "L (lg)",      ring: "24×24px", dot: "10px", padding: "4px", note: "Spacing/1x on all sides" },
+    { size: "M (md)",      ring: "20×20px", dot: "8px",  padding: "4px", note: "Default" },
+    { size: "S (sm)",      ring: "16×16px", dot: "6px",  padding: "4px", note: "Dense forms and filter panels" },
+  ],
+  typography: [
+    { element: "Label",       family: "Inter", size: "14px", weight: "Medium (500)",  lineHeight: "28px", variable: "--color-text-body" },
+    { element: "Description", family: "Inter", size: "12px", weight: "Regular (400)", lineHeight: "1.4",  variable: "--color-text-caption" },
+  ],
+  states: [
+    { name: "unselected", borderWidth: "2px", tokens: [
+      { role: "Ring", variable: "--color-icon-neutral-dark", varId: "Icon/Neutral/Dark", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.50)" },
+    ] },
+    { name: "selected", borderWidth: "2px", tokens: [
+      { role: "Ring and dot", variable: "--primary", varId: "Icon/Primary/Default", light: "#2173ff", dark: "#2b7fff" },
+    ] },
+    { name: "disabled", borderWidth: "2px", tokens: [
+      { role: "Ring and dot", variable: "--color-text-disabled", varId: "Icon/Neutral/Disable-Dark", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+    ] },
+    { name: "hover / focus", borderWidth: "2px", tokens: [
+      { role: "Container background", variable: "--color-surface-primary-subtle", varId: "Surface/Primary/Subtle", light: "#E9F1FF", dark: "rgba(33,115,255,0.15)" },
+    ] },
+  ],
+  variants: [
+    { name: "Unselect",  description: "Empty ring. The default.", cssPrefix: "radio", tokens: [] },
+    { name: "Select",    description: "Filled dot inside the ring.", cssPrefix: "radio", tokens: [] },
+    { name: "Disabled",  description: "Muted ring, and dot if selected. Leaves the tab order.", cssPrefix: "radio", tokens: [] },
   ],
 }
 
@@ -3309,6 +3357,7 @@ const SLIDE_OUT_SPEC = {
 
 function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "process-item")     return PROCESS_ITEM_SPEC     as AnySpec
+  if (id === "radio")            return RADIO_SPEC            as AnySpec
   if (id === "breadcrumb")       return BREADCRUMB_SPEC       as AnySpec
   if (id === "button")           return BUTTON_SPEC           as AnySpec
   if (id === "input")            return INPUT_SPEC            as AnySpec
@@ -36398,6 +36447,281 @@ function ProcessItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   )
 }
 
+// ── RadioPage ────────────────────────────────────────────────────────────────
+function RadioPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "reference">("overview")
+  const [plan, setPlan]       = useState("standard")
+  const [density, setDensity] = useState("comfortable")
+  const [scope, setScope]     = useState("tenant")
+  const spec = RADIO_SPEC
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Radio</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            Selects exactly one option from a set of two or more mutually exclusive choices — picking
+            one deselects the rest. Never used alone: reach for{" "}
+            <code className="font-mono text-[13px] text-[var(--primary)]">RadioGroup</code>, which renders
+            the radios and owns the fieldset, the legend and arrow-key navigation.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("radio")} />
+      </div>
+
+      <TabBar
+        tabs={[{ id: "overview", label: "Overview" }, { id: "reference", label: "Reference" }]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Radio or Checkbox — the question this component always raises */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Radio, Checkbox or Select?</h2>
+              <div className="grid grid-cols-3 gap-[12px]">
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-primary-subtle)", border: "1px solid var(--color-border-primary-subtle)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Radio</span>
+                  <p className="text-[12px] text-[var(--foreground)]">Exactly one, from 2–6 options, all visible at once.</p>
+                </div>
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-neutral-subtle)", border: "1px solid var(--field-border)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--field-supporting)" }}>Checkbox</span>
+                  <p className="text-[12px] text-[var(--foreground)]">More than one can be selected at the same time.</p>
+                </div>
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-neutral-subtle)", border: "1px solid var(--field-border)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--field-supporting)" }}>Select</span>
+                  <p className="text-[12px] text-[var(--foreground)]">More than about six options — showing them all costs more room than it is worth.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Live */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Live</h2>
+              <CardContainer size="default">
+                <div className="grid grid-cols-2 gap-[32px] p-[8px]">
+                  <RadioGroup
+                    legend="Plan"
+                    value={plan}
+                    onChange={setPlan}
+                    options={[
+                      { value: "starter",    label: "Starter",    description: "Up to 5 seats" },
+                      { value: "standard",   label: "Standard",   description: "Up to 50 seats" },
+                      { value: "enterprise", label: "Enterprise", description: "Unlimited seats and SSO" },
+                      { value: "custom",     label: "Custom",     description: "Talk to sales", disabled: true },
+                    ]}
+                  />
+                  <RadioGroup
+                    legend="Scope"
+                    value={scope}
+                    onChange={setScope}
+                    options={[
+                      { value: "tenant",    label: "This tenant" },
+                      { value: "workspace", label: "This workspace only" },
+                    ]}
+                  />
+                </div>
+              </CardContainer>
+              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Tab into the group, then use the arrow keys. Tab again leaves the group entirely rather than
+                stepping through every option — that is what the DS asks for, and it is why only the selected
+                radio holds the tab stop.
+              </p>
+            </div>
+
+            {/* Sizes */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Sizes</h2>
+              <CardContainer size="default">
+                <div className="flex items-start gap-[40px] p-[8px]">
+                  {(["sm", "md", "lg"] as const).map(s => (
+                    <div key={s} className="flex flex-col gap-[8px]">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+                        {s === "sm" ? "S · 16px" : s === "md" ? "M · 20px" : "L · 24px"}
+                      </span>
+                      <RadioGroup
+                        legend={`Density ${s}`}
+                        hideLegend
+                        size={s}
+                        value={density}
+                        onChange={setDensity}
+                        options={[
+                          { value: "compact",     label: "Compact" },
+                          { value: "comfortable", label: "Comfortable" },
+                        ]}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </CardContainer>
+            </div>
+
+            {/* States */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">States</h2>
+              <CardContainer size="default">
+                <div className="flex items-start gap-[40px] p-[8px]">
+                  <Radio value="a" label="Unselect"  checked={false} onChange={() => {}} />
+                  <Radio value="b" label="Select"    checked        onChange={() => {}} />
+                  <Radio value="c" label="Disabled"  checked={false} disabled onChange={() => {}} />
+                  <Radio value="d" label="Disabled, selected" checked disabled onChange={() => {}} />
+                </div>
+              </CardContainer>
+            </div>
+
+            {/* Do / Don't — straight from the DS frame */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Do and don't</h2>
+              <div className="flex flex-col gap-[10px]">
+                {[
+                  { type: "do",   text: "Use when the user must select exactly one option from a predefined set." },
+                  { type: "do",   text: "Use for settings, form fields or filters where the options are mutually exclusive." },
+                  { type: "do",   text: "Use when there are 2–6 options and all of them should be visible at once." },
+                  { type: "dont", text: "Don't use when several options can be selected at the same time — that is Checkbox." },
+                  { type: "dont", text: "Don't use for more than about six options — use Select and save the room." },
+                  { type: "dont", text: "Never use a single radio on its own. It must always be part of a group." },
+                ].map((r, i) => (
+                  <div key={i} className="flex items-start gap-[8px]">
+                    <span className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
+                      style={{
+                        background: r.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                        color:      r.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
+                      }}>
+                      {r.type === "do" ? "Do" : "Don't"}
+                    </span>
+                    <span className="text-[12px] text-[var(--foreground)]">{r.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[32px]">
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Prop", "Type", "Default", "Notes"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.properties.map((row, i, arr) => (
+                      <tr key={row.name} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.name}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                          {row.type === "Variant" ? row.values.join(" | ") : row.type}
+                        </td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.default}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{(row as { note?: string }).note ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Design tokens</h2>
+              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Every one already existed. None was created for this component.
+              </p>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["State", "Role", "Token", "Figma variable", "Light", "Dark"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.states.flatMap(st => st.tokens.map(tk => ({ st: st.name, ...tk }))).map((row, i, arr) => (
+                      <tr key={i} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.st}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.role}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.variable}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.varId}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.light}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.dark}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Sizes</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Size", "Ring", "Dot", "Padding"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.sizes.map((row, i, arr) => (
+                      <tr key={row.size} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.size}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.ring}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.dot}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.padding}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Accessibility</h2>
+              <ul className="text-[13px] pl-[20px] flex flex-col gap-[7px]" style={{ color: "var(--color-text-subtitle)" }}>
+                <li><code className="font-mono text-[12px] text-[var(--primary)]">RadioGroup</code> renders a real <code className="font-mono text-[12px]">fieldset</code> and <code className="font-mono text-[12px]">legend</code>. Pass <code className="font-mono text-[12px]">hideLegend</code> to keep it for screen readers only.</li>
+                <li>Every radio carries a <code className="font-mono text-[12px]">label</code>. It is a required prop, not an optional one — placeholder text is not a label.</li>
+                <li>Arrow keys move between options and wrap; Tab leaves the group. Only the selected radio holds the tab stop, which is what makes that true.</li>
+                <li>Disabled options set <code className="font-mono text-[12px]">aria-disabled</code>, leave the tab order, and are skipped by the arrow keys.</li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
+              <pre className="text-[12px] font-mono bg-[var(--field-bg)] p-[16px] rounded-[8px] overflow-x-auto text-[var(--foreground)]">{`import { RadioGroup } from "@/components/ui/radio"
+
+<RadioGroup
+  legend="Plan"
+  value={plan}
+  onChange={setPlan}
+  options={[
+    { value: "starter",    label: "Starter",    description: "Up to 5 seats" },
+    { value: "standard",   label: "Standard",   description: "Up to 50 seats" },
+    { value: "enterprise", label: "Enterprise", description: "Unlimited seats and SSO" },
+  ]}
+/>`}
+              </pre>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── BreadcrumbPage ────────────────────────────────────────────────────────────
 
 const PROCESS_ITEM_SPEC = {
@@ -42055,6 +42379,7 @@ export default function App() {
           {active === "record-header"       && <RecordHeaderPage      openSpec={setSpecModal} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "process-item"   && <ProcessItemPage openSpec={setSpecModal} />}
+          {active === "radio"           && <RadioPage openSpec={setSpecModal} />}
           {active === "breadcrumb"      && <BreadcrumbPage openSpec={setSpecModal} />}
           {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}
           {active === "pagination"      && <PaginationPage      openSpec={setSpecModal} />}
