@@ -33140,8 +33140,13 @@ type NbaMock = {
   // Layer 3 — omitted where no runtime input applies
   dynamicInputs?: NbaDynamicInput[]
   /** Passed straight through to NextBestAction.contextTag — what area this
-   *  action is about, at a glance ("Access", "Renewal", ...). */
+   *  action is about, at a glance ("Access", "Renewal", ...). Kept on the mock
+   *  for the detail SlideOut's own header; the card itself no longer renders a
+   *  context Tag (the Figma NBA card has none). */
   contextTag?: string
+  /** When the recommendation was produced — renders after the title behind a
+   *  purple bullet, per the Figma card. */
+  timeAgo?: string
 }
 
 const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
@@ -33153,6 +33158,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       task: { kind: "approval", whatChanges: "Scope down Sarah Chen's Admin access", context: "2 repos sit outside Platform Infra's ownership boundary, inherited from her prior team — removing them brings her access back in line with her current role." },
       dynamicInputs: [{ label: "Effective date", kind: "date", placeholder: "When the scoped-down access takes effect" }],
       contextTag: "Access",
+      timeAgo: "2h ago",
     },
     {
       id: "uep-nba-2", title: "Suggest the Platform Infra security module",
@@ -33162,6 +33168,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       task: { kind: "email", subject: "Complete your Platform Infra security training", bodyPreview: "Hi Sarah,\n\nWelcome to Platform Infra! As part of the team's standard onboarding, there's a security training module that isn't showing as started yet — it takes about 45 minutes and covers the access patterns specific to this team.\n\nCould you get to it in the next couple weeks?\n\nThanks,", outcome: "immediate" },
       dynamicInputs: [{ label: "CC (optional)", kind: "text", placeholder: "e.g. Sarah's manager or HR Business Partner" }],
       contextTag: "Compliance",
+      timeAgo: "4h ago",
     },
   ],
   ucp: [
@@ -33175,6 +33182,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
         { label: "Notes for the agent", kind: "text", placeholder: "e.g. Also mention the upcoming product launch" },
       ],
       contextTag: "Renewal",
+      timeAgo: "1d ago",
     },
   ],
   uvp: [
@@ -33188,6 +33196,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
         { label: "Scheduled send date", kind: "date", placeholder: "When this email goes out" },
       ],
       contextTag: "Coverage",
+      timeAgo: "6h ago",
     },
   ],
   patient: [
@@ -33198,6 +33207,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       task: { kind: "call", contactName: "Inpatient Lab Services", contactRole: "4B-112 · Internal Medicine", suggestedNote: "Schedule a follow-up coagulation panel for Elena Vasquez within 48 hours, per the flagged Warfarin/Aspirin interaction — before the next dose if possible.", outcome: "immediate" },
       dynamicInputs: [{ label: "Priority", kind: "select", placeholder: "Select a priority", options: ["Routine", "Urgent", "STAT"] }],
       contextTag: "Clinical",
+      timeAgo: "30m ago",
     },
   ],
   claim: [
@@ -33208,6 +33218,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       task: { kind: "email", subject: "Missing parts invoice — Claim CLM-48821", bodyPreview: "Hi team,\n\nWe're finishing adjudication on Claim CLM-48821 and the itemized parts-sourcing breakdown from your last estimate is still missing. Could you send that over so we can close out the payout?\n\nThanks,", outcome: "governed" },
       dynamicInputs: [{ label: "Follow-up reminder", kind: "date", placeholder: "If no response by this date" }],
       contextTag: "Claims",
+      timeAgo: "2d ago",
     },
   ],
   borrower: [
@@ -33218,6 +33229,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       task: { kind: "call", contactName: "Jordan Ellis", contactRole: "Personal Loan Applicant", suggestedNote: "DTI is above the automated approval line — applicants with a similar profile who added a co-signer saw approval odds increase by roughly 30%. Worth raising as an option before the underwriter review.", outcome: "immediate" },
       dynamicInputs: [{ label: "Best time to reach", kind: "select", placeholder: "Select a time of day", options: ["Morning", "Afternoon", "Evening"] }],
       contextTag: "Credit",
+      timeAgo: "3h ago",
     },
   ],
   repairOrder: [
@@ -33231,6 +33243,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       description: "This vehicle is due for that service within 500 miles — bundling it now saves the customer a second visit.",
       assignedTo: "Service Advisor Copilot", assignedToKind: "agent", dueDate: "Aug 18, 2026", status: "In progress",
       contextTag: "Service",
+      timeAgo: "1h ago",
     },
   ],
 }
@@ -33323,7 +33336,8 @@ function EntityHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">1 · Collapsed — governance-state Tags + NBA visible (N items, redesign pass)</p>
-          <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep}
+          <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep}
+            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             agenticSystem={rhAgenticSystem("uep")}
             intervention={{ items: [{ id: "gallery-1", description: "Elevated access request needs manager approval.", severity: "high", onReview: () => {}, contextTag: "Access" }] }}
@@ -33333,7 +33347,8 @@ function EntityHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">2 · Your Intervention — empty (genuinely nothing pending)</p>
-          <EntityHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
+          <EntityHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp}
+            source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
             assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
             agenticSystem={rhAgenticSystem("uvp")}
             intervention={{ status: "empty", message: "No interventions pending — nothing awaiting your review right now." }} />
@@ -33341,14 +33356,16 @@ function EntityHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">3 · Agentic System — empty (freshly imported record)</p>
-          <EntityHeader name="Jordan Ellis" entityType={RH_ENTITY_TYPE.uep} recordFields={[]} defaultExpanded
+          <EntityHeader name="Jordan Ellis" entityType={RH_ENTITY_TYPE.uep}
+            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={[]} defaultExpanded
             assignedAgent={null}
             agenticSystem={{ status: "empty" }} />
         </div>
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">4 · Loading — agent/NBA still computing (Skeleton)</p>
-          <EntityHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
+          <EntityHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp}
+            source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
             assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
             agenticSystem={{ status: "loading" }}
             intervention={{ status: "loading" }} />
@@ -33356,7 +33373,8 @@ function EntityHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">5 · PII masked — same field, 2 entitlement states (Law 4)</p>
-          <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
+          <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep}
+            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             agenticSystem={rhAgenticSystem("uep")} />
         </div>
@@ -33368,7 +33386,8 @@ function EntityHeaderStatesGallery({
           {/* DECISION FLAGGED — hypothesis, not explicitly confirmed: see
               RecordHeaderProps.locked's own doc comment in record-header.tsx.
               // TODO: confirmar con Michael. */}
-          <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} locked defaultExpanded
+          <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep}
+            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep} locked defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             agenticSystem={rhAgenticSystem("uep")} />
         </div>
@@ -33378,6 +33397,7 @@ function EntityHeaderStatesGallery({
           <EntityHeader
             name="Alexandria Christodoulopoulos-Fitzgerald-Whitmore"
             entityType={RH_ENTITY_TYPE.uep}
+            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep}
             recordFields={overflowFields}
             defaultExpanded
             assignedAgent={rhAssignedAgent("uep", "Alexandria Christodoulopoulos-Fitzgerald-Whitmore")}
@@ -33386,7 +33406,8 @@ function EntityHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">8 · Your Intervention — 3 pending, most prioritized shown + "+2 more" (Block 3)</p>
-          <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
+          <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep}
+            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
             assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
             agenticSystem={rhAgenticSystem("uep")}
             intervention={{
@@ -33401,14 +33422,16 @@ function EntityHeaderStatesGallery({
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">9 · No agent assigned — identity trigger disabled, not hidden</p>
-          <EntityHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
+          <EntityHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower}
+            source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
             assignedAgent={null}
             agenticSystem={rhAgenticSystem("borrower")} />
         </div>
 
         <div>
           <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">10 · Agentic System — 2 workflows, most prioritized shown + "Show 1 more" / "View all" (Block 3)</p>
-          <EntityHeader name={RH_CLAIM.name} entityType={RH_ENTITY_TYPE.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
+          <EntityHeader name={RH_CLAIM.name} entityType={RH_ENTITY_TYPE.claim}
+            source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
             assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
             agenticSystem={rhAgenticSystem("claim")} />
         </div>
@@ -33457,7 +33480,8 @@ function EntityHeaderFlowsSection({
           <div className="flex flex-col gap-0">
             <ProcessItem number={1} status="done" title="Intervention arrives" description="A governed decision needs a human before it takes effect — the same zone as the States gallery, but here it's step 1 of a story.">
               <EntityHeader
-                name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={[]} defaultExpanded
+                name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp}
+                source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={[]} defaultExpanded
                 assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
                 intervention={rhIntervention("ucp")}
               />
@@ -33476,7 +33500,8 @@ function EntityHeaderFlowsSection({
           <div className="flex flex-col gap-0">
             <ProcessItem number={1} status="done" title="Task arrives" description="A Next Best Action is always visible, right under the identity tags — the agent suggesting a task to hand off or a decision to make.">
               <EntityHeader
-                name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={[]} defaultExpanded
+                name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp}
+                source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={[]} defaultExpanded
                 assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
               />
               <NextBestActionCard items={rhNextBestActions("ucp")} className="mt-[12px]" />
@@ -33670,9 +33695,17 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     (RH_NBA[v] ?? []).map(nba => ({
       id: nba.id,
       title: nba.title,
+      timeAgo: nba.timeAgo,
       description: nba.description,
-      onOpen: () => rhOpenNba(v, nba.id),
-      contextTag: nba.contextTag,
+      onViewDetails: () => rhOpenNba(v, nba.id),
+      // Accept only where the action is actually modeled (Layer 2 present).
+      // A recommendation the platform cannot yet execute gets the
+      // View-details-only variant — which is the second Figma variant, not a
+      // degraded state.
+      onAccept: nba.task ? () => rhOpenNba(v, nba.id) : undefined,
+      // Demo-only: the card is documentation, so dismissing it would hide the
+      // thing being documented. A real host removes the item from `items`.
+      onDismiss: () => {},
     }))
 
   // Assigned agent chat — no dedicated "agent chat" component exists yet
@@ -33700,9 +33733,11 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const pgNbaSource = PG_NBA_TYPE_SOURCE[pgNbaType]
   const pgNbaMock = RH_NBA[pgNbaSource.v].find(n => n.id === pgNbaSource.id)!
   const pgNextBestActions: NextBestAction[] = [{
-    id: pgNbaMock.id, title: pgNbaMock.title, description: pgNbaMock.description,
-    onOpen: () => rhOpenNba(pgNbaSource.v, pgNbaMock.id),
-    contextTag: pgNbaMock.contextTag,
+    id: pgNbaMock.id, title: pgNbaMock.title, timeAgo: pgNbaMock.timeAgo,
+    description: pgNbaMock.description,
+    onViewDetails: () => rhOpenNba(pgNbaSource.v, pgNbaMock.id),
+    onAccept: pgNbaMock.task ? () => rhOpenNba(pgNbaSource.v, pgNbaMock.id) : undefined,
+    onDismiss: () => {},
   }]
   const openVariant = rhOpenVariant ?? "uep"
   const openWorkflowList = RH_WORKFLOWS[openVariant]
@@ -33802,7 +33837,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Same record as the reference variant above, with one addition: <code>statusTag</code> — a visible, temporary state on the contact itself, beside entityType in the identity row. Neutral, never <code>error</code> (red) — this isn't a problem to fix, it's a fact the viewer should know before acting on anything else here.
             </p>
-            <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
+            <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep}
+              source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
               statusTag={{ label: "On Leave · Returns Mar 15", icon: LucideIcons.Palmtree }}
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
               agenticSystem={rhAgenticSystem("uep")}
@@ -33814,7 +33850,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer (example)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
-            <EntityHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
+            <EntityHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp}
+              source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
               assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
               agenticSystem={rhAgenticSystem("ucp")}
               intervention={rhIntervention("ucp")}
@@ -33825,7 +33862,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor (example)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content. No pending intervention here on purpose — the zone is fully omitted, not shown empty.</p>
-            <EntityHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
+            <EntityHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp}
+              source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
               agenticSystem={rhAgenticSystem("uvp")}
               intervention={rhIntervention("uvp")}
@@ -33838,7 +33876,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the healthcare market: a patient, deliberately picked to be as unlike UEP/UCP/UVP as possible — a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba). Same colors (light blue = workflow, amber = intervention), same skeleton, zero changes to record-header.tsx.
             </p>
-            <EntityHeader name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient} recordFields={RH_RECORD_FIELDS.patient} defaultExpanded
+            <EntityHeader name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient}
+              source={RH_SOURCE.patient} secondaryMetadata={RH_SECONDARY_METADATA.patient} recordFields={RH_RECORD_FIELDS.patient} defaultExpanded
               assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
               agenticSystem={rhAgenticSystem("patient")}
               intervention={rhIntervention("patient")}
@@ -33851,7 +33890,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the insurance market: a policyholder, never the claim itself — the CONTACT rule this component enforces (the record's entity is always a person or account, never a process), so it's Diane Ostrowski and not her open claim. Her claim lives instead as a workflow in Agentic System ("Claims Adjudication"), where the calculated payout is held for supervisor sign-off. RECORD fields describe Diane's own standing relationship with the carrier — policy, coverage, agent, claims history — sourced from 2 systems: Duck Creek (policy admin) and Guidewire (claims core), both cited via Data Provenance. Also carries 2 pending interventions at once: the higher-severity payout approval renders full-size, the documentation follow-up collapses behind "+1 more" (never a carousel). This market can grow more contact types later — the carrier's own customer, an appointed adjuster/vendor firm — without touching this skeleton; only Policyholder is built today. Same skeleton, same colors, zero changes to record-header.tsx.
             </p>
-            <EntityHeader name={RH_CLAIM.name} entityType={RH_ENTITY_TYPE.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
+            <EntityHeader name={RH_CLAIM.name} entityType={RH_ENTITY_TYPE.claim}
+              source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
               assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
               agenticSystem={rhAgenticSystem("claim")}
               intervention={rhIntervention("claim")}
@@ -33864,7 +33904,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the banking market: an applicant, never the credit application itself — a fourth distinct entity type (<code>Personal Loan Applicant</code>, <code>Landmark</code> icon), a RECORD shape sourced from 3 distinct systems at once — Experian (credit bureau), nCino (loan origination), and FIS (core banking) — the kind of cross-system audit trail a real credit decision needs. A risk exception (debt-to-income above the automated threshold) is held for underwriter sign-off, the same Your Intervention zone as every other vertical. This market can grow more contact types later — an account holder/customer, a vendor relationship — without touching this skeleton; only the applicant is built today.
             </p>
-            <EntityHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
+            <EntityHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower}
+              source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
               assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
               agenticSystem={rhAgenticSystem("borrower")}
               intervention={rhIntervention("borrower")}
@@ -33877,7 +33918,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the automotive market: AIMS OS's own central vertical (its roots are in automotive dealership platforms), and the same CONTACT rule proof as the insurance example above — the entity is Devon Marsh, the customer who owns the vehicle (<code>Service Customer</code>, <code>Car</code> icon), never the repair order itself. The repair order now lives as a workflow in Agentic System ("Service / Repair"), tracking a live diagnostic → repair → QA process where additional scope found mid-service exceeds the customer's pre-authorized budget, held for sign-off in Your Intervention. RECORD fields describe Devon's own standing relationship with the dealership — service advisor, vehicle, warranty status, last service date — sourced from 3 distinct systems: CDK Global (DMS), Carfax (vehicle history), and an OEM warranty portal. This market can grow more contact types later — a fleet/vendor account — without touching this skeleton; only the service customer is built today.
             </p>
-            <EntityHeader name={RH_REPAIR_ORDER.name} entityType={RH_ENTITY_TYPE.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder} defaultExpanded
+            <EntityHeader name={RH_REPAIR_ORDER.name} entityType={RH_ENTITY_TYPE.repairOrder}
+              source={RH_SOURCE.repairOrder} secondaryMetadata={RH_SECONDARY_METADATA.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder} defaultExpanded
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
               agenticSystem={rhAgenticSystem("repairOrder")}
               intervention={rhIntervention("repairOrder")}

@@ -16,7 +16,7 @@ import { HighlightIcon }    from "@/components/ui/highlight-icon"
 import { CardContainer }    from "@/components/ui/card-container"
 import { ModalDialog }      from "@/components/ui/modal-dialog"
 import { EntityHeader }     from "@/components/ui/record-header"
-import type { EntityHeaderEntityType } from "@/components/ui/record-header"
+import type { EntityHeaderEntityType, SecondaryMetadataItem } from "@/components/ui/record-header"
 import { NextBestActionCard, type NextBestAction } from "@/components/experimental/next-best-action-card"
 import { SlideOut }         from "@/components/ui/slide-out"
 import { Input }            from "@/components/ui/input"
@@ -215,14 +215,41 @@ const ENTITY_TYPE_OPTIONS: Record<EntityType, { label: string; iconName: string;
   ],
 }
 
-// Migrated to the current NextBestAction shape — { id, title,
-// description, onOpen }. The old { severity, label, dueContext } fields no
-// longer exist on the component. Same 3 records and same copy as before: the
-// former `label` is now `title`, and `dueContext` is now `description`.
+// Feeds NextBestActionCard, which renders BELOW the header in its own card —
+// the header no longer accepts recommendations at all.
+//
+// The card's `description` is the REASONING, not a subtitle: it wraps and it
+// explains why the recommendation exists. The old one-liners ("Due in 3 days")
+// were timing, which now belongs in `timeAgo`, so each record gets a real
+// sentence instead of a fragment stretched into a paragraph slot.
 const PROFILE_NBAS: Record<string, NextBestAction[]> = {
-  "EMP-00412": [{ id: "nba-emp-00412", title: "1 performance review pending approval",     description: "Due in 3 days",  onOpen: () => {} }],
-  "PER-0091":  [{ id: "nba-per-0091",  title: "Compliance certification expiring soon",    description: "Expires Sep 15", onOpen: () => {} }],
-  "ORG-0023":  [{ id: "nba-org-0023",  title: "Renewal in 12 days — health dropped to 61", description: "Closes Sep 5",   onOpen: () => {} }],
+  "EMP-00412": [{
+    id: "nba-emp-00412",
+    title: "Approve James's performance review",
+    timeAgo: "3h ago",
+    description: "The mid-year review has been sitting with you since Aug 12 and the cycle closes in 3 days. Approving it now keeps James's compensation change on schedule.",
+    onViewDetails: () => {},
+    onAccept: () => {},
+    onDismiss: () => {},
+  }],
+  "PER-0091":  [{
+    id: "nba-per-0091",
+    title: "Renew Sarah's compliance certification",
+    timeAgo: "1d ago",
+    description: "Her certification expires Sep 15 and she holds approval authority on 4 open governance items — letting it lapse would block every one of them.",
+    onViewDetails: () => {},
+    onAccept: () => {},
+    onDismiss: () => {},
+  }],
+  "ORG-0023":  [{
+    id: "nba-org-0023",
+    title: "Schedule a renewal call with Meridian",
+    timeAgo: "2h ago",
+    description: "Account health dropped from 78 to 61 this month and the renewal is 12 days out with no proposal sent. A call this week is the last comfortable window.",
+    onViewDetails: () => {},
+    onAccept: () => {},
+    onDismiss: () => {},
+  }],
 }
 
 const ENTITY_TYPE_ICON: Record<EntityType, LucideIcon> = {
@@ -528,6 +555,19 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     icon:  ENTITY_TYPE_ICON[profile.type],
     label: TYPE_LABEL[profile.type],
   }
+  // Source — one item, the system this record came from. Uses the documented
+  // per-entity-type mapping (Employee/Person → Workday, Company →
+  // Salesforce), not a guess.
+  const rhSource = profile.type === "company" ? "Salesforce" : "Workday"
+  // Secondary metadata — max 6, aim for 4. Every value here is already shown
+  // by this screen's own study widgets below; nothing is invented for the
+  // header's sake.
+  const rhSecondaryMetadata: SecondaryMetadataItem[] = [
+    { icon: LucideIcons.ShieldCheck,    text: "94 / 100", tooltip: "Compliance score · 94 of 100, from the Governance study." },
+    { icon: LucideIcons.ClipboardList,  text: "1 open",   tooltip: "Open reviews · 1 governance review awaiting a decision." },
+    { icon: LucideIcons.Flag,           text: "0 flags",  tooltip: "Open flags · nothing raised by the Risk study." },
+    { icon: LucideIcons.ScanLine,       text: "Jul 27",   tooltip: "Last scan · Jul 27, 2026, from the Risk study." },
+  ]
   // An empty array is how the current component expresses "nothing to
   // recommend right now" — the block disappears instead of rendering a
   // placeholder, which is what the old neutral "No active recommendations"
@@ -608,6 +648,8 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
       <EntityHeader
         name={profile.name}
         entityType={rhEntityType}
+        source={rhSource}
+        secondaryMetadata={rhSecondaryMetadata}
         actions={[
           { label: "Export",  variant: "secondary", onClick: () => {} },
           { label: profile.type === "company" ? "Contact account" : "Message", variant: "primary", onClick: () => {} },

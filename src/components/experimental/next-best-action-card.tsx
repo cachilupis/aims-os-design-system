@@ -1,50 +1,63 @@
 // DS-GAP: NextBestActionCard — the proactive AI recommendation card that sits
-// UNDER the Entity Header, in its own Card Container. Closest DS component:
-// CardContainer (which it composes). Extracted out of record-header.tsx per
-// section 11 of docs/patterns/entity-header-change-spec.md: "The card that
-// appears under the header is a separate component in its own Card Container,
-// not a second slot in the same one. Two records, two containers. Nothing
-// about it belongs in record-header.tsx."
+// UNDER the Entity Header. Closest DS component: CardContainer (which it
+// composes). Its own container per section 11 of
+// docs/patterns/entity-header-change-spec.md: "The card that appears under the
+// header is a separate component in its own Card Container, not a second slot
+// in the same one. Two records, two containers. Nothing about it belongs in
+// record-header.tsx."
 //
-// The Figma Entity Header section states the same rule from the header's side:
-// "NO INSIGHT SECTION — System interpretation reaches the header only as a tag
-// with a tooltip. No descriptive sentences, no scores with drivers, no
-// expandable analysis. Anything larger lives in the Overview, where the NBA
-// widget carries recommendations and reasoning."
+// Built from the Figma component set "Next Best Action Card Content"
+// (v6rmYKA2zmyXWOahlxLOeI, node 20206:316306) — structure, spacing, type
+// sizes/weights and every token read from the file, Light and Dark
+// independently. Two variants on one axis: Actions = "View details" |
+// "Accept / View details".
 //
-// Why experimental/ and not ui/: the change spec parks this card as "out of
-// scope" and never assigns it to a PR, so it has no spec of its own yet — only
-// the rendering it already had inside the header. It stays here until Michael
-// promotes it. Everything below is the code that was in record-header.tsx,
-// moved rather than rewritten, plus the CardContainer it now owns.
+// This is NOT the block that used to live inside the header. That one was a
+// filled purple surface with a HighlightIcon box, a context Tag and a trailing
+// chevron. Figma has none of those: the card is a plain surface, the only
+// colour is the purple label and the bullet, and the actions are real buttons.
+//
+// Tokens (Figma → repo, all pre-existing, none invented):
+//   Text/Purple              → --color-text-purple      #2c075c / #d8b4fe
+//   Text/Subtitle            → --color-text-subtitle    #2a2a2a / rgba(255,255,255,0.6)
+//   Text/Body                → --color-text-body        #5c5c5c / rgba(255,255,255,0.6)
+//   Surface/Primary/Default  → the DS Button primary variant, not hand-styled
+//
+// Why experimental/ and not ui/: the change spec parks section 11 as "out of
+// scope" and never assigns it to a PR, so this card has no written spec of its
+// own — only the Figma node above. It stays a candidate until Michael promotes
+// it.
 
-import { useState } from "react"
-import { ChevronDown, ChevronUp, ChevronRight, Sparkle } from "lucide-react"
+import { X, Sparkle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CardContainer } from "@/components/ui/card-container"
-import { Tag } from "@/components/ui/tag"
 import { Button } from "@/components/ui/button"
-import { HighlightIcon } from "@/components/ui/highlight-icon"
 
-// ── Next Best Action ────────────────────────────────────────────────────────
-// A proactive AI recommendation. N is supported; each renders its own block,
-// stacked, with the extras behind a "Show N more" disclosure.
+// ── One recommendation ──────────────────────────────────────────────────────
 export interface NextBestAction {
   id: string
+  /** What the agent recommends doing. One line, 14px Semi Bold. */
   title: string
+  /** When the recommendation was produced — "2h ago". Renders after the title,
+   *  behind a purple bullet. Omit when the host has no timestamp. */
+  timeAgo?: string
+  /** WHY — the reasoning behind the recommendation. A full sentence that
+   *  wraps; this is the one place in the pattern where prose is correct, which
+   *  is exactly why the Entity Header itself forbids it ("NO INSIGHT
+   *  SECTION"). */
   description: string
-  onOpen: () => void
-  /** Short category label ("Renewal", "Coverage", ...) — what area this
-   *  action is about, at a glance. Neutral Tag, never a signal color: purple
-   *  already means "agent" here. Omit when the host has no category. */
-  contextTag?: string
+  /** "View details" — always rendered. */
+  onViewDetails: () => void
+  /** "Accept" — the primary action. Omit for the View-details-only variant. */
+  onAccept?: () => void
+  /** The dismiss control in the top-right corner. Omit to hide it. */
+  onDismiss?: () => void
 }
 
 export interface NextBestActionCardProps {
   /** Omit or pass an empty array for a record with genuinely nothing to
-   *  recommend right now — the card disappears entirely rather than
-   *  rendering a placeholder. Same "never fake a state" rule the header's
-   *  own zones follow. */
+   *  recommend — the card disappears entirely rather than rendering a
+   *  placeholder. N items stack with the container's own 24px rhythm. */
   items?: NextBestAction[]
   variant?: "default"
   size?: "default" | "sm"
@@ -59,61 +72,73 @@ export function NextBestActionCard({
   if (items.length === 0) return null
   return (
     <CardContainer size={size === "sm" ? "sm" : undefined} className={cn(className)}>
-      <NextBestActionZone items={items} />
+      {/* 24px between suggestions — the container's own itemSpacing in Figma. */}
+      <div className="flex flex-col gap-[24px]">
+        {items.map(item => <Suggestion key={item.id} nba={item} />)}
+      </div>
     </CardContainer>
   )
 }
 
-// ── Zone — primary item always visible, extras behind a disclosure ─────────
-// Capped at 3 revealed extras, never all of them at once. Button sits BELOW
-// every item, not between the primary and the extras.
-function NextBestActionZone({ items }: { items: NextBestAction[] }) {
-  const [showMore, setShowMore] = useState(false)
-  if (items.length === 0) return null
-  const [primary, ...rest] = items
-  const visibleRest = rest.slice(0, 3)
+// ── Suggestion — label + dismiss, then title · timeAgo, then why, then actions
+function Suggestion({ nba }: { nba: NextBestAction }) {
   return (
     <div className="flex flex-col gap-[8px]">
-      <NextBestActionBlock nba={primary} />
-      {showMore && visibleRest.map(nba => <NextBestActionBlock key={nba.id} nba={nba} />)}
-      {visibleRest.length > 0 && (
-        <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
-          {showMore ? "Show less" : `Show ${visibleRest.length} more`}
-          {showMore
-            ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
-            : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
-        </Button>
-      )}
-    </div>
-  )
-}
+      {/* Label row — the purple "Next Best Action" marker with the platform's
+          own Sparkle glyph (the single 4-point one, same as the Topbar and the
+          header's agent trigger), and the dismiss control pushed to the far
+          right. */}
+      <div className="flex items-start justify-between gap-[8px]">
+        <div className="flex items-center gap-[4px] min-w-0">
+          <Sparkle size={14} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--color-text-purple)" }} />
+          <span className="text-[14px] font-semibold leading-[1.3]" style={{ color: "var(--color-text-purple)" }}>
+            Next Best Action
+          </span>
+        </div>
+        {nba.onDismiss && (
+          <Button
+            variant="tertiary"
+            size="sm"
+            iconPosition="alone"
+            icon={<X size={14} strokeWidth={1.75} />}
+            aria-label="Dismiss this recommendation"
+            onClick={nba.onDismiss}
+            className="shrink-0"
+          />
+        )}
+      </div>
 
-function NextBestActionBlock({ nba }: { nba: NextBestAction }) {
-  return (
-    <button
-      type="button"
-      onClick={nba.onOpen}
-      className="w-full flex items-center gap-[8px] rounded-[8px] p-[12px] text-left transition-opacity hover:opacity-90"
-      style={{ background: "var(--card-purple-bg)", border: "0.5px solid var(--card-purple-border)" }}
-    >
-      <HighlightIcon size="sm" variant="purple" icon={<Sparkle size={16} strokeWidth={1.75} />} className="shrink-0" />
-      <div className="flex-1 flex flex-col gap-[2px] min-w-0">
-        <div className="flex items-center gap-[6px] min-w-0">
-          <span className="flex-1 truncate text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
+      {/* Title · timeAgo, then the reasoning. 4px between both pairs. */}
+      <div className="flex flex-col gap-[4px]">
+        <div className="flex items-baseline gap-[4px] flex-wrap">
+          <span className="text-[14px] font-semibold leading-[1.3]" style={{ color: "var(--color-text-subtitle)" }}>
             {nba.title}
           </span>
-          {/* One context Tag per NBA — what area this action is about, at a
-              glance ("Renewal", "Coverage", ...). Neutral, never a signal
-              color — purple already means "agent" on this card. */}
-          {nba.contextTag && (
-            <Tag variant="neutral" size="sm" className="shrink-0">{nba.contextTag}</Tag>
+          {nba.timeAgo && (
+            <>
+              <span aria-hidden="true" className="text-[14px] font-medium leading-[1.3]" style={{ color: "var(--color-text-purple)" }}>
+                ·
+              </span>
+              <span className="text-[12px] font-medium leading-[1.3]" style={{ color: "var(--color-text-body)" }}>
+                {nba.timeAgo}
+              </span>
+            </>
           )}
         </div>
-        <span className="text-[12px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>
+        {/* Wraps on purpose — this is the reasoning, not a subtitle. */}
+        <p className="text-[14px] font-medium leading-[1.5]" style={{ color: "var(--color-text-body)" }}>
           {nba.description}
-        </span>
+        </p>
       </div>
-      <ChevronRight size={16} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--field-supporting)" }} />
-    </button>
+
+      {/* Actions — DS Buttons, never hand-styled: Accept carries
+          Surface/Primary/Default through the primary variant. */}
+      <div className="flex items-center gap-[4px]">
+        {nba.onAccept && (
+          <Button variant="primary" size="sm" onClick={nba.onAccept}>Accept</Button>
+        )}
+        <Button variant="tertiary" size="sm" onClick={nba.onViewDetails}>View details</Button>
+      </div>
+    </div>
   )
 }
