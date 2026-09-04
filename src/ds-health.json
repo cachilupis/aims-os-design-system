@@ -29,12 +29,10 @@
   },
   "totals": {
     "hardcodedColourErrors": 0,
-    "findings": 19,
-    "undecided": 19
+    "findings": 16,
+    "undecided": 16
   },
-  "staleDecisions": [
-    "main-overuse:src/screens/pm-michael-test-v1.tsx"
-  ],
+  "staleDecisions": [],
   "findings": [
     {
       "key": "duplicate-component:src/screens/AdminAuditLog.tsx:DetailRow",
@@ -181,54 +179,6 @@
       "repeatCount": 1
     },
     {
-      "key": "duplicate-component:src/screens/pm-thomas-dashboard-list.tsx:FilterToolbar",
-      "type": "duplicate-component",
-      "typeLabel": "Same component in two screens",
-      "file": "src/screens/pm-thomas-dashboard-list.tsx",
-      "line": 95,
-      "name": "FilterToolbar",
-      "count": null,
-      "lines": null,
-      "message": "`FilterToolbar` is defined separately in 2 screens (pm-thomas-dashboard-list.tsx, pm-thomas-widget-library.tsx) — no copy is canonical, so they drift. Extract one shared version, or rename if they are unrelated",
-      "verdict": "undecided",
-      "why": null,
-      "decidedBy": null,
-      "decidedOn": null,
-      "repeatCount": 1
-    },
-    {
-      "key": "duplicate-component:src/screens/pm-thomas-dashboard-list.tsx:Pill",
-      "type": "duplicate-component",
-      "typeLabel": "Same component in two screens",
-      "file": "src/screens/pm-thomas-dashboard-list.tsx",
-      "line": 98,
-      "name": "Pill",
-      "count": null,
-      "lines": null,
-      "message": "`Pill` is defined separately in 2 screens (pm-thomas-dashboard-list.tsx, pm-thomas-widget-library.tsx) — no copy is canonical, so they drift. Extract one shared version, or rename if they are unrelated",
-      "verdict": "undecided",
-      "why": null,
-      "decidedBy": null,
-      "decidedOn": null,
-      "repeatCount": 1
-    },
-    {
-      "key": "duplicate-component:src/screens/pm-thomas-dashboard-list.tsx:Opt",
-      "type": "duplicate-component",
-      "typeLabel": "Same component in two screens",
-      "file": "src/screens/pm-thomas-dashboard-list.tsx",
-      "line": 118,
-      "name": "Opt",
-      "count": null,
-      "lines": null,
-      "message": "`Opt` is defined separately in 2 screens (pm-thomas-dashboard-list.tsx, pm-thomas-widget-library.tsx) — no copy is canonical, so they drift. Extract one shared version, or rename if they are unrelated",
-      "verdict": "undecided",
-      "why": null,
-      "decidedBy": null,
-      "decidedOn": null,
-      "repeatCount": 1
-    },
-    {
       "key": "duplicate-component:src/screens/pm-thomas-dashboard-list.tsx:OverflowMenu",
       "type": "duplicate-component",
       "typeLabel": "Same component in two screens",
@@ -281,7 +231,7 @@
       "type": "widget-vocab",
       "typeLabel": "Second widget vocabulary",
       "file": "src/screens/pm-thomas-widget-builder.tsx",
-      "line": 58,
+      "line": 61,
       "name": "WIDGET_TYPES",
       "count": null,
       "lines": null,

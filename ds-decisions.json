@@ -21,12 +21,5 @@
     "Every entry needs a `why`. A verdict with no reasoning is how the next person ends up",
     "reversing a decision that was right."
   ],
-  "decisions": {
-    "main-overuse:src/screens/pm-michael-test-v1.tsx": {
-      "verdict": "accepted",
-      "why": "Both hits (lines 360, 562) are legitimate Header primaryActions — one for the worker detail view, one for the list view. Only one renders at a time. Check 7 counts per file, not per screen, so this is a false positive. Demoting either would break the real rule to satisfy the heuristic.",
-      "decidedBy": "Michael",
-      "decidedOn": "2026-09-01"
-    }
-  }
+  "decisions": {}
 }
