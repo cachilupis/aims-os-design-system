@@ -15,7 +15,6 @@ import { EmptyState }       from "@/components/ui/empty-state"
 import { HighlightIcon }    from "@/components/ui/highlight-icon"
 import { CardContainer }    from "@/components/ui/card-container"
 import { ModalDialog }      from "@/components/ui/modal-dialog"
-import { Menu, MenuItem }   from "@/components/ui/menu-item"
 import { RecordHeader }     from "@/components/ui/record-header"
 import type { RecordHeaderEntityType, NextBestAction } from "@/components/ui/record-header"
 import { SlideOut }         from "@/components/ui/slide-out"
@@ -430,7 +429,6 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
   const [logsPage,     setLogsPage]     = useState(1)
   const [logsPageSize, setLogsPageSize] = useState(10)
   const [showArchive,  setShowArchive]  = useState(false)
-  const [menuOpen,     setMenuOpen]     = useState(false)
   const [userTabs,     setUserTabs]     = useState<string[]>([])
   const [tabPickerOpen, setTabPickerOpen] = useState(false)
   const [entityPreview, setEntityPreview] = useState<SecondaryEntity | null>(null)
@@ -577,50 +575,13 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
             tag={<Tag variant={STATUS_TAG[profile.status]} size="sm">{profile.status}</Tag>}
             secondaryAction={{ label: "Export", icon: LucideIcons.Download, onClick: () => {} }}
             primaryAction={{ label: "Edit Profile", icon: LucideIcons.Pencil, onClick: () => {} }}
+            // Header owns the "···" now, so the hand-rolled menu and its open
+            // state are gone. A company profile has nothing to archive.
+            // DS-GAP: RBAC — archive visibility should depend on user role
+            overflowActions={profile.type !== "company"
+              ? [{ label: "Archive", icon: LucideIcons.Archive, onClick: () => setShowArchive(true) }]
+              : undefined}
           />
-          {/* DS-GAP: Header has no slot for non-CTA controls. The kebab used to be
-              crammed into primaryAction alongside the two buttons; primaryAction now
-              takes an action object, so it sits here instead. A Header slot for menus
-              and notification bells is the real fix — pm-chat-widget needs the same. */}
-          <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 24px 8px" }}>
-{/* Kebab — Archive only for person + employee, not company */}
-            {/* DS-GAP: RBAC — archive visibility should depend on user role */}
-            {profile.type !== "company" && (
-              <div style={{ position: "relative" }}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setMenuOpen(o => !o)}
-                >
-                  <LucideIcons.MoreHorizontal size={14} />
-                </Button>
-                {menuOpen && (
-                  <div
-                    style={{
-                      position: "fixed",
-                      zIndex: 10001,
-                      minWidth: 180,
-                      background: "var(--surface)",
-                      border: "0.5px solid var(--field-border)",
-                      boxShadow: "var(--shadow-elevation-3)",
-                      borderRadius: 8,
-                      padding: "4px 0",
-                    }}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <Menu>
-                      <MenuItem
-                        leadingIcon={<LucideIcons.Archive size={14} />}
-                        label="Archive"
-                        size="sm"
-                        onClick={() => { setMenuOpen(false); setShowArchive(true) }}
-                      />
-                    </Menu>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       )}
       pagination={

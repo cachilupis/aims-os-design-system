@@ -391,7 +391,6 @@ export default function PMChatWidgetScreen() {
             backButton
           />
         ) : (
-          <>
           <Header
             size={isScrolled ? "compress" : "size-l"}
             title={activeWidget.name}
@@ -399,11 +398,9 @@ export default function PMChatWidgetScreen() {
             tag={<Tag variant="success" size="sm">Active</Tag>}
             backButton
             primaryAction={{ label: "Deploy", icon: Icons.Send, onClick: handleDeploy }}
-          />
-          {/* DS-GAP: Header has no slot for standing controls like a notification
-              bell — primaryAction takes an action object, not arbitrary JSX.
-              AdminIntegrations (kebab) and pm-thomas-universal-profile need the
-              same slot. Until it exists, the bell renders in this row. */}
+              // A standing control, not an action: it is always there and it opens a
+              // panel rather than doing something. That is what aux is for.
+              aux={
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 32px 8px" }}>
             {/* Notifications bell — layered on top of ScreenLayout's own actions for prototype clarity */}
             <div ref={notifRef} style={{ position: "relative" }}>
@@ -442,7 +439,8 @@ export default function PMChatWidgetScreen() {
               )}
             </div>
           </div>
-          </>
+              }
+          />
         )}
       >
         {/* ── LIST VIEW ── */}
