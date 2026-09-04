@@ -1,11 +1,18 @@
 import { useRef, useState, useEffect } from "react"
-import { HighlightCard, type HighlightCardStyle } from "@/components/ui/highlight-card"
+import { HighlightCard, type HighlightCardStyle, type HighlightCardFeedback } from "@/components/ui/highlight-card"
 
 export interface MetricCardDef {
   label:     string
   value:     string | number
   iconName?: string
   style?:    HighlightCardStyle
+  /** The delta line under the value — "+2.1%", "No change", "+142 this month".
+   *  HighlightCard has always rendered this; the grid could not pass it through,
+   *  so any KPI with a trend had to be hand-rolled. Half of what a KPI is, is
+   *  how it moved, and that is a plausible reason this grid sat unused in 14
+   *  screens that each drew their own. */
+  feedback?:     string
+  feedbackType?: HighlightCardFeedback
 }
 
 interface AdaptiveMetricGridProps {
@@ -41,7 +48,7 @@ export function AdaptiveMetricGrid({ cards, threshold = 310, className }: Adapti
       {!isNarrow ? (
         <div className="grid gap-[8px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))" }}>
           {cards.map((c, i) => (
-            <HighlightCard key={i} label={c.label} value={c.value} iconName={c.iconName} style={c.style} className="!w-full" />
+            <HighlightCard key={i} label={c.label} value={c.value} iconName={c.iconName} feedback={c.feedback} feedbackType={c.feedbackType} style={c.style} className="!w-full" />
           ))}
         </div>
       ) : (
@@ -49,12 +56,12 @@ export function AdaptiveMetricGrid({ cards, threshold = 310, className }: Adapti
           {/* Row 1: first two cards side by side */}
           <div className="grid grid-cols-2 gap-[8px]">
             {cards.slice(0, 2).map((c, i) => (
-              <HighlightCard key={i} label={c.label} value={c.value} iconName={c.iconName} style={c.style} className="!w-full" />
+              <HighlightCard key={i} label={c.label} value={c.value} iconName={c.iconName} feedback={c.feedback} feedbackType={c.feedbackType} style={c.style} className="!w-full" />
             ))}
           </div>
           {/* Row 2: third card full-width */}
           {cards.length > 2 && (
-            <HighlightCard label={cards[2].label} value={cards[2].value} iconName={cards[2].iconName} style={cards[2].style} className="!w-full" />
+            <HighlightCard label={cards[2].label} value={cards[2].value} iconName={cards[2].iconName} feedback={cards[2].feedback} feedbackType={cards[2].feedbackType} style={cards[2].style} className="!w-full" />
           )}
         </div>
       )}
