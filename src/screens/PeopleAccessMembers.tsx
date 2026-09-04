@@ -1677,33 +1677,64 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
 
 // ─── Resources tab ────────────────────────────────────────────────────────────
 
-type MemberResource = { name: string; type: string; scope: string; access: string; source: string }
+type ResourceGrantPath = "direct" | "via-role" | "via-group"
+
+type MemberResource = {
+  id: string
+  name: string
+  type: string
+  scope: string
+  access: string
+  source: string
+  grantedBy: string
+  grantedAt: string
+  grantPath: ResourceGrantPath
+  groupName?: string
+  groupMemberCount?: number
+  roleName?: string
+  removable?: boolean        // false = system-managed, cannot be manually removed
+  criticalAccess?: boolean   // owner-level on critical resource → extra warning
+  lastPath?: boolean         // removing this leaves the member with no access to this resource
+  dualPath?: boolean         // resource is accessible via another path too — safe to remove this one
+}
 
 const MEMBER_RESOURCES: Record<string, MemberResource[]> = {
   tg: [
-    { name: "customer_360",        type: "Dataset",   scope: "Tenant",    access: "Owner",       source: "Direct" },
-    { name: "fraud_signals_v2",    type: "Model",     scope: "Tenant",    access: "Owner",       source: "Direct" },
-    { name: "platform_events",     type: "Event Bus", scope: "Tenant",    access: "Owner",       source: "Direct" },
-    { name: "governance_audit_log",type: "Dataset",   scope: "Tenant",    access: "Read",        source: "via Leadership" },
-    { name: "sandbox_env_prod",    type: "Sandbox",   scope: "Own",       access: "Manager",     source: "via Leadership" },
+    // ── Direct grants (normal remove flow) ────────────────────────────────
+    { id: "tg-r1",  name: "customer_360",         type: "Dataset",   scope: "Tenant",    access: "Owner",       source: "Direct",              grantedBy: "Thomas Gonzalez", grantedAt: "Jan 14, 2025", grantPath: "direct",    criticalAccess: true,  lastPath: true  },
+    { id: "tg-r2",  name: "fraud_signals_v2",     type: "Model",     scope: "Tenant",    access: "Owner",       source: "Direct",              grantedBy: "Thomas Gonzalez", grantedAt: "Mar 2, 2025",  grantPath: "direct",    criticalAccess: true,  lastPath: true  },
+    // ── Via group (removing here removes from the group) ──────────────────
+    { id: "tg-r3",  name: "governance_audit_log", type: "Dataset",   scope: "Tenant",    access: "Read",        source: "via Leadership",      grantedBy: "Maria García",    grantedAt: "Aug 20, 2026", grantPath: "via-group", groupName: "Leadership",    groupMemberCount: 12, lastPath: true  },
+    { id: "tg-r4",  name: "sandbox_env_prod",     type: "Sandbox",   scope: "Own",       access: "Manager",     source: "via Leadership",      grantedBy: "Maria García",    grantedAt: "Aug 20, 2026", grantPath: "via-group", groupName: "Leadership",    groupMemberCount: 12, lastPath: false, dualPath: true },
+    // ── Via role ──────────────────────────────────────────────────────────
+    { id: "tg-r5",  name: "platform_events",      type: "Event Bus", scope: "Tenant",    access: "Owner",       source: "via Workspace Admin", grantedBy: "System",          grantedAt: "Jan 14, 2025", grantPath: "via-role",  roleName: "Workspace Admin",  lastPath: false, dualPath: true },
+    // ── Dual path: direct + group (safe to remove individual grant) ───────
+    { id: "tg-r6",  name: "sandbox_env_prod",     type: "Sandbox",   scope: "Own",       access: "Owner",       source: "Direct",              grantedBy: "Thomas Gonzalez", grantedAt: "Feb 1, 2026",  grantPath: "direct",    dualPath: true, lastPath: false },
+    // ── System-managed — not removable ────────────────────────────────────
+    { id: "tg-r7",  name: "workspace_root",       type: "Dataset",   scope: "Tenant",    access: "Owner",       source: "System",              grantedBy: "System",          grantedAt: "Jan 14, 2025", grantPath: "direct",    removable: false },
+    // ── Last resource of its type for this member ─────────────────────────
+    { id: "tg-r8",  name: "billing_export",       type: "Dataset",   scope: "Tenant",    access: "Read",        source: "Direct",              grantedBy: "Maria García",    grantedAt: "Jul 5, 2026",  grantPath: "direct",    lastPath: true  },
+    // ── Very old grant — might be stale ───────────────────────────────────
+    { id: "tg-r9",  name: "legacy_crm_v1",        type: "Dataset",   scope: "Tenant",    access: "Contributor", source: "Direct",              grantedBy: "System",          grantedAt: "Jan 14, 2025", grantPath: "direct",    lastPath: true  },
   ],
   mg: [
-    { name: "employee_directory",  type: "Dataset",   scope: "IT",        access: "Manager",     source: "Direct" },
-    { name: "access_audit_log",    type: "Dataset",   scope: "IT",        access: "Read",        source: "via IT Admin" },
-    { name: "hr_events_stream",    type: "Event Bus", scope: "IT",        access: "Read",        source: "via IT Admin" },
+    { id: "mg-r1",  name: "employee_directory",   type: "Dataset",   scope: "IT",        access: "Manager",     source: "Direct",              grantedBy: "Maria García",    grantedAt: "Feb 5, 2025",  grantPath: "direct",    lastPath: true  },
+    { id: "mg-r2",  name: "access_audit_log",     type: "Dataset",   scope: "IT",        access: "Read",        source: "via IT Admin",        grantedBy: "Thomas Gonzalez", grantedAt: "Apr 1, 2025",  grantPath: "via-group", groupName: "IT Admin",      groupMemberCount: 5,  lastPath: true  },
+    { id: "mg-r3",  name: "hr_events_stream",     type: "Event Bus", scope: "IT",        access: "Read",        source: "via IT Admin",        grantedBy: "Thomas Gonzalez", grantedAt: "Apr 1, 2025",  grantPath: "via-group", groupName: "IT Admin",      groupMemberCount: 5,  lastPath: false, dualPath: true },
+    { id: "mg-r4",  name: "workspace_root",       type: "Dataset",   scope: "Tenant",    access: "Owner",       source: "System",              grantedBy: "System",          grantedAt: "Feb 5, 2025",  grantPath: "direct",    removable: false },
   ],
   es: [
-    { name: "revenue_pipeline",    type: "Model",     scope: "Analytics", access: "Contributor", source: "Direct" },
-    { name: "churn_predictions",   type: "Model",     scope: "Analytics", access: "Read",        source: "via Analytics" },
-    { name: "user_events",         type: "Event Bus", scope: "Analytics", access: "Read",        source: "via Analytics" },
+    { id: "es-r1",  name: "revenue_pipeline",     type: "Model",     scope: "Analytics", access: "Contributor", source: "Direct",              grantedBy: "Maria García",    grantedAt: "Jun 10, 2025", grantPath: "direct",    lastPath: true  },
+    { id: "es-r2",  name: "churn_predictions",    type: "Model",     scope: "Analytics", access: "Read",        source: "via Analytics",       grantedBy: "Thomas Gonzalez", grantedAt: "Jun 10, 2025", grantPath: "via-group", groupName: "Analytics",     groupMemberCount: 8,  lastPath: true  },
+    { id: "es-r3",  name: "user_events",          type: "Event Bus", scope: "Analytics", access: "Read",        source: "via Analytics",       grantedBy: "Thomas Gonzalez", grantedAt: "Jun 10, 2025", grantPath: "via-group", groupName: "Analytics",     groupMemberCount: 8,  lastPath: false, dualPath: true },
   ],
   sb: [
-    { name: "risk_scoring_v3",     type: "Model",     scope: "Risk",      access: "Read",        source: "Direct" },
-    { name: "compliance_reports",  type: "Dataset",   scope: "Risk",      access: "Read",        source: "via Compliance" },
+    { id: "sb-r1",  name: "risk_scoring_v3",      type: "Model",     scope: "Risk",      access: "Read",        source: "Direct",              grantedBy: "Maria García",    grantedAt: "Jul 3, 2025",  grantPath: "direct",    lastPath: true  },
+    { id: "sb-r2",  name: "compliance_reports",   type: "Dataset",   scope: "Risk",      access: "Read",        source: "via Compliance",      grantedBy: "Thomas Gonzalez", grantedAt: "Jul 3, 2025",  grantPath: "via-group", groupName: "Compliance",    groupMemberCount: 4,  lastPath: true  },
   ],
   dp: [
-    { name: "ops_metrics",         type: "Dataset",   scope: "Ops",       access: "Contributor", source: "Direct" },
-    { name: "ops_events",          type: "Event Bus", scope: "Ops",       access: "Read",        source: "via Operations" },
+    { id: "dp-r1",  name: "ops_metrics",          type: "Dataset",   scope: "Ops",       access: "Contributor", source: "Direct",              grantedBy: "Maria García",    grantedAt: "May 20, 2025", grantPath: "direct",    lastPath: true  },
+    { id: "dp-r2",  name: "ops_events",           type: "Event Bus", scope: "Ops",       access: "Read",        source: "via Operations",      grantedBy: "Thomas Gonzalez", grantedAt: "May 20, 2025", grantPath: "via-group", groupName: "Operations",    groupMemberCount: 6,  lastPath: true  },
   ],
 }
 
@@ -1721,14 +1752,177 @@ const RESOURCE_TYPE_ICON: Record<string, React.ReactNode> = {
   Sandbox:    <Icons.Box size={13} />,
 }
 
+// ─── Remove Access Modal ──────────────────────────────────────────────────────
+
+function RemoveAccessModal({
+  resource, memberName, onConfirm, onCancel,
+}: {
+  resource: MemberResource
+  memberName: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const typeColor = RESOURCE_TYPE_COLOR[resource.type] ?? "var(--muted-foreground)"
+  const isViaGroup = resource.grantPath === "via-group"
+  const isViaRole  = resource.grantPath === "via-role"
+  const isSystem   = resource.removable === false
+
+  // Warnings in priority order
+  const warnings: Array<{ icon: React.ReactNode; color: string; text: React.ReactNode }> = []
+
+  if (isSystem) {
+    warnings.push({
+      icon: <Icons.Lock size={14} />,
+      color: "var(--muted-foreground)",
+      text: "This access is managed by the system and cannot be removed manually.",
+    })
+  } else if (resource.criticalAccess) {
+    warnings.push({
+      icon: <Icons.AlertTriangle size={14} />,
+      color: "var(--badge-error)",
+      text: <>Removing <strong>Owner</strong> access to <strong>{resource.name}</strong> may break {memberName}'s ability to manage or share this resource.</>,
+    })
+  }
+
+  if (isViaGroup && !isSystem) {
+    warnings.push({
+      icon: <Icons.Users size={14} />,
+      color: "var(--badge-alert)",
+      text: <>This access comes from the <strong>{resource.groupName}</strong> group ({resource.groupMemberCount} members). Removing it here removes access for the <strong>entire group</strong>, not just this member.</>,
+    })
+  }
+
+  if (isViaRole && !isSystem) {
+    warnings.push({
+      icon: <Icons.Shield size={14} />,
+      color: "var(--badge-alert)",
+      text: <>This access is inherited from the <strong>{resource.roleName}</strong> role. Removing it will revoke all permissions granted by that role on this resource.</>,
+    })
+  }
+
+  if (resource.lastPath && !isSystem) {
+    warnings.push({
+      icon: <Icons.AlertCircle size={14} />,
+      color: "var(--badge-error)",
+      text: <>{memberName} has <strong>no other access path</strong> to this resource. After removal, they will lose access completely.</>,
+    })
+  }
+
+  if (resource.dualPath && !isSystem) {
+    warnings.push({
+      icon: <Icons.CheckCircle size={14} />,
+      color: "var(--badge-success)",
+      text: <>Safe to remove — {memberName} will still be able to access <strong>{resource.name}</strong> via another path.</>,
+    })
+  }
+
+  return (
+    <>
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 10100, background: "rgba(0,0,0,0.5)" }} // audit-ignore: scrim
+        onClick={onCancel}
+      />
+      <div style={{
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+        zIndex: 10101, width: 480, maxWidth: "90vw",
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 14, overflow: "hidden",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)", // audit-ignore: modal shadow
+      }}>
+        {/* Header */}
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
+            {isSystem ? "Access is system-managed" : "Remove resource access?"}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+            {isSystem
+              ? "This access cannot be changed from here."
+              : `You're about to remove ${memberName}'s access to the resource below.`}
+          </div>
+        </div>
+
+        {/* Resource card */}
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>
+              {RESOURCE_TYPE_ICON[resource.type] ?? <Icons.Layers size={16} />}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>{resource.name}</span>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, marginLeft: 4,
+              background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
+              color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
+            }}>{resource.type}</span>
+          </div>
+          <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 16px" }}>
+            {[
+              { label: "ACCESS",     value: resource.access    },
+              { label: "SOURCE",     value: resource.source    },
+              { label: "GRANTED",    value: resource.grantedAt },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
+                <div style={{ fontSize: 12, color: "var(--foreground)" }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Warnings */}
+        {warnings.length > 0 && (
+          <div style={{ padding: "14px 24px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
+            {warnings.map((w, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ color: w.color, flexShrink: 0, marginTop: 1 }}>{w.icon}</span>
+                <span style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.55 }}>{w.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ padding: "16px 24px", display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button onClick={onCancel} style={{
+            padding: "7px 16px", fontSize: 12, fontWeight: 600, borderRadius: 8,
+            border: "1px solid var(--border)", background: "transparent", color: "var(--foreground)", cursor: "pointer",
+          }}>Cancel</button>
+          {!isSystem && (
+            <button onClick={onConfirm} style={{
+              padding: "7px 16px", fontSize: 12, fontWeight: 600, borderRadius: 8,
+              border: "none", cursor: "pointer",
+              background: isViaGroup ? "var(--badge-alert)" : "var(--badge-error)",
+              color: "#fff", // audit-ignore: white text on colored button
+            }}>
+              {isViaGroup ? `Remove from ${resource.groupName}` : "Remove access"}
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
 function ResourcesPanel({ member }: { member: Member }) {
-  const allResources = MEMBER_RESOURCES[member.id] ?? []
-  const types = ["All", ...Array.from(new Set(allResources.map(r => r.type)))]
+  const initialResources = MEMBER_RESOURCES[member.id] ?? []
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
+  const [pendingRemove, setPendingRemove] = useState<MemberResource | null>(null)
+  const [justRemoved, setJustRemoved] = useState<string | null>(null)
+
+  const allResources = initialResources.filter(r => !removedIds.has(r.id))
+  const types = ["All", ...Array.from(new Set(initialResources.map(r => r.type)))]
   const [activeType, setActiveType] = useState("All")
 
   const resources = activeType === "All" ? allResources : allResources.filter(r => r.type === activeType)
 
-  if (allResources.length === 0) {
+  function handleRemoveConfirm() {
+    if (!pendingRemove) return
+    setRemovedIds(prev => new Set(prev).add(pendingRemove.id))
+    setJustRemoved(pendingRemove.name)
+    setPendingRemove(null)
+    setTimeout(() => setJustRemoved(null), 3000)
+  }
+
+  if (allResources.length === 0 && removedIds.size === 0) {
     return (
       <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
         <Icons.Package size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
@@ -1740,57 +1934,130 @@ function ResourcesPanel({ member }: { member: Member }) {
 
   return (
     <div>
-      {/* Type filter chips */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-        {types.map(t => (
-          <button key={t} onClick={() => setActiveType(t)} style={{
-            padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: 20,
-            border: "1px solid", cursor: "pointer",
-            background: activeType === t ? "var(--primary)" : "transparent",
-            color: activeType === t ? "#fff" /* audit-ignore */ : "var(--muted-foreground)",
-            borderColor: activeType === t ? "var(--primary)" : "var(--border)",
-          }}>{t}</button>
-        ))}
-        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", alignSelf: "center" }}>
-          {resources.length} resource{resources.length !== 1 ? "s" : ""}
-        </span>
-      </div>
+      {/* Remove modal */}
+      {pendingRemove && (
+        <RemoveAccessModal
+          resource={pendingRemove}
+          memberName={member.name}
+          onConfirm={handleRemoveConfirm}
+          onCancel={() => setPendingRemove(null)}
+        />
+      )}
 
-      {/* Table */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+      {/* Success toast */}
+      {justRemoved && (
         <div style={{
-          display: "grid", gridTemplateColumns: "1fr 90px 90px 100px 100px",
-          padding: "9px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
-          fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
+          position: "fixed", bottom: 24, right: 24, zIndex: 10200,
+          background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10,
+          padding: "10px 16px", display: "flex", alignItems: "center", gap: 10,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.15)", // audit-ignore: toast shadow
+          animation: "tab-indicator-in 180ms ease-out both",
         }}>
-          <span>Resource</span><span>Type</span><span>Scope</span><span>Access</span><span>Source</span>
+          <Icons.CheckCircle size={15} style={{ color: "var(--badge-success)", flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>
+            Access to <strong>{justRemoved}</strong> removed
+          </span>
         </div>
-        {resources.map((r, i) => {
-          const typeColor = RESOURCE_TYPE_COLOR[r.type] ?? "var(--muted-foreground)"
-          const typeIcon  = RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />
-          return (
-            <div key={i} style={{
-              display: "grid", gridTemplateColumns: "1fr 90px 90px 100px 100px",
-              padding: "11px 16px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
-              alignItems: "center",
+      )}
+
+      {/* Empty state after removing all */}
+      {allResources.length === 0 && removedIds.size > 0 && (
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+          <Icons.ShieldOff size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No resources remaining</div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>All resource access has been removed for this member.</div>
+        </div>
+      )}
+
+      {allResources.length > 0 && (
+        <>
+          {/* Type filter chips */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+            {types.map(t => (
+              <button key={t} onClick={() => setActiveType(t)} style={{
+                padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: 20,
+                border: "1px solid", cursor: "pointer",
+                background: activeType === t ? "var(--primary)" : "transparent",
+                color: activeType === t ? "#fff" /* audit-ignore */ : "var(--muted-foreground)",
+                borderColor: activeType === t ? "var(--primary)" : "var(--border)",
+              }}>{t}</button>
+            ))}
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", alignSelf: "center" }}>
+              {resources.length} resource{resources.length !== 1 ? "s" : ""}
+              {removedIds.size > 0 && <span style={{ color: "var(--badge-error)", marginLeft: 6 }}>· {removedIds.size} removed</span>}
+            </span>
+          </div>
+
+          {/* Table */}
+          <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{
+              display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
+              padding: "9px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
+              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>{typeIcon}</span>
-                <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", fontFamily: "monospace" }}>{r.name}</span>
-              </div>
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
-                color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
-                width: "fit-content",
-              }}>{r.type}</span>
-              <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{r.scope}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{r.access}</span>
-              <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: r.source.startsWith("via") ? "italic" : "normal" }}>{r.source}</span>
+              <span>Resource</span><span>Type</span><span>Access</span><span>Granted by</span><span>When</span><span />
             </div>
-          )
-        })}
-      </div>
+            {resources.map((r, i) => {
+              const typeColor = RESOURCE_TYPE_COLOR[r.type] ?? "var(--muted-foreground)"
+              const typeIcon  = RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />
+              const isSystem  = r.removable === false
+              return (
+                <div key={r.id} style={{
+                  display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
+                  padding: "10px 16px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
+                  alignItems: "center",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>{typeIcon}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", fontFamily: "monospace" }}>{r.name}</span>
+                    {isSystem && (
+                      <span title="System-managed" style={{ display: "flex", color: "var(--muted-foreground)" }}>
+                        <Icons.Lock size={11} />
+                      </span>
+                    )}
+                    {r.dualPath && (
+                      <span title="Accessible via another path" style={{ display: "flex", color: "var(--badge-success)" }}>
+                        <Icons.GitMerge size={11} />
+                      </span>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                    background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
+                    color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
+                    width: "fit-content",
+                  }}>{r.type}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{r.access}</span>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span style={{ fontSize: 12, color: "var(--foreground)" }}>{r.grantedBy}</span>
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: "italic" }}>{r.source}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.grantedAt}</span>
+                  <button
+                    onClick={e => { e.stopPropagation(); setPendingRemove(r) }}
+                    title={isSystem ? "System-managed — cannot be removed" : "Remove access"}
+                    disabled={isSystem}
+                    style={{
+                      width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: isSystem ? "not-allowed" : "pointer",
+                      color: isSystem ? "var(--muted-foreground)" : "var(--badge-error)",
+                      opacity: isSystem ? 0.35 : 0.7,
+                    }}
+                    onMouseEnter={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "1" }}
+                    onMouseLeave={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "0.7" }}
+                  >
+                    {isSystem ? <Icons.Lock size={12} /> : <Icons.Trash2 size={13} />}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -2213,7 +2480,7 @@ function MemberRow({
     e.stopPropagation()
     const btn = (e.currentTarget as HTMLElement)
     const rect = btn.getBoundingClientRect()
-    setMenuAnchor({ top: rect.bottom + 4, left: rect.left + rect.width / 2 })
+    setMenuAnchor({ top: rect.bottom + 4, left: rect.right })
     setMenuOpen(true)
   }
 
@@ -2330,7 +2597,7 @@ function MemberRow({
           <div style={{ position: "fixed", inset: 0, zIndex: 10000 }} onClick={() => setMenuOpen(false)} />
           <div style={{
             position: "fixed", top: menuAnchor.top, left: menuAnchor.left,
-            transform: "translateX(-50%)", zIndex: 10001,
+            transform: "translateX(-100%)", zIndex: 10001,
             background: "var(--surface)", border: "1px solid var(--border)",
             borderRadius: 10, padding: "4px 0",
             boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
