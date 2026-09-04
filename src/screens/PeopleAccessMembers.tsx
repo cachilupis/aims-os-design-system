@@ -3403,6 +3403,8 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [mainTab, setMainTab]           = useState<"members" | "roles" | "groups">("members")
   const [statusFilter, setStatusFilter] = useState<"all" | MemberStatus>("all")
   const [query, setQuery]               = useState("")
+  const [rolesQuery, setRolesQuery]     = useState("")
+  const [groupsQuery, setGroupsQuery]   = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
   const [roles, setRoles]               = useState<Role[]>(ROLES)
   const [detailView, setDetailView]     = useState<DetailView>(null)
@@ -3450,6 +3452,18 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     }
     return result
   }, [members, statusFilter, query])
+
+  const filteredRoles = useMemo(() => {
+    const q = rolesQuery.trim().toLowerCase()
+    if (!q) return roles
+    return roles.filter(r => r.label.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q))
+  }, [roles, rolesQuery])
+
+  const filteredGroups = useMemo(() => {
+    const q = groupsQuery.trim().toLowerCase()
+    if (!q) return GROUPS
+    return GROUPS.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
+  }, [groupsQuery])
 
   function handleRoleChange(id: string, role: MemberRole) {
     setMembers(ms => ms.map(m => m.id === id ? { ...m, role } : m))
@@ -3611,36 +3625,79 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       {/* Roles view */}
       {mainTab === "roles" && (
         <>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-              System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {roles.filter(r => r.system).length}</span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-              {roles.filter(r => r.system).map(r => (
-                <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
-              ))}
-            </div>
+          <div style={{ marginTop: 16, marginBottom: 16 }}>
+            <Filters
+              showSearch
+              searchPlaceholder="Search roles…"
+              searchValue={rolesQuery}
+              onSearchChange={setRolesQuery}
+              showAllFilters={false}
+              showSort={false}
+              showViewToggle={false}
+            />
           </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-              Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {roles.filter(r => !r.system).length}</span>
+          {filteredRoles.filter(r => r.system).length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+                System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {filteredRoles.filter(r => r.system).length}</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                {filteredRoles.filter(r => r.system).map(r => (
+                  <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
+                ))}
+              </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-              {roles.filter(r => !r.system).map(r => (
-                <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
-              ))}
+          )}
+          {filteredRoles.filter(r => !r.system).length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+                Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {filteredRoles.filter(r => !r.system).length}</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                {filteredRoles.filter(r => !r.system).map(r => (
+                  <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+          {filteredRoles.length === 0 && (
+            <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
+              <Icons.SearchX size={28} style={{ marginBottom: 10, opacity: 0.35 }} />
+              <div style={{ fontSize: 14, fontWeight: 500 }}>No roles match</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Try a different search term</div>
+            </div>
+          )}
         </>
       )}
 
       {/* Groups view */}
       {mainTab === "groups" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-          {GROUPS.map(g => (
-            <GroupCard key={g.id} group={g} onSelect={group => setPreviewItem({ type: "group", group })} />
-          ))}
-        </div>
+        <>
+          <div style={{ marginTop: 16, marginBottom: 16 }}>
+            <Filters
+              showSearch
+              searchPlaceholder="Search groups…"
+              searchValue={groupsQuery}
+              onSearchChange={setGroupsQuery}
+              showAllFilters={false}
+              showSort={false}
+              showViewToggle={false}
+            />
+          </div>
+          {filteredGroups.length > 0 ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+              {filteredGroups.map(g => (
+                <GroupCard key={g.id} group={g} onSelect={group => setPreviewItem({ type: "group", group })} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
+              <Icons.SearchX size={28} style={{ marginBottom: 10, opacity: 0.35 }} />
+              <div style={{ fontSize: 14, fontWeight: 500 }}>No groups match</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Try a different search term</div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Preview slide-out */}
