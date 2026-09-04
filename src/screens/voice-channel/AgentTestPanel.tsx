@@ -1,18 +1,18 @@
 import { useState } from "react"
-import { MessageCircle, Paperclip, Send } from "lucide-react"
+import { MessageCircle, Paperclip, Send, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "./toast"
 
 // ─────────────────────────────────────────────────────────────────────
 // AgentTestPanel — the right-side "Test your Agent" chat area used by
 // every 2-column agent-detail panel (Channels / Knowledge / Tools /
-// Configuration / Instructions / Create).
+// Configuration / Instructions / Create) and by the UCP.
 //
-// Description copy is per-tab (Channels talks about routing, Knowledge
-// talks about sources, Instructions talks about persona, etc.).
-// The composer holds local draft text, wires Cmd/Ctrl+Enter to send,
-// and fires a toast — the real chat runtime is a follow-up but this
-// gives the panel a lived-in feel instead of feeling frozen.
+// Rendered as a distinct panel: subtle surface + rounded top-level
+// container so it reads as its own workspace, not just a border-left
+// column. The composer holds local draft text, wires Cmd/Ctrl+Enter to
+// send, and fires a toast — the real chat runtime is a follow-up but
+// this gives the panel a lived-in feel instead of feeling frozen.
 // ─────────────────────────────────────────────────────────────────────
 
 interface AgentTestPanelProps {
@@ -20,16 +20,21 @@ interface AgentTestPanelProps {
   description: string
   /** Placeholder for the composer textarea. */
   placeholder: string
+  /** Label of the primary CTA — defaults to "Try me". */
+  ctaLabel?: string
 }
 
-export function AgentTestPanel({ description, placeholder }: AgentTestPanelProps) {
+export function AgentTestPanel({ description, placeholder, ctaLabel = "Try me" }: AgentTestPanelProps) {
   const toast = useToast()
   const [draft, setDraft] = useState("")
 
   const canSend = draft.trim().length > 0
 
   const send = () => {
-    if (!canSend) return
+    if (!canSend) {
+      toast.info(`Type a message and hit ${ctaLabel} to preview the agent's response.`)
+      return
+    }
     const preview = draft.trim().slice(0, 60)
     toast.info(`Test message sent — "${preview}${draft.length > 60 ? "…" : ""}"`)
     setDraft("")
@@ -38,7 +43,14 @@ export function AgentTestPanel({ description, placeholder }: AgentTestPanelProps
   return (
     <div
       className="w-[380px] shrink-0 flex flex-col"
-      style={{ borderLeft: "1px solid var(--color-border-neutral-default)", overflow: "hidden" }}
+      style={{
+        // Distinct surface — subtle contrast against the main content
+        // so the panel reads as its own workspace, not a strip glued to
+        // the right edge.
+        background: "var(--color-surface-neutral-subtle)",
+        borderLeft: "1px solid var(--color-border-neutral-default)",
+        overflow: "hidden",
+      }}
     >
       <div
         className="flex items-center gap-2"
@@ -104,9 +116,17 @@ export function AgentTestPanel({ description, placeholder }: AgentTestPanelProps
               aria-label="Attach file"
               onClick={() => toast.info("Attach a file to the test session")}
             />
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
               <Button
                 variant="primary" size="sm"
+                icon={<Sparkles size={13}/>} iconPosition="left"
+                disabled={!canSend}
+                onClick={send}
+              >
+                {ctaLabel}
+              </Button>
+              <Button
+                variant="secondary" size="sm"
                 icon={<Send size={13}/>} iconPosition="alone"
                 aria-label="Send test message"
                 disabled={!canSend}

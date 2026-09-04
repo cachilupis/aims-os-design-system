@@ -1,20 +1,21 @@
 import { useMemo, useState } from "react"
-import { Bot, Search } from "lucide-react"
+import { Bot, Search, Hash, Phone as PhoneIcon } from "lucide-react"
 import { Filters } from "@/components/ui/filters"
 import { Chip } from "@/components/ui/chip"
+import { Button } from "@/components/ui/button"
 import { CardContainer } from "@/components/ui/card-container"
 import { EmptyState } from "@/components/ui/empty-state"
-import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
+import { HighlightIcon } from "@/components/ui/highlight-icon"
+import { Tag, type TagVariant } from "@/components/ui/tag"
 import type { VoiceAIAgent, AIAgentStatus } from "./voice-agents-data"
 
 // ─────────────────────────────────────────────────────────────────────
 // VoiceAgentsTab — landing view for the Agents section.
 //
-// Uses the DS EntityList primitive for the list rows so the icon +
-// title + meta + state tag + Configure action layout is a canonical
-// DS pattern rather than a bespoke CardContainer + inline flexbox.
-// Every visual (icon variant, tag color, meta chips) maps to
-// EntityList's typed props.
+// Each agent renders as its own CardContainer with icon + title +
+// meta + state tag + active-channel chips + Configure action, matching
+// the pack-card pattern already used in KnowledgePanel, ToolsPanel,
+// and ChannelsPanel.
 // ─────────────────────────────────────────────────────────────────────
 
 type StatusFilter = "all" | AIAgentStatus
@@ -24,9 +25,7 @@ interface VoiceAgentsTabProps {
   onOpenAgent: (id: string) => void
 }
 
-// Map lifecycle status → the EntityList state tag variant so a demo
-// reads Published/Draft/Paused as green/neutral/amber immediately.
-const STATE_FOR: Record<AIAgentStatus, { label: string; variant: "success" | "neutral" | "alert" }> = {
+const STATE_FOR: Record<AIAgentStatus, { label: string; variant: TagVariant }> = {
   Published: { label: "Published", variant: "success" },
   Draft:     { label: "Draft",     variant: "neutral" },
   Paused:    { label: "Paused",    variant: "alert"   },
@@ -46,30 +45,6 @@ export function VoiceAgentsTab({ agents, onOpenAgent }: VoiceAgentsTabProps) {
           || a.description.toLowerCase().includes(q)
     })
   }, [agents, filter, search])
-
-  // Every filtered agent → one EntityListItemData row. Everything
-  // beyond that (icon, title, meta, state tag, tags for channels,
-  // Configure action) is a typed field EntityList already renders.
-  const items: EntityListItemData[] = filtered.map(a => {
-    const activeKinds = a.channels.filter(c => c.active).map(c => c.kind)
-    return {
-      id:          a.id,
-      iconVariant: a.status === "Published" ? "info" : "neutral",
-      iconName:    "Bot",
-      title:       `${a.name} — ${a.purpose}`,
-      description: a.description,
-      primaryMeta: [
-        { iconName: "Hash",  label: `${a.numbersAssigned} number${a.numbersAssigned === 1 ? "" : "s"}` },
-        { iconName: "Phone", label: `${a.callsHandled30d.toLocaleString()} calls · 30d` },
-      ],
-      state: STATE_FOR[a.status],
-      // Active channels render as chips in the body row. Web Chat is
-      // capitalised in labels because "webchat" looks like a typo.
-      tags: activeKinds.map(k => ({ label: k === "webchat" ? "Web Chat" : k[0].toUpperCase() + k.slice(1) })),
-      actions: [{ label: "Configure", variant: "primary", onClick: () => onOpenAgent(a.id) }],
-      onClick: () => onOpenAgent(a.id),
-    }
-  })
 
   return (
     <div className="flex flex-col gap-4">
@@ -101,7 +76,7 @@ export function VoiceAgentsTab({ agents, onOpenAgent }: VoiceAgentsTabProps) {
       </div>
 
       {/* List */}
-      {items.length === 0 ? (
+      {filtered.length === 0 ? (
         <CardContainer variant="default" size="default">
           <EmptyState
             icon={search ? Search : Bot}
@@ -112,8 +87,62 @@ export function VoiceAgentsTab({ agents, onOpenAgent }: VoiceAgentsTabProps) {
           />
         </CardContainer>
       ) : (
-        <EntityList items={items}/>
+        <div className="flex flex-col gap-3">
+          {filtered.map(a => (
+            <AgentCard key={a.id} agent={a} onOpen={() => onOpenAgent(a.id)}/>
+          ))}
+        </div>
       )}
     </div>
+  )
+}
+
+// ─── AgentCard — one CardContainer per agent row ─────────────────
+
+function AgentCard({ agent, onOpen }: { agent: VoiceAIAgent; onOpen: () => void }) {
+  const state = STATE_FOR[agent.status]
+  const activeKinds = agent.channels.filter(c => c.active).map(c => c.kind)
+  return (
+    <CardContainer variant="default" size="default">
+      <div className="flex items-start gap-3">
+        <HighlightIcon
+          icon={<Bot size={16}/>}
+          variant={agent.status === "Published" ? "informative" : "neutral"}
+          size="md"
+          iconColor="dark"
+        />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: 4 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-title)" }}>
+              {agent.name} — {agent.purpose}
+            </span>
+            <Tag variant={state.variant} size="sm">{state.label}</Tag>
+          </div>
+
+          <div style={{ fontSize: 12, color: "var(--color-text-caption)", lineHeight: 1.5 }}>
+            {agent.description}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 8 }}>
+            <Tag variant="lightBlue" size="sm" leadingIcon={<Hash size={10}/>}>
+              {agent.numbersAssigned} number{agent.numbersAssigned === 1 ? "" : "s"}
+            </Tag>
+            <Tag variant="lightBlue" size="sm" leadingIcon={<PhoneIcon size={10}/>}>
+              {agent.callsHandled30d.toLocaleString()} calls · 30d
+            </Tag>
+            {activeKinds.map(k => (
+              <Tag key={k} variant="secondary" size="sm">
+                {k === "webchat" ? "Web Chat" : k[0].toUpperCase() + k.slice(1)}
+              </Tag>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ flexShrink: 0 }}>
+          <Button variant="primary" size="sm" onClick={onOpen}>Configure</Button>
+        </div>
+      </div>
+    </CardContainer>
   )
 }

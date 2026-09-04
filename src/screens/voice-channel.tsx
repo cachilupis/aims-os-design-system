@@ -269,14 +269,14 @@ function VoiceChannelScreenInner() {
           <Header
             size={isScrolled ? "compress" : "size-l"}
             title={
-              screen === "agents" && agentDetailAgent ? `${agentDetailAgent.name} — ${agentDetailAgent.purpose}` :
+              screen === "agents" && agentDetailAgent ? agentDetailAgent.name :
               screen === "agents"                     ? "Agents" :
               screen === "contacts"                   ? UCP_ALEJANDRO.displayName :
               detailNumber                            ? detailNumber.number :
                                                         "Voice Channel"
             }
             description={
-              screen === "agents" && agentDetailAgent ? `AI voice agent · ${agentDetailAgent.status}` :
+              screen === "agents" && agentDetailAgent ? `${agentDetailAgent.purpose} · AI voice agent · ${agentDetailAgent.status}` :
               screen === "agents"                     ? "AI voice agents that answer, route and act across channels." :
               screen === "contacts"                   ? `Contact · Last interaction ${UCP_ALEJANDRO.lastInteraction}` :
               detailNumber                            ? `${detailNumber.label || "No label"} · ${detailNumber.type} · Full configuration` :
