@@ -544,116 +544,281 @@ function PermissionsPanel() {
 
 // ─── Activity / Audit Log panel ───────────────────────────────────────────────
 
-type AuditCategory = "auth" | "permission" | "data" | "admin" | "group"
+type AuditAction = "Login" | "Update" | "Create" | "Delete" | "Permission" | "Group" | "Export"
+type AuditResult = "Success" | "Failed"
+type AuditSource = "UI" | "API" | "System"
 
 type AuditEvent = {
-  msg: string
-  detail?: string
-  timestamp: string
-  category: AuditCategory
-  actor?: string
+  timestamp: string   // "Sep 4, 2026 20:14:02 UTC"
+  relative: string    // "2h ago"
+  user: string
+  userId: string
+  action: AuditAction
+  resource: string
+  description: string
+  result: AuditResult
+  source: AuditSource
+  roleAtEvent: string
+  ip: string
+  sessionId: string
+  resourcePath: string
+  diff?: { before: string; after: string }
 }
 
 const AUDIT_LOG: AuditEvent[] = [
-  { msg: "Signed in",                  detail: "Chrome · macOS · 192.168.1.42",          timestamp: "Sep 4, 2026 · 14:02",  category: "auth" },
-  { msg: "Permission override saved",  detail: "governance.sandbox.connect_sources → Granted", timestamp: "Sep 3, 2026 · 10:17", category: "permission", actor: "Thomas Gonzalez" },
-  { msg: "Data Studio model updated",  detail: "customer_360_v2 · configuration change", timestamp: "Sep 2, 2026 · 16:34",  category: "data" },
-  { msg: "Added to Leadership group",  detail: "Added by Maria García",                  timestamp: "Aug 20, 2026 · 09:15", category: "group",      actor: "Maria García" },
-  { msg: "Role updated",               detail: "Viewer → Owner",                         timestamp: "Aug 18, 2026 · 16:10", category: "admin",      actor: "Maria García" },
-  { msg: "Promotion packet approved",  detail: "GV-2200 · Governance Studio",            timestamp: "Aug 15, 2026 · 11:30", category: "data" },
-  { msg: "Signed in",                  detail: "Safari · macOS · 192.168.1.42",          timestamp: "Aug 12, 2026 · 08:05", category: "auth" },
-  { msg: "Files uploaded",             detail: "3 files → Governance Drives",            timestamp: "Aug 10, 2026 · 15:20", category: "data" },
-  { msg: "Sandbox created",            detail: "SB-2026-08 · Governance Studio",         timestamp: "Aug 8, 2026 · 10:05",  category: "data" },
-  { msg: "MFA device enrolled",        detail: "Authenticator app (TOTP)",               timestamp: "Aug 1, 2026 · 09:00",  category: "auth" },
-  { msg: "Permission denied removed",  detail: "datastudio.models.publish → cleared",    timestamp: "Jul 28, 2026 · 14:40", category: "permission", actor: "Maria García" },
-  { msg: "Workspace invitation accepted", detail: "Avance Financial workspace",          timestamp: "Jan 14, 2025 · 09:00", category: "admin" },
+  {
+    timestamp: "Sep 4, 2026 14:02:18 UTC", relative: "2h ago",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Login",
+    resource: "platform", description: "Signed in successfully.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F12", resourcePath: "avance-corp / platform / session",
+  },
+  {
+    timestamp: "Sep 3, 2026 10:17:44 UTC", relative: "Yesterday",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Permission",
+    resource: "governance.sandbox.connect_sources",
+    description: "Permission override applied — connect_sources granted.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F11", resourcePath: "avance-corp / Governance Studio / sandbox / connect_sources",
+    diff: { before: '{ "state": "" }', after: '{ "state": "g-direct" }' },
+  },
+  {
+    timestamp: "Sep 2, 2026 16:34:05 UTC", relative: "2d ago",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Update",
+    resource: "customer_360_v2", description: "Updated model configuration.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F10", resourcePath: "avance-corp / Data Studio / models / customer_360_v2",
+    diff: { before: '{ "retention_days": 30 }', after: '{ "retention_days": 90 }' },
+  },
+  {
+    timestamp: "Aug 20, 2026 09:15:00 UTC", relative: "Aug 20",
+    user: "Maria García", userId: "usr_mg002", action: "Group",
+    resource: "Leadership", description: "Added Thomas Gonzalez to Leadership group.",
+    result: "Success", source: "UI", roleAtEvent: "Admin",
+    ip: "10.0.0.5", sessionId: "sess-MG401", resourcePath: "avance-corp / People & Access / groups / Leadership",
+  },
+  {
+    timestamp: "Aug 18, 2026 16:10:33 UTC", relative: "Aug 18",
+    user: "Maria García", userId: "usr_mg002", action: "Update",
+    resource: "role assignment", description: "Role changed from Viewer to Owner.",
+    result: "Success", source: "UI", roleAtEvent: "Admin",
+    ip: "10.0.0.5", sessionId: "sess-MG400", resourcePath: "avance-corp / People & Access / members / usr_tg001 / role",
+    diff: { before: '{ "role": "Viewer" }', after: '{ "role": "Owner" }' },
+  },
+  {
+    timestamp: "Aug 15, 2026 11:30:20 UTC", relative: "Aug 15",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Update",
+    resource: "GV-2200", description: "Promotion packet GV-2200 approved.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F09", resourcePath: "avance-corp / Governance Studio / promotion-packets / GV-2200",
+  },
+  {
+    timestamp: "Aug 10, 2026 15:20:44 UTC", relative: "Aug 10",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Create",
+    resource: "governance_drives", description: "Uploaded 3 files to Governance Drives.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F08", resourcePath: "avance-corp / Governance Studio / drives / governance_drives",
+  },
+  {
+    timestamp: "Aug 1, 2026 09:00:00 UTC", relative: "Aug 1",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Update",
+    resource: "mfa_device", description: "MFA device enrolled — Authenticator app (TOTP).",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F05", resourcePath: "avance-corp / platform / security / mfa",
+  },
+  {
+    timestamp: "Jul 28, 2026 14:40:11 UTC", relative: "Jul 28",
+    user: "Maria García", userId: "usr_mg002", action: "Permission",
+    resource: "datastudio.models.publish", description: "Permission denial removed — publish cleared.",
+    result: "Success", source: "UI", roleAtEvent: "Admin",
+    ip: "10.0.0.5", sessionId: "sess-MG390", resourcePath: "avance-corp / Data Studio / permissions / models.publish",
+    diff: { before: '{ "state": "g-denied" }', after: '{ "state": "" }' },
+  },
+  {
+    timestamp: "Jan 14, 2025 09:00:00 UTC", relative: "Jan 14, 2025",
+    user: "System", userId: "sys", action: "Create",
+    resource: "workspace_membership", description: "Workspace invitation accepted.",
+    result: "Success", source: "System", roleAtEvent: "—",
+    ip: "—", sessionId: "—", resourcePath: "avance-corp / People & Access / members / usr_tg001",
+  },
 ]
 
-const AUDIT_CATEGORY_META: Record<AuditCategory, { label: string; color: string; icon: React.ReactNode }> = {
-  auth:       { label: "Auth",        color: "var(--badge-info)",    icon: <Icons.LogIn size={13} /> },
-  permission: { label: "Permission",  color: "var(--badge-alert)",   icon: <Icons.ShieldCheck size={13} /> },
-  data:       { label: "Data",        color: "var(--badge-success)", icon: <Icons.FileEdit size={13} /> },
-  admin:      { label: "Admin",       color: "var(--muted-foreground)", icon: <Icons.Settings size={13} /> },
-  group:      { label: "Group",       color: "var(--primary)",       icon: <Icons.Users size={13} /> },
+const ACTION_COLOR: Record<AuditAction, string> = {
+  Login:      "var(--badge-info)",
+  Update:     "var(--primary)",
+  Create:     "var(--badge-success)",
+  Delete:     "var(--badge-error, #ef4444)",
+  Permission: "var(--badge-alert)",
+  Group:      "var(--muted-foreground)",
+  Export:     "var(--muted-foreground)",
 }
 
-const AUDIT_CATEGORIES: Array<AuditCategory | "all"> = ["all", "auth", "permission", "data", "group", "admin"]
+const ACTION_FILTERS: Array<AuditAction | "All"> = ["All", "Login", "Update", "Create", "Permission", "Group"]
+const RESULT_FILTERS: Array<AuditResult | "All"> = ["All", "Success", "Failed"]
 
-function ActivityPanel() {
-  const [active, setActive] = useState<AuditCategory | "all">("all")
-  const filtered = active === "all" ? AUDIT_LOG : AUDIT_LOG.filter(e => e.category === active)
+function AuditUserAvatar({ name, size = 26 }: { name: string; size?: number }) {
+  const initials = name === "System" ? "SY" : name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+  const hue = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", flexShrink: 0,
+      background: `hsl(${hue}, 55%, 42%)`, /* audit-ignore */
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: size * 0.38, fontWeight: 700, color: "#fff", /* audit-ignore */
+      letterSpacing: 0.3,
+    }}>{initials}</div>
+  )
+}
+
+function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+  const actionColor = ACTION_COLOR[ev.action]
 
   return (
-    <div>
-      {/* Category filter */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-        {AUDIT_CATEGORIES.map(cat => {
-          const meta = cat !== "all" ? AUDIT_CATEGORY_META[cat] : null
-          const isActive = active === cat
-          return (
-            <button key={cat} onClick={() => setActive(cat)} style={{
-              padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: 20,
-              border: "1px solid", cursor: "pointer",
-              background: isActive ? (meta?.color ?? "var(--foreground)") : "transparent",
-              color: isActive ? "#fff" /* audit-ignore */ : "var(--muted-foreground)",
-              borderColor: isActive ? (meta?.color ?? "var(--foreground)") : "var(--border)",
-            }}>
-              {cat === "all" ? "All events" : meta!.label}
-            </button>
-          )
-        })}
-        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", alignSelf: "center" }}>
-          {filtered.length} event{filtered.length !== 1 ? "s" : ""}
+    <div style={{ borderBottom: isLast ? "none" : "1px solid var(--border)" }}>
+      {/* Main row */}
+      <div
+        onClick={() => setExpanded(e => !e)}
+        style={{
+          display: "grid", gridTemplateColumns: "20px 150px 160px 90px 130px 1fr 70px 60px",
+          padding: "11px 14px", cursor: "pointer", gap: 10, alignItems: "center",
+          background: expanded ? "var(--accent)" : "transparent",
+        }}
+        onMouseEnter={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+        onMouseLeave={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "transparent" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)" }}>
+          {expanded ? <Icons.ChevronDown size={12} /> : <Icons.ChevronRight size={12} />}
+        </div>
+        {/* Timestamp */}
+        <div>
+          <div style={{ fontSize: 12, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{ev.timestamp.split(" ").slice(0, 2).join(" ")}</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{ev.relative}</div>
+        </div>
+        {/* User */}
+        <div style={{ display: "flex", alignItems: "center", gap: 7, overflow: "hidden" }}>
+          <AuditUserAvatar name={ev.user} />
+          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.user}</span>
+        </div>
+        {/* Action badge */}
+        <span style={{
+          fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
+          background: `color-mix(in srgb, ${actionColor} 14%, transparent)`,
+          color: actionColor, border: `1px solid color-mix(in srgb, ${actionColor} 28%, transparent)`,
+          width: "fit-content",
+        }}>{ev.action}</span>
+        {/* Resource */}
+        <span style={{ fontSize: 11, color: "var(--foreground)", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.resource}</span>
+        {/* Description */}
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.description}</span>
+        {/* Result */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {ev.result === "Success"
+            ? <><Icons.Check size={11} color="var(--badge-success)" /><span style={{ fontSize: 11, color: "var(--badge-success)", fontWeight: 600 }}>Success</span></>
+            : <><Icons.X size={11} color="var(--badge-error, #ef4444)" /><span style={{ fontSize: 11, color: "var(--badge-error, #ef4444)", fontWeight: 600 }}>Failed</span></>
+          }
+        </div>
+        {/* Source */}
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "right" }}>
+          {ev.source === "UI" ? <><Icons.Monitor size={11} style={{ display: "inline", marginRight: 3 }} />UI</>
+           : ev.source === "API" ? <><Icons.Code size={11} style={{ display: "inline", marginRight: 3 }} />API</>
+           : "System"}
         </span>
       </div>
 
-      {/* Log */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-        {filtered.map((ev, i) => {
-          const meta = AUDIT_CATEGORY_META[ev.category]
-          return (
-            <div key={i} style={{
-              display: "flex", gap: 14, padding: "13px 18px",
-              borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
-              alignItems: "flex-start",
-            }}>
-              {/* Icon */}
-              <div style={{
-                width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                background: `color-mix(in srgb, ${meta.color} 12%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${meta.color} 25%, transparent)`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: meta.color,
-              }}>
-                {meta.icon}
+      {/* Expanded detail */}
+      {expanded && (
+        <div style={{ background: "var(--surface-raised)", borderTop: "1px solid var(--border)", padding: "14px 44px 16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px 20px", marginBottom: 12 }}>
+            {[
+              { label: "USER ID",        value: ev.userId },
+              { label: "ROLE AT EVENT",  value: ev.roleAtEvent },
+              { label: "IP ADDRESS",     value: ev.ip },
+              { label: "SESSION ID",     value: ev.sessionId },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 3 }}>{label}</div>
+                <div style={{ fontSize: 12, color: "var(--foreground)", fontFamily: "monospace" }}>{value}</div>
               </div>
-              {/* Content */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{ev.msg}</span>
-                  <span style={{
-                    fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4,
-                    background: `color-mix(in srgb, ${meta.color} 12%, transparent)`,
-                    color: meta.color,
-                    border: `1px solid color-mix(in srgb, ${meta.color} 25%, transparent)`,
-                  }}>{meta.label}</span>
+            ))}
+          </div>
+          <div style={{ marginBottom: ev.diff ? 12 : 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 3 }}>RESOURCE PATH</div>
+            <div style={{ fontSize: 12, color: "var(--foreground)", fontFamily: "monospace" }}>{ev.resourcePath}</div>
+          </div>
+          {ev.diff && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 6 }}>CHANGE DIFF</div>
+              <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", fontSize: 12, fontFamily: "monospace" }}>
+                <div style={{ padding: "8px 14px", background: "color-mix(in srgb, var(--badge-error, #ef4444) 8%, transparent)", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ color: "var(--muted-foreground)", marginRight: 8 }}>before</span>{ev.diff.before}
                 </div>
-                {ev.detail && (
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{ev.detail}</div>
-                )}
-                <div style={{ display: "flex", gap: 10, marginTop: 3 }}>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{ev.timestamp}</span>
-                  {ev.actor && (
-                    <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· by {ev.actor}</span>
-                  )}
+                <div style={{ padding: "8px 14px", background: "color-mix(in srgb, var(--badge-success) 8%, transparent)" }}>
+                  <span style={{ color: "var(--muted-foreground)", marginRight: 8 }}>after &nbsp;</span>{ev.diff.after}
                 </div>
               </div>
             </div>
-          )
-        })}
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ActivityPanel() {
+  const [actionFilter, setActionFilter] = useState<AuditAction | "All">("All")
+  const [resultFilter, setResultFilter] = useState<AuditResult | "All">("All")
+  const [search, setSearch] = useState("")
+
+  const filtered = AUDIT_LOG.filter(ev => {
+    if (actionFilter !== "All" && ev.action !== actionFilter) return false
+    if (resultFilter !== "All" && ev.result !== resultFilter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return ev.description.toLowerCase().includes(q) || ev.resource.toLowerCase().includes(q) || ev.user.toLowerCase().includes(q)
+    }
+    return true
+  })
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search events, resources…"
+          style={{ flex: 1, minWidth: 160, padding: "5px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)" }} />
+        <select value={actionFilter} onChange={e => setActionFilter(e.target.value as AuditAction | "All")}
+          style={{ padding: "5px 8px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", cursor: "pointer" }}>
+          {ACTION_FILTERS.map(f => <option key={f} value={f}>{f === "All" ? "Action: All" : f}</option>)}
+        </select>
+        <select value={resultFilter} onChange={e => setResultFilter(e.target.value as AuditResult | "All")}
+          style={{ padding: "5px 8px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", cursor: "pointer" }}>
+          {RESULT_FILTERS.map(f => <option key={f} value={f}>{f === "All" ? "Result: All" : f}</option>)}
+        </select>
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap" }}>{filtered.length} event{filtered.length !== 1 ? "s" : ""}</span>
+        <button style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 6, cursor: "pointer", background: "none", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 5 }}>
+          <Icons.Download size={12} />Export
+        </button>
+      </div>
+
+      {/* Table */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "20px 150px 160px 90px 130px 1fr 70px 60px",
+          padding: "8px 14px", gap: 10,
+          background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
+          fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
+        }}>
+          <span />
+          <span>Timestamp</span><span>User</span><span>Action</span><span>Resource</span>
+          <span>Description</span><span>Result</span><span style={{ textAlign: "right" }}>Source</span>
+        </div>
+        {filtered.map((ev, i) => (
+          <AuditRow key={i} ev={ev} isLast={i === filtered.length - 1} />
+        ))}
         {filtered.length === 0 && (
           <div style={{ padding: "40px 24px", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
-            No events in this category
+            No events match the current filters
           </div>
         )}
       </div>
