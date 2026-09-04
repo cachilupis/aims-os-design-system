@@ -94,53 +94,168 @@ export function WidgetFreshnessBadge({ status }: { status: WidgetFreshness }) {
   return <Tag variant={variant} size="sm">{label}</Tag>
 }
 
-/** A miniature of the widget's shape, for catalog cards. Deliberately abstract:
- *  it says "this is a donut" without pretending to show real data. */
+/** A miniature of the widget's shape, for catalog cards. Thin wrapper — the
+ *  shapes themselves are shared with the builder's live preview below. */
 export function WidgetMiniPreview({ skeleton }: { skeleton: string }) {
-  if (skeleton === "Donut") {
+  return <WidgetShapePreview shape={SHAPE_FOR_SKELETON[skeleton] ?? "bars"} height={52} />
+}
+
+// ── Widget shapes ───────────────────────────────────────────────────────────
+// One set of shapes, drawn at whatever height the caller needs: 52px for a
+// catalog thumbnail, 120px for the builder's live preview.
+//
+// Three screens used to draw these independently. The builder's set was the
+// richest — a real conic-gradient pie, a gauge arc, a heatmap grid — so it is
+// the one that survived; the catalog's thinner set now renders from here too.
+//
+// Two vocabularies map in, because there are still two. The builder names a
+// widget by its render shape ("bar", "pie", "heatmap"); the catalog names it
+// by identity ("Chart", "Donut", "Cost KPI"). Reconciling those is a product
+// decision that has not been made — see the widget vocabulary audit. Until it
+// is, both maps live here side by side, which at least keeps the *drawing*
+// identical no matter which name you arrive with.
+
+export type WidgetShape = "kpi" | "bars" | "pie" | "donut" | "gauge" | "grid" | "rows"
+
+/** Builder vocabulary — the shape you pick when authoring a widget. */
+export const SHAPE_FOR_BUILDER_TYPE: Record<string, WidgetShape> = {
+  kpi: "kpi", costkpi: "kpi", summary: "kpi",
+  bar: "bars", line: "bars", table: "rows", list: "rows", "record-card": "rows",
+  pie: "pie",
+  gauge: "gauge",
+  heatmap: "grid", scatter: "grid", map: "grid",
+}
+
+/** Catalog vocabulary — the identity a widget is filed under. */
+export const SHAPE_FOR_SKELETON: Record<string, WidgetShape> = {
+  KPI: "kpi", "Cost KPI": "kpi", "Stat Row": "kpi",
+  Chart: "bars", Funnel: "bars",
+  Donut: "donut",
+  Gauge: "gauge",
+  Feed: "rows", Alerts: "rows", Board: "rows",
+}
+
+const BARS  = [55, 75, 45, 80, 60, 70, 50, 65]
+const CELLS = [0.8,0.2,0.5,0.9,0.3,0.6,0.1,0.7,0.4,0.8,0.6,0.2,0.9,0.5,0.3,0.7,0.1,0.8,0.4,0.6,0.2,0.9,0.5,0.3]
+
+/** Draws a widget's shape. Abstract on purpose — it says "this is a donut"
+ *  without pretending to show real data.
+ *
+ *  `accent` lets the builder preview follow the colour the user picked; the
+ *  catalog leaves it unset and gets --primary. */
+export function WidgetShapePreview({
+  shape,
+  height = 52,
+  accent,
+}: {
+  shape: WidgetShape | null
+  height?: number
+  accent?: string
+}) {
+  const c = accent || "var(--primary)"
+  const big = height >= 100          // builder preview vs catalog thumbnail
+  const pad = big ? 16 : 8
+
+  if (!shape) {
+    return <div style={{ height, background: "var(--field-border)", borderRadius: 8, opacity: 0.4 }} />
+  }
+
+  if (shape === "kpi") {
+    // At 120px there is room for the real anatomy — a big value, a label, a
+    // bar. At 52px there is not: a "big number" shrinks to a dash and the tile
+    // reads as empty. The thumbnail instead says "one prominent value" with a
+    // single solid block, which is the thing a KPI actually is.
+    if (!big) {
+      return (
+        <div style={{ height, display: "flex", flexDirection: "column", justifyContent: "center", gap: 6, padding: "0 10px" }}>
+          <div style={{ height: 14, width: "52%", background: c, borderRadius: 4, opacity: 0.55 }} />
+          <div style={{ height: 6,  width: "30%", background: c, borderRadius: 3, opacity: 0.22 }} />
+        </div>
+      )
+    }
     return (
-      <div style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ width: 38, height: 38, borderRadius: "50%", border: "10px solid var(--primary)", opacity: 0.3 }} />
+      <div style={{ height, display: "flex", flexDirection: "column", justifyContent: "center", gap: 8, padding: "0 20px" }}>
+        <div style={{ fontSize: 32, fontWeight: 800, color: c, opacity: 0.7, lineHeight: 1 }}>—</div>
+        <div style={{ height: 8,  width: "40%",  background: c, borderRadius: 4, opacity: 0.25 }} />
+        <div style={{ height: 24, width: "100%", background: c, borderRadius: 4, opacity: 0.08 }} />
       </div>
     )
   }
 
-  if (skeleton === "Gauge") {
+  if (shape === "bars") {
     return (
-      <div style={{ height: 52, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div
-          style={{
-            width: 44, height: 22, borderRadius: "22px 22px 0 0",
-            border: "9px solid var(--primary)", borderBottom: "none", opacity: 0.3,
-          }}
-        />
-      </div>
-    )
-  }
-
-  // Row-shaped types — a feed, an alert list, a board column
-  if (skeleton === "Feed" || skeleton === "Alerts" || skeleton === "Board") {
-    return (
-      <div style={{ height: 52, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 5 }}>
-        {[100, 78, 55].map((w, i) => (
+      <div style={{ height, display: "flex", alignItems: "flex-end", gap: big ? 5 : 3, padding: `${pad}px ${pad}px ${big ? 8 : 0}px` }}>
+        {(big ? BARS : BARS.slice(0, 6)).map((h, i, arr) => (
           <div
             key={i}
-            style={{ height: 8, borderRadius: 4, background: "var(--primary)", opacity: 0.18 + i * 0.1, width: `${w}%` }}
+            style={{
+              flex: 1, height: `${h}%`, borderRadius: "2px 2px 0 0",
+              background: i === arr.length - 2 ? c : "var(--color-text-subtitle)",
+              opacity: i === arr.length - 2 ? 0.9 : 0.28,
+            }}
           />
         ))}
       </div>
     )
   }
 
-  // Everything else reads as a bar chart
+  if (shape === "pie") {
+    const d = big ? 80 : 38
+    return (
+      <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div
+          style={{
+            width: d, height: d, borderRadius: "50%",
+            background: `conic-gradient(${c} 0deg 145deg, color-mix(in srgb,${c} 50%, transparent) 145deg 250deg, var(--field-border) 250deg 360deg)`,
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (shape === "donut") {
+    const d = big ? 80 : 38
+    return (
+      <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: d, height: d, borderRadius: "50%", border: `${big ? 20 : 10}px solid ${c}`, opacity: 0.3 }} />
+      </div>
+    )
+  }
+
+  if (shape === "gauge") {
+    const w = big ? 100 : 44
+    return (
+      <div style={{ height, display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: big ? 24 : 12 }}>
+        <div
+          style={{
+            width: w, height: w / 2, borderRadius: `${w}px ${w}px 0 0`,
+            background: `conic-gradient(from 180deg, ${c} 0deg 110deg, var(--field-border) 110deg 180deg)`,
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (shape === "grid") {
+    return (
+      <div style={{ height, display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 3, padding: `${big ? 12 : 6}px ${pad}px` }}>
+        {(big ? CELLS : CELLS.slice(0, 12)).map((o, i) => (
+          <div key={i} style={{ borderRadius: 2, background: o > 0.5 ? c : "var(--field-border)", opacity: o }} />
+        ))}
+      </div>
+    )
+  }
+
+  // rows — a feed, an alert list, a table, a board column
   return (
-    <div style={{ height: 52, display: "flex", alignItems: "flex-end", gap: 3, padding: "6px 8px 0" }}>
-      {[45, 65, 40, 85, 55, 70].map((h, i) => (
+    <div style={{ height, display: "flex", flexDirection: "column", gap: big ? 7 : 5, padding: `${big ? 12 : 6}px ${pad}px` }}>
+      {(big ? [100, 80, 65, 90, 55] : [100, 78, 55]).map((w, i) => (
         <div
           key={i}
           style={{
-            flex: 1, height: `${h}%`, borderRadius: "3px 3px 0 0",
-            background: "var(--primary)", opacity: 0.18 + i * 0.09,
+            height: big ? 10 : 8, width: `${w}%`, borderRadius: 4,
+            background: i === 0 ? c : "var(--field-border)",
+            opacity: i === 0 ? 0.5 : 0.25,
           }}
         />
       ))}

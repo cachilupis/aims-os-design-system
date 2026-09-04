@@ -5,6 +5,7 @@ import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
+import { WidgetShapePreview, SHAPE_FOR_BUILDER_TYPE } from "@/components/experimental/widget-parts"
 import { Tag } from "@/components/ui/tag"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import type { SidebarItem } from "@/components/ui/sidebar"
@@ -207,51 +208,6 @@ function TypeTile({ type, selected, onSelect }: { type: typeof WIDGET_TYPES[0]; 
 }
 
 // DS-GAP: SkeletonShape — CSS-only skeleton preview shape keyed by widget type. Closest DS component: none.
-function SkeletonShape({ typeId, color }: { typeId: string | null; color: string }) {
-  const c = color || "var(--primary)"
-  const bars = [55, 75, 45, 80, 60, 70, 50, 65]
-  if (!typeId) return <div style={{ height: 120, background: "var(--field-border)", borderRadius: 8, opacity: 0.4 }} />
-  if (typeId === "kpi" || typeId === "costkpi") return (
-    <div style={{ height: 120, display: "flex", flexDirection: "column", justifyContent: "center", gap: 8, padding: "0 20px" }}>
-      <div style={{ fontSize: 32, fontWeight: 800, color: c, opacity: 0.7 }}>—</div>
-      <div style={{ height: 8, width: "40%", background: c, borderRadius: 4, opacity: 0.25 }} />
-      <div style={{ height: 24, width: "100%", background: c, borderRadius: 4, opacity: 0.08 }} />
-    </div>
-  )
-  if (typeId === "bar" || typeId === "line") return (
-    <div style={{ height: 120, display: "flex", alignItems: "flex-end", gap: 5, padding: "16px 16px 8px" }}>
-      {bars.map((h, i) => (
-        <div key={i} style={{ flex: 1, height: `${h}%`, background: i === 6 ? c : "var(--color-text-subtitle)", borderRadius: "2px 2px 0 0", opacity: i === 6 ? 0.75 : 0.18 }} />
-      ))}
-    </div>
-  )
-  if (typeId === "pie") return (
-    <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 80, height: 80, borderRadius: "50%", background: `conic-gradient(${c} 0deg 145deg, color-mix(in srgb,${c} 50%, transparent) 145deg 255deg, var(--field-border) 255deg)`, opacity: 0.65 }} />
-    </div>
-  )
-  if (typeId === "gauge") return (
-    <div style={{ height: 120, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 6, paddingBottom: 24 }}>
-      <div style={{ width: 100, height: 50, borderRadius: "100px 100px 0 0", background: `conic-gradient(from 180deg, ${c} 0deg 110deg, var(--field-border) 110deg 180deg)`, opacity: 0.7 }} />
-    </div>
-  )
-  if (typeId === "heatmap" || typeId === "scatter" || typeId === "map") {
-    const cells = [0.8,0.2,0.5,0.9,0.3,0.6,0.1,0.7,0.4,0.8,0.6,0.2,0.9,0.5,0.3,0.7,0.1,0.8,0.4,0.6,0.2,0.9,0.5,0.3]
-    return (
-      <div style={{ height: 120, display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 3, padding: "12px 16px" }}>
-        {cells.map((o, i) => <div key={i} style={{ borderRadius: 2, background: o > 0.5 ? c : "var(--field-border)", opacity: o }} />)}
-      </div>
-    )
-  }
-  return (
-    <div style={{ height: 120, display: "flex", flexDirection: "column", gap: 7, padding: "12px 16px" }}>
-      {[100, 80, 65, 90, 55].map((w, i) => (
-        <div key={i} style={{ height: 10, width: `${w}%`, background: i === 0 ? c : "var(--field-border)", borderRadius: 3, opacity: i === 0 ? 0.5 : 0.25 }} />
-      ))}
-    </div>
-  )
-}
-
 // DS-GAP: WidgetPreviewPanel — sticky live preview panel with size switcher and widget info. Closest DS component: CardContainer.
 function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previewSize, setPreviewSize, saveHint }: {
   typeId: string | null; name: string; sourceId: string | null; freshness: string; accentColor: string;
@@ -284,7 +240,11 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, pr
               <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{name || "Untitled widget"}</span>
               <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
             </div>
-            <SkeletonShape typeId={typeId} color={accentColor} />
+            <WidgetShapePreview
+              shape={typeId ? SHAPE_FOR_BUILDER_TYPE[typeId] ?? "rows" : null}
+              height={120}
+              accent={accentColor}
+            />
             <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid var(--field-border)" }}>
               {srcLabel && <Tag variant="informative">{srcLabel}</Tag>}
               {typeInfo && <Tag variant="neutral">{typeInfo.label}</Tag>}
