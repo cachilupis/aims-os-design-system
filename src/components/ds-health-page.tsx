@@ -22,6 +22,7 @@ import { Tag, type TagVariant } from "@/components/ui/tag"
 import { EmptyState } from "@/components/ui/empty-state"
 import { AlertBanner } from "@/components/ui/alert-banner"
 import health from "@/ds-health.json"
+import dsIndex from "@/../ds-index.json"
 
 type Verdict = "align" | "promote" | "accepted" | "undecided"
 
@@ -84,6 +85,8 @@ function Stat({ label, value, hint }: { label: string; value: number | string; h
 
 export function DsHealthPage() {
   const undecided = totals.undecided ?? 0
+  const promotable = (dsIndex as { promotionQueue?: { id: string; usedInScreens: number; import: string }[] })
+    .promotionQueue ?? []
 
   const columns: TableColumn<Finding>[] = [
     {
@@ -180,7 +183,44 @@ export function DsHealthPage() {
         <Stat label="To align" value={totals.align ?? 0} hint="Use the real DS component" />
         <Stat label="To promote" value={totals.promote ?? 0} hint="Candidates for a component or variant" />
         <Stat label="Accepted" value={totals.accepted ?? 0} hint="False positives and exceptions" />
+          <Stat label="Ready to promote" value={promotable.length} hint="Candidates used in 2+ screens" />
       </div>
+
+        {/* ── Promotion queue ──────────────────────────────────────────────
+            Candidates used in two or more screens. Two is the line because one
+            use is a single screen's decision and two is a pattern — and a
+            pattern belongs in the catalog with a spec behind it.
+
+            This counts imports, not copies. The duplicate-component finding
+            above catches the same component written twice, which is the failure
+            this queue exists to prevent; once reuse works that check goes quiet
+            and a candidate imported by five screens would never surface here. */}
+        {promotable.length > 0 && (
+          <div className="flex flex-col gap-[10px]">
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>
+              Ready to promote
+            </div>
+            <p style={{ fontSize: 13, color: "var(--color-text-subtitle)", lineHeight: 1.6, margin: 0, maxWidth: "68ch" }}>
+              Built for one prototype, now used in more than one. Give it a spec — size class, widths,
+              states, dontUse — and move it from experimental/ to ui/.
+            </p>
+            <CardContainer size="sm" className="!p-0 overflow-hidden">
+              <Table
+                size="sm"
+                columns={[
+                  { key: "id",   header: "Candidate", width: "30%" },
+                  { key: "uses", header: "Used in",   width: "20%" },
+                  { key: "path", header: "Import",    width: "50%" },
+                ] as TableColumn<{ id: string; uses: string; path: string }>[]}
+                data={promotable.map((c) => ({
+                  id:   c.id,
+                  uses: `${c.usedInScreens} screens`,
+                  path: c.import,
+                }))}
+              />
+            </CardContainer>
+          </div>
+        )}
 
       {findings.length === 0 ? (
         <EmptyState
