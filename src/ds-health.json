@@ -29,8 +29,8 @@
   },
   "totals": {
     "hardcodedColourErrors": 0,
-    "findings": 16,
-    "undecided": 16
+    "findings": 17,
+    "undecided": 17
   },
   "staleDecisions": [],
   "findings": [
@@ -220,6 +220,22 @@
       "count": null,
       "lines": null,
       "message": "`FieldLabel` is defined separately in 3 screens (pm-thomas-new-dashboard.tsx, stepper-nav-footer-example.tsx, voice-channel/AcquireNumberModal.tsx) — no copy is canonical, so they drift. Extract one shared version, or rename if they are unrelated",
+      "verdict": "undecided",
+      "why": null,
+      "decidedBy": null,
+      "decidedOn": null,
+      "repeatCount": 1
+    },
+    {
+      "key": "duplicate-component:src/screens/pm-thomas-universal-profile.tsx:MetricRow",
+      "type": "duplicate-component",
+      "typeLabel": "Same component in two screens",
+      "file": "src/screens/pm-thomas-universal-profile.tsx",
+      "line": 304,
+      "name": "MetricRow",
+      "count": null,
+      "lines": null,
+      "message": "`MetricRow` is defined separately in 2 screens (pm-thomas-universal-profile.tsx, voice-channel/CallDetailPage.tsx) — no copy is canonical, so they drift. Extract one shared version, or rename if they are unrelated",
       "verdict": "undecided",
       "why": null,
       "decidedBy": null,
