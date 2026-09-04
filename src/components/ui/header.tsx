@@ -3,6 +3,9 @@ import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highlight-icon"
+import { Menu, MenuItem } from "@/components/ui/menu-item"
+import { MoreHorizontal } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
 
 export type HeaderSize = "size-l" | "size-m" | "compress"
 export type { HighlightIconVariant }
@@ -76,6 +79,30 @@ export interface HeaderProps {
   primaryAction?: HeaderAction
   /** A second, lower-rank action beside the primary one. Defaults to "secondary" priority. */
   secondaryAction?: HeaderAction
+  /** Actions behind a "···" overflow menu, placed before the CTAs.
+   *
+   *  Three screens had already written `DS-GAP: Header has no overflow slot`
+   *  and put a kebab in a row underneath instead. CLAUDE.md documents the
+   *  pattern in detail — Archive and Duplicate as defaults, icon + text, size S
+   *  — so it is a real pattern the Header simply had nowhere to put.
+   *
+   *  Destructive actions belong here, not in `primaryAction`: an overflow menu
+   *  is the one place a Delete is not one stray click away. */
+  overflowActions?: HeaderAction[]
+  /** Controls that are not actions: a notification bell, an inline rename, a
+   *  split button, a saved-at indicator. Rendered before the overflow and the
+   *  CTAs, right-aligned.
+   *
+   *  Untyped on purpose. `primaryAction` and `secondaryAction` are objects
+   *  because the DS knows exactly what a CTA is and must own its variant — that
+   *  is the whole reason no screen writes `variant="main"` any more. It does not
+   *  know what a bell with a badge is, and pretending otherwise would produce a
+   *  worse API than admitting it. Five call sites needed this and had to
+   *  improvise a row under the Header instead.
+   *
+   *  Not a loophole for a CTA. If it is the page's main action, it is
+   *  `primaryAction`. */
+  aux?: React.ReactNode
   /**
    * Sticky filters row — shown only in compress mode, directly below the title row.
    * No border between the title row and this row. Renders after the gradient fade.
@@ -103,6 +130,58 @@ const VARIANT_BY_PRIORITY: Record<HeaderActionPriority, "main" | "secondary" | "
   primary:   "main",
   secondary: "secondary",
   tertiary:  "tertiary",
+}
+
+/** The "···" menu. Closes on outside click and on Escape — a menu that traps
+ *  you is worse than no menu. */
+function OverflowMenu({ actions }: { actions: HeaderAction[] }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const away = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false) }
+    document.addEventListener("mousedown", away)
+    document.addEventListener("keydown", esc)
+    return () => {
+      document.removeEventListener("mousedown", away)
+      document.removeEventListener("keydown", esc)
+    }
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <Button
+        variant="tertiary"
+        size="sm"
+        aria-label="More actions"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen(v => !v)}
+        icon={<MoreHorizontal size={16} strokeWidth={1.75} />}
+        iconPosition="alone"
+      />
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+4px)] z-[10001]">
+          <Menu className="w-auto min-w-[180px]">
+            {actions.map(a => (
+              <MenuItem
+                key={a.label}
+                label={a.label}
+                size="sm"
+                state={a.disabled ? "disabled" : "default"}
+                leadingIcon={a.icon ? <a.icon size={14} strokeWidth={1.75} /> : undefined}
+                onClick={() => { if (!a.disabled) { a.onClick?.(); setOpen(false) } }}
+              />
+            ))}
+          </Menu>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function renderAction(action: HeaderAction, fallback: HeaderActionPriority) {
@@ -134,6 +213,8 @@ export function Header({
   iconVariant = "informative",
   primaryAction,
   secondaryAction,
+  overflowActions,
+  aux,
   filters,
   className,
   style,
@@ -194,8 +275,10 @@ export function Header({
 
         {/* Right zone: secondary + primary CTAs. The Header builds the buttons,
             so no screen has to name a variant — see HeaderAction. */}
-        {(primaryAction || secondaryAction) && (
+        {(primaryAction || secondaryAction || overflowActions?.length || aux) && (
           <div className="flex items-center gap-[8px] shrink-0">
+            {aux}
+            {overflowActions?.length ? <OverflowMenu actions={overflowActions} /> : null}
             {secondaryAction && renderAction(secondaryAction, "secondary")}
             {primaryAction && renderAction(primaryAction, "primary")}
           </div>

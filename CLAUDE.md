@@ -88,6 +88,25 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER** open a `ModalDialog` for non-blocking or non-destructive content — use `SlideOut`.
 - **NEVER** show a filter chip before the user clicks Apply.
 
+### Header slots — where a control goes
+
+`Header` has four slots on its right side, rendered in this order: `aux`, the
+overflow menu, `secondaryAction`, `primaryAction`. Picking the wrong one is how
+five screens ended up rendering a loose row underneath the Header instead.
+
+| What it is | Slot |
+|---|---|
+| The page's one main action | `primaryAction` — an action object, never a `Button` |
+| A second action, same nature | `secondaryAction` — same shape |
+| Destructive or secondary actions that should not be one click away | `overflowActions` — an array; Header renders and anchors the `•••` menu |
+| A control that is not an action: a notification bell, an inline rename, a saved-at indicator, a split button | `aux` — a `ReactNode`, because the DS has no component for these and pretending otherwise would be worse |
+
+`aux` is not a loophole for a CTA. If it is the page's main action it belongs in
+`primaryAction`, which exists precisely so no screen writes `variant="main"`.
+
+Anything destructive goes in `overflowActions`, not `primaryAction` — an
+overflow menu is the one place a Delete is not a stray click away.
+
 ### 3-dot context menu (kebab `•••`)
 - Global default actions: **Archive** + **Duplicate** — always in that order, always present unless the entity type explicitly excludes them.
 - **Delete** is context-dependent — only include it when the entity type supports deletion. It is NOT a global default.

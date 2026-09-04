@@ -281,7 +281,7 @@
       "group": "Components",
       "tier": "catalog",
       "description": "Floating list of selectable options. Used inside dropdowns, context menus, command palettes, and select fields. Supports icons, subtext, dividers, and section headers. Placement is not the caller's decision: the panel's left edge aligns with its trigger's left edge, 4px below, flipping to right-aligned only when it would cross the viewport edge — use src/lib/dropdown-anchor.ts, never centre it on the trigger and never open it away from the element that was clicked. In the 3-dot kebab menu, always the icon + text variant at size S.",
-      "usedInScreens": 2,
+      "usedInScreens": 1,
       "hasSpec": true,
       "hasCatalogPage": true
     },

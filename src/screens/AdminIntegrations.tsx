@@ -1176,29 +1176,24 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
       activeSidebarId="integrations"
       onSidebarItemClick={onNavigate}
       header={(isScrolled) => detailView ? (
-        <>
-          <Header
-            size={isScrolled ? "compress" : "size-m"}
-            title={detailView.name}
-            description="Integrations"
-            backButton
-            showBackInCompress
-            onBack={() => setDetailView(null)}
-            secondaryAction={{ label: "Ask AI", icon: Icons.Sparkles }}
-            primaryAction={detailView.status === "error"
-              ? { label: "Re-authenticate", icon: Icons.RefreshCw, onClick: () => handleAction(detailView.id, "reauth") }
-              : { label: "Rotate credentials", icon: Icons.KeyRound, priority: "secondary" }}
-          />
-          {/* DS-GAP: Header has no overflow (kebab) slot, so Disconnect — a
-              destructive action that should sit behind "···" — renders in this
-              row instead. Third action of three; Header takes only two. */}
-          <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 32px 8px" }}>
-            <Button variant="tertiary" size="sm" style={{ color: "var(--badge-error)" }}
-              onClick={() => { handleAction(detailView.id, "disconnect"); setDetailView(null) }}>
-              Disconnect
-            </Button>
-          </div>
-        </>
+        <Header
+          size={isScrolled ? "compress" : "size-m"}
+          title={detailView.name}
+          description="Integrations"
+          backButton
+          showBackInCompress
+          onBack={() => setDetailView(null)}
+          secondaryAction={{ label: "Ask AI", icon: Icons.Sparkles }}
+          primaryAction={detailView.status === "error"
+            ? { label: "Re-authenticate", icon: Icons.RefreshCw, onClick: () => handleAction(detailView.id, "reauth") }
+            : { label: "Rotate credentials", icon: Icons.KeyRound, priority: "secondary" }}
+          // Behind the "···" because it is destructive. An overflow menu is the
+          // one place a Disconnect is not a stray click away.
+          overflowActions={[
+            { label: "Disconnect", icon: Icons.Unplug,
+              onClick: () => { handleAction(detailView.id, "disconnect"); setDetailView(null) } },
+          ]}
+        />
       ) : tab === "catalog" ? (
         <Header
           size={isScrolled ? "compress" : "size-m"}
