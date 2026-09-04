@@ -11,6 +11,7 @@ import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { Chip }        from "@/components/ui/chip"
+import { Toggle }      from "@/components/ui/toggle"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -376,7 +377,6 @@ function PermIcon({ state }: { state: PermState }) {
 function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
   const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
   const hasChildren = (node.children?.length ?? 0) > 0
-  const grantedChildren = node.children?.filter(c => c.state !== "").length ?? 0
 
   return (
     <div>
@@ -399,10 +399,9 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
               : <Icons.ChevronRight size={12} color="var(--muted-foreground)" />
             : null}
         </div>
-        <PermIcon state={node.state} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{node.label}</span>
+            <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
             {node.role && (
               <span style={{
                 fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
@@ -419,15 +418,8 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
           {node.desc && (
             <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{node.desc}</div>
           )}
-          {depth === 0 && hasChildren && (
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>
-              {grantedChildren} of {node.children?.length} permissions granted
-            </div>
-          )}
         </div>
-        {node.locked && (
-          <Icons.Lock size={11} color="var(--muted-foreground)" style={{ flexShrink: 0, opacity: 0.5 }} />
-        )}
+        <Toggle checked disabled size="sm" />
       </div>
       {expanded && hasChildren && node.children!.map(child => (
         <PermTreeNode key={child.id} node={child} depth={depth + 1} />
