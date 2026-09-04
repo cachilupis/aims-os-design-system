@@ -1207,22 +1207,170 @@ function MemberDetailPage({
         {/* Right: tabs */}
         <div>
           <DetailTabs
-            tabs={["Apps", "Roles", "Groups", "Permissions", "Resources", "Security", "Activity"]}
+            tabs={["Overview", "Apps", "Roles", "Groups", "Permissions", "Resources", "Security", "Activity"]}
             active={activeTab}
             onChange={setActiveTab}
           />
           <div style={{ marginTop: 20 }}>
-            {activeTab === 0 && <AppsPanel member={member} />}
-            {activeTab === 1 && <MemberRolesPanel member={member} />}
-            {activeTab === 2 && <MemberGroupsPanel member={member} />}
-            {activeTab === 3 && <MemberPermissionsPanel member={member} />}
-            {activeTab === 4 && <ResourcesPanel member={member} />}
-            {activeTab === 5 && <SecurityPanel member={member} onUpdate={onUpdate} />}
-            {activeTab === 6 && <ActivityPanel />}
+            {activeTab === 0 && <OverviewPanel member={member} />}
+            {activeTab === 1 && <AppsPanel member={member} />}
+            {activeTab === 2 && <MemberRolesPanel member={member} />}
+            {activeTab === 3 && <MemberGroupsPanel member={member} />}
+            {activeTab === 4 && <MemberPermissionsPanel member={member} />}
+            {activeTab === 5 && <ResourcesPanel member={member} />}
+            {activeTab === 6 && <SecurityPanel member={member} onUpdate={onUpdate} />}
+            {activeTab === 7 && <ActivityPanel />}
           </div>
         </div>
       </div>
     </ScreenLayout>
+  )
+}
+
+// ─── Overview tab ─────────────────────────────────────────────────────────────
+
+type StudioUsage = {
+  id: string
+  label: string
+  icon: React.ReactNode
+  role: string
+  lastUsed: string
+  tokensMonth: number
+  tokensLimit: number
+  status: "active" | "idle" | "none"
+}
+
+const STUDIO_USAGE_FIXTURE: Record<string, StudioUsage[]> = {
+  tg: [
+    { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={15} />, role: "Owner", lastUsed: "Today",     tokensMonth: 142000, tokensLimit: 200000, status: "active" },
+    { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={15} />,    role: "Owner", lastUsed: "Yesterday", tokensMonth: 87500,  tokensLimit: 200000, status: "active" },
+    { id: "agentic",    label: "Agentic Studio",     icon: <Icons.Bot size={15} />,          role: "Owner", lastUsed: "3d ago",    tokensMonth: 34200,  tokensLimit: 200000, status: "idle" },
+    { id: "admin",      label: "Admin Console",      icon: <Icons.Settings size={15} />,     role: "Owner", lastUsed: "Today",     tokensMonth: 12800,  tokensLimit: 200000, status: "active" },
+  ],
+  mg: [
+    { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={15} />, role: "Admin", lastUsed: "Today",  tokensMonth: 98000, tokensLimit: 150000, status: "active" },
+    { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={15} />,    role: "Admin", lastUsed: "2d ago", tokensMonth: 41000, tokensLimit: 150000, status: "idle" },
+    { id: "admin",      label: "Admin Console",      icon: <Icons.Settings size={15} />,     role: "Admin", lastUsed: "Today",  tokensMonth: 6200,  tokensLimit: 150000, status: "active" },
+  ],
+}
+
+const DEFAULT_STUDIO_USAGE: StudioUsage[] = [
+  { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={15} />, role: "Viewer", lastUsed: "5d ago", tokensMonth: 12000, tokensLimit: 80000, status: "idle" },
+]
+
+function TokenBar({ used, limit }: { used: number; limit: number }) {
+  const pct = Math.min(100, Math.round((used / limit) * 100))
+  const color = pct >= 90 ? "var(--badge-error, #ef4444)" : pct >= 70 ? "var(--badge-alert)" : "var(--badge-success)"
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ flex: 1, height: 5, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 99, transition: "width 0.4s" }} />
+      </div>
+      <span style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", minWidth: 60, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+        {(used / 1000).toFixed(0)}K / {(limit / 1000).toFixed(0)}K
+      </span>
+    </div>
+  )
+}
+
+function OverviewPanel({ member }: { member: Member }) {
+  const studios = STUDIO_USAGE_FIXTURE[member.id] ?? DEFAULT_STUDIO_USAGE
+  const totalTokens = studios.reduce((s, u) => s + u.tokensMonth, 0)
+  const totalLimit  = studios.reduce((s, u) => s + u.tokensLimit, 0)
+  const activeCount = studios.filter(u => u.status === "active").length
+
+  const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
+  const permCount = (PERM_TREE["governance"] ?? []).flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-direct" || n.state === "g-inh").length
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* KPI strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        {[
+          { label: "Active studios",  value: activeCount,           icon: <Icons.LayoutDashboard size={14} />, color: "var(--primary)" },
+          { label: "Groups",          value: memberGroups.length,   icon: <Icons.Users size={14} />,           color: "var(--badge-info)" },
+          { label: "Permissions",     value: permCount,             icon: <Icons.ShieldCheck size={14} />,    color: "var(--badge-success)" },
+          { label: "Tokens this month", value: `${(totalTokens / 1000).toFixed(0)}K`, icon: <Icons.Zap size={14} />, color: "var(--badge-alert)" },
+        ].map(({ label, value, icon, color }) => (
+          <div key={label} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <span style={{ color }}>{icon}</span>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600 }}>{label}</span>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)", lineHeight: 1 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Active Studios */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Studio access</span>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{studios.length} studio{studios.length !== 1 ? "s" : ""}</span>
+        </div>
+        {studios.map((s, i) => (
+          <div key={s.id} style={{
+            display: "grid", gridTemplateColumns: "28px 1fr 80px 90px 8px",
+            padding: "11px 16px", gap: 12, alignItems: "center",
+            borderBottom: i < studios.length - 1 ? "1px solid var(--border)" : "none",
+          }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+              background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "var(--primary)",
+            }}>{s.icon}</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{s.label}</div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>Role: {s.role} · Last used: {s.lastUsed}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Token usage</div>
+              <TokenBar used={s.tokensMonth} limit={s.tokensLimit} />
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <span style={{
+                fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20,
+                background: s.status === "active"
+                  ? "color-mix(in srgb, var(--badge-success) 14%, transparent)"
+                  : "color-mix(in srgb, var(--muted-foreground) 12%, transparent)",
+                color: s.status === "active" ? "var(--badge-success)" : "var(--muted-foreground)",
+                border: s.status === "active"
+                  ? "1px solid color-mix(in srgb, var(--badge-success) 28%, transparent)"
+                  : "1px solid var(--border)",
+              }}>
+                {s.status === "active" ? "Active" : "Idle"}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Token usage summary */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Token usage — September 2026</span>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{Math.round((totalTokens / totalLimit) * 100)}% of total allocation</span>
+        </div>
+        <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {studios.map(s => (
+            <div key={s.id} style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 12, alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: "var(--muted-foreground)" }}>{s.icon}</span>
+                <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{s.label.replace(" Studio", "").replace(" Console", "")}</span>
+              </div>
+              <TokenBar used={s.tokensMonth} limit={s.tokensLimit} />
+            </div>
+          ))}
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 10, display: "grid", gridTemplateColumns: "140px 1fr", gap: 12, alignItems: "center" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>Total</span>
+            <TokenBar used={totalTokens} limit={totalLimit} />
+          </div>
+        </div>
+      </div>
+
+    </div>
   )
 }
 
