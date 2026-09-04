@@ -300,13 +300,13 @@ function BackBreadcrumb({ label, onBack }: { label: string; onBack: () => void }
 
 function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number; onChange: (i: number) => void }) {
   return (
-    <div style={{ display: "flex", borderBottom: "1px solid var(--border)", marginBottom: 0 }}>
+    <div style={{ display: "flex", borderBottom: "1px solid var(--border)", marginBottom: 0, overflowX: "auto", scrollbarWidth: "none" }}>
       {tabs.map((t, i) => (
         <button
           key={t}
           onClick={() => onChange(i)}
           style={{
-            padding: "10px 20px", fontSize: 13, fontWeight: 600,
+            padding: "8px 10px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0,
             border: "none", background: "none", cursor: "pointer",
             color: active === i ? "var(--foreground)" : "var(--muted-foreground)",
             borderBottom: active === i ? "2px solid var(--primary)" : "2px solid transparent",
@@ -971,7 +971,7 @@ function MemberDetailPage({
         {/* Right: tabs */}
         <div>
           <DetailTabs
-            tabs={["Apps", "Roles", "Groups", "Resources", "Security", "Activity"]}
+            tabs={["Apps", "Roles", "Groups", "Permissions", "Resources", "Security", "Activity"]}
             active={activeTab}
             onChange={setActiveTab}
           />
@@ -979,9 +979,10 @@ function MemberDetailPage({
             {activeTab === 0 && <AppsPanel member={member} />}
             {activeTab === 1 && <MemberRolesPanel member={member} />}
             {activeTab === 2 && <MemberGroupsPanel member={member} />}
-            {activeTab === 3 && <ResourcesPanel member={member} />}
-            {activeTab === 4 && <SecurityPanel member={member} onUpdate={onUpdate} />}
-            {activeTab === 5 && <ActivityPanel />}
+            {activeTab === 3 && <MemberPermissionsPanel member={member} />}
+            {activeTab === 4 && <ResourcesPanel member={member} />}
+            {activeTab === 5 && <SecurityPanel member={member} onUpdate={onUpdate} />}
+            {activeTab === 6 && <ActivityPanel />}
           </div>
         </div>
       </div>
@@ -1143,6 +1144,147 @@ function MemberGroupsPanel({ member }: { member: Member }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ─── Permissions tab (dual-mode: Audit / Edit) ───────────────────────────────
+
+type PermMode = "audit" | "edit"
+type PermOverrides = Record<string, PermState>
+const PERM_CYCLE: PermState[] = ["", "g-direct", "g-denied"]
+
+function EditPermIcon({ base, override, locked, onCycle }: {
+  base: PermState; override: PermState | undefined; locked?: boolean; onCycle: () => void
+}) {
+  const effective = override !== undefined ? override : base
+  if (locked) return <PermIcon state={effective} />
+  return (
+    <button onClick={e => { e.stopPropagation(); onCycle() }} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+      <PermIcon state={effective} />
+      {override !== undefined && override !== base && (
+        <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.3 }}>OVERRIDE</span>
+      )}
+    </button>
+  )
+}
+
+function EditablePermTreeNode({ node, depth, overrides, onCycle }: {
+  node: PermNode; depth: number; overrides: PermOverrides; onCycle: (id: string, current: PermState) => void
+}) {
+  const effective = overrides[node.id] !== undefined ? overrides[node.id] : node.state
+  const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
+  const hasChildren = node.children && node.children.length > 0
+  return (
+    <div>
+      <div
+        onClick={() => hasChildren && setExpanded(e => !e)}
+        style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0 6px", paddingLeft: depth * 20, cursor: hasChildren ? "pointer" : "default", borderRadius: 6 }}
+      >
+        {hasChildren ? (
+          <span style={{ fontSize: 10, color: "var(--muted-foreground)", width: 12, textAlign: "center" }}>{expanded ? "▾" : "▸"}</span>
+        ) : (
+          <span style={{ width: 12 }} />
+        )}
+        <EditPermIcon base={node.state} override={overrides[node.id]} locked={node.locked} onCycle={() => onCycle(node.id, effective)} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</div>
+          {node.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{node.desc}</div>}
+        </div>
+        {node.role && <span style={{ fontSize: 10, color: "var(--muted-foreground)", flexShrink: 0 }}>via {node.role}</span>}
+      </div>
+      {expanded && hasChildren && node.children!.map(child => (
+        <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onCycle={onCycle} />
+      ))}
+    </div>
+  )
+}
+
+function MemberPermissionsPanel({ member: _member }: { member: Member }) {
+  const [mode, setMode] = useState<PermMode>("audit")
+  const [studio, setStudio] = useState("governance")
+  const [filter, setFilter] = useState("")
+  const [overrides, setOverrides] = useState<PermOverrides>({})
+  const [saved, setSaved] = useState(false)
+
+  const nodes = PERM_TREE[studio] ?? []
+  const isDirty = Object.keys(overrides).length > 0
+
+  function cyclePermission(id: string, current: PermState) {
+    const idx = PERM_CYCLE.indexOf(current)
+    const next = PERM_CYCLE[(idx + 1) % PERM_CYCLE.length]
+    setOverrides(prev => {
+      const allNodes = nodes.flatMap(n => [n, ...(n.children ?? [])])
+      const node = allNodes.find(n => n.id === id)
+      if (node && next === node.state) {
+        const copy = { ...prev }; delete copy[id]; return copy
+      }
+      return { ...prev, [id]: next }
+    })
+    setSaved(false)
+  }
+
+  function handleDiscard() { setOverrides({}); setSaved(false) }
+  function handleSave() {
+    setOverrides({}); setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  const filterLower = filter.toLowerCase()
+  const visibleNodes = filter
+    ? nodes.filter(n => n.label.toLowerCase().includes(filterLower) || n.children?.some(c => c.label.toLowerCase().includes(filterLower)))
+    : nodes
+
+  return (
+    <div>
+      {/* Mode toggle + Save/Discard */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        <div style={{ display: "flex", background: "var(--muted)", borderRadius: 6, padding: 2 }}>
+          {(["audit", "edit"] as PermMode[]).map(m => (
+            <button key={m} onClick={() => { setMode(m); if (m === "audit") handleDiscard() }}
+              style={{ padding: "4px 12px", fontSize: 12, fontWeight: 600, border: "none", borderRadius: 5, cursor: "pointer",
+                background: mode === m ? "var(--background)" : "transparent",
+                color: mode === m ? "var(--foreground)" : "var(--muted-foreground)" }}>
+              {m === "audit" ? "Audit" : "Edit"}
+            </button>
+          ))}
+        </div>
+        {mode === "edit" && isDirty && (
+          <>
+            <button onClick={handleSave} style={{ padding: "4px 12px", fontSize: 12, fontWeight: 600, border: "none", borderRadius: 6, cursor: "pointer", background: "var(--primary)", color: "#fff" /* audit-ignore */ }}>Save</button>
+            <button onClick={handleDiscard} style={{ padding: "4px 12px", fontSize: 12, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 6, cursor: "pointer", background: "none", color: "var(--foreground)" }}>Discard</button>
+          </>
+        )}
+        {saved && <span style={{ fontSize: 12, color: "var(--success, #22c55e)" /* audit-ignore */ }}>Saved</span>}
+      </div>
+
+      {/* Studio sub-tabs */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 12, borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+        {STUDIO_TABS.map(s => (
+          <button key={s.id} onClick={() => setStudio(s.id)} style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+            color: studio === s.id ? "var(--foreground)" : "var(--muted-foreground)",
+            borderBottom: studio === s.id ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -9 }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div style={{ marginBottom: 12 }}>
+        <input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter permissions…"
+          style={{ width: "100%", padding: "6px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" }} />
+      </div>
+
+      {/* Tree */}
+      <div>
+        {mode === "audit"
+          ? visibleNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
+          : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onCycle={cyclePermission} />)
+        }
+        {visibleNodes.length === 0 && (
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>No permissions match "{filter}"</div>
+        )}
+      </div>
     </div>
   )
 }
