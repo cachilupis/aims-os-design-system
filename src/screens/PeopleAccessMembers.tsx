@@ -542,53 +542,121 @@ function PermissionsPanel() {
   )
 }
 
-// ─── Activity panel ───────────────────────────────────────────────────────────
+// ─── Activity / Audit Log panel ───────────────────────────────────────────────
 
-const ACTIVITY_LOG = [
-  { msg: "Signed in from Chrome on macOS",          time: "2 hours ago",          type: "auth"  },
-  { msg: "Updated Data Studio model configuration", time: "Yesterday at 2:34 PM", type: "edit"  },
-  { msg: "Added to Engineering group by Admin",     time: "Aug 20 at 9:15 AM",    type: "group" },
-  { msg: "Role updated: Viewer → Member",           time: "Aug 18 at 4:10 PM",    type: "role"  },
-  { msg: "Approved promotion packet GV-2200",       time: "Aug 15 at 11:30 AM",   type: "check" },
-  { msg: "Signed in from Safari on macOS",          time: "Aug 12 at 8:05 AM",    type: "auth"  },
-  { msg: "Uploaded 3 files to Governance Drives",   time: "Aug 10 at 3:20 PM",    type: "edit"  },
-  { msg: "Created sandbox SB-2026-08",              time: "Aug 8 at 10:05 AM",    type: "edit"  },
-]
+type AuditCategory = "auth" | "permission" | "data" | "admin" | "group"
 
-const ACTIVITY_ICON: Record<string, React.ReactNode> = {
-  auth:  <Icons.LogIn size={14} />,
-  edit:  <Icons.FileEdit size={14} />,
-  group: <Icons.Users size={14} />,
-  role:  <Icons.ShieldCheck size={14} />,
-  check: <Icons.CheckCircle size={14} />,
+type AuditEvent = {
+  msg: string
+  detail?: string
+  timestamp: string
+  category: AuditCategory
+  actor?: string
 }
 
-function ActivityPanel({ log = ACTIVITY_LOG }: { log?: typeof ACTIVITY_LOG }) {
+const AUDIT_LOG: AuditEvent[] = [
+  { msg: "Signed in",                  detail: "Chrome · macOS · 192.168.1.42",          timestamp: "Sep 4, 2026 · 14:02",  category: "auth" },
+  { msg: "Permission override saved",  detail: "governance.sandbox.connect_sources → Granted", timestamp: "Sep 3, 2026 · 10:17", category: "permission", actor: "Thomas Gonzalez" },
+  { msg: "Data Studio model updated",  detail: "customer_360_v2 · configuration change", timestamp: "Sep 2, 2026 · 16:34",  category: "data" },
+  { msg: "Added to Leadership group",  detail: "Added by Maria García",                  timestamp: "Aug 20, 2026 · 09:15", category: "group",      actor: "Maria García" },
+  { msg: "Role updated",               detail: "Viewer → Owner",                         timestamp: "Aug 18, 2026 · 16:10", category: "admin",      actor: "Maria García" },
+  { msg: "Promotion packet approved",  detail: "GV-2200 · Governance Studio",            timestamp: "Aug 15, 2026 · 11:30", category: "data" },
+  { msg: "Signed in",                  detail: "Safari · macOS · 192.168.1.42",          timestamp: "Aug 12, 2026 · 08:05", category: "auth" },
+  { msg: "Files uploaded",             detail: "3 files → Governance Drives",            timestamp: "Aug 10, 2026 · 15:20", category: "data" },
+  { msg: "Sandbox created",            detail: "SB-2026-08 · Governance Studio",         timestamp: "Aug 8, 2026 · 10:05",  category: "data" },
+  { msg: "MFA device enrolled",        detail: "Authenticator app (TOTP)",               timestamp: "Aug 1, 2026 · 09:00",  category: "auth" },
+  { msg: "Permission denied removed",  detail: "datastudio.models.publish → cleared",    timestamp: "Jul 28, 2026 · 14:40", category: "permission", actor: "Maria García" },
+  { msg: "Workspace invitation accepted", detail: "Avance Financial workspace",          timestamp: "Jan 14, 2025 · 09:00", category: "admin" },
+]
+
+const AUDIT_CATEGORY_META: Record<AuditCategory, { label: string; color: string; icon: React.ReactNode }> = {
+  auth:       { label: "Auth",        color: "var(--badge-info)",    icon: <Icons.LogIn size={13} /> },
+  permission: { label: "Permission",  color: "var(--badge-alert)",   icon: <Icons.ShieldCheck size={13} /> },
+  data:       { label: "Data",        color: "var(--badge-success)", icon: <Icons.FileEdit size={13} /> },
+  admin:      { label: "Admin",       color: "var(--muted-foreground)", icon: <Icons.Settings size={13} /> },
+  group:      { label: "Group",       color: "var(--primary)",       icon: <Icons.Users size={13} /> },
+}
+
+const AUDIT_CATEGORIES: Array<AuditCategory | "all"> = ["all", "auth", "permission", "data", "group", "admin"]
+
+function ActivityPanel() {
+  const [active, setActive] = useState<AuditCategory | "all">("all")
+  const filtered = active === "all" ? AUDIT_LOG : AUDIT_LOG.filter(e => e.category === active)
+
   return (
-    <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-      {log.map((ev, i) => (
-        <div
-          key={i}
-          style={{
-            display: "flex", gap: 14, padding: "14px 20px",
-            borderBottom: i < log.length - 1 ? "1px solid var(--border)" : "none",
-            alignItems: "flex-start",
-          }}
-        >
-          <div style={{
-            width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-            background: "var(--surface-raised)", border: "1px solid var(--border)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "var(--muted-foreground)",
-          }}>
-            {ACTIVITY_ICON[ev.type] ?? <Icons.Circle size={14} />}
+    <div>
+      {/* Category filter */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+        {AUDIT_CATEGORIES.map(cat => {
+          const meta = cat !== "all" ? AUDIT_CATEGORY_META[cat] : null
+          const isActive = active === cat
+          return (
+            <button key={cat} onClick={() => setActive(cat)} style={{
+              padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: 20,
+              border: "1px solid", cursor: "pointer",
+              background: isActive ? (meta?.color ?? "var(--foreground)") : "transparent",
+              color: isActive ? "#fff" /* audit-ignore */ : "var(--muted-foreground)",
+              borderColor: isActive ? (meta?.color ?? "var(--foreground)") : "var(--border)",
+            }}>
+              {cat === "all" ? "All events" : meta!.label}
+            </button>
+          )
+        })}
+        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", alignSelf: "center" }}>
+          {filtered.length} event{filtered.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Log */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        {filtered.map((ev, i) => {
+          const meta = AUDIT_CATEGORY_META[ev.category]
+          return (
+            <div key={i} style={{
+              display: "flex", gap: 14, padding: "13px 18px",
+              borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
+              alignItems: "flex-start",
+            }}>
+              {/* Icon */}
+              <div style={{
+                width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                background: `color-mix(in srgb, ${meta.color} 12%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${meta.color} 25%, transparent)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: meta.color,
+              }}>
+                {meta.icon}
+              </div>
+              {/* Content */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{ev.msg}</span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4,
+                    background: `color-mix(in srgb, ${meta.color} 12%, transparent)`,
+                    color: meta.color,
+                    border: `1px solid color-mix(in srgb, ${meta.color} 25%, transparent)`,
+                  }}>{meta.label}</span>
+                </div>
+                {ev.detail && (
+                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{ev.detail}</div>
+                )}
+                <div style={{ display: "flex", gap: 10, marginTop: 3 }}>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{ev.timestamp}</span>
+                  {ev.actor && (
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· by {ev.actor}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        {filtered.length === 0 && (
+          <div style={{ padding: "40px 24px", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
+            No events in this category
           </div>
-          <div>
-            <div style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.4 }}>{ev.msg}</div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 3 }}>{ev.time}</div>
-          </div>
-        </div>
-      ))}
+        )}
+      </div>
     </div>
   )
 }
@@ -1306,76 +1374,120 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
 
 // ─── Resources tab ────────────────────────────────────────────────────────────
 
-const MEMBER_RESOURCES: Record<string, Array<{ name: string; type: string; scope: string; access: string }>> = {
+type MemberResource = { name: string; type: string; scope: string; access: string; source: string }
+
+const MEMBER_RESOURCES: Record<string, MemberResource[]> = {
   tg: [
-    { name: "customer_360",     type: "Dataset",   scope: "Tenant",       access: "Owner" },
-    { name: "fraud_signals_v2", type: "Model",     scope: "Tenant",       access: "Owner" },
-    { name: "platform_events",  type: "Event Bus", scope: "Tenant",       access: "Owner" },
+    { name: "customer_360",        type: "Dataset",   scope: "Tenant",    access: "Owner",       source: "Direct" },
+    { name: "fraud_signals_v2",    type: "Model",     scope: "Tenant",    access: "Owner",       source: "Direct" },
+    { name: "platform_events",     type: "Event Bus", scope: "Tenant",    access: "Owner",       source: "Direct" },
+    { name: "governance_audit_log",type: "Dataset",   scope: "Tenant",    access: "Read",        source: "via Leadership" },
+    { name: "sandbox_env_prod",    type: "Sandbox",   scope: "Own",       access: "Manager",     source: "via Leadership" },
   ],
   mg: [
-    { name: "employee_directory", type: "Dataset", scope: "IT",           access: "Manager" },
-    { name: "access_audit_log",   type: "Dataset", scope: "IT",           access: "Read" },
+    { name: "employee_directory",  type: "Dataset",   scope: "IT",        access: "Manager",     source: "Direct" },
+    { name: "access_audit_log",    type: "Dataset",   scope: "IT",        access: "Read",        source: "via IT Admin" },
+    { name: "hr_events_stream",    type: "Event Bus", scope: "IT",        access: "Read",        source: "via IT Admin" },
   ],
   es: [
-    { name: "revenue_pipeline",   type: "Model",   scope: "Analytics",    access: "Contributor" },
-    { name: "churn_predictions",  type: "Model",   scope: "Analytics",    access: "Read" },
+    { name: "revenue_pipeline",    type: "Model",     scope: "Analytics", access: "Contributor", source: "Direct" },
+    { name: "churn_predictions",   type: "Model",     scope: "Analytics", access: "Read",        source: "via Analytics" },
+    { name: "user_events",         type: "Event Bus", scope: "Analytics", access: "Read",        source: "via Analytics" },
+  ],
+  sb: [
+    { name: "risk_scoring_v3",     type: "Model",     scope: "Risk",      access: "Read",        source: "Direct" },
+    { name: "compliance_reports",  type: "Dataset",   scope: "Risk",      access: "Read",        source: "via Compliance" },
+  ],
+  dp: [
+    { name: "ops_metrics",         type: "Dataset",   scope: "Ops",       access: "Contributor", source: "Direct" },
+    { name: "ops_events",          type: "Event Bus", scope: "Ops",       access: "Read",        source: "via Operations" },
   ],
 }
 
 const RESOURCE_TYPE_COLOR: Record<string, string> = {
-  Dataset:   "var(--badge-info)",
-  Model:     "var(--badge-success)",
-  "Event Bus": "var(--badge-alert)",
+  Dataset:    "var(--badge-info)",
+  Model:      "var(--badge-success)",
+  "Event Bus":"var(--badge-alert)",
+  Sandbox:    "var(--muted-foreground)",
+}
+
+const RESOURCE_TYPE_ICON: Record<string, React.ReactNode> = {
+  Dataset:    <Icons.Database size={13} />,
+  Model:      <Icons.Cpu size={13} />,
+  "Event Bus":<Icons.Zap size={13} />,
+  Sandbox:    <Icons.Box size={13} />,
 }
 
 function ResourcesPanel({ member }: { member: Member }) {
-  const resources = MEMBER_RESOURCES[member.id] ?? []
+  const allResources = MEMBER_RESOURCES[member.id] ?? []
+  const types = ["All", ...Array.from(new Set(allResources.map(r => r.type)))]
+  const [activeType, setActiveType] = useState("All")
 
-  if (resources.length === 0) {
+  const resources = activeType === "All" ? allResources : allResources.filter(r => r.type === activeType)
+
+  if (allResources.length === 0) {
     return (
       <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
         <Icons.Package size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
         <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No resources assigned</div>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Resources are datasets, models, and event buses accessible to this member.</div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Resources are datasets, models, and event buses this member can access.</div>
       </div>
     )
   }
 
   return (
-    <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-      {/* Header */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "1fr 90px 100px 80px",
-        padding: "10px 18px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
-        fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)",
-      }}>
-        <span>Resource</span>
-        <span>Type</span>
-        <span>Scope</span>
-        <span style={{ textAlign: "right" }}>Access</span>
+    <div>
+      {/* Type filter chips */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+        {types.map(t => (
+          <button key={t} onClick={() => setActiveType(t)} style={{
+            padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: 20,
+            border: "1px solid", cursor: "pointer",
+            background: activeType === t ? "var(--primary)" : "transparent",
+            color: activeType === t ? "#fff" /* audit-ignore */ : "var(--muted-foreground)",
+            borderColor: activeType === t ? "var(--primary)" : "var(--border)",
+          }}>{t}</button>
+        ))}
+        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", alignSelf: "center" }}>
+          {resources.length} resource{resources.length !== 1 ? "s" : ""}
+        </span>
       </div>
-      {resources.map((r, i) => {
-        const typeColor = RESOURCE_TYPE_COLOR[r.type] ?? "var(--muted-foreground)"
-        return (
-          <div key={i} style={{
-            display: "grid", gridTemplateColumns: "1fr 90px 100px 80px",
-            padding: "12px 18px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
-            alignItems: "center",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Icons.Layers size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", fontFamily: "monospace" }}>{r.name}</span>
+
+      {/* Table */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 90px 90px 100px 100px",
+          padding: "9px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
+          fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
+        }}>
+          <span>Resource</span><span>Type</span><span>Scope</span><span>Access</span><span>Source</span>
+        </div>
+        {resources.map((r, i) => {
+          const typeColor = RESOURCE_TYPE_COLOR[r.type] ?? "var(--muted-foreground)"
+          const typeIcon  = RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />
+          return (
+            <div key={i} style={{
+              display: "grid", gridTemplateColumns: "1fr 90px 90px 100px 100px",
+              padding: "11px 16px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
+              alignItems: "center",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>{typeIcon}</span>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", fontFamily: "monospace" }}>{r.name}</span>
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
+                color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
+                width: "fit-content",
+              }}>{r.type}</span>
+              <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{r.scope}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{r.access}</span>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: r.source.startsWith("via") ? "italic" : "normal" }}>{r.source}</span>
             </div>
-            <span style={{
-              fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
-              background: `${typeColor}18`, color: typeColor, border: `1px solid ${typeColor}33`,
-              width: "fit-content",
-            }}>{r.type}</span>
-            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{r.scope}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", textAlign: "right" }}>{r.access}</span>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
