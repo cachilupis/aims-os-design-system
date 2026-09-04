@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react"
 import { Bot, Search, Hash, Phone as PhoneIcon } from "lucide-react"
 import { Filters } from "@/components/ui/filters"
-import { Chip } from "@/components/ui/chip"
 import { Button } from "@/components/ui/button"
 import { CardContainer } from "@/components/ui/card-container"
 import { EmptyState } from "@/components/ui/empty-state"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Tag, type TagVariant } from "@/components/ui/tag"
 import type { VoiceAIAgent, AIAgentStatus } from "./voice-agents-data"
+import { useFilterDropdown } from "./shared"
 
 // ─────────────────────────────────────────────────────────────────────
 // VoiceAgentsTab — landing view for the Agents section.
@@ -46,34 +46,44 @@ export function VoiceAgentsTab({ agents, onOpenAgent }: VoiceAgentsTabProps) {
     })
   }, [agents, filter, search])
 
+  const statusCounts = useMemo(() => ({
+    all:       agents.length,
+    Published: agents.filter(a => a.status === "Published").length,
+    Draft:     agents.filter(a => a.status === "Draft").length,
+    Paused:    agents.filter(a => a.status === "Paused").length,
+  }), [agents])
+
+  const statusDropdown = useFilterDropdown<StatusFilter>({
+    placeholder:  "Status",
+    value:        filter,
+    defaultValue: "all",
+    onChange:     setFilter,
+    options: [
+      { id: "all",       label: "All agents", count: statusCounts.all       },
+      { id: "Published", label: "Published",  count: statusCounts.Published },
+      { id: "Draft",     label: "Draft",      count: statusCounts.Draft     },
+      { id: "Paused",    label: "Paused",     count: statusCounts.Paused    },
+    ],
+  })
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* Toolbar — DS Filters w/ search + Status slot (dropdown) */}
+      <div ref={statusDropdown.containerRef} className="flex items-center gap-2 flex-wrap relative">
         <div className="flex-1 min-w-[200px]">
           <Filters
             showSearch
             searchPlaceholder="Search agents by name or purpose…"
             searchValue={search}
             onSearchChange={setSearch}
+            slots={[statusDropdown.slot]}
             showAllFilters={false}
             showSort={false}
             showViewToggle={false}
           />
         </div>
-        <div className="flex items-center gap-2">
-          {(["all", "Published", "Draft", "Paused"] as const).map(k => (
-            <Chip
-              key={k}
-              variant={filter === k ? "primary" : "secondary"}
-              size="s"
-              onClick={() => setFilter(k)}
-            >
-              {k === "all" ? "All" : k}
-            </Chip>
-          ))}
-        </div>
       </div>
+      {statusDropdown.menu}
 
       {/* List */}
       {filtered.length === 0 ? (

@@ -5,10 +5,10 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CardContainer } from "@/components/ui/card-container"
-import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { EmptyState } from "@/components/ui/empty-state"
+import { useFilterDropdown } from "./shared"
 import { AgentTestPanel } from "./AgentTestPanel"
 import { KpMarketplaceModal } from "./KpMarketplaceModal"
 import { SourceDriveMarketplaceModal } from "./SourceDriveMarketplaceModal"
@@ -124,6 +124,27 @@ export function KnowledgePanel({
                     : tab === "shared"   ? "Browse drives"
                     : "Upload file"
 
+  // Source-type "filter" — a switcher, not a subset. We use the shared
+  // dropdown primitive for visual + interaction consistency with the
+  // rest of the voice-channel toolbars, but omit `defaultValue` so the
+  // chip always shows the current source (and there's no clear X).
+  const sourceCounts = useMemo(() => ({
+    packs:    attachedPackIds.length,
+    shared:   attachedDriveIds.length,
+    uploaded: files.length,
+  }), [attachedPackIds, attachedDriveIds, files])
+
+  const sourceDropdown = useFilterDropdown<DaTab>({
+    placeholder: "Data source",
+    value:       tab,
+    onChange:    setTab,
+    options: [
+      { id: "packs",    label: "Knowledge Packs", count: sourceCounts.packs    },
+      { id: "shared",   label: "Shared Drives",   count: sourceCounts.shared   },
+      { id: "uploaded", label: "Own Documents",   count: sourceCounts.uploaded },
+    ],
+  })
+
   const onAdd = () => {
     if (tab === "uploaded")     onUploadFile()
     else if (tab === "packs")   setMarketplaceOpen(true)
@@ -171,37 +192,24 @@ export function KnowledgePanel({
           </Button>
         </div>
 
-        {/* Toolbar — DS Filters for search + DS Chip pills for the
-            data-source tab switch. Matches CallHistoryTab / VoiceAgentsTab. */}
-        <div className="flex items-center gap-2 flex-wrap mb-4">
+        {/* Toolbar — DS Filters with search + a Data-source slot backed
+            by an anchored dropdown menu. Same primitive as the Numbers /
+            Call History / Agents toolbars. */}
+        <div ref={sourceDropdown.containerRef} className="flex items-center gap-2 flex-wrap mb-4 relative">
           <div style={{ flex: 1, minWidth: 200 }}>
             <Filters
               showSearch
               searchPlaceholder="Search drives and documents…"
               searchValue={search}
               onSearchChange={setSearch}
+              slots={[sourceDropdown.slot]}
               showAllFilters={false}
               showSort={false}
               showViewToggle={false}
             />
           </div>
-          <div className="flex items-center gap-2">
-            {([
-              { id: "packs",    label: "Knowledge Packs" },
-              { id: "shared",   label: "Shared Drives"   },
-              { id: "uploaded", label: "Own Documents"   },
-            ] as const).map(o => (
-              <Chip
-                key={o.id}
-                variant={tab === o.id ? "primary" : "secondary"}
-                size="s"
-                onClick={() => setTab(o.id)}
-              >
-                {o.label}
-              </Chip>
-            ))}
-          </div>
         </div>
+        {sourceDropdown.menu}
 
         {/* Content */}
         {tab === "packs" && (

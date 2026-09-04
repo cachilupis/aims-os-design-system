@@ -3,10 +3,10 @@ import { Phone, Mail, Sparkles, MessageSquare, ClipboardCheck, PhoneCall } from 
 import { Tabs } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { CardContainer } from "@/components/ui/card-container"
-import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
 import { Tag, type TagVariant } from "@/components/ui/tag"
 import { EmptyState } from "@/components/ui/empty-state"
+import { useFilterDropdown } from "./shared"
 import {
   UCP_ALEJANDRO,
   UCP_ACTIVITY_GROUPS,
@@ -184,17 +184,51 @@ function ActivityBody({
   onOpenCallDetail?: (callDetailId: string) => void
   onLoadOlder?:      () => void
 }) {
-  const KIND_OPTIONS: { id: KindFilter; label: string }[] = [
-    { id: "all",   label: "All"   },
-    { id: "call",  label: "Calls" },
-    { id: "email", label: "Email" },
-    { id: "sms",   label: "SMS"   },
-    { id: "task",  label: "Tasks" },
-  ]
+  // Counts per kind / per agent, computed from the full activity set
+  // so users can size a filter before applying it. We deliberately
+  // count from source (not filtered) because "how many calls exist"
+  // shouldn't shift as other filters change.
+  const allItems = useMemo(
+    () => UCP_ACTIVITY_GROUPS.flatMap(g => g.items),
+    [],
+  )
+  const kindCounts = useMemo(() => ({
+    all:   allItems.length,
+    call:  allItems.filter(i => i.kind === "call").length,
+    email: allItems.filter(i => i.kind === "email").length,
+    sms:   allItems.filter(i => i.kind === "sms").length,
+    task:  allItems.filter(i => i.kind === "task").length,
+  }), [allItems])
+  const agentCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: allItems.length }
+    for (const a of UCP_AGENTS) counts[a] = allItems.filter(i => i.agent === a).length
+    return counts
+  }, [allItems])
 
-  // Agent filter: current seed only has Sammy — render one chip per agent
-  // + an "All" chip, matching the CallHistoryTab direction-filter pattern.
-  const agentOptions = ["all", ...UCP_AGENTS]
+  const kindDropdown = useFilterDropdown<KindFilter>({
+    placeholder:  "Type",
+    value:        kind,
+    defaultValue: "all",
+    onChange:     onKind,
+    options: [
+      { id: "all",   label: "All types", count: kindCounts.all   },
+      { id: "call",  label: "Calls",     count: kindCounts.call  },
+      { id: "email", label: "Email",     count: kindCounts.email },
+      { id: "sms",   label: "SMS",       count: kindCounts.sms   },
+      { id: "task",  label: "Tasks",     count: kindCounts.task  },
+    ],
+  })
+
+  const agentDropdown = useFilterDropdown<string>({
+    placeholder:  "Agent",
+    value:        agent,
+    defaultValue: "all",
+    onChange:     onAgent,
+    options: [
+      { id: "all", label: "All agents", count: agentCounts.all },
+      ...UCP_AGENTS.map(a => ({ id: a, label: a, count: agentCounts[a] ?? 0 })),
+    ],
+  })
 
   return (
     <div className="flex flex-col gap-4">
@@ -208,44 +242,24 @@ function ActivityBody({
         </span>
       </div>
 
-      {/* Toolbar — DS Chip pills on the left (kind + agent), DS Filters
-          on the right (showSort only). Mirrors CallHistoryTab's filter
-          bar so the whole voice module uses one toolbar pattern. */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-          {KIND_OPTIONS.map(o => (
-            <Chip
-              key={o.id}
-              variant={o.id === kind ? "primary" : "secondary"}
-              size="s"
-              onClick={() => onKind(o.id)}
-            >
-              {o.label}
-            </Chip>
-          ))}
-          <span style={{
-            width: 1, height: 16, background: "var(--color-border-neutral-default)", margin: "0 4px",
-          }} aria-hidden/>
-          {agentOptions.map(a => (
-            <Chip
-              key={a}
-              variant={a === agent ? "primary" : "secondary"}
-              size="s"
-              onClick={() => onAgent(a)}
-            >
-              {a === "all" ? "All agents" : a}
-            </Chip>
-          ))}
+      {/* Toolbar — one DS Filters instance with two dropdown slots
+          (Type + Agent) + built-in sort. Same primitive as every
+          other voice-channel toolbar. */}
+      <div className="flex items-center gap-2 flex-wrap relative">
+        <div className="flex-1 min-w-0">
+          <Filters
+            showSearch={false}
+            slots={[kindDropdown.slot, agentDropdown.slot]}
+            showAllFilters={false}
+            showViewToggle={false}
+            showSort={true}
+            sortLabel={sort === "newest" ? "Newest first" : "Oldest first"}
+            onSortClick={() => onSort(sort === "newest" ? "oldest" : "newest")}
+          />
         </div>
-        <Filters
-          showSearch={false}
-          showAllFilters={false}
-          showViewToggle={false}
-          showSort={true}
-          sortLabel={sort === "newest" ? "Newest first" : "Oldest first"}
-          onSortClick={() => onSort(sort === "newest" ? "oldest" : "newest")}
-        />
       </div>
+      {kindDropdown.menu}
+      {agentDropdown.menu}
 
       {/* Date groups */}
       {filteredGroups.length === 0 ? (

@@ -21,6 +21,7 @@ import {
   NumberStatusTag,
   HilBadge,
   AgentAvatarStack,
+  useFilterDropdown,
 } from "./voice-channel/shared"
 import { NumberSheet as NumberPreview } from "./voice-channel/NumberSheet"
 import { NumberDetailPage } from "./voice-channel/NumberDetailPage"
@@ -143,9 +144,6 @@ function VoiceChannelScreenInner() {
   // Numbers-tab controls
   const [numFilter,     setNumFilter]     = useState<NumberFilter>("all")
   const [numSearch,     setNumSearch]     = useState("")
-  // Anchor-positioned dropdown for the Status filter chip (DS-native
-  // pattern — same shape PeopleAccessMembers uses).
-  const [statusDropdown, setStatusDropdown] = useState<{ top: number; left: number } | null>(null)
 
   // The number that's currently "focused" — for release/add-agent modals we
   // prefer the full-view target when it exists, else the preview target.
@@ -171,6 +169,19 @@ function VoiceChannelScreenInner() {
     active:    numbers.filter(n => n.status === "active").length,
     suspended: numbers.filter(n => n.status === "suspended").length,
   }), [numbers])
+
+  // Shared dropdown primitive — same as CallHistory / Agents / Knowledge / UCP.
+  const numberDropdown = useFilterDropdown<NumberFilter>({
+    placeholder:  "Status",
+    value:        numFilter,
+    defaultValue: "all",
+    onChange:     setNumFilter,
+    options: [
+      { id: "all",       label: "All numbers", count: counts.all       },
+      { id: "active",    label: "Active",      count: counts.active    },
+      { id: "suspended", label: "Suspended",   count: counts.suspended },
+    ],
+  })
 
   // ── Mutation handlers ──────────────────────────────────────────────
 
@@ -343,42 +354,18 @@ function VoiceChannelScreenInner() {
 
           {tab === "numbers" && (
             <div className="flex flex-col gap-4">
-              {/* Toolbar — DS Filters with search + a Status filter
-                  slot backed by a real anchored dropdown menu. Matches
-                  the DS pattern used in PeopleAccessMembers: chip
-                  surfaces the current filter (Tag + X clears), click
-                  opens a menu of the full option set with counts. */}
-              <div className="flex items-center gap-2 flex-wrap relative">
+              {/* Toolbar — DS Filters with search + a Status slot backed
+                  by the shared dropdown primitive (see useFilterDropdown
+                  in voice-channel/shared). Same shape as every other
+                  voice-channel toolbar. */}
+              <div ref={numberDropdown.containerRef} className="flex items-center gap-2 flex-wrap relative">
                 <div className="flex-1 min-w-[200px]">
                   <Filters
                     showSearch
                     searchPlaceholder="Search…"
                     searchValue={numSearch}
                     onSearchChange={setNumSearch}
-                    slots={[
-                      {
-                        placeholder: "Status",
-                        value: numFilter === "all"
-                          ? undefined
-                          : numFilter === "active"
-                            ? `Active · ${counts.active}`
-                            : `Suspended · ${counts.suspended}`,
-                        onOpen: () => {
-                          // Anchor the dropdown under the Status chip. The
-                          // Filters slot doesn't expose its button ref, so
-                          // find the chip by its visible label — either the
-                          // placeholder "Status" or the active value chip.
-                          const chip = Array.from(document.querySelectorAll("button")).find(b => {
-                            const t = b.textContent?.trim() ?? ""
-                            return t === "Status" || t.startsWith("Active") || t.startsWith("Suspended")
-                          })
-                          if (!chip) return
-                          const rect = chip.getBoundingClientRect()
-                          setStatusDropdown({ top: rect.bottom + 4, left: rect.left })
-                        },
-                        onRemove: numFilter !== "all" ? () => setNumFilter("all") : undefined,
-                      },
-                    ]}
+                    slots={[numberDropdown.slot]}
                     showAllFilters={false}
                     showSort={false}
                     showViewToggle={false}
@@ -388,53 +375,7 @@ function VoiceChannelScreenInner() {
                   Acquire Number
                 </Button>
               </div>
-
-              {/* Status dropdown — positioned from the chip's rect at
-                  onOpen time, so no anchor element is needed. */}
-              {statusDropdown && (
-                <>
-                  <div
-                    style={{ position: "fixed", inset: 0, zIndex: 10000 }}
-                    onClick={() => setStatusDropdown(null)}
-                  />
-                  <div style={{
-                    position: "fixed", top: statusDropdown.top, left: statusDropdown.left,
-                    zIndex: 10001,
-                    background: "var(--surface-floating-default, var(--popover, var(--surface)))",
-                    border: "1px solid var(--color-border-neutral-default)",
-                    borderRadius: "var(--radius-md)",
-                    padding: "4px 0",
-                    boxShadow: "var(--shadow-elevation-3, 0 8px 24px rgba(0,0,0,.18))", // audit-ignore: rgba is CSS var fallback
-                    minWidth: 200,
-                  }}>
-                    {([
-                      { id: "all"       as NumberFilter, label: "All numbers", count: counts.all       },
-                      { id: "active"    as NumberFilter, label: "Active",      count: counts.active    },
-                      { id: "suspended" as NumberFilter, label: "Suspended",   count: counts.suspended },
-                    ]).map(opt => (
-                      <button
-                        key={opt.id}
-                        onClick={() => { setNumFilter(opt.id); setStatusDropdown(null) }}
-                        style={{
-                          display: "flex", alignItems: "center", justifyContent: "space-between",
-                          width: "100%", padding: "8px 14px", border: "none", background: "none",
-                          cursor: "pointer", fontSize: 13, textAlign: "left",
-                          fontFamily: "inherit",
-                          fontWeight: numFilter === opt.id ? 600 : 400,
-                          color:      numFilter === opt.id ? "var(--primary)" : "var(--color-text-title)",
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--color-surface-neutral-subtle)" }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
-                      >
-                        <span>{opt.label}</span>
-                        <span style={{ fontSize: 11, color: "var(--color-text-caption)", marginLeft: 12 }}>
-                          {opt.count}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+              {numberDropdown.menu}
 
               {/* Table or full empty state */}
               {numbers.length === 0 ? (

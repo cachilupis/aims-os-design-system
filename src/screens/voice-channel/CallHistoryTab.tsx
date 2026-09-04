@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
 import { PhoneCall, Search, ArrowDownLeft, ArrowUpRight } from "lucide-react"
-import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
 import { CardContainer } from "@/components/ui/card-container"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -8,7 +7,7 @@ import { Table, type TableColumn } from "@/components/ui/table"
 import { Tag } from "@/components/ui/tag"
 import type { Call, PhoneNumberRecord, CallDirection } from "./data"
 import { AGENTS } from "./data"
-import { AgentAvatar, HilBadge, SentimentTag } from "./shared"
+import { AgentAvatar, HilBadge, SentimentTag, useFilterDropdown } from "./shared"
 import { CallPreview } from "./CallPreview"
 import { CallDetailPage } from "./CallDetailPage"
 
@@ -54,6 +53,28 @@ export function CallHistoryTab({
       return c.caller.includes(search) || (AGENTS.find(a => a.id === c.agent)?.name ?? "").toLowerCase().includes(q)
     })
   }, [calls, dirFilter, search])
+
+  // Counts drive the option list — shown as tallies inside the dropdown
+  // so a user can size a filter before applying it.
+  const dirCounts = useMemo(() => ({
+    all:      calls.length,
+    inbound:  calls.filter(c => c.direction === "inbound").length,
+    outbound: calls.filter(c => c.direction === "outbound").length,
+    hil:      calls.filter(c => c.hil).length,
+  }), [calls])
+
+  const dirDropdown = useFilterDropdown<DirFilter>({
+    placeholder:  "Direction",
+    value:        dirFilter,
+    defaultValue: "all",
+    onChange:     setDirFilter,
+    options: [
+      { id: "all",      label: "All calls",   count: dirCounts.all      },
+      { id: "inbound",  label: "Inbound",     count: dirCounts.inbound  },
+      { id: "outbound", label: "Outbound",    count: dirCounts.outbound },
+      { id: "hil",      label: "HiL only",    count: dirCounts.hil      },
+    ],
+  })
 
   const previewCall = calls.find(c => c.id === previewId) ?? null
   const detailCall  = calls.find(c => c.id === detailId)  ?? null
@@ -145,32 +166,24 @@ export function CallHistoryTab({
   return (
     <>
       <div className="flex flex-col gap-4">
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Toolbar — DS Filters with search + a Direction slot backed
+            by an anchored dropdown menu (same primitive as the Numbers
+            tab). */}
+        <div ref={dirDropdown.containerRef} className="flex items-center gap-2 flex-wrap relative">
           <div className="flex-1 min-w-[200px]">
             <Filters
               showSearch
               searchPlaceholder="Search transcripts…"
               searchValue={search}
               onSearchChange={setSearch}
+              slots={[dirDropdown.slot]}
               showAllFilters={false}
               showSort={false}
               showViewToggle={false}
             />
           </div>
-          <div className="flex items-center gap-2">
-            {(["all", "inbound", "outbound", "hil"] as const).map(k => (
-              <Chip
-                key={k}
-                variant={dirFilter === k ? "primary" : "secondary"}
-                size="s"
-                onClick={() => setDirFilter(k)}
-              >
-                {k === "all" ? "All" : k === "inbound" ? "Inbound" : k === "outbound" ? "Outbound" : "HiL only"}
-              </Chip>
-            ))}
-          </div>
         </div>
+        {dirDropdown.menu}
 
         {/* Full-width table (no more split view — preview lives in a slide-out) */}
         {filtered.length === 0 ? (
