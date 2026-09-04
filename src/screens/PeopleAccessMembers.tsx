@@ -5,7 +5,8 @@ import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
-import { SwitchTab }    from "@/components/ui/switch-tab"
+import { Tag }          from "@/components/ui/tag"
+import { Tabs }         from "@/components/ui/tabs"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
 
@@ -196,6 +197,11 @@ const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number;
   "compliance-auditor": { governance: 2, datastudio: 2, agentic: 1, admin: 3,  total: 8  },
 }
 
+const ROLE_COLORS = [
+  "#6366f1", "#10b981", "#f97316", "#0ea5e9",
+  "#8b5cf6", "#ef4444", "#f59e0b", "#64748b",
+] // audit-ignore: preset color swatches for role form
+
 // ─── Groups fixture ───────────────────────────────────────────────────────────
 
 const GROUPS: Group[] = [
@@ -279,7 +285,7 @@ function formatDate(iso: string): string {
 
 // ─── Shared UI atoms ──────────────────────────────────────────────────────────
 
-function BackBreadcrumb({ label, onBack }: { label: string; onBack: () => void }) {
+function BackBreadcrumb({ onBack }: { onBack: () => void }) {
   return (
     <button
       onClick={onBack}
@@ -294,7 +300,7 @@ function BackBreadcrumb({ label, onBack }: { label: string; onBack: () => void }
       onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
     >
       <Icons.ChevronLeft size={14} />
-      People & Access / <span style={{ color: "var(--foreground)", fontWeight: 600 }}>{label}</span>
+      Back
     </button>
   )
 }
@@ -1038,21 +1044,18 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 // ─── Member detail page ───────────────────────────────────────────────────────
 
 const USER_TYPE_OPTIONS: UserType[] = ["Owner", "Admin", "Member"]
-const ROLE_OPTIONS = USER_TYPE_OPTIONS
 
 function MemberDetailPage({
-  member, onBack, onRoleChange, onToggleSuspend, onRemove, onUpdate,
+  member, onBack, onToggleSuspend, onRemove, onUpdate,
 }: {
   member: Member
   onBack: () => void
-  onRoleChange: (id: string, role: MemberRole) => void
   onToggleSuspend: (id: string) => void
   onRemove: (id: string) => void
   onUpdate: (m: Member) => void
 }) {
   const [activeTab, setActiveTab] = useState(0)
   const [confirmRemove, setConfirmRemove] = useState(false)
-  const statusColor = STATUS_COLOR[member.status]
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
 
@@ -1071,24 +1074,23 @@ function MemberDetailPage({
         />
       )}
     >
-      <BackBreadcrumb label={member.name} onBack={onBack} />
+      <BackBreadcrumb onBack={onBack} />
 
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, marginTop: 16, alignItems: "start" }}>
 
         {/* Left: identity card */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--surface)" }}>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
           {/* Avatar + name */}
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-            padding: "28px 24px 20px", borderBottom: "1px solid var(--border)",
-            background: "var(--surface-raised)",
+            padding: "28px 24px 20px",
           }}>
             <div style={{
-              width: 64, height: 64, borderRadius: "50%",
+              width: 80, height: 80, borderRadius: "50%",
               background: isActive ? member.avatarColor : "var(--muted)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 22, fontWeight: 700,
+              fontSize: 26, fontWeight: 700,
               color: isActive ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
               opacity: member.status === "suspended" ? 0.6 : 1,
             }}>
@@ -1103,16 +1105,14 @@ function MemberDetailPage({
                   {member.title}{member.title && member.department ? " · " : ""}{member.department}
                 </div>
               )}
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
-              }}>
-                <div style={{ width: 5, height: 5, borderRadius: "50%", background: statusColor }} />
+              <Tag variant={isActive ? "success" : member.status === "suspended" ? "alert" : "secondary"}>
                 {STATUS_LABEL[member.status]}
-              </div>
+              </Tag>
             </div>
           </div>
+
+          {/* Divider after active tag */}
+          <div style={{ height: 1, background: "var(--border)" }} />
 
           {/* Info fields */}
           <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1125,80 +1125,40 @@ function MemberDetailPage({
               <InfoRow icon={<Icons.Send size={14} />}   label="Invite sent" value={formatRelative(member.joinedAt)} />
             )}
 
-            {/* Role picker */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--muted-foreground)" }}>
-                <Icons.ShieldCheck size={14} />
-                <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Role</span>
-              </div>
-              <select
-                value={member.role}
-                onChange={e => onRoleChange(member.id, e.target.value as MemberRole)}
-                style={{
-                  width: "100%", padding: "8px 12px", fontSize: 13, borderRadius: 8,
-                  border: "1px solid var(--border)", background: "var(--surface)",
-                  color: "var(--foreground)", cursor: "pointer", outline: "none",
-                }}
-              >
-                {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
+            {/* User Type — read-only */}
+            <InfoRow icon={<Icons.ShieldCheck size={14} />} label="User Type" value={member.role} />
           </div>
 
-          {/* Actions */}
-          <div style={{ margin: "0 16px 16px", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-            <div style={{
-              padding: "8px 14px",
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em",
-              color: "var(--muted-foreground)", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
-            }}>
-              Actions
-            </div>
-            {!isInvited && (
-              <DangerRow
-                icon={isActive ? <Icons.UserX size={14} /> : <Icons.UserCheck size={14} />}
-                label={isActive ? "Suspend access" : "Reactivate account"}
-                desc={isActive ? "Block login and API access immediately" : "Restore login access for this member"}
-                onClick={() => { onToggleSuspend(member.id); onBack() }}
-              />
-            )}
-            {isInvited && (
-              <DangerRow
-                icon={<Icons.RefreshCw size={14} />}
-                label="Resend invite"
-                desc="Send a new invitation email to this address"
-                onClick={() => alert(`Invite resent to ${member.email}`)}
-              />
+          {/* Divider after info */}
+          <div style={{ height: 1, background: "var(--border)" }} />
+
+          {/* Action buttons */}
+          <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {isInvited ? (
+              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => alert(`Invite resent to ${member.email}`)}>
+                <Icons.RefreshCw size={13} /> Resend invite
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => { onToggleSuspend(member.id); onBack() }}>
+                {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
+              </Button>
             )}
             {!confirmRemove ? (
-              <DangerRow
-                icon={<Icons.Trash2 size={14} />}
-                label="Remove from workspace"
-                desc="Permanently removes access. Cannot be undone."
-                destructive
-                onClick={() => setConfirmRemove(true)}
-              />
+              <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => setConfirmRemove(true)}>
+                <Icons.Trash2 size={13} /> Remove from workspace
+              </Button>
             ) : (
-              <div style={{ padding: "14px", background: "color-mix(in srgb, var(--badge-error) 8%, transparent)" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--badge-error)", marginBottom: 6 }}>
-                  Remove {member.name}?
-                </div>
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
-                  They will lose all access immediately. This cannot be undone.
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={() => { onRemove(member.id); onBack() }}
-                    style={{ flex: 1, padding: "7px 0", border: "1px solid var(--badge-error)", borderRadius: 7, fontSize: 12, fontWeight: 600, color: "var(--badge-error)", background: "none", cursor: "pointer" }}
-                  >
-                    Yes, remove
-                  </button>
-                  <button
-                    onClick={() => setConfirmRemove(false)}
-                    style={{ flex: 1, padding: "7px 0", border: "1px solid var(--border)", borderRadius: 7, fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}
-                  >
-                    Cancel
-                  </button>
+              <div style={{ padding: "12px", border: "1px solid var(--badge-error)", borderRadius: 8, background: "color-mix(in srgb, var(--badge-error) 6%, transparent)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", marginBottom: 4 }}>Remove {member.name}?</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>This cannot be undone.</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <Button variant="warning" size="sm" style={{ flex: 1, justifyContent: "center" }}
+                    onClick={() => { onRemove(member.id); onBack() }}>Confirm</Button>
+                  <Button variant="secondary" size="sm" style={{ flex: 1, justifyContent: "center" }}
+                    onClick={() => setConfirmRemove(false)}>Cancel</Button>
                 </div>
               </div>
             )}
@@ -1208,19 +1168,18 @@ function MemberDetailPage({
         {/* Right: tabs */}
         <div>
           <DetailTabs
-            tabs={["Overview", "Apps", "Roles", "Groups", "Permissions", "Resources", "Security", "Activity"]}
+            tabs={["Apps", "Roles", "Groups", "Permissions", "Resources", "Security", "Activity"]}
             active={activeTab}
             onChange={setActiveTab}
           />
           <div style={{ marginTop: 20 }}>
-            {activeTab === 0 && <OverviewPanel member={member} />}
-            {activeTab === 1 && <AppsPanel member={member} />}
-            {activeTab === 2 && <MemberRolesPanel member={member} />}
-            {activeTab === 3 && <MemberGroupsPanel member={member} />}
-            {activeTab === 4 && <MemberPermissionsPanel member={member} />}
-            {activeTab === 5 && <ResourcesPanel member={member} />}
-            {activeTab === 6 && <SecurityPanel member={member} onUpdate={onUpdate} />}
-            {activeTab === 7 && <ActivityPanel />}
+            {activeTab === 0 && <AppsPanel member={member} />}
+            {activeTab === 1 && <MemberRolesPanel member={member} />}
+            {activeTab === 2 && <MemberGroupsPanel member={member} />}
+            {activeTab === 3 && <MemberPermissionsPanel member={member} />}
+            {activeTab === 4 && <ResourcesPanel member={member} />}
+            {activeTab === 5 && <SecurityPanel member={member} onUpdate={onUpdate} />}
+            {activeTab === 6 && <ActivityPanel />}
           </div>
         </div>
       </div>
@@ -1228,205 +1187,208 @@ function MemberDetailPage({
   )
 }
 
-// ─── Overview tab ─────────────────────────────────────────────────────────────
-
-type StudioUsage = {
-  id: string
-  label: string
-  icon: React.ReactNode
-  role: string
-  lastUsed: string
-  tokensMonth: number
-  tokensLimit: number
-  status: "active" | "idle" | "none"
-}
-
-const STUDIO_USAGE_FIXTURE: Record<string, StudioUsage[]> = {
-  tg: [
-    { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={15} />, role: "Owner", lastUsed: "Today",     tokensMonth: 142000, tokensLimit: 200000, status: "active" },
-    { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={15} />,    role: "Owner", lastUsed: "Yesterday", tokensMonth: 87500,  tokensLimit: 200000, status: "active" },
-    { id: "agentic",    label: "Agentic Studio",     icon: <Icons.Bot size={15} />,          role: "Owner", lastUsed: "3d ago",    tokensMonth: 34200,  tokensLimit: 200000, status: "idle" },
-    { id: "admin",      label: "Admin Console",      icon: <Icons.Settings size={15} />,     role: "Owner", lastUsed: "Today",     tokensMonth: 12800,  tokensLimit: 200000, status: "active" },
-  ],
-  mg: [
-    { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={15} />, role: "Admin", lastUsed: "Today",  tokensMonth: 98000, tokensLimit: 150000, status: "active" },
-    { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={15} />,    role: "Admin", lastUsed: "2d ago", tokensMonth: 41000, tokensLimit: 150000, status: "idle" },
-    { id: "admin",      label: "Admin Console",      icon: <Icons.Settings size={15} />,     role: "Admin", lastUsed: "Today",  tokensMonth: 6200,  tokensLimit: 150000, status: "active" },
-  ],
-}
-
-const DEFAULT_STUDIO_USAGE: StudioUsage[] = [
-  { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={15} />, role: "Viewer", lastUsed: "5d ago", tokensMonth: 12000, tokensLimit: 80000, status: "idle" },
-]
-
-function TokenBar({ used, limit }: { used: number; limit: number }) {
-  const pct = Math.min(100, Math.round((used / limit) * 100))
-  const color = pct >= 90 ? "var(--badge-error, #ef4444)" : pct >= 70 ? "var(--badge-alert)" : "var(--badge-success)" // audit-ignore: hex is CSS var fallback
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ flex: 1, height: 5, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 99, transition: "width 0.4s" }} />
-      </div>
-      <span style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", minWidth: 60, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-        {(used / 1000).toFixed(0)}K / {(limit / 1000).toFixed(0)}K
-      </span>
-    </div>
-  )
-}
-
-function OverviewPanel({ member }: { member: Member }) {
-  const studios = STUDIO_USAGE_FIXTURE[member.id] ?? DEFAULT_STUDIO_USAGE
-  const totalTokens = studios.reduce((s, u) => s + u.tokensMonth, 0)
-  const totalLimit  = studios.reduce((s, u) => s + u.tokensLimit, 0)
-  const activeCount = studios.filter(u => u.status === "active").length
-
-  const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
-  const permCount = (PERM_TREE["governance"] ?? []).flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-direct" || n.state === "g-inh").length
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-      {/* KPI strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-        {[
-          { label: "Active studios",  value: activeCount,           icon: <Icons.LayoutDashboard size={14} />, color: "var(--primary)" },
-          { label: "Groups",          value: memberGroups.length,   icon: <Icons.Users size={14} />,           color: "var(--badge-info)" },
-          { label: "Permissions",     value: permCount,             icon: <Icons.ShieldCheck size={14} />,    color: "var(--badge-success)" },
-          { label: "Tokens this month", value: `${(totalTokens / 1000).toFixed(0)}K`, icon: <Icons.Zap size={14} />, color: "var(--badge-alert)" },
-        ].map(({ label, value, icon, color }) => (
-          <div key={label} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <span style={{ color }}>{icon}</span>
-              <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600 }}>{label}</span>
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)", lineHeight: 1 }}>{value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Active Studios */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Studio access</span>
-          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{studios.length} studio{studios.length !== 1 ? "s" : ""}</span>
-        </div>
-        {studios.map((s, i) => (
-          <div key={s.id} style={{
-            display: "grid", gridTemplateColumns: "28px 1fr 80px 90px 8px",
-            padding: "11px 16px", gap: 12, alignItems: "center",
-            borderBottom: i < studios.length - 1 ? "1px solid var(--border)" : "none",
-          }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-              background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "var(--primary)",
-            }}>{s.icon}</div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{s.label}</div>
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>Role: {s.role} · Last used: {s.lastUsed}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>Token usage</div>
-              <TokenBar used={s.tokensMonth} limit={s.tokensLimit} />
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <span style={{
-                fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20,
-                background: s.status === "active"
-                  ? "color-mix(in srgb, var(--badge-success) 14%, transparent)"
-                  : "color-mix(in srgb, var(--muted-foreground) 12%, transparent)",
-                color: s.status === "active" ? "var(--badge-success)" : "var(--muted-foreground)",
-                border: s.status === "active"
-                  ? "1px solid color-mix(in srgb, var(--badge-success) 28%, transparent)"
-                  : "1px solid var(--border)",
-              }}>
-                {s.status === "active" ? "Active" : "Idle"}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Token usage summary */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Token usage — September 2026</span>
-          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{Math.round((totalTokens / totalLimit) * 100)}% of total allocation</span>
-        </div>
-        <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {studios.map(s => (
-            <div key={s.id} style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 12, alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: "var(--muted-foreground)" }}>{s.icon}</span>
-                <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{s.label.replace(" Studio", "").replace(" Console", "")}</span>
-              </div>
-              <TokenBar used={s.tokensMonth} limit={s.tokensLimit} />
-            </div>
-          ))}
-          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 10, display: "grid", gridTemplateColumns: "140px 1fr", gap: 12, alignItems: "center" }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>Total</span>
-            <TokenBar used={totalTokens} limit={totalLimit} />
-          </div>
-        </div>
-      </div>
-
-    </div>
-  )
-}
 
 // ─── Apps tab ─────────────────────────────────────────────────────────────────
+
+function StudioPermissionsView({ studioId, onBack }: { studioId: string; onBack: () => void }) {
+  const meta = STUDIO_META[studioId]
+  const nodes = PERM_TREE[studioId] ?? []
+  const granted = filterGrantedTree(nodes)
+  const directCount = granted.flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-direct").length
+  const inhCount = granted.flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-inh").length
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <button onClick={onBack} style={{
+          display: "flex", alignItems: "center", gap: 4, padding: "5px 10px",
+          fontSize: 12, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 7,
+          background: "var(--surface)", color: "var(--muted-foreground)", cursor: "pointer",
+        }}>
+          <Icons.ChevronLeft size={13} /> Apps
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+            background: "var(--surface-raised)", border: "1px solid var(--border)",
+            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
+          }}>{meta?.icon}</div>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{meta?.label} — Permissions</span>
+        </div>
+      </div>
+      <div style={{
+        display: "flex", gap: 16, padding: "10px 16px", background: "var(--surface)",
+        border: "1px solid var(--border)", borderRadius: 8, marginBottom: 14,
+        fontSize: 12, color: "var(--muted-foreground)",
+      }}>
+        <span><strong style={{ color: "var(--foreground)" }}>{directCount}</strong> direct</span>
+        <span><strong style={{ color: "var(--foreground)" }}>{inhCount}</strong> via role</span>
+      </div>
+      {granted.length === 0 ? (
+        <div style={{ padding: "24px 0", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
+          No permissions granted in this studio.
+        </div>
+      ) : (
+        <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+          {granted.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function GrantAccessModal({ assignedStudios, onGrant, onClose }: {
+  assignedStudios: string[]
+  onGrant: (studioId: string) => void
+  onClose: () => void
+}) {
+  const available = Object.entries(STUDIO_META).filter(([id]) => !assignedStudios.includes(id))
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)" /* audit-ignore */,
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
+    }} onClick={onClose}>
+      <div style={{
+        background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14,
+        padding: 24, minWidth: 360, boxShadow: "0 16px 48px rgba(0,0,0,0.3)" /* audit-ignore */,
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Grant studio access</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4 }}>
+            <Icons.X size={16} />
+          </button>
+        </div>
+        {available.length === 0 ? (
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>
+            Member already has access to all studios.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {available.map(([id, meta]) => (
+              <div key={id} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "12px 14px", border: "1px solid var(--border)", borderRadius: 9,
+                background: "var(--background)",
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                  background: "var(--surface-raised)", border: "1px solid var(--border)",
+                  display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
+                }}>{meta.icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
+                </div>
+                <button onClick={() => onGrant(id)} style={{
+                  padding: "5px 12px", fontSize: 12, fontWeight: 600,
+                  border: "none", borderRadius: 6, cursor: "pointer",
+                  background: "var(--primary)", color: "#fff" /* audit-ignore */,
+                }}>Grant</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function AppsPanel({ member }: { member: Member }) {
   const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
   const studioSet = new Set<string>(member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : [])
   memberGroups.forEach(g => g.studios.forEach(s => studioSet.add(s)))
-  const studios = Array.from(studioSet)
+  const [studios, setStudios] = useState(Array.from(studioSet))
+  const [selectedStudio, setSelectedStudio] = useState<string | null>(null)
+  const [grantOpen, setGrantOpen] = useState(false)
+
+  if (selectedStudio) {
+    return <StudioPermissionsView studioId={selectedStudio} onBack={() => setSelectedStudio(null)} />
+  }
 
   if (studios.length === 0) {
     return (
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-        <Icons.AppWindow size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No apps assigned</div>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Add this member to a group with studio access, or assign a role that includes studio permissions.</div>
-      </div>
+      <>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <button onClick={() => setGrantOpen(true)} style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
+            fontSize: 12, fontWeight: 600, border: "1px solid var(--border)",
+            borderRadius: 8, background: "var(--surface)", color: "var(--foreground)", cursor: "pointer",
+          }}><Icons.Plus size={13} /> Grant access</button>
+        </div>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+          <Icons.AppWindow size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No apps assigned</div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Add this member to a group with studio access, or grant direct access below.</div>
+        </div>
+        {grantOpen && <GrantAccessModal assignedStudios={studios} onGrant={id => { setStudios(p => [...p, id]); setGrantOpen(false) }} onClose={() => setGrantOpen(false)} />}
+      </>
     )
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {studios.map(s => {
-        const meta = STUDIO_META[s]
-        if (!meta) return null
-        const via = memberGroups.filter(g => g.studios.includes(s)).map(g => g.name)
-        return (
-          <div key={s} style={{
-            display: "flex", alignItems: "center", gap: 16,
-            padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
-            background: "var(--surface)",
-          }}>
-            <div style={{
-              width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-              background: "var(--surface-raised)", border: "1px solid var(--border)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "var(--primary)",
-            }}>{meta.icon}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{meta.label}</div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{meta.desc}</div>
-            </div>
-            <div style={{ flexShrink: 0, textAlign: "right" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--badge-success)", marginBottom: 3 }}>Active</div>
-              {via.length > 0 && (
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                  via {via.slice(0, 2).join(", ")}{via.length > 2 ? ` +${via.length - 2}` : ""}
+    <>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+          <button onClick={() => setGrantOpen(true)} style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
+            fontSize: 12, fontWeight: 600, border: "1px solid var(--border)",
+            borderRadius: 8, background: "var(--surface)", color: "var(--foreground)", cursor: "pointer",
+          }}><Icons.Plus size={13} /> Grant access</button>
+        </div>
+        {studios.map(s => {
+          const meta = STUDIO_META[s]
+          if (!meta) return null
+          const via = memberGroups.filter(g => g.studios.includes(s)).map(g => g.name)
+          return (
+            <div key={s}
+              onClick={() => setSelectedStudio(s)}
+              style={{
+                display: "flex", alignItems: "center", gap: 16,
+                padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
+                background: "var(--surface)", cursor: "pointer", transition: "background 0.1s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface)" }}
+            >
+              <div style={{
+                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                background: "var(--surface-raised)", border: "1px solid var(--border)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "var(--primary)",
+              }}>{meta.icon}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{meta.label}</div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{meta.desc}</div>
+              </div>
+              <div style={{ flexShrink: 0, textAlign: "right", display: "flex", alignItems: "center", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--badge-success)", marginBottom: 3 }}>Active</div>
+                  {via.length > 0 && (
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                      via {via.slice(0, 2).join(", ")}{via.length > 2 ? ` +${via.length - 2}` : ""}
+                    </div>
+                  )}
                 </div>
-              )}
+                <button
+                  onClick={e => { e.stopPropagation(); setStudios(p => p.filter(id => id !== s)) }}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)",
+                    background: "var(--surface-raised)", color: "var(--muted-foreground)", cursor: "pointer",
+                  }}
+                  title="Remove access"
+                >
+                  <Icons.Trash2 size={12} />
+                </button>
+                <Icons.ChevronRight size={14} style={{ color: "var(--muted-foreground)" }} />
+              </div>
             </div>
-          </div>
-        )
-      })}
-    </div>
+          )
+        })}
+      </div>
+      {grantOpen && <GrantAccessModal assignedStudios={studios} onGrant={id => { setStudios(p => [...p, id]); setGrantOpen(false) }} onClose={() => setGrantOpen(false)} />}
+    </>
   )
 }
 
@@ -1468,8 +1430,13 @@ function MemberRolesPanel({ member }: { member: Member }) {
               </div>
               <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{role.desc}</div>
             </div>
-            <div style={{ flexShrink: 0, fontSize: 12, color: "var(--muted-foreground)", textAlign: "right" }}>
-              {perms.total} permission{perms.total !== 1 ? "s" : ""}
+            <div style={{ flexShrink: 0, textAlign: "right" }}>
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 2 }}>
+                {perms.total} permission{perms.total !== 1 ? "s" : ""}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                Assigned by Admin · 14 days ago
+              </div>
             </div>
           </div>
         )
@@ -1635,7 +1602,7 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   return (
     <div>
       {/* Mode toggle + Save/Discard */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <div style={{ display: "flex", background: "var(--muted)", borderRadius: 6, padding: 2 }}>
           {(["audit", "edit"] as PermMode[]).map(m => (
             <button key={m} onClick={() => { setMode(m); if (m === "audit") handleDiscard() }}
@@ -1654,6 +1621,28 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
         )}
         {saved && <span style={{ fontSize: 12, color: "var(--success, #22c55e)" /* audit-ignore */ }}>Saved</span>}
       </div>
+
+      {/* Audit-mode summary banner */}
+      {mode === "audit" && (() => {
+        const allGranted = nodes.flatMap(n => [n, ...(n.children ?? [])]).filter(n => GRANTED_STATES.includes(n.state))
+        const directCount = allGranted.filter(n => n.state === "g-direct").length
+        const inhCount = allGranted.filter(n => n.state === "g-inh").length
+        return (
+          <div style={{
+            display: "flex", gap: 20, padding: "10px 16px", marginBottom: 12,
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
+            fontSize: 12, color: "var(--muted-foreground)",
+          }}>
+            <span><strong style={{ color: "var(--foreground)" }}>{allGranted.length}</strong> granted</span>
+            <span style={{ color: "var(--border)" }}>|</span>
+            <span><strong style={{ color: "var(--foreground)" }}>{directCount}</strong> direct</span>
+            <span><strong style={{ color: "var(--foreground)" }}>{inhCount}</strong> via role</span>
+            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4 }}>
+              <Icons.Lock size={11} /> Read-only
+            </span>
+          </div>
+        )
+      })()}
 
       {/* Studio sub-tabs */}
       <div style={{ display: "flex", gap: 4, marginBottom: 12, borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
@@ -1818,35 +1807,15 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
   )
 }
 
-function DangerRow({ icon, label, desc, destructive, onClick }: {
-  icon: React.ReactNode; label: string; desc: string; destructive?: boolean; onClick: () => void
-}) {
-  const [hov, setHov] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        width: "100%", textAlign: "left", padding: "10px 14px",
-        display: "flex", alignItems: "center", gap: 10,
-        background: hov ? (destructive ? "color-mix(in srgb, var(--badge-error) 8%, transparent)" : "var(--accent)") : "transparent",
-        border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", transition: "background 0.1s",
-      }}
-    >
-      <div style={{ color: destructive ? "var(--badge-error)" : "var(--muted-foreground)", flexShrink: 0 }}>{icon}</div>
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: destructive ? "var(--badge-error)" : "var(--foreground)" }}>{label}</div>
-        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{desc}</div>
-      </div>
-    </button>
-  )
-}
 
 // ─── Role detail page ─────────────────────────────────────────────────────────
 
-function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
+function RoleDetailPage({ role, onBack, onEdit, onDelete }: {
+  role: Role; onBack: () => void
+  onEdit?: () => void; onDelete?: () => void
+}) {
   const [activeTab, setActiveTab] = useState(0)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
 
@@ -1864,14 +1833,40 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
           description={role.desc}
           primaryAction={!role.system ? (
             <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm">Edit role</Button>
-              <Button variant="secondary" size="sm">Delete role</Button>
+              <Button variant="secondary" size="sm" onClick={onEdit}>Edit role</Button>
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(true)}>Delete role</Button>
             </div>
           ) : undefined}
         />
       )}
     >
-      <BackBreadcrumb label={role.label} onBack={onBack} />
+      <BackBreadcrumb onBack={onBack} />
+
+      {/* Delete confirmation overlay */}
+      {confirmDelete && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10002,
+          background: "rgba(0,0,0,0.45)", // audit-ignore: scrim overlay
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 14, padding: "28px 32px", width: 400, maxWidth: "90vw",
+            boxShadow: "var(--shadow-elevation-3, 0 16px 48px rgba(0,0,0,.22))", // audit-ignore: rgba fallback
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 8 }}>
+              Delete "{role.label}"?
+            </div>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: "0 0 24px", lineHeight: 1.6 }}>
+              This role will be removed permanently. Members who had this role will lose any permissions it granted. This can't be undone.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+              <Button variant="warning" size="sm" onClick={() => { setConfirmDelete(false); onDelete?.() }}>Delete role</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Color accent + identity row */}
       <div style={{
@@ -1906,39 +1901,11 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
         </div>
       </div>
 
-      <DetailTabs tabs={["Overview", "Members", "Permissions"]} active={activeTab} onChange={setActiveTab} />
+      <DetailTabs tabs={["Members", "Permissions"]} active={activeTab} onChange={setActiveTab} />
 
       <div style={{ marginTop: 20 }}>
-        {/* Overview */}
-        {activeTab === 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-            {([
-              { label: "Governance",  value: perms.governance, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
-              { label: "Data Studio", value: perms.datastudio, color: "#10b981" },  // audit-ignore: prototype fixture data
-              { label: "Agentic",     value: perms.agentic,    color: "#f97316" },  // audit-ignore: prototype fixture data
-              { label: "Admin",       value: perms.admin,      color: "#6366f1" },  // audit-ignore: prototype fixture data
-            ] as const).map(s => (
-              <div key={s.label} style={{
-                padding: "20px 24px", borderRadius: 12,
-                background: "var(--surface)", border: "1px solid var(--border)",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)" }}>{s.label}</span>
-                </div>
-                <div style={{ fontSize: 32, fontWeight: 700, color: s.value > 0 ? "var(--foreground)" : "var(--muted-foreground)", opacity: s.value > 0 ? 1 : 0.4, lineHeight: 1 }}>
-                  {s.value}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4 }}>
-                  permission{s.value !== 1 ? "s" : ""}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Members */}
-        {activeTab === 1 && (
+        {activeTab === 0 && (
           <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
             <div style={{
               padding: "12px 20px", borderBottom: "1px solid var(--border)",
@@ -1980,7 +1947,7 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
         )}
 
         {/* Permissions */}
-        {activeTab === 2 && <PermissionsPanel />}
+        {activeTab === 1 && <PermissionsPanel />}
       </div>
     </ScreenLayout>
   )
@@ -2037,7 +2004,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
         />
       )}
     >
-      <BackBreadcrumb label={group.name} onBack={onBack} />
+      <BackBreadcrumb onBack={onBack} />
 
       {/* Group identity bar */}
       <div style={{
@@ -3251,6 +3218,185 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
   )
 }
 
+// ─── Role form modal (create / edit) ─────────────────────────────────────────
+
+function RoleFormModal({ role, onSave, onClose }: {
+  role: Role | null
+  onSave: (saved: Role) => void
+  onClose: () => void
+}) {
+  const isEdit = role !== null
+  const [name, setName]   = useState(role?.label ?? "")
+  const [desc, setDesc]   = useState(role?.desc ?? "")
+  const [color, setColor] = useState(role?.color ?? ROLE_COLORS[0])
+  const [done, setDone]   = useState(false)
+
+  function handleSave() {
+    if (!name.trim()) return
+    const saved: Role = {
+      id: role?.id ?? name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+      label: name.trim(),
+      system: false,
+      color,
+      desc: desc.trim(),
+      memberIds: role?.memberIds ?? [],
+    }
+    onSave(saved)
+    setDone(true)
+    setTimeout(onClose, 1600)
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 10002,
+      background: "rgba(0,0,0,0.45)", // audit-ignore: scrim overlay
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 16, width: 480, maxWidth: "95vw",
+        boxShadow: "var(--shadow-elevation-3, 0 16px 48px rgba(0,0,0,.22))", // audit-ignore: rgba fallback
+        overflow: "hidden",
+      }}>
+        {done ? (
+          <div style={{ padding: "48px 40px", textAlign: "center" }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: "50%", margin: "0 auto 16px",
+              background: "color-mix(in srgb, var(--color-text-success) 12%, transparent)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Icons.CheckCircle2 size={26} style={{ color: "var(--color-text-success)" }} />
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>
+              Role {isEdit ? "updated" : "created"}
+            </div>
+            <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+              "{name.trim()}" is {isEdit ? "now updated" : "ready to assign to members"}.
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div style={{
+              padding: "20px 24px 16px",
+              borderBottom: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>
+                  {isEdit ? "Edit role" : "New role"}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
+                  {isEdit ? "Update this custom role's name, description, and color." : "Create a custom role to bundle permissions for specific team members."}
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6 }}
+              >
+                <Icons.X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "24px 24px 8px" }}>
+              {/* Name */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Role name
+                </label>
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Risk Analyst"
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    padding: "9px 12px", borderRadius: 8,
+                    border: "1px solid var(--border)", background: "var(--background)",
+                    color: "var(--foreground)", fontSize: 14, fontFamily: "inherit", outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Description
+                </label>
+                <textarea
+                  value={desc}
+                  onChange={e => setDesc(e.target.value)}
+                  placeholder="What does this role allow members to do?"
+                  rows={3}
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    padding: "9px 12px", borderRadius: 8,
+                    border: "1px solid var(--border)", background: "var(--background)",
+                    color: "var(--foreground)", fontSize: 14, fontFamily: "inherit",
+                    resize: "vertical", outline: "none", lineHeight: 1.5,
+                  }}
+                />
+              </div>
+
+              {/* Color picker */}
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Role color
+                </label>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {ROLE_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setColor(c)}
+                      title={c}
+                      style={{
+                        width: 30, height: 30, borderRadius: "50%", background: c,
+                        border: color === c ? "3px solid var(--foreground)" : "3px solid transparent",
+                        outline: color === c ? `2px solid ${c}` : "none",
+                        outlineOffset: 2, cursor: "pointer", flexShrink: 0,
+                        transition: "outline 0.12s, border 0.12s",
+                      }}
+                    />
+                  ))}
+                </div>
+                {/* Preview */}
+                <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0,
+                  }} />
+                  <span style={{
+                    fontSize: 12, fontWeight: 600, padding: "2px 10px", borderRadius: 6,
+                    background: `${color}22`, color: color, border: `1px solid ${color}55`,
+                  }}>
+                    {name.trim() || "Role name"}
+                  </span>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>preview</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: "16px 24px 20px",
+              display: "flex", justifyContent: "flex-end", gap: 10,
+            }}>
+              <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+              <Button
+                variant="main" size="sm"
+                onClick={handleSave}
+                disabled={!name.trim()}
+              >
+                {isEdit ? "Save changes" : "Create role"}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
@@ -3258,9 +3404,20 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [statusFilter, setStatusFilter] = useState<"all" | MemberStatus>("all")
   const [query, setQuery]               = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
+  const [roles, setRoles]               = useState<Role[]>(ROLES)
   const [detailView, setDetailView]     = useState<DetailView>(null)
   const [previewItem, setPreviewItem]   = useState<DetailView>(null)
   const [showInvite, setShowInvite]     = useState(false)
+  const [roleForm, setRoleForm]         = useState<{ role: Role | null } | null>(null)
+
+  function handleRoleSave(saved: Role) {
+    setRoles(prev => {
+      const exists = prev.some(r => r.id === saved.id)
+      return exists ? prev.map(r => r.id === saved.id ? saved : r) : [...prev, saved]
+    })
+    setDetailView(dv => dv?.type === "role" && dv.role.id === saved.id ? { type: "role", role: saved } : dv)
+    setRoleForm(null)
+  }
 
   const counts = useMemo(() => ({
     all:       members.length,
@@ -3315,7 +3472,6 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       <MemberDetailPage
         member={detailView.member}
         onBack={() => setDetailView(null)}
-        onRoleChange={handleRoleChange}
         onToggleSuspend={handleToggleSuspend}
         onRemove={handleRemove}
         onUpdate={handleMemberUpdate}
@@ -3323,7 +3479,20 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     )
   }
   if (detailView?.type === "role") {
-    return <RoleDetailPage role={detailView.role} onBack={() => setDetailView(null)} />
+    const dRole = detailView.role
+    return (
+      <>
+        <RoleDetailPage
+          role={dRole}
+          onBack={() => setDetailView(null)}
+          onEdit={!dRole.system ? () => setRoleForm({ role: dRole }) : undefined}
+          onDelete={!dRole.system ? () => { setRoles(prev => prev.filter(r => r.id !== dRole.id)); setDetailView(null) } : undefined}
+        />
+        {roleForm !== null && (
+          <RoleFormModal role={roleForm.role} onSave={handleRoleSave} onClose={() => setRoleForm(null)} />
+        )}
+      </>
+    )
   }
   if (detailView?.type === "group") {
     return <GroupDetailPage group={detailView.group} onBack={() => setDetailView(null)} />
@@ -3344,7 +3513,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
           title="People & Access"
           description={
             mainTab === "members" ? `${counts.all} members · Avance Financial workspace`
-            : mainTab === "roles"  ? `${ROLES.length} roles · ${ROLES.filter(r => !r.system).length} custom`
+            : mainTab === "roles"  ? `${roles.length} roles · ${roles.filter(r => !r.system).length} custom`
             : `${GROUPS.length} groups · manage shared access across the workspace`
           }
           primaryAction={
@@ -3354,7 +3523,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
                 Invite member
               </Button>
             ) : mainTab === "roles" ? (
-              <Button variant="primary" size="sm">
+              <Button variant="primary" size="sm" onClick={() => setRoleForm({ role: null })}>
                 <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
                 New role
               </Button>
@@ -3369,34 +3538,33 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       )}
     >
       {/* Main tab switcher */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <SwitchTab
-          items={[
-            { id: "members", label: `Members (${counts.all})` },
-            { id: "roles",   label: `Roles (${ROLES.length})`  },
-            { id: "groups",  label: `Groups (${GROUPS.length})` },
-          ]}
-          value={mainTab}
-          onChange={v => setMainTab(v as "members" | "roles" | "groups")}
-          size="s"
-        />
+      <Tabs
+        items={[
+          { id: "members", label: `Members (${counts.all})` },
+          { id: "roles",   label: `Roles (${roles.length})`  },
+          { id: "groups",  label: `Groups (${GROUPS.length})` },
+        ]}
+        activeId={mainTab}
+        onChange={v => setMainTab(v as "members" | "roles" | "groups")}
+        size="m"
+      />
 
-        {mainTab === "members" && (
-          <div ref={statusContainerRef} style={{ flex: 1, minWidth: 0, position: "relative" }}>
-            <Filters
-              showSearch
-              searchPlaceholder="Search members…"
-              searchValue={query}
-              onSearchChange={setQuery}
-              slots={[statusSlot]}
-              showAllFilters={false}
-              showSort={false}
-              showViewToggle={false}
-            />
-            {statusMenu}
-          </div>
-        )}
-      </div>
+      {/* Filters row */}
+      {mainTab === "members" && (
+        <div ref={statusContainerRef} style={{ position: "relative", marginTop: 16, marginBottom: 16 }}>
+          <Filters
+            showSearch
+            searchPlaceholder="Search members…"
+            searchValue={query}
+            onSearchChange={setQuery}
+            slots={[statusSlot]}
+            showAllFilters={false}
+            showSort={false}
+            showViewToggle={false}
+          />
+          {statusMenu}
+        </div>
+      )}
 
       {/* Members view */}
       {mainTab === "members" && (
@@ -3445,20 +3613,20 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         <>
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-              System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {ROLES.filter(r => r.system).length}</span>
+              System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {roles.filter(r => r.system).length}</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-              {ROLES.filter(r => r.system).map(r => (
+              {roles.filter(r => r.system).map(r => (
                 <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
               ))}
             </div>
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-              Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {ROLES.filter(r => !r.system).length}</span>
+              Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {roles.filter(r => !r.system).length}</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-              {ROLES.filter(r => !r.system).map(r => (
+              {roles.filter(r => !r.system).map(r => (
                 <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
               ))}
             </div>
@@ -3533,6 +3701,10 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             setMembers(ms => [...ms, ...newMembers])
           }}
         />
+      )}
+
+      {roleForm !== null && (
+        <RoleFormModal role={roleForm.role} onSave={handleRoleSave} onClose={() => setRoleForm(null)} />
       )}
     </ScreenLayout>
   )
