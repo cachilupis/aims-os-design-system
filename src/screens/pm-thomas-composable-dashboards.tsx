@@ -3,6 +3,7 @@ const DashboardCanvasScreen = lazy(() => import("./pm-thomas-dashboard-canvas"))
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header, type HeaderAction } from "@/components/ui/header"
+import { WidgetMiniPreview } from "@/components/experimental/widget-parts"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
@@ -68,18 +69,6 @@ const DASHBOARDS = [
 
 // ── Widget library data ───────────────────────────────────────────────────────
 
-const SKELETON_ICON: Record<string, keyof typeof LucideIcons> = {
-  KPI:        "Hash",
-  Chart:      "BarChart2",
-  Feed:       "List",
-  Gauge:      "Gauge",
-  Donut:      "PieChart",
-  Board:      "LayoutGrid",
-  Funnel:     "TrendingDown",
-  "Stat Row": "Rows3",
-  Alerts:     "Bell",
-  "Cost KPI": "DollarSign",
-}
 
 const LIB_WIDGETS: LibWidget[] = [
   { id:"w-001", name:"Human-in-the-Loop Queue",      source:"AIMS OS — Agentic Studio",   skeleton:"Feed",     category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:true,  usedIn:5,  placement:"Standalone", description:"Live queue of all conversations waiting for a human agent to pick up or review." },
@@ -344,126 +333,11 @@ function HealthBadge({ health }: { health: LibHealth }) {
   return <Tag variant="alert" size="sm">Needs remap</Tag>
 }
 
-// DS-GAP: WidgetMiniPreview — visual mini render per skeleton. Closest DS: CardContainer (variant=sunken).
-function WidgetMiniPreview({ skeleton, seed, height = 64 }: { skeleton: Skeleton; seed: number; height?: number }) {
-  const wrap: React.CSSProperties = { height, borderRadius: 8, background: "var(--canvas)", border: "1px solid var(--field-border)", overflow: "hidden", pointerEvents: "none", display: "flex", alignItems: "center" }
-
-  if (skeleton === "KPI" || skeleton === "Cost KPI") {
-    const vals = [86.4, 12.8, 540, 1284, 3.2, 48.2, 920, 7.6]
-    const n   = vals[seed % vals.length]
-    const lbl = skeleton === "Cost KPI" ? `$${n < 10 ? n + "K" : Math.round(n) + "K"}` : n >= 100 ? String(Math.round(n)) : `${n}K`
-    return <div style={{ ...wrap, justifyContent: "center" }}><span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px", color: "var(--foreground)" }}>{lbl}</span></div>
-  }
-
-  if (skeleton === "Chart") {
-    const BARS = ["#2B7FFF","#8B5CF6","#0EA5E9","#22C55E","#F59E0B"] // audit-ignore: chart demo palette
-    const hs   = [65,40,80,55,35,70,50].map((h,i) => (h + seed * 11 + i * 7) % 70 + 20)
-    return (
-      <div style={{ ...wrap, justifyContent: "center", alignItems: "flex-end", padding: "0 14px", gap: 4 }}>
-        {hs.slice(0,5).map((h,i) => <div key={i} style={{ flex:1, height:`${h}%`, borderRadius:"3px 3px 0 0", background: BARS[i % BARS.length] }} />)}
-      </div>
-    )
-  }
-
-  if (skeleton === "Feed") {
-    return (
-      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", alignItems:"stretch", gap:5, padding:"10px 12px" }}>
-        {[0,1,2].map(i => (
-          <div key={i} style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <div style={{ width:5, height:5, borderRadius:"50%", background:"var(--primary)", flexShrink:0 }} />
-            <div style={{ height:6, borderRadius:4, background:"var(--field-border)", flex:1, opacity: 1 - i * 0.25 }} />
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  if (skeleton === "Donut") {
-    const pct = 0.55 + (seed % 4) * 0.1
-    const r = 21, circ = 2 * Math.PI * r
-    return (
-      <div style={{ ...wrap, justifyContent:"center", padding:0 }}>
-        <svg width={64} height={64} viewBox="0 0 64 64">
-          <circle cx={32} cy={32} r={r} fill="none" stroke="var(--field-border)" strokeWidth={7} />
-          <circle cx={32} cy={32} r={r} fill="none" stroke="#F59E0B" strokeWidth={7} // audit-ignore: donut demo colour
-            strokeDasharray={`${circ*pct} ${circ}`} strokeLinecap="round" transform="rotate(-90 32 32)" />
-        </svg>
-      </div>
-    )
-  }
-
-  if (skeleton === "Gauge") {
-    const pct = 0.45 + (seed % 5) * 0.1
-    return (
-      <div style={{ ...wrap, justifyContent:"center", padding:0 }}>
-        <svg width={84} height={46} viewBox="0 0 84 46">
-          <path d="M 10 42 A 32 32 0 0 1 74 42" fill="none" stroke="var(--field-border)" strokeWidth={7} strokeLinecap="round" />
-          <path d="M 10 42 A 32 32 0 0 1 74 42" fill="none" stroke="#22C55E" strokeWidth={7} strokeLinecap="round" // audit-ignore: gauge demo colour
-            strokeDasharray={`${100*pct} 100`} />
-        </svg>
-      </div>
-    )
-  }
-
-  if (skeleton === "Board") {
-    const rows: [string,string,number][] = [["#22C55E","Active",3],["#94A3B8","Idle",1],["#F59E0B","Paused",1]] // audit-ignore: board status colours
-    return (
-      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", alignItems:"stretch", gap:4, padding:"8px 12px" }}>
-        {rows.map(([c,l,n]) => (
-          <div key={l} style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background:c, flexShrink:0 }} />
-              <span style={{ fontSize:10, color:"var(--field-supporting)" }}>{l}</span>
-            </div>
-            <span style={{ fontSize:10, fontWeight:600, color:"var(--foreground)" }}>{n}</span>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  if (skeleton === "Funnel") {
-    const widths = [95,70,50,32]
-    const COLS = ["#2B7FFF","#8B5CF6","#0EA5E9","#22C55E"] // audit-ignore: funnel demo palette
-    return (
-      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", alignItems:"center", gap:3, padding:"8px 14px" }}>
-        {widths.map((w,i) => <div key={i} style={{ width:`${w}%`, height:9, borderRadius:3, background:COLS[i] }} />)}
-      </div>
-    )
-  }
-
-  if (skeleton === "Stat Row") {
-    const vals = [["1.2K","Conv."],["87%","Rate"],["4.3","Avg"]]
-    return (
-      <div style={{ ...wrap, justifyContent:"space-around", padding:"0 8px" }}>
-        {vals.map(([v,l]) => (
-          <div key={l} style={{ textAlign:"center" }}>
-            <div style={{ fontSize:14, fontWeight:700, color:"var(--foreground)" }}>{v}</div>
-            <div style={{ fontSize:9, color:"var(--field-supporting)", marginTop:1 }}>{l}</div>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  if (skeleton === "Alerts") {
-    const items: [string,string][] = [["#EF4444","Critical · 2"],["#F59E0B","Warning · 5"]] // audit-ignore: alert demo colours
-    return (
-      <div style={{ ...wrap, flexDirection:"column", justifyContent:"center", alignItems:"stretch", gap:6, padding:"10px 12px" }}>
-        {items.map(([c,l]) => (
-          <div key={l} style={{ display:"flex", alignItems:"center", gap:7 }}>
-            <div style={{ width:6, height:6, borderRadius:2, background:c, flexShrink:0 }} />
-            <span style={{ fontSize:10, color:"var(--field-supporting)" }}>{l}</span>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  const iconKey = SKELETON_ICON[skeleton] ?? "BarChart2"
-  const Icon = LucideIcons[iconKey] as React.FC<{ size?: number; style?: React.CSSProperties }>
-  return <div style={{ ...wrap, justifyContent:"center" }}>{Icon && <Icon size={20} style={{ color:"var(--field-supporting)" }} />}</div>
-}
+// The widget preview renderer used to live here. It was the best of the three
+// copies in the repo, so it became the shared one in widget-parts.tsx rather
+// than being replaced by it — its hardcoded hex swapped for the DS tokens they
+// already matched, and shapes added for the nine catalog widgets that had no
+// drawing at all. Imported at the top of this file now.
 
 // DS-GAP: LibStudioWelcome — contextual library banner. Closest DS: CardContainer.
 function LibStudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {

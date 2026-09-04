@@ -4,6 +4,7 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Tag } from "@/components/ui/tag"
+import { WidgetMiniPreview, seedFrom } from "@/components/experimental/widget-parts"
 import { CardContainer } from "@/components/ui/card-container"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { Input } from "@/components/ui/input"
@@ -98,56 +99,12 @@ function FreshnessBadge({ f }: { f: PlacedWidget["freshness"] }) {
   return <Tag variant="neutral" size="sm">Stale</Tag>
 }
 
-// Maps skeleton → a visual sketch using simple SVG shapes inside the tile
-function WidgetSketch({ skeleton, colSpan }: { skeleton: string; colSpan: ColSpan }) {
-  const h = colSpan === 1 ? 80 : 60
-  const color = "var(--field-border)"
-  switch (skeleton) {
-    case "KPI": return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 4 }}>
-        <div style={{ height: 28, width: "55%", borderRadius: 4, background: color, opacity: 0.6 }} />
-        <div style={{ height: 12, width: "35%", borderRadius: 3, background: color, opacity: 0.35 }} />
-      </div>
-    )
-    case "Gauge": return (
-      <svg width={h} height={h / 1.5} viewBox="0 0 80 50">
-        <path d="M10 45 A35 35 0 0 1 70 45" fill="none" stroke="var(--field-border)" strokeWidth="6" strokeLinecap="round" />
-        <path d="M10 45 A35 35 0 0 1 48 14" fill="none" stroke="var(--primary)" strokeWidth="6" strokeLinecap="round" opacity="0.5" />
-        <circle cx="40" cy="45" r="4" fill="var(--primary)" opacity="0.6" />
-      </svg>
-    )
-    case "Chart": return (
-      <svg width="100%" height={h} viewBox="0 0 200 60" preserveAspectRatio="none">
-        {[20,40,30,55,25,50,35,48,42,38].map((v, i) => (
-          <rect key={i} x={i*20+2} y={60-v} width={16} height={v} rx={2} fill="var(--primary)" opacity="0.35" />
-        ))}
-      </svg>
-    )
-    case "Feed": return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        {[90, 75, 60].map((w, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--primary)", opacity: 0.5 }} />
-            <div style={{ height: 8, width: `${w}%`, borderRadius: 3, background: color, opacity: 0.4 }} />
-          </div>
-        ))}
-      </div>
-    )
-    case "Donut": return (
-      <svg width={h} height={h} viewBox="0 0 60 60">
-        <circle cx="30" cy="30" r="22" fill="none" stroke="var(--field-border)" strokeWidth="10" />
-        <circle cx="30" cy="30" r="22" fill="none" stroke="var(--primary)" strokeWidth="10" opacity="0.5"
-          strokeDasharray="80 58" strokeLinecap="round" transform="rotate(-90 30 30)" />
-      </svg>
-    )
-    default: return (
-      <div style={{ height: h, display: "flex", flexDirection: "column", gap: 4 }}>
-        {[100, 80, 90, 70].slice(0, colSpan === 3 ? 4 : 2).map((w, i) => (
-          <div key={i} style={{ height: 10, width: `${w}%`, borderRadius: 3, background: color, opacity: 0.35 }} />
-        ))}
-      </div>
-    )
-  }
+// The canvas used to draw its own abstract wireframe here — grey blocks, no
+// values. That was a fourth copy of "what does a widget look like", and it is
+// why the same dashboard read differently in the canvas than in the library.
+// Now it draws from the shared renderer, at the tile heights the canvas uses.
+function WidgetSketch({ skeleton, colSpan, name }: { skeleton: string; colSpan: ColSpan; name: string }) {
+  return <WidgetMiniPreview skeleton={skeleton} height={colSpan === 1 ? 80 : 64} seed={seedFrom(name)} />
 }
 
 // ── Add Widget Picker modal ────────────────────────────────────────────────────
@@ -362,7 +319,7 @@ function WidgetTile({
             </div>
           </div>
           {/* Sketch */}
-          <WidgetSketch skeleton={widget.skeleton} colSpan={widget.colSpan} />
+          <WidgetSketch skeleton={widget.skeleton} colSpan={widget.colSpan} name={widget.name} />
           {/* Source */}
           <div style={{ fontSize: 11, color: "var(--field-supporting)", marginTop: "auto" }}>{widget.source}</div>
         </CardContainer>
