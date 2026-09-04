@@ -7,7 +7,6 @@ import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
 import { Tag, type TagVariant } from "@/components/ui/tag"
 import { EmptyState } from "@/components/ui/empty-state"
-import { AgentTestPanel } from "./AgentTestPanel"
 import {
   UCP_ALEJANDRO,
   UCP_ACTIVITY_GROUPS,
@@ -120,42 +119,30 @@ export function UcpAlejandroPage({ onOpenCallDetail, onLoadOlder }: UcpAlejandro
         </div>
       </div>
 
-      {/* ── Two-pane body: tabbed contact content on the left,
-          shared AgentTestPanel on the right so agents can be
-          dry-run against this contact from any tab. */}
-      <div className="flex flex-row flex-1" style={{ overflow: "hidden", minHeight: 0 }}>
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          {/* Tab strip */}
-          <div style={{ padding: "0 12px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
-            <Tabs
-              items={TABS}
-              activeId={tab}
-              onChange={(id) => setTab(id as UcpTab)}
-            />
-          </div>
-
-          {/* Tab body */}
-          <div className="flex-1 overflow-y-auto" style={{ padding: 24 }}>
-            {tab === "activity" ? (
-              <ActivityBody
-                kind={kind}          onKind={setKind}
-                agent={agent}        onAgent={setAgent}
-                sort={sort}          onSort={setSort}
-                filteredCount={filteredCount}
-                filteredGroups={filteredGroups}
-                onOpenCallDetail={onOpenCallDetail}
-                onLoadOlder={onLoadOlder}
-              />
-            ) : (
-              <TabStub tab={tab}/>
-            )}
-          </div>
-        </div>
-
-        <AgentTestPanel
-          description={`Send a message to preview how an agent would handle ${UCP_ALEJANDRO.displayName.split("@")[0]} across voice, SMS or email.`}
-          placeholder="Try a scenario for this contact…"
+      {/* ── Tab strip ─────────────────────────────────────────── */}
+      <div style={{ padding: "0 12px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+        <Tabs
+          items={TABS}
+          activeId={tab}
+          onChange={(id) => setTab(id as UcpTab)}
         />
+      </div>
+
+      {/* ── Tab body ──────────────────────────────────────────── */}
+      <div style={{ padding: 24 }}>
+        {tab === "activity" ? (
+          <ActivityBody
+            kind={kind}          onKind={setKind}
+            agent={agent}        onAgent={setAgent}
+            sort={sort}          onSort={setSort}
+            filteredCount={filteredCount}
+            filteredGroups={filteredGroups}
+            onOpenCallDetail={onOpenCallDetail}
+            onLoadOlder={onLoadOlder}
+          />
+        ) : (
+          <TabStub tab={tab}/>
+        )}
       </div>
     </div>
   )
