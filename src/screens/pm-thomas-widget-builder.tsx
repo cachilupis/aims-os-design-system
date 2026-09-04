@@ -411,7 +411,7 @@ export default function PMThomasWidgetBuilderScreen() {
 
       {/* ── Builder ── */}
       {!saved && (
-        <>
+        <div style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 160px)" }}>
           {/* Step progress indicator */}
           <Stepper
             steps={stepItems}
@@ -584,8 +584,9 @@ export default function PMThomasWidgetBuilderScreen() {
           </div>
         </div>
 
-        <StepperNavFooter {...footerProps} />
-      </>
+          <div style={{ flex: 1 }} />
+          <StepperNavFooter {...footerProps} />
+        </div>
       )}
 
       {/* ── Leave confirmation modal ── */}
