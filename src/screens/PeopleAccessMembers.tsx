@@ -407,8 +407,11 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
             )}
           </div>
+          {node.desc && (
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{node.desc}</div>
+          )}
           {depth === 0 && hasChildren && (
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>
               {grantedChildren} of {node.children?.length} permissions granted
             </div>
           )}
