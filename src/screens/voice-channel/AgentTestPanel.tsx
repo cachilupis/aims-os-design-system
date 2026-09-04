@@ -1,18 +1,20 @@
 import { useState } from "react"
-import { MessageCircle, Paperclip, Send, Sparkles } from "lucide-react"
+import { MessageCircle, Paperclip, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { CardContainer } from "@/components/ui/card-container"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "./toast"
 
 // ─────────────────────────────────────────────────────────────────────
 // AgentTestPanel — the right-side "Test your Agent" chat area used by
 // every 2-column agent-detail panel (Channels / Knowledge / Tools /
-// Configuration / Instructions / Create) and by the UCP.
+// Configuration / Instructions / Create).
 //
-// Rendered as a distinct panel: subtle surface + rounded top-level
-// container so it reads as its own workspace, not just a border-left
-// column. The composer holds local draft text, wires Cmd/Ctrl+Enter to
-// send, and fires a toast — the real chat runtime is a follow-up but
-// this gives the panel a lived-in feel instead of feeling frozen.
+// Composer uses the DS Textarea inside a CardContainer so the input
+// surface reads as one DS-native "chat box" component rather than a
+// bespoke bordered div wrapping a raw <textarea>. Primary action is a
+// labelled "Try me" button (Sparkles icon) — Cmd/Ctrl+Enter still
+// submits from anywhere in the textarea.
 // ─────────────────────────────────────────────────────────────────────
 
 interface AgentTestPanelProps {
@@ -80,43 +82,32 @@ export function AgentTestPanel({ description, placeholder, ctaLabel = "Try me" }
         </div>
       </div>
 
-      <div style={{ padding: 12, borderTop: "1px solid var(--color-border-neutral-default)" }}>
-        <div
-          style={{
-            padding: 8,
-            background: "var(--field-bg)",
-            border: "1px solid var(--field-border)",
-            borderRadius: "var(--radius-md)",
-          }}
-        >
-          <textarea
+      {/* Composer — DS CardContainer + DS Textarea + Try me CTA.
+          Cmd/Ctrl+Enter sends from anywhere in the textarea. */}
+      <div style={{ padding: 12 }}>
+        <CardContainer variant="default" size="sm">
+          <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              // Cmd/Ctrl+Enter sends. Plain Enter still adds a newline.
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
                 send()
               }
             }}
             placeholder={placeholder}
-            rows={2}
             aria-label="Test message to agent"
-            style={{
-              width: "100%", padding: 4,
-              fontSize: 13, color: "var(--color-text-title)",
-              background: "transparent", border: "none", outline: "none",
-              resize: "none", fontFamily: "inherit",
-            }}
+            expand
+            className="!border-none !bg-transparent !p-0 min-h-[44px]"
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" style={{ marginTop: 4 }}>
             <Button
               variant="tertiary" size="sm"
               icon={<Paperclip size={13}/>} iconPosition="alone"
               aria-label="Attach file"
               onClick={() => toast.info("Attach a file to the test session")}
             />
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto">
               <Button
                 variant="primary" size="sm"
                 icon={<Sparkles size={13}/>} iconPosition="left"
@@ -125,16 +116,9 @@ export function AgentTestPanel({ description, placeholder, ctaLabel = "Try me" }
               >
                 {ctaLabel}
               </Button>
-              <Button
-                variant="secondary" size="sm"
-                icon={<Send size={13}/>} iconPosition="alone"
-                aria-label="Send test message"
-                disabled={!canSend}
-                onClick={send}
-              />
             </div>
           </div>
-        </div>
+        </CardContainer>
       </div>
     </div>
   )
