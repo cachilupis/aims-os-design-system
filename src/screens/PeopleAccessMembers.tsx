@@ -1150,6 +1150,17 @@ function MemberGroupsPanel({ member }: { member: Member }) {
 
 // ─── Permissions tab (dual-mode: Audit / Edit) ───────────────────────────────
 
+const GRANTED_STATES: PermState[] = ["g-direct", "g-inh"]
+
+function filterGrantedTree(nodes: PermNode[]): PermNode[] {
+  return nodes.flatMap(n => {
+    const grantedChildren = n.children ? filterGrantedTree(n.children) : []
+    const isGranted = GRANTED_STATES.includes(n.state)
+    if (!isGranted && grantedChildren.length === 0) return []
+    return [{ ...n, children: grantedChildren }]
+  })
+}
+
 type PermMode = "audit" | "edit"
 type PermOverrides = Record<string, PermState>
 const PERM_CYCLE: PermState[] = ["", "g-direct", "g-denied"]
@@ -1231,9 +1242,10 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   }
 
   const filterLower = filter.toLowerCase()
+  const baseNodes = mode === "audit" ? filterGrantedTree(nodes) : nodes
   const visibleNodes = filter
-    ? nodes.filter(n => n.label.toLowerCase().includes(filterLower) || n.children?.some(c => c.label.toLowerCase().includes(filterLower)))
-    : nodes
+    ? baseNodes.filter(n => n.label.toLowerCase().includes(filterLower) || n.children?.some(c => c.label.toLowerCase().includes(filterLower)))
+    : baseNodes
 
   return (
     <div>
