@@ -198,9 +198,9 @@ const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number;
 }
 
 const ROLE_COLORS = [
-  "#6366f1", "#10b981", "#f97316", "#0ea5e9",
-  "#8b5cf6", "#ef4444", "#f59e0b", "#64748b",
-] // audit-ignore: preset color swatches for role form
+  "#6366f1", "#10b981", "#f97316", "#0ea5e9", // audit-ignore: preset color swatches for role form
+  "#8b5cf6", "#ef4444", "#f59e0b", "#64748b", // audit-ignore: preset color swatches for role form
+]
 
 // ─── Groups fixture ───────────────────────────────────────────────────────────
 
