@@ -14,7 +14,9 @@ import { SlideOut }     from "@/components/ui/slide-out"
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MemberStatus = "active" | "invited" | "suspended"
-type MemberRole   = "Super Admin" | "Tenant Admin" | "Member" | "Viewer" | "Billing Admin"
+type UserType     = "Admin" | "Owner" | "Member"
+// Legacy alias kept only to avoid cascading rename inside fixture data until full refactor
+type MemberRole   = UserType
 type PermState    = "g-direct" | "g-inh" | "g-denied" | ""
 
 interface PermNode {
@@ -56,11 +58,11 @@ type DetailView =
 // ─── Members fixture ──────────────────────────────────────────────────────────
 
 const MEMBERS: Member[] = [
-  { id: "tg",  name: "Thomas Gonzalez",  email: "thomas.gonzalez@aimsos.ai",   role: "Super Admin",   status: "active",    lastActive: "2026-08-26T09:10:00Z", joinedAt: "2025-01-15T00:00:00Z", initials: "TG", avatarColor: "var(--badge-info)",       title: "Platform Owner",       department: "AIMS OS",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-01-15T00:00:00Z", sessions: [
+  { id: "tg",  name: "Thomas Gonzalez",  email: "thomas.gonzalez@aimsos.ai",   role: "Owner",   status: "active",    lastActive: "2026-08-26T09:10:00Z", joinedAt: "2025-01-15T00:00:00Z", initials: "TG", avatarColor: "var(--badge-info)",       title: "Platform Owner",       department: "AIMS OS",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-01-15T00:00:00Z", sessions: [
     { id: "s1", device: "MacBook Pro",    browser: "Chrome 125",  location: "San Francisco, CA", lastActive: "2026-08-26T09:10:00Z", current: true  },
     { id: "s2", device: "iPhone 15 Pro",  browser: "Safari 17",   location: "San Francisco, CA", lastActive: "2026-08-25T21:00:00Z", current: false },
   ]},
-  { id: "mg",  name: "Maria García",     email: "maria.garcia@avance.com",     role: "Tenant Admin",  status: "active",    lastActive: "2026-08-26T08:45:00Z", joinedAt: "2025-03-02T00:00:00Z", initials: "MG", avatarColor: "var(--badge-success)",    title: "IT Director",           department: "IT",               mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-03-02T00:00:00Z", sessions: [
+  { id: "mg",  name: "Maria García",     email: "maria.garcia@avance.com",     role: "Admin",  status: "active",    lastActive: "2026-08-26T08:45:00Z", joinedAt: "2025-03-02T00:00:00Z", initials: "MG", avatarColor: "var(--badge-success)",    title: "IT Director",           department: "IT",               mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-03-02T00:00:00Z", sessions: [
     { id: "s3", device: "Windows PC",     browser: "Edge 124",    location: "Mexico City, MX",   lastActive: "2026-08-26T08:45:00Z", current: true  },
   ]},
   { id: "es",  name: "Eduardo Suárez",   email: "eduardo.suarez@avance.com",   role: "Member",        status: "active",    lastActive: "2026-08-25T17:30:00Z", joinedAt: "2025-04-10T00:00:00Z", initials: "ES", avatarColor: "var(--badge-alert)",      title: "Data Analyst",          department: "Analytics",        mfaEnabled: true,  mfaMethod: "sms",   mfaEnrolledAt: "2025-04-12T00:00:00Z", sessions: [
@@ -74,16 +76,16 @@ const MEMBERS: Member[] = [
   { id: "dp",  name: "Diana Pérez",      email: "diana.perez@avance.com",      role: "Member",        status: "active",    lastActive: "2026-08-24T11:20:00Z", joinedAt: "2025-06-01T00:00:00Z", initials: "DP", avatarColor: "var(--badge-info)",       title: "Operations Lead",       department: "Operations",       mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined, sessions: [
     { id: "s8", device: "Windows PC",     browser: "Chrome 125",  location: "Mexico City, MX",   lastActive: "2026-08-24T11:20:00Z", current: true  },
   ]},
-  { id: "jp",  name: "James Park",       email: "james.park@avance.com",       role: "Billing Admin", status: "active",    lastActive: "2026-08-23T09:00:00Z", joinedAt: "2025-07-07T00:00:00Z", initials: "JP", avatarColor: "var(--badge-success)",    title: "Finance Manager",       department: "Finance",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-07-08T00:00:00Z", sessions: [
+  { id: "jp",  name: "James Park",       email: "james.park@avance.com",       role: "Member", status: "active",    lastActive: "2026-08-23T09:00:00Z", joinedAt: "2025-07-07T00:00:00Z", initials: "JP", avatarColor: "var(--badge-success)",    title: "Finance Manager",       department: "Finance",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-07-08T00:00:00Z", sessions: [
     { id: "s9", device: "MacBook Pro",    browser: "Safari 17",   location: "Chicago, IL",       lastActive: "2026-08-23T09:00:00Z", current: true  },
   ]},
-  { id: "at",  name: "Ana Torres",       email: "ana.torres@avance.com",       role: "Viewer",        status: "active",    lastActive: "2026-08-22T16:45:00Z", joinedAt: "2025-08-01T00:00:00Z", initials: "AT", avatarColor: "var(--badge-alert)",      title: "Business Analyst",      department: "Analytics",        mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined, sessions: [
+  { id: "at",  name: "Ana Torres",       email: "ana.torres@avance.com",       role: "Member",        status: "active",    lastActive: "2026-08-22T16:45:00Z", joinedAt: "2025-08-01T00:00:00Z", initials: "AT", avatarColor: "var(--badge-alert)",      title: "Business Analyst",      department: "Analytics",        mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined, sessions: [
     { id: "s10", device: "Windows Laptop", browser: "Edge 124",  location: "Guadalajara, MX",   lastActive: "2026-08-22T16:45:00Z", current: true  },
   ]},
   { id: "lr",  name: "Leo Ramírez",      email: "leo.ramirez@avance.com",      role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-20T00:00:00Z", initials: "LR", avatarColor: "var(--muted-foreground)", title: "Data Engineer",         department: "Engineering",      mfaEnabled: false, sessions: [] },
   { id: "cn",  name: "Clara Nakamura",   email: "clara.nakamura@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-21T00:00:00Z", initials: "CN", avatarColor: "var(--muted-foreground)", title: "Product Manager",       department: "Product",          mfaEnabled: false, sessions: [] },
   { id: "rv",  name: "Roberto Vargas",   email: "roberto.vargas@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-22T00:00:00Z", initials: "RV", avatarColor: "var(--muted-foreground)", title: "Solutions Architect",   department: "Engineering",      mfaEnabled: false, sessions: [] },
-  { id: "fw",  name: "Fiona Walsh",      email: "fiona.walsh@avance.com",      role: "Viewer",        status: "suspended", lastActive: "2026-07-14T10:00:00Z", joinedAt: "2025-09-10T00:00:00Z", initials: "FW", avatarColor: "var(--muted-foreground)", title: "Analyst",               department: "Risk & Compliance", mfaEnabled: true,  mfaMethod: "sms",   mfaEnrolledAt: "2025-09-15T00:00:00Z", sessions: [] },
+  { id: "fw",  name: "Fiona Walsh",      email: "fiona.walsh@avance.com",      role: "Member",        status: "suspended", lastActive: "2026-07-14T10:00:00Z", joinedAt: "2025-09-10T00:00:00Z", initials: "FW", avatarColor: "var(--muted-foreground)", title: "Analyst",               department: "Risk & Compliance", mfaEnabled: true,  mfaMethod: "sms",   mfaEnrolledAt: "2025-09-15T00:00:00Z", sessions: [] },
   { id: "ms",  name: "Marcus Silva",     email: "marcus.silva@avance.com",     role: "Member",        status: "suspended", lastActive: "2026-06-30T08:00:00Z", joinedAt: "2025-10-01T00:00:00Z", initials: "MS", avatarColor: "var(--muted-foreground)", title: "Data Scientist",        department: "Analytics",        mfaEnabled: false, sessions: [] },
 ]
 
@@ -250,13 +252,13 @@ const STATUS_LABEL: Record<MemberStatus, string> = {
   invited:   "Invited",
   suspended: "Suspended",
 }
-const ROLE_COLOR: Record<MemberRole, string> = {
-  "Super Admin":   "var(--badge-error)",
-  "Tenant Admin":  "var(--badge-alert)",
-  "Billing Admin": "var(--badge-info)",
-  "Member":        "var(--muted-foreground)",
-  "Viewer":        "var(--muted-foreground)",
+const USER_TYPE_COLOR: Record<UserType, string> = {
+  "Owner":  "var(--badge-error)",
+  "Admin":  "var(--badge-alert)",
+  "Member": "var(--muted-foreground)",
 }
+// Keep alias for any legacy references in this file
+const ROLE_COLOR = USER_TYPE_COLOR
 const PROTO_NOW = new Date("2026-08-26T10:00:00Z")
 
 function formatRelative(iso: string): string {
@@ -798,7 +800,8 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 
 // ─── Member detail page ───────────────────────────────────────────────────────
 
-const ROLE_OPTIONS: MemberRole[] = ["Super Admin", "Tenant Admin", "Billing Admin", "Member", "Viewer"]
+const USER_TYPE_OPTIONS: UserType[] = ["Owner", "Admin", "Member"]
+const ROLE_OPTIONS = USER_TYPE_OPTIONS
 
 function MemberDetailPage({
   member, onBack, onRoleChange, onToggleSuspend, onRemove, onUpdate,
@@ -1401,89 +1404,177 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
 
 // ─── Member row ───────────────────────────────────────────────────────────────
 
-function MemberRow({ member, onSelect }: { member: Member; onSelect: (m: Member) => void }) {
+type MemberAction = "reset-password" | "reset-mfa" | "suspend" | "unsuspend" | "deactivate" | "update"
+
+function MemberRow({
+  member, onSelect, onAction,
+}: {
+  member: Member
+  onSelect: (m: Member) => void
+  onAction?: (m: Member, action: MemberAction) => void
+}) {
   const [hovered, setHovered] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; left: number } | null>(null)
   const statusColor = STATUS_COLOR[member.status]
 
-  return (
-    <div
-      onClick={() => onSelect(member)}
-      style={{
-        padding: "12px 20px", borderBottom: "1px solid var(--border)",
-        display: "flex", alignItems: "center", gap: 14,
-        background: hovered ? "var(--accent)" : "transparent",
-        cursor: "pointer", transition: "background 0.1s",
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div style={{
-        width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-        background: member.status === "active" ? member.avatarColor : "var(--muted)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 12, fontWeight: 700,
-        color: member.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-        opacity: member.status === "suspended" ? 0.5 : 1,
-      }}>{member.initials}</div>
+  function openMenu(e: React.MouseEvent) {
+    e.stopPropagation()
+    const btn = (e.currentTarget as HTMLElement)
+    const rect = btn.getBoundingClientRect()
+    setMenuAnchor({ top: rect.bottom + 4, left: rect.left + rect.width / 2 })
+    setMenuOpen(true)
+  }
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", opacity: member.status === "suspended" ? 0.5 : 1 }}>
+  return (
+    <>
+      <div
+        onClick={() => onSelect(member)}
+        style={{
+          padding: "10px 20px", borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", gap: 14,
+          background: hovered ? "var(--accent)" : "transparent",
+          cursor: "pointer", transition: "background 0.1s",
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* Avatar */}
+        <div style={{
+          width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+          background: member.status === "active" ? member.avatarColor : "var(--muted)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 12, fontWeight: 700,
+          color: member.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore
+          opacity: member.status === "suspended" ? 0.5 : 1,
+        }}>{member.initials}</div>
+
+        {/* Name + email */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", opacity: member.status === "suspended" ? 0.5 : 1, marginBottom: 1 }}>
             {member.name}
-          </span>
-          <span style={{ fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: `${ROLE_COLOR[member.role]}22`, color: ROLE_COLOR[member.role], border: `1px solid ${ROLE_COLOR[member.role]}44` }}>
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {member.email}
+          </div>
+        </div>
+
+        {/* Department */}
+        <div style={{ minWidth: 120, fontSize: 12, color: "var(--muted-foreground)", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {member.department ?? "—"}
+        </div>
+
+        {/* User type badge */}
+        <div style={{ minWidth: 72, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{
+            fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 100,
+            background: `${USER_TYPE_COLOR[member.role]}22`,
+            color: USER_TYPE_COLOR[member.role],
+            border: `1px solid ${USER_TYPE_COLOR[member.role]}44`,
+          }}>
             {member.role}
           </span>
         </div>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {member.email}
-        </div>
-      </div>
 
-      <div style={{ textAlign: "right", flexShrink: 0, minWidth: 88 }}>
-        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 2 }}>
-          {member.status === "invited" ? "Invite sent" : member.status === "suspended" ? "Suspended" : "Last active"}
-        </div>
-        {member.lastActive ? (
-          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{formatRelative(member.lastActive)}</div>
-        ) : (
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>
-            {member.status === "invited" ? formatRelative(member.joinedAt) : "—"}
+        {/* Last active */}
+        <div style={{ textAlign: "right", flexShrink: 0, minWidth: 88 }}>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 1 }}>
+            {member.status === "invited" ? "Invite sent" : member.status === "suspended" ? "Suspended" : "Last active"}
           </div>
-        )}
+          {member.lastActive ? (
+            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{formatRelative(member.lastActive)}</div>
+          ) : (
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>
+              {member.status === "invited" ? formatRelative(member.joinedAt) : "—"}
+            </div>
+          )}
+        </div>
+
+        {/* MFA */}
+        <div
+          title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
+          style={{
+            display: "flex", alignItems: "center", gap: 4, minWidth: 60, justifyContent: "center",
+            padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 600, flexShrink: 0,
+            background: member.mfaEnabled
+              ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
+              : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
+            color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
+            border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
+          }}
+        >
+          {member.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+          MFA
+        </div>
+
+        {/* Status */}
+        <div style={{
+          padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+          background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
+          minWidth: 76, textAlign: "center", flexShrink: 0,
+        }}>
+          {STATUS_LABEL[member.status]}
+        </div>
+
+        {/* Kebab menu */}
+        <button
+          onClick={openMenu}
+          onMouseEnter={() => setHovered(true)}
+          style={{
+            width: 28, height: 28, borderRadius: 6, border: "none",
+            background: menuOpen ? "var(--accent)" : "transparent",
+            color: "var(--muted-foreground)", cursor: "pointer", flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            opacity: hovered || menuOpen ? 1 : 0, transition: "opacity 0.1s",
+          }}
+          title="Member actions"
+        >
+          <Icons.MoreVertical size={14} />
+        </button>
       </div>
 
-      {/* MFA badge */}
-      <div
-        title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
-        style={{
-          display: "flex", alignItems: "center", gap: 4,
-          padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 600, flexShrink: 0,
-          background: member.mfaEnabled
-            ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-            : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-          color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-          border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-        }}
-      >
-        {member.mfaEnabled
-          ? <Icons.ShieldCheck size={11} />
-          : <Icons.ShieldAlert size={11} />}
-        MFA
-      </div>
-
-      <div style={{
-        padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-        background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
-        minWidth: 76, textAlign: "center", flexShrink: 0,
-      }}>
-        {STATUS_LABEL[member.status]}
-      </div>
-
-      <div style={{ color: "var(--muted-foreground)", flexShrink: 0, opacity: hovered ? 0.5 : 0, transition: "opacity 0.1s" }}>
-        <Icons.ChevronRight size={15} />
-      </div>
-    </div>
+      {/* Dropdown menu */}
+      {menuOpen && menuAnchor && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 10000 }} onClick={() => setMenuOpen(false)} />
+          <div style={{
+            position: "fixed", top: menuAnchor.top, left: menuAnchor.left,
+            transform: "translateX(-50%)", zIndex: 10001,
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 10, padding: "4px 0",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
+            minWidth: 200,
+          }}>
+            {[
+              { key: "reset-password", label: "Reset password", icon: Icons.KeyRound },
+              { key: "reset-mfa",      label: "Reset MFA",       icon: Icons.ShieldOff },
+              { key: member.status === "suspended" ? "unsuspend" : "suspend",
+                label: member.status === "suspended" ? "Unsuspend access" : "Suspend access",
+                icon: member.status === "suspended" ? Icons.UserCheck : Icons.UserX,
+              },
+              { key: "deactivate", label: "Deactivate user", icon: Icons.Ban, danger: true },
+            ].map(({ key, label, icon: Icon, danger }) => (
+              <button key={key} onClick={e => {
+                e.stopPropagation()
+                setMenuOpen(false)
+                onAction?.(member, key as MemberAction)
+              }} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                width: "100%", padding: "8px 14px", border: "none", background: "none",
+                cursor: "pointer", fontSize: 12, fontWeight: 500, textAlign: "left",
+                color: danger ? "var(--badge-error)" : "var(--foreground)",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none" }}
+              >
+                <Icon size={13} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -1653,7 +1744,7 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
 
 // ─── Invite modal ─────────────────────────────────────────────────────────────
 
-const ALL_ROLES: MemberRole[] = ["Super Admin", "Tenant Admin", "Member", "Viewer", "Billing Admin"]
+const ALL_ROLES: UserType[] = ["Owner", "Admin", "Member"]
 
 function InviteModal({ onClose, onSend }: {
   onClose: () => void
@@ -1784,7 +1875,7 @@ function InviteModal({ onClose, onSend }: {
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: role === r ? "var(--primary)" : "var(--foreground)" }}>{r}</div>
                     <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1 }}>
-                      {r === "Super Admin" ? "Full platform access" : r === "Tenant Admin" ? "Manage members & settings" : r === "Member" ? "Access assigned studios" : r === "Viewer" ? "Read-only access" : "Billing & seats only"}
+                      {r === "Owner" ? "Full control — same as Admin, transferable" : r === "Admin" ? "Manage members, studios & settings" : "Access assigned studios only"}
                     </div>
                   </div>
                 </button>
@@ -2018,13 +2109,13 @@ function MemberPreview({
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {!isInvited && (
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>Change role</div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>Change user type</div>
                 <select
                   value={member.role}
-                  onChange={e => onRoleChange(member.id, e.target.value as MemberRole)}
+                  onChange={e => onRoleChange(member.id, e.target.value as UserType)}
                   style={{ width: "100%", padding: "8px 10px", fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none", cursor: "pointer" }}
                 >
-                  {(["Super Admin", "Tenant Admin", "Billing Admin", "Member", "Viewer"] as MemberRole[]).map(r => (
+                  {USER_TYPE_OPTIONS.map(r => (
                     <option key={r} value={r}>{r}</option>
                   ))}
                 </select>
@@ -2369,10 +2460,12 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
               textTransform: "uppercase", letterSpacing: "0.07em",
             }}>
               <span style={{ flex: 1 }}>Member</span>
+              <span style={{ minWidth: 120 }}>Department</span>
+              <span style={{ minWidth: 72, textAlign: "center" }}>User Type</span>
               <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
               <span style={{ minWidth: 60, textAlign: "center" }}>MFA</span>
               <span style={{ minWidth: 76, textAlign: "center" }}>Status</span>
-              <span style={{ width: 15 }} />
+              <span style={{ width: 28 }} />
             </div>
             {filtered.length === 0 ? (
               <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
