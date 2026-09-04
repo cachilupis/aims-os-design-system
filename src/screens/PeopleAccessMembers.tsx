@@ -7,6 +7,7 @@ import { Button }       from "@/components/ui/button"
 import { Input }        from "@/components/ui/input"
 import { SwitchTab }    from "@/components/ui/switch-tab"
 import { SlideOut }     from "@/components/ui/slide-out"
+import { Filters }     from "@/components/ui/filters"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -2318,6 +2319,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [mainTab, setMainTab]           = useState<"members" | "roles" | "groups">("members")
   const [statusFilter, setStatusFilter] = useState("all")
   const [query, setQuery]               = useState("")
+  const [statusDropdown, setStatusDropdown] = useState<{ top: number; left: number } | null>(null)
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
   const [detailView, setDetailView]     = useState<DetailView>(null)
   const [previewItem, setPreviewItem]   = useState<DetailView>(null)
@@ -2430,22 +2432,69 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         />
 
         {mainTab === "members" && (
-          <>
-            <SwitchTab
-              items={[
-                { id: "all",       label: `All (${counts.all})`             },
-                { id: "active",    label: `Active (${counts.active})`       },
-                { id: "invited",   label: `Invited (${counts.invited})`     },
-                { id: "suspended", label: `Suspended (${counts.suspended})` },
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Filters
+              showSearch
+              searchPlaceholder="Search members…"
+              searchValue={query}
+              onSearchChange={setQuery}
+              slots={[
+                {
+                  placeholder: "Status",
+                  value: statusFilter !== "all"
+                    ? `${STATUS_LABEL[statusFilter as MemberStatus]} (${counts[statusFilter as MemberStatus] ?? 0})`
+                    : undefined,
+                  onRemove: statusFilter !== "all" ? () => setStatusFilter("all") : undefined,
+                  onOpen: () => {
+                    const el = document.querySelector("[data-status-anchor]") as HTMLElement | null
+                    if (!el) return
+                    const rect = el.getBoundingClientRect()
+                    setStatusDropdown({ top: rect.bottom + 4, left: rect.left })
+                  },
+                },
               ]}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              size="s"
+              showAllFilters={false}
+              showSort={false}
+              showViewToggle={false}
             />
-            <div style={{ marginLeft: "auto", width: 240 }}>
-              <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search members…" />
-            </div>
-          </>
+            {/* anchor for status dropdown positioning */}
+            <div data-status-anchor style={{ height: 0 }} />
+            {/* Status dropdown */}
+            {statusDropdown && (
+              <>
+                <div style={{ position: "fixed", inset: 0, zIndex: 10000 }} onClick={() => setStatusDropdown(null)} />
+                <div style={{
+                  position: "fixed", top: statusDropdown.top, left: statusDropdown.left,
+                  zIndex: 10001, background: "var(--surface)", border: "1px solid var(--border)",
+                  borderRadius: 10, padding: "4px 0",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
+                  minWidth: 200,
+                }}>
+                  {[
+                    { id: "all",       label: "All members", count: counts.all       },
+                    { id: "active",    label: "Active",      count: counts.active    },
+                    { id: "invited",   label: "Invited",     count: counts.invited   },
+                    { id: "suspended", label: "Suspended",   count: counts.suspended },
+                  ].map(opt => (
+                    <button key={opt.id} onClick={() => { setStatusFilter(opt.id); setStatusDropdown(null) }}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        width: "100%", padding: "8px 14px", border: "none", background: "none",
+                        cursor: "pointer", fontSize: 13, textAlign: "left",
+                        fontWeight: statusFilter === opt.id ? 600 : 400,
+                        color: statusFilter === opt.id ? "var(--primary)" : "var(--foreground)",
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none" }}
+                    >
+                      <span>{opt.label}</span>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 12 }}>{opt.count}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 
