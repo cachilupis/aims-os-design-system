@@ -1,7 +1,7 @@
 import { useState, useRef, useLayoutEffect } from "react"
 import {
   ChevronDown, ChevronUp, ChevronRight, ArrowUpRight, Sparkle, MoreHorizontal, Lock, Info, Workflow,
-  AlertTriangle, CheckCircle2,
+  AlertTriangle, CheckCircle2, Database,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -448,6 +448,41 @@ export interface RecordHeaderEntityType {
   label: string
 }
 
+// ── Secondary metadata (Entity Header change spec, section 3) ──────────────
+// The compact attribute row under the title. Icon says what KIND of
+// information this is, text is the value, tooltip carries the field label
+// plus context ("Assigned agent · Manager Agent. Handling this account since
+// Mar 3."). Capped at SECONDARY_METADATA_MAX by the component, not by
+// trusting the caller.
+//
+// This is NOT `recordFields`. RECORD fields carry provenance and a masking
+// state and are reached through the "About this record" trigger; secondary
+// metadata is display-only and always visible. Both exist at once in the
+// reference design, so they stay separate props.
+//
+// What qualifies: something a person could act on, or something governance
+// requires be visible — counts of facts, open items and workflows, the
+// assigned agent tier, access role, tenure, a Bridge ID where policy
+// permits. What does not: anything true of every entity of the same type
+// (that is a label, not information), and anything describing a conversation
+// rather than the entity.
+export interface SecondaryMetadataItem {
+  /** What kind of information this is — never rendered without `text`. */
+  icon: LucideIcon
+  /** The value. Short form ≤ 8 chars / 2 words, long form ≤ 24 chars. */
+  text: string
+  /** Field label + context. Required: the tooltip shows even when `text` is not truncated. */
+  tooltip: string
+}
+
+/**
+ * Six is the maximum, not the goal — aim for four. Past six it stops being a
+ * row and becomes a section, and anything beyond belongs in the Overview,
+ * never behind a `+N` chip: an item hidden behind a counter is not
+ * discovered, and if it was worth showing it is worth having a place.
+ */
+export const SECONDARY_METADATA_MAX = 6
+
 export interface RecordHeaderProps {
   /** The record's display name — e.g. a person's name or an account name. */
   name: string
@@ -464,6 +499,40 @@ export interface RecordHeaderProps {
    * has nothing like this to show — most records, most of the time.
    */
   statusTag?: { label: string; icon?: LucideIcon }
+  /**
+   * Which system this record came from — Workday, Salesforce, NetSuite, DMS,
+   * Helix Data Studio. Renders beside the entity type, always visible.
+   *
+   * ONE ITEM, NEVER TWO. A source is a single fact: which system this record
+   * comes from. Concatenating a second value breaks it — "Enterprise Account
+   * · Midwest Region" is a category next to a location, and neither of them
+   * is a source. A job title, a location, a region, a category or a parent
+   * company DESCRIBE or PLACE the entity; they do not say where the data came
+   * from, so they belong in tags or in secondary metadata, or nowhere.
+   *
+   * Omit entirely for an entity created in the platform itself and therefore
+   * having no source — the slot is removed, never filled with something else.
+   */
+  source?: string
+  /**
+   * Durable context, OFF by default — most headers do not carry one, and it
+   * is an edge case rather than a slot to fill. Ask in this order and stop at
+   * the first yes: needs attention now → signal tag; what kind of thing this
+   * is → classification tag; current status → `statusTag`; a fact someone
+   * might act on → `secondaryMetadata`; durable context none of those
+   * captured → this.
+   *
+   * The one case that justifies it: the title is an opaque code. `RO-48291`
+   * alone means nothing, so the description says what the record concerns.
+   *
+   * Durability test — if the sentence could change next week it is an
+   * activity note and belongs in the Overview, not here. It says what the
+   * entity IS, never what is happening to it. Renders as one line,
+   * truncated with a Tooltip; it never wraps.
+   */
+  description?: string
+  /** The compact attribute row under the title. Capped at SECONDARY_METADATA_MAX (6) by the component. Omit or pass an empty array to skip the row. */
+  secondaryMetadata?: SecondaryMetadataItem[]
   /** Zone: RECORD. Each field already carries provenance (Law 1) and a
    *  masking state (Law 4) — see RecordField's own doc comment. Omit or
    *  pass an empty array to skip the RECORD zone for this entity type. */
@@ -551,6 +620,9 @@ function RecordHeader({
   name,
   entityType,
   statusTag,
+  source,
+  description,
+  secondaryMetadata = [],
   recordFields = [],
   assignedAgent,
   actions = [],
@@ -572,6 +644,10 @@ function RecordHeader({
   const hasAgenticSystem = agenticSystem !== undefined
   const hasIntervention = intervention !== undefined
   const hasRecordFields = recordFields.length > 0
+  // Capped here rather than by trusting the caller — same reasoning as the
+  // identity tags cap. Six is the maximum; the overflow goes to the Overview,
+  // never to a `+N` chip.
+  const visibleMetadata = secondaryMetadata.slice(0, SECONDARY_METADATA_MAX)
   // RECORD is no longer one of the expandable zones (this correction pass —
   // its provenance trigger moved up beside the name, always visible). Only
   // Agentic System/Your Intervention still gate the disclosure chevron.
@@ -715,6 +791,30 @@ function RecordHeader({
                   </span>
                 </span>
               </Tooltip>
+              {/* Source — which system this record came from. One item,
+                  always visible, separated from the entity type by the same
+                  bullet the reference design uses. Tokens read from Figma:
+                  the bullet is Surface/Neutral/Emphasis, the icon is
+                  Icon/Neutral/Dark, the value is Text/Body at 12px Medium. */}
+              {source && (
+                <span className="inline-flex items-center gap-[8px] shrink-0 min-w-0">
+                  <span
+                    aria-hidden="true"
+                    className="text-[16px] leading-none"
+                    style={{ color: "var(--color-surface-neutral-emphasis)" }}
+                  >
+                    •
+                  </span>
+                  <Tooltip content={`Source · ${source}`} side="cursor">
+                    <span className="inline-flex items-center gap-[4px] min-w-0">
+                      <Database size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />
+                      <span className="block truncate text-[12px] font-medium" style={{ color: "var(--color-text-body)" }}>
+                        {source}
+                      </span>
+                    </span>
+                  </Tooltip>
+                </span>
+              )}
               {/* Contact status — beside entityType, per its own doc comment.
                   Neutral Tag, never a signal color: a temporary state (on
                   leave, parental/medical leave, ...), not an error and not a
@@ -916,6 +1016,41 @@ function RecordHeader({
             )}
           </div>
         </div>
+
+        {/* Description — one line, never wraps, truncates with a Tooltip
+            carrying the full sentence. Off unless the caller passes one:
+            there is no default copy and no placeholder. Text/Body at 14px
+            Medium, read from Figma. */}
+        {description && (
+          <Tooltip content={description} side="cursor" triggerClassName="block min-w-0">
+            <p className="truncate text-[14px] font-medium leading-[1.4]" style={{ color: "var(--color-text-body)" }}>
+              {description}
+            </p>
+          </Tooltip>
+        )}
+
+        {/* Secondary metadata — the compact attribute row. Icon + text, never
+            an icon alone: Entity List allows icon-only under space pressure,
+            this header does not — it has the width, and a bare symbol forces
+            the user to interpret it. Tooltip is always present, even when the
+            text is not truncated. */}
+        {visibleMetadata.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-[16px] gap-y-[8px]">
+            {visibleMetadata.map((item, i) => {
+              const ItemIcon = item.icon
+              return (
+                <Tooltip key={`${item.text}-${i}`} content={item.tooltip} side="cursor">
+                  <span className="inline-flex items-center gap-[4px] min-w-0">
+                    <ItemIcon size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />
+                    <span className="block truncate text-[12px] font-medium" style={{ color: "var(--color-text-body)" }}>
+                      {item.text}
+                    </span>
+                  </span>
+                </Tooltip>
+              )
+            })}
+          </div>
+        )}
 
         {/* NBA, collapsed position — full card width (this redesign pass),
             so it sits as a sibling of the whole identity row rather than

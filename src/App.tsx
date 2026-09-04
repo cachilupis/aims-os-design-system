@@ -50,7 +50,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { RecordHeader, type RecordHeaderEntityType, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent, type NextBestAction } from "@/components/ui/record-header"
+import { RecordHeader, type RecordHeaderEntityType, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent, type NextBestAction, type SecondaryMetadataItem } from "@/components/ui/record-header"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
@@ -2200,6 +2200,9 @@ const RECORD_HEADER_SPEC = {
     { name: "intervention",   type: "object",   values: ["PendingIntervention — pending: { items: InterventionItem[], onViewAll? } — each { id, description, severity, onReview, contextTag? }"], default: "undefined", note: "Zone: YOUR INTERVENTION — only rendered when set (a real pending HTL decision). N items: most prioritized shown + \"Show N more\" (caps at 3 extra) + \"View all\". Every item's trigger is a diagonal ArrowUpRight opening the real HTL view in a NEW TAB (redesign pass — was a labeled \"Review\" button). Optional contextTag renders a neutral Tag beside the item (\"Access\", \"Compliance\", ...) — one word, never a signal color. Calm/informative styling ALWAYS, regardless of severity — Law 3." },
     { name: "nextBestActions", type: "Array", values: ["NextBestAction[] — { id, title, description, onOpen, contextTag? }"], default: "[]", note: "The protagonist block (redesign pass). Always visible, never gated by the disclosure — right under the identity tags collapsed, at the end of the zones expanded. Dark-purple surface, Sparkle icon. Optional contextTag renders a neutral Tag beside the title (\"Renewal\", \"Coverage\", ...) — one word, same convention as Your Intervention's own contextTag. Omit/empty array skips it entirely." },
     { name: "statusTag",      type: "object",   values: ["{ label: string, icon?: LucideIcon }"], default: "undefined", note: "A visible, temporary status on the contact itself (\"On Leave · Returns Mar 15\") — renders as a single neutral/amber Tag beside entityType, always visible. Never `error`/red — a state, not a problem. Omit for the common case (nothing to show)." },
+    { name: "source",         type: "string",   values: ["\"Workday\" | \"Salesforce\" | \"NetSuite\" | \"DMS\" | \"Helix Data Studio\" | ..."], default: "undefined", note: "Which system this record came from. Renders beside the entity type — a Database icon plus the value at 12px Medium, preceded by the same bullet separator the reference design uses. ONE ITEM, NEVER TWO: a source is a single fact. Concatenating a second value breaks it — \"Enterprise Account · Midwest Region\" is a category next to a location and neither is a source. A job title, a location, a region, a category or a parent company DESCRIBE or PLACE the entity; they do not say where the data came from, so they belong in tags or secondaryMetadata, or nowhere. An entity created inside the platform itself reads \"Helix Data Studio\"; one with no source omits the prop — the slot is removed, never filled with something else." },
+    { name: "description",    type: "string",   values: ["One line of durable context"], default: "undefined (OFF)", note: "OFF by default — most headers do not carry one, and it is an edge case rather than a slot to fill. Ask in this order and stop at the first yes: needs attention now → signal tag; what kind of thing this is → classification tag; current status → statusTag; a fact someone might act on → secondaryMetadata; durable context none of those captured → this. The one case that justifies it is an opaque code as the title: \"RO-48291\" alone means nothing, so the description says what the record concerns. DURABILITY TEST — if the sentence could change next week it is an activity note and belongs in the Overview. It says what the entity IS, never what is happening to it. One line at 14px Medium, truncated with a Tooltip; it never wraps." },
+    { name: "secondaryMetadata", type: "Array", values: ["SecondaryMetadataItem[] — { icon, text, tooltip }"], default: "[]", note: "The compact attribute row under the title. Icon says what KIND of information this is, text is the value, tooltip carries the field label plus context (\"Assigned agent · Manager Agent. Handling this account since Mar 3.\") and shows on hover AND focus, always — even when the text is not truncated. CAPPED AT 6 by the component (SECONDARY_METADATA_MAX), not by trusting the caller: six is where the industry lands for a compact attribute row under a record title, and past six it stops being a row and becomes a section. Six is the maximum, not the goal — aim for four. Anything beyond six goes to the Overview, NEVER to a `+N` chip: an item hidden behind a counter is not discovered, and if it was worth showing it is worth having a place. THE ICON NEVER APPEARS ALONE — Entity List allows icon-only under space pressure, this header does not. What qualifies: counts of Truth Plane facts and Canon Plane documents (counted separately — TR outranks CR), open workflows, the assigned agent tier, access role, tenure, a Bridge ID where policy permits. What does not: anything true of every entity of the same type (a label, not information), and anything describing a conversation rather than the entity. This is NOT recordFields — those carry provenance and a masking state and are reached through the \"About this record\" trigger; both exist at once." },
     { name: "onProvenanceOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens \"About this record\" (renamed from \"Data Provenance\" this redesign pass) for the RECORD zone — reached through the icon-only Button beside the name (moved there this redesign pass; used to be a labeled Button down in a RECORD zone that no longer exists). Fields never render inline." },
     { name: "defaultExpanded", type: "Boolean", values: ["true","false"], default: "false", note: "Uncontrolled initial state for the zones disclosure. Predictable header height when collapsed." },
     { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "Read-only record. Shows a \"Locked\" Tag next to the type label; disables any contact/write actions passed via `actions` (Tooltip explains why); the agent trigger and RECORD's provenance button stay fully interactive." },
@@ -2216,8 +2219,26 @@ const RECORD_HEADER_SPEC = {
     { element: "Record field label", family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1", variable: "--field-supporting" },
     { element: "Record field value (hydrated)", family: "Inter", size: "13px", weight: "Regular", lineHeight: "1.4", variable: "--foreground" },
     { element: "Record field value (masked)",   family: "Inter", size: "13px", weight: "Regular, Italic", lineHeight: "1.4", variable: "--field-supporting" },
+    { element: "Source value",     family: "Inter", size: "12px", weight: "Medium (500)", lineHeight: "1",   variable: "--color-text-body" },
+    { element: "Description",      family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.4", variable: "--color-text-body" },
+    { element: "Secondary metadata", family: "Inter", size: "12px", weight: "Medium (500)", lineHeight: "1", variable: "--color-text-body" },
   ],
   states: [
+    // Source / Description / Secondary metadata — values extracted from the
+    // Entity Header component set in Figma (node 19895:11728), Light + Dark
+    // modes, not derived from each other.
+    { name: "Source — value + icon", borderWidth: "—", tokens: [
+      { role: "Text",      variable: "--color-text-body",              varId: "Text/Body",               light: "#5C5C5C", dark: "#94A3B8" },
+      { role: "Icon",      variable: "--color-icon-neutral-dark",      varId: "Icon/Neutral/Dark",       light: "#5c5c5c", dark: "rgba(255,255,255,0.5)" },
+      { role: "Separator", variable: "--color-surface-neutral-emphasis", varId: "Surface/Neutral/Emphasis", light: "#d9d9d9", dark: "rgba(255,255,255,0.12)" },
+    ]},
+    { name: "Description (off by default)", borderWidth: "—", tokens: [
+      { role: "Text", variable: "--color-text-body", varId: "Text/Body", light: "#5C5C5C", dark: "#94A3B8" },
+    ]},
+    { name: "Secondary metadata — max 6", borderWidth: "—", tokens: [
+      { role: "Text", variable: "--color-text-body",         varId: "Text/Body",         light: "#5C5C5C", dark: "#94A3B8" },
+      { role: "Icon", variable: "--color-icon-neutral-dark", varId: "Icon/Neutral/Dark", light: "#5c5c5c", dark: "rgba(255,255,255,0.5)" },
+    ]},
     { name: "Status dot — attention", borderWidth: "—", tokens: [
       { role: "Fill", variable: "--badge-alert", varId: "", light: "#f59e0b", dark: "#f59e0b" },
     ]},
@@ -32623,6 +32644,76 @@ const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
   repairOrder: [RH_REPAIR_ORDER.serviceAdvisor, RH_REPAIR_ORDER.vehicleField, RH_REPAIR_ORDER.warrantyStatus, RH_REPAIR_ORDER.lastServiceDate],
 }
 
+// Source — which system the record came from. ONE item per entity, never a
+// concatenation. Values are the source systems each example's RECORD fields
+// are already attributed to above (Workday, Salesforce, NetSuite, Epic,
+// Guidewire, nCino), plus DMS for the automotive example, matching the
+// reference design's own mapping. An entity created inside the platform
+// itself would read "Helix Data Studio"; one with no source at all omits the
+// prop rather than filling the slot with a category or a location.
+const RH_SOURCE: Record<RhDemoKey, string> = {
+  uep:         "Workday",
+  ucp:         "Salesforce",
+  uvp:         "NetSuite",
+  patient:     "Epic",
+  claim:       "Guidewire",
+  borrower:    "nCino",
+  repairOrder: "DMS",
+}
+
+// Secondary metadata — the compact attribute row, max 6 (aim for 4). Every
+// item is something a person could act on or something governance requires be
+// visible: counts of Truth Plane facts and Canon Plane documents (counted
+// separately — TR outranks CR), open workflows, the assigned agent tier from
+// ORI's hierarchy (User PA → Manager Agent → Director Agent → Council), the
+// access role, and tenure. Nothing here is true of every entity of the same
+// type — that would be a label, not information.
+const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
+  uep: [
+    { icon: LucideIcons.CircleCheckBig, text: "9 facts",   tooltip: "Truth Plane facts · 9 attested facts on this record." },
+    { icon: LucideIcons.FileText,       text: "3 docs",    tooltip: "Canon Plane documents · 3 long-form references. Counted separately from facts: TR outranks CR." },
+    { icon: LucideIcons.Workflow,       text: "3 open",    tooltip: "Open workflows · 3 agentic workflows currently touching this record." },
+    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent when Council confidence drops below 0.65." },
+    { icon: LucideIcons.ShieldCheck,    text: "Admin",     tooltip: "Access role · Admin. Granted through Okta, last reviewed Mar 2026." },
+  ],
+  ucp: [
+    { icon: LucideIcons.CircleCheckBig, text: "14 facts",  tooltip: "Truth Plane facts · 14 attested facts on this account." },
+    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 agentic workflows currently touching this account." },
+    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Handling this account since Mar 3." },
+    { icon: LucideIcons.CalendarClock,  text: "Since 2021", tooltip: "Customer since · March 2021." },
+  ],
+  uvp: [
+    { icon: LucideIcons.CircleCheckBig, text: "6 facts",   tooltip: "Truth Plane facts · 6 attested facts on this supplier." },
+    { icon: LucideIcons.FileText,       text: "5 docs",    tooltip: "Canon Plane documents · 5 contracts and policies on file." },
+    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 agentic workflow currently touching this supplier." },
+    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Owns procurement escalations for this supplier." },
+  ],
+  patient: [
+    { icon: LucideIcons.CircleCheckBig, text: "22 facts",  tooltip: "Truth Plane facts · 22 attested facts on this chart." },
+    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 agentic workflows currently touching this chart." },
+    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent for anything clinical." },
+    { icon: LucideIcons.ShieldCheck,    text: "Restricted", tooltip: "Access role · Restricted. PHI fields resolve per viewer entitlement at display time." },
+  ],
+  claim: [
+    { icon: LucideIcons.CircleCheckBig, text: "11 facts",  tooltip: "Truth Plane facts · 11 attested facts on this policyholder." },
+    { icon: LucideIcons.FileText,       text: "8 docs",    tooltip: "Canon Plane documents · 8 policy documents and endorsements on file." },
+    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 claim workflow currently touching this policyholder." },
+    { icon: LucideIcons.CalendarClock,  text: "Since 2019", tooltip: "Policyholder since · June 2019." },
+  ],
+  borrower: [
+    { icon: LucideIcons.CircleCheckBig, text: "7 facts",   tooltip: "Truth Plane facts · 7 attested facts on this applicant." },
+    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 credit application currently in progress." },
+    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Credit decisions route to the Council." },
+    { icon: LucideIcons.Link2,          text: "BR-4471",   tooltip: "Bridge ID · BR-4471. The immutable link between this record's Truth facts and their source documents." },
+  ],
+  repairOrder: [
+    { icon: LucideIcons.CircleCheckBig, text: "5 facts",   tooltip: "Truth Plane facts · 5 attested facts on this customer." },
+    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 repair order currently in progress." },
+    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent on warranty disputes." },
+    { icon: LucideIcons.CalendarClock,  text: "Since 2022", tooltip: "Customer since · August 2022." },
+  ],
+}
+
 // Display name per demo key — a lookup instead of a growing ternary chain
 // now that there are 7 variants across 2 groups (Work Surfaces + Other
 // Markets).
@@ -33695,6 +33786,8 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">UEP — Employee (reference variant)</p>
             <RecordHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
+              source={RH_SOURCE.uep}
+              secondaryMetadata={RH_SECONDARY_METADATA.uep}
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
               agenticSystem={rhAgenticSystem("uep")}
               intervention={rhIntervention("uep")}
@@ -33844,6 +33937,12 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           <RecordHeader
             name={pgName}
             entityType={RH_ENTITY_TYPE[pgVariant]}
+            source={RH_SOURCE[pgVariant]}
+            secondaryMetadata={RH_SECONDARY_METADATA[pgVariant]}
+            /* Description stays OFF here on purpose — none of these 7 titles
+               is an opaque code, so none of them qualifies. The one example
+               that does turn it on is the Repair Order edge case, where the
+               title is an identifier rather than a name. */
             recordFields={pgRecordFields}
             statusTag={pgVariant === "uep" ? { label: "On Leave · Returns Mar 15", icon: LucideIcons.Palmtree } : undefined}
             assignedAgent={rhAssignedAgent(pgVariant, pgName)}

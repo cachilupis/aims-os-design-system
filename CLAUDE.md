@@ -160,6 +160,9 @@ Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard vi
 | `name` | Identity | `string` — required |
 | `entityType` | Identity | `{ icon, label }` — required, host-defined |
 | `statusTag?` | Identity | `{ label, icon? }` — a temporary state on the contact ("On Leave · Returns Mar 15"). Neutral/amber only, never `error` |
+| `source?` | Identity | `string` — which system the record came from. **One item, never two** |
+| `description?` | below Identity | `string` — durable context, **off unless passed** |
+| `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
 | `recordFields?` | RECORD | `RecordField[]` |
 | `nextBestActions?` | (protagonist block) | `NextBestAction[]` — N supported, each stacked |
 | `agenticSystem?` | AGENTIC SYSTEM | `AgenticSystemInfo` |
@@ -175,6 +178,28 @@ Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard vi
 **`assignedAgent` is required as a prop, but the value may be `null`** — AIMS OS is agent-first, so every caller must decide; `null` renders the same button, disabled, with a Tooltip explaining why. Never a silently missing button. Renders as an always-present, most-prominent (icon-only, `variant="main"`) button using the Topbar's own `Sparkle` glyph (the single 4-point one, not the 3-star `Sparkles`). This is the one confirmed exception to "never `main` inside a card" (see Button hierarchy rules below) — don't extend that exception to any other button in this file.
 
 **`nextBestActions` has no severity and no colors.** Each entry is `{ id, title, description, onOpen, contextTag? }` — there is no `severity`, no `dueContext`, no `aiGenerated`, no `actionLabel`. Timing and urgency live in the copy (`description`), not in a token. Pass an empty array or omit the prop for a record with genuinely nothing to recommend — the block disappears, which is the correct "all good" state; never synthesize a filler recommendation.
+
+**`source` answers one question: which system this record came from.** Workday, Salesforce, NetSuite, DMS, Helix Data Studio. **One item, never two** — a source is a single fact, and concatenating a second value breaks it: "Enterprise Account · Midwest Region" is a category next to a location, and neither is a source. A job title, a location, a region, a category or a parent company *describe* or *place* the entity; they do not say where the data came from, so they go in tags or `secondaryMetadata`, or nowhere. An entity created inside the platform itself reads "Helix Data Studio". An entity with no source **omits the prop** — the slot is removed, never filled with something else.
+
+**`description` is off unless you pass it, and it is the last resort.** Ask in this order and stop at the first yes:
+
+1. Needs attention right now → signal tag
+2. What kind of thing this is → classification tag
+3. The current status → `statusTag`
+4. A fact someone might act on → `secondaryMetadata`
+5. Durable context none of the above captured → `description`
+
+The one case that justifies it is **an opaque code as the title**: `RO-48291` alone means nothing, so the description says what the record concerns. **Durability test** — if the sentence could change next week it is an activity note and belongs in the Overview, not here. It says what the entity IS, never what is happening to it. One line, truncated with a Tooltip, never wrapped.
+
+**`secondaryMetadata` caps at 6 — enforced by the component, not by trusting the caller.** Six is the maximum, not the goal: **aim for four.** Past six it stops being a row and becomes a section.
+- **Anything beyond six goes to the Overview, never to a `+N` chip.** An item hidden behind a counter is not discovered, and if it was worth showing it is worth having a place.
+- **The icon never appears alone.** `EntityList` allows icon-only under space pressure; this header does not — it has the width, and a bare symbol forces the reader to interpret it.
+- **The tooltip is required and always shows** — on hover and on focus, even when the text is not truncated. It carries the field label plus context: `"Assigned agent · Manager Agent. Handling this account since Mar 3."`
+- **What qualifies:** something a person could act on, or something governance requires be visible — counts of Truth Plane facts and Canon Plane documents (counted *separately*: a document is not a fact, and TR outranks CR), open workflows, the assigned agent tier, access role, tenure, a Bridge ID where policy permits.
+- **What does not:** anything true of every entity of the same type — that is a label, not information — and anything describing a conversation rather than the entity.
+- **`secondaryMetadata` is not `recordFields`.** RECORD fields carry provenance and a masking state and are reached through the "About this record" trigger; secondary metadata is display-only and always visible. Both exist at once — never fold one into the other.
+
+**Never repeat a value across slots.** If it appears in `source`, it does not also appear in `description` or as a tag.
 
 **Fallback copy comes from `RECORD_HEADER_FALLBACKS`** — never write fallback strings inline at the call site.
 
