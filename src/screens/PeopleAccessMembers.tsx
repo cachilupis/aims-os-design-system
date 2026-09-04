@@ -1690,7 +1690,7 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
       })()}
 
       {/* Studio sub-tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 12, borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
         {STUDIO_TABS.map(s => (
           <button key={s.id} onClick={() => setStudio(s.id)} style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
             color: studio === s.id ? "var(--foreground)" : "var(--muted-foreground)",
