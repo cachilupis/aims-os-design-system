@@ -15,8 +15,9 @@ import { EmptyState }       from "@/components/ui/empty-state"
 import { HighlightIcon }    from "@/components/ui/highlight-icon"
 import { CardContainer }    from "@/components/ui/card-container"
 import { ModalDialog }      from "@/components/ui/modal-dialog"
-import { RecordHeader }     from "@/components/ui/record-header"
-import type { RecordHeaderEntityType, NextBestAction } from "@/components/ui/record-header"
+import { EntityHeader }     from "@/components/ui/record-header"
+import type { EntityHeaderEntityType } from "@/components/ui/record-header"
+import { NextBestActionCard, type NextBestAction } from "@/components/experimental/next-best-action-card"
 import { SlideOut }         from "@/components/ui/slide-out"
 import { Input }            from "@/components/ui/input"
 import type { LucideIcon }  from "lucide-react"
@@ -214,7 +215,7 @@ const ENTITY_TYPE_OPTIONS: Record<EntityType, { label: string; iconName: string;
   ],
 }
 
-// Migrated to RecordHeader's current NextBestAction shape — { id, title,
+// Migrated to the current NextBestAction shape — { id, title,
 // description, onOpen }. The old { severity, label, dueContext } fields no
 // longer exist on the component. Same 3 records and same copy as before: the
 // former `label` is now `title`, and `dueContext` is now `description`.
@@ -230,7 +231,7 @@ const ENTITY_TYPE_ICON: Record<EntityType, LucideIcon> = {
   company:  LucideIcons.Building2,
 }
 
-// `recordFields` is deliberately NOT passed to RecordHeader here. In the
+// `recordFields` is deliberately NOT passed to EntityHeader here. In the
 // current component the RECORD zone renders nothing inline — the array's only
 // visible effect is enabling the ⓘ provenance trigger beside the name, and
 // that button is disabled unless `onProvenanceOpen` is wired. This screen has
@@ -522,8 +523,8 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     return slots
   }, [profile])
 
-  // RecordHeader data
-  const rhEntityType: RecordHeaderEntityType = {
+  // EntityHeader data
+  const rhEntityType: EntityHeaderEntityType = {
     icon:  ENTITY_TYPE_ICON[profile.type],
     label: TYPE_LABEL[profile.type],
   }
@@ -599,18 +600,21 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
           : undefined
       }
     >
-      {/* ── RecordHeader — lean identity card with NBA signal ── */}
-      <RecordHeader
+      {/* ── EntityHeader — identity only. The Next Best Action card is a
+             SIBLING below it, in its own Card Container, per section 11 of
+             the Entity Header change spec: two records, two containers. It
+             used to render inside the header; the header no longer accepts
+             it. ── */}
+      <EntityHeader
         name={profile.name}
         entityType={rhEntityType}
-        nextBestActions={rhNextBestActions}
         actions={[
           { label: "Export",  variant: "secondary", onClick: () => {} },
           { label: profile.type === "company" ? "Contact account" : "Message", variant: "primary", onClick: () => {} },
         ]}
         assignedAgent={{ id: "agent-1", name: "AIMS Assistant", onOpenChat: () => {} }}
-        className="mb-[16px]"
       />
+      <NextBestActionCard items={rhNextBestActions} className="mt-[12px] mb-[16px]" />
 
       {/* ── Tabs row + "+" entity-type picker ── */}
       <div className="flex items-center gap-[8px] mb-[24px]">

@@ -44,7 +44,7 @@ import { Skeleton } from "@/components/ui/skeleton"
  *      at 3 extra items inline; "View all" is the separate, always-present
  *      escape hatch to the full list (also a new tab). See OPEN_HTL_TOOLTIP
  *      and InterventionZoneContent's own doc comment.
- *   5. `RecordHeaderZoneLabels` lost `agenticSystem` (no heading left to
+ *   5. `EntityHeaderZoneLabels` lost `agenticSystem` (no heading left to
  *      translate) on top of `record` (already gone from the prior pass).
  *      Closing pass, later still: `intervention` — its last remaining
  *      entry — also lost its heading, so the whole `labels` prop/type is
@@ -219,7 +219,7 @@ import { Skeleton } from "@/components/ui/skeleton"
  *                — the only Tooltip mode that flips off a viewport edge
  *                instead of clipping) showing the fuller provenance.
  *   Governed SlideOuts/SidePanels (Workflow detail, Pending Decisions,
- *                Agent detail, Data Provenance, agent chat) → RecordHeader
+ *                Agent detail, Data Provenance, agent chat) → EntityHeader
  *                itself never renders any of them — every clickable
  *                surface exposes an `onOpen`/`onAction` callback, and the
  *                consuming screen (App.tsx's RecordHeaderPage demo) owns
@@ -245,14 +245,14 @@ export interface FieldProvenance {
 
 // ── A single RECORD field (Law 4 — display-time PII resolution) ────────────
 // A "hydrated" field and a "masked" field are the SAME field in 2 possible
-// entitlement states — NOT two different field types. RecordHeader renders
+// entitlement states — NOT two different field types. EntityHeader renders
 // whichever state it's given; it never resolves permissions itself. See the
 // Reference tab's "PII / masking (Law 4)" section for the full framing.
 //
 // Block 4 — this is the ONLY field shape RECORD ever renders, for ANY entity
 // type: { label, value, provenance, destination? }. There is no hidden
 // "employee field" structure anywhere else in this file — the host builds
-// this array directly (see RecordHeaderProps.recordFields).
+// this array directly (see EntityHeaderProps.recordFields).
 export interface RecordField {
   label: string
   /** Leading icon for scanability — also reinforces Law 1 (authority/origin
@@ -373,26 +373,20 @@ export type PendingIntervention =
   | { status: "empty"; message?: string }
   | { status: "loading" }
 
-// ── Next Best Action (reintroduced, this redesign pass — NEW shape, not the
-// pre-governed-card Signal bar the file header's history note describes) ──
-// A protagonist block, not a zone: visible in BOTH collapsed (right under
-// the identity tags) and expanded (at the end, after Your Intervention) —
-// same block, repositioned, never duplicated or hidden. A record can have
-// N of these; each opens its own detail SlideOut (host-owned, same
-// onOpen/onAction delegation as everything else in this file). Detail
-// SlideOut CONTENT (the "base + type + dynamic" 3-layer task structure) is
-// // TODO: Prompt 2 — this pass only wires the trigger and a placeholder.
-export interface NextBestAction {
-  id: string
-  title: string
-  description: string
-  onOpen: () => void
-  /** Short category label ("Renewal", "Coverage", ...) — what area this
-   *  action is about, at a glance. Same convention as InterventionItem's
-   *  own contextTag (neutral Tag, never a signal color — purple already
-   *  means "agent" on this card). Omit when the host has no category. */
-  contextTag?: string
-}
+// ── Next Best Action — REMOVED from this component ─────────────────────────
+// Section 11 of docs/patterns/entity-header-change-spec.md: "The card that
+// appears under the header is a separate component in its own Card Container,
+// not a second slot in the same one. Two records, two containers. Nothing
+// about it belongs in record-header.tsx."
+//
+// The Figma Entity Header section states the same rule from this side: "NO
+// INSIGHT SECTION — System interpretation reaches the header only as a tag
+// with a tooltip. No descriptive sentences, no scores with drivers, no
+// expandable analysis."
+//
+// The `NextBestAction` type and its rendering now live in
+// @/components/experimental/next-best-action-card. Render that card as a
+// SIBLING below this one; never pass its content in here.
 
 // ── Assigned AI agent (transversal across entity types) ─────────────────────
 // AIMS OS is agent-first: every record has one, regardless of entity type.
@@ -407,7 +401,7 @@ export interface NextBestAction {
 export interface AssignedAgent {
   id: string
   name: string
-  /** Opens a chat scoped to this record. RecordHeader never renders the chat
+  /** Opens a chat scoped to this record. EntityHeader never renders the chat
    *  UI itself — same delegation pattern as every onOpen/onAction below. */
   onOpenChat: () => void
 }
@@ -443,7 +437,7 @@ export interface RecordAction {
 // Whatever this record IS — Employee, Customer, Vendor, Patient, Citizen,
 // Student, anything the host platform defines tomorrow — comes from the
 // host as a plain icon + label. This file never enumerates entity types.
-export interface RecordHeaderEntityType {
+export interface EntityHeaderEntityType {
   icon: LucideIcon
   label: string
 }
@@ -483,11 +477,11 @@ export interface SecondaryMetadataItem {
  */
 export const SECONDARY_METADATA_MAX = 6
 
-export interface RecordHeaderProps {
+export interface EntityHeaderProps {
   /** The record's display name — e.g. a person's name or an account name. */
   name: string
   /** What kind of record this is — icon + label, entirely host-defined. */
-  entityType: RecordHeaderEntityType
+  entityType: EntityHeaderEntityType
   /**
    * A visible, temporary status on the CONTACT itself — "On Leave · Returns
    * Mar 15," a maternity/parental leave, anything that changes how the
@@ -550,13 +544,6 @@ export interface RecordHeaderProps {
   agenticSystem?: AgenticSystemInfo
   /** Zone: YOUR INTERVENTION. Omit entirely to skip the zone for this entity type. */
   intervention?: PendingIntervention
-  /**
-   * The protagonist block (this redesign pass) — omit or pass an empty
-   * array for a record with genuinely nothing to recommend right now (it
-   * disappears entirely, same "never fake a state" rule as every other
-   * zone). N is supported; each renders its own block, stacked.
-   */
-  nextBestActions?: NextBestAction[]
   /** Opens the Data Provenance SlideOut for the whole RECORD zone (Law 2). */
   onProvenanceOpen?: () => void
   /** Uncontrolled initial state for the zones disclosure. Default: false (collapsed) — predictable header height. */
@@ -616,7 +603,7 @@ type ZoneKey = "agenticSystem" | "intervention"
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-function RecordHeader({
+function EntityHeader({
   name,
   entityType,
   statusTag,
@@ -628,16 +615,14 @@ function RecordHeader({
   actions = [],
   agenticSystem,
   intervention,
-  nextBestActions = [],
   onProvenanceOpen,
   defaultExpanded = false,
   locked = false,
   className,
-}: RecordHeaderProps) {
+}: EntityHeaderProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const TypeIcon = entityType.icon
   const [primaryAction, ...overflowActions] = actions
-  const hasNBA = nextBestActions.length > 0
 
   const agenticStatus = agenticSystem ? (agenticSystem.status ?? "ready") : undefined
   const interventionStatus = intervention ? (intervention.status ?? "pending") : undefined
@@ -726,22 +711,6 @@ function RecordHeader({
     // tagsHidden toggling, or a zone's presence/status changing, mounts or
     // unmounts the ref target, and a plain [] effect would miss that.
   }, [tagsHidden, agenticStatus, interventionStatus])
-
-  // NBA, collapsed position — same measured-height technique as the tags
-  // row above, kept as its own independent ref/state since it lives at a
-  // different DOM level (full card width, not nested in the name column)
-  // and can't share that wrapper's ref.
-  const nbaBlockRef = useRef<HTMLDivElement>(null)
-  const [nbaBlockHeight, setNbaBlockHeight] = useState(0)
-  useLayoutEffect(() => {
-    const el = nbaBlockRef.current
-    if (!el) { setNbaBlockHeight(0); return }
-    const measure = () => setNbaBlockHeight(el.scrollHeight)
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [hasNBA])
 
   // AI Assistant CTA — "Ask about {firstName}" communicates this chat is
   // scoped to THIS record, not a generic assistant entry point. Falls back
@@ -1052,27 +1021,6 @@ function RecordHeader({
           </div>
         )}
 
-        {/* NBA, collapsed position — full card width (this redesign pass),
-            so it sits as a sibling of the whole identity row rather than
-            nested inside the narrower name column the tags row lives in.
-            Same measured maxHeight+opacity collapse technique as the tags
-            row above, kept as its own independent measurement since it's a
-            different DOM region and can't share that ref. */}
-        {hasNBA && (
-          <div
-            style={{
-              maxHeight: expanded ? 0 : nbaBlockHeight,
-              opacity: expanded ? 0 : 1,
-              overflow: "hidden",
-              transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease",
-            }}
-          >
-            <div ref={nbaBlockRef}>
-              <NextBestActionZone items={nextBestActions} />
-            </div>
-          </div>
-        )}
-
         {/* ── Expandable zones — collapsed by default, predictable header height. */}
         {hasAnyZone && (
           <div
@@ -1110,111 +1058,11 @@ function RecordHeader({
                 </div>
               )}
 
-              {/* NBA, expanded position — the SAME block as the collapsed
-                  one below, just repositioned to the end (this redesign
-                  pass). Never duplicated content, never a second copy with
-                  different data — see the file header's NBA note. */}
-              {hasNBA && <NextBestActionZone items={nextBestActions} />}
-
             </div>
           </div>
         )}
       </div>
     </CardContainer>
-  )
-}
-
-// ── Next Best Action block — the protagonist, dark-purple surface ──────────
-// A native `<button>`, not the Button component — the whole block is one
-// clickable target (icon-in-a-box + 2-line text + chevron), same "raw
-// styled element for a custom shape" precedent as the collapsed identity
-// tags above, not a shape any Button variant already covers.
-//
-// Verified against the actual Figma redesign node (v6rmYKA2zmyXWOahlxLOeI,
-// 19815:101548) via the Figma MCP — pixel-sampled, not guessed:
-//   - Block background #120520 in dark mode is an exact match for
-//     --card-purple-bg (the SAME token the "AI Summary" card pattern
-//     already uses elsewhere in this file) — corrected from 2 earlier
-//     guesses in this same pass (--color-surface-purple-darker, a fully
-//     opaque non-adapting hex; then --color-surface-purple-lighter, still
-//     too saturated/vibrant next to this card's own neutral bg).
-//   - The sparkle sits in its OWN tinted icon box (measured ≈24×24px,
-//     composited color matches --hi-purple-bg over the block background)
-//     — a real HighlightIcon (variant="purple", size="sm"), not a bare
-//     icon floating in the row.
-//   - Title and description are NEUTRAL text (--foreground /
-//     --field-supporting), same as every other card in this file — color
-//     lives ONLY in the icon box + block background, never in the text.
-//     Same principle AgenticSystemItem already follows ("color lives in
-//     the icon, never in the button").
-//   - Trailing chevron is neutral (--field-supporting) too, not purple.
-//
-// Correction pass — N items use the SAME disclosure pattern as Your
-// Intervention (InterventionZoneContent below): the most prioritized item
-// always renders full-size, the rest collapse behind "Show N more" /
-// "Show less" instead of all stacking open at once (verified against the
-// Figma file's own multi-NBA node — the revealed extras render as the SAME
-// full NextBestActionBlock, not HTL's compact bordered row, since NBA
-// items carry a title+description HTL's single-line items don't). Caps
-// at 3 revealed extras like HTL does, for the same reason — if this ever
-// needs a "View all" escape hatch beyond that, it isn't built yet (not
-// requested), same "flag rather than silently truncate" rule HTL follows.
-//
-// Button position — BELOW every card, not between the primary and the
-// extras. Re-checked against the Figma node's own expanded-state frame
-// (its "Show less" sits at the bottom of the whole stack, after all 3
-// NBA cards) — an earlier pass had copied HTL's own code layout (button
-// row before the revealed extras) instead of re-verifying this specific
-// pattern's actual Figma order, which put "Show less" in the middle.
-function NextBestActionZone({ items }: { items: NextBestAction[] }) {
-  const [showMore, setShowMore] = useState(false)
-  if (items.length === 0) return null
-  const [primary, ...rest] = items
-  const visibleRest = rest.slice(0, 3)
-  return (
-    <div className="flex flex-col gap-[8px]">
-      <NextBestActionBlock nba={primary} />
-      {showMore && visibleRest.map(nba => <NextBestActionBlock key={nba.id} nba={nba} />)}
-      {visibleRest.length > 0 && (
-        <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
-          {showMore ? "Show less" : `Show ${visibleRest.length} more`}
-          {showMore
-            ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
-            : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
-        </Button>
-      )}
-    </div>
-  )
-}
-
-function NextBestActionBlock({ nba }: { nba: NextBestAction }) {
-  return (
-    <button
-      type="button"
-      onClick={nba.onOpen}
-      className="w-full flex items-center gap-[8px] rounded-[8px] p-[12px] text-left transition-opacity hover:opacity-90"
-      style={{ background: "var(--card-purple-bg)", border: "0.5px solid var(--card-purple-border)" }}
-    >
-      <HighlightIcon size="sm" variant="purple" icon={<Sparkle size={16} strokeWidth={1.75} />} className="shrink-0" />
-      <div className="flex-1 flex flex-col gap-[2px] min-w-0">
-        <div className="flex items-center gap-[6px] min-w-0">
-          <span className="flex-1 truncate text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
-            {nba.title}
-          </span>
-          {/* One context Tag per NBA — what area this action is about, at a
-              glance ("Renewal", "Coverage", ...). Neutral, never a signal
-              color — purple already means "agent" on this card. Same
-              convention as Your Intervention's own contextTag. */}
-          {nba.contextTag && (
-            <Tag variant="neutral" size="sm" className="shrink-0">{nba.contextTag}</Tag>
-          )}
-        </div>
-        <span className="text-[12px] leading-[1.4]" style={{ color: "var(--field-supporting)" }}>
-          {nba.description}
-        </span>
-      </div>
-      <ChevronRight size={16} strokeWidth={1.75} className="shrink-0" style={{ color: "var(--field-supporting)" }} />
-    </button>
   )
 }
 
@@ -1592,5 +1440,5 @@ function ActionOverflowMenu({
   )
 }
 
-export { RecordHeader }
+export { EntityHeader }
 export type { LucideIcon }
