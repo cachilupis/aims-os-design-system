@@ -9,6 +9,8 @@ import { Tag }          from "@/components/ui/tag"
 import { Tabs }         from "@/components/ui/tabs"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
+import { ModalDialog } from "@/components/ui/modal-dialog"
+import { Chip }        from "@/components/ui/chip"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -1237,31 +1239,57 @@ function StudioPermissionsView({ studioId, onBack }: { studioId: string; onBack:
   )
 }
 
-function GrantAccessModal({ assignedStudios, onGrant, onClose }: {
-  assignedStudios: string[]
-  onGrant: (studioId: string) => void
-  onClose: () => void
-}) {
-  const available = Object.entries(STUDIO_META).filter(([id]) => !assignedStudios.includes(id))
+function AppsPanel({ member }: { member: Member }) {
+  const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
+  const studioSet = new Set<string>(member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : [])
+  memberGroups.forEach(g => g.studios.forEach(s => studioSet.add(s)))
+  const [studios, setStudios] = useState(Array.from(studioSet))
+  const [selectedStudio, setSelectedStudio] = useState<string | null>(null)
+  const [grantOpen, setGrantOpen] = useState(false)
+  const [removingStudio, setRemovingStudio] = useState<string | null>(null)
 
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)" /* audit-ignore */,
-      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
-    }} onClick={onClose}>
-      <div style={{
-        background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14,
-        padding: 24, minWidth: 360, boxShadow: "0 16px 48px rgba(0,0,0,0.3)" /* audit-ignore */,
-      }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Grant studio access</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4 }}>
-            <Icons.X size={16} />
-          </button>
-        </div>
-        {available.length === 0 ? (
-          <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>
-            Member already has access to all studios.
+  const allAssigned = studios.length >= Object.keys(STUDIO_META).length
+  const available = Object.entries(STUDIO_META).filter(([id]) => !studios.includes(id))
+
+  function confirmRemove() {
+    if (removingStudio) {
+      setStudios(p => p.filter(id => id !== removingStudio))
+      setRemovingStudio(null)
+    }
+  }
+
+  const removingMeta = removingStudio ? STUDIO_META[removingStudio] : null
+
+  // ── Remove confirmation modal ─────────────────────────────────────────────
+  const removeModal = (
+    <ModalDialog
+      isOpen={!!removingStudio}
+      onClose={() => setRemovingStudio(null)}
+      tone="error"
+      iconName="ShieldOff"
+      title={`Remove access to ${removingMeta?.label ?? "this studio"}?`}
+      description={`${member.name} will immediately lose all permissions in ${removingMeta?.label ?? "this studio"} and won't be able to access any of its features or data.`}
+      informativeCard="This action removes all permissions for this studio. If the member needs access again, it must be granted manually."
+      ctaPrimary={{ label: "Remove access", destructive: true, onClick: confirmRemove }}
+      ctaSecondary={{ label: "Keep access", onClick: () => setRemovingStudio(null) }}
+    />
+  )
+
+  // ── Grant access modal (DS ModalDialog, content variant) ──────────────────
+  const grantModal = (
+    <ModalDialog
+      isOpen={grantOpen}
+      onClose={() => setGrantOpen(false)}
+      variant="content"
+      tone="default"
+      iconName="KeyRound"
+      title="Grant studio access"
+      description="Select a studio to give this member access. You can configure individual permissions after granting."
+      showClose
+      slot={
+        available.length === 0 ? (
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "8px 0" }}>
+            Member already has access to all available studios.
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1269,7 +1297,7 @@ function GrantAccessModal({ assignedStudios, onGrant, onClose }: {
               <div key={id} style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "12px 14px", border: "1px solid var(--border)", borderRadius: 9,
-                background: "var(--background)",
+                background: "var(--surface)",
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: 8, flexShrink: 0,
@@ -1280,62 +1308,62 @@ function GrantAccessModal({ assignedStudios, onGrant, onClose }: {
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
                 </div>
-                <button onClick={() => onGrant(id)} style={{
-                  padding: "5px 12px", fontSize: 12, fontWeight: 600,
-                  border: "none", borderRadius: 6, cursor: "pointer",
-                  background: "var(--primary)", color: "#fff" /* audit-ignore */,
-                }}>Grant</button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => { setStudios(p => [...p, id]); setGrantOpen(false) }}
+                >
+                  Grant
+                </Button>
               </div>
             ))}
           </div>
-        )}
-      </div>
-    </div>
+        )
+      }
+    />
   )
-}
-
-function AppsPanel({ member }: { member: Member }) {
-  const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
-  const studioSet = new Set<string>(member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : [])
-  memberGroups.forEach(g => g.studios.forEach(s => studioSet.add(s)))
-  const [studios, setStudios] = useState(Array.from(studioSet))
-  const [selectedStudio, setSelectedStudio] = useState<string | null>(null)
-  const [grantOpen, setGrantOpen] = useState(false)
 
   if (selectedStudio) {
-    return <StudioPermissionsView studioId={selectedStudio} onBack={() => setSelectedStudio(null)} />
+    return (
+      <>
+        <StudioPermissionsView studioId={selectedStudio} onBack={() => setSelectedStudio(null)} />
+        {removeModal}
+      </>
+    )
   }
 
   if (studios.length === 0) {
     return (
       <>
+        {removeModal}
+        {grantModal}
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-          <button onClick={() => setGrantOpen(true)} style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-            fontSize: 12, fontWeight: 600, border: "1px solid var(--border)",
-            borderRadius: 8, background: "var(--surface)", color: "var(--foreground)", cursor: "pointer",
-          }}><Icons.Plus size={13} /> Grant access</button>
+          <Button variant="secondary" size="sm" onClick={() => setGrantOpen(true)}>
+            <Icons.Plus size={13} /> Grant access
+          </Button>
         </div>
         <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
           <Icons.AppWindow size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No apps assigned</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Add this member to a group with studio access, or grant direct access below.</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No studio access</div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Grant access to a studio to configure this member's permissions.</div>
         </div>
-        {grantOpen && <GrantAccessModal assignedStudios={studios} onGrant={id => { setStudios(p => [...p, id]); setGrantOpen(false) }} onClose={() => setGrantOpen(false)} />}
       </>
     )
   }
 
   return (
     <>
+      {removeModal}
+      {grantModal}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
-          <button onClick={() => setGrantOpen(true)} style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-            fontSize: 12, fontWeight: 600, border: "1px solid var(--border)",
-            borderRadius: 8, background: "var(--surface)", color: "var(--foreground)", cursor: "pointer",
-          }}><Icons.Plus size={13} /> Grant access</button>
-        </div>
+        {/* Only show Grant access when there are still studios left to add */}
+        {!allAssigned && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+            <Button variant="secondary" size="sm" onClick={() => setGrantOpen(true)}>
+              <Icons.Plus size={13} /> Grant access
+            </Button>
+          </div>
+        )}
         {studios.map(s => {
           const meta = STUDIO_META[s]
           if (!meta) return null
@@ -1358,26 +1386,38 @@ function AppsPanel({ member }: { member: Member }) {
                 color: "var(--primary)",
               }}>{meta.icon}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{meta.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>{meta.label}</div>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{meta.desc}</div>
               </div>
-              <div style={{ flexShrink: 0, textAlign: "right", display: "flex", alignItems: "center", gap: 12 }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--badge-success)", marginBottom: 3 }}>Active</div>
-                  {via.length > 0 && (
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                      via {via.slice(0, 2).join(", ")}{via.length > 2 ? ` +${via.length - 2}` : ""}
-                    </div>
-                  )}
-                </div>
+              <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+                <Chip variant="success-secondary" size="s">Active</Chip>
+                {via.length > 0 && (
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {via.slice(0, 2).map(v => (
+                      <Chip key={v} variant="secondary" size="s">via {v}</Chip>
+                    ))}
+                    {via.length > 2 && <Chip variant="secondary" size="s">+{via.length - 2} more</Chip>}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 12 }}>
                 <button
-                  onClick={e => { e.stopPropagation(); setStudios(p => p.filter(id => id !== s)) }}
+                  onClick={e => { e.stopPropagation(); setRemovingStudio(s) }}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)",
                     background: "var(--surface-raised)", color: "var(--muted-foreground)", cursor: "pointer",
+                    opacity: 0.7,
                   }}
-                  title="Remove access"
+                  title="Remove studio access"
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.color = "var(--badge-error)"
+                    ;(e.currentTarget as HTMLElement).style.opacity = "1"
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.color = "var(--muted-foreground)"
+                    ;(e.currentTarget as HTMLElement).style.opacity = "0.7"
+                  }}
                 >
                   <Icons.Trash2 size={12} />
                 </button>
@@ -1386,8 +1426,13 @@ function AppsPanel({ member }: { member: Member }) {
             </div>
           )
         })}
+        {/* Footer note when all studios are assigned */}
+        {allAssigned && (
+          <div style={{ textAlign: "center", padding: "8px 0", fontSize: 12, color: "var(--muted-foreground)" }}>
+            This member has access to all available studios.
+          </div>
+        )}
       </div>
-      {grantOpen && <GrantAccessModal assignedStudios={studios} onGrant={id => { setStudios(p => [...p, id]); setGrantOpen(false) }} onClose={() => setGrantOpen(false)} />}
     </>
   )
 }
