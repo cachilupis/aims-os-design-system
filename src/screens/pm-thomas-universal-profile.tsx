@@ -17,7 +17,7 @@ import { CardContainer }    from "@/components/ui/card-container"
 import { ModalDialog }      from "@/components/ui/modal-dialog"
 import { Menu, MenuItem }   from "@/components/ui/menu-item"
 import { RecordHeader }     from "@/components/ui/record-header"
-import type { CustomerRecord, EmployeeRecord, NextBestAction } from "@/components/ui/record-header"
+import type { RecordHeaderEntityType, NextBestAction } from "@/components/ui/record-header"
 import { SlideOut }         from "@/components/ui/slide-out"
 import { Input }            from "@/components/ui/input"
 import type { LucideIcon }  from "lucide-react"
@@ -215,47 +215,36 @@ const ENTITY_TYPE_OPTIONS: Record<EntityType, { label: string; iconName: string;
   ],
 }
 
-const PROFILE_SIGNALS: Record<string, NextBestAction> = {
-  "EMP-00412": { severity: "alert",       label: "1 performance review pending approval",     dueContext: "Due in 3 days" },
-  "PER-0091":  { severity: "informative", label: "Compliance certification expiring soon",    dueContext: "Expires Sep 15" },
-  "ORG-0023":  { severity: "alert",       label: "Renewal in 12 days — health dropped to 61", dueContext: "Closes Sep 5"  },
+// Migrated to RecordHeader's current NextBestAction shape — { id, title,
+// description, onOpen }. The old { severity, label, dueContext } fields no
+// longer exist on the component. Same 3 records and same copy as before: the
+// former `label` is now `title`, and `dueContext` is now `description`.
+const PROFILE_NBAS: Record<string, NextBestAction[]> = {
+  "EMP-00412": [{ id: "nba-emp-00412", title: "1 performance review pending approval",     description: "Due in 3 days",  onOpen: () => {} }],
+  "PER-0091":  [{ id: "nba-per-0091",  title: "Compliance certification expiring soon",    description: "Expires Sep 15", onOpen: () => {} }],
+  "ORG-0023":  [{ id: "nba-org-0023",  title: "Renewal in 12 days — health dropped to 61", description: "Closes Sep 5",   onOpen: () => {} }],
 }
 
-function buildRecordHeaderData(profile: UniversalProfile): {
-  variant: "employee" | "customer" | "client"
-  data: CustomerRecord | EmployeeRecord
-} {
-  if (profile.type === "company") {
-    const data: CustomerRecord = {
-      accountName:    profile.name,
-      segment:        profile.subtitle.split(" · ")[0] ?? "—",
-      owner:          "Priya Nair",
-      tier:           "Enterprise",
-      renewalDate:    "Sep 5, 2026",
-      mrr:            "$480K",
-      lastContact:    "Aug 22, 2026",
-      openTickets:    3,
-      adoptionLevel:  "High",
-      industry:       "Financial Services",
-      primaryContact: "Sandra Torres",
-    }
-    return { variant: "customer", data }
-  }
-  // employee or person
-  const data: EmployeeRecord = {
-    name:       profile.name,
-    role:       profile.subtitle.split(" · ")[0] ?? "—",
-    department: profile.subtitle.split(" · ")[1] ?? "—",
-    manager:    "Lisa Park",
-    location:   "Remote",
-    email:      profile.name.toLowerCase().replace(" ", ".") + "@acme.com",
-    phone:      "+1 (602) 555-0100",
-    startDate:  "Jan 12, 2022",
-    team:       "Operations",
-    accessRole: "Standard",
-  }
-  return { variant: "employee", data }
+const ENTITY_TYPE_ICON: Record<EntityType, LucideIcon> = {
+  person:   LucideIcons.UserRound,
+  employee: LucideIcons.User,
+  company:  LucideIcons.Building2,
 }
+
+// `recordFields` is deliberately NOT passed to RecordHeader here. In the
+// current component the RECORD zone renders nothing inline — the array's only
+// visible effect is enabling the ⓘ provenance trigger beside the name, and
+// that button is disabled unless `onProvenanceOpen` is wired. This screen has
+// no provenance panel yet, so passing fields would ship a permanently
+// disabled control (same reason the DS never shows a disabled Eye) and would
+// require inventing a source system for mock data that has none. The panel
+// gets wired with real provenance during the UCP header redesign; the fields
+// themselves are already visible in the Profile Summary widget below.
+//
+// The retired { variant, data } API's other fields (lastContact, openTickets,
+// adoptionLevel, industry, primaryContact, email, phone, team) are dropped
+// rather than translated: the current API has no slot for them, and they
+// belong on the detail tabs.
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -510,8 +499,15 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
   }, [profile])
 
   // RecordHeader data
-  const { variant: rhVariant, data: rhData } = buildRecordHeaderData(profile)
-  const signal = PROFILE_SIGNALS[profile.id] ?? { severity: "neutral" as const, label: "No active recommendations" }
+  const rhEntityType: RecordHeaderEntityType = {
+    icon:  ENTITY_TYPE_ICON[profile.type],
+    label: TYPE_LABEL[profile.type],
+  }
+  // An empty array is how the current component expresses "nothing to
+  // recommend right now" — the block disappears instead of rendering a
+  // placeholder, which is what the old neutral "No active recommendations"
+  // signal was standing in for.
+  const rhNextBestActions = PROFILE_NBAS[profile.id] ?? []
 
   // Available entity type options for the "+" picker (filter already-added tabs)
   const availableOptions = (ENTITY_TYPE_OPTIONS[profile.type] ?? []).filter(
@@ -618,9 +614,9 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     >
       {/* ── RecordHeader — lean identity card with NBA signal ── */}
       <RecordHeader
-        variant={rhVariant}
-        data={rhData}
-        signal={signal}
+        name={profile.name}
+        entityType={rhEntityType}
+        nextBestActions={rhNextBestActions}
         actions={[
           { label: "Export",  variant: "secondary", onClick: () => {} },
           { label: profile.type === "company" ? "Contact account" : "Message", variant: "primary", onClick: () => {} },
