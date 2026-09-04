@@ -1594,6 +1594,10 @@ function EditablePermTreeNode({ node, depth, overrides, onCycle }: {
   )
 }
 
+// Prototype: current session user is Platform Owner → can edit any member's permissions.
+// In production this would come from the authenticated user's role/scope check.
+const CURRENT_USER_CAN_EDIT_PERMISSIONS = true
+
 function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   const [mode, setMode] = useState<PermMode>("audit")
   const [studio, setStudio] = useState("governance")
@@ -1617,68 +1621,63 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
     setSaved(false)
   }
 
-  function handleDiscard() { setOverrides({}); setSaved(false) }
+  function handleDiscard() { setOverrides({}); setMode("audit"); setSaved(false) }
   function handleSave() {
-    setOverrides({}); setSaved(true)
+    setOverrides({}); setMode("audit"); setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
+  const allGranted = nodes.flatMap(n => [n, ...(n.children ?? [])]).filter(n => GRANTED_STATES.includes(n.state))
+  const directCount = allGranted.filter(n => n.state === "g-direct").length
+  const inhCount    = allGranted.filter(n => n.state === "g-inh").length
   const visibleNodes = mode === "audit" ? filterGrantedTree(nodes) : nodes
 
   return (
     <div>
-      {/* Mode toggle + Save/Discard */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-        <div style={{ display: "flex", background: "var(--muted)", borderRadius: 6, padding: 2 }}>
-          {(["audit", "edit"] as PermMode[]).map(m => (
-            <button key={m} onClick={() => { setMode(m); if (m === "audit") handleDiscard() }}
-              style={{ padding: "4px 12px", fontSize: 12, fontWeight: 600, border: "none", borderRadius: 5, cursor: "pointer",
-                background: mode === m ? "var(--background)" : "transparent",
-                color: mode === m ? "var(--foreground)" : "var(--muted-foreground)" }}>
-              {m === "audit" ? "Audit" : "Edit"}
+      {/* Header row: studio sub-tabs + action button */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+        {/* Studio sub-tabs */}
+        <div style={{ display: "flex", gap: 4, flex: 1 }}>
+          {STUDIO_TABS.map(s => (
+            <button key={s.id} onClick={() => setStudio(s.id)} style={{
+              padding: "4px 10px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+              color: studio === s.id ? "var(--foreground)" : "var(--muted-foreground)",
+              borderBottom: studio === s.id ? "2px solid var(--primary)" : "2px solid transparent",
+            }}>
+              {s.label}
             </button>
           ))}
         </div>
-        {mode === "edit" && isDirty && (
-          <>
-            <button onClick={handleSave} style={{ padding: "4px 12px", fontSize: 12, fontWeight: 600, border: "none", borderRadius: 6, cursor: "pointer", background: "var(--primary)", color: "#fff" /* audit-ignore */ }}>Save</button>
-            <button onClick={handleDiscard} style={{ padding: "4px 12px", fontSize: 12, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 6, cursor: "pointer", background: "none", color: "var(--foreground)" }}>Discard</button>
-          </>
+
+        {/* Right-side actions — only for permitted users */}
+        {mode === "audit" && CURRENT_USER_CAN_EDIT_PERMISSIONS && (
+          <Button variant="secondary" size="sm" onClick={() => setMode("edit")}>
+            <Icons.Pencil size={13} style={{ marginRight: 4 }} />
+            Edit permissions
+          </Button>
         )}
-        {saved && <span style={{ fontSize: 12, color: "var(--success, #22c55e)" /* audit-ignore */ }}>Saved</span>}
+        {mode === "edit" && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {saved && (
+              <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */ , display: "flex", alignItems: "center", gap: 4 }}>
+                <Icons.CheckCircle size={13} /> Saved
+              </span>
+            )}
+            <Button variant="secondary" size="sm" onClick={handleDiscard}>Discard</Button>
+            <Button variant="primary" size="sm" onClick={handleSave} disabled={!isDirty}>Save changes</Button>
+          </div>
+        )}
       </div>
 
-      {/* Audit-mode summary banner */}
-      {mode === "audit" && (() => {
-        const allGranted = nodes.flatMap(n => [n, ...(n.children ?? [])]).filter(n => GRANTED_STATES.includes(n.state))
-        const directCount = allGranted.filter(n => n.state === "g-direct").length
-        const inhCount = allGranted.filter(n => n.state === "g-inh").length
-        return (
-          <div style={{
-            display: "flex", gap: 20, padding: "10px 16px", marginBottom: 12,
-            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
-            fontSize: 12, color: "var(--muted-foreground)",
-          }}>
-            <span><strong style={{ color: "var(--foreground)" }}>{allGranted.length}</strong> granted</span>
-            <span style={{ color: "var(--border)" }}>|</span>
-            <span><strong style={{ color: "var(--foreground)" }}>{directCount}</strong> direct</span>
-            <span><strong style={{ color: "var(--foreground)" }}>{inhCount}</strong> via role</span>
-            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4 }}>
-              <Icons.Lock size={11} /> Read-only
-            </span>
-          </div>
-        )
-      })()}
-
-      {/* Studio sub-tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
-        {STUDIO_TABS.map(s => (
-          <button key={s.id} onClick={() => setStudio(s.id)} style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
-            color: studio === s.id ? "var(--foreground)" : "var(--muted-foreground)",
-            borderBottom: studio === s.id ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -9 }}>
-            {s.label}
-          </button>
-        ))}
+      {/* Lightweight stats row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        <Chip variant="secondary" size="s">{allGranted.length} granted</Chip>
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{directCount} direct · {inhCount} via role</span>
+        {mode === "audit" && (
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+            <Icons.Eye size={11} /> View only
+          </span>
+        )}
       </div>
 
       {/* Tree */}
