@@ -3,7 +3,6 @@ import { Phone, PhoneCall, Settings as SettingsIcon, Plus, Search, Shield } from
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Tabs } from "@/components/ui/tabs"
-import { Chip } from "@/components/ui/chip"
 import { Filters } from "@/components/ui/filters"
 import { Button } from "@/components/ui/button"
 import { Table, type TableColumn } from "@/components/ui/table"
@@ -341,7 +340,10 @@ function VoiceChannelScreenInner() {
 
           {tab === "numbers" && (
             <div className="flex flex-col gap-4">
-              {/* Toolbar: search + filter chips + Acquire */}
+              {/* Toolbar — DS Filters with search + a Status filter
+                  slot. Click the Status chip to cycle All → Active →
+                  Suspended → All, matching the DS filter-slot pattern
+                  (chip surfaces the current filter, X clears it). */}
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex-1 min-w-[200px]">
                   <Filters
@@ -349,24 +351,26 @@ function VoiceChannelScreenInner() {
                     searchPlaceholder="Search…"
                     searchValue={numSearch}
                     onSearchChange={setNumSearch}
+                    slots={[
+                      {
+                        placeholder: `Status · ${counts.all}`,
+                        value: numFilter === "all"
+                          ? undefined
+                          : numFilter === "active"
+                            ? `Active · ${counts.active}`
+                            : `Suspended · ${counts.suspended}`,
+                        onOpen:   () => setNumFilter(
+                          numFilter === "all"    ? "active"    :
+                          numFilter === "active" ? "suspended" :
+                                                   "all"
+                        ),
+                        onRemove: () => setNumFilter("all"),
+                      },
+                    ]}
                     showAllFilters={false}
                     showSort={false}
                     showViewToggle={false}
                   />
-                </div>
-                <div className="flex items-center gap-2">
-                  {(["all", "active", "suspended"] as const).map(f => (
-                    <Chip
-                      key={f}
-                      variant={numFilter === f ? "primary" : "secondary"}
-                      size="s"
-                      onClick={() => setNumFilter(f)}
-                    >
-                      {f === "all"    ? `All ${counts.all}`
-                       : f === "active" ? `Active ${counts.active}`
-                       :                  `Suspended ${counts.suspended}`}
-                    </Chip>
-                  ))}
                 </div>
                 <Button variant="primary" size="default" icon={<Plus size={14}/>} iconPosition="left" onClick={() => setAcquireOpen(true)}>
                   Acquire Number
