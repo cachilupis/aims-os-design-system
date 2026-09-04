@@ -282,23 +282,19 @@ function StudyWidget({ title, status, children }: { title: string; status: Study
   if (status === "empty") return null
 
   if (status === "error") {
+    // EmptyState, not a hand-rolled div. CLAUDE.md is explicit that any view or
+    // section with no content to show uses it — a failed load is exactly that,
+    // and rolling one by hand is how the empty states in an app stop looking
+    // like each other.
     return (
-      <div style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-text-error-default)" }}>
-          <LucideIcons.AlertCircle size={14} />
-          <span style={{ fontSize: 12, fontWeight: 500 }}>Failed to load</span>
-        </div>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{title} data couldn't be retrieved.</span>
-        <button
-          style={{
-            alignSelf: "flex-start", fontSize: 12, fontWeight: 500,
-            color: "var(--primary)", border: "none", background: "none",
-            cursor: "pointer", padding: 0,
-          }}
-          onClick={() => {}} // DS-GAP: wire to retry handler
-        >
-          Retry
-        </button>
+      <div style={{ padding: "0 8px 8px" }}>
+        <EmptyState
+          icon={LucideIcons.AlertCircle}
+          title="Failed to load"
+          description={`${title} data couldn't be retrieved.`}
+          ctaLabel="Retry"
+          onCta={() => {}} // DS-GAP: wire to a real retry handler
+        />
       </div>
     )
   }
