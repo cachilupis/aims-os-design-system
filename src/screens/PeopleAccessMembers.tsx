@@ -1713,7 +1713,13 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
           : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onCycle={cyclePermission} />)
         }
         {visibleNodes.length === 0 && (
-          <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>No permissions match "{filter}"</div>
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>
+            {filter
+              ? `No permissions match "${filter}"`
+              : mode === "audit"
+                ? "No permissions granted in this studio."
+                : "No permissions available."}
+          </div>
         )}
       </div>
     </div>
