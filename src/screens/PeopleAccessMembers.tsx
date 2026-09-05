@@ -1624,7 +1624,7 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle }: {
         <span onClick={e => e.stopPropagation()}>
           <Toggle
             checked={isDirect}
-            disabled={node.locked && !isInheritedOnly}
+            disabled={node.locked && node.state !== "g-inh"}
             size="sm"
             onChange={on => { onToggle(node.id, on) }}
           />
@@ -1655,23 +1655,37 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
 
   function togglePermission(id: string, on: boolean) {
     setOverrides(prev => {
-      const allNodes = nodes.flatMap(n => [n, ...(n.children ?? [])])
-      const base = allNodes.find(n => n.id === id)
-      const baseState = base?.state ?? ""
+      function findNode(list: PermNode[], targetId: string): PermNode | undefined {
+        for (const n of list) {
+          if (n.id === targetId) return n
+          const found = findNode(n.children ?? [], targetId)
+          if (found) return found
+        }
+      }
+      function descendants(node: PermNode): PermNode[] {
+        return [node, ...(node.children ?? []).flatMap(descendants)]
+      }
+
+      const copy = { ...prev }
 
       if (on) {
-        // Granting direct: if already natively g-direct, clear override; otherwise pin
-        if (baseState === "g-direct") {
-          const copy = { ...prev }; delete copy[id]; return copy
+        // Grant: set this node + all descendants to g-direct.
+        // If a descendant is already natively g-direct, clear its override instead.
+        const target = findNode(nodes, id)
+        const affected = target ? descendants(target) : [{ id, state: "" } as PermNode]
+        for (const node of affected) {
+          if (node.state === "g-direct") {
+            delete copy[node.id]
+          } else {
+            copy[node.id] = "g-direct"
+          }
         }
-        return { ...prev, [id]: "g-direct" }
       } else {
-        // Removing direct: always clear the override and let base state take over.
-        // For g-inh nodes this is an "unpin" (back to inherited-only).
-        // For g-direct nodes this restores native direct (same as clearing).
-        // For "" nodes this removes a previously granted override.
-        const copy = { ...prev }; delete copy[id]; return copy
+        // Revoke: only clear this node's override. Siblings/descendants unchanged.
+        delete copy[id]
       }
+
+      return copy
     })
     setSaved(false)
   }
