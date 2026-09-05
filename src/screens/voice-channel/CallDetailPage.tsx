@@ -1,12 +1,13 @@
 import { useState } from "react"
-import { ArrowLeft, Download, FileText, Sparkles, BarChart3, PhoneCall, User } from "lucide-react"
+import { ArrowLeft, Download, FileText, Sparkles, BarChart3, PhoneCall, User, Shield, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { Tabs } from "@/components/ui/tabs"
 import { Tag } from "@/components/ui/tag"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
 import { CardContainer } from "@/components/ui/card-container"
-import { AGENTS, TRANSCRIPT, type Call, type PhoneNumberRecord } from "./data"
+import { AGENTS, TRANSCRIPT, type Call, type PhoneNumberRecord, type CallIntel, type TranscriptLine } from "./data"
 import { AgentAvatar, SentimentTag } from "./shared"
+import { useToast } from "./toast"
 
 type DetailTab = "transcript" | "summary" | "metrics"
 
@@ -14,6 +15,21 @@ interface CallDetailPageProps {
   call:    Call
   number:  PhoneNumberRecord | null
   onBack:  () => void
+}
+
+// Generic mock intel — used as a fallback for calls that do not ship
+// their own transcript / summary / metrics. Presented with an explicit
+// "sample" banner so the reader knows it is not the real recording.
+const FALLBACK_INTEL: CallIntel = {
+  transcript: TRANSCRIPT,
+  summary:    "Customer Maria Garcia called regarding an account lockout due to repeated failed login attempts. The AI agent diagnosed the issue and initiated an account unlock, but the customer requested human assistance. Agent Jordan Kim resolved the issue and sent a password reset link.",
+  topics:     ["Account lockout", "Login issue", "Password reset"],
+  actionItems: ["Verify Maria's account security settings", "Follow up if login issue persists within 24h"],
+  aiTurns:    4,
+  humanTurns: 3,
+  timeToHandoff: "51 seconds",
+  handoffReason: "Negative sentiment + customer request",
+  resolution: "Resolved",
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -26,7 +42,10 @@ interface CallDetailPageProps {
 
 export function CallDetailPage({ call, number, onBack }: CallDetailPageProps) {
   const [tab, setTab] = useState<DetailTab>("transcript")
+  const toast = useToast()
   const agent = AGENTS.find(a => a.id === call.agent) ?? null
+  const intel = call.intel ?? FALLBACK_INTEL
+  const isFallback = !call.intel
 
   return (
     <div className="flex flex-col gap-4">
@@ -46,8 +65,8 @@ export function CallDetailPage({ call, number, onBack }: CallDetailPageProps) {
                 {call.caller}
               </h2>
               {call.direction === "inbound"
-                ? <Tag variant="success"     size="sm">↙ Inbound</Tag>
-                : <Tag variant="informative" size="sm">↗ Outbound</Tag>}
+                ? <Tag variant="success"     size="sm" leadingIcon={<ArrowDownLeft size={10} strokeWidth={2.5}/>}>Inbound</Tag>
+                : <Tag variant="informative" size="sm" leadingIcon={<ArrowUpRight size={10} strokeWidth={2.5}/>}>Outbound</Tag>}
               <Tag variant="neutral" size="sm">Ended</Tag>
               {call.hil && <Tag variant="purple" size="sm">HiL Handoff</Tag>}
               <SentimentTag s={call.sentiment}/>
@@ -59,7 +78,11 @@ export function CallDetailPage({ call, number, onBack }: CallDetailPageProps) {
             </p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <Button variant="secondary" size="default" icon={<Download size={13}/>} iconPosition="left">
+            <Button
+              variant="secondary" size="default"
+              icon={<Download size={13}/>} iconPosition="left"
+              onClick={() => toast.info(`Exporting call ${call.id} — you'll get an email with the transcript, summary and metrics.`)}
+            >
               Export
             </Button>
           </div>
@@ -109,9 +132,26 @@ export function CallDetailPage({ call, number, onBack }: CallDetailPageProps) {
 
       {/* Body */}
       <CardContainer variant="default" size="default">
-        {tab === "transcript" && <Transcript/>}
-        {tab === "summary"    && <Summary/>}
-        {tab === "metrics"    && <Metrics call={call} agent={agent}/>}
+        {isFallback && (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: "8px 12px",
+              background: "var(--color-surface-neutral-subtle)",
+              border: "1px dashed var(--color-border-neutral-default)",
+              borderRadius: "var(--radius-md)",
+              fontSize: 12,
+              color: "var(--color-text-caption)",
+              display: "flex", alignItems: "center", gap: 8,
+            }}
+          >
+            <Sparkles size={12}/>
+            <span>Sample intelligence — this call was not indexed. Showing a representative transcript to demonstrate the layout.</span>
+          </div>
+        )}
+        {tab === "transcript" && <Transcript lines={intel.transcript ?? TRANSCRIPT}/>}
+        {tab === "summary"    && <Summary intel={intel}/>}
+        {tab === "metrics"    && <Metrics call={call} agent={agent} intel={intel}/>}
       </CardContainer>
     </div>
   )
@@ -119,21 +159,25 @@ export function CallDetailPage({ call, number, onBack }: CallDetailPageProps) {
 
 // ── Transcript view (chat bubbles + HiL divider) ───────────────────────
 
-function Transcript() {
+function Transcript({ lines }: { lines: TranscriptLine[] }) {
   return (
     <div className="flex flex-col gap-3">
-      {TRANSCRIPT.map((line, i) => {
+      {lines.map((line, i) => {
         if (line.divider) {
           return (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0" }}>
               <div style={{ flex: 1, height: 1, background: "var(--primary)", opacity: 0.4 }}/>
-              <span style={{
-                fontSize: 11, fontWeight: 700, color: "var(--primary)",
-                padding: "4px 10px", border: "1px solid var(--primary)",
-                borderRadius: 9999,
-                background: "var(--color-surface-primary-more-subtle)",
-              }}>
-                🛡 {line.text}
+              <span
+                className="flex items-center gap-1"
+                style={{
+                  fontSize: 11, fontWeight: 700, color: "var(--primary)",
+                  padding: "4px 10px", border: "1px solid var(--primary)",
+                  borderRadius: 9999,
+                  background: "var(--color-surface-primary-more-subtle)",
+                }}
+              >
+                <Shield size={12} strokeWidth={2}/>
+                {line.text}
               </span>
               <div style={{ flex: 1, height: 1, background: "var(--primary)", opacity: 0.4 }}/>
             </div>
@@ -142,7 +186,7 @@ function Transcript() {
         const roleLabel =
           line.role === "caller" ? "CALLER" :
           line.role === "agent"  ? "AI AGENT" :
-          "AGENT (Jordan Kim)"
+          "HUMAN AGENT"
         const isCaller = line.role === "caller"
         const alignRight = !isCaller
         const bg =
@@ -174,56 +218,89 @@ function Transcript() {
 
 // ── AI Summary view ────────────────────────────────────────────────────
 
-function Summary() {
+function Summary({ intel }: { intel: CallIntel }) {
+  const topics = intel.topics ?? []
+  const actions = intel.actionItems ?? []
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <div style={microLabel}>Summary</div>
-        <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--color-text-title)", marginTop: 6 }}>
-          Customer Maria Garcia called regarding an account lockout due to repeated failed login attempts. The AI agent diagnosed the issue and initiated an account unlock, but the customer requested human assistance. Agent Jordan Kim resolved the issue and sent a password reset link.
-        </p>
-      </div>
-
-      <div>
-        <div style={microLabel}>Key Topics</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-          {["Account lockout", "Login issue", "Password reset"].map(t => (
-            <Chip key={t} variant="primary" size="s">{t}</Chip>
-          ))}
+      {intel.summary && (
+        <div>
+          <div style={microLabel}>Summary</div>
+          <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--color-text-title)", marginTop: 6 }}>
+            {intel.summary}
+          </p>
         </div>
-      </div>
+      )}
 
-      <div>
-        <div style={microLabel}>Action Items</div>
-        <ul style={{ fontSize: 13, color: "var(--color-text-body)", lineHeight: 1.6, paddingLeft: 16, marginTop: 6 }}>
-          <li>Verify Maria's account security settings</li>
-          <li>Follow up if login issue persists within 24h</li>
-        </ul>
-      </div>
+      {topics.length > 0 && (
+        <div>
+          <div style={microLabel}>Key Topics</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+            {topics.map(t => (
+              <Chip key={t} variant="primary" size="s">{t}</Chip>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {actions.length > 0 && (
+        <div>
+          <div style={microLabel}>Action Items</div>
+          <ul style={{ fontSize: 13, color: "var(--color-text-body)", lineHeight: 1.6, paddingLeft: 16, marginTop: 6 }}>
+            {actions.map((a, i) => <li key={i}>{a}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
 
 // ── Metrics view ───────────────────────────────────────────────────────
 
-function Metrics({ call, agent }: { call: Call; agent: { name: string } | null }) {
+function Metrics({
+  call, agent, intel,
+}: { call: Call; agent: { name: string } | null; intel: CallIntel }) {
+  const sentimentValue =
+    call.sentiment === "negative" ? "0.31" :
+    call.sentiment === "positive" ? "0.82" :
+                                    "0.55"
+  const sentimentColor =
+    call.sentiment === "negative" ? "var(--color-text-error)" :
+    call.sentiment === "positive" ? "var(--color-text-success)" :
+                                    undefined
+
+  const resolutionTagVariant =
+    intel.resolution === "Escalated"     ? "alert"  :
+    intel.resolution === "Task Created"  ? "yellow" :
+    intel.resolution === "No Answer"     ? "neutral" :
+                                           "success"
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-3 gap-3">
-        <MetricTile value={call.duration}                                                                            label="Duration"  />
-        <MetricTile value={call.sentiment === "negative" ? "0.31" : call.sentiment === "positive" ? "0.82" : "0.55"} label="Sentiment"
-                    color={call.sentiment === "negative" ? "var(--color-text-error)" : call.sentiment === "positive" ? "var(--color-text-success)" : undefined}/>
-        <MetricTile value={`$${call.cost.toFixed(2)}`}                                                               label="Cost"     />
+        <MetricTile value={call.duration}              label="Duration"  />
+        <MetricTile value={sentimentValue}             label="Sentiment" color={sentimentColor}/>
+        <MetricTile value={`$${call.cost.toFixed(2)}`} label="Cost"     />
       </div>
 
       <div className="flex flex-col gap-2">
-        <MetricRow label="HiL Triggered"      value={call.hil ? <Tag variant="purple" size="sm">Yes — 0:51</Tag> : <span style={{ color: "var(--color-text-caption)" }}>No</span>}/>
-        <MetricRow label="HiL Trigger Reason" value={call.hil ? "Negative sentiment + customer request" : "—"}/>
+        <MetricRow
+          label="HiL Triggered"
+          value={call.hil
+            ? <Tag variant="purple" size="sm">Yes{intel.timeToHandoff ? ` — ${intel.timeToHandoff}` : ""}</Tag>
+            : <span style={{ color: "var(--color-text-caption)" }}>No</span>}
+        />
+        <MetricRow label="HiL Trigger Reason" value={intel.handoffReason ?? (call.hil ? "—" : "—")}/>
         <MetricRow label="Assigned Agent"     value={agent?.name ?? "—"}/>
-        <MetricRow label="Time to Handoff"    value={call.hil ? "12 seconds" : "—"}/>
-        <MetricRow label="AI Turns"           value="8"/>
-        <MetricRow label="Human Turns"        value={call.hil ? "4" : "0"}/>
-        <MetricRow label="Resolution"         value={<Tag variant="success" size="sm">Resolved</Tag>}/>
+        <MetricRow label="Time to Handoff"    value={intel.timeToHandoff ?? "—"}/>
+        <MetricRow label="AI Turns"           value={intel.aiTurns    !== undefined ? String(intel.aiTurns)    : "—"}/>
+        <MetricRow label="Human Turns"        value={intel.humanTurns !== undefined ? String(intel.humanTurns) : "—"}/>
+        <MetricRow
+          label="Resolution"
+          value={intel.resolution
+            ? <Tag variant={resolutionTagVariant} size="sm">{intel.resolution}</Tag>
+            : "—"}
+        />
       </div>
     </div>
   )

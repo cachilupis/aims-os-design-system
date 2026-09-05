@@ -1,3 +1,4 @@
+import { useCallback, useRef, useState, type ReactElement } from "react"
 import { CheckCircle2, PauseCircle, Shield } from "lucide-react"
 import { Tag } from "@/components/ui/tag"
 import type { NumberStatus, CallSentiment, AgentStatus } from "./data"
@@ -88,6 +89,141 @@ export function AgentAvatarStack({ colors, initials, max = 3 }: { colors: string
       )}
     </div>
   )
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// useFilterDropdown — reusable dropdown-menu popover for a DS Filters
+// slot. Encapsulates the "click chip → open menu → pick option" pattern
+// so every voice-channel toolbar shares the exact same behavior and
+// visual treatment.
+//
+// Usage:
+//   const { containerRef, slot, menu } = useFilterDropdown({...})
+//   return (
+//     <div ref={containerRef} className="relative">
+//       <Filters slots={[slot]} … />
+//       {menu}
+//     </div>
+//   )
+//
+// The hook anchors the menu using getBoundingClientRect() on the chip
+// button inside `containerRef` — scoped, so multiple dropdowns can
+// coexist on one screen without label collisions.
+// ─────────────────────────────────────────────────────────────────────
+
+export interface FilterOption<T extends string = string> {
+  id:     T
+  label:  string
+  count?: number
+}
+
+export function useFilterDropdown<T extends string>(opts: {
+  placeholder:  string
+  value:        T
+  /** Optional "empty" value. When set, the chip shows the placeholder
+   *  while value === defaultValue and exposes a clear (X) affordance
+   *  in every other state. When omitted, the chip always displays the
+   *  current selection's label and never renders a clear affordance —
+   *  use this shape for source-type switchers where "all" isn't a
+   *  meaningful state. */
+  defaultValue?: T
+  options:      FilterOption<T>[]
+  onChange:     (id: T) => void
+}) {
+  const { placeholder, value, defaultValue, options, onChange } = opts
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+
+  const selected = options.find(o => o.id === value)
+  const chipLabel = selected
+    ? (selected.count != null ? `${selected.label} · ${selected.count}` : selected.label)
+    : undefined
+
+  const openMenu = useCallback(() => {
+    // Prefer the container scope when provided (multiple dropdowns
+    // sharing one placeholder need it); fall back to document scope
+    // so a caller doesn't have to plumb a ref for the common single-
+    // dropdown case.
+    const root: ParentNode = containerRef.current ?? document
+    const btn = Array.from(root.querySelectorAll("button")).find(b => {
+      const t = b.textContent?.trim() ?? ""
+      return t === placeholder || (chipLabel != null && t === chipLabel)
+    })
+    if (!btn) return
+    const rect = btn.getBoundingClientRect()
+    setPos({ top: rect.bottom + 4, left: rect.left })
+  }, [placeholder, chipLabel])
+
+  const close = useCallback(() => setPos(null), [])
+
+  const isCleared = defaultValue !== undefined && value === defaultValue
+  const slot = {
+    placeholder,
+    value:    isCleared ? undefined : chipLabel,
+    onOpen:   openMenu,
+    onRemove: defaultValue !== undefined && value !== defaultValue
+      ? () => onChange(defaultValue)
+      : undefined,
+  }
+
+  const menu: ReactElement | null = pos ? (
+    <>
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 10000 }}
+        onClick={close}
+      />
+      <div
+        role="menu"
+        style={{
+          position:     "fixed",
+          top:          pos.top,
+          left:         pos.left,
+          zIndex:       10001,
+          background:   "var(--surface-floating-default, var(--popover, var(--surface)))",
+          border:       "1px solid var(--color-border-neutral-default)",
+          borderRadius: "var(--radius-md)",
+          padding:      "4px 0",
+          boxShadow:    "var(--shadow-elevation-3, 0 8px 24px rgba(0,0,0,.18))", // audit-ignore: rgba is CSS var fallback
+          minWidth:     200,
+        }}
+      >
+        {options.map(opt => (
+          <button
+            key={opt.id}
+            role="menuitemradio"
+            aria-checked={value === opt.id}
+            onClick={() => { onChange(opt.id); close() }}
+            style={{
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "space-between",
+              width:          "100%",
+              padding:        "8px 14px",
+              border:         "none",
+              background:     "none",
+              cursor:         "pointer",
+              fontSize:       13,
+              textAlign:      "left",
+              fontFamily:     "inherit",
+              fontWeight:     value === opt.id ? 600 : 400,
+              color:          value === opt.id ? "var(--primary)" : "var(--color-text-title)",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--color-surface-neutral-subtle)" }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
+          >
+            <span>{opt.label}</span>
+            {opt.count != null && (
+              <span style={{ fontSize: 11, color: "var(--color-text-caption)", marginLeft: 12 }}>
+                {opt.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    </>
+  ) : null
+
+  return { containerRef, slot, menu }
 }
 
 // ── Sentiment bar (0..1 → colored bar) ─────────────────────────────────

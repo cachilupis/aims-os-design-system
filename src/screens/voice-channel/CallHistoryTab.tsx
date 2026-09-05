@@ -1,15 +1,13 @@
-import { useMemo, useState } from "react"
-import { PhoneCall, Search } from "lucide-react"
-import { Chip } from "@/components/ui/chip"
+import { useEffect, useMemo, useState } from "react"
+import { PhoneCall, Search, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { Filters } from "@/components/ui/filters"
-import { Select } from "@/components/ui/select"
 import { CardContainer } from "@/components/ui/card-container"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Table, type TableColumn } from "@/components/ui/table"
 import { Tag } from "@/components/ui/tag"
 import type { Call, PhoneNumberRecord, CallDirection } from "./data"
 import { AGENTS } from "./data"
-import { AgentAvatar, HilBadge, SentimentTag } from "./shared"
+import { AgentAvatar, HilBadge, SentimentTag, useFilterDropdown } from "./shared"
 import { CallPreview } from "./CallPreview"
 import { CallDetailPage } from "./CallDetailPage"
 
@@ -18,14 +16,32 @@ type DirFilter = "all" | CallDirection | "hil"
 interface CallHistoryTabProps {
   calls:   Call[]
   numbers: PhoneNumberRecord[]
+  /** Optional call id to open on the full detail page as soon as the
+   *  tab mounts / becomes visible. Used by UCP's "View full details"
+   *  handoff to jump straight into the detail without an extra click. */
+  openDetailId?: string | null
+  /** Fired after `openDetailId` has been consumed so the parent can
+   *  clear its own state and not re-open the same call on next render. */
+  onOpenDetailConsumed?: () => void
 }
 
-export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
+export function CallHistoryTab({
+  calls, numbers, openDetailId, onOpenDetailConsumed,
+}: CallHistoryTabProps) {
   const [dirFilter, setDirFilter]     = useState<DirFilter>("all")
   const [search,    setSearch]        = useState("")
-  const [dateRange, setDateRange]     = useState("Last 7 days")
   const [previewId, setPreviewId]     = useState<string | null>(null)  // Slide-out preview
   const [detailId,  setDetailId]      = useState<string | null>(null)  // Full-page detail
+
+  // Parent-driven detail open — used by cross-section flows (UCP →
+  // "View full details") so a caller can land directly on the detail
+  // page rather than the preview slide-out.
+  useEffect(() => {
+    if (openDetailId) {
+      setDetailId(openDetailId)
+      onOpenDetailConsumed?.()
+    }
+  }, [openDetailId, onOpenDetailConsumed])
 
   const filtered = useMemo(() => {
     return calls.filter(c => {
@@ -37,6 +53,28 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
       return c.caller.includes(search) || (AGENTS.find(a => a.id === c.agent)?.name ?? "").toLowerCase().includes(q)
     })
   }, [calls, dirFilter, search])
+
+  // Counts drive the option list — shown as tallies inside the dropdown
+  // so a user can size a filter before applying it.
+  const dirCounts = useMemo(() => ({
+    all:      calls.length,
+    inbound:  calls.filter(c => c.direction === "inbound").length,
+    outbound: calls.filter(c => c.direction === "outbound").length,
+    hil:      calls.filter(c => c.hil).length,
+  }), [calls])
+
+  const dirDropdown = useFilterDropdown<DirFilter>({
+    placeholder:  "Direction",
+    value:        dirFilter,
+    defaultValue: "all",
+    onChange:     setDirFilter,
+    options: [
+      { id: "all",      label: "All calls",   count: dirCounts.all      },
+      { id: "inbound",  label: "Inbound",     count: dirCounts.inbound  },
+      { id: "outbound", label: "Outbound",    count: dirCounts.outbound },
+      { id: "hil",      label: "HiL only",    count: dirCounts.hil      },
+    ],
+  })
 
   const previewCall = calls.find(c => c.id === previewId) ?? null
   const detailCall  = calls.find(c => c.id === detailId)  ?? null
@@ -72,15 +110,26 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
     {
       key: "direction", header: "Dir", width: "110px",
       render: (c) => c.direction === "inbound"
-        ? <Tag variant="success"     size="sm">↙ Inbound</Tag>
-        : <Tag variant="informative" size="sm">↗ Outbound</Tag>,
+        ? <Tag variant="success"     size="sm" leadingIcon={<ArrowDownLeft size={10} strokeWidth={2.5}/>}>Inbound</Tag>
+        : <Tag variant="informative" size="sm" leadingIcon={<ArrowUpRight size={10} strokeWidth={2.5}/>}>Outbound</Tag>,
     },
     {
       key: "caller", header: "Caller", width: "160px",
-      render: (c) => <span className="font-mono text-[12px]" style={{ color: "var(--color-text-title)" }}>{c.caller}</span>,
+      render: (c) => (
+        <span
+          className="font-mono text-[12px]"
+          style={{
+            color: "var(--color-text-title)",
+            whiteSpace: "nowrap",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {c.caller}
+        </span>
+      ),
     },
     {
-      key: "agent", header: "Agent", width: "160px",
+      key: "agent", header: "Operator", width: "160px",
       render: (c) => {
         const a = AGENTS.find(x => x.id === c.agent)
         if (!a) return null
@@ -117,44 +166,31 @@ export function CallHistoryTab({ calls, numbers }: CallHistoryTabProps) {
   return (
     <>
       <div className="flex flex-col gap-4">
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Toolbar — DS Filters with search + a Direction slot backed
+            by an anchored dropdown menu (same primitive as the Numbers
+            tab). */}
+        <div ref={dirDropdown.containerRef} className="flex items-center gap-2 flex-wrap relative">
           <div className="flex-1 min-w-[200px]">
             <Filters
               showSearch
               searchPlaceholder="Search transcripts…"
               searchValue={search}
               onSearchChange={setSearch}
+              slots={[dirDropdown.slot]}
               showAllFilters={false}
               showSort={false}
               showViewToggle={false}
             />
           </div>
-          <div className="flex items-center gap-2">
-            {(["all", "inbound", "outbound", "hil"] as const).map(k => (
-              <Chip
-                key={k}
-                variant={dirFilter === k ? "primary" : "secondary"}
-                size="s"
-                onClick={() => setDirFilter(k)}
-              >
-                {k === "all" ? "All" : k === "inbound" ? "Inbound" : k === "outbound" ? "Outbound" : "HiL only"}
-              </Chip>
-            ))}
-            <Select
-              value={dateRange}
-              onClear={() => setDateRange("Last 7 days")}
-              size="sm"
-            />
-          </div>
         </div>
+        {dirDropdown.menu}
 
         {/* Full-width table (no more split view — preview lives in a slide-out) */}
         {filtered.length === 0 ? (
           <CardContainer variant="default" size="default">
             <EmptyState
               icon={search ? Search : PhoneCall}
-              title={search ? `No calls match "${search}"` : "No calls this filter"}
+              title={search ? `No calls match "${search}"` : "No calls match this filter"}
               description={search ? "Try clearing your search." : "Try a different direction filter."}
               ctaLabel={search ? "Clear search" : "Show all"}
               onCta={search ? () => setSearch("") : () => setDirFilter("all")}
