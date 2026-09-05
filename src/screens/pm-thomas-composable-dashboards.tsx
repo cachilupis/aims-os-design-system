@@ -1418,8 +1418,8 @@ function WBSkeletonShape({ typeId, color }: { typeId: string | null; color: stri
   )
 }
 
-function WBPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previewSize, setPreviewSize, saveHint }: {
-  typeId: string | null; name: string; sourceId: string | null; freshness: string; accentColor: string;
+function WBPreviewPanel({ typeId, name, onNameChange, sourceId, freshness, accentColor, previewSize, setPreviewSize, saveHint }: {
+  typeId: string | null; name: string; onNameChange: (n: string) => void; sourceId: string | null; freshness: string; accentColor: string;
   previewSize: string; setPreviewSize: (s: string) => void; saveHint: string
 }) {
   const entitySrc  = ENTITY_SOURCES.find(s => s.id === sourceId)
@@ -1446,7 +1446,12 @@ function WBPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previe
         <div style={{ borderRadius: 10, border: "1.5px dashed var(--field-border)", background: "var(--surface)", overflow: "hidden" }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px dashed var(--field-border)" }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{name || "Untitled widget"}</span>
+              <input
+                value={name}
+                onChange={e => onNameChange(e.target.value)}
+                placeholder="Untitled widget"
+                style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", background: "transparent", border: "none", outline: "none", width: "100%", minWidth: 0, cursor: "text" }}
+              />
               <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
             </div>
             {!typeId || !srcLabel ? (
@@ -1504,7 +1509,7 @@ function sourceToPresetId(source: string): string | null {
   return PRESET_DATASETS.find(d => d.integration === integration)?.id ?? null
 }
 
-function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef, initialWidget }: {
+function WidgetBuilderOverlay({ onClose: _onClose, tab, setTab, onProgressChange, saveRef, initialWidget }: {
   onClose: () => void
   tab: TabId
   setTab: (t: TabId) => void
@@ -1525,7 +1530,7 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
   const [previewSize, setPrvSize]   = useState("md")
   const [describePrompt, setDescPr] = useState("")
   const [filterRows, setFilterRows] = useState<WBFilter[]>([])
-  const [saved, setSaved]           = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
 
   const accentHex  = ACCENT_COLORS.find(a => a.id === accentColor)?.hex ?? "var(--primary)"
   const dataComplete   = !!(sourceId && metric)
@@ -1538,13 +1543,13 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
     ? ENTITY_SOURCES.find(s => s.id === sourceId)?.label
     : PRESET_DATASETS.find(d => d.id === sourceId)?.name
 
-  const saveHint = !dataComplete   ? "Complete the Data tab to see a live preview."
-    : !widgetComplete ? "Pick a type and name to finalize the preview."
+  const saveHint = !dataComplete   ? "Choose a governed dataset and metric to continue."
+    : !widgetComplete ? "Choose a widget type and give it a name to save."
     : ""
 
   function handleSave() {
     if (!widgetName) return
-    setSaved(true)
+    setShowSaveModal(true)
   }
 
   // Expose handleSave to parent header button via ref
@@ -1552,23 +1557,6 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
     saveRef.current = handleSave
     return () => { saveRef.current = null }
   })
-
-  if (saved) {
-    const CheckCircle = LucideIcons.CheckCircle2 as React.FC<{ size?: number; style?: React.CSSProperties }>
-    return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, height: "100%", padding: 40, textAlign: "center" as const }}>
-        <CheckCircle size={48} style={{ color: "var(--success)" }} />
-        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)" }}>"{widgetName}" saved to catalog</div>
-        <p style={{ fontSize: 14, color: "var(--field-supporting)", maxWidth: 360, margin: 0 }}>
-          Your widget is now available in the Widget Library and can be added to any dashboard.
-        </p>
-        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          <Button variant="secondary" size="sm" onClick={onClose}>Back to Library</Button>
-          <Button variant="main" size="sm" onClick={() => { setSaved(false); setSourceId(null); setMetric(""); setTypeId(null); setWName(""); setAccent(""); setStyle(""); setTab("data"); onProgressChange(false, false) }}>Build another</Button>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
@@ -1829,10 +1817,21 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
       {/* ── Right: sticky preview ───────────────────────────────────────── */}
       <div style={{ width: "42%", flexShrink: 0, position: "sticky" as const, top: 0 }}>
         <WBPreviewPanel
-          typeId={typeId} name={widgetName} sourceId={sourceId} freshness={freshness}
+          typeId={typeId} name={widgetName} onNameChange={setWName} sourceId={sourceId} freshness={freshness}
           accentColor={accentHex} previewSize={previewSize} setPreviewSize={setPrvSize} saveHint={saveHint}
         />
       </div>
+
+      <ModalDialog
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        tone="success"
+        iconName="BookMarked"
+        title="Save to catalog?"
+        description={`"${widgetName || "Untitled widget"}" will be added to the widget library and available across all dashboards.`}
+        ctaPrimary={{ label: "Save to catalog", onClick: () => { setShowSaveModal(false); setSourceId(null); setMetric(""); setTypeId(null); setWName(""); setAccent(""); setStyle(""); setTab("data"); onProgressChange(false, false) } }}
+        ctaSecondary={{ label: "Keep editing", onClick: () => setShowSaveModal(false) }}
+      />
     </div>
   )
 }
