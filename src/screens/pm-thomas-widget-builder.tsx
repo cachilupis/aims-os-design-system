@@ -73,10 +73,10 @@ const WIDGET_TYPES = [
 ]
 
 const FRESHNESS_OPTIONS = [
-  { value: "realtime", label: "Real-time (live)" },
-  { value: "15m",      label: "Every 15 minutes (fresh)" },
-  { value: "1h",       label: "Every hour (fresh)" },
-  { value: "24h",      label: "Every day (aging)" },
+  { value: "realtime", label: "Real-time" },
+  { value: "15m",      label: "Every 15 minutes" },
+  { value: "1h",       label: "Every hour" },
+  { value: "24h",      label: "Every 24 hours" },
 ]
 
 const WIDGET_SIZES = [
@@ -224,8 +224,8 @@ function SkeletonShape({ typeId, color }: { typeId: string | null; color: string
 }
 
 // DS-GAP: WidgetPreviewPanel — sticky live preview panel with size switcher and widget info. Closest DS component: CardContainer.
-function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previewSize, setPreviewSize, saveHint }: {
-  typeId: string | null; name: string; sourceId: string | null; freshness: string; accentColor: string;
+function WidgetPreviewPanel({ typeId, name, onNameChange, sourceId, freshness, accentColor, previewSize, setPreviewSize, saveHint }: {
+  typeId: string | null; name: string; onNameChange: (n: string) => void; sourceId: string | null; freshness: string; accentColor: string;
   previewSize: string; setPreviewSize: (s: string) => void; saveHint: string
 }) {
   const entitySrc  = ENTITY_SOURCES.find(s => s.id === sourceId)
@@ -252,7 +252,12 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, pr
         <CardContainer>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--field-border)" }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{name || "Untitled widget"}</span>
+              <input
+                value={name}
+                onChange={e => onNameChange(e.target.value)}
+                placeholder="Untitled widget"
+                style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", background: "transparent", border: "none", outline: "none", width: "100%", minWidth: 0, cursor: "text" }}
+              />
               <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
             </div>
             <SkeletonShape typeId={typeId} color={accentColor} />
@@ -283,8 +288,8 @@ function SavedConfirmationView({ name, onReset }: { name: string; onReset: () =>
         <CheckIcon size={28} style={{ color: "var(--canvas)" }} />
       </div>
       <div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "var(--color-text-title)" }}>Widget saved</div>
-        <div style={{ fontSize: 13, color: "var(--color-text-subtitle)", marginTop: 4 }}>Your widget is now in the library.</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "var(--color-text-title)" }}>Saved to catalog</div>
+        <div style={{ fontSize: 13, color: "var(--color-text-subtitle)", marginTop: 4 }}>Your widget is now available across all dashboards.</div>
       </div>
       <div style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid var(--field-border)", background: "var(--canvas)", width: "100%" }}>
         <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--color-text-subtitle)", marginBottom: 4 }}>Saved as</div>
@@ -293,7 +298,7 @@ function SavedConfirmationView({ name, onReset }: { name: string; onReset: () =>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
         <Button variant="primary">Add to a dashboard</Button>
         <div style={{ display: "flex", gap: 8 }}>
-          <Button variant="secondary" onClick={onReset}>New widget</Button>
+          <Button variant="secondary" onClick={onReset}>Create another widget</Button>
           <Button variant="secondary">Back to library</Button>
         </div>
       </div>
@@ -330,6 +335,7 @@ export default function PMThomasWidgetBuilderScreen() {
   const [previewSize, setPreviewSize]   = useState("lg")
   const [saved, setSaved]               = useState(false)
   const [showLeave, setShowLeave]       = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
 
   // ── Derived ──
 
@@ -341,13 +347,13 @@ export default function PMThomasWidgetBuilderScreen() {
   const hasUnsaved     = !!(sourceId || typeId || name.trim())
 
   const saveHint = !sourceId
-    ? (dataMode === "dataset" ? "Select a governed dataset on the Data tab." : "Select an entity source on the Data tab.")
+    ? (dataMode === "dataset" ? "Choose a governed dataset on the Data tab to get started." : "Choose an entity source on the Data tab to get started.")
     : !dataComplete
-    ? "Complete the dataset configuration on the Data tab."
+    ? "Finish configuring your data source on the Data tab."
     : !typeId
-    ? "Pick a widget type on the Widget tab."
+    ? "Choose a widget type on the Widget tab."
     : !name.trim()
-    ? "Name your widget on the Widget tab."
+    ? "Give your widget a name on the Widget tab."
     : ""
 
   const accentHex = ACCENT_COLORS.find(c => c.id === accentColor)?.hex ?? ""
@@ -381,7 +387,7 @@ export default function PMThomasWidgetBuilderScreen() {
     ? { variant: "cancel-next" as const, onCancel: () => { if (hasUnsaved) setShowLeave(true) }, nextLabel: "Continue to Widget", nextDisabled: !dataComplete, onNext: () => setTab("widget") }
     : tab === "widget"
     ? { variant: "back-next"   as const, onBack:   () => setTab("data"),      nextLabel: "Continue to Appearance", nextDisabled: !widgetComplete, onNext: () => setTab("appearance") }
-    : { variant: "back-next"   as const, onBack:   () => setTab("widget"),    nextLabel: "Save to catalog",        nextDisabled: !canSave,        onNext: () => setSaved(true) }
+    : { variant: "back-next"   as const, onBack:   () => setTab("widget"),    nextLabel: "Save to catalog",        nextDisabled: !canSave,        onNext: () => setShowSaveModal(true) }
 
   const selectStyle = { width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--field-border)", background: "var(--surface)", color: "var(--color-text-title)", fontSize: 13 }
 
@@ -395,12 +401,12 @@ export default function PMThomasWidgetBuilderScreen() {
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}
-          title={saved ? "Widget saved" : "Widget Playground"}
-          description={saved ? "Your widget is now in the library." : "Map an entity and metric, pick a type, and preview it live."}
+          title={saved ? "Saved to catalog" : "Widget Builder"}
+          description={saved ? "Your widget is now available across all dashboards." : "Connect a data source, pick a chart type, and preview your widget live."}
           primaryAction={!saved ? (
             <div style={{ display: "flex", gap: 8 }}>
               <Button variant="secondary" size="sm" onClick={() => hasUnsaved ? setShowLeave(true) : undefined}>Cancel</Button>
-              <Button variant="main" size="sm" disabled={!canSave} onClick={() => setSaved(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
+              <Button variant="main" size="sm" disabled={!canSave} onClick={() => setShowSaveModal(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
             </div>
           ) : undefined}
         />
@@ -430,7 +436,7 @@ export default function PMThomasWidgetBuilderScreen() {
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
             {/* DS-GAP: DescribeComposer — natural-language widget setup generator. Using simplified Input bar. */}
             <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--field-border)", display: "flex", gap: 8 }}>
-              <Input placeholder='Describe your widget… e.g. "Win Rate gauge by team"' />
+              <Input placeholder='Describe what you want to track, e.g. "Win Rate gauge by team"' />
               <Button variant="secondary" size="sm">Generate</Button>
             </div>
 
@@ -469,7 +475,7 @@ export default function PMThomasWidgetBuilderScreen() {
 
                 {sourceId && dataMode === "entity" && (
                   <div>
-                    <SectionLabel n={3}>Operation type</SectionLabel>
+                    <SectionLabel n={3}>Data operation</SectionLabel>
                     <div style={{ display: "flex", gap: 8 }}>
                       <SectionChip active={opType === "aggregate"} onClick={() => { setOpType("aggregate"); setRecordColumns([]) }}>Aggregate</SectionChip>
                       <SectionChip active={opType === "record_set"} onClick={() => { setOpType("record_set"); setCalcColumn(""); setCalcFn("count") }}>Record set</SectionChip>
@@ -491,7 +497,7 @@ export default function PMThomasWidgetBuilderScreen() {
 
                 {sourceId && dataMode === "entity" && opType === "record_set" && (
                   <div>
-                    <SectionLabel n={4}>Exposed columns</SectionLabel>
+                    <SectionLabel n={4}>Columns to display</SectionLabel>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {(SOURCE_COLUMNS[sourceId] ?? []).map(col => (
                         <label key={col} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "var(--color-text-title)" }}>
@@ -522,7 +528,7 @@ export default function PMThomasWidgetBuilderScreen() {
                   <SectionLabel n={2}>Configure</SectionLabel>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     <Input placeholder="Widget name, e.g. Pipeline by Stage" value={name} onChange={e => setName(e.target.value)} />
-                    <Input placeholder="Description (optional, ≤120 chars)" value={subtitle} onChange={e => setSubtitle(e.target.value.slice(0, 120))} />
+                    <Input placeholder="Short description (optional, up to 120 characters)" value={subtitle} onChange={e => setSubtitle(e.target.value.slice(0, 120))} />
                     <select value={freshness} onChange={e => setFreshness(e.target.value)} style={selectStyle}>
                       {FRESHNESS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
@@ -574,6 +580,7 @@ export default function PMThomasWidgetBuilderScreen() {
             <WidgetPreviewPanel
               typeId={typeId}
               name={name}
+              onNameChange={setName}
               sourceId={sourceId}
               freshness={freshness}
               accentColor={accentHex}
@@ -598,6 +605,18 @@ export default function PMThomasWidgetBuilderScreen() {
         description="Your widget isn't saved yet. If you leave now, your configuration will be lost."
         ctaPrimary={{ label: "Leave without saving", destructive: true, onClick: resetAll }}
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowLeave(false) }}
+      />
+
+      {/* ── Save confirmation modal ── */}
+      <ModalDialog
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        tone="success"
+        iconName="BookMarked"
+        title="Save to catalog?"
+        description={`"${name || "Untitled widget"}" will be added to the widget library and available across all dashboards.`}
+        ctaPrimary={{ label: "Save to catalog", onClick: () => { setSaved(true); setShowSaveModal(false) } }}
+        ctaSecondary={{ label: "Keep editing", onClick: () => setShowSaveModal(false) }}
       />
     </ScreenLayout>
   )
