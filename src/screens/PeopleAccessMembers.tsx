@@ -14,6 +14,7 @@ import { Chip }        from "@/components/ui/chip"
 import { Toggle }      from "@/components/ui/toggle"
 import { Stepper, type StepItem } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
+import { SwitchTab, type SwitchTabItem } from "@/components/ui/switch-tab"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -1536,6 +1537,11 @@ function MemberGroupsPanel({ member }: { member: Member }) {
 // ─── Permissions tab (dual-mode: Audit / Edit) ───────────────────────────────
 
 const GRANTED_STATES: PermState[] = ["g-direct", "g-inh"]
+const SCOPE_ITEMS: SwitchTabItem[] = [
+  { id: "Own",    label: "Own" },
+  { id: "Team",   label: "Team" },
+  { id: "Tenant", label: "Tenant" },
+]
 
 function filterGrantedTree(nodes: PermNode[]): PermNode[] {
   return nodes.flatMap(n => {
@@ -1549,8 +1555,9 @@ function filterGrantedTree(nodes: PermNode[]): PermNode[] {
 type PermMode = "audit" | "edit"
 type PermOverrides = Record<string, PermState>
 
-function EditablePermTreeNode({ node, depth, overrides, onToggle }: {
+function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOverrides, onScopeChange }: {
   node: PermNode; depth: number; overrides: PermOverrides; onToggle: (id: string, on: boolean) => void
+  mode: PermMode; scopeOverrides: Record<string, string>; onScopeChange: (id: string, scope: string) => void
 }) {
   const effective = overrides[node.id] !== undefined ? overrides[node.id] : node.state
   // Toggle = "is directly granted?" — g-inh alone does NOT turn the toggle ON
@@ -1578,7 +1585,7 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle }: {
       <div
         onClick={() => hasChildren && setExpanded(e => !e)}
         style={{
-          display: "flex", alignItems: "center", gap: 8,
+          display: "flex", alignItems: "flex-start", gap: 8,
           padding: `8px 16px 8px ${16 + depth * 20}px`,
           borderBottom: "1px solid var(--border)",
           cursor: hasChildren ? "pointer" : "default",
@@ -1587,7 +1594,7 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle }: {
         onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = rowBgHover }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = rowBg }}
       >
-        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 3 }}>
           {hasChildren
             ? expanded
               ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" />
@@ -1597,7 +1604,6 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle }: {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
-            {/* "via role" badge — always shown when inherited, even after pinning */}
             {node.role && (
               <span style={{
                 fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
@@ -1605,7 +1611,10 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle }: {
                 color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
               }}>via {node.role}</span>
             )}
-            {node.scope && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>}
+            {/* Static scope badge — audit mode only; edit mode shows SwitchTab below */}
+            {node.scope && mode !== "edit" && (
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
+            )}
             {isPinned && (
               <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.4, textTransform: "uppercase" }}>Pinned</span>
             )}
@@ -1614,14 +1623,25 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle }: {
             )}
           </div>
           {node.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{node.desc}</div>}
-          {/* Hint on inherited rows: guide the admin to pin */}
           {isInheritedOnly && (
             <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1, fontStyle: "italic" }}>
               Inherited via role · toggle to confirm direct access
             </div>
           )}
+          {/* Scope selector — edit mode, nodes with a scope field */}
+          {mode === "edit" && node.scope && (
+            <div style={{ marginTop: 6 }} onClick={e => e.stopPropagation()}>
+              <SwitchTab
+                size="s"
+                items={SCOPE_ITEMS}
+                value={scopeOverrides[node.id] ?? node.scope}
+                onChange={scope => onScopeChange(node.id, scope)}
+                aria-label={`Scope for ${node.label}`}
+              />
+            </div>
+          )}
         </div>
-        <span onClick={e => e.stopPropagation()}>
+        <span onClick={e => e.stopPropagation()} style={{ paddingTop: 2 }}>
           <Toggle
             checked={isDirect}
             disabled={node.locked && node.state !== "g-inh"}
@@ -1631,7 +1651,8 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle }: {
         </span>
       </div>
       {expanded && hasChildren && node.children!.map(child => (
-        <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onToggle={onToggle} />
+        <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onToggle={onToggle}
+          mode={mode} scopeOverrides={scopeOverrides} onScopeChange={onScopeChange} />
       ))}
     </div>
   )
@@ -1645,13 +1666,19 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   const [mode, setMode] = useState<PermMode>("audit")
   const [studio, setStudio] = useState("governance")
   const [overrides, setOverrides] = useState<PermOverrides>({})
+  const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveStep, setSaveStep] = useState<0 | 1>(0)
 
   const nodes = PERM_TREE[studio] ?? []
-  const isDirty = Object.keys(overrides).length > 0
+  const isDirty = Object.keys(overrides).length > 0 || Object.keys(scopeOverrides).length > 0
+
+  function changeScopeOverride(id: string, scope: string) {
+    setScopeOverrides(prev => ({ ...prev, [id]: scope }))
+    setSaved(false)
+  }
 
   function togglePermission(id: string, on: boolean) {
     setOverrides(prev => {
@@ -1694,10 +1721,12 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
     setSaved(false)
   }
 
-  function confirmDiscard() { setShowDiscardModal(false); setOverrides({}); setMode("audit"); setSaved(false) }
+  function confirmDiscard() {
+    setShowDiscardModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(false)
+  }
   function openSaveModal() { setSaveStep(0); setShowSaveModal(true) }
   function confirmSave() {
-    setShowSaveModal(false); setOverrides({}); setMode("audit"); setSaved(true)
+    setShowSaveModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
@@ -1770,7 +1799,7 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
       <div>
         {mode === "audit"
           ? visibleNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
-          : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onToggle={togglePermission} />)
+          : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onToggle={togglePermission} mode={mode} scopeOverrides={scopeOverrides} onScopeChange={changeScopeOverride} />)
         }
         {visibleNodes.length === 0 && (
           <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>
