@@ -279,32 +279,6 @@ function WidgetPreviewPanel({ typeId, name, onNameChange, sourceId, freshness, a
   )
 }
 
-// DS-GAP: SavedConfirmationView — post-save success state with action buttons. Closest DS component: none.
-function SavedConfirmationView({ name, onReset }: { name: string; onReset: () => void }) {
-  const CheckIcon = LucideIcons.Check as React.FC<{ size?: number; style?: React.CSSProperties }>
-  return (
-    <div style={{ maxWidth: 420, margin: "48px auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 20, textAlign: "center" as const }}>
-      <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--success)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <CheckIcon size={28} style={{ color: "var(--canvas)" }} />
-      </div>
-      <div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "var(--color-text-title)" }}>Saved to catalog</div>
-        <div style={{ fontSize: 13, color: "var(--color-text-subtitle)", marginTop: 4 }}>Your widget is now available across all dashboards.</div>
-      </div>
-      <div style={{ padding: "10px 16px", borderRadius: 10, border: "1px solid var(--field-border)", background: "var(--canvas)", width: "100%" }}>
-        <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, color: "var(--color-text-subtitle)", marginBottom: 4 }}>Saved as</div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)" }}>"{name || "Untitled widget"}"</div>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-        <Button variant="primary">Add to a dashboard</Button>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Button variant="secondary" onClick={onReset}>Create another widget</Button>
-          <Button variant="secondary">Back to library</Button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -333,7 +307,6 @@ export default function PMThomasWidgetBuilderScreen() {
   // UI state
   const [dataMode, setDataMode]         = useState<"entity" | "dataset">("entity")
   const [previewSize, setPreviewSize]   = useState("lg")
-  const [saved, setSaved]               = useState(false)
   const [showLeave, setShowLeave]       = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
 
@@ -372,7 +345,7 @@ export default function PMThomasWidgetBuilderScreen() {
   function resetAll() {
     setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setCalcFn("count"); setCalcColumn(""); setRecordColumns([])
     setTypeId(null); setName(""); setSubtitle(""); setFreshness("15m"); setInteractiveFilters(true)
-    setAccentColor(""); setStyleVariant(""); setSaved(false)
+    setAccentColor(""); setStyleVariant("")
   }
 
   const CheckIcon = LucideIcons.Check as React.FC<{ size?: number; style?: React.CSSProperties }>
@@ -401,23 +374,19 @@ export default function PMThomasWidgetBuilderScreen() {
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}
-          title={saved ? "Saved to catalog" : "Widget Builder"}
-          description={saved ? "Your widget is now available across all dashboards." : "Connect a data source, pick a chart type, and preview your widget live."}
-          primaryAction={!saved ? (
+          title="Widget Builder"
+          description="Connect a data source, pick a chart type, and preview your widget live."
+          primaryAction={
             <div style={{ display: "flex", gap: 8 }}>
               <Button variant="secondary" size="sm" onClick={() => hasUnsaved ? setShowLeave(true) : undefined}>Cancel</Button>
               <Button variant="main" size="sm" disabled={!canSave} onClick={() => setShowSaveModal(true)}><CheckIcon size={14} style={{ color: "inherit" }} />Save to catalog</Button>
             </div>
-          ) : undefined}
+          }
         />
       )}
     >
-      {/* ── Success view ── */}
-      {saved && <SavedConfirmationView name={name} onReset={resetAll} />}
-
       {/* ── Builder ── */}
-      {!saved && (
-        <div style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 160px)" }}>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 160px)" }}>
           {/* Step progress indicator */}
           <Stepper
             steps={stepItems}
@@ -594,7 +563,6 @@ export default function PMThomasWidgetBuilderScreen() {
           <div style={{ flex: 1 }} />
           <StepperNavFooter {...footerProps} />
         </div>
-      )}
 
       {/* ── Leave confirmation modal ── */}
       <ModalDialog
@@ -615,7 +583,7 @@ export default function PMThomasWidgetBuilderScreen() {
         iconName="BookMarked"
         title="Save to catalog?"
         description={`"${name || "Untitled widget"}" will be added to the widget library and available across all dashboards.`}
-        ctaPrimary={{ label: "Save to catalog", onClick: () => { setSaved(true); setShowSaveModal(false) } }}
+        ctaPrimary={{ label: "Save to catalog", onClick: () => { resetAll(); setShowSaveModal(false) } }}
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowSaveModal(false) }}
       />
     </ScreenLayout>
