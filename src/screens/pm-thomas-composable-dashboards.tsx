@@ -149,11 +149,11 @@ const MKT_WIDGETS = [
 
 const ENTITY_SOURCES = [
   { id: "contacts_hubspot",      label: "Contacts",      icon: "Users",         desc: "CRM contact profiles and relationship history",    integration: "HubSpot",  governed: true,  hasPII: true,  extraIntegrations: ["Salesforce", "Pipedrive"] },
-  { id: "companies_hubspot",     label: "Companies",     icon: "Building2",     desc: "Organization records, domains, and account data",  integration: "HubSpot",  governed: true,  hasPII: false, extraIntegrations: [] },
-  { id: "deals_hubspot",         label: "Deals",         icon: "TrendingUp",    desc: "Pipeline opportunities and deal stages",           integration: "HubSpot",  governed: true,  hasPII: false, extraIntegrations: [] },
-  { id: "tickets_zendesk",       label: "Tickets",       icon: "HelpCircle",    desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false, extraIntegrations: [] },
+  { id: "companies_hubspot",     label: "Companies",     icon: "Building2",     desc: "Organization records, domains, and account data",  integration: "HubSpot",  governed: true,  hasPII: false, extraIntegrations: ["Salesforce"] },
+  { id: "deals_hubspot",         label: "Deals",         icon: "TrendingUp",    desc: "Pipeline opportunities and deal stages",           integration: "HubSpot",  governed: true,  hasPII: false, extraIntegrations: ["Salesforce", "Pipedrive", "Close"] },
+  { id: "tickets_zendesk",       label: "Tickets",       icon: "HelpCircle",    desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false, extraIntegrations: ["Intercom"] },
   { id: "conversations_zendesk", label: "Conversations", icon: "MessageSquare", desc: "Chat and email threads with CSAT scores",          integration: "Zendesk",  governed: false, hasPII: true,  extraIntegrations: [] },
-  { id: "employees_bamboohr",    label: "Employees",     icon: "UserCheck",     desc: "HR records, roles, and people data",               integration: "BambooHR", governed: true,  hasPII: true,  extraIntegrations: [] },
+  { id: "employees_bamboohr",    label: "Employees",     icon: "UserCheck",     desc: "HR records, roles, and people data",               integration: "BambooHR", governed: true,  hasPII: true,  extraIntegrations: ["Rippling", "Workday"] },
   { id: "workflows_aims",        label: "Workflows",     icon: "GitBranch",     desc: "Automated process definitions in AIMS OS",        integration: "AIMS OS",  governed: true,  hasPII: false, extraIntegrations: [] },
   { id: "ai_workers_aims",       label: "AI Workers",    icon: "Bot",           desc: "AI agent instances and performance metrics",       integration: "AIMS OS",  governed: true,  hasPII: false, extraIntegrations: [] },
 ]
@@ -1360,7 +1360,7 @@ function WBEntitySourceCard({ source, selected, onSelect, isLast }: { source: ty
       </div>
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
         {visibleTags.map(t => <Tag key={t.key} variant={t.variant}>{t.label}</Tag>)}
-        {hiddenCount > 0 && <Tag variant="neutral">+{hiddenCount}</Tag>}
+        {hiddenCount > 0 && <Tag variant="neutral" size="sm">+{hiddenCount}</Tag>}
       </div>
     </div>
   )
