@@ -1630,7 +1630,10 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
           )}
           {/* Scope selector — edit mode, nodes with a scope field */}
           {mode === "edit" && node.scope && (
-            <div style={{ marginTop: 6 }} onClick={e => e.stopPropagation()}>
+            <div
+              style={{ marginTop: 6, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }}
+              onClick={e => e.stopPropagation()}
+            >
               <SwitchTab
                 size="s"
                 items={SCOPE_ITEMS}
