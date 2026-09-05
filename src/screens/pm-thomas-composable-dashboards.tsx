@@ -148,14 +148,14 @@ const MKT_WIDGETS = [
 // ── Widget builder data ───────────────────────────────────────────────────────
 
 const ENTITY_SOURCES = [
-  { id: "contacts_hubspot",      label: "Contacts",      icon: "Users",         desc: "CRM contact profiles and relationship history",    integration: "HubSpot",  governed: true,  hasPII: true },
-  { id: "companies_hubspot",     label: "Companies",     icon: "Building2",     desc: "Organization records, domains, and account data",  integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "deals_hubspot",         label: "Deals",         icon: "TrendingUp",    desc: "Pipeline opportunities and deal stages",           integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "tickets_zendesk",       label: "Tickets",       icon: "HelpCircle",    desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false },
-  { id: "conversations_zendesk", label: "Conversations", icon: "MessageSquare", desc: "Chat and email threads with CSAT scores",          integration: "Zendesk",  governed: false, hasPII: true },
-  { id: "employees_bamboohr",    label: "Employees",     icon: "UserCheck",     desc: "HR records, roles, and people data",               integration: "BambooHR", governed: true,  hasPII: true },
-  { id: "workflows_aims",        label: "Workflows",     icon: "GitBranch",     desc: "Automated process definitions in AIMS OS",        integration: "AIMS OS",  governed: true,  hasPII: false },
-  { id: "ai_workers_aims",       label: "AI Workers",    icon: "Bot",           desc: "AI agent instances and performance metrics",       integration: "AIMS OS",  governed: true,  hasPII: false },
+  { id: "contacts_hubspot",      label: "Contacts",      icon: "Users",         desc: "CRM contact profiles and relationship history",    integration: "HubSpot",  governed: true,  hasPII: true,  extraIntegrations: ["Salesforce", "Pipedrive"] },
+  { id: "companies_hubspot",     label: "Companies",     icon: "Building2",     desc: "Organization records, domains, and account data",  integration: "HubSpot",  governed: true,  hasPII: false, extraIntegrations: [] },
+  { id: "deals_hubspot",         label: "Deals",         icon: "TrendingUp",    desc: "Pipeline opportunities and deal stages",           integration: "HubSpot",  governed: true,  hasPII: false, extraIntegrations: [] },
+  { id: "tickets_zendesk",       label: "Tickets",       icon: "HelpCircle",    desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false, extraIntegrations: [] },
+  { id: "conversations_zendesk", label: "Conversations", icon: "MessageSquare", desc: "Chat and email threads with CSAT scores",          integration: "Zendesk",  governed: false, hasPII: true,  extraIntegrations: [] },
+  { id: "employees_bamboohr",    label: "Employees",     icon: "UserCheck",     desc: "HR records, roles, and people data",               integration: "BambooHR", governed: true,  hasPII: true,  extraIntegrations: [] },
+  { id: "workflows_aims",        label: "Workflows",     icon: "GitBranch",     desc: "Automated process definitions in AIMS OS",        integration: "AIMS OS",  governed: true,  hasPII: false, extraIntegrations: [] },
+  { id: "ai_workers_aims",       label: "AI Workers",    icon: "Bot",           desc: "AI agent instances and performance metrics",       integration: "AIMS OS",  governed: true,  hasPII: false, extraIntegrations: [] },
 ]
 const PRESET_DATASETS = [
   { id: "ds-contacts-tier",  name: "Contacts by Tier",  description: "Count of contacts grouped by tier.",                     type: "GROUPED",      integration: "HubSpot" },
@@ -1335,8 +1335,18 @@ function WBBuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: T
   )
 }
 
+const WB_MAX_TAGS = 3
+
 function WBEntitySourceCard({ source, selected, onSelect, isLast }: { source: typeof ENTITY_SOURCES[0]; selected: boolean; onSelect: () => void; isLast?: boolean }) {
   const Icon = (LucideIcons as Record<string, unknown>)[source.icon] as React.FC<{ size?: number; style?: React.CSSProperties }> | undefined
+  const allTags = [
+    { key: "integration", label: source.integration, variant: "informative" as const },
+    ...((source.extraIntegrations ?? []).map((s, i) => ({ key: `extra-${i}`, label: s, variant: "informative" as const }))),
+    ...(!source.governed ? [{ key: "ungoverned", label: "Ungoverned", variant: "alert" as const }] : []),
+    ...(source.hasPII    ? [{ key: "pii",         label: "PII",        variant: "alert" as const }] : []),
+  ]
+  const visibleTags = allTags.slice(0, WB_MAX_TAGS)
+  const hiddenCount = allTags.length - visibleTags.length
   return (
     <div onClick={onSelect} style={{
       cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px",
@@ -1349,9 +1359,8 @@ function WBEntitySourceCard({ source, selected, onSelect, isLast }: { source: ty
         <div style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.4 }}>{source.desc}</div>
       </div>
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-        <Tag variant="informative">{source.integration}</Tag>
-        {!source.governed && <Tag variant="alert">Ungoverned</Tag>}
-        {source.hasPII && <Tag variant="alert">PII</Tag>}
+        {visibleTags.map(t => <Tag key={t.key} variant={t.variant}>{t.label}</Tag>)}
+        {hiddenCount > 0 && <Tag variant="neutral">+{hiddenCount}</Tag>}
       </div>
     </div>
   )
