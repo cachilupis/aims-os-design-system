@@ -1681,8 +1681,12 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
           }
         }
       } else {
-        // Revoke: only clear this node's override. Siblings/descendants unchanged.
-        delete copy[id]
+        // Revoke: clear this node + all descendants' overrides (cascade off).
+        const target = findNode(nodes, id)
+        const affected = target ? descendants(target) : [{ id, state: "" } as PermNode]
+        for (const node of affected) {
+          delete copy[node.id]
+        }
       }
 
       return copy
