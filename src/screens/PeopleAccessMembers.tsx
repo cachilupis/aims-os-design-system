@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, type ReactElement } from "react"
+import { createPortal } from "react-dom"
 import { useFilterDropdown } from "./voice-channel/shared"
 import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
 import * as Icons from "lucide-react"
@@ -1628,8 +1629,8 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
               Inherited via role · toggle to confirm direct access
             </div>
           )}
-          {/* Scope selector — edit mode, nodes with a scope field */}
-          {mode === "edit" && node.scope && (
+          {/* Scope selector — edit mode, all permission nodes */}
+          {mode === "edit" && (
             <div
               style={{ marginTop: 6, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }}
               onClick={e => e.stopPropagation()}
@@ -1637,7 +1638,7 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
               <SwitchTab
                 size="s"
                 items={SCOPE_ITEMS}
-                value={scopeOverrides[node.id] ?? node.scope}
+                value={scopeOverrides[node.id] ?? node.scope ?? "Own"}
                 onChange={scope => onScopeChange(node.id, scope)}
                 aria-label={`Scope for ${node.label}`}
               />
@@ -1672,8 +1673,7 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
-  const [showSaveModal, setShowSaveModal] = useState(false)
-  const [saveStep, setSaveStep] = useState<0 | 1>(0)
+  const [saveStep, setSaveStep] = useState<null | 0 | 1>(null)
 
   const nodes = PERM_TREE[studio] ?? []
   const isDirty = Object.keys(overrides).length > 0 || Object.keys(scopeOverrides).length > 0
@@ -1727,9 +1727,8 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   function confirmDiscard() {
     setShowDiscardModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(false)
   }
-  function openSaveModal() { setSaveStep(0); setShowSaveModal(true) }
   function confirmSave() {
-    setShowSaveModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
+    setSaveStep(null); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
@@ -1748,12 +1747,12 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   const visibleNodes = mode === "audit" ? filterGrantedTree(nodes) : nodes
 
   const saveSteps: StepItem[] = [
-    { label: "Review changes", state: saveStep === 0 ? "active" : "completed" },
-    { label: "Confirm", state: saveStep === 1 ? "active" : "default" },
+    { label: "Review changes", state: saveStep === 0 ? "active" : saveStep === 1 ? "completed" : "default" },
+    { label: "Confirm",        state: saveStep === 1 ? "active" : "default" },
   ]
 
   return (
-    <div>
+    <div style={{ paddingBottom: mode === "edit" ? 80 : 0 }}>
       {/* Header row: studio sub-tabs + action button */}
       <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
         <div style={{ display: "flex", gap: 4, flex: 1 }}>
@@ -1774,122 +1773,109 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
             Edit permissions
           </Button>
         )}
-        {mode === "edit" && (
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {saved && (
-              <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
-                <Icons.CheckCircle size={13} /> Saved
-              </span>
-            )}
-            <Button variant="secondary" size="sm" onClick={() => setShowDiscardModal(true)}>Discard</Button>
-            <Button variant="primary" size="sm" onClick={openSaveModal} disabled={!isDirty}>Save changes</Button>
-          </div>
-        )}
-      </div>
-
-      {/* Lightweight stats row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <Chip variant="secondary" size="s">{allGranted.length} granted</Chip>
-        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{directCount} direct · {inhCount} via role</span>
-        {mode === "audit" && (
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
-            <Icons.Eye size={11} /> View only
+        {mode === "edit" && saveStep === null && saved && (
+          <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
+            <Icons.CheckCircle size={13} /> Saved
           </span>
         )}
       </div>
 
-      {/* Tree */}
-      <div>
-        {mode === "audit"
-          ? visibleNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
-          : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onToggle={togglePermission} mode={mode} scopeOverrides={scopeOverrides} onScopeChange={changeScopeOverride} />)
-        }
-        {visibleNodes.length === 0 && (
-          <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>
-            {mode === "audit" ? "No permissions granted in this studio." : "No permissions available."}
-          </div>
-        )}
-      </div>
+      {/* Lightweight stats row — only in tree view */}
+      {saveStep === null && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <Chip variant="secondary" size="s">{allGranted.length} granted</Chip>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{directCount} direct · {inhCount} via role</span>
+          {mode === "audit" && (
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+              <Icons.Eye size={11} /> View only
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* ── Discard confirmation modal ─────────────────────────────────────── */}
-      <ModalDialog
-        isOpen={showDiscardModal}
-        onClose={() => setShowDiscardModal(false)}
-        tone="warning"
-        iconName="AlertTriangle"
-        title="Discard changes?"
-        description="Your permission edits will be lost. This can't be undone."
-        ctaPrimary={{ label: "Discard changes", destructive: true, onClick: confirmDiscard }}
-        ctaSecondary={{ label: "Keep editing", onClick: () => setShowDiscardModal(false) }}
-      />
+      {/* Tree (hidden during save review steps) */}
+      {saveStep === null && (
+        <div>
+          {mode === "audit"
+            ? visibleNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
+            : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onToggle={togglePermission} mode={mode} scopeOverrides={scopeOverrides} onScopeChange={changeScopeOverride} />)
+          }
+          {visibleNodes.length === 0 && (
+            <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>
+              {mode === "audit" ? "No permissions granted in this studio." : "No permissions available."}
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* ── Save changes modal (2-step) ────────────────────────────────────── */}
-      <ModalDialog
-        isOpen={showSaveModal}
-        onClose={() => setShowSaveModal(false)}
-        variant="content"
-        showIcon={false}
-        title={saveStep === 0 ? "Review permission changes" : "Confirm changes"}
-        description={saveStep === 0
-          ? "Check what will change before applying. You can go back to keep editing."
-          : "These changes will take effect immediately for this member."
+      {/* ── Inline save review (replaces tree when saveStep !== null) ─────── */}
+      {saveStep !== null && (() => {
+        const effectiveScope = (n: PermNode) => scopeOverrides[n.id] ?? n.scope ?? "Own"
+
+        function renderDiffSection(
+          items: PermNode[],
+          header: string,
+          accentColor: string,
+          bgMix: string,
+          icon: ReactElement
+        ) {
+          if (items.length === 0) return null
+          const itemIds = new Set(items.map(n => n.id))
+          type DiffGroup = { parent: PermNode; parentInItems: boolean; children: PermNode[] }
+          const groups: DiffGroup[] = []
+          for (const root of nodes) {
+            const pi = itemIds.has(root.id)
+            const ci = (root.children ?? []).filter(c => itemIds.has(c.id))
+            if (pi || ci.length > 0) groups.push({ parent: root, parentInItems: pi, children: ci })
+          }
+          return (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>
+                {header} · {items.length}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {groups.map(({ parent, parentInItems, children }) => (
+                  <div key={parent.id}>
+                    {parentInItems ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, background: bgMix }}>
+                        {icon}
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{parent.label}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {effectiveScope(parent)}</span>
+                        {parent.role && <span style={{ fontSize: 10, color: "var(--muted-foreground)", marginLeft: "auto" }}>via {parent.role}</span>}
+                      </div>
+                    ) : (
+                      <div style={{ padding: "4px 10px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}>{parent.label}</span>
+                      </div>
+                    )}
+                    {children.map(child => (
+                      <div key={child.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px 5px 28px", borderRadius: 6, marginTop: 2, background: bgMix }}>
+                        <Icons.CornerDownRight size={10} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />
+                        {icon}
+                        <span style={{ fontSize: 12, color: "var(--foreground)" }}>{child.label}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {effectiveScope(child)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
         }
-        slot={
+
+        return (
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {/* Stepper */}
-            <div style={{ padding: "4px 0 20px" }}>
+            <div style={{ marginBottom: 20 }}>
               <Stepper steps={saveSteps} />
             </div>
 
             {/* Step 0: Review diff */}
             {saveStep === 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {pinnedNodes.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
-                      Confirming direct access ({pinnedNodes.length})
-                    </div>
-                    {pinnedNodes.map(n => (
-                      <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6,
-                        background: "color-mix(in srgb, var(--primary) 8%, transparent)" }}>
-                        <Icons.Pin size={12} color="var(--primary)" />
-                        <span style={{ fontSize: 13, color: "var(--foreground)" }}>{n.label}</span>
-                        {n.scope && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {n.scope}</span>}
-                        <span style={{ fontSize: 10, color: "var(--muted-foreground)", marginLeft: "auto" }}>was: via role · now: direct</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {addedNodes.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
-                      Granting access ({addedNodes.length})
-                    </div>
-                    {addedNodes.map(n => (
-                      <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6,
-                        background: "color-mix(in srgb, var(--success, #22c55e) 8%, transparent)" }}>
-                        <Icons.Plus size={12} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />
-                        <span style={{ fontSize: 13, color: "var(--foreground)" }}>{n.label}</span>
-                        {n.scope && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {n.scope}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {removedNodes.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
-                      Revoking access ({removedNodes.length})
-                    </div>
-                    {removedNodes.map(n => (
-                      <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6,
-                        background: "color-mix(in srgb, var(--error, #ef4444) 8%, transparent)" }}>
-                        <Icons.Minus size={12} color="var(--error, #ef4444)" /* audit-ignore */ />
-                        <span style={{ fontSize: 13, color: "var(--foreground)" }}>{n.label}</span>
-                        {n.scope && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {n.scope}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {renderDiffSection(pinnedNodes, "Pinned — stays if role is removed", "var(--primary)", "color-mix(in srgb, var(--primary) 8%, transparent)", <Icons.Pin size={11} color="var(--primary)" />)}
+                {renderDiffSection(addedNodes, "New access", "var(--color-text-success, #22c55e)" /* audit-ignore */, "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
+                {renderDiffSection(removedNodes, "Access removed", "var(--error, #ef4444)" /* audit-ignore */, "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
                 {changedNodes.length === 0 && (
                   <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>
                     No changes to review.
@@ -1911,35 +1897,54 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                       {pinnedNodes.length > 0 && `${pinnedNodes.length} pinned`}
                       {pinnedNodes.length > 0 && (addedNodes.length > 0 || removedNodes.length > 0) && " · "}
-                      {addedNodes.length > 0 && `${addedNodes.length} granted`}
+                      {addedNodes.length > 0 && `${addedNodes.length} new`}
                       {addedNodes.length > 0 && removedNodes.length > 0 && " · "}
-                      {removedNodes.length > 0 && `${removedNodes.length} revoked`}
+                      {removedNodes.length > 0 && `${removedNodes.length} removed`}
                     </div>
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "4px 2px" }}>
-                  Changes apply immediately. The member will see updated access on their next action.
+                  Access updates take effect immediately. The member will see changes on their next action.
                 </div>
               </div>
             )}
 
-            {/* StepperNavFooter */}
-            <div style={{ marginTop: 16 }}>
-              <StepperNavFooter
-                variant={saveStep === 0 ? "cancel-next" : "back-next"}
-                cancelLabel="Cancel"
-                onCancel={() => setShowSaveModal(false)}
-                onBack={() => setSaveStep(0)}
-                nextLabel={saveStep === 0 ? "Review & confirm" : "Apply changes"}
-                nextDisabled={changedNodes.length === 0}
-                onNext={saveStep === 0 ? () => setSaveStep(1) : confirmSave}
-              />
-            </div>
           </div>
-        }
-        slotUnstyled
-        showClose
+        )
+      })()}
+
+      {/* ── StepperNavFooter portal — renders at full-screen bottom ──────── */}
+      {mode === "edit" && createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 56, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={saveStep === null || saveStep === 0 ? "cancel-next" : "back-next"}
+            cancelLabel={saveStep === null ? "Discard" : "Keep editing"}
+            onCancel={saveStep === null ? () => setShowDiscardModal(true) : () => setSaveStep(null)}
+            onBack={() => setSaveStep(0)}
+            nextLabel={saveStep === null ? "Save changes" : saveStep === 0 ? "Review & confirm" : "Apply changes"}
+            nextDisabled={saveStep === null ? !isDirty : changedNodes.length === 0}
+            onNext={saveStep === null ? () => setSaveStep(0) : saveStep === 0 ? () => setSaveStep(1) : confirmSave}
+          />
+        </div>,
+        document.body
+      )}
+
+      {/* ── Discard confirmation modal ─────────────────────────────────────── */}
+      <ModalDialog
+        isOpen={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        tone="warning"
+        iconName="AlertTriangle"
+        title="Discard changes?"
+        description="Your permission edits will be lost. This can't be undone."
+        ctaPrimary={{ label: "Discard changes", destructive: true, onClick: confirmDiscard }}
+        ctaSecondary={{ label: "Keep editing", onClick: () => setShowDiscardModal(false) }}
       />
+
     </div>
   )
 }
