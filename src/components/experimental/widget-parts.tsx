@@ -271,8 +271,13 @@ export function WidgetShapePreview({
   seed?: number
 }) {
   const big = height >= 100          // builder preview vs catalog thumbnail
-  const c   = accent || CAT[0]
-  const cat = (i: number) => (accent && i === 0 ? accent : CAT[i % CAT.length])
+
+  // A caller passing "transparent" or "none" means "no accent", not "paint it
+  // invisible" — the builder's Default swatch did exactly that and every
+  // accented shape vanished. Treat any non-paintable value as absent.
+  const tint = accent && accent !== "transparent" && accent !== "none" ? accent : undefined
+  const c    = tint || CAT[0]
+  const cat  = (i: number) => (tint && i === 0 ? tint : CAT[i % CAT.length])
 
   const box: React.CSSProperties = {
     height, borderRadius: 8, background: SUNKEN, border: `1px solid ${LINE}`,
@@ -362,7 +367,7 @@ export function WidgetShapePreview({
       <div style={{ ...box, justifyContent: "center", alignItems: "flex-end", paddingBottom: big ? 22 : 10 }}>
         <svg width={w} height={w / 2 + sw} viewBox={`0 0 ${w} ${w / 2 + sw}`}>
           <path d={d} fill="none" stroke={LINE} strokeWidth={sw} strokeLinecap="round" />
-          <path d={d} fill="none" stroke={accent || OK} strokeWidth={sw} strokeLinecap="round"
+          <path d={d} fill="none" stroke={tint || OK} strokeWidth={sw} strokeLinecap="round"
             strokeDasharray={`${arc * pct} ${arc}`} />
         </svg>
       </div>

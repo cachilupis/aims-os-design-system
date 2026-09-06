@@ -9,6 +9,7 @@ import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { WidgetShapePreview, SHAPE_FOR_BUILDER_TYPE } from "@/components/experimental/widget-parts"
 import { Tag } from "@/components/ui/tag"
+import { EmptyState } from "@/components/ui/empty-state"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import type { SidebarItem } from "@/components/ui/sidebar"
 
@@ -87,13 +88,21 @@ const WIDGET_SIZES = [
 ]
 
 // DS-GAP: AccentColorPalette — widget accent swatches; hex values are product data (displayed to user), not CSS styling. Needs tokenization.
+// The swatches a user can tint a widget with. Same six hues the preview
+// renderer draws series in, so a widget the user accents blue matches the blue
+// of a chart's first series — these used to be hand-typed hex that happened to
+// sit a shade off the tokens.
+//
+// "Default" carries no colour at all. It used to be hex "transparent", which is
+// truthy: the preview took it for a real accent and painted every accented
+// shape invisible. Its swatch draws itself from `id`, not from `hex`.
 const ACCENT_COLORS = [
-  { id: "",       label: "Default",  hex: "transparent" },
-  { id: "blue",   label: "Blue",    hex: "#2B7FFF" }, // audit-ignore: widget accent colour picker swatches
-  { id: "green",  label: "Green",   hex: "#22C55E" }, // audit-ignore: widget accent colour picker swatches
-  { id: "amber",  label: "Amber",   hex: "#F59E0B" }, // audit-ignore: widget accent colour picker swatches
-  { id: "red",    label: "Red",     hex: "#EF4444" }, // audit-ignore: widget accent colour picker swatches
-  { id: "purple", label: "Purple",  hex: "#A78BFA" }, // audit-ignore: widget accent colour picker swatches
+  { id: "",       label: "Default", hex: "" },
+  { id: "blue",   label: "Blue",    hex: "var(--color-surface-primary-default)"    },
+  { id: "green",  label: "Green",   hex: "var(--color-surface-success-default)"    },
+  { id: "amber",  label: "Amber",   hex: "var(--color-surface-yellow-default)"     },
+  { id: "red",    label: "Red",     hex: "var(--color-surface-error-default)"      },
+  { id: "purple", label: "Purple",  hex: "var(--color-surface-purple-default)"     },
 ]
 
 const STYLE_VARIANTS = [
@@ -134,7 +143,7 @@ function EntitySourceCard({ source, selected, onSelect }: { source: typeof ENTIT
       <CardContainer selected={selected} className="h-full">
         <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{source.label}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <Tag variant="informative">{source.integration}</Tag>
             {!source.governed && <Tag variant="alert">Ungoverned</Tag>}
             {source.hasPII && <Tag variant="alert">PII</Tag>}
@@ -211,15 +220,25 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, pr
               <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{name || "Untitled widget"}</span>
               <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
             </div>
-            <WidgetShapePreview
-              shape={typeId ? SHAPE_FOR_BUILDER_TYPE[typeId] ?? "rows" : null}
-              height={120}
-              accent={accentColor}
-            />
-            <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid var(--field-border)" }}>
-              {srcLabel && <Tag variant="informative">{srcLabel}</Tag>}
-              {typeInfo && <Tag variant="neutral">{typeInfo.label}</Tag>}
-            </div>
+            {typeId ? (
+              <WidgetShapePreview
+                shape={SHAPE_FOR_BUILDER_TYPE[typeId] ?? "rows"}
+                height={120}
+                accent={accentColor}
+              />
+            ) : (
+              // No type picked yet — which is the whole of step 1, so this is the
+              // state this panel is in most of the time. It used to be a flat grey
+              // slab with the instruction stranded in small text underneath. The
+              // instruction belongs in the empty space it is explaining.
+              <EmptyState compact icon={LucideIcons.Shapes} title="Nothing to preview yet" description={saveHint} />
+            )}
+            {(srcLabel || typeInfo) && (
+              <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid var(--field-border)" }}>
+                {srcLabel && <Tag variant="informative">{srcLabel}</Tag>}
+                {typeInfo && <Tag variant="neutral">{typeInfo.label}</Tag>}
+              </div>
+            )}
           </div>
         </CardContainer>
       </div>
@@ -229,7 +248,7 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, accentColor, pr
           <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: 0 }}>{typeInfo.bestFor}</p>
         </div>
       )}
-      {saveHint && <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", textAlign: "center" as const, margin: 0 }}>{saveHint}</p>}
+      {typeId && saveHint && <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", textAlign: "center" as const, margin: 0 }}>{saveHint}</p>}
     </div>
   )
 }
@@ -416,7 +435,7 @@ export default function PMThomasWidgetBuilderScreen() {
                 {dataMode === "entity" && (
                   <div>
                     <SectionLabel n={2}>Entity source</SectionLabel>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
                       {ENTITY_SOURCES.map(src => (
                         <EntitySourceCard key={src.id} source={src} selected={sourceId === src.id} onSelect={() => selectSource(src.id)} />
                       ))}
@@ -518,7 +537,7 @@ export default function PMThomasWidgetBuilderScreen() {
                     {ACCENT_COLORS.map(c => (
                       <button key={c.id} onClick={() => setAccentColor(c.id)} title={c.label} style={{
                         width: 30, height: 30, borderRadius: "50%", border: `2px solid ${accentColor === c.id ? "var(--primary)" : "var(--field-border)"}`,
-                        background: c.hex === "transparent" ? "var(--field-border)" : c.hex, cursor: "pointer",
+                        background: c.hex || "var(--field-border)", cursor: "pointer",
                       }} />
                     ))}
                   </div>
