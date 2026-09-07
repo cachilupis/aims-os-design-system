@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import * as Icons from "lucide-react"
 import { ScreenLayout }        from "@/components/layouts/screen-layout"
 import { Header }              from "@/components/ui/header"
+import { HighlightCard } from "@/components/ui/highlight-card"
 import { Button }              from "@/components/ui/button"
 import { Tag }                 from "@/components/ui/tag"
 import { Tabs }                from "@/components/ui/tabs"
@@ -502,36 +503,24 @@ export default function PMChatWidgetScreen() {
               {activeTab === "overview" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {/* Metrics row — 2x2 grid */}
-                  <CardContainer size="sm" className="!p-0 overflow-hidden">
-                    <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--color-border-neutral-default)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)" }}>Metrics</span>
-                      <Icons.RefreshCw size={12} color="var(--color-text-disabled)" style={{ cursor: "pointer" }} />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0" }}>
-                      {[
-                        { icon: "Activity",   label: "Success Rate",          value: "94.2%",  meta: "+2.1%",          ok: true  },
-                        { icon: "Shield",     label: "Autonomous Resolution",  value: "78.5%",  meta: "+5.3%",          ok: true  },
-                        { icon: "DollarSign", label: "Cost per Execution",    value: "$0.08",  meta: "No change",      ok: false },
-                        { icon: "Clock",      label: "Executions",            value: "1,240",  meta: "+142 this month", ok: true  },
-                      ].map((row, i) => {
-                        const Ic = (Icons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[row.icon]
-                        const borderRight = i % 2 === 0 ? "1px solid var(--color-border-neutral-default)" : "none"
-                        const borderBottom = i < 2 ? "1px solid var(--color-border-neutral-default)" : "none"
-                        return (
-                          <div key={row.label} style={{ padding: "14px 16px", borderRight, borderBottom }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
-                              <span style={{ width: 24, height: 24, borderRadius: 6, background: "var(--color-surface-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <Ic size={11} color="var(--color-text-subtitle)" />
-                              </span>
-                              <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{row.label}</span>
-                            </div>
-                            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-title)", lineHeight: 1, marginBottom: 4 }}>{row.value}</div>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: row.ok ? "var(--color-text-success)" : "var(--color-text-disabled)" }}>{row.meta}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </CardContainer>
+                  {/* HighlightCard, the DS's KPI card. This was a hand-drawn 2×2
+                      grid of divs — icon chip, label, big number, delta — which is
+                      exactly HighlightCard's anatomy. One of fourteen screens that
+                      each drew their own while the component sat catalogued.
+
+                      Laid out 2×2 by hand rather than through AdaptiveMetricGrid:
+                      that grid is built for three cards and degrades to 2+1, so
+                      four of them in this half-width column came out 4-across and
+                      truncated every label to "Succ", "Auto", "Cost". The card is
+                      the right component; the grid is for a different card count. */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {[
+                      { iconName: "Activity",   label: "Success Rate",          value: "94.2%", feedback: "+2.1%",           feedbackType: "positive" as const },
+                      { iconName: "Shield",     label: "Autonomous Resolution", value: "78.5%", feedback: "+5.3%",           feedbackType: "positive" as const },
+                      { iconName: "DollarSign", label: "Cost per Execution",    value: "$0.08", feedback: "No change",       feedbackType: "neutral"  as const },
+                      { iconName: "Clock",      label: "Executions",            value: "1,240", feedback: "+142 this month", feedbackType: "positive" as const },
+                    ].map(m => <HighlightCard key={m.label} {...m} />)}
+                  </div>
 
                   {/* Details + Assigned side by side */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
