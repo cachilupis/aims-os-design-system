@@ -4046,7 +4046,7 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
             background: role.color,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <Icons.Shield size={22} style={{ color: "#fff" }} />
+            <Icons.Shield size={22} style={{ color: "#fff" }} /* audit-ignore: icon on colored bg, always white */ />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{role.label}</div>
@@ -4172,7 +4172,7 @@ function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onVi
             background: group.color,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <Icons.Users size={22} style={{ color: "#fff" }} />
+            <Icons.Users size={22} style={{ color: "#fff" }} /* audit-ignore: icon on colored bg, always white */ />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{group.name}</div>
