@@ -209,6 +209,72 @@ const ROLE_COLORS = [
   "#8b5cf6", "#ef4444", "#f59e0b", "#64748b", // audit-ignore: preset color swatches for role form
 ]
 
+// Per-role permission states: what each role directly grants
+const ROLE_PERM_STATES: Record<string, Record<string, PermState>> = {
+  "workspace-admin": {
+    "gov-drives": "g-direct", "gov-drives-view": "g-direct", "gov-drives-up": "g-direct", "gov-drives-folder": "g-direct",
+    "gov-sandbox": "g-direct", "gov-sb-view": "g-direct", "gov-sb-det": "g-direct", "gov-sb-claims": "g-direct", "gov-sb-bundles": "g-direct", "gov-sb-sources": "g-direct", "gov-sb-promo": "g-direct",
+    "gov-truth": "g-direct", "gov-truth-view": "g-direct", "gov-truth-facts": "g-direct",
+    "gov-packs": "g-direct", "gov-packs-view": "g-direct", "gov-packs-create": "g-direct",
+    "ds-models": "g-direct", "ds-models-view": "g-direct", "ds-models-author": "g-direct", "ds-models-publish": "g-direct", "ds-models-deprecate": "g-direct",
+    "ds-lineage": "g-direct", "ds-lineage-view": "g-direct", "ds-lineage-trace": "g-direct",
+    "ds-connectors": "g-direct", "ds-conn-view": "g-direct", "ds-conn-manage": "g-direct", "ds-conn-test": "g-direct",
+    "ag-workers": "g-direct", "ag-workers-view": "g-direct", "ag-workers-run": "g-direct", "ag-workers-manage": "g-direct", "ag-workers-deploy": "g-direct",
+    "ag-hitl": "g-direct", "ag-hitl-view": "g-direct", "ag-hitl-approve": "g-direct", "ag-hitl-config": "g-direct",
+    "ag-networks": "g-direct", "ag-net-view": "g-direct", "ag-net-manage": "g-direct",
+    "ag-workflows": "g-direct", "ag-wf-view": "g-direct", "ag-wf-manage": "g-direct",
+    "adm-members": "g-direct", "adm-members-view": "g-direct", "adm-members-invite": "g-direct", "adm-members-remove": "g-direct", "adm-members-suspend": "g-direct",
+    "adm-roles": "g-direct", "adm-roles-view": "g-direct", "adm-roles-manage": "g-direct",
+    "adm-integrations": "g-direct", "adm-int-view": "g-direct", "adm-int-manage": "g-direct",
+    "adm-audit": "g-direct", "adm-audit-view": "g-direct", "adm-audit-export": "g-direct",
+  },
+  "developer": {
+    "ds-models": "g-direct", "ds-models-view": "g-direct", "ds-models-author": "g-direct",
+    "ds-connectors": "g-direct", "ds-conn-view": "g-direct", "ds-conn-manage": "g-direct", "ds-conn-test": "g-direct",
+    "ag-workers": "g-direct", "ag-workers-view": "g-direct", "ag-workers-run": "g-direct", "ag-workers-manage": "g-direct", "ag-workers-deploy": "g-direct",
+    "ag-networks": "g-direct", "ag-net-view": "g-direct", "ag-net-manage": "g-direct",
+    "ag-workflows": "g-direct", "ag-wf-view": "g-direct", "ag-wf-manage": "g-direct",
+    "adm-integrations": "g-direct", "adm-int-view": "g-direct", "adm-int-manage": "g-direct",
+    "adm-audit-view": "g-direct",
+  },
+  "viewer": {
+    "gov-drives-view": "g-direct",
+    "gov-sb-view": "g-direct",
+    "gov-truth-view": "g-direct",
+    "gov-packs-view": "g-direct",
+    "ds-models-view": "g-direct",
+    "ds-lineage": "g-direct", "ds-lineage-view": "g-direct",
+    "ag-workers-view": "g-direct",
+    "ag-hitl-view": "g-direct",
+    "adm-members-view": "g-direct",
+    "adm-roles-view": "g-direct",
+  },
+  "agent-builder": {
+    "ag-workers": "g-direct", "ag-workers-view": "g-direct", "ag-workers-run": "g-direct", "ag-workers-manage": "g-direct", "ag-workers-deploy": "g-direct",
+    "ag-hitl": "g-direct", "ag-hitl-view": "g-direct", "ag-hitl-approve": "g-direct", "ag-hitl-config": "g-direct",
+    "ag-networks": "g-direct", "ag-net-view": "g-direct", "ag-net-manage": "g-direct",
+    "ag-workflows": "g-direct", "ag-wf-view": "g-direct", "ag-wf-manage": "g-direct",
+  },
+  "data-steward": {
+    "gov-drives": "g-direct", "gov-drives-view": "g-direct", "gov-drives-up": "g-direct", "gov-drives-folder": "g-direct",
+    "gov-sandbox": "g-direct", "gov-sb-view": "g-direct", "gov-sb-det": "g-direct", "gov-sb-claims": "g-direct", "gov-sb-bundles": "g-direct",
+    "gov-packs": "g-direct", "gov-packs-view": "g-direct", "gov-packs-create": "g-direct",
+    "ds-models": "g-direct", "ds-models-view": "g-direct", "ds-models-author": "g-direct", "ds-models-publish": "g-direct",
+    "ds-lineage": "g-direct", "ds-lineage-view": "g-direct", "ds-lineage-trace": "g-direct",
+    "adm-audit-view": "g-direct",
+  },
+  "compliance-auditor": {
+    "gov-truth-view": "g-direct",
+    "gov-packs-view": "g-direct",
+    "ds-models-view": "g-direct",
+    "ds-lineage-view": "g-direct",
+    "ag-workers-view": "g-direct",
+    "adm-members-view": "g-direct",
+    "adm-roles-view": "g-direct",
+    "adm-audit": "g-direct", "adm-audit-view": "g-direct", "adm-audit-export": "g-direct",
+  },
+}
+
 // ─── Groups fixture ───────────────────────────────────────────────────────────
 
 const GROUPS: Group[] = [
@@ -336,47 +402,6 @@ function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number
 
 // ─── Permission state icon ────────────────────────────────────────────────────
 
-function PermIcon({ state }: { state: PermState }) {
-  if (state === "g-direct") {
-    return (
-      <div style={{
-        width: 16, height: 16, borderRadius: 4, border: "1.5px solid var(--primary)",
-        background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      }}>
-        <Icons.Check size={10} color={"#fff" /* audit-ignore: prototype fixture data */} strokeWidth={2.5} />
-
-      </div>
-    )
-  }
-  if (state === "g-inh") {
-    return (
-      <div style={{
-        width: 16, height: 16, borderRadius: 4, border: "1.5px solid var(--primary)",
-        background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      }}>
-        <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--primary)", opacity: 0.8 }} />
-      </div>
-    )
-  }
-  if (state === "g-denied") {
-    return (
-      <div style={{
-        width: 16, height: 16, borderRadius: 4, border: "1.5px solid var(--badge-error)",
-        background: "color-mix(in srgb, var(--badge-error) 12%, transparent)",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      }}>
-        <Icons.X size={10} color="var(--badge-error)" strokeWidth={2.5} />
-      </div>
-    )
-  }
-  return (
-    <div style={{
-      width: 16, height: 16, borderRadius: 4,
-      border: "1.5px solid var(--border)", flexShrink: 0,
-    }} />
-  )
-}
 
 function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
   const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
@@ -441,108 +466,270 @@ const STUDIO_TABS = [
   { id: "admin",      label: "Admin" },
 ]
 
-function PermissionsPanel() {
+// ─── Role Permissions Panel ───────────────────────────────────────────────────
+
+function buildRoleNodes(studioKey: string, roleId: string): PermNode[] {
+  const states = ROLE_PERM_STATES[roleId] ?? {}
+  return (PERM_TREE[studioKey] ?? []).map(n => ({
+    ...n,
+    state: (states[n.id] ?? "") as PermState,
+    locked: false,
+    role: undefined,
+    children: n.children?.map(c => ({
+      ...c,
+      state: (states[c.id] ?? "") as PermState,
+      locked: false,
+      role: undefined,
+    })),
+  }))
+}
+
+function RolePermissionsPanel({ role }: { role: Role }) {
+  const [mode, setMode] = useState<PermMode>("audit")
   const [studio, setStudio] = useState("governance")
-  const [filter, setFilter] = useState("")
-  const nodes = PERM_TREE[studio] ?? []
+  const [overrides, setOverrides] = useState<PermOverrides>({})
+  const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
+  const [saved, setSaved] = useState(false)
+  const [showDiscardModal, setShowDiscardModal] = useState(false)
+  const [saveStep, setSaveStep] = useState<null | 0 | 1>(null)
 
-  const grantedCount = nodes.reduce((n, nd) => {
-    let c = nd.state !== "" ? 1 : 0
-    nd.children?.forEach(ch => { if (ch.state !== "") c++ })
-    return n + c
-  }, 0)
-  const totalCount = nodes.reduce((n, nd) => n + 1 + (nd.children?.length ?? 0), 0)
+  const nodes = buildRoleNodes(studio, role.id)
+  const isDirty = Object.keys(overrides).length > 0 || Object.keys(scopeOverrides).length > 0
+  const canEdit = !role.system
 
-  const filteredNodes = filter.trim()
-    ? nodes.map(nd => ({
-        ...nd,
-        children: nd.children?.filter(ch =>
-          ch.label.toLowerCase().includes(filter.toLowerCase()) ||
-          ch.code.toLowerCase().includes(filter.toLowerCase())
-        ),
-      })).filter(nd =>
-        nd.label.toLowerCase().includes(filter.toLowerCase()) ||
-        (nd.children?.length ?? 0) > 0
-      )
-    : nodes
+  function changeScopeOverride(id: string, scope: string) {
+    setScopeOverrides(prev => ({ ...prev, [id]: scope }))
+    setSaved(false)
+  }
+
+  function togglePermission(id: string, on: boolean) {
+    setOverrides(prev => {
+      function findNode(list: PermNode[], targetId: string): PermNode | undefined {
+        for (const n of list) {
+          if (n.id === targetId) return n
+          const found = findNode(n.children ?? [], targetId)
+          if (found) return found
+        }
+      }
+      function descendants(node: PermNode): PermNode[] {
+        return [node, ...(node.children ?? []).flatMap(descendants)]
+      }
+      const copy = { ...prev }
+      if (on) {
+        const target = findNode(nodes, id)
+        const affected = target ? descendants(target) : [{ id, state: "" } as PermNode]
+        for (const node of affected) {
+          if (node.state === "g-direct") delete copy[node.id]
+          else copy[node.id] = "g-direct"
+        }
+      } else {
+        const target = findNode(nodes, id)
+        const affected = target ? descendants(target) : [{ id, state: "" } as PermNode]
+        for (const node of affected) delete copy[node.id]
+      }
+      return copy
+    })
+    setSaved(false)
+  }
+
+  function confirmDiscard() {
+    setShowDiscardModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(false)
+  }
+  function confirmSave() {
+    setSaveStep(null); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  const allNodes   = nodes.flatMap(n => [n, ...(n.children ?? [])])
+  const changedNodes  = allNodes.filter(n => overrides[n.id] !== undefined && overrides[n.id] !== n.state)
+  const addedNodes   = changedNodes.filter(n => GRANTED_STATES.includes(overrides[n.id]!))
+  const removedNodes = changedNodes.filter(n => !GRANTED_STATES.includes(overrides[n.id]!))
+  const allGranted   = allNodes.filter(n => GRANTED_STATES.includes(n.state))
+  const visibleNodes = mode === "audit" ? filterGrantedTree(nodes) : nodes
+
+  const saveSteps: StepItem[] = [
+    { label: "Review changes", state: saveStep === 0 ? "active" : saveStep === 1 ? "completed" : "default" },
+    { label: "Confirm",        state: saveStep === 1 ? "active" : "default" },
+  ]
 
   return (
-    <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-      {/* Studio tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
-        {STUDIO_TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setStudio(t.id)}
-            style={{
-              flex: 1, padding: "10px 4px", fontSize: 12, fontWeight: 600,
-              border: "none", background: "none", cursor: "pointer",
-              color: studio === t.id ? "var(--primary)" : "var(--muted-foreground)",
-              borderBottom: studio === t.id ? "2px solid var(--primary)" : "2px solid transparent",
-              marginBottom: -1, transition: "color 0.15s",
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Summary + search */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "10px 16px", borderBottom: "1px solid var(--border)",
-        background: "var(--surface-raised)",
-      }}>
-        <div style={{ flex: 1, position: "relative" }}>
-          <Icons.Search size={12} style={{
-            position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)",
-            color: "var(--muted-foreground)", pointerEvents: "none",
-          }} />
-          <input
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-            placeholder="Filter permissions…"
-            style={{
-              width: "100%", paddingLeft: 28, paddingRight: 8, paddingTop: 6, paddingBottom: 6,
-              fontSize: 13, border: "1px solid var(--border)", borderRadius: 6,
-              background: "var(--surface)", color: "var(--foreground)", outline: "none",
-            }}
-          />
+    <div style={{ paddingBottom: mode === "edit" ? 80 : 0 }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 4, flex: 1 }}>
+          {STUDIO_TABS.map(s => (
+            <button key={s.id} onClick={() => setStudio(s.id)} style={{
+              padding: "4px 10px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+              color: studio === s.id ? "var(--foreground)" : "var(--muted-foreground)",
+              borderBottom: studio === s.id ? "2px solid var(--primary)" : "2px solid transparent",
+            }}>
+              {s.label}
+            </button>
+          ))}
         </div>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)", flexShrink: 0 }}>
-          <span style={{ fontWeight: 700, color: "var(--primary)" }}>{grantedCount}</span>
-          <span> / {totalCount} granted</span>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div style={{
-        display: "flex", gap: 16, padding: "8px 16px",
-        borderBottom: "1px solid var(--border)", background: "var(--surface-raised)",
-      }}>
-        {[
-          { state: "g-direct" as PermState, label: "Direct" },
-          { state: "g-inh"    as PermState, label: "Via role" },
-          { state: "g-denied" as PermState, label: "Denied" },
-          { state: ""         as PermState, label: "None" },
-        ].map(l => (
-          <div key={l.state} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <PermIcon state={l.state} />
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Tree */}
-      <div>
-        {filteredNodes.length === 0 ? (
-          <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-            No permissions match "{filter}"
-          </div>
-        ) : (
-          filteredNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
+        {mode === "audit" && canEdit && (
+          <Button variant="secondary" size="sm" onClick={() => setMode("edit")}>
+            <Icons.Pencil size={13} style={{ marginRight: 4 }} />
+            Edit permissions
+          </Button>
+        )}
+        {mode === "audit" && !canEdit && (
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+            <Icons.Lock size={11} /> System role · read only
+          </span>
+        )}
+        {mode === "edit" && saveStep === null && saved && (
+          <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
+            <Icons.CheckCircle size={13} /> Saved
+          </span>
         )}
       </div>
+
+      {/* Stats row — only in tree view */}
+      {saveStep === null && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <Chip variant="secondary" size="s">{allGranted.length} granted</Chip>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+            {allGranted.length} permission{allGranted.length !== 1 ? "s" : ""} this role grants
+          </span>
+          {mode === "audit" && (
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: "auto", display: "flex", alignItems: "center", gap: 4 }}>
+              <Icons.Eye size={11} /> View only
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Tree */}
+      {saveStep === null && (
+        <div>
+          {mode === "audit"
+            ? visibleNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
+            : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onToggle={togglePermission} mode={mode} scopeOverrides={scopeOverrides} onScopeChange={changeScopeOverride} />)
+          }
+          {visibleNodes.length === 0 && (
+            <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>
+              {mode === "audit" ? "This role grants no permissions yet." : "No permissions available."}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Inline save review */}
+      {saveStep !== null && (() => {
+        const effectiveScope = (n: PermNode) => scopeOverrides[n.id] ?? n.scope ?? "Own"
+        function renderDiffSection(
+          items: PermNode[], header: string, accentColor: string, bgMix: string, icon: ReactElement
+        ) {
+          if (items.length === 0) return null
+          const itemIds = new Set(items.map(n => n.id))
+          type DiffGroup = { parent: PermNode; parentInItems: boolean; children: PermNode[] }
+          const groups: DiffGroup[] = []
+          for (const root of nodes) {
+            const pi = itemIds.has(root.id)
+            const ci = (root.children ?? []).filter(c => itemIds.has(c.id))
+            if (pi || ci.length > 0) groups.push({ parent: root, parentInItems: pi, children: ci })
+          }
+          return (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>
+                {header} · {items.length}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {groups.map(({ parent, parentInItems, children }) => (
+                  <div key={parent.id}>
+                    {parentInItems ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, background: bgMix }}>
+                        {icon}
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{parent.label}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {effectiveScope(parent)}</span>
+                      </div>
+                    ) : (
+                      <div style={{ padding: "4px 10px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}>{parent.label}</span>
+                      </div>
+                    )}
+                    {children.map(child => (
+                      <div key={child.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px 5px 28px", borderRadius: 6, marginTop: 2, background: bgMix }}>
+                        <Icons.CornerDownRight size={10} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />
+                        {icon}
+                        <span style={{ fontSize: 12, color: "var(--foreground)" }}>{child.label}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {effectiveScope(child)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        }
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            <div style={{ marginBottom: 20 }}><Stepper steps={saveSteps} /></div>
+            {saveStep === 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {renderDiffSection(addedNodes, "New access", "var(--color-text-success, #22c55e)" /* audit-ignore */, "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
+                {renderDiffSection(removedNodes, "Access removed", "var(--error, #ef4444)" /* audit-ignore */, "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
+                {changedNodes.length === 0 && (
+                  <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>No changes to review.</div>
+                )}
+              </div>
+            )}
+            {saveStep === 1 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  <Icons.ShieldCheck size={16} color="var(--primary)" />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>
+                      {changedNodes.length} permission{changedNodes.length !== 1 ? "s" : ""} will change
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                      {addedNodes.length > 0 && `${addedNodes.length} new`}
+                      {addedNodes.length > 0 && removedNodes.length > 0 && " · "}
+                      {removedNodes.length > 0 && `${removedNodes.length} removed`}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "4px 2px" }}>
+                  Changes apply to all members assigned this role. They take effect immediately.
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* StepperNavFooter portal */}
+      {mode === "edit" && createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 56, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={saveStep === null || saveStep === 0 ? "cancel-next" : "back-next"}
+            cancelLabel={saveStep === null ? "Discard" : "Keep editing"}
+            onCancel={saveStep === null ? () => setShowDiscardModal(true) : () => setSaveStep(null)}
+            onBack={() => setSaveStep(0)}
+            nextLabel={saveStep === null ? "Save changes" : saveStep === 0 ? "Review & confirm" : "Apply changes"}
+            nextDisabled={saveStep === null ? !isDirty : changedNodes.length === 0}
+            onNext={saveStep === null ? () => setSaveStep(0) : saveStep === 0 ? () => setSaveStep(1) : confirmSave}
+          />
+        </div>,
+        document.body
+      )}
+
+      {/* Discard modal */}
+      <ModalDialog
+        isOpen={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        tone="warning"
+        iconName="AlertTriangle"
+        title="Discard changes?"
+        description="Your permission edits will be lost. This can't be undone."
+        ctaPrimary={{ label: "Discard changes", destructive: true, onClick: confirmDiscard }}
+        ctaSecondary={{ label: "Keep editing", onClick: () => setShowDiscardModal(false) }}
+      />
     </div>
   )
 }
@@ -2488,7 +2675,7 @@ function RoleDetailPage({ role, onBack, onEdit, onDelete }: {
         )}
 
         {/* Permissions */}
-        {activeTab === 1 && <PermissionsPanel />}
+        {activeTab === 1 && <RolePermissionsPanel role={role} />}
       </div>
     </ScreenLayout>
   )
