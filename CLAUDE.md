@@ -84,7 +84,7 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER** pass the `label` prop to `Input` or `Textarea` in desktop screen files.
 
 ### Buttons & overlays
-- **NEVER** use `variant="main"` inside a widget, card, SlideOut, or modal — use `primary`. One named exception: `RecordHeader`'s AI agent trigger — see the Button hierarchy rules below.
+- **NEVER** use `variant="main"` inside a widget, card, SlideOut, or modal — use `primary`. One named exception: `EntityHeader`'s AI agent trigger — see the Button hierarchy rules below.
 - **NEVER** open a `ModalDialog` for non-blocking or non-destructive content — use `SlideOut`.
 - **NEVER** show a filter chip before the user clicks Apply.
 
@@ -148,8 +148,8 @@ actions={[
 actions={[{ icon: "Eye", onClick: () => {} }]}
 ```
 
-### Record Header — entity profile header
-Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; RecordHeader sits inside the content area, typically the Overview tab).
+### Entity Header — entity profile header
+Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its old name on purpose; the change spec forbids renaming it) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; EntityHeader sits inside the content area, typically the Overview tab).
 
 **There are no variants.** The component models no entity types at all — Employee, Customer, Vendor, Patient, Borrower, anything the host defines tomorrow all use the same shape. `entityType` is a plain `{ icon, label }` the caller supplies. Never look for a `variant` prop, never flag a missing one as a DS-GAP: an entity type the DS has never heard of is the normal case, not a gap.
 
@@ -160,8 +160,10 @@ Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard vi
 | `name` | Identity | `string` — required |
 | `entityType` | Identity | `{ icon, label }` — required, host-defined |
 | `statusTag?` | Identity | `{ label, icon? }` — a temporary state on the contact ("On Leave · Returns Mar 15"). Neutral/amber only, never `error` |
+| `source?` | Identity | `string` — which system the record came from. **One item, never two** |
+| `description?` | below Identity | `string` — durable context, **off unless passed** |
+| `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
 | `recordFields?` | RECORD | `RecordField[]` |
-| `nextBestActions?` | (protagonist block) | `NextBestAction[]` — N supported, each stacked |
 | `agenticSystem?` | AGENTIC SYSTEM | `AgenticSystemInfo` |
 | `intervention?` | YOUR INTERVENTION | `PendingIntervention` |
 | `assignedAgent` | Identity | `AssignedAgent \| null` — required as a prop |
@@ -174,7 +176,33 @@ Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard vi
 
 **`assignedAgent` is required as a prop, but the value may be `null`** — AIMS OS is agent-first, so every caller must decide; `null` renders the same button, disabled, with a Tooltip explaining why. Never a silently missing button. Renders as an always-present, most-prominent (icon-only, `variant="main"`) button using the Topbar's own `Sparkle` glyph (the single 4-point one, not the 3-star `Sparkles`). This is the one confirmed exception to "never `main` inside a card" (see Button hierarchy rules below) — don't extend that exception to any other button in this file.
 
-**`nextBestActions` has no severity and no colors.** Each entry is `{ id, title, description, onOpen, contextTag? }` — there is no `severity`, no `dueContext`, no `aiGenerated`, no `actionLabel`. Timing and urgency live in the copy (`description`), not in a token. Pass an empty array or omit the prop for a record with genuinely nothing to recommend — the block disappears, which is the correct "all good" state; never synthesize a filler recommendation.
+**The Next Best Action card is NOT part of this component.** It is `NextBestActionCard` from `@/components/experimental/next-best-action-card`, rendered as a **sibling below** the header in its own `CardContainer`. Two records, two containers. Passing recommendations into the header is the single most common mistake with this card, so the prop does not exist to be misused.
+
+**NO INSIGHT SECTION.** System interpretation reaches this header only as a tag with a tooltip — never a descriptive sentence, never a score with drivers, never an expandable analysis. Anything larger lives in the Overview, where the NBA widget carries recommendations and reasoning.
+
+**`NextBestActionCard` has no severity and no colors.** Each entry is `{ id, title, description, onOpen, contextTag? }` — no `severity`, no `dueContext`, no `aiGenerated`, no `actionLabel`. Timing and urgency live in the copy (`description`), not in a token. Pass an empty array or omit `items` for a record with genuinely nothing to recommend — the whole card disappears, which is the correct "all good" state; never synthesize a filler recommendation.
+
+**`source` answers one question: which system this record came from.** Workday, Salesforce, NetSuite, DMS, Helix Data Studio. **One item, never two** — a source is a single fact, and concatenating a second value breaks it: "Enterprise Account · Midwest Region" is a category next to a location, and neither is a source. A job title, a location, a region, a category or a parent company *describe* or *place* the entity; they do not say where the data came from, so they go in tags or `secondaryMetadata`, or nowhere. An entity created inside the platform itself reads "Helix Data Studio". An entity with no source **omits the prop** — the slot is removed, never filled with something else.
+
+**`description` is off unless you pass it, and it is the last resort.** Ask in this order and stop at the first yes:
+
+1. Needs attention right now → signal tag
+2. What kind of thing this is → classification tag
+3. The current status → `statusTag`
+4. A fact someone might act on → `secondaryMetadata`
+5. Durable context none of the above captured → `description`
+
+The one case that justifies it is **an opaque code as the title**: `RO-48291` alone means nothing, so the description says what the record concerns. **Durability test** — if the sentence could change next week it is an activity note and belongs in the Overview, not here. It says what the entity IS, never what is happening to it. One line, truncated with a Tooltip, never wrapped.
+
+**`secondaryMetadata` caps at 6 — enforced by the component, not by trusting the caller.** Six is the maximum, not the goal: **aim for four.** Past six it stops being a row and becomes a section.
+- **Anything beyond six goes to the Overview, never to a `+N` chip.** An item hidden behind a counter is not discovered, and if it was worth showing it is worth having a place.
+- **The icon never appears alone.** `EntityList` allows icon-only under space pressure; this header does not — it has the width, and a bare symbol forces the reader to interpret it.
+- **The tooltip is required and always shows** — on hover and on focus, even when the text is not truncated. It carries the field label plus context: `"Assigned agent · Manager Agent. Handling this account since Mar 3."`
+- **What qualifies:** something a person could act on, or something governance requires be visible — counts of Truth Plane facts and Canon Plane documents (counted *separately*: a document is not a fact, and TR outranks CR), open workflows, the assigned agent tier, access role, tenure, a Bridge ID where policy permits.
+- **What does not:** anything true of every entity of the same type — that is a label, not information — and anything describing a conversation rather than the entity.
+- **`secondaryMetadata` is not `recordFields`.** RECORD fields carry provenance and a masking state and are reached through the "About this record" trigger; secondary metadata is display-only and always visible. Both exist at once — never fold one into the other.
+
+**Never repeat a value across slots.** If it appears in `source`, it does not also appear in `description` or as a tag.
 
 **Fallback copy comes from `RECORD_HEADER_FALLBACKS`** — never write fallback strings inline at the call site.
 
@@ -182,7 +210,7 @@ Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard vi
 - Several items to review one by one before deciding → `SlideOut`
 - A risk/health state to investigate, with evidence to show first → `SlideOut`
 - One immediate, reversible-by-Cancel decision → `ModalDialog`
-- Never Full Navigation from inside the card — RecordHeader already lives on that record's own page.
+- Never Full Navigation from inside the card — EntityHeader already lives on that record's own page.
 
 ### Empty states
 **ALWAYS** use `EmptyState` from `src/components/ui/empty-state.tsx` when a view, section, or search has no content to display. **NEVER** hardcode a custom div, illustration, or message — custom empty states break visual consistency and are invisible to the DS.
@@ -746,7 +774,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 - **Never repeat `main` more than once per view.** If a widget or card needs a call-to-action, use `primary`, not `main`.
 - **No more than 2 `primary` buttons visible at the same time** in a single scrolled viewport. If more actions compete, demote lower-priority ones to `secondary`.
 - Action order is always: `main` (header) → `primary` → `secondary` → `tertiary`.
-- **One confirmed exception:** `RecordHeader`'s AI agent trigger uses `variant="main"` even though it renders inside a `CardContainer`. Confirmed directly by Michael — the agent button is the platform's one persistent, always-present entry point (same role as Topbar's own IA-icon), not a regular card CTA, so it earns the top-of-hierarchy treatment. Do not treat this as precedent for any other card/widget/SlideOut button — it's a named, single-purpose exception, not a loophole.
+- **One confirmed exception:** `EntityHeader`'s AI agent trigger uses `variant="main"` even though it renders inside a `CardContainer`. Confirmed directly by Michael — the agent button is the platform's one persistent, always-present entry point (same role as Topbar's own IA-icon), not a regular card CTA, so it earns the top-of-hierarchy treatment. Do not treat this as precedent for any other card/widget/SlideOut button — it's a named, single-purpose exception, not a loophole.
 
 ---
 
@@ -757,7 +785,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 - Rendering dropdowns inside `overflow: hidden` parents — use fixed positioning to escape.
 - Creating a new button/input/card component when `src/components/ui/` has one.
 - Showing two secondary buttons side by side — order is always primary → secondary → tertiary.
-- Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead (except `RecordHeader`'s AI agent trigger — see Button hierarchy rules).
+- Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead (except `EntityHeader`'s AI agent trigger — see Button hierarchy rules).
 - Adding a filter chip before Apply is clicked.
 - Opening a Modal for non-destructive/non-blocking content — use SlideOut instead.
 - Showing a loading indicator for operations under 300ms.
