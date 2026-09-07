@@ -1179,7 +1179,7 @@ function WBSectionChip({ onClick, children }: { onClick: () => void; children: R
 
 function WBSectionLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" as const, color: "var(--field-supporting)", marginBottom: 10, ...style }}>
+    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "var(--field-supporting)", marginBottom: 8, ...style }}>
       {children}
     </div>
   )
