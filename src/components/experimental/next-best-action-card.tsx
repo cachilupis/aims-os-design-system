@@ -59,19 +59,31 @@ export interface NextBestActionCardProps {
    *  recommend — the card disappears entirely rather than rendering a
    *  placeholder. N items stack with the container's own 24px rhythm. */
   items?: NextBestAction[]
-  variant?: "default"
+  /**
+   * `purple` (the default) is the DS CardContainer purple variant. Purple
+   * means "an agent produced this" across the whole system, and this card is
+   * the agent's recommendation — so the surface carries it. The colour comes
+   * from CardContainer's own variant, never from a background painted in
+   * here: painting it by hand was exactly the mistake in the version of this
+   * block that used to live inside the header.
+   *
+   * `default` exists for a host that already sits this card on a purple
+   * surface and would otherwise stack two purples.
+   */
+  variant?: "purple" | "default"
   size?: "default" | "sm"
   className?: string
 }
 
 export function NextBestActionCard({
   items = [],
+  variant = "purple",
   size = "default",
   className,
 }: NextBestActionCardProps) {
   if (items.length === 0) return null
   return (
-    <CardContainer size={size === "sm" ? "sm" : undefined} className={cn(className)}>
+    <CardContainer variant={variant} size={size === "sm" ? "sm" : undefined} className={cn(className)}>
       {/* 24px between suggestions — the container's own itemSpacing in Figma. */}
       <div className="flex flex-col gap-[24px]">
         {items.map(item => <Suggestion key={item.id} nba={item} />)}

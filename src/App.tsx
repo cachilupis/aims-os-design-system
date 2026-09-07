@@ -50,7 +50,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { EntityHeader, type EntityHeaderEntityType, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent, type SecondaryMetadataItem } from "@/components/ui/record-header"
+import { EntityHeader, type EntityHeaderEntityType, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent, type SecondaryMetadataItem, type RecordAction } from "@/components/ui/record-header"
 import { NextBestActionCard, type NextBestAction } from "@/components/experimental/next-best-action-card"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
@@ -32715,6 +32715,30 @@ const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
   ],
 }
 
+// Preview tab only — what each type's `description` would legitimately say IF
+// it qualified. Figma allows the slot only when the title is an opaque code,
+// and none of these seven titles is one, so the Preview keeps it off by
+// default; these strings exist so turning the toggle on shows real copy rather
+// than lorem. Each passes the durability test — it says what the entity IS,
+// never what is happening to it.
+const RH_PREVIEW_DESCRIPTION: Record<RhDemoKey, string> = {
+  uep:         "Decision maker for infrastructure purchases across all sites.",
+  ucp:         "Multi-site financial services account, contracted at the parent level.",
+  uvp:         "Sole supplier for direct materials on the Midwest assembly lines.",
+  patient:     "Long-term cardiology patient, managed jointly with an outside specialist.",
+  claim:       "Commercial policyholder covering a fleet of 40 vehicles.",
+  borrower:    "First-time commercial borrower, no prior facility with the bank.",
+  repairOrder: "Fleet owner whose vehicles are serviced under a single account.",
+}
+
+// Preview tab only — the one contextual CTA plus overflow, so the Actions
+// toggle has something real to show. Contact-type actions per entity, same
+// convention the catalog examples use.
+const RH_PREVIEW_ACTIONS: RecordAction[] = [
+  { label: "Message", variant: "primary", onClick: () => {} },
+  { label: "Archive",                     onClick: () => {} },
+]
+
 // Display name per demo key — a lookup instead of a growing ternary chain
 // now that there are 7 variants across 2 groups (Work Surfaces + Other
 // Markets).
@@ -33598,7 +33622,21 @@ const WORKFLOW_STATUS_TAG: Record<WorkflowDetail["status"], TagVariant> = {
 const NbaSectionDivider = () => <div className="h-px" style={{ background: "var(--table-border)" }} />
 
 function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
-  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
+  const [tab, setTab] = useState<"preview" | "overview" | "playground" | "reference">("preview")
+  // Preview tab — the component alone on a stage, with one control per
+  // optional slot. Mirrors the Figma component set's own property panel (2
+  // variant axes + 8 booleans) so "what can this card turn on and off" is
+  // answerable without reading the props table.
+  const [pvKey,         setPvKey]         = useState<RhDemoKey>("uep")
+  const [pvDescription, setPvDescription] = useState(false)
+  const [pvSource,      setPvSource]      = useState(true)
+  const [pvMetadata,    setPvMetadata]    = useState(true)
+  const [pvStatusTag,   setPvStatusTag]   = useState(false)
+  const [pvZones,       setPvZones]       = useState(true)
+  const [pvActions,     setPvActions]     = useState(true)
+  const [pvAgent,       setPvAgent]       = useState(true)
+  const [pvLocked,      setPvLocked]      = useState(false)
+  const [pvNba,         setPvNba]         = useState(true)
   const [pgVariant, setPgVariant] = useState<RhDemoKey>("uep")
   // Closing pass — Playground's own NBA-type selector, decoupled from
   // pgVariant: picks which of the 3 modeled types (+ the 1 "not yet
@@ -33799,7 +33837,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
       </div>
 
       <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
-        {(["overview", "playground", "reference"] as const).map(t => (
+        {(["preview", "overview", "playground", "reference"] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -33815,14 +33853,103 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         ))}
       </div>
 
+      {/* ── PREVIEW — the component alone on a stage ──────────────────────
+          One control per optional slot, mirroring the Figma component set's
+          own property panel: 2 variant axes (entity type here; Size lives in
+          the responsive pass) plus its 8 booleans. Nothing here is a mock —
+          every toggle drives the real prop. */}
+      {tab === "preview" && (
+        <div className="flex flex-col gap-[24px]">
+          <div
+            className="rounded-[12px] p-[40px]"
+            style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}
+          >
+            <EntityHeader
+              name={RH_NAME[pvKey]}
+              entityType={RH_ENTITY_TYPE[pvKey]}
+              source={pvSource ? RH_SOURCE[pvKey] : undefined}
+              secondaryMetadata={pvMetadata ? RH_SECONDARY_METADATA[pvKey] : []}
+              description={pvDescription ? RH_PREVIEW_DESCRIPTION[pvKey] : undefined}
+              statusTag={pvStatusTag ? { label: "On Leave · Returns Mar 15", icon: LucideIcons.Palmtree } : undefined}
+              recordFields={RH_RECORD_FIELDS[pvKey]}
+              assignedAgent={pvAgent ? rhAssignedAgent(pvKey, RH_NAME[pvKey]) : null}
+              actions={pvActions ? RH_PREVIEW_ACTIONS : []}
+              agenticSystem={pvZones ? rhAgenticSystem(pvKey) : undefined}
+              intervention={pvZones ? rhIntervention(pvKey) : undefined}
+              locked={pvLocked}
+              onProvenanceOpen={() => rhOpenProvenance(pvKey)}
+            />
+            {pvNba && <NextBestActionCard items={rhNextBestActions(pvKey)} className="mt-[12px]" />}
+          </div>
+
+          <div className="flex flex-col gap-[12px]">
+            <CtrlGroup<RhDemoKey>
+              label="Entity type"
+              value={pvKey}
+              onChange={setPvKey}
+              options={[
+                { value: "uep", label: "Employee" },
+                { value: "ucp", label: "Customer" },
+                { value: "uvp", label: "Vendor" },
+                { value: "patient", label: "Patient" },
+                { value: "claim", label: "Policyholder" },
+                { value: "borrower", label: "Borrower" },
+                { value: "repairOrder", label: "Service customer" },
+              ]}
+            />
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">
+                Slots — every one of these is optional, and omitting it removes the slot rather than emptying it
+              </p>
+              <div className="flex flex-wrap gap-[8px]">
+                {([
+                  ["Source",             pvSource,      setPvSource],
+                  ["Secondary metadata", pvMetadata,    setPvMetadata],
+                  ["Description",        pvDescription, setPvDescription],
+                  ["Status tag",         pvStatusTag,   setPvStatusTag],
+                  ["Zones",              pvZones,       setPvZones],
+                  ["Actions",            pvActions,     setPvActions],
+                  ["Assigned agent",     pvAgent,       setPvAgent],
+                  ["Restricted",         pvLocked,      setPvLocked],
+                  ["Next Best Action",   pvNba,         setPvNba],
+                ] as const).map(([label, on, set]) => (
+                  <Chip
+                    key={label}
+                    variant={on ? "primary" : "secondary"}
+                    size="s"
+                    onClick={() => set(v => !v)}
+                  >
+                    {label}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[760px]">
+              <strong>Description is off by default and stays off for six of these seven types</strong> — Figma allows it
+              only when the title is an opaque code, and every example entity here is a person or an account. Turn it on to
+              see the slot; the copy you get is the one that type would legitimately carry.{" "}
+              <strong>Assigned agent off</strong> is not a missing button: it renders disabled with a Tooltip, because the prop
+              is required and its value may be <code>null</code>.{" "}
+              <strong>Restricted</strong> is Figma's second variant on the Property&nbsp;1 axis — its third,{" "}
+              <code>Loading</code>, is a skeleton this component does not implement yet (it belongs with the responsive and
+              truncation pass, not this one).
+            </p>
+          </div>
+        </div>
+      )}
+
       {tab === "overview" && (
         <div className="flex flex-col gap-[40px]">
-          {/* Each variant shown expanded (defaultExpanded) so all 3 zones are
+          {/* Shown in the component's REAL default state — zones collapsed, identity
+              tags visible. Figma: collapsed by default, for a predictable header
+              height. An earlier pass forced defaultExpanded here as a docs
+              convenience, which made Overview and Playground look like two
+              different components. Click the chevron to open the zones.
               visible without an extra click — the real default is still
               collapsed; this is a docs-only override. */}
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">UEP — Employee (reference variant)</p>
-            <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
+            <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep} recordFields={RH_RECORD_FIELDS.uep}
               source={RH_SOURCE.uep}
               secondaryMetadata={RH_SECONDARY_METADATA.uep}
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
@@ -33838,7 +33965,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               Same record as the reference variant above, with one addition: <code>statusTag</code> — a visible, temporary state on the contact itself, beside entityType in the identity row. Neutral, never <code>error</code> (red) — this isn't a problem to fix, it's a fact the viewer should know before acting on anything else here.
             </p>
             <EntityHeader name={RH_UEP.name} entityType={RH_ENTITY_TYPE.uep}
-              source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
+              source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
               statusTag={{ label: "On Leave · Returns Mar 15", icon: LucideIcons.Palmtree }}
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
               agenticSystem={rhAgenticSystem("uep")}
@@ -33851,7 +33978,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer (example)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
             <EntityHeader name={RH_UCP.name} entityType={RH_ENTITY_TYPE.ucp}
-              source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
+              source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={RH_RECORD_FIELDS.ucp}
               assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
               agenticSystem={rhAgenticSystem("ucp")}
               intervention={rhIntervention("ucp")}
@@ -33863,7 +33990,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor (example)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content. No pending intervention here on purpose — the zone is fully omitted, not shown empty.</p>
             <EntityHeader name={RH_UVP.name} entityType={RH_ENTITY_TYPE.uvp}
-              source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
+              source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp}
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
               agenticSystem={rhAgenticSystem("uvp")}
               intervention={rhIntervention("uvp")}
@@ -33877,7 +34004,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the healthcare market: a patient, deliberately picked to be as unlike UEP/UCP/UVP as possible — a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba). Same colors (light blue = workflow, amber = intervention), same skeleton, zero changes to record-header.tsx.
             </p>
             <EntityHeader name={RH_PATIENT.name} entityType={RH_ENTITY_TYPE.patient}
-              source={RH_SOURCE.patient} secondaryMetadata={RH_SECONDARY_METADATA.patient} recordFields={RH_RECORD_FIELDS.patient} defaultExpanded
+              source={RH_SOURCE.patient} secondaryMetadata={RH_SECONDARY_METADATA.patient} recordFields={RH_RECORD_FIELDS.patient}
               assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
               agenticSystem={rhAgenticSystem("patient")}
               intervention={rhIntervention("patient")}
@@ -33891,7 +34018,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the insurance market: a policyholder, never the claim itself — the CONTACT rule this component enforces (the record's entity is always a person or account, never a process), so it's Diane Ostrowski and not her open claim. Her claim lives instead as a workflow in Agentic System ("Claims Adjudication"), where the calculated payout is held for supervisor sign-off. RECORD fields describe Diane's own standing relationship with the carrier — policy, coverage, agent, claims history — sourced from 2 systems: Duck Creek (policy admin) and Guidewire (claims core), both cited via Data Provenance. Also carries 2 pending interventions at once: the higher-severity payout approval renders full-size, the documentation follow-up collapses behind "+1 more" (never a carousel). This market can grow more contact types later — the carrier's own customer, an appointed adjuster/vendor firm — without touching this skeleton; only Policyholder is built today. Same skeleton, same colors, zero changes to record-header.tsx.
             </p>
             <EntityHeader name={RH_CLAIM.name} entityType={RH_ENTITY_TYPE.claim}
-              source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
+              source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim}
               assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
               agenticSystem={rhAgenticSystem("claim")}
               intervention={rhIntervention("claim")}
@@ -33905,7 +34032,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the banking market: an applicant, never the credit application itself — a fourth distinct entity type (<code>Personal Loan Applicant</code>, <code>Landmark</code> icon), a RECORD shape sourced from 3 distinct systems at once — Experian (credit bureau), nCino (loan origination), and FIS (core banking) — the kind of cross-system audit trail a real credit decision needs. A risk exception (debt-to-income above the automated threshold) is held for underwriter sign-off, the same Your Intervention zone as every other vertical. This market can grow more contact types later — an account holder/customer, a vendor relationship — without touching this skeleton; only the applicant is built today.
             </p>
             <EntityHeader name={RH_BORROWER.name} entityType={RH_ENTITY_TYPE.borrower}
-              source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
+              source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower}
               assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
               agenticSystem={rhAgenticSystem("borrower")}
               intervention={rhIntervention("borrower")}
@@ -33919,7 +34046,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the automotive market: AIMS OS's own central vertical (its roots are in automotive dealership platforms), and the same CONTACT rule proof as the insurance example above — the entity is Devon Marsh, the customer who owns the vehicle (<code>Service Customer</code>, <code>Car</code> icon), never the repair order itself. The repair order now lives as a workflow in Agentic System ("Service / Repair"), tracking a live diagnostic → repair → QA process where additional scope found mid-service exceeds the customer's pre-authorized budget, held for sign-off in Your Intervention. RECORD fields describe Devon's own standing relationship with the dealership — service advisor, vehicle, warranty status, last service date — sourced from 3 distinct systems: CDK Global (DMS), Carfax (vehicle history), and an OEM warranty portal. This market can grow more contact types later — a fleet/vendor account — without touching this skeleton; only the service customer is built today.
             </p>
             <EntityHeader name={RH_REPAIR_ORDER.name} entityType={RH_ENTITY_TYPE.repairOrder}
-              source={RH_SOURCE.repairOrder} secondaryMetadata={RH_SECONDARY_METADATA.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder} defaultExpanded
+              source={RH_SOURCE.repairOrder} secondaryMetadata={RH_SECONDARY_METADATA.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder}
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
               agenticSystem={rhAgenticSystem("repairOrder")}
               intervention={rhIntervention("repairOrder")}
