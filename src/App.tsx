@@ -33191,7 +33191,7 @@ const NBA_RESULT_COPY: Record<"executed" | "in-review", { title: string; state: 
 // them as such in the UI.
 const NbaSectionDivider = () => <div className="h-px" style={{ background: "var(--table-border)" }} />
 
-function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecModal) => void; openProtoExample: (protoId: string, from: string, params?: Record<string, string>) => void }) {
   const [tab, setTab] = useState<"preview" | "overview" | "reference">("preview")
   // Preview tab — the component alone on a stage, with one control per
   // optional slot. Mirrors the Figma component set's own property panel (2
@@ -33491,8 +33491,10 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 opened straight onto a record's detail view (the list has no
                 header on it), where the card sits with tabs, widgets and the
                 Next Best Action as its own sibling, and where dismissing the
-                recommendation actually removes it. New tab, so the reader
-                keeps their place in the docs. */}
+                recommendation actually removes it. Same tab, and the ← chip
+                in the prototype comes back HERE rather than to the gallery:
+                this is a worked example of this component, not a detour into
+                someone else's prototype list. */}
             <div
               className="rounded-[8px] p-[16px] flex items-center justify-between gap-[16px] flex-wrap"
               style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}
@@ -33509,7 +33511,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 variant="secondary"
                 size="sm"
                 icon={<LucideIcons.ExternalLink size={14} strokeWidth={1.75} />}
-                onClick={() => window.open("?proto=proto-thomas-universal-profile&profile=ORG-0023", "_blank")}
+                onClick={() => openProtoExample("proto-thomas-universal-profile", "record-header", { profile: "ORG-0023" })}
                 className="shrink-0"
               >
                 View screen example
@@ -41883,6 +41885,24 @@ export default function App() {
   const [search,  setSearch]  = useState("")
   const [isDark,  setIsDark]  = useState(true)
   const [specModal, setSpecModal] = useState<SpecModal>(null)
+  // Where the prototype overlay's ← chip returns to. Null means the gallery,
+  // which is right when the reader arrived from the gallery. A component page
+  // that opens a prototype as its own worked example sets this to itself, so
+  // closing the example lands back on the component, not on a list the reader
+  // never asked for.
+  const [protoReturnTo, setProtoReturnTo] = useState<string | null>(null)
+
+  // Open a prototype as an example of the page the reader is on. Same tab —
+  // the ← chip is the way back, and it goes to `from`. Extra params (e.g.
+  // `profile`, which the UCP prototype reads on mount to open one record
+  // instead of its list) go on the URL BEFORE the state change, so they are
+  // already there when the prototype first renders.
+  function openProtoExample(protoId: string, from: string, params?: Record<string, string>) {
+    const qs = new URLSearchParams({ proto: protoId, ...(params ?? {}) })
+    window.history.replaceState(null, "", `?${qs.toString()}`)
+    setProtoReturnTo(from)
+    setActive(protoId)
+  }
 
   const theme = isDark ? "dark" : "light"
 
@@ -41918,7 +41938,16 @@ export default function App() {
     if (active === "home" && params.get("proto")) return
     const isProto = PROTOTYPE_PAGES.some(p => p.id === active)
     if (isProto) {
-      window.history.replaceState(null, "", `?proto=${active}${hash}`)
+      // Keep whatever else the prototype's link carried — `profile` on the
+      // UCP screen, and anything a future one adds. This used to rebuild the
+      // URL from the id alone, which wiped those on the first render after
+      // mount: the deep link still worked, because the screen reads the param
+      // in a state initialiser, but reloading the page silently lost it.
+      const next = new URLSearchParams(params)
+      next.delete("page")
+      next.delete("tab")
+      next.set("proto", active)
+      window.history.replaceState(null, "", `?${next.toString()}${hash}`)
     } else {
       // Preserve ?tab= (owned by the active page's own tab state, e.g. via
       // usePageTab in src/lib/use-page-tab.ts, or HomePage's hand-rolled
@@ -42015,7 +42044,7 @@ export default function App() {
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "notification-item"   && <NotificationItemPage   openSpec={setSpecModal} />}
           {active === "notification-center" && <NotificationCenterPage openSpec={setSpecModal} />}
-          {active === "record-header"       && <EntityHeaderPage      openSpec={setSpecModal} />}
+          {active === "record-header"       && <EntityHeaderPage      openSpec={setSpecModal} openProtoExample={openProtoExample} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "process-item"   && <ProcessItemPage openSpec={setSpecModal} />}
           {active === "radio"           && <RadioPage openSpec={setSpecModal} />}
@@ -42045,7 +42074,7 @@ export default function App() {
         <div className={`${theme} fixed inset-0`} style={{ zIndex: 40, background: canvasBg }}>
           <ActiveProtoComponent key={activeProto.id} />
           <button
-            onClick={() => setActive("proto-gallery")}
+            onClick={() => { const to = protoReturnTo ?? "proto-gallery"; setProtoReturnTo(null); setActive(to) }}
             className="fixed top-[16px] left-[16px] flex items-center gap-[8px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-medium transition-opacity hover:opacity-70"
             style={{
               zIndex: 45,
@@ -42055,7 +42084,7 @@ export default function App() {
               boxShadow: "var(--shadow-elevation-2)",
             }}
           >
-            ← Prototypes
+            ← {protoReturnTo ? (NAV_SECTIONS.find(n => n.id === protoReturnTo)?.label ?? "Back") : "Prototypes"}
           </button>
         </div>
       )}
