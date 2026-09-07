@@ -580,11 +580,13 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     { icon: LucideIcons.Flag,           text: "0 flags",  tooltip: "Open flags · nothing raised by the Risk study." },
     { icon: LucideIcons.ScanLine,       text: "Jul 27",   tooltip: "Last scan · Jul 27, 2026, from the Risk study." },
   ]
-  // An empty array is how the current component expresses "nothing to
-  // recommend right now" — the block disappears instead of rendering a
-  // placeholder, which is what the old neutral "No active recommendations"
-  // signal was standing in for.
-  const rhNextBestActions = PROFILE_NBAS[profile.id] ?? []
+  // The recommendation, and a real dismiss. `undefined` is how the card
+  // expresses "nothing to recommend right now" — it disappears rather than
+  // rendering a placeholder, which is also what dismissing has to produce:
+  // the ✕ was wired to a no-op, so it looked broken. One recommendation at a
+  // time, so dismissing the current one clears the card.
+  const [nbaDismissed, setNbaDismissed] = useState(false)
+  const rhNextBestAction = nbaDismissed ? undefined : PROFILE_NBAS[profile.id]?.[0]
 
   // Available entity type options for the "+" picker (filter already-added tabs)
   const availableOptions = (ENTITY_TYPE_OPTIONS[profile.type] ?? []).filter(
@@ -674,7 +676,10 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
         ]}
         assignedAgent={{ id: "agent-1", name: "AIMS Assistant", onOpenChat: () => {} }}
       />
-      <NextBestActionCard item={rhNextBestActions[0]} className="mt-[12px] mb-[16px]" />
+      <NextBestActionCard
+        item={rhNextBestAction && { ...rhNextBestAction, onDismiss: () => setNbaDismissed(true) }}
+        className="mt-[12px] mb-[16px]"
+      />
 
       {/* ── Tabs row + "+" entity-type picker ── */}
       <div className="flex items-center gap-[8px] mb-[24px]">
@@ -920,7 +925,15 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
 // ── Main screen — profile selector ───────────────────────────────────────────
 
 export default function PMThomasUniversalProfileScreen() {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // `?profile=<id>` opens a record's detail directly, skipping the list. The
+  // Entity Header only exists on the detail view, so a link meant to show the
+  // header has to land there — arriving at the list and asking the reader to
+  // click a row first defeats the point.
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    const wanted = new URLSearchParams(window.location.search).get("profile")
+    return wanted && PROFILES.some(p => p.id === wanted) ? wanted : null
+  })
 
   const selected = PROFILES.find(p => p.id === selectedId)
 

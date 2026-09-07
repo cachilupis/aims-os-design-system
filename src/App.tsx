@@ -33201,7 +33201,6 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pvDescription, setPvDescription] = useState(false)
   const [pvSource,      setPvSource]      = useState(true)
   const [pvMetadata,    setPvMetadata]    = useState(true)
-  const [pvZones,       setPvZones]       = useState(true)
   const [pvTags,        setPvTags]        = useState(true)
   const [pvState,       setPvState]       = useState(true)
   const [pvSecondary,   setPvSecondary]   = useState(false)
@@ -33359,22 +33358,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             Identity card for a Unified Entity Profile. It identifies the entity you are looking at and surfaces what needs attention — it carries no detail, which lives in the tabs below. Title, source, tags and actions in the first row; secondary metadata (max 6) in the second. One shared skeleton for every entity type — there is no variant prop, and no disclosure: this is a fixed arrangement of slots, not a collapsible card. The Next Best Action card below is a <strong>separate component in its own container</strong>, not part of this one.
           </p>
         </div>
-        <div className="flex items-center gap-[8px] shrink-0">
-          {/* See it applied. Every example on this page is the component on a
-              stage; this opens the real UCP prototype — Thomas's Universal
-              Profile screen — where the header sits in a page with tabs,
-              widgets and the Next Best Action card as its own sibling. A new
-              tab, so the reader keeps their place in the docs. */}
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<LucideIcons.ExternalLink size={14} strokeWidth={1.75} />}
-            onClick={() => window.open("?proto=proto-thomas-universal-profile", "_blank")}
-          >
-            Open the real UCP screen
-          </Button>
-          <SpecButton onClick={() => openSpec("record-header")} />
-        </div>
+        <SpecButton onClick={() => openSpec("record-header")} />
       </div>
 
       <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
@@ -33475,7 +33459,6 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   ["Information",        pvInformation, setPvInformation],
                   ["Secondary action",   pvSecondary,   setPvSecondary],
                   ["Menu",               pvMenu,        setPvMenu],
-                  ["Zones",              pvZones,       setPvZones],
                   ["Assigned agent",     pvAgent,       setPvAgent],
                   ["Locked",             pvLocked,      setPvLocked],
                   ["Next Best Action",   pvNba,         setPvNba],
@@ -33492,28 +33475,57 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               </div>
             </div>
             <p className="text-[12px] text-[var(--field-supporting)] max-w-[760px]">
-              <strong>Description is off by default and stays off for six of these seven types</strong> — Figma allows it
-              only when the title is an opaque code, and every example entity here is a person or an account. Turn it on to
-              see the slot; the copy you get is the one that type would legitimately carry.{" "}
+              <strong>Description is off by default</strong> and stays off for every entity here except the repair order —
+              Figma allows it only when the title is an opaque code, and <code>RO-48291</code> is the one that qualifies.
+              Turn it on elsewhere to see the slot; the copy you get is what that type would legitimately carry.{" "}
               <strong>Assigned agent off</strong> is not a missing button: it renders disabled with a Tooltip, because the prop
               is required and its value may be <code>null</code>.{" "}
-              <strong>Restricted</strong> is Figma's second variant on the Property&nbsp;1 axis — its third,{" "}
-              <code>Loading</code>, is a skeleton this component does not implement yet (it belongs with the responsive and
-              truncation pass, not this one).
+              <strong>Locked</strong> is "you cannot edit this record" — not Figma's <code>Restricted</code>, which is "you
+              cannot see this value" and lives on the field, not the card.{" "}
+              <code>Loading</code>, Figma's third state on the Property&nbsp;1 axis, is a skeleton this component does not
+              implement yet.
             </p>
+
+            {/* See it applied. Everything above is the component on a stage;
+                this is the component in a real page — Thomas's UCP prototype,
+                opened straight onto a record's detail view (the list has no
+                header on it), where the card sits with tabs, widgets and the
+                Next Best Action as its own sibling, and where dismissing the
+                recommendation actually removes it. New tab, so the reader
+                keeps their place in the docs. */}
+            <div
+              className="rounded-[8px] p-[16px] flex items-center justify-between gap-[16px] flex-wrap"
+              style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}
+            >
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
+                  See it in a real screen
+                </p>
+                <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>
+                  The Unified Customer Profile prototype, on a record's detail view.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<LucideIcons.ExternalLink size={14} strokeWidth={1.75} />}
+                onClick={() => window.open("?proto=proto-thomas-universal-profile&profile=ORG-0023", "_blank")}
+                className="shrink-0"
+              >
+                View screen example
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
       {tab === "overview" && (
         <div className="flex flex-col gap-[40px]">
-          {/* Shown in the component's REAL default state — zones collapsed, identity
-              tags visible. Figma: collapsed by default, for a predictable header
-              height. An earlier pass forced here as a docs
-              convenience, which made Overview and Playground look like two
-              different components. Click the chevron to open the zones.
-              visible without an extra click — the real default is still
-              collapsed; this is a docs-only override. */}
+          {/* Every instance below is the component in its REAL default state
+              — no docs-only overrides. An earlier pass forced `defaultExpanded`
+              here as a convenience, which made Overview and the interactive tab
+              look like two different components. There is nothing to expand any
+              more: the zones and the chevron are gone. */}
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">UEP — Employee (reference variant)</p>
             <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep} recordFields={RH_RECORD_FIELDS.uep}
@@ -33525,15 +33537,16 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UEP — Employee, on leave (identity status tag)</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Reflow — the same record in a 560px container</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Same record as the reference variant above, with one addition: <code>statusTag</code> — a visible, temporary state on the contact itself, beside entityType in the identity row. Neutral, never <code>error</code> (red) — this isn't a problem to fix, it's a fact the viewer should know before acting on anything else here.
+              Figma&rsquo;s <code>Size = Responsive</code>. Below 720px of <strong>card</strong> width the identity row stacks: title on its own row, source and tags together on the next, right cluster untouched. Nothing is hidden and nothing is dropped &mdash; reflowing comes before yielding, and yielding (tags to <code>+N</code>, then source, then the title truncating) only starts once stacking has run out of room too. The trigger is the card&rsquo;s own measured width, not the viewport: this header sits in panels and split views, where a wide screen tells you nothing about how much room it actually has.
             </p>
-            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
-              source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
-              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-              showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
-            <NextBestActionCard item={rhNextBestActions("uep")[0]} className="mt-[12px]" />
+            <div className="max-w-[560px]">
+              <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
+                source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
+                assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+                showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
+            </div>
           </section>
 
           <section>
@@ -41946,7 +41959,7 @@ export default function App() {
         isDark={isDark} onToggle={() => setIsDark(d => !d)}
       />
       <main className="flex-1 overflow-y-auto">
-        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
+        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" || active === "record-header" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
           {active === "proto-gallery"   && <PrototypeGalleryPage onOpen={(id) => setActive(id)} />}
           {active === "ds-health"       && <DsHealthPage />}

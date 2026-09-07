@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useLayoutEffect } from "react"
 import { Sparkle, MoreHorizontal, Lock, Info, Database, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
@@ -40,6 +40,13 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  * The right side is fixed and never compressed. The left side yields, in this
  * order: tags collapse to `+N`, then source, and only then does the title
  * truncate. Nothing wraps and nothing abbreviates.
+ *
+ * REFLOW BEFORE YIELDING. Below 720px of measured card width the identity row
+ * stacks — title on its own row, source and tags together on the next, right
+ * cluster unchanged — which is Figma's `Size = Responsive`. The trigger is
+ * the CARD's own width, measured with a ResizeObserver, not the viewport: this
+ * header sits in panels and split views, so a wide screen tells you nothing
+ * about how much room it actually has.
  *
  * WHAT IT IS NOT
  *
@@ -101,7 +108,9 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *
  *   - `Loading` and `Minimum`, two of the states Figma says this component
  *     owns.
- *   - `Size = Responsive`: the reflow into stacked rows.
+ *   - The 720px reflow threshold is a calibrated estimate, not a number
+ *     Figma states. Figma models Responsive as a variant with no breakpoint
+ *     attached; 720 is where the built wide instance stops fitting.
  *   - The pixel truncation ceilings, and the nine-stop focus order with
  *     roving tabindex.
  */
@@ -487,6 +496,14 @@ export const RECORD_HEADER_FALLBACKS = {
   lockedActionTooltip: "This record is locked — read-only",
 }
 
+// ── Reflow threshold ──────────────────────────────────────────────────────
+// The width below which the identity row stacks (see the `stacked` measurement
+// in the component). Figma's identity row is 932px and it models Responsive as
+// a discrete variant with no px value, so this is a calibrated estimate — set
+// just under the point where the single row stops fitting, and documented as
+// an estimate rather than presented as a specification.
+const REFLOW_WIDTH = 720
+
 // ── Removed: the container-width collapse thresholds ──────────────────────
 // Three constants lived here (560px hide-tags, 480px shorten-assistant, and a
 // 12-character first-name guard) and their own comment admitted the problem:
@@ -543,42 +560,55 @@ function EntityHeader({
   // identity tags cap. Six is the maximum; the overflow goes to the Overview,
   // never to a `+N` chip.
   const visibleMetadata = secondaryMetadata.slice(0, SECONDARY_METADATA_MAX)
-  // RECORD is no longer one of the expandable zones (this correction pass —
-  // its provenance trigger moved up beside the name, always visible). Only
-  // Agentic System/Your Intervention still gate the disclosure chevron.
 
-  // Block 2 — clicking a compressed identity Tag expands the card and
-  // scrolls/highlights the zone it summarizes. Never opens a SlideOut
-  // directly — the deep detail lives one step further in, inside the
-  // expanded zone's own Button/Review CTA.
-  // focusZone() and the two zone refs lived here, plus the highlight timer.
-  // Only the clickable zone-summary tags called them, and those are gone —
-  // so the scroll-and-highlight behaviour goes with them. Nothing in this
-  // header scrolls to a zone any more.
   // Avatar fallback: only a genuinely blank name gets the DS's own "empty"
   // glyph (avatar.tsx's existing avatarStyle="empty") instead of initials —
   // a single-character name already renders fine as one initial.
   const hasName = Boolean(name && name.trim())
 
-  // The width-measuring machinery that used to live here is GONE. It hid the
-  // identity tags below 560px and shortened "Ask about {name}" below 480px —
-  // neither exists in the Figma, which specifies reflow (stack the rows) and
-  // then yielding (tags collapse to +N, then the title truncates) instead of
-  // hiding things wholesale. The Ask label is one word now, so there is
-  // nothing left to shorten either. Reflow lands with the responsive pass.
+  // ── Reflow — Figma's `Size = Responsive` variant ─────────────────────────
+  // REFLOW BEFORE YIELDING, AND YIELDING BEFORE DROPPING. At narrower widths
+  // this card does not compress a single row and it does not hide slots: it
+  // breaks into stacked rows and keeps everything. On a tablet there is
+  // vertical space to spare, so stacking costs nothing and loses nothing.
+  //
+  //   wide      visual · title · source · │ · tags   —   ⓘ · badge · secondary · Ask · ···
+  //   stacked   visual · title                       —   ⓘ · badge · secondary · Ask · ···
+  //             source · tags
+  //
+  // Source and tags share the stacked row. Figma's BEHAVIOUR block describes
+  // them on separate rows, but its built Responsive instance (node
+  // 20150:8324) puts them together — the instance is what renders, so the
+  // instance wins.
+  //
+  // Measured on the CARD, not the viewport: this header can sit in a narrow
+  // panel on an otherwise-desktop screen, so a media query would get it
+  // wrong. The threshold is a calibrated estimate, not a spec'd breakpoint —
+  // Figma models this as a discrete variant and gives no px value. It is set
+  // just below the width the single row needs (Figma's identity row is
+  // 932px), so the switch happens when the row genuinely runs out.
   const rootRef = useRef<HTMLDivElement>(null)
+  const [stacked, setStacked] = useState(false)
+  useLayoutEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const measure = () => setStacked(el.clientWidth < REFLOW_WIDTH)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   return (
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
       <div ref={rootRef} className="flex flex-col gap-[16px]">
 
-        {/* ── Identity row (always visible, fixed) — avatar + name +
-            entity-type icon+text + up to 2 governance-state Tags + action row.
-            Cross-axis alignment is conditional: items-start while collapsed
-            (the tags row underneath makes this a 2-line block), items-center
-            once expanded (name row is the only line left, so it should sit
-            centered against the avatar, not pinned to its top edge). */}
-        <div className="flex gap-[12px] flex-wrap items-center">
+        {/* ── Identity row — visual · (title · source · tags) · right cluster.
+            Cross-axis alignment follows the layout: centered while the left
+            side is a single line, top-aligned once it reflows into two, so
+            the avatar and the right cluster sit against the title rather than
+            floating in the middle of a two-line block. */}
+        <div className={cn("flex gap-[12px] flex-wrap", stacked ? "items-start" : "items-center")}>
           {/* Visual identity — exactly one, never both. Avatar for people and
               brands, highlight icon for everything else. Decorative to the
               keyboard (never a focus stop), named to the screen reader. */}
@@ -594,92 +624,118 @@ function EntityHeader({
           )}
 
           <div className="flex-1 flex flex-col gap-[6px]">
-            <div className="flex items-center gap-[12px] min-w-0">
-              {/* Title — PROTECTED, and it yields last.
-                  `flex: 0 1 auto` + `min-width: 0` + a 540px ceiling, exactly
-                  as the Figma truncation block specifies for code: the title
-                  takes whatever the row has left after visual, source,
-                  collapsed tags and actions, and truncates only there.
-                  It was `flex-1`, which made it GROW and shove the source out
-                  to the right edge — the bug visible in the prototype. The
-                  540px is Figma's own number: the identity row is 932px and
-                  visual + source + tags + gaps take roughly 395 of it.
-                  A title cut short with empty space beside it is a bug, not a
-                  rule. Never wraps, at any width. Never dropped. */}
-              <Tooltip content={name} side="cursor" triggerClassName="block min-w-0 basis-auto grow-0 shrink max-w-[540px]">
-                <span className="block truncate text-[18px] font-semibold leading-[1.3]" style={{ color: "var(--color-text-title)" }}>
-                  {name}
-                </span>
-              </Tooltip>
-              {/* Source — which system this record came from. One item,
-                  always visible, separated from the entity type by the same
-                  bullet the reference design uses. Tokens read from Figma:
-                  the bullet is Surface/Neutral/Emphasis, the icon is
-                  Icon/Neutral/Dark, the value is Text/Body at 12px Medium. */}
-              {source && (
-                <span className="inline-flex items-center gap-[8px] shrink-0 min-w-0">
-                  <span
-                    aria-hidden="true"
-                    className="text-[16px] leading-none"
-                    style={{ color: "var(--color-surface-neutral-emphasis)" }}
-                  >
-                    •
+            {/* Wide: one row — title · source · │ · tags.
+                Stacked: two — title, then source · tags together, matching
+                Figma's built Responsive instance. Same elements in the same
+                order either way; only the wrapping changes. Nothing is hidden
+                and nothing is dropped, which is the whole point of reflowing
+                before yielding. */}
+            <div className={cn("flex gap-[12px] min-w-0", stacked ? "flex-col items-start gap-[6px]" : "items-center")}>
+              {/* Identity group — title (+ `Locked`). Stays whole in both
+                  layouts; in the stacked layout it becomes row 1 on its own. */}
+              <div className={cn("flex items-center gap-[12px] min-w-0", stacked && "w-full")}>
+                {/* Title — PROTECTED, and it yields last.
+                    `flex: 0 1 auto` + `min-width: 0` + a 540px ceiling, exactly
+                    as the Figma truncation block specifies for code: the title
+                    takes whatever the row has left after visual, source,
+                    collapsed tags and actions, and truncates only there.
+                    It was `flex-1`, which made it GROW and shove the source out
+                    to the right edge — the bug visible in the prototype. The
+                    540px is Figma's own number: the identity row is 932px and
+                    visual + source + tags + gaps take roughly 395 of it.
+                    A title cut short with empty space beside it is a bug, not a
+                    rule. Never wraps, at any width. Never dropped. */}
+                <Tooltip content={name} side="cursor" triggerClassName="block min-w-0 basis-auto grow-0 shrink max-w-[540px]">
+                  <span className="block truncate text-[18px] font-semibold leading-[1.3]" style={{ color: "var(--color-text-title)" }}>
+                    {name}
                   </span>
-                  <Tooltip content={`Source · ${source}`} side="cursor">
-                    <span className="inline-flex items-center gap-[4px] min-w-0">
-                      <Database size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />
-                      <span className="block truncate text-[12px] font-medium" style={{ color: "var(--color-text-body)" }}>
-                        {source}
-                      </span>
+                </Tooltip>
+                {locked && (
+                  <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
+                    {RECORD_HEADER_FALLBACKS.lockedTagLabel}
+                  </Tag>
+                )}
+              </div>
+
+              {/* Provenance group — source · │ · tags. Same order in both
+                  layouts; in the stacked layout it becomes row 2, which is
+                  what Figma's built Responsive instance does (its BEHAVIOUR
+                  prose lists source and tags as two separate rows — the
+                  instance puts them on one, and the instance wins). */}
+              {(source || visibleTags.length > 0) && (
+                <div className={cn("flex items-center gap-[12px] min-w-0", stacked && "w-full")}>
+                  {/* Source — which system this record came from. One item,
+                      always visible, separated from the title by the same
+                      bullet the reference design uses. Tokens read from Figma:
+                      the bullet is Surface/Neutral/Emphasis, the icon is
+                      Icon/Neutral/Dark, the value is Text/Body at 12px Medium.
+                      The bullet is a SEPARATOR from the title, so it goes when
+                      the title moves to its own row — a row must not open on a
+                      dangling punctuation mark. */}
+                  {source && (
+                    <span className="inline-flex items-center gap-[8px] shrink-0 min-w-0">
+                      {!stacked && (
+                        <span
+                          aria-hidden="true"
+                          className="text-[16px] leading-none"
+                          style={{ color: "var(--color-surface-neutral-emphasis)" }}
+                        >
+                          •
+                        </span>
+                      )}
+                      <Tooltip content={`Source · ${source}`} side="cursor">
+                        <span className="inline-flex items-center gap-[4px] min-w-0">
+                          <Database size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />
+                          <span className="block truncate text-[12px] font-medium" style={{ color: "var(--color-text-body)" }}>
+                            {source}
+                          </span>
+                        </span>
+                      </Tooltip>
                     </span>
-                  </Tooltip>
-                </span>
-              )}
-              {/* Divider — separates identity from the tag group, per the
-                  Figma identity row (Identity · Divider · Tags, gap 8). */}
-              {visibleTags.length > 0 && (
-                <span
-                  aria-hidden="true"
-                  className="shrink-0 self-center"
-                  style={{ width: 1, height: 16, background: "var(--color-border-neutral-lighter)" }}
-                />
-              )}
-              {/* Tag group — signals first, then classification, capped at 6
-                  with a `+N` chip. Tags HUG and wrap: they never take a fixed
-                  width, so growth in the title or source makes them collapse
-                  instead of overlapping.
-                  Colour rule: only signals may be error/alert. Classification
-                  is always neutral — enforced above, in orderedTags. */}
-              {visibleTags.length > 0 && (
-                <div className="flex items-center gap-[6px] flex-wrap min-w-0">
-                  {visibleTags.map((t, i) => (
-                    <Tag
-                      key={`${t.role}-${t.label}-${i}`}
-                      variant={t.tone ?? "neutral"}
-                      size="sm"
-                      leadingIcon={t.icon ? <t.icon size={12} strokeWidth={1.75} /> : undefined}
-                      className="shrink-0"
-                    >
-                      {t.label}
-                    </Tag>
-                  ))}
-                  {/* +N — the hidden tags reach the keyboard and the screen
-                      reader through the Tooltip's own content, not only on
-                      hover. That is what makes it acceptable for tags to
-                      yield before the title: nothing is lost, only moved. */}
-                  {hiddenTags.length > 0 && (
-                    <Tooltip content={hiddenTags.map(t => t.label).join(" · ")} side="cursor">
-                      <Tag variant="neutral" size="sm" className="shrink-0">
-                        {`+${hiddenTags.length}`}
-                      </Tag>
-                    </Tooltip>
+                  )}
+                  {/* Divider — separates identity from the tag group, per the
+                      Figma identity row (Identity · Divider · Tags, gap 8).
+                      Only when there is something on both sides of it. */}
+                  {source && visibleTags.length > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="shrink-0 self-center"
+                      style={{ width: 1, height: 16, background: "var(--color-border-neutral-lighter)" }}
+                    />
+                  )}
+                  {/* Tag group — signals first, then classification, capped at 6
+                      with a `+N` chip. Tags HUG and wrap: they never take a fixed
+                      width, so growth in the title or source makes them collapse
+                      instead of overlapping.
+                      Colour rule: only signals may be error/alert. Classification
+                      is always neutral — enforced above, in orderedTags. */}
+                  {visibleTags.length > 0 && (
+                    <div className="flex items-center gap-[6px] flex-wrap min-w-0">
+                      {visibleTags.map((t, i) => (
+                        <Tag
+                          key={`${t.role}-${t.label}-${i}`}
+                          variant={t.tone ?? "neutral"}
+                          size="sm"
+                          leadingIcon={t.icon ? <t.icon size={12} strokeWidth={1.75} /> : undefined}
+                          className="shrink-0"
+                        >
+                          {t.label}
+                        </Tag>
+                      ))}
+                      {/* +N — the hidden tags reach the keyboard and the screen
+                          reader through the Tooltip's own content, not only on
+                          hover. That is what makes it acceptable for tags to
+                          yield before the title: nothing is lost, only moved. */}
+                      {hiddenTags.length > 0 && (
+                        <Tooltip content={hiddenTags.map(t => t.label).join(" · ")} side="cursor">
+                          <Tag variant="neutral" size="sm" className="shrink-0">
+                            {`+${hiddenTags.length}`}
+                          </Tag>
+                        </Tooltip>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-              {locked && (
-                <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
-                  {RECORD_HEADER_FALLBACKS.lockedTagLabel}
-                </Tag>
               )}
             </div>
 
