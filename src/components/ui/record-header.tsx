@@ -1,5 +1,5 @@
 import { useState, useRef, useLayoutEffect, type KeyboardEvent } from "react"
-import { Sparkle, MoreHorizontal, Lock, Info, Database, type LucideIcon } from "lucide-react"
+import { Sparkle, MoreHorizontal, Lock, EyeOff, Info, Database, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
@@ -42,6 +42,14 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  * order: tags collapse to `+N`, then source, and only then does the title
  * truncate. Nothing wraps and nothing abbreviates.
  *
+ * DROPPING IS THE LAST RESORT, and only these two slots ever get dropped:
+ * the description below 420px of card width, then the secondary metadata row
+ * below 320px. Visual identity, title and state badge are never dropped at
+ * any width. Note the ORDER IS REVERSED from Figma's own priority list on
+ * Michael's call — metadata carries the facts someone might act on, the
+ * description is the edge case for extra granularity — so the description
+ * goes first and the metadata row survives longer.
+ *
  * NINE TAB STOPS, SIX WHEN NOTHING IS TRUNCATED. Tags and secondary metadata
  * are each ONE stop, not one per item: Tab enters the group, arrows move
  * inside it, Tab leaves. Six tags plus six metadata items as individual stops
@@ -77,7 +85,7 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *
  * NO NEXT BEST ACTION. The recommendation card is a separate component in
  * its own Card Container — `NextBestActionCard` in
- * @/components/experimental/next-best-action-card — rendered as a SIBLING
+ * @/components/ui/next-best-action-card — rendered as a SIBLING
  * below this one. Two records, two containers. Passing recommendations into
  * the header is the single most common mistake with this card, so the prop
  * does not exist to be misused.
@@ -122,20 +130,26 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *   - `Minimum`, one of the states Figma names, needs no implementation. It
  *     is "only visual, title and state" — which is what you already get by
  *     passing only those props. Nothing to switch on.
- *   - `restricted` renders at 50% opacity and adds no visible element. That
- *     is exactly what Figma's own Restricted variant is.
+ *   - `restricted` renders at 50% opacity — Figma's own variant — PLUS a
+ *     `Restricted` Tag beside the title with the reason in a Tooltip. The
+ *     Tag is deliberately BEYOND Figma's instance (Michael, 2026-09-07):
+ *     the prose asks for "calm and explanatory" and the instance carries
+ *     nothing explanatory, and opacity alone cannot be told apart from
+ *     loading or failed.
+ *
+ * DELIBERATELY NOT IMPLEMENTED
+ *
+ *   - The ellipsis rule Figma cites from Carbon and PatternFly — an ellipsis
+ *     must hide at least three characters and leave at least four visible.
+ *     Michael's call (2026-09-07): dropped. CSS cannot count characters, so
+ *     it would mean measuring every string on every render, and nobody ships
+ *     it that way.
  *
  * NOT IMPLEMENTED YET — do not mistake these for oversights
  *
  *   - The 720px reflow threshold is a calibrated estimate, not a number
  *     Figma states. Figma models Responsive as a variant with no breakpoint
  *     attached; 720 is where the built wide instance stops fitting.
- *   - The industry ellipsis rule Figma cites from Carbon and PatternFly: an
- *     ellipsis must hide at least three characters and leave at least four
- *     visible. CSS truncation cannot express it.
- *   - Visibility priority: nothing is ever dropped. The card reflows and
- *     yields, but at an extreme width it keeps description and metadata
- *     instead of dropping them in Figma's documented order.
  *   - The explanatory half of `restricted`. Figma's prose asks for "calm and
  *     explanatory" and its instance carries no explanatory element, so the
  *     explanation is screen-reader-only. Making it visible is a design
@@ -546,15 +560,18 @@ export const RECORD_HEADER_FALLBACKS = {
   lockedTagLabel: "Locked",
   /** Tooltip on the CTA/overflow trigger when `locked` is true. */
   lockedActionTooltip: "This record is locked — read-only",
+  /** The Tag shown beside the title when `state === "restricted"`. */
+  restrictedTagLabel: "Restricted",
   /**
-   * Announced (screen-reader only) when `state === "restricted"`. Figma's
-   * prose asks this state to be "calm and explanatory", but its built
-   * variant is a 50%-opacity card with NO explanatory element — so the
-   * visual half is faithful to the instance and the explanation reaches
-   * assistive technology only. Adding a visible `Restricted` tag or a line
-   * under the title is a design decision, not an implementation one.
+   * Tooltip on that Tag, and the state's accessible explanation. Figma's
+   * prose asks `Restricted` to be "calm and explanatory" while its built
+   * variant is a 50%-opacity card with NO explanatory element at all. The
+   * opacity alone leaves a reader unable to tell a restricted card from a
+   * loading one or a failed one, so Michael's call (2026-09-07) closes the
+   * gap the way this component already closes it for `locked`: a Tag beside
+   * the title, with the reason in a Tooltip on hover and on focus.
    */
-  restrictedNote: "You do not have access to this entity's values. The entity exists and is governed.",
+  restrictedTooltip: "You do not have access to this entity's values. The entity exists and is governed — this is not an error.",
 }
 
 // ── Reflow threshold ──────────────────────────────────────────────────────
@@ -564,6 +581,31 @@ export const RECORD_HEADER_FALLBACKS = {
 // just under the point where the single row stops fitting, and documented as
 // an estimate rather than presented as a specification.
 const REFLOW_WIDTH = 720
+
+// ── Drop thresholds — the third mechanism ─────────────────────────────────
+// Figma's BEHAVIOUR frame lists three mechanisms IN ORDER and warns against
+// confusing them: reflow (stack), then yielding (truncate), then dropping.
+// Dropping is the last resort, once stacking and yielding have both run out.
+//
+// ORDER REVERSED FROM FIGMA, ON MICHAEL'S CALL (2026-09-07). Figma's
+// visibility priority puts description at 6 and secondary metadata at 7,
+// which drops METADATA first. Michael's ruling is the opposite: metadata is
+// what you reach for first and it carries the facts someone might act on;
+// description is the very edge case for extra granularity when metadata is
+// not enough. So the description goes first and the metadata row survives
+// longer. The remaining order is Figma's, untouched: source and tags yield
+// long before either of these, and visual identity, title and state badge
+// are NEVER dropped at any width.
+//
+// Both numbers are calibrated estimates, same as REFLOW_WIDTH — Figma states
+// the order but no breakpoint for it. 420 is where a one-line description
+// stops being able to hold a sentence worth reading (roughly 45 characters,
+// the bottom of the comfortable reading range). 320 is a SlideOut at its
+// narrowest snap minus padding: below that the metadata row cannot fit two
+// items without wrapping into a block, which is the point Figma says it
+// stops being a row.
+const DROP_DESCRIPTION_WIDTH = 420
+const DROP_METADATA_WIDTH = 320
 
 // ── Removed: the container-width collapse thresholds ──────────────────────
 // Three constants lived here (560px hide-tags, 480px shorten-assistant, and a
@@ -775,7 +817,12 @@ function EntityHeader({
   // Stops 3 and 9 — the two roving groups. Declared before the early
   // `loading` return would be wrong (hooks must not be conditional), so
   // they live here, above it.
-  const tagGroup  = useRovingIndex(visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) + (locked ? 1 : 0))
+  // The tag group is the tags plus, in order, the `+N` chip, `Locked` and
+  // `Restricted` — the last two are STATE tags rather than caller tags, but
+  // they sit in the same visual slot, so they are items in the same group
+  // rather than extra tab stops.
+  const stateTagCount = (locked ? 1 : 0) + (state === "restricted" ? 1 : 0)
+  const tagGroup  = useRovingIndex(visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) + stateTagCount)
   const metaGroup = useRovingIndex(visibleMetadata.length)
   // Stops 1 and 8 — only when the value actually overflows.
   const titleTrunc = useIsTruncated<HTMLSpanElement>()
@@ -804,10 +851,18 @@ function EntityHeader({
   // 932px), so the switch happens when the row genuinely runs out.
   const rootRef = useRef<HTMLDivElement>(null)
   const [stacked, setStacked] = useState(false)
+  const [dropped, setDropped] = useState({ description: false, metadata: false })
   useLayoutEffect(() => {
     const el = rootRef.current
     if (!el) return
-    const measure = () => setStacked(el.clientWidth < REFLOW_WIDTH)
+    const measure = () => {
+      const w = el.clientWidth
+      setStacked(w < REFLOW_WIDTH)
+      setDropped({
+        description: w < DROP_DESCRIPTION_WIDTH,
+        metadata: w < DROP_METADATA_WIDTH,
+      })
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
@@ -838,14 +893,14 @@ function EntityHeader({
 
   return (
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
-      {/* Restricted — Figma's own Restricted variant is the default card at
-          50% opacity and nothing else: no badge, no banner, no colour change.
-          It is a governed STATE, not a failure, which is exactly why it must
-          not read as an error. The explanation Figma's prose asks for reaches
-          assistive technology through the note below; making it visible is a
-          design decision (see RECORD_HEADER_FALLBACKS.restrictedNote). */}
+      {/* Restricted — the card at 50% opacity, which is what Figma's own
+          Restricted variant is, PLUS a `Restricted` Tag beside the title
+          carrying the reason in a Tooltip. The opacity is Figma's; the Tag is
+          Michael's call (2026-09-07), because Figma's prose asks this state
+          to be "calm and explanatory" and its instance carries nothing
+          explanatory at all — opacity alone cannot be told apart from
+          loading or failed. Neutral, never error: it is a governed state. */}
       <div ref={rootRef} className={cn("flex flex-col gap-[16px]", state === "restricted" && "opacity-50")}>
-        {state === "restricted" && <span className="sr-only">{RECORD_HEADER_FALLBACKS.restrictedNote}</span>}
 
         {/* ── Identity row — visual · (title · source · tags) · right cluster.
             Cross-axis alignment follows the layout: centered while the left
@@ -971,7 +1026,7 @@ function EntityHeader({
                   {/* STOP 3 — ONE stop for the whole tag group. Tab enters it,
                       arrows move inside it, Tab leaves. Six tags as six stops
                       would put six presses between the reader and the page. */}
-                  {visibleTags.length > 0 && (
+                  {(visibleTags.length > 0 || stateTagCount > 0) && (
                     <div
                       ref={tagGroup.ref}
                       role="group"
@@ -1016,15 +1071,37 @@ function EntityHeader({
                         </Tooltip>
                       )}
                       {locked && (
-                        <span
-                          data-roving
-                          tabIndex={tagGroup.index === visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) ? 0 : -1}
-                          className={cn("inline-flex shrink-0", FOCUS_RING)}
-                        >
-                          <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
-                            {RECORD_HEADER_FALLBACKS.lockedTagLabel}
-                          </Tag>
-                        </span>
+                        <Tooltip content={RECORD_HEADER_FALLBACKS.lockedActionTooltip} side="cursor">
+                          <span
+                            data-roving
+                            tabIndex={tagGroup.index === visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) ? 0 : -1}
+                            className={cn("inline-flex shrink-0", FOCUS_RING)}
+                          >
+                            <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
+                              {RECORD_HEADER_FALLBACKS.lockedTagLabel}
+                            </Tag>
+                          </span>
+                        </Tooltip>
+                      )}
+                      {/* `Restricted` — the viewer lacks entitlement to the
+                          VALUES. Same treatment as `Locked` because it is the
+                          same kind of fact about the whole card, and for the
+                          same reason: a muted card with no label leaves the
+                          reader unable to tell restricted from loading or
+                          failed. Neutral, never error — the entity exists and
+                          is governed, so this is a state and not a failure. */}
+                      {state === "restricted" && (
+                        <Tooltip content={RECORD_HEADER_FALLBACKS.restrictedTooltip} side="cursor">
+                          <span
+                            data-roving
+                            tabIndex={tagGroup.index === visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) + (locked ? 1 : 0) ? 0 : -1}
+                            className={cn("inline-flex shrink-0", FOCUS_RING)}
+                          >
+                            <Tag variant="secondary" size="sm" leadingIcon={<EyeOff size={12} strokeWidth={1.75} />} className="shrink-0">
+                              {RECORD_HEADER_FALLBACKS.restrictedTagLabel}
+                            </Tag>
+                          </span>
+                        </Tooltip>
                       )}
                     </div>
                   )}
@@ -1152,7 +1229,7 @@ function EntityHeader({
             carrying the full sentence. Off unless the caller passes one:
             there is no default copy and no placeholder. Text/Body at 14px
             Medium, read from Figma. */}
-        {description && (
+        {description && !dropped.description && (
           <Tooltip content={description} side="cursor" triggerClassName="block min-w-0">
             {/* STOP 8 — and only when truncated, same reasoning as the title.
                 It is elastic, not fixed: one line at container width, with no
@@ -1177,7 +1254,7 @@ function EntityHeader({
         {/* STOP 9 — ONE stop for the whole row, arrows inside. Six metadata
             items as six stops is the other half of the twenty-five-press
             problem Figma's focus frame is written to avoid. */}
-        {visibleMetadata.length > 0 && (
+        {visibleMetadata.length > 0 && !dropped.metadata && (
           <div
             ref={metaGroup.ref}
             role="group"

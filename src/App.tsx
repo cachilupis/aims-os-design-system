@@ -52,7 +52,7 @@ import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
 import { EntityHeader, type EntityVisual, type EntityHeaderTag, type EntityStateBadge, type RecordField, type FieldProvenance, type AssignedAgent, type SecondaryMetadataItem, type RecordAction } from "@/components/ui/record-header"
-import { NextBestActionCard, type NextBestAction } from "@/components/experimental/next-best-action-card"
+import { NextBestActionCard, type NextBestAction } from "@/components/ui/next-best-action-card"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
@@ -112,7 +112,7 @@ import VoiceChannelScreen               from "./screens/voice-channel"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "ds-health" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SectionId = "home" | "ds-health" | "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
 type SpecModal = "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -227,7 +227,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
   { id: "chip",            label: "Chip",              group: "Components",  description: "Pill-shaped selection control · 11 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · used in filter rows and Slide Out headers" },
   { id: "empty-state",     label: "Empty State",       group: "Components",  description: "Zero-content placeholder. Icon Highlight + title + description + 1–2 CTA buttons. Compact variant for Tables and Cards." },
-  { id: "record-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see experimental/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
+  { id: "record-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
   { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
   { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
   { id: "header",          label: "Header",            group: "Components",  description: "Page header · title + description + status tag + CTAs + optional back button · 3 sizes: Size L (24px), Size M (18px), Compress (scroll state)" },
@@ -237,6 +237,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "input",           label: "Input",             group: "Components",  description: "Single-line text field · 2 sizes · 5 validation states · icon slots" },
   { id: "menu-item",       label: "Menu / Dropdown",   group: "Components",  description: "Dropdown list panel · 2 sizes · 4 states · leading icon, subtext, dividers, section headers" },
   { id: "modal-dialog",    label: "Modal Dialog",      group: "Components",  description: "2 variants: Confirmation (centered, max 900px) and Content (left-aligned, max 900px). Icon, title, description, slot, informative card, CTA pair." },
+  { id: "next-best-action", label: "Next Best Action Card", group: "Components",  description: "The proactive AI recommendation. Its own Card Container directly BELOW the Entity Header, never inside it — the header identifies the entity, this proposes what to do about it. ONE AT A TIME, never stacked, and no recommendation means no card at all rather than an empty state. The title is the action, not the engine's name; it always declares when and why. Accept assigns the work to the agent and still opens the detail first — there is no inline accept." },
   { id: "notification-center", label: "Notification Center", group: "Components", description: "420px floating panel · header with count + Mark all read + overflow · filter chips · date-grouped Notification Item list · footer View all · 5 states: Default, Empty, Loading, Error, Offline" },
   { id: "notification-item",   label: "Notification Item",   group: "Components", description: "Single-row notification · lead icon + title/timestamp + description + tags/actions · unread indicator dot · 5 states × Read/Unread: Default, Hover, Pressed, Focus, Disabled" },
   { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
@@ -2238,7 +2239,7 @@ const ENTITY_HEADER_SPEC = {
   name: "Entity Header",
   figmaNodeId: "19815:101548",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=19815-101548",
-  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and NO DISCLOSURE — this is a fixed arrangement of slots, not a collapsible card. The chevron and the two expandable zones an earlier revision had are gone; that content belongs to Overview widgets. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip — no descriptive sentences, no scores with drivers, no expandable analysis. The Next Best Action card is a SEPARATE component in its own Card Container (see experimental/next-best-action-card), never a second slot in this one. Import name is EntityHeader; the file keeps its old path, src/components/ui/record-header.tsx, on purpose — the change spec forbids renaming it. See the Reference tab's Governance canon section for the 4 laws this component enforces.",
+  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and NO DISCLOSURE — this is a fixed arrangement of slots, not a collapsible card. The chevron and the two expandable zones an earlier revision had are gone; that content belongs to Overview widgets. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip — no descriptive sentences, no scores with drivers, no expandable analysis. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a second slot in this one. Import name is EntityHeader; the file keeps its old path, src/components/ui/record-header.tsx, on purpose — the change spec forbids renaming it. See the Reference tab's Governance canon section for the 4 laws this component enforces.",
   properties: [
     { name: "name",           type: "string",   values: ["The entity's display name"], default: "required", note: "A person's name, an account name, or a code. There is NO variant prop and no closed set of entity types — what kind of thing this is arrives as a classification tag instead (see tags)." },
     { name: "visual",         type: "object",   values: ["{ kind: \"avatar\" }", "{ kind: \"icon\", icon: LucideIcon, variant?: HighlightIconVariant }"], default: "required", note: "Avatar for companies, people and groups. Highlight icon for everything else — objects, assets, processes, transactions, documents. EXACTLY ONE RENDERS: never both, never neither, which is why this is required and has no default. Initials are NEVER derived from a code, so a code-titled record (RO-48291) can only be an icon. A site inherits its parent company's brand rather than getting its own mark. The icon colour is assigned per entity TYPE and stays the same everywhere in the product. WATCH OUT: this is the one required object with no fallback, and the card throws if it arrives undefined — which type-checking does not catch here, because this repo runs without strictNullChecks, so a lookup like MY_VISUALS[key] type-checks even for a key that is missing. Build the map exhaustively." },
@@ -2254,13 +2255,13 @@ const ENTITY_HEADER_SPEC = {
     { name: "onInformationOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Information side panel: where the fields IN THIS HEADER came from — the title, the source, the state. Not the Overview, not the Knowledge tab. It explains what is on screen right now, nothing more. ONE SIDE PANEL AT A TIME: this panel and the Personal Assistant both open on the side, opening one closes the other, and the panel requested last wins — the component delegates both, so enforcing that is the host's job." },
     { name: "recordFields",   type: "Array",    values: ["RecordField[] — { label, icon, provenance, state, value, maskedValue?, hasDestination? }"], default: "undefined", note: "PASSED THROUGH, NOT RENDERED HERE — the Information panel that displays these is built by the host, so this component accepts the array and never reads it. A flat array the host builds directly; there is no per-entity-type field structure inside the component. `provenance` is mandatory on every field (Law 1: no code path renders a value without its origin). `state: \"hydrated\" | \"masked\"` is the SAME field in 2 entitlement states, not 2 field types — whoever renders them renders whichever state they are given and never resolves permissions (Law 4). `hasDestination: false` for a plain descriptive fact (a pure date, a pure figure) — static text, no chevron." },
     { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "\"You cannot act on or edit this entity.\" Shows a \"Locked\" Tag beside the title and disables secondaryAction plus the overflow's write actions, each with a Tooltip explaining why. `Ask` and the Information panel stay fully interactive — locked does not mean you cannot consult it. NOT the same thing as Figma's `Restricted`, which is \"you cannot see this value\" and lives on the field as RecordField.state === \"masked\". Both coexist." },
-    { name: "state",          type: "Variant",  values: ["default", "loading", "restricted"], default: '"default"', note: "Figma's `Property 1` axis. INDEPENDENT of the reflow — an entity can be loading on a tablet — and an enum rather than three booleans because the options are mutually exclusive. `loading` renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does), never an empty state: saying \"nothing here\" while data is in flight states something untrue. `restricted` renders the card at 50% opacity and nothing else, which is precisely what Figma's Restricted variant is — the viewer lacks entitlement to the values, and because the entity exists and is governed this must never read as an error. Figma's fourth named state, `Minimum`, needs no value here: \"only visual, title and state\" is what you get by passing only those props." },
+    { name: "state",          type: "Variant",  values: ["default", "loading", "restricted"], default: '"default"', note: "Figma's `Property 1` axis. INDEPENDENT of the reflow — an entity can be loading on a tablet — and an enum rather than three booleans because the options are mutually exclusive. `loading` renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does), never an empty state: saying \"nothing here\" while data is in flight states something untrue. `restricted` renders the card at 50% opacity — Figma's own variant — plus a neutral `Restricted` Tag beside the title with the reason in a Tooltip. The Tag goes BEYOND Figma's instance on purpose (Michael, 2026-09-07): the prose asks this state to be \"calm and explanatory\" and the instance carries nothing explanatory, and opacity on its own cannot be told apart from loading or failed. Never error — the viewer lacks entitlement to the values, the entity exists and is governed, so this is a state and not a failure. Figma's fourth named state, `Minimum`, needs no value here: \"only visual, title and state\" is what you get by passing only those props." },
     { name: "className",      type: "string",   values: ["any string"], default: "undefined", note: "Merged onto the CardContainer." },
     { name: "entityType",     type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED. In Figma the entity type is a classification TAG, not an icon-plus-label beside the name, and it only appears when the visual is an avatar. Figma's own icon examples (RO-48291, Customer Master) carry signals and no classification at all." },
     { name: "variant",        type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED. There were three (employee/customer/client) and Figma has none: one skeleton serves every entity type, including ones the DS has never heard of. An entity shape this file does not model is the normal case, not a gap — never flag a missing variant as a DS-GAP." },
     { name: "statusTag",      type: "REMOVED",  values: ["— replaced by stateBadge —"], default: "—", note: "REMOVED, replaced by stateBadge. It sat on the LEFT and its own doc said 'never error' — both contradicted Figma, where the state badge is a right-hand slot with the full semantic range, and where Blocked and Suspended are precisely the cases that read error." },
     { name: "actions",        type: "REMOVED",  values: ["— split into secondaryAction + menuActions —"], default: "—", note: "REMOVED. One array whose first item silently became a CTA and whose rest silently became an overflow is not an API — the two slots have different rules, so they are two props now." },
-    { name: "nextBestActions", type: "REMOVED", values: ["— no longer a prop —"], default: "—", note: "REMOVED from this component. Section 11 of the Entity Header change spec: \"The card that appears under the header is a separate component in its own Card Container, not a second slot in the same one. Two records, two containers.\" Figma states the same rule from this side: NO INSIGHT SECTION. Render NextBestActionCard from @/components/experimental/next-best-action-card as a SIBLING below this card instead." },
+    { name: "nextBestActions", type: "REMOVED", values: ["— no longer a prop —"], default: "—", note: "REMOVED from this component. Section 11 of the Entity Header change spec: \"The card that appears under the header is a separate component in its own Card Container, not a second slot in the same one. Two records, two containers.\" Figma states the same rule from this side: NO INSIGHT SECTION. Render NextBestActionCard from @/components/ui/next-best-action-card as a SIBLING below this card instead." },
     { name: "agenticSystem",  type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED with the disclosure. The AGENTIC SYSTEM zone does not exist in the Figma Entity Header; running workflows belong to an Overview widget." },
     { name: "intervention",   type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED with the disclosure. The YOUR INTERVENTION zone does not exist in the Figma Entity Header; a pending HTL decision belongs to the HTL surface, reached from an Overview widget." },
     { name: "defaultExpanded", type: "REMOVED", values: ["— no longer a prop —"], default: "—", note: "REMOVED. There is nothing to expand: the chevron and both zones are gone, so the card has one fixed height per content." },
@@ -2270,6 +2271,7 @@ const ENTITY_HEADER_SPEC = {
     { size: "Avatar / highlight icon", dimensions: "32×32px (AvatarCircle / HighlightIcon lg)", padding: "—", gap: "—" },
     { size: "Identity row — wide",    dimensions: "≥ 720px of card width", padding: "—", gap: "12px between title, source and tags" },
     { size: "Identity row — stacked", dimensions: "< 720px of card width", padding: "—", gap: "6px between the two rows — Figma's Size = Responsive. Title on row 1, source + tags on row 2, right cluster unchanged. Measured on the CARD with a ResizeObserver, not the viewport, because this header sits in panels and split views. 720 is a calibrated estimate — Figma models Responsive as a discrete variant with no px value." },
+    { size: "Drop thresholds", dimensions: "description below 420px of card width · secondary metadata row below 320px", padding: "—", gap: "The last resort, after reflow and yielding. Order reversed from Figma on Michael's call — metadata survives longer than the description. Visual identity, title and state badge are never dropped at any width. Both numbers are calibrated estimates; Figma states the order but no breakpoint" },
     { size: "Truncation ceilings", dimensions: "title 540px (protected) · source 160px · secondary metadata 24ch, short form 8 · description container width, one line", padding: "—", gap: "Figma's own numbers. Tag chip 160px and state badge 140px belong to the Tag component, and the action label's 180px to Button — setting them here would fix only this header" },
     { size: "Loading skeleton — wide",    dimensions: "circle 32 · title 180×24 · source+tags 120×20 · actions 80×20 and 120×28 · description 420×16 · metadata 90/70/110/60/70 ×16", padding: "—", gap: "Read from Figma node 20134:314522" },
     { size: "Loading skeleton — stacked", dimensions: "circle 32 · title 150×24 · actions 96/120/28 ×28 · source 110×16 · tags 92/72/36 ×20 · description 380×16 · metadata 86/62/100/58 ×16", padding: "—", gap: "Read from Figma node 20152:6818, with one deviation: source and tags share a row here, matching the stacked layout the skeleton is standing in for rather than Figma's own five-row skeleton" },
@@ -2308,7 +2310,7 @@ const NEXT_BEST_ACTION_SPEC = {
   name: "Next Best Action Card",
   figmaNodeId: "20206:316306",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=20206-316306",
-  description: "The proactive recommendation card. It sits in its own Card Container DIRECTLY BELOW the Entity Header — never inside it: the header identifies the entity, this proposes what to do about it. Two records, two containers. Sixteen products were reviewed for the Figma study and none puts the recommendation in the record header. ONE AT A TIME, never stacked: the engine has already prioritised, unified and discarded, so showing five is not trusting the engine — and stacked cards push the real content below the fold. NO RECOMMENDATION, NO CARD: the container does not render, and this is not an empty state — there is nothing to say when there is nothing to do. The title is the ACTION, never the engine's name. It always declares when (a timestamp) and why (the rationale); without a rationale it is an order, not a proposal. It carries no accuracy disclaimer, because a recommendation reaching this surface has passed the Council — it declares its source instead of hedging. IMPLEMENTATION: NextBestActionCard in src/components/experimental/next-best-action-card.tsx. It is experimental because Figma parks it as its own component and the change spec never assigned it a PR — only Michael promotes it into src/components/ui/.",
+  description: "The proactive recommendation card. It sits in its own Card Container DIRECTLY BELOW the Entity Header — never inside it: the header identifies the entity, this proposes what to do about it. Two records, two containers. Sixteen products were reviewed for the Figma study and none puts the recommendation in the record header. ONE AT A TIME, never stacked: the engine has already prioritised, unified and discarded, so showing five is not trusting the engine — and stacked cards push the real content below the fold. NO RECOMMENDATION, NO CARD: the container does not render, and this is not an empty state — there is nothing to say when there is nothing to do. The title is the ACTION, never the engine's name. It always declares when (a timestamp) and why (the rationale); without a rationale it is an order, not a proposal. It carries no accuracy disclaimer, because a recommendation reaching this surface has passed the Council — it declares its source instead of hedging. IMPLEMENTATION: NextBestActionCard in src/components/ui/next-best-action-card.tsx. Promoted out of experimental/ by Michael (2026-09-07) because it will grow more variants and appear differently in different parts of the platform.",
   properties: [
     { name: "item",     type: "object",  values: ["NextBestAction — { id, title, timeAgo?, description, onViewDetails, onAccept?, onDismiss? }"], default: "undefined", note: "SINGULAR ON PURPOSE. Figma rule 2: one at a time, it never stacks. An array plus a `.map` is how this card rendered two recommendations in one container for three separate passes — making the prop singular is what makes the rule structural instead of a convention someone has to remember. Undefined or omitted renders NOTHING AT ALL: not an empty card, not a placeholder, not a \"nothing to recommend\" message. If more recommendations exist, a counter leads to the list — never a second card." },
     { name: "item.title",       type: "string",  values: ["\"Assign a proactive check-in call\""], default: "required", note: "WHAT TO DO, not what produced it. \"Next Best Action\" is the engine's name and it already appears as the card's own label — repeating it in the title wastes the one line that carries the instruction. Limits: min 20 · target 40 · max 60 characters. The minimum is real: under 20 it stops being an instruction and becomes a label — \"Call client\" does not say which call or why, \"Assign a renewal check-in call\" does." },
@@ -31853,6 +31855,241 @@ const NBA_RESULT_COPY: Record<"executed" | "in-review", { title: string; state: 
 // them as such in the UI.
 const NbaSectionDivider = () => <div className="h-px" style={{ background: "var(--table-border)" }} />
 
+// ── Next Best Action Card ───────────────────────────────────────────────────
+// Promoted out of experimental/ on 2026-09-07. Everything on this page comes
+// from the Figma section (20206:316306 for the component, 20257:7761 and
+// 20258:7787 for the rules, 20009:12610 for the detail panel), read through
+// the plugin API rather than from memory.
+const NBA_DEMO: NextBestAction = {
+  id: "nba-demo",
+  title: "Assign a proactive check-in call",
+  timeAgo: "2h ago",
+  description: "Usage dropped 12% this month with no support tickets. An early check-in protects the renewal, which is 52 days out with no proposal sent.",
+  onViewDetails: () => {},
+}
+
+function NextBestActionCardPage({ openSpec, onNavigate }: { openSpec: (s: SpecModal) => void; onNavigate: (id: string) => void }) {
+  const [tab, setTab] = usePageTab<"overview" | "reference">("overview", ["overview", "reference"])
+  const [dismissed, setDismissed] = useState(false)
+
+  return (
+    <div>
+      <div className="flex items-start justify-between gap-[16px] mb-[24px]">
+        <div>
+          <h1 className="text-[28px] font-semibold text-[var(--foreground)] mb-[6px]">Next Best Action Card</h1>
+          <p className="text-[13px] leading-[1.6] text-[var(--field-supporting)] max-w-[760px]">
+            The proactive recommendation. It sits in its own Card Container <strong>directly below the Entity Header, never inside it</strong> — the header identifies the entity, this proposes what to do about it. Two records, two containers. <strong>One at a time</strong>, and no recommendation means no card at all rather than an empty state.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("next-best-action")} />
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "reference"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-[14px] py-[9px] text-[13px] font-medium capitalize transition-colors border-b-2 -mb-[1px] ${
+              tab === t
+                ? "border-[var(--primary)] text-[var(--foreground)]"
+                : "border-transparent text-[var(--field-supporting)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">View details — the default variant</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Use this unless there is a reason not to. One path: open the record. <strong>Every example in the Figma file uses this variant</strong>, because the card cannot guarantee it showed everything, so the safe route is always the one that opens the record.
+            </p>
+            <NextBestActionCard item={NBA_DEMO} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Accept / View details — reserved</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              For actions that are neither destructive nor complex, where offering Accept saves a step without risking a careless commitment. <strong>Which actions qualify is not decided yet in Figma</strong> — until it is, use the default. The variant exists so the pattern is ready when a real case appears, not so it can be picked by preference. Even here, <strong>Accept assigns the work to the agent and opens the detail first</strong>: the agent executes, the human governs, and there is no inline accept anywhere in this component.
+            </p>
+            <NextBestActionCard item={{ ...NBA_DEMO, onAccept: () => {} }} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Dismiss — resolves in place</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Dismissing commits the user to nothing, so it needs no detail. The <code>×</code> hides the card <strong>for this session only</strong> — it returns on reload, nothing is stored, and nothing is fed back to the engine. Click it below; the card disappears entirely rather than collapsing to a message, which is the same thing that happens when the engine has nothing to propose.
+            </p>
+            {dismissed ? (
+              <div className="flex items-center gap-[12px]">
+                <p className="text-[12px] italic" style={{ color: "var(--field-supporting)" }}>Nothing renders — this is the correct &ldquo;all good&rdquo; state, not an empty state.</p>
+                <Button variant="tertiary" size="sm" onClick={() => setDismissed(false)}>Bring it back</Button>
+              </div>
+            ) : (
+              <NextBestActionCard item={{ ...NBA_DEMO, onDismiss: () => setDismissed(true) }} />
+            )}
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Where it belongs</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Always as the next sibling below <code>EntityHeader</code>, in its own container. See it in place on the Entity Header page, and in a real screen through that page&rsquo;s <em>View screen example</em>.
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => onNavigate("record-header")}>Open the Entity Header page</Button>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
+            <div className="grid grid-cols-2 gap-[16px]">
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--badge-success)" }}>Use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["The engine has exactly one thing to propose about the entity you are looking at", "You can state both a fact and a consequence in the rationale — without the consequence the user cannot decide", "The action names something the AGENT will do once assigned, never something the viewer does right now"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="shrink-0" style={{ color: "var(--badge-success)" }}>✓</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--badge-error)" }}>Don't use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["There are several recommendations. It never stacks and it has no carousel — a counter leads to the list instead", "There is nothing to recommend. Omit `item` and nothing renders; never synthesize a filler recommendation to keep the layout even", "You want it inside the Entity Header. It is a separate component in a separate container, and passing it into the header is the single most common mistake with that card", "You want colour to carry the urgency. Timing and urgency live in the rationale; the header's state badge and signal tags are the urgency channel"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="shrink-0" style={{ color: "var(--badge-error)" }}>✕</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[32px]">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Figma&rsquo;s ten rules</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[40px_230px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Rule", "Why"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "Under the header, never inside it", "Full width, directly below. The header identifies the entity; the card proposes. Sixteen products were reviewed and none puts the recommendation in the record header."],
+                ["2", "One at a time", "The engine already prioritised, unified and discarded. Showing five is not trusting the engine — and stacked cards push the real content below the fold. If more exist, a counter leads to the list. It never stacks."],
+                ["3", "No recommendation, no card", "The container does not render. This is not an empty state: there is nothing to say when there is nothing to do."],
+                ["4", "The title is the action, not the engine name", "The card says what to do. \"Next Best Action\" names the engine — and it is already the card's own label."],
+                ["5", "It always declares when and why", "Timestamp plus rationale. Without a rationale it is an order, not a proposal."],
+                ["6", "Source replaces the accuracy disclaimer", "Other products hedge generated content with \"may be inaccurate\". A recommendation here passed the Council before reaching the surface, so it explains itself instead of apologising."],
+                ["7", "View details is the default", "Every example uses it. The card cannot guarantee it showed everything, so the safe path is always the one that opens the record."],
+                ["8", "Accepting always opens the detail", "Even in the variant that offers Accept, accepting does not resolve in place — it routes to the detail so the user sees the record before committing. There is no inline accept anywhere in this component."],
+                ["9", "Dismiss resolves in place", "Dismissing commits the user to nothing, so it needs no detail. The × hides the card for this session only and it returns on reload; nothing is stored and nothing is fed back to the engine."],
+                ["10", "Accept assigns to the agent, it does not execute", "The agent executes, the human governs. Never \"Call now\"."],
+              ].map(([n, rule, why], i) => (
+                <div key={n} className="grid grid-cols-[40px_230px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{rule}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{why}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[720px]">
+              <strong>And one NEVER.</strong> Figma: the card must not share the glyph or colour used by <code>Ask</code> — that button produces summaries, this one asks for a decision. <strong>The repo deliberately does the opposite:</strong> Michael confirmed (2026-09-07) that both are AI surfaces and the shared Sparkle is what says so — one converses, the other transacts — and Figma&rsquo;s own component instances share it too. Do not &ldquo;fix&rdquo; this.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Character limits, and the reasoning behind each bound</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[140px_90px_90px_90px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Field", "Min", "Target", "Max", "Why"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Title", "20", "40", "60", "Under 20 it stops being an instruction and becomes a label. \"Call client\" does not say which call or why; \"Assign a renewal check-in call\" does."],
+                ["Rationale", "60", "90", "150", "The minimum is a FACT plus a CONSEQUENCE — with only the fact the user cannot decide, and 60 is roughly where both fit. The target is 90 rather than the ~180 a full-width line holds because comfortable reading sits at 45–75 per line and comprehension drops past 90: a line that fits is not the same as a line that gets read."],
+                ["Action label", "—", "—", "25", "It competes for the same row as the default path."],
+              ].map(([f, mn, tg, mx, why], i) => (
+                <div key={f} className="grid grid-cols-[140px_90px_90px_90px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{f}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{mn}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{tg}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{mx}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{why}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
+              <strong>Documented, not enforced.</strong> The component does not reject a short string, because Figma leaves the important half open: what the card does when the engine returns less than the minimum is an unresolved question with Engineering. It cannot invent the consequence, and losing the action to a short string is worse than showing it incomplete.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">The detail panel — four families, by what the user has to do</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Everything above the divider is the same in every family — why, when, who executes, status. Only the block below it changes, and it is built entirely from Node Config components that already exist in the Workflow Builder.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[180px_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Family", "What the user has to do", "Inputs it composes"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Nothing to edit", "Confirm a defined change. Before and after, read-only. Approval, permission change, attestation.", "None. A Textarea appears only when rejecting, to record the reason"],
+                ["Content to review", "Read a draft the agent wrote. Prefilled and editable. Email, message.", "Text Input for recipient and subject, Textarea for the body"],
+                ["Parameters to set", "Fill in fields. Empty or suggested. Call, meeting, task.", "Text Input, Date Picker, Select, Textarea"],
+                ["A sequence to inspect", "Read a multi-step plan. Read-only steps plus a couple of run parameters. Workflow run.", "Process for the steps, Select for how it runs, Toggle for notifications"],
+              ].map(([fam, what, inputs], i) => (
+                <div key={fam} className="grid grid-cols-[180px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{fam}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{what}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{inputs}</div>
+                </div>
+              ))}
+            </div>
+            <ul className="text-[12px] leading-[1.7] list-disc pl-[18px]" style={{ color: "var(--field-supporting)" }}>
+              <li><strong>There is no input catalogue here on purpose.</strong> The Workflow Builder&rsquo;s Nodes Configuration section documents fifteen input types with their own USE WHEN / DON&rsquo;T USE WHEN / FIELD LOGIC / DEV NOTES. A second copy drifts the first time either is edited, so what belongs here is the mapping above and a pointer.</li>
+              <li><strong>The steps block must always say what each step touches and whether it writes.</strong> &ldquo;Read only · 2 records&rdquo; and &ldquo;Writes to Salesforce&rdquo; are not decoration — they are what makes accepting an informed decision rather than a blind one. A step that needs a human says so, and says which step it blocks.</li>
+              <li>The Entity Header page&rsquo;s demo panel models three of the four families. <em>A sequence to inspect</em> is not built.</li>
+            </ul>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Where each rule comes from</p>
+            <div className="grid gap-[12px] md:grid-cols-2">
+              <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[11px] font-semibold uppercase tracking-widest mb-[6px]" style={{ color: "var(--field-label)" }}>Industry</p>
+                <ul className="text-[12px] leading-[1.7] list-disc pl-[16px]" style={{ color: "var(--field-supporting)" }}>
+                  <li>Auto-hide when there is nothing to recommend — Salesforce</li>
+                  <li>Card below the header with a why — Lightfield</li>
+                  <li>Accept and reject are what make it a proposal — Salesforce, Peec AI</li>
+                  <li>The card shows the action, not the engine name — Salesforce</li>
+                </ul>
+              </div>
+              <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[11px] font-semibold uppercase tracking-widest mb-[6px]" style={{ color: "var(--field-label)" }}>AIMS OS canon</p>
+                <ul className="text-[12px] leading-[1.7] list-disc pl-[16px]" style={{ color: "var(--field-supporting)" }}>
+                  <li>One at a time — the engine already unifies and discards</li>
+                  <li>Accept assigns to the agent — the agent executes, the human governs</li>
+                  <li>Accepting always opens the detail — committing without the record is accepting blind</li>
+                  <li>Source instead of an accuracy disclaimer — it passed the Council</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecModal) => void; openProtoExample: (protoId: string, from: string, params?: Record<string, string>) => void }) {
   const [tab, setTab] = useState<"preview" | "overview" | "reference">("preview")
   // Preview tab — the component alone on a stage, with one control per
@@ -32227,7 +32464,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Restricted — a governed state, not a failure</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Figma&rsquo;s <code>Property 1 = Restricted</code>, as <code>state=&quot;restricted&quot;</code>: the viewer lacks entitlement to the values. Read directly from the Figma variant, it is the default card at <strong>50% opacity and nothing else</strong> &mdash; no badge, no banner, no colour change, because the entity exists and is governed, so this must not read as an error. <strong>Figma&rsquo;s prose asks for &ldquo;calm and explanatory&rdquo; and its instance carries no explanatory element</strong>, so the explanation is screen-reader-only for now (<code>RECORD_HEADER_FALLBACKS.restrictedNote</code>). Making it visible &mdash; a <code>Restricted</code> tag beside the title, or a line under it &mdash; is a design decision, not an implementation one.
+              Figma&rsquo;s <code>Property 1 = Restricted</code>, as <code>state=&quot;restricted&quot;</code>: the viewer lacks entitlement to the values. The 50% opacity comes straight from the Figma variant, which is all that variant is. The <strong><code>Restricted</code> tag is deliberately beyond it</strong> (Michael, 2026-09-07): Figma&rsquo;s prose asks this state to be &ldquo;calm and explanatory&rdquo; and its instance carries nothing explanatory, so a reader had no way to tell a restricted card from a loading or a failed one. Hover the tag for the reason &mdash; and it opens on focus too. Neutral, never error: the entity exists and is governed, so this is a state, not a failure.
             </p>
             <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
               source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
@@ -32551,7 +32788,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               {[
                 ["1 · Reflow — stack before you shrink", "Below 720px of CARD width the identity row breaks into stacked rows and keeps everything. On a narrower screen there is vertical space to spare, so stacking costs nothing and loses nothing. Figma's Size=Responsive variant documents this: it is not a smaller version of the desktop row, it is a different arrangement of the same slots.", "Implemented. Measured with a ResizeObserver on the card, never a media query — the header sits in panels and split views, where the viewport tells you nothing."],
                 ["2 · Space allocation — how a row shares its width", "The right side (state badge and actions) is fixed and never compressed. The left side yields in order of protection: visual identity never yields, the title is protected and truncates only after everything else has, source yields next, and TAGS YIELD FIRST — collapsing to +N one at a time.", "Implemented. Tags cap into +N, the title is flex 0 1 auto with min-width 0 and a 540px ceiling, and source and secondary metadata now carry their own ceilings too."],
-                ["3 · Visibility priority — what is dropped once reflow and yielding are exhausted", "Visual identity, then title, then state badge — priorities 1 to 3 are NEVER dropped at any width. Then tags (signals before classification), source, description, and secondary metadata last. Secondary metadata is hidden before it is stripped of text: a row of bare icons is worse than no row.", "NOT implemented. Nothing is dropped today — the card reflows and yields, and at extreme widths it would keep description and metadata rather than dropping them."],
+                ["3 · Visibility priority — what is dropped once reflow and yielding are exhausted", "Visual identity, then title, then state badge — priorities 1 to 3 are NEVER dropped at any width. Then tags (signals before classification), source, and the two optional blocks. Secondary metadata is hidden before it is stripped of text: a row of bare icons is worse than no row.", "Implemented, with the last two REVERSED from Figma on Michael's call: description drops below 420px of card width, the metadata row below 320px. Metadata carries the facts someone might act on; the description is the edge case for extra granularity, so it goes first."],
               ].map(([title, body, status]) => (
                 <div key={title} className="rounded-[8px] p-[12px] flex flex-col gap-[6px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
                   <p className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{title}</p>
@@ -32597,7 +32834,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               <li><strong>Why 540 and not 320.</strong> The identity row is 932px; visual, source, tags and gaps take roughly 395 of it, which leaves about 537 for the title. 540 is the most the row can give without pushing the tags, and it lands at the low end of the 50–60 character range the industry uses for titles. Anything lower wastes space that is already there — the earlier mistake was a title cutting at 45 characters with 175px sitting empty beside it.</li>
               <li><strong>A title cut short with empty space next to it is a bug, not a rule.</strong> If you see one, the ceiling is set too low or a stale width override is holding it back.</li>
               <li><strong>Measure in pixels, not characters.</strong> A &ldquo;w&rdquo; is roughly three times the width of an &ldquo;i&rdquo;, so a character count is only ever an approximation. CSS truncation does this for free.</li>
-              <li><strong>An ellipsis must hide at least three characters, and at least four must stay visible</strong> (Carbon and PatternFly both state this). Truncating one or two letters costs more space than it saves. NOT implemented — CSS truncation cannot express it.</li>
+              <li><strong>An ellipsis must hide at least three characters, and at least four must stay visible</strong> (Carbon and PatternFly both state this) &mdash; truncating one or two letters costs more space than it saves. <strong>Deliberately dropped</strong> (Michael, 2026-09-07): CSS cannot count characters, so honouring it means measuring every string on every render, and nobody ships it that way.</li>
               <li><strong>The title has no minimum.</strong> Unlike a Next Best Action title, an entity title is an identifier, not a sentence: <code>RO-48291</code> is eight characters and complete.</li>
               <li>In Figma these are max-width values, because Figma text is either hug or fill — there is no shrink-to-fit. Figma says so itself: <em>&ldquo;the number in the file is a stand-in for that behaviour, not a specification.&rdquo;</em></li>
             </ul>
@@ -32665,7 +32902,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                 ["Metadata tooltip", "On hover AND on focus, always — including when the text is not truncated. The tooltip names the field; the header only shows its value. The same pattern covers a truncated title.", "Implemented"],
                 ["Tag overflow", "The +N chip reveals the hidden tags, reachable by keyboard and screen reader, not only on hover. This is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.", "Implemented"],
                 ["Loading", "A skeleton for title, state and metadata, matching the arrangement of its size. NEVER an empty state — saying \"nothing here\" while data is in flight states something untrue.", "Implemented — state=\"loading\". Geometry read from Figma's own Loading variants; the skeleton stacks below 720px exactly as the loaded card does"],
-                ["Restricted", "The user lacks entitlement to a value. Calm and explanatory, visually distinct from an error: the field exists and is governed. This is a state, not a failure. The built variant is the default card at 50% opacity and nothing else.", "Implemented — state=\"restricted\", the 50% opacity and no visible element, faithful to the variant. The explanatory half Figma's prose asks for is screen-reader-only; making it visible needs a design decision"],
+                ["Restricted", "The user lacks entitlement to a value. Calm and explanatory, visually distinct from an error: the field exists and is governed. This is a state, not a failure. The built variant is the default card at 50% opacity and nothing else.", "Implemented — state=\"restricted\": the 50% opacity from the variant, plus a neutral Restricted Tag beside the title with the reason in a Tooltip (hover AND focus). The Tag is Michael's addition, closing the gap between Figma's prose and its instance"],
                 ["Minimum", "Only visual, title and state. No description, no tags, no metadata — the header stays valid. This is what visibility priorities 1 to 3 guarantee.", "Nothing to implement — pass only name, visual, stateBadge and assignedAgent and this is what you get"],
                 ["No signals", "The tag group is REMOVED, not left empty.", "Implemented"],
                 ["Not found", "NOT THIS COMPONENT. When an entity ID resolves to nothing, the page handles it. There is no \"not found\" variant.", "Correctly absent"],
@@ -32757,7 +32994,8 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                 ["The secondary action", "RULES THAT ARE EASY TO MISS: \"Secondary action: icon only.\"", "It is a labelled button. The built Default variant renders it as a labelled \"Secondary CTA\" button, not an icon. The instance wins."],
                 ["Ask as a boolean", "COMPONENT PROPERTIES lists Primary CTA as a boolean, default TRUE — so Ask can be switched off.", "assignedAgent is REQUIRED as a prop and the button is always present; a null value renders it disabled with a tooltip. Michael's ruling: AIMS OS is agent-first, so every caller must decide, and a silently missing agent button is worse than a disabled one."],
                 ["Source's second item", "SPACE ALLOCATION says source \"yields its second item, then its first\", implying two. METADATA says \"one item, never two\".", "One item. METADATA is the rule and the instances follow it; TRUNCATION even hedges its own sentence — \"a second source item WOULD be dropped, if one existed\"."],
-                ["Restricted", "A whole-card variant on the Property 1 axis, and prose asking for something \"calm and EXPLANATORY\" — but the variant itself is only the default card at 50% opacity, with no explanatory element at all.", "The 50% opacity, faithfully. The explanation reaches assistive technology only, because adding a visible one is a design decision Figma has not made. `locked` remains a separate thing (\"you cannot edit\" vs \"you cannot see\") and so does RecordField.state === \"masked\", which is restricted applied to one field."],
+                ["Restricted", "A whole-card variant on the Property 1 axis, and prose asking for something \"calm and EXPLANATORY\" — but the variant itself is only the default card at 50% opacity, with no explanatory element at all.", "The opacity from the instance, and a neutral Restricted Tag with a Tooltip to satisfy the prose — Michael's call (2026-09-07), the one place this repo goes BEYOND the instance rather than following it. The reason: opacity alone cannot be told apart from loading or failed. `locked` remains a separate thing (\"you cannot edit\" vs \"you cannot see\") and so does RecordField.state === \"masked\", which is restricted applied to one field."],
+                ["The drop order", "VISIBILITY PRIORITY puts description at 6 and secondary metadata at 7, which drops metadata first.", "Reversed, on Michael's call (2026-09-07): the description drops first and the metadata row survives longer. Metadata is what you reach for first and it carries facts someone might act on; the description is the very edge case for extra granularity when metadata is not enough. The rest of Figma's order is untouched, and priorities 1 to 3 are still never dropped."],
                 ["The right-cluster order", "The prose fixes it as Information → state badge → secondary → Ask → Menu. The Responsive instance renders secondary → Ask → Information → badge → Menu.", "The documented order, in both layouts. This one is the exception to \"the instance wins\": the prose states an order explicitly and the Responsive instance's differs from the Default instance's, so one of the two instances is wrong regardless."],
               ].map(([pt, figma, repo], i) => (
                 <div key={pt} className="grid grid-cols-[190px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
@@ -40803,10 +41041,18 @@ export default function App() {
     // be re-appended every time or it's lost before the target page can read it.
     const hash = window.location.hash
     const params = new URLSearchParams(window.location.search)
-    // Guard: React StrictMode double-invokes mount effects. Without this, the
-    // URL sync fires with the initial active="home" and clobbers a ?proto= deep-link
-    // before the deep-link effect's second invocation can read it.
-    if (active === "home" && params.get("proto")) return
+    // Guard: React StrictMode double-invokes mount effects, and this effect
+    // fires with the INITIAL active="home" before the deep-link effect below
+    // has resolved the URL. Without the guard it rewrites the address bar to
+    // ?page=home and the deep link is gone before anything can read it.
+    //
+    // It used to guard only `?proto=`, which is why `?page=<anything>` never
+    // worked: pasting ?page=chip landed on home, and the only way to reach a
+    // component page was to navigate the sidebar. Both params need the same
+    // protection, and both need it for any target rather than just a
+    // non-home one — ?page=home is a legitimate link too.
+    const deepLinked = params.get("proto") ?? params.get("page")
+    if (active === "home" && deepLinked) return
     const isProto = PROTOTYPE_PAGES.some(p => p.id === active)
     if (isProto) {
       // Keep whatever else the prototype's link carried — `profile` on the
@@ -40916,6 +41162,7 @@ export default function App() {
           {active === "notification-item"   && <NotificationItemPage   openSpec={setSpecModal} />}
           {active === "notification-center" && <NotificationCenterPage openSpec={setSpecModal} />}
           {active === "record-header"       && <EntityHeaderPage      openSpec={setSpecModal} openProtoExample={openProtoExample} />}
+          {active === "next-best-action"    && <NextBestActionCardPage openSpec={setSpecModal} onNavigate={setActive} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "process-item"   && <ProcessItemPage openSpec={setSpecModal} />}
           {active === "radio"           && <RadioPage openSpec={setSpecModal} />}
