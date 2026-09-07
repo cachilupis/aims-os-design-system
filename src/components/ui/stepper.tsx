@@ -1,6 +1,7 @@
 import { Check, ChevronRight, Lock } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Tooltip } from "@/components/ui/tooltip"
 import { HighlightIcon, type HighlightIconVariant, type HighlightIconColor } from "@/components/ui/highlight-icon"
 
 export type StepState = "default" | "active" | "completed" | "locked" | "view-only"
@@ -10,6 +11,13 @@ export interface StepItem {
   state: StepState
   /** Optional Lucide icon component to show inside the dot. When omitted, the step number is shown. */
   icon?: LucideIcon
+  /** Why this step cannot be reached yet, e.g. "Complete the Data tab first".
+   *
+   *  A locked step shows a padlock and nothing else, which tells the user they
+   *  cannot go there but not what would unlock it — a dead end. When set, the
+   *  reason appears on hover and is appended to the step's accessible label, so
+   *  it reaches a screen reader too and not only a mouse. */
+  hint?: string
 }
 
 interface StepperProps {
@@ -43,7 +51,7 @@ export function Stepper({ steps, onStepClick, className }: StepperProps) {
         const labelWeight = isActive ? "600" : "500"
         const labelLine   = isActive ? "normal" : "20px"
 
-        const dotLabel = `Step ${i + 1}: ${step.label}${isCompleted ? " — Completed" : ""}${isLocked ? " — Locked" : ""}`
+        const dotLabel = `Step ${i + 1}: ${step.label}${isCompleted ? " — Completed" : ""}${isLocked ? " — Locked" : ""}${step.hint ? ` — ${step.hint}` : ""}`
 
         const inner = (
           <span className="flex items-center gap-[4px]">
@@ -86,6 +94,12 @@ export function Stepper({ steps, onStepClick, className }: StepperProps) {
               >
                 {inner}
               </button>
+            ) : step.hint ? (
+              <Tooltip content={step.hint} side="bottom">
+                <span aria-label={dotLabel} aria-disabled={isLocked ? "true" : undefined}>
+                  {inner}
+                </span>
+              </Tooltip>
             ) : (
               <span aria-label={dotLabel} aria-disabled={isLocked ? "true" : undefined}>
                 {inner}

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
 import { Stepper, type StepItem } from "@/components/ui/stepper"
 import type { SidebarItem } from "@/components/ui/sidebar"
+import { OptionCard } from "@/components/experimental/widget-screen-parts"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -83,23 +84,6 @@ function SectionChip({ active, onClick, children }: { active: boolean; onClick: 
   )
 }
 
-// DS-GAP: OptionCard — large selectable card with icon, title, description. Closest DS component: CardContainer.
-function OptionCard({ selected, onClick, iconName, title, desc }: {
-  selected: boolean; onClick: () => void; iconName: string; title: string; desc: string
-}) {
-  const Icon = (LucideIcons as Record<string, unknown>)[iconName] as React.FC<{ size?: number; style?: React.CSSProperties }>
-  return (
-    <div style={{ cursor: "pointer" }} onClick={onClick}>
-      <CardContainer selected={selected} className="h-full">
-        <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-          <Icon size={20} style={{ color: "var(--primary)" }} />
-          <div style={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-title)" }}>{title}</div>
-          <div style={{ fontSize: 12, color: "var(--color-text-subtitle)", lineHeight: 1.5 }}>{desc}</div>
-        </div>
-      </CardContainer>
-    </div>
-  )
-}
 
 // DS-GAP: FieldLabel — section label for form groups. Closest DS component: none.
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -258,8 +242,8 @@ export default function PMThomasNewDashboardScreen() {
               <div>
                 <FieldLabel>What kind of dashboard?</FieldLabel>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <OptionCard selected={kind === "profile"} onClick={() => selectKind("profile")} iconName="UserSquare" title="Profile dashboard" desc="Shows on a contact, account, or employee record — lives in that profile's tabs." />
-                  <OptionCard selected={kind === "global"} onClick={() => selectKind("global")} iconName="LayoutGrid" title="Standalone dashboard" desc="A report, home, or workspace page — not tied to any single record." />
+                  <OptionCard selected={kind === "profile"} onSelect={() => selectKind("profile")} icon="UserSquare" title="Profile dashboard" description="Shows on a contact, account, or employee record — lives in that profile's tabs." />
+                  <OptionCard selected={kind === "global"} onSelect={() => selectKind("global")} icon="LayoutGrid" title="Standalone dashboard" description="A report, home, or workspace page — not tied to any single record." />
                 </div>
               </div>
 
@@ -411,8 +395,8 @@ export default function PMThomasNewDashboardScreen() {
           {step === 1 && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <OptionCard selected={startMode === "blank"} onClick={() => setStartMode("blank")} iconName="LayoutGrid" title="Blank canvas" desc="Start empty and place widgets yourself." />
-                <OptionCard selected={startMode === "template"} onClick={() => setStartMode("template")} iconName="Sparkles" title="From an AIMS template" desc="Start from a pre-built layout you can adjust." />
+                <OptionCard selected={startMode === "blank"} onSelect={() => setStartMode("blank")} icon="LayoutGrid" title="Blank canvas" description="Start empty and place widgets yourself." />
+                <OptionCard selected={startMode === "template"} onSelect={() => setStartMode("template")} icon="Sparkles" title="From an AIMS template" description="Start from a pre-built layout you can adjust." />
               </div>
 
               {startMode === "template" && (
