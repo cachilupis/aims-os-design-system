@@ -50,7 +50,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { EntityHeader, type EntityVisual, type EntityHeaderTag, type EntityStateBadge, type RecordField, type FieldProvenance, type PendingIntervention, type AgenticSystemInfo, type AssignedAgent, type SecondaryMetadataItem, type RecordAction } from "@/components/ui/record-header"
+import { EntityHeader, type EntityVisual, type EntityHeaderTag, type EntityStateBadge, type RecordField, type FieldProvenance, type AssignedAgent, type SecondaryMetadataItem, type RecordAction } from "@/components/ui/record-header"
 import { NextBestActionCard, type NextBestAction } from "@/components/experimental/next-best-action-card"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
@@ -32839,178 +32839,7 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
 // 1 (RH_WORKFLOWS[v] is now an array — see RecordHeader's own WorkflowSummary/
 // AgenticSystemInfo doc comment for the N-item disclosure pattern this
 // feeds). `id` is unique per workflow (not per vertical) so the SlideOut
-// below can tell which one of several was actually clicked.
-type WorkflowDetail = {
-  id: string
-  name: string
-  owner: string
-  status: "running" | "blocked" | "completed"
-  /** Shown only when status === "blocked" — what's actually stuck and why. */
-  blockedReason?: string
-  started: string
-  /** The next thing that happens to this workflow, and when (when known —
-   *  an event-driven next step, like "awaiting underwriter review," has no
-   *  fixed date). Replaces the old `nextTrigger` string, which conflated a
-   *  generic status word ("In progress") with an actual next milestone. */
-  nextMilestone?: { label: string; date?: string }
-  /** AI Summary content zone — always first, per the Content pattern's
-   *  documented order (AI Summary → List → Insights → Detail). */
-  aiSummary: string
-  totalRuns: number
-  steps: { label: string; status: ProcessStatus; date?: string }[]
-  /** List Section — past runs, denser real content per this refinement's
-   *  "SlideOuts look thin" feedback. Resolved item → status Tag, no button
-   *  (per the List Sections pattern's own "never combine badge + button"
-   *  rule). */
-  recentRuns: { date: string; outcome: "success" | "error" }[]
-}
 
-const RH_WORKFLOWS: Record<RhDemoKey, WorkflowDetail[]> = {
-  uep: [{
-    id: "wf-uep-1",
-    name: "Access Recertification", owner: "IT Access Governance",
-    status: "blocked", blockedReason: "Paused — awaiting the manager's decision on the flagged Billing repo grant. Nothing changes in Okta until that decision lands.",
-    started: "Aug 12, 2026", nextMilestone: { label: "Next scheduled run", date: "Sep 12, 2026 (monthly)" },
-    aiSummary: "This workflow re-validates Sarah Chen's access against her current role every 30 days. It's currently paused, awaiting her manager's decision on the flagged Billing repo grant — nothing will change in Okta until that decision lands.",
-    totalRuns: 14,
-    steps: [
-      { label: "Access snapshot pulled from Okta", status: "done", date: "Aug 12, 2026" },
-      { label: "Manager notified for review", status: "done", date: "Aug 13, 2026" },
-      { label: "Awaiting manager decision", status: "loading" },
-      { label: "Access updated in Okta", status: "pending" },
-    ],
-    recentRuns: [
-      { date: "Jul 12, 2026", outcome: "success" },
-      { date: "Jun 12, 2026", outcome: "success" },
-      { date: "May 12, 2026", outcome: "success" },
-    ],
-  }],
-  ucp: [{
-    id: "wf-ucp-1",
-    name: "Renewal Playbook", owner: "Renewal Copilot",
-    status: "blocked", blockedReason: "Held for deal-desk sign-off on the loyalty discount before the renewal quote goes out.",
-    started: "Jul 28, 2026", nextMilestone: { label: "Next scheduled run", date: "Aug 26, 2026" },
-    aiSummary: "Tracks Kestrel Systems's health score and usage signals toward the Sep 2 renewal. A discount request is currently held for deal-desk sign-off before the quote goes out.",
-    totalRuns: 6,
-    steps: [
-      { label: "Health score recalculated", status: "done", date: "Jul 28, 2026" },
-      { label: "Renewal risk flagged to CSM", status: "done", date: "Aug 1, 2026" },
-      { label: "Renewal call scheduled", status: "loading" },
-      { label: "Renewal quote sent", status: "pending" },
-    ],
-    recentRuns: [
-      { date: "Apr 28, 2026", outcome: "success" },
-      { date: "Jan 28, 2026", outcome: "success" },
-    ],
-  }],
-  uvp: [{
-    id: "wf-uvp-1",
-    name: "Vendor Requalification", owner: "Procurement Copilot",
-    status: "blocked", blockedReason: "Held for category-manager review of a spend-cap overage before requalification is approved.",
-    started: "Jun 30, 2026", nextMilestone: { label: "Next scheduled run", date: "Dec 1, 2026 (annual)" },
-    aiSummary: "Annual requalification for Meridian Logistics. Compliance documents and insurance are verified; a spend-cap overage is flagged and awaiting category-manager review before final approval.",
-    totalRuns: 3,
-    steps: [
-      { label: "Compliance documents requested", status: "done", date: "Jun 30, 2026" },
-      { label: "Insurance certificate verified", status: "done", date: "Jul 14, 2026" },
-      { label: "Risk review in progress", status: "loading" },
-      { label: "Requalification approved", status: "pending" },
-    ],
-    recentRuns: [
-      { date: "Dec 1, 2025", outcome: "success" },
-      { date: "Dec 1, 2024", outcome: "error" },
-    ],
-  }],
-  patient: [{
-    id: "wf-patient-1",
-    name: "Medication Reconciliation", owner: "Care Coordinator AI",
-    status: "blocked", blockedReason: "Held for the attending physician's sign-off on the flagged Warfarin/Aspirin interaction.",
-    started: "Aug 14, 2026", nextMilestone: { label: "Next scheduled run", date: "Aug 21, 2026 (weekly)" },
-    aiSummary: "Cross-checks Elena's current medication list against every new prescription from this admission to catch interactions before discharge — a different vertical, the exact same Agentic System zone.",
-    totalRuns: 2,
-    steps: [
-      { label: "Current medication list pulled from Epic", status: "done", date: "Aug 14, 2026" },
-      { label: "New prescriptions cross-checked for interactions", status: "done", date: "Aug 14, 2026" },
-      { label: "Physician notified of flagged interaction", status: "loading" },
-      { label: "Reconciled list confirmed at discharge", status: "pending" },
-    ],
-    recentRuns: [
-      { date: "Aug 7, 2026", outcome: "success" },
-    ],
-  }],
-  // Closing pass — Insurance/Diane gets a SECOND workflow (same real demo
-  // vertical HTL already uses for its own "2 pending" multi-item example)
-  // to prove Agentic System's disclosure pattern with genuinely N>1 items,
-  // not a contrived/empty one.
-  claim: [
-    {
-      id: "wf-claim-1",
-      name: "Claims Adjudication — CLM-48821", owner: "Claims Copilot AI",
-      status: "blocked", blockedReason: "Held for supervisor sign-off — the calculated payout is above the adjuster's standing authority.",
-      started: "Aug 2, 2026", nextMilestone: { label: "Pending adjuster review" },
-      aiSummary: "Tracks Diane's open claim (CLM-48821) from first notice of loss through payout. The calculated payout is above the adjuster's standing authority and is held for supervisor sign-off before funds are released — a third vertical, the exact same Agentic System zone, the claim itself living here as a workflow rather than as the record's own identity.",
-      totalRuns: 5,
-      steps: [
-        { label: "First notice of loss recorded in Guidewire", status: "done", date: "Aug 2, 2026" },
-        { label: "Coverage verified against policy", status: "done", date: "Aug 3, 2026" },
-        { label: "Payout amount awaiting supervisor sign-off", status: "loading" },
-        { label: "Payout released", status: "pending" },
-      ],
-      recentRuns: [
-        { date: "Mar 12, 2026", outcome: "success" },
-        { date: "Nov 4, 2025", outcome: "success" },
-      ],
-    },
-    {
-      id: "wf-claim-2",
-      name: "Policy Renewal Review", owner: "Claims Copilot AI",
-      status: "running",
-      started: "Aug 10, 2026", nextMilestone: { label: "Renewal notice due", date: "Oct 1, 2026" },
-      aiSummary: "Reviews Diane's policy terms and premium ahead of her Oct 2026 renewal — checking for coverage gaps and rate changes before the renewal notice goes out. Independent of her open claim above; a policyholder can have more than one active workflow at once.",
-      totalRuns: 1,
-      steps: [
-        { label: "Current policy terms pulled from Duck Creek", status: "done", date: "Aug 10, 2026" },
-        { label: "Rate change checked against renewal model", status: "loading" },
-        { label: "Renewal notice drafted", status: "pending" },
-      ],
-      recentRuns: [
-        { date: "Oct 1, 2025", outcome: "success" },
-      ],
-    },
-  ],
-  borrower: [{
-    id: "wf-borrower-1",
-    name: "Credit Risk Review", owner: "Underwriting Copilot",
-    status: "blocked", blockedReason: "Held for underwriter sign-off — debt-to-income is above the automated approval line.",
-    started: "Aug 10, 2026", nextMilestone: { label: "Pending underwriter review" },
-    aiSummary: "Scores Jordan Ellis's loan application against the standard risk model. Debt-to-income is above the automated approval line and is held for underwriter sign-off — a fourth vertical, the exact same Agentic System zone.",
-    totalRuns: 1,
-    steps: [
-      { label: "Credit pulled from Experian", status: "done", date: "Aug 10, 2026" },
-      { label: "Application scored against risk model", status: "done", date: "Aug 10, 2026" },
-      { label: "DTI exception awaiting underwriter review", status: "loading" },
-      { label: "Loan decision issued", status: "pending" },
-    ],
-    recentRuns: [],
-  }],
-  repairOrder: [{
-    id: "wf-repairOrder-1",
-    name: "Service / Repair — RO #48213", owner: "Service Advisor Copilot",
-    status: "blocked", blockedReason: "Held for the customer's sign-off — additional repair scope exceeds the pre-authorized budget.",
-    started: "Aug 16, 2026", nextMilestone: { label: "Awaiting customer sign-off" },
-    aiSummary: "Tracks Devon's repair order (RO #48213) for the 2022 Ford F-150 through diagnostic, repair, and QA. Additional repair scope found mid-service exceeds the customer's pre-authorized budget — held for sign-off before work continues, the repair order itself living here as a workflow rather than as the record's own identity.",
-    totalRuns: 1,
-    steps: [
-      { label: "Vehicle diagnostic completed", status: "done", date: "Aug 16, 2026" },
-      { label: "Additional worn component found during repair", status: "done", date: "Aug 16, 2026" },
-      { label: "Awaiting customer sign-off on additional repair", status: "loading" },
-      { label: "QA inspection and pickup", status: "pending" },
-    ],
-    recentRuns: [
-      { date: "Feb 3, 2026", outcome: "success" },
-    ],
-  }],
-}
 
 // AgentDetail / RH_AGENT_DETAILS — REMOVED (closing pass). Backed the "Last
 // Agent" SlideOut (session summary/finding/recommendation), which is gone
@@ -33029,115 +32858,7 @@ const RH_WORKFLOWS: Record<RhDemoKey, WorkflowDetail[]> = {
 // HTL always opens in a new tab, no exceptions), so these 4 fields are
 // currently unused by any UI here. Left in place as realistic context for
 // whatever the real HTL destination ends up rendering — not dead in the
-// sense of "delete," just not wired to this demo anymore.
-type InterventionMock = {
-  id: string
-  description: string
-  severity: "high" | "medium" | "low"
-  detail: string
-  requestedBy: string
-  impact: string
-  history: { date: string; label: string }[]
-  /** Passed straight through to InterventionItem.contextTag — what area
-   *  this intervention is about, at a glance ("Access", "Compliance", ...). */
-  contextTag?: string
-}
 
-const RH_INTERVENTIONS: Partial<Record<RhDemoKey, InterventionMock[]>> = {
-  uep: [
-    {
-      id: "uep-access-request",
-      severity: "high",
-      description: "Elevated access request needs manager approval before it takes effect.",
-      detail: "Sarah Chen requested temporary Admin access to the Billing service repo to support an incident on Aug 15. The request exceeds her current role's standing access and requires explicit manager sign-off before Okta grants it. No access has been changed yet — this is a request, not a completed action.",
-      requestedBy: "Sarah Chen", impact: "Billing service repo · Admin · temporary (7 days)",
-      history: [
-        { date: "Jul 2, 2026", label: "Similar request for Payments repo — approved by David Kim" },
-      ],
-      contextTag: "Access",
-    },
-  ],
-  ucp: [
-    {
-      id: "ucp-discount-approval",
-      severity: "medium",
-      description: "A discount above standard approval thresholds needs sign-off before the renewal quote can go out.",
-      detail: "Renewal Copilot drafted a 12% loyalty discount for Kestrel Systems's renewal, above the 10% threshold reps can approve unassisted. The quote is held until a deal desk reviewer signs off — nothing has been sent to the customer yet.",
-      requestedBy: "Renewal Copilot", impact: "Renewal quote · 12% discount · Kestrel Systems",
-      history: [
-        { date: "Feb 14, 2026", label: "8% discount on prior renewal — approved by deal desk" },
-      ],
-      contextTag: "Renewal",
-    },
-  ],
-  // No intervention for UVP in this example — demonstrates the zone being
-  // omitted entirely when there's genuinely nothing pending, not shown as
-  // an empty "0 actions" placeholder.
-  patient: [
-    {
-      id: "patient-medication-signoff",
-      severity: "high",
-      description: "Lab result requires physician sign-off before the flagged medication change proceeds.",
-      detail: "Care Coordinator AI flagged a Warfarin/Aspirin interaction in Elena Vasquez's new prescription order. The interacting dose has not been administered — it's held pending the attending physician's explicit sign-off on the reconciled medication list.",
-      requestedBy: "Care Coordinator AI", impact: "Medication order · Warfarin 5mg · Room 4B-112",
-      history: [
-        { date: "Mar 3, 2026", label: "Similar interaction flag on a prior admission — approved by Dr. Osei" },
-      ],
-      contextTag: "Clinical",
-    },
-  ],
-  // This correction pass's real N-item example: Claim has 2 pending
-  // interventions at once — the most prioritized (higher severity) renders
-  // full-size, the other collapses behind "+1 more."
-  claim: [
-    {
-      id: "claim-payout-approval",
-      severity: "high",
-      description: "A payout above standard adjuster authority needs supervisor approval before it's released.",
-      detail: "Claims Copilot AI calculated an $18,400 payout for Claim #CLM-48821, above Renee Castillo's $10,000 standing authority. No funds have been released — this is held pending supervisor sign-off.",
-      requestedBy: "Claims Copilot AI", impact: "Payout · $18,400 · Claim #CLM-48821",
-      history: [
-        { date: "Nov 4, 2025", label: "Similar payout on a prior claim — approved by claims supervisor" },
-      ],
-      contextTag: "Claims",
-    },
-    {
-      id: "claim-documentation-missing",
-      severity: "medium",
-      description: "Repair estimate documentation is incomplete and needs adjuster follow-up before the payout can close.",
-      detail: "The auto body shop's itemized estimate is missing a required parts-sourcing breakdown per policy terms. Claims Copilot AI flagged it; the payout can't close until Renee Castillo follows up with the shop.",
-      requestedBy: "Claims Copilot AI", impact: "Documentation · Claim #CLM-48821",
-      history: [
-        { date: "Jun 1, 2025", label: "Same documentation gap on a prior claim — resolved by adjuster follow-up" },
-      ],
-      contextTag: "Compliance",
-    },
-  ],
-  borrower: [
-    {
-      id: "borrower-dti-exception",
-      severity: "medium",
-      description: "A debt-to-income exception needs underwriter sign-off before a decision is issued.",
-      detail: "Jordan Ellis's application scored a 42% DTI ratio, above the 38% threshold Underwriting Copilot can clear automatically. No decision has been issued — it's held pending underwriter review.",
-      requestedBy: "Underwriting Copilot", impact: "Loan decision · $45,000 requested · DTI 42%",
-      history: [],
-      contextTag: "Credit",
-    },
-  ],
-  repairOrder: [
-    {
-      id: "repairOrder-budget-exception",
-      severity: "medium",
-      description: "Additional repair scope exceeds the customer's pre-authorized budget and needs sign-off before work continues.",
-      detail: "Diagnostic on the 2022 Ford F-150 found a worn control arm needing replacement, adding $640 beyond the $2,200 the customer pre-authorized. No further work has started on that item — it's held pending the customer's sign-off.",
-      requestedBy: "Service Advisor Copilot", impact: "Additional repair · $640 · RO #48213",
-      history: [
-        { date: "Feb 3, 2026", label: "Similar mid-service exception — approved by customer over phone" },
-      ],
-      contextTag: "Service",
-    },
-  ],
-}
 
 // Next Best Action (redesign pass) — a proactive AI recommendation,
 // deliberately NOT a restatement of the pending intervention above: HTL is
@@ -33354,158 +33075,9 @@ function ProvenanceRow({ field }: { field: RecordField }) {
 // Every instance below is collapsed (not defaultExpanded) except where a
 // caption specifically calls out the collapsed-tags look — expanding is
 // always still available via the disclosure chevron, same as production.
-function EntityHeaderStatesGallery({
-  rhAssignedAgent,
-  rhAgenticSystem,
-  rhNextBestActions,
-}: {
-  rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent | null
-  rhAgenticSystem: (v: RhDemoKey) => AgenticSystemInfo
-  rhNextBestActions: (v: RhDemoKey) => NextBestAction[]
-}) {
-  const overflowFields: RecordField[] = [
-    {
-      label: "Job Title", icon: LucideIcons.Briefcase,
-      value: "Principal Staff Software Engineer, Platform Infrastructure & Reliability Engineering",
-      state: "hydrated", provenance: wdProv("2h ago"), hasDestination: false,
-    },
-    { label: "Manager", icon: LucideIcons.User, value: "David Kim", state: "hydrated", provenance: wdProv("2h ago") },
-  ]
-
-  return (
-    <section>
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">States — full coverage, not just the happy path</p>
-      <p className="text-[12px] text-[var(--field-supporting)] mb-[8px] max-w-[720px]">
-        Every state this component can render, labeled, with realistic mock data — for dev to see the full surface, not just the demo's default "everything is fine" cards above. Grouped by zone:
-      </p>
-      <ul className="mb-[16px] flex flex-col gap-[2px]">
-        {[
-          "Identity — collapsed (#1, tags visible) vs. expanded (everywhere else)",
-          "Next Best Action (redesign pass) — N items, collapsed position, right under the tags (#1); see the Overview tab's UEP example (defaultExpanded) for the same block at its expanded position",
-          "Your Intervention — pending (#1), empty (#2), loading (#4): all 3 states. no-permission/error/resolved-elsewhere were removed (closing pass) — they modeled an in-card approve/retry/resolve decision that no longer exists now that every item's only interaction is the arrow opening a NEW TAB.",
-          "Your Intervention — N items (Block 3): 1 shows alone, no counter (#1); N shows the most prioritized + \"+N-1 more\" disclosure, never a carousel (#8)",
-          "Agentic System — workflow(s) only (everywhere), empty (#3), loading (#4): the zone's own agent card was removed entirely (closing pass) — its value is now fully carried by Next Best Action instead.",
-          "Agentic System — N workflows (Block 3): 1 shows alone, no counter (everywhere else); N shows the most prioritized + \"Show N more\"/\"Show less\"/\"View all\" disclosure, the SAME pattern Your Intervention and Next Best Action use (#10)",
-          "Record — normal (everywhere), PII masked (#5), overflow (#7) — all reached only through \"View record details\" (this correction pass), never rendered inline",
-          "Locked (#6) — read-only Tag; agent trigger, Agentic System, and RECORD's provenance access stay active regardless",
-          "Assigned agent (identity trigger) — active everywhere except the explicit #9 (correction pass — a prior pass had disabled it by default on all 7 demo verticals, which was itself a bug): absent renders a Tooltip (RECORD_HEADER_FALLBACKS.noAgentTooltip) instead of disappearing. No lime identity Tag anywhere anymore either (closing pass) — the button alone is this record's one agent signal now.",
-        ].map(line => (
-          <li key={line} className="text-[11px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>· {line}</li>
-        ))}
-      </ul>
-      {/* Single column, full-width cards — a 2-up grid squeezes this card
-          into a narrower box than its own width-driven responsive behavior
-          (identity tags, Record's field-count columns) is meant for, which
-          is what actually caused it to visually break in an earlier pass.
-          One column per row keeps every state at the card's real width. */}
-      <div className="grid grid-cols-1 gap-[24px]">
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">1 · Collapsed — governance-state Tags + NBA visible (N items, redesign pass)</p>
-          <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
-            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
-            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            agenticSystem={rhAgenticSystem("uep")}
-            intervention={{ items: [{ id: "gallery-1", description: "Elevated access request needs manager approval.", severity: "high", onReview: () => {}, contextTag: "Access" }] }}
- />
-          <NextBestActionCard items={rhNextBestActions("uep")} className="mt-[12px]" />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">2 · Your Intervention — empty (genuinely nothing pending)</p>
-          <EntityHeader name={RH_UVP.name} visual={RH_VISUAL.uvp} tags={RH_TAGS.uvp} stateBadge={RH_STATE_BADGE.uvp}
-            source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp} defaultExpanded
-            assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
-            agenticSystem={rhAgenticSystem("uvp")}
-            intervention={{ status: "empty", message: "No interventions pending — nothing awaiting your review right now." }} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">3 · Agentic System — empty (freshly imported record)</p>
-          <EntityHeader name="Jordan Ellis" visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
-            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={[]} defaultExpanded
-            assignedAgent={null}
-            agenticSystem={{ status: "empty" }} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">4 · Loading — agent/NBA still computing (Skeleton)</p>
-          <EntityHeader name={RH_UCP.name} visual={RH_VISUAL.ucp} tags={RH_TAGS.ucp} stateBadge={RH_STATE_BADGE.ucp}
-            source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={RH_RECORD_FIELDS.ucp} defaultExpanded
-            assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
-            agenticSystem={{ status: "loading" }}
-            intervention={{ status: "loading" }} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">5 · PII masked — same field, 2 entitlement states (Law 4)</p>
-          <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
-            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_UEP_MASKED_FIELDS} defaultExpanded
-            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            agenticSystem={rhAgenticSystem("uep")} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">
-            6 · Locked — read-only Tag; agent trigger, Agentic System, and RECORD's "View record details" stay active
-          </p>
-          {/* DECISION FLAGGED — hypothesis, not explicitly confirmed: see
-              RecordHeaderProps.locked's own doc comment in record-header.tsx.
-              // TODO: confirmar con Michael. */}
-          <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
-            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep} locked defaultExpanded
-            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            agenticSystem={rhAgenticSystem("uep")} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">7 · Overflow — long name + long value, both truncate with a Tooltip</p>
-          <EntityHeader
-            name="Alexandria Christodoulopoulos-Fitzgerald-Whitmore"
-            visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
-            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep}
-            recordFields={overflowFields}
-            defaultExpanded
-            assignedAgent={rhAssignedAgent("uep", "Alexandria Christodoulopoulos-Fitzgerald-Whitmore")}
-          />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">8 · Your Intervention — 3 pending, most prioritized shown + "+2 more" (Block 3)</p>
-          <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
-            source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep} defaultExpanded
-            assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-            agenticSystem={rhAgenticSystem("uep")}
-            intervention={{
-              items: [
-                { id: "gallery-n-1", description: "Elevated access request needs manager approval before it takes effect.", severity: "high", onReview: () => {}, contextTag: "Access" },
-                { id: "gallery-n-2", description: "A discount above standard approval thresholds needs sign-off.", severity: "medium", onReview: () => {}, contextTag: "Renewal" },
-                { id: "gallery-n-3", description: "Vendor requalification checklist needs a final read-through.", severity: "low", onReview: () => {}, contextTag: "Compliance" },
-              ],
-              onViewAll: () => {},
-            }} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">9 · No agent assigned — identity trigger disabled, not hidden</p>
-          <EntityHeader name={RH_BORROWER.name} visual={RH_VISUAL.borrower} tags={RH_TAGS.borrower} stateBadge={RH_STATE_BADGE.borrower}
-            source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower} defaultExpanded
-            assignedAgent={null}
-            agenticSystem={rhAgenticSystem("borrower")} />
-        </div>
-
-        <div>
-          <p className="text-[11px] font-semibold text-[var(--field-supporting)] mb-[8px]">10 · Agentic System — 2 workflows, most prioritized shown + "Show 1 more" / "View all" (Block 3)</p>
-          <EntityHeader name={RH_CLAIM.name} visual={RH_VISUAL.claim} tags={RH_TAGS.claim} stateBadge={RH_STATE_BADGE.claim}
-            source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim} defaultExpanded
-            assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
-            agenticSystem={rhAgenticSystem("claim")} />
-        </div>
-
-      </div>
-    </section>
-  )
-}
+// EntityHeaderStatesGallery lived here — 8 numbered examples, 5 of which
+// documented the two expandable zones. It went with them; Figma's own
+// example set carries the Overview tab now.
 
 // ── End-to-end flows (this pass) — 2 complete walkthroughs, not loose
 // states. Each step is a real, rendered piece of this same page (a focused
@@ -33518,88 +33090,9 @@ function EntityHeaderStatesGallery({
 // a multi-step interactive wizard (Block 2's own instruction): every step
 // renders simultaneously, stacked, so the whole walkthrough is visible at
 // a glance.
-function EntityHeaderFlowsSection({
-  rhAssignedAgent,
-  rhIntervention,
-  rhOpenHtlNewTab,
-  rhNextBestActions,
-  rhOpenNba,
-}: {
-  rhAssignedAgent: (v: RhDemoKey, recordName: string) => AssignedAgent | null
-  rhIntervention: (v: RhDemoKey) => PendingIntervention | undefined
-  rhOpenHtlNewTab: () => void
-  rhNextBestActions: (v: RhDemoKey) => NextBestAction[]
-  rhOpenNba: (v: RhDemoKey, itemId: string) => void
-}) {
-  return (
-    <section>
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">End-to-end flows — 2 complete walkthroughs</p>
-      <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[720px]">
-        Not loose states — 2 full walkthroughs, so dev can see how the card behaves start to finish. Every step below is a real rendered piece of this page (a focused RecordHeader instance or a button that opens the actual SlideOut used elsewhere on this page), stacked so the whole flow is visible at once — no multi-step wizard to click through.
-      </p>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[32px]">
-
-        {/* ── Flow 1 — HTL Intervention ─────────────────────────────────── */}
-        <div>
-          <p className="text-[13px] font-semibold mb-[12px]" style={{ color: "var(--foreground)" }}>Flow 1 — HTL intervention</p>
-          <div className="flex flex-col gap-0">
-            <ProcessItem number={1} status="done" title="Intervention arrives" description="A governed decision needs a human before it takes effect — the same zone as the States gallery, but here it's step 1 of a story.">
-              <EntityHeader
-                name={RH_UCP.name} visual={RH_VISUAL.ucp} tags={RH_TAGS.ucp} stateBadge={RH_STATE_BADGE.ucp}
-                source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={[]} defaultExpanded
-                assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
-                intervention={rhIntervention("ucp")}
-              />
-            </ProcessItem>
-            <ProcessItem number={2} status="done" showLine={false} title="Diagonal arrow → new tab, always" description="Clicking the arrow on the card above ALWAYS opens the real HTL view in a new tab — never a slideout, never a same-page redirect, no exceptions. Try it:">
-              <Button variant="secondary" size="sm" onClick={rhOpenHtlNewTab}>
-                Open in new tab <LucideIcons.ArrowUpRight size={14} className="ml-[2px]" />
-              </Button>
-            </ProcessItem>
-          </div>
-        </div>
-
-        {/* ── Flow 2 — Next Best Action execution ──────────────────────── */}
-        <div>
-          <p className="text-[13px] font-semibold mb-[12px]" style={{ color: "var(--foreground)" }}>Flow 2 — Next Best Action execution</p>
-          <div className="flex flex-col gap-0">
-            <ProcessItem number={1} status="done" title="Task arrives" description="A Next Best Action is always visible, right under the identity tags — the agent suggesting a task to hand off or a decision to make.">
-              <EntityHeader
-                name={RH_UCP.name} visual={RH_VISUAL.ucp} tags={RH_TAGS.ucp} stateBadge={RH_STATE_BADGE.ucp}
-                source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={[]} defaultExpanded
-                assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
-              />
-              <NextBestActionCard items={rhNextBestActions("ucp")} className="mt-[12px]" />
-            </ProcessItem>
-            <ProcessItem number={2} status="done" title="User opens the task" description={`Clicking the task above opens its real 3-layer detail SlideOut — try it:`}>
-              <Button variant="secondary" size="sm" onClick={() => rhOpenNba("ucp", "ucp-nba-1")}>
-                Open task <LucideIcons.ChevronRight size={14} className="ml-[2px]" />
-              </Button>
-            </ProcessItem>
-            <ProcessItem number={3} status="pending" showLine={false} title="Two possible outcomes" description="Taking the task's action resolves one of 2 ways, per that task's own outcome — this card doesn't decide which; the host does.">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-[8px]">
-                <InformativeCard
-                  state="success"
-                  size="sm"
-                  title="(a) Executed"
-                  description={'No further gate — done as soon as the action is taken. Demonstrated live above: "Assign call to agent" → the SlideOut shows "Done."'}
-                />
-                <InformativeCard
-                  state="informative"
-                  size="sm"
-                  title="(b) In review"
-                  description={"Held for sign-off before it actually happens — e.g. Insurance's email NBA (Diane Ostrowski). Same SlideOut, same footer CTA, a different task-level outcome."}
-                />
-              </div>
-            </ProcessItem>
-          </div>
-        </div>
-
-      </div>
-    </section>
-  )
-}
+// EntityHeaderFlowsSection lived here — two HTL walkthroughs built out of
+// ProcessItem steps. It documented Your Intervention end to end, so it
+// went with the zone.
 
 // Block 5 (this pass) — ONE shared definition for every SlideOut/SidePanel
 // body's horizontal spacing, applied everywhere instead of patched panel by
@@ -33647,17 +33140,6 @@ const NBA_RESULT_COPY: Record<"executed" | "in-review", { title: string; state: 
   "in-review": { title: "Submitted — held for sign-off before it takes effect", state: "informative" },
 }
 // Active Workflow detail (correction pass) — status Tag color + label,
-// same idea as NBA_STATUS_TAG above.
-const WORKFLOW_STATUS_LABEL: Record<WorkflowDetail["status"], string> = {
-  running: "Running",
-  blocked: "Blocked",
-  completed: "Completed",
-}
-const WORKFLOW_STATUS_TAG: Record<WorkflowDetail["status"], TagVariant> = {
-  running: "informative",
-  blocked: "alert",
-  completed: "success",
-}
 // A thin rule between sections — deliberately plainer than a Section Title
 // row, since it separates the base/type/dynamic groupings without naming
 // them as such in the UI.
@@ -33706,8 +33188,6 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [rhOpenVariant, setRhOpenVariant] = useState<RhDemoKey | null>(null)
   // Which specific workflow within that vertical's array was clicked (a
   // record can have N — closing pass) — not just which vertical.
-  const [rhOpenWorkflowId, setRhOpenWorkflowId] = useState<string | null>(null)
-  const [rhWorkflowOpen, setRhWorkflowOpen] = useState(false)
   const [rhProvenanceOpen, setRhProvenanceOpen] = useState(false)
   // NBA detail — "which one" id pattern, since a record can have N NBAs.
   const [rhNbaOpen, setRhNbaOpen] = useState(false)
@@ -33726,7 +33206,6 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [rhNbaSelectOpenIdx, setRhNbaSelectOpenIdx] = useState<number | null>(null)
   const [rhNbaSelectValues, setRhNbaSelectValues] = useState<Record<number, string>>({})
 
-  const rhOpenWorkflow = (v: RhDemoKey, workflowId: string) => { setRhOpenVariant(v); setRhOpenWorkflowId(workflowId); setRhWorkflowOpen(true) }
   const rhOpenProvenance = (v: RhDemoKey) => { setRhOpenVariant(v); setRhProvenanceOpen(true) }
 
   // HTL ALWAYS opens in a new tab — never a slideout, never a same-page
@@ -33740,37 +33219,9 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   // untouched" without pretending a deep link exists that isn't real.
   // // TODO: once a real HTL/Agentic Studio destination exists, point
   // this at it.
-  const rhOpenHtlNewTab = () => window.open(window.location.href, "_blank")
-  // Agentic System's own "View all" — same reasoning as rhOpenHtlNewTab
-  // above: no dedicated Agentic Studio workflow-list page exists anywhere
-  // in this repo yet (checked directly), so this demo opens a new tab to
-  // this SAME page as a truthful placeholder rather than a SlideOut.
-  // // TODO: once a real Agentic Studio destination exists, point this at it.
-  const rhOpenWorkflowsList = () => window.open(window.location.href, "_blank")
-
-  const rhAgenticSystem = (v: RhDemoKey): AgenticSystemInfo => ({
-    workflows: RH_WORKFLOWS[v].map(wf => ({ id: wf.id, name: wf.name, onOpen: () => rhOpenWorkflow(v, wf.id) })),
-    onViewAll: rhOpenWorkflowsList,
-  })
-  // Block 3 (this pass) — maps this demo's mock array to the real
-  // InterventionItem[] shape, one onReview per item (not one shared
-  // callback for the whole record) so each keeps its own individual
-  // trigger. onViewAll (redesign pass) — same new-tab treatment, no
-  // separate "all interventions" list view exists yet either.
-  const rhIntervention = (v: RhDemoKey): PendingIntervention | undefined => {
-    const src = RH_INTERVENTIONS[v]
-    if (!src) return undefined
-    return {
-      items: src.map(item => ({
-        id: item.id,
-        description: item.description,
-        severity: item.severity,
-        onReview: rhOpenHtlNewTab,
-        contextTag: item.contextTag,
-      })),
-      onViewAll: rhOpenHtlNewTab,
-    }
-  }
+  // rhAgenticSystem, rhIntervention and rhOpenWorkflowsList lived here.
+  // They built the two zones' props out of RH_WORKFLOWS / RH_INTERVENTIONS;
+  // both zones are gone, so the builders and their mock data went too.
 
   const rhOpenNba = (v: RhDemoKey, itemId: string) => {
     setRhOpenVariant(v); setRhNbaItemId(itemId); setRhNbaOpen(true); setRhNbaResult(null)
@@ -33829,15 +33280,6 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     onDismiss: () => {},
   }]
   const openVariant = rhOpenVariant ?? "uep"
-  const openWorkflowList = RH_WORKFLOWS[openVariant]
-  const openWorkflow = openWorkflowList.find(wf => wf.id === rhOpenWorkflowId) ?? openWorkflowList[0]
-  // Correction pass — "progress" as a glanceable fact (step N of total),
-  // derived from the same steps array the timeline below already renders
-  // — not a second authored field that could drift out of sync with it.
-  // The first non-"done" step is the current one; all-done means the
-  // workflow finished its last run.
-  const openWorkflowCurrentStep = openWorkflow.steps.findIndex(s => s.status !== "done")
-  const openWorkflowStepNum = openWorkflowCurrentStep === -1 ? openWorkflow.steps.length : openWorkflowCurrentStep + 1
   const openRecordFields = RH_RECORD_FIELDS[openVariant]
   // Closing pass — "About this record"'s subtitle used to be one hardcoded
   // string ("Manager, access, department, and more") that only actually
@@ -33927,13 +33369,11 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               assignedAgent={pvAgent ? rhAssignedAgent(pvKey, RH_NAME[pvKey]) : null}
               secondaryAction={pvSecondary ? RH_PREVIEW_SECONDARY_ACTION : undefined}
               menuActions={pvMenu ? RH_PREVIEW_MENU_ACTIONS : []}
-              agenticSystem={pvZones ? rhAgenticSystem(pvKey) : undefined}
-              intervention={pvZones ? rhIntervention(pvKey) : undefined}
               locked={pvLocked}
               showInformation={pvInformation}
               onInformationOpen={() => rhOpenProvenance(pvKey)}
             />
-            {pvNba && <NextBestActionCard items={rhNextBestActions(pvKey)} className="mt-[12px]" />}
+            {pvNba && <NextBestActionCard item={rhNextBestActions(pvKey)[0]} className="mt-[12px]" />}
           </div>
 
           <div className="flex flex-col gap-[12px]">
@@ -34000,7 +33440,7 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div className="flex flex-col gap-[40px]">
           {/* Shown in the component's REAL default state — zones collapsed, identity
               tags visible. Figma: collapsed by default, for a predictable header
-              height. An earlier pass forced defaultExpanded here as a docs
+              height. An earlier pass forced here as a docs
               convenience, which made Overview and Playground look like two
               different components. Click the chevron to open the zones.
               visible without an extra click — the real default is still
@@ -34011,10 +33451,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               source={RH_SOURCE.uep}
               secondaryMetadata={RH_SECONDARY_METADATA.uep}
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-              agenticSystem={rhAgenticSystem("uep")}
-              intervention={rhIntervention("uep")}
               showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
-            <NextBestActionCard items={rhNextBestActions("uep")} className="mt-[12px]" />
+            <NextBestActionCard item={rhNextBestActions("uep")[0]} className="mt-[12px]" />
           </section>
 
           <section>
@@ -34025,10 +33463,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
               source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
               assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
-              agenticSystem={rhAgenticSystem("uep")}
-              intervention={rhIntervention("uep")}
               showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
-            <NextBestActionCard items={rhNextBestActions("uep")} className="mt-[12px]" />
+            <NextBestActionCard item={rhNextBestActions("uep")[0]} className="mt-[12px]" />
           </section>
 
           <section>
@@ -34037,10 +33473,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <EntityHeader name={RH_UCP.name} visual={RH_VISUAL.ucp} tags={RH_TAGS.ucp} stateBadge={RH_STATE_BADGE.ucp}
               source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={RH_RECORD_FIELDS.ucp}
               assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
-              agenticSystem={rhAgenticSystem("ucp")}
-              intervention={rhIntervention("ucp")}
               showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
-            <NextBestActionCard items={rhNextBestActions("ucp")} className="mt-[12px]" />
+            <NextBestActionCard item={rhNextBestActions("ucp")[0]} className="mt-[12px]" />
           </section>
 
           <section>
@@ -34049,10 +33483,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <EntityHeader name={RH_UVP.name} visual={RH_VISUAL.uvp} tags={RH_TAGS.uvp} stateBadge={RH_STATE_BADGE.uvp}
               source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp}
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
-              agenticSystem={rhAgenticSystem("uvp")}
-              intervention={rhIntervention("uvp")}
               showInformation onInformationOpen={() => rhOpenProvenance("uvp")} />
-            <NextBestActionCard items={rhNextBestActions("uvp")} className="mt-[12px]" />
+            <NextBestActionCard item={rhNextBestActions("uvp")[0]} className="mt-[12px]" />
           </section>
 
           <section>
@@ -34063,10 +33495,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <EntityHeader name={RH_PATIENT.name} visual={RH_VISUAL.patient} tags={RH_TAGS.patient} stateBadge={RH_STATE_BADGE.patient}
               source={RH_SOURCE.patient} secondaryMetadata={RH_SECONDARY_METADATA.patient} recordFields={RH_RECORD_FIELDS.patient}
               assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
-              agenticSystem={rhAgenticSystem("patient")}
-              intervention={rhIntervention("patient")}
               showInformation onInformationOpen={() => rhOpenProvenance("patient")} />
-            <NextBestActionCard items={rhNextBestActions("patient")} className="mt-[12px]" />
+            <NextBestActionCard item={rhNextBestActions("patient")[0]} className="mt-[12px]" />
           </section>
 
           <section>
@@ -34077,10 +33507,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <EntityHeader name={RH_CLAIM.name} visual={RH_VISUAL.claim} tags={RH_TAGS.claim} stateBadge={RH_STATE_BADGE.claim}
               source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim}
               assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
-              agenticSystem={rhAgenticSystem("claim")}
-              intervention={rhIntervention("claim")}
               showInformation onInformationOpen={() => rhOpenProvenance("claim")} />
-            <NextBestActionCard items={rhNextBestActions("claim")} className="mt-[12px]" />
+            <NextBestActionCard item={rhNextBestActions("claim")[0]} className="mt-[12px]" />
           </section>
 
           <section>
@@ -34091,10 +33519,8 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <EntityHeader name={RH_BORROWER.name} visual={RH_VISUAL.borrower} tags={RH_TAGS.borrower} stateBadge={RH_STATE_BADGE.borrower}
               source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower}
               assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
-              agenticSystem={rhAgenticSystem("borrower")}
-              intervention={rhIntervention("borrower")}
               showInformation onInformationOpen={() => rhOpenProvenance("borrower")} />
-            <NextBestActionCard items={rhNextBestActions("borrower")} className="mt-[12px]" />
+            <NextBestActionCard item={rhNextBestActions("borrower")[0]} className="mt-[12px]" />
           </section>
 
           <section>
@@ -34105,32 +33531,25 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
             <EntityHeader name={RH_REPAIR_ORDER.name} visual={RH_VISUAL.repairOrder} tags={RH_TAGS.repairOrder} stateBadge={RH_STATE_BADGE.repairOrder}
               source={RH_SOURCE.repairOrder} secondaryMetadata={RH_SECONDARY_METADATA.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder}
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
-              agenticSystem={rhAgenticSystem("repairOrder")}
-              intervention={rhIntervention("repairOrder")}
               showInformation onInformationOpen={() => rhOpenProvenance("repairOrder")} />
-            <NextBestActionCard items={rhNextBestActions("repairOrder")} className="mt-[12px]" />
+            <NextBestActionCard item={rhNextBestActions("repairOrder")[0]} className="mt-[12px]" />
           </section>
 
-          {/* Law 4 — PII masking dedicated Overview example REMOVED (Thom:
-              didn't carry enough standalone value). Law 4 stays documented
-              and demonstrated live elsewhere — the States gallery's own
-              "PII masked" item (#5) and the Reference tab's "PII / masking"
-              section. RH_UEP_MASKED_FIELDS stays in the code; it's still
-              used by that gallery item. */}
+          {/* Law 4 — PII masking. The States gallery item that used to
+              demonstrate this went with the zones, so it gets its own example
+              here: the SAME employee as the reference variant above, with one
+              RECORD field masked. A hydrated field and a masked field are the
+              same field in two entitlement states, not two field types. */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">
+              Law 4 — the same field, two entitlement states
+            </p>
+            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
+              source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_UEP_MASKED_FIELDS}
+              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+              showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
+          </section>
 
-          <EntityHeaderStatesGallery
-            rhAssignedAgent={rhAssignedAgent}
-            rhAgenticSystem={rhAgenticSystem}
-            rhNextBestActions={rhNextBestActions}
-          />
-
-          <EntityHeaderFlowsSection
-            rhAssignedAgent={rhAssignedAgent}
-            rhIntervention={rhIntervention}
-            rhOpenHtlNewTab={rhOpenHtlNewTab}
-            rhNextBestActions={rhNextBestActions}
-            rhOpenNba={rhOpenNba}
-          />
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
@@ -34173,11 +33592,9 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                title is an identifier rather than a name. */
             recordFields={pgRecordFields}
             assignedAgent={rhAssignedAgent(pgVariant, pgName)}
-            agenticSystem={rhAgenticSystem(pgVariant)}
-            intervention={rhIntervention(pgVariant)}
             showInformation onInformationOpen={() => rhOpenProvenance(pgVariant)}
           />
-          <NextBestActionCard items={pgNextBestActions} className="mt-[12px]" />
+          <NextBestActionCard item={pgNextBestActions[0]} className="mt-[12px]" />
 
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Variant — same skeleton, only content changes</p>
@@ -34706,110 +34123,11 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
       )}
 
 
-      {/* ── Active Workflow detail — read-only content, but "go look at the
-           real workflow" is a genuine, single, always-relevant next step —
-           correction pass replaces the "···" dropdown (View in Agentic
-           Studio, one hidden click away) with a direct footer CTA, the
-           SlideOut's own default bottom-CTA pattern, so it's one click
-           instead of two. Single-action footer (showCtaSecondary={false}),
-           same reasoning as the Agent SlideOut's "Apply recommendation". */}
-      <SlideOut
-        open={rhWorkflowOpen}
-        onClose={() => setRhWorkflowOpen(false)}
-        type="with-variants"
-        size="m"
-        title={openWorkflow.name}
-        subtitle={`Workflow · Started ${openWorkflow.started}`}
-        iconContent={<LucideIcons.Workflow size={24} style={{ color: "var(--hi-lightblue-icon)" }} />}
-        iconBg="var(--hi-lightblue-bg)"
-        showStatus={false}
-        showTabs={false}
-        showSearchBar={false}
-        showChips={false}
-        showCta
-        showCtaSecondary={false}
-        ctaPrimaryLabel="Go to workflow"
-        // TODO: confirmar navegación real a Agentic Studio — no destination exists yet.
-        onCtaPrimary={() => setRhWorkflowOpen(false)}
-        showTopButton={false}
-      >
-        <div className={PANEL_CONTENT_CLASS}>
-          {/* AI Summary — always first, per the Content pattern's documented
-              order (AI Summary → List → Insights → Detail). */}
-          <div className="p-[14px] rounded-[8px] flex flex-col gap-[8px]" style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}>
-            <div className="flex items-center gap-[6px]">
-              <LucideIcons.Sparkles size={12} style={{ color: "var(--color-text-purple)" }} />
-              <span className="text-[11px] font-semibold" style={{ color: "var(--color-text-purple)" }}>AI Summary</span>
-            </div>
-            <p className="text-[12px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{openWorkflow.aiSummary}</p>
-          </div>
-
-          {/* Correction pass — refined for what actually matters when a
-              workflow is impacting this contact: status + where it stands
-              (step N of total), a surfaced blocker when there is one, and
-              the next milestone — never the workflow's own internal node
-              config (that's Agentic Studio's job, not this card's). Status
-              uses the repo's own status-Tag component (showStatus on the
-              SlideOut header itself is a fixed green pill — wrong for
-              "Blocked"), not a second ad-hoc badge. */}
-          <div className="flex items-center gap-[8px]">
-            <Tag variant={WORKFLOW_STATUS_TAG[openWorkflow.status]} size="sm">{WORKFLOW_STATUS_LABEL[openWorkflow.status]}</Tag>
-            <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Step {openWorkflowStepNum} of {openWorkflow.steps.length}</span>
-          </div>
-
-          {openWorkflow.status === "blocked" && openWorkflow.blockedReason && (
-            <InformativeCard state="alert" size="sm" title="Blocked" description={openWorkflow.blockedReason} />
-          )}
-
-          <div>
-            <div className="flex items-center h-[32px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Details</span>
-            </div>
-            <div className="grid grid-cols-3 gap-[12px] text-[12px] mt-[4px]">
-              <div>
-                <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Started</p>
-                <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openWorkflow.started}</p>
-              </div>
-              {openWorkflow.nextMilestone && (
-                <div>
-                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Next Milestone</p>
-                  <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>
-                    {openWorkflow.nextMilestone.label}{openWorkflow.nextMilestone.date ? ` · ${openWorkflow.nextMilestone.date}` : ""}
-                  </p>
-                </div>
-              )}
-              <div>
-                <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Total Runs</p>
-                <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openWorkflow.totalRuns}</p>
-              </div>
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center h-[32px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Steps</span>
-            </div>
-            {openWorkflow.steps.map((s, i) => (
-              <ProcessItem key={i} title={s.label} timestamp={s.date} status={s.status} number={i + 1} showLine={i < openWorkflow.steps.length - 1} />
-            ))}
-          </div>
-          {/* List Section — recent runs, denser real content. Resolved item
-              → status Tag, no button (List Sections pattern rule: never
-              combine badge + button in the same row). */}
-          <div>
-            <div className="flex items-center h-[32px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Recent Runs</span>
-            </div>
-            <div className="flex flex-col gap-[8px]">
-              {openWorkflow.recentRuns.map((r, i) => (
-                <div key={i} className="flex items-center gap-[10px] px-[12px] h-[40px] rounded-[8px]" style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
-                  <span className="text-[13px] font-medium flex-1" style={{ color: "var(--foreground)" }}>{r.date}</span>
-                  <Tag variant={r.outcome === "success" ? "success" : "error"} size="sm">{r.outcome === "success" ? "Completed" : "Failed"}</Tag>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </SlideOut>
+      {/* The Active Workflow SlideOut lived here. Nothing opened it any
+          more: its only entry point was the Agentic System zone, so it
+          became unreachable UI the moment the zone went. Its content — a
+          workflow's steps, status and provenance — belongs to the Overview
+          widget that now carries that data. */}
 
       {/* ── About this record (Law 2) — renamed this redesign pass (was
            "Data Provenance") to match the reference brief's own framing:

@@ -674,7 +674,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
         ]}
         assignedAgent={{ id: "agent-1", name: "AIMS Assistant", onOpenChat: () => {} }}
       />
-      <NextBestActionCard items={rhNextBestActions} className="mt-[12px] mb-[16px]" />
+      <NextBestActionCard item={rhNextBestActions[0]} className="mt-[12px] mb-[16px]" />
 
       {/* ── Tabs row + "+" entity-type picker ── */}
       <div className="flex items-center gap-[8px] mb-[24px]">

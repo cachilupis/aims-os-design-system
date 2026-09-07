@@ -55,10 +55,25 @@ export interface NextBestAction {
 }
 
 export interface NextBestActionCardProps {
-  /** Omit or pass an empty array for a record with genuinely nothing to
-   *  recommend — the card disappears entirely rather than rendering a
-   *  placeholder. N items stack with the container's own 24px rhythm. */
-  items?: NextBestAction[]
+  /**
+   * ONE recommendation, or none.
+   *
+   * This is deliberately singular. It used to be `items: NextBestAction[]`
+   * and the card stacked every one of them, which put two Next Best Actions
+   * in a single container — the record's most important recommendation
+   * competing with its second most important, in the same purple box. There
+   * is one next best action by definition; if there were two, neither is
+   * next.
+   *
+   * A host with several candidates picks the most prioritized one and passes
+   * that. Making the prop singular means no caller can get this wrong, which
+   * is the whole reason it is not an array.
+   *
+   * Omit it, or pass `undefined`, for a record with genuinely nothing to
+   * recommend — the card disappears entirely rather than rendering a
+   * placeholder.
+   */
+  item?: NextBestAction
   /**
    * `purple` (the default) is the DS CardContainer purple variant. Purple
    * means "an agent produced this" across the whole system, and this card is
@@ -76,18 +91,15 @@ export interface NextBestActionCardProps {
 }
 
 export function NextBestActionCard({
-  items = [],
+  item,
   variant = "purple",
   size = "default",
   className,
 }: NextBestActionCardProps) {
-  if (items.length === 0) return null
+  if (!item) return null
   return (
     <CardContainer variant={variant} size={size === "sm" ? "sm" : undefined} className={cn(className)}>
-      {/* 24px between suggestions — the container's own itemSpacing in Figma. */}
-      <div className="flex flex-col gap-[24px]">
-        {items.map(item => <Suggestion key={item.id} nba={item} />)}
-      </div>
+      <Suggestion nba={item} />
     </CardContainer>
   )
 }
