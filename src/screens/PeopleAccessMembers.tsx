@@ -1251,7 +1251,6 @@ function MemberDetailPage({
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={() => <Header size="compress" title="" />}
     >
       <BackBreadcrumb onBack={onBack} />
 
@@ -2779,6 +2778,9 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
   const [activeTab, setActiveTab] = useState(0)
   const [group, setGroup] = useState(initialGroup)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [draftName, setDraftName] = useState(initialGroup.name)
+  const [savedName, setSavedName] = useState(initialGroup.name)
   const groupMembers = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const log = GROUP_ACTIVITY[group.id] ?? []
   const allStudios = ["governance", "datastudio", "agentic", "admin"]
@@ -2803,30 +2805,58 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={() => (
-        <Header
-          size="compress"
-          title={group.name}
-          description={group.desc}
-          primaryAction={
-            <Button variant="primary" size="sm">
-              <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
-              Add member
-            </Button>
-          }
-        />
-      )}
     >
       <BackBreadcrumb onBack={onBack} />
 
       {/* Group identity bar */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 16, marginTop: 16, marginBottom: 24,
+        display: "flex", alignItems: "flex-start", gap: 16, marginTop: 16, marginBottom: 24,
         padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
         background: "var(--surface)", borderLeft: `4px solid ${group.color}`,
       }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Editable name row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            {editingName ? (
+              <input
+                autoFocus
+                value={draftName}
+                onChange={e => setDraftName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") { setSavedName(draftName); setGroup(g => ({ ...g, name: draftName })); setEditingName(false) }
+                  if (e.key === "Escape") { setDraftName(savedName); setEditingName(false) }
+                }}
+                style={{
+                  fontSize: 16, fontWeight: 700, color: "var(--foreground)",
+                  background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                  borderRadius: 6, padding: "2px 8px", outline: "none", flex: 1, maxWidth: 280,
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{savedName}</span>
+            )}
+            {!editingName && (
+              <button
+                onClick={() => { setDraftName(savedName); setEditingName(true) }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}
+                title="Edit name"
+              >
+                <Icons.Pencil size={13} />
+              </button>
+            )}
+            {editingName && (
+              <div style={{ display: "flex", gap: 4 }}>
+                <button onClick={() => { setSavedName(draftName); setGroup(g => ({ ...g, name: draftName })); setEditingName(false) }}
+                  style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>
+                  Save
+                </button>
+                <button onClick={() => { setDraftName(savedName); setEditingName(false) }}
+                  style={{ fontSize: 11, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {group.studios.length === 0 ? (
               <span style={{ fontSize: 12, color: "var(--muted-foreground)", opacity: 0.6 }}>No studios</span>
@@ -2843,7 +2873,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
             })}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 24, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{groupMembers.length}</div>
             <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
@@ -2852,8 +2882,45 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
             <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{group.studios.length}</div>
             <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>studios</div>
           </div>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            style={{
+              background: "none", border: "1px solid var(--border)", borderRadius: 8,
+              padding: "6px 10px", cursor: "pointer", color: "var(--muted-foreground)",
+              display: "flex", alignItems: "center", gap: 5, fontSize: 12,
+            }}
+            title="Delete group"
+          >
+            <Icons.Trash2 size={13} />
+          </button>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10002,
+          background: "rgba(0,0,0,0.45)", // audit-ignore: scrim overlay
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 14, padding: "28px 32px", width: 400, maxWidth: "90vw",
+            boxShadow: "var(--shadow-elevation-3, 0 16px 48px rgba(0,0,0,.22))", // audit-ignore: rgba fallback
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 8 }}>
+              Delete "{savedName}"?
+            </div>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: "0 0 24px", lineHeight: 1.6 }}>
+              This group will be removed permanently. Members are not removed from the workspace.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+              <Button variant="warning" size="sm" onClick={onBack}>Delete group</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DetailTabs tabs={["Members", "Settings", "Activity"]} active={activeTab} onChange={setActiveTab} />
 
