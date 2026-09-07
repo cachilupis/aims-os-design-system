@@ -1,4 +1,4 @@
-import { Search, X, ChevronDown, SlidersHorizontal, ArrowDown, LayoutGrid, LayoutList } from "lucide-react"
+import { Search, X, ChevronDown, SlidersHorizontal, ArrowDown, ArrowUp, LayoutGrid, LayoutList } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tag } from "@/components/ui/tag"
 import { Input } from "@/components/ui/input"
@@ -63,6 +63,20 @@ export type FiltersProps = {
   onAllFiltersClick?: () => void
   showSort?: boolean
   sortLabel?: string
+  /** When set, Filters renders and positions the sort menu itself — the same
+   *  deal as FilterSlot.options, and it exists for the same reason: the sort
+   *  control was a trigger only, so every screen that wanted a working sort
+   *  had to wire Menu + dropdown-anchor by hand. Leave it unset to keep the
+   *  old behaviour, where onSortClick fires and the screen owns the menu. */
+  sortOptions?: string[]
+  /** Called with the chosen sort field. Only used alongside `sortOptions`. */
+  onSortSelect?: (option: string) => void
+  /** Drives the arrow glyph — ArrowDown for "desc", ArrowUp for "asc".
+   *  Filters does not sort anything; flipping this is the caller's job. */
+  sortDirection?: "asc" | "desc"
+  onSortDirectionChange?: (direction: "asc" | "desc") => void
+  /** Custom-menu escape hatch, on both sort controls. Ignored for the label
+   *  button when `sortOptions` is set. */
   onSortClick?: () => void
   showViewToggle?: boolean
   viewMode?: "grid" | "list"
@@ -106,6 +120,10 @@ export function Filters({
   onAllFiltersClick,
   showSort          = true,
   sortLabel         = "Name",
+  sortOptions,
+  onSortSelect,
+  sortDirection     = "desc",
+  onSortDirectionChange,
   onSortClick,
   showViewToggle    = true,
   viewMode          = "grid",
@@ -117,16 +135,24 @@ export function Filters({
 
   // Menu state for slots that carry their own options. Slots using the onOpen
   // escape hatch never touch this — openIdx stays null for them.
-  const [openIdx, setOpenIdx] = useState<number | null>(null)
+  const [openIdx, setOpenIdx] = useState<number | "sort" | null>(null)
   const [anchor,  setAnchor]  = useState<DropdownAnchor | null>(null)
   const dropdown = useDropdownPosition(anchor)
-  const openSlot = openIdx === null ? null : slots[openIdx]
+  const openSlot = typeof openIdx === "number" ? slots[openIdx] : null
+  const sortOpen = openIdx === "sort"
 
   /** A slot click either opens the menu we own, or hands off to the screen. */
   const handleSlotClick = (slot: FilterSlot, i: number) => (e: React.MouseEvent) => {
     if (!slot.options) { slot.onOpen?.(); return }
     setAnchor(anchorFromEvent(e))
     setOpenIdx(prev => (prev === i ? null : i))
+  }
+
+  /** Same deal for the sort label. */
+  const handleSortClick = (e: React.MouseEvent) => {
+    if (!sortOptions) { onSortClick?.(); return }
+    setAnchor(anchorFromEvent(e))
+    setOpenIdx(prev => (prev === "sort" ? null : "sort"))
   }
 
   return (
@@ -290,15 +316,20 @@ export function Filters({
               style={{ color: "var(--fi-sort-icon)" }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--fi-chip-bg)" }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
-              onClick={onSortClick}
-              aria-label="Toggle sort direction"
+              onClick={() => {
+                if (onSortDirectionChange) onSortDirectionChange(sortDirection === "asc" ? "desc" : "asc")
+                else onSortClick?.()
+              }}
+              aria-label={`Sort ${sortDirection === "asc" ? "ascending" : "descending"} — click to reverse`}
             >
-              <ArrowDown className="w-[16px] h-[16px]" />
+              {sortDirection === "asc"
+                ? <ArrowUp   className="w-[16px] h-[16px]" />
+                : <ArrowDown className="w-[16px] h-[16px]" />}
             </button>
             <button
               className="inline-flex items-center gap-[8px] text-sm font-medium transition-opacity hover:opacity-80 shrink-0"
               style={{ color: "var(--fi-sort-text)" }}
-              onClick={onSortClick}
+              onClick={handleSortClick}
             >
               {sortLabel}
               <ChevronDown className="w-[13px] h-[13px] shrink-0" style={{ color: "var(--fi-sort-icon)" }} />
@@ -336,7 +367,7 @@ export function Filters({
       {/* The menu for slots that carry their own options. Fixed-positioned so it
           escapes any overflow:hidden ancestor, with a full-screen click-catcher
           behind it — the same shape ListViewSection had to assemble by hand. */}
-      {openSlot?.options && (
+      {(openSlot?.options || (sortOpen && sortOptions)) && (
         <>
           <div
             className="fixed inset-0"
@@ -345,10 +376,10 @@ export function Filters({
           />
           <div ref={dropdown.ref} style={{ position: "fixed", zIndex: 10001, ...dropdown.style }}>
             <Menu className="w-auto min-w-[200px]">
-              <MenuSection label={openSlot.placeholder} />
+              <MenuSection label={openSlot ? openSlot.placeholder : "Sort by"} />
               <MenuDivider />
-              {openSlot.options.map(option => {
-                const selected = openSlot.value === option
+              {(openSlot ? openSlot.options! : sortOptions!).map(option => {
+                const selected = openSlot ? openSlot.value === option : sortLabel === option
                 return (
                   <MenuItem
                     key={option}
@@ -359,7 +390,11 @@ export function Filters({
                         ? <Check size={13} style={{ flexShrink: 0, color: "var(--primary)" }} />
                         : undefined
                     }
-                    onClick={() => { openSlot.onSelect?.(option); setOpenIdx(null) }}
+                    onClick={() => {
+                      if (openSlot) openSlot.onSelect?.(option)
+                      else onSortSelect?.(option)
+                      setOpenIdx(null)
+                    }}
                   />
                 )
               })}

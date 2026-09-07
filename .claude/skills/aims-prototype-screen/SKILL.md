@@ -196,7 +196,7 @@ import MyScreen from "./screens/pm-[author]-[feature]"
 
 ```tsx
 // one new entry inside the PROTOTYPE_PAGES array
-{ id: "proto-[author]-[feature]", label: "[Human label] — [Author]", description: "[one sentence on what it demonstrates]", author: "[Author]", component: MyScreen },
+{ id: "proto-[author]-[feature]", label: "[Human label] — [Author]", description: "[one sentence on what it demonstrates]", author: "[Author]", addedOn: "[today, YYYY-MM-DD]", component: MyScreen },
 ```
 
 `id` becomes the shareable link once deployed: `aims-os-design-system.vercel.app/?proto=proto-[author]-[feature]` — keep it a lowercase, hyphenated slug.
