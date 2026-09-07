@@ -355,6 +355,8 @@ Three layers — always compose in this order:
 2. **All Filters button** → opens `FiltersSlideout`
 3. **Applied chips** (`Tag` or `Chip`) — appear below filters after Apply, show active state
 
+**The `Filters` bar owns its own menus.** Both the filter chips and the sort label render and position their dropdown themselves — pass `slots[].options` + `onSelect` for a chip, and `sortOptions` + `onSortSelect` + `sortDirection`/`onSortDirectionChange` for sort. **Never hand-roll a `Menu` + `dropdown-anchor` next to a `Filters` bar, and never fall back to a raw `<select>`.** The `onOpen` / `onSortClick` props remain only as the escape hatch for a genuinely custom menu.
+
 Rules:
 - Closing `FiltersSlideout` without Apply discards draft state; list does not change.
 - Apply → sync draft to applied → reset pagination to page 1 → close slideout.
