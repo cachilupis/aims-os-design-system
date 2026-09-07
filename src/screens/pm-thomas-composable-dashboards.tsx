@@ -137,14 +137,14 @@ const MKT_WIDGETS = [
 // ── Widget builder data ───────────────────────────────────────────────────────
 
 const ENTITY_SOURCES = [
-  { id: "contacts_hubspot",      label: "Contacts",      icon: "Users",         desc: "CRM contact profiles and relationship history",    integration: "HubSpot",  governed: true,  hasPII: true },
-  { id: "companies_hubspot",     label: "Companies",     icon: "Building2",     desc: "Organization records, domains, and account data",  integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "deals_hubspot",         label: "Deals",         icon: "TrendingUp",    desc: "Pipeline opportunities and deal stages",           integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "tickets_zendesk",       label: "Tickets",       icon: "HelpCircle",    desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false },
-  { id: "conversations_zendesk", label: "Conversations", icon: "MessageSquare", desc: "Chat and email threads with CSAT scores",          integration: "Zendesk",  governed: false, hasPII: true },
-  { id: "employees_bamboohr",    label: "Employees",     icon: "UserCheck",     desc: "HR records, roles, and people data",               integration: "BambooHR", governed: true,  hasPII: true },
-  { id: "workflows_aims",        label: "Workflows",     icon: "GitBranch",     desc: "Automated process definitions in AIMS OS",        integration: "AIMS OS",  governed: true,  hasPII: false },
-  { id: "ai_workers_aims",       label: "AI Workers",    icon: "Bot",           desc: "AI agent instances and performance metrics",       integration: "AIMS OS",  governed: true,  hasPII: false },
+  { id: "contacts_hubspot",      label: "Contacts",      icon: "Users",         desc: "CRM contact profiles and relationship history",    integration: "HubSpot",  governed: true,  hasPII: true,  extraIntegrations: ["Salesforce", "Pipedrive"] },
+  { id: "companies_hubspot",     label: "Companies",     icon: "Building2",     desc: "Organization records, domains, and account data",  integration: "HubSpot",  governed: true,  hasPII: false, extraIntegrations: ["Salesforce"] },
+  { id: "deals_hubspot",         label: "Deals",         icon: "TrendingUp",    desc: "Pipeline opportunities and deal stages",           integration: "HubSpot",  governed: true,  hasPII: false, extraIntegrations: ["Salesforce", "Pipedrive", "Close"] },
+  { id: "tickets_zendesk",       label: "Tickets",       icon: "HelpCircle",    desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false, extraIntegrations: ["Intercom"] },
+  { id: "conversations_zendesk", label: "Conversations", icon: "MessageSquare", desc: "Chat and email threads with CSAT scores",          integration: "Zendesk",  governed: false, hasPII: true,  extraIntegrations: [] },
+  { id: "employees_bamboohr",    label: "Employees",     icon: "UserCheck",     desc: "HR records, roles, and people data",               integration: "BambooHR", governed: true,  hasPII: true,  extraIntegrations: ["Rippling", "Workday"] },
+  { id: "workflows_aims",        label: "Workflows",     icon: "GitBranch",     desc: "Automated process definitions in AIMS OS",        integration: "AIMS OS",  governed: true,  hasPII: false, extraIntegrations: [] },
+  { id: "ai_workers_aims",       label: "AI Workers",    icon: "Bot",           desc: "AI agent instances and performance metrics",       integration: "AIMS OS",  governed: true,  hasPII: false, extraIntegrations: [] },
 ]
 const PRESET_DATASETS = [
   { id: "ds-contacts-tier",  name: "Contacts by Tier",  description: "Count of contacts grouped by tier.",                     type: "GROUPED",      integration: "HubSpot" },
@@ -1209,8 +1209,18 @@ function WBBuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: T
   )
 }
 
+const WB_MAX_TAGS = 3
+
 function WBEntitySourceCard({ source, selected, onSelect, isLast }: { source: typeof ENTITY_SOURCES[0]; selected: boolean; onSelect: () => void; isLast?: boolean }) {
   const Icon = (LucideIcons as Record<string, unknown>)[source.icon] as React.FC<{ size?: number; style?: React.CSSProperties }> | undefined
+  const allTags = [
+    { key: "integration", label: source.integration, variant: "informative" as const },
+    ...((source.extraIntegrations ?? []).map((s, i) => ({ key: `extra-${i}`, label: s, variant: "informative" as const }))),
+    ...(!source.governed ? [{ key: "ungoverned", label: "Ungoverned", variant: "alert" as const }] : []),
+    ...(source.hasPII    ? [{ key: "pii",         label: "PII",        variant: "alert" as const }] : []),
+  ]
+  const visibleTags = allTags.slice(0, WB_MAX_TAGS)
+  const hiddenCount = allTags.length - visibleTags.length
   return (
     <div onClick={onSelect} style={{
       cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px",
@@ -1223,9 +1233,8 @@ function WBEntitySourceCard({ source, selected, onSelect, isLast }: { source: ty
         <div style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.4 }}>{source.desc}</div>
       </div>
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-        <Tag variant="informative">{source.integration}</Tag>
-        {!source.governed && <Tag variant="alert">Ungoverned</Tag>}
-        {source.hasPII && <Tag variant="alert">PII</Tag>}
+        {visibleTags.map(t => <Tag key={t.key} variant={t.variant}>{t.label}</Tag>)}
+        {hiddenCount > 0 && <Tag variant="neutral" size="sm">+{hiddenCount}</Tag>}
       </div>
     </div>
   )
@@ -1292,8 +1301,8 @@ function WBSkeletonShape({ typeId, color }: { typeId: string | null; color: stri
   )
 }
 
-function WBPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previewSize, setPreviewSize, saveHint }: {
-  typeId: string | null; name: string; sourceId: string | null; freshness: string; accentColor: string;
+function WBPreviewPanel({ typeId, name, onNameChange, sourceId, freshness, accentColor, previewSize, setPreviewSize, saveHint }: {
+  typeId: string | null; name: string; onNameChange: (n: string) => void; sourceId: string | null; freshness: string; accentColor: string;
   previewSize: string; setPreviewSize: (s: string) => void; saveHint: string
 }) {
   const entitySrc  = ENTITY_SOURCES.find(s => s.id === sourceId)
@@ -1320,7 +1329,12 @@ function WBPreviewPanel({ typeId, name, sourceId, freshness, accentColor, previe
         <div style={{ borderRadius: 10, border: "1.5px dashed var(--field-border)", background: "var(--surface)", overflow: "hidden" }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px dashed var(--field-border)" }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{name || "Untitled widget"}</span>
+              <input
+                value={name}
+                onChange={e => onNameChange(e.target.value)}
+                placeholder="Untitled widget"
+                style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", background: "transparent", border: "none", outline: "none", width: "100%", minWidth: 0, cursor: "text" }}
+              />
               <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
             </div>
             {!typeId || !srcLabel ? (
@@ -1378,7 +1392,7 @@ function sourceToPresetId(source: string): string | null {
   return PRESET_DATASETS.find(d => d.integration === integration)?.id ?? null
 }
 
-function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef, initialWidget }: {
+function WidgetBuilderOverlay({ onClose: _onClose, tab, setTab, onProgressChange, saveRef, initialWidget }: {
   onClose: () => void
   tab: TabId
   setTab: (t: TabId) => void
@@ -1399,7 +1413,7 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
   const [previewSize, setPrvSize]   = useState("md")
   const [describePrompt, setDescPr] = useState("")
   const [filterRows, setFilterRows] = useState<WBFilter[]>([])
-  const [saved, setSaved]           = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
 
   const accentHex  = ACCENT_COLORS.find(a => a.id === accentColor)?.hex ?? "var(--primary)"
   const dataComplete   = !!(sourceId && metric)
@@ -1412,13 +1426,13 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
     ? ENTITY_SOURCES.find(s => s.id === sourceId)?.label
     : PRESET_DATASETS.find(d => d.id === sourceId)?.name
 
-  const saveHint = !dataComplete   ? "Complete the Data tab to see a live preview."
-    : !widgetComplete ? "Pick a type and name to finalize the preview."
+  const saveHint = !dataComplete   ? "Choose a governed dataset and metric to continue."
+    : !widgetComplete ? "Choose a widget type and give it a name to save."
     : ""
 
   function handleSave() {
     if (!widgetName) return
-    setSaved(true)
+    setShowSaveModal(true)
   }
 
   // Expose handleSave to parent header button via ref
@@ -1426,23 +1440,6 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
     saveRef.current = handleSave
     return () => { saveRef.current = null }
   })
-
-  if (saved) {
-    const CheckCircle = LucideIcons.CheckCircle2 as React.FC<{ size?: number; style?: React.CSSProperties }>
-    return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, height: "100%", padding: 40, textAlign: "center" as const }}>
-        <CheckCircle size={48} style={{ color: "var(--success)" }} />
-        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)" }}>"{widgetName}" saved to catalog</div>
-        <p style={{ fontSize: 14, color: "var(--field-supporting)", maxWidth: 360, margin: 0 }}>
-          Your widget is now available in the Widget Library and can be added to any dashboard.
-        </p>
-        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          <Button variant="secondary" size="sm" onClick={onClose}>Back to Library</Button>
-          <Button variant="primary" size="sm" onClick={() => { setSaved(false); setSourceId(null); setMetric(""); setTypeId(null); setWName(""); setAccent(""); setStyle(""); setTab("data"); onProgressChange(false, false) }}>Build another</Button>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
@@ -1703,10 +1700,21 @@ function WidgetBuilderOverlay({ onClose, tab, setTab, onProgressChange, saveRef,
       {/* ── Right: sticky preview ───────────────────────────────────────── */}
       <div style={{ width: "42%", flexShrink: 0, position: "sticky" as const, top: 0 }}>
         <WBPreviewPanel
-          typeId={typeId} name={widgetName} sourceId={sourceId} freshness={freshness}
+          typeId={typeId} name={widgetName} onNameChange={setWName} sourceId={sourceId} freshness={freshness}
           accentColor={accentHex} previewSize={previewSize} setPreviewSize={setPrvSize} saveHint={saveHint}
         />
       </div>
+
+      <ModalDialog
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        tone="success"
+        iconName="BookMarked"
+        title="Save to catalog?"
+        description={`"${widgetName || "Untitled widget"}" will be added to the widget library and available across all dashboards.`}
+        ctaPrimary={{ label: "Save to catalog", onClick: () => { setShowSaveModal(false); setSourceId(null); setMetric(""); setTypeId(null); setWName(""); setAccent(""); setStyle(""); setTab("data"); onProgressChange(false, false) } }}
+        ctaSecondary={{ label: "Keep editing", onClick: () => setShowSaveModal(false) }}
+      />
     </div>
   )
 }
