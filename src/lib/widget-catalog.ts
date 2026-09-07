@@ -58,7 +58,10 @@ export type WidgetTypeDef = {
   id:        string
   label:     string
   category:  WidgetCategory
-  /** How the preview renderer draws it. */
+  /** Lucide icon name. The type picker shows this rather than a miniature —
+   *  twenty-odd previews at tile size compete with each other and none reads. */
+  icon:      string
+  /** How the preview renderer draws it, for the live preview. */
   shape:     WidgetShape
   /** One line of guidance, shown beside the live preview. */
   bestFor:   string
@@ -70,43 +73,47 @@ export type WidgetTypeDef = {
 
 export const WIDGET_CATALOG: WidgetTypeDef[] = [
   // ── Statistical ───────────────────────────────────────────────────────────
-  { id: "kpi",             label: "KPI",             category: "statistical",  shape: "kpi",       catalogId: "kpi",             authorable: true,  bestFor: "At-a-glance status and headline numbers." },
-  { id: "stat-row",        label: "Stat Row",        category: "statistical",  shape: "stat-row",  catalogId: "status-warning",  authorable: true,  bestFor: "Three related counters side by side." },
-  { id: "gauge",           label: "Gauge",           category: "statistical",  shape: "gauge",     catalogId: "charts",          authorable: true,  bestFor: "Monitoring against a target in real time." },
-  { id: "line",            label: "Line Chart",      category: "statistical",  shape: "line",      catalogId: "charts",          authorable: true,  bestFor: "Spotting trends and momentum over time." },
-  { id: "bar",             label: "Bar Chart",       category: "statistical",  shape: "bars",      catalogId: "charts",          authorable: true,  bestFor: "Comparing groups or stages." },
-  { id: "donut",           label: "Donut",           category: "statistical",  shape: "donut",     catalogId: "charts",          authorable: true,  bestFor: "Showing composition at a glance." },
-  { id: "funnel",          label: "Funnel",          category: "statistical",  shape: "funnel",    catalogId: "charts",          authorable: true,  bestFor: "Drop-off between ordered stages." },
-  { id: "heatmap",         label: "Heat Map",        category: "statistical",  shape: "heatmap",   catalogId: "charts",          authorable: true,  bestFor: "Finding hotspots across two dimensions." },
-  { id: "correlation",     label: "Correlation",     category: "statistical",  shape: "scatter",   catalogId: "charts",          authorable: true,  bestFor: "Relationships and outliers, one dot per record." },
-  { id: "map",             label: "Map",             category: "statistical",  shape: "map",       catalogId: "charts",          authorable: true,  bestFor: "Comparing performance across regions." },
-  { id: "ai-summary",      label: "AI Summary",      category: "statistical",  shape: "notes",     catalogId: null,              authorable: true,  bestFor: "A written read of the data, not the data itself." },
+  { id: "kpi",             label: "KPI",             icon: "Hash", category: "statistical",  shape: "kpi",       catalogId: "kpi",             authorable: true,  bestFor: "At-a-glance status and headline numbers." },
+  { id: "stat-row",        label: "Stat Row",        icon: "Rows3", category: "statistical",  shape: "stat-row",  catalogId: "status-warning",  authorable: true,  bestFor: "Three related counters side by side." },
+  { id: "gauge",           label: "Gauge",           icon: "Gauge", category: "statistical",  shape: "gauge",     catalogId: "charts",          authorable: true,  bestFor: "Monitoring against a target in real time." },
+  { id: "line",            label: "Line Chart",      icon: "TrendingUp", category: "statistical",  shape: "line",      catalogId: "charts",          authorable: true,  bestFor: "Spotting trends and momentum over time." },
+  { id: "bar",             label: "Bar Chart",       icon: "BarChart3", category: "statistical",  shape: "bars",      catalogId: "charts",          authorable: true,  bestFor: "Comparing groups or stages." },
+  { id: "donut",           label: "Donut",           icon: "PieChart", category: "statistical",  shape: "donut",     catalogId: "charts",          authorable: true,  bestFor: "Showing composition at a glance." },
+  { id: "funnel",          label: "Funnel",          icon: "Filter", category: "statistical",  shape: "funnel",    catalogId: "charts",          authorable: true,  bestFor: "Drop-off between ordered stages." },
+  { id: "heatmap",         label: "Heat Map",        icon: "Grid3X3", category: "statistical",  shape: "heatmap",   catalogId: "charts",          authorable: true,  bestFor: "Finding hotspots across two dimensions." },
+  { id: "correlation",     label: "Correlation",     icon: "Crosshair", category: "statistical",  shape: "scatter",   catalogId: "charts",          authorable: true,  bestFor: "Relationships and outliers, one dot per record." },
+  { id: "map",             label: "Map",             icon: "Map", category: "statistical",  shape: "map",       catalogId: "charts",          authorable: true,  bestFor: "Comparing performance across regions." },
+  { id: "pie",             label: "Pie",             icon: "ChartPie",     category: "statistical",  shape: "pie",       catalogId: "charts",          authorable: true,  bestFor: "Composition when every slice is named." },
+  { id: "area",            label: "Area",            icon: "AreaChart",    category: "statistical",  shape: "line",      catalogId: "charts",          authorable: true,  bestFor: "A trend where the volume underneath matters." },
+  { id: "stacked-bar",     label: "Stacked Bar",     icon: "BarChartBig",  category: "statistical",  shape: "bars",      catalogId: "charts",          authorable: true,  bestFor: "Totals and their make-up in one bar." },
+  { id: "sparkline",       label: "Sparkline",       icon: "Activity",     category: "statistical",  shape: "line",      catalogId: "charts",          authorable: true,  bestFor: "A trend small enough to sit beside a number." },
+  { id: "ai-summary",      label: "AI Summary",      icon: "Sparkles", category: "statistical",  shape: "notes",     catalogId: null,              authorable: true,  bestFor: "A written read of the data, not the data itself." },
 
   // ── Data display ──────────────────────────────────────────────────────────
-  { id: "table",           label: "Table",           category: "data-display", shape: "table",     catalogId: "table",           authorable: true,  bestFor: "Detailed row-by-row review." },
-  { id: "list",            label: "List",            category: "data-display", shape: "tasks",     catalogId: null,              authorable: true,  bestFor: "Scannable items with one status each." },
-  { id: "profile-card",    label: "Profile Card",    category: "data-display", shape: "roster",    catalogId: null,              authorable: true,  bestFor: "Key fields of one entity record." },
-  { id: "carousel",        label: "Carousel",        category: "data-display", shape: "carousel",  catalogId: null,              authorable: true,  bestFor: "A few rich items, browsed sideways." },
-  { id: "board",           label: "Board",           category: "data-display", shape: "status",    catalogId: null,              authorable: true,  bestFor: "Counts grouped by lifecycle state." },
-  { id: "feed",            label: "Feed",            category: "data-display", shape: "feed",      catalogId: "activity",        authorable: true,  bestFor: "What happened, newest first." },
-  { id: "alerts",          label: "Alerts",          category: "data-display", shape: "alerts",    catalogId: null,              authorable: true,  bestFor: "Open problems ranked by severity." },
+  { id: "table",           label: "Table",           icon: "Table2", category: "data-display", shape: "table",     catalogId: "table",           authorable: true,  bestFor: "Detailed row-by-row review." },
+  { id: "list",            label: "List",            icon: "List", category: "data-display", shape: "tasks",     catalogId: null,              authorable: true,  bestFor: "Scannable items with one status each." },
+  { id: "profile-card",    label: "Profile Card",    icon: "IdCard", category: "data-display", shape: "roster",    catalogId: null,              authorable: true,  bestFor: "Key fields of one entity record." },
+  { id: "carousel",        label: "Carousel",        icon: "GalleryHorizontal", category: "data-display", shape: "carousel",  catalogId: null,              authorable: true,  bestFor: "A few rich items, browsed sideways." },
+  { id: "board",           label: "Board",           icon: "Kanban", category: "data-display", shape: "status",    catalogId: null,              authorable: true,  bestFor: "Counts grouped by lifecycle state." },
+  { id: "feed",            label: "Feed",            icon: "Rss", category: "data-display", shape: "feed",      catalogId: "activity",        authorable: true,  bestFor: "What happened, newest first." },
+  { id: "alerts",          label: "Alerts",          icon: "Bell", category: "data-display", shape: "alerts",    catalogId: null,              authorable: true,  bestFor: "Open problems ranked by severity." },
 
   // ── Consumption ───────────────────────────────────────────────────────────
-  { id: "cost-kpi",        label: "Cost KPI",        category: "consumption",  shape: "cost-kpi",  catalogId: null,              authorable: true,  bestFor: "One spend figure with its unit." },
-  { id: "usage-heatmap",   label: "Usage Heatmap",   category: "consumption",  shape: "heatmap",   catalogId: null,              authorable: true,  bestFor: "When consumption peaks across a period." },
-  { id: "spend-breakdown", label: "Spend Breakdown", category: "consumption",  shape: "donut",     catalogId: null,              authorable: true,  bestFor: "Where the budget actually goes." },
-  { id: "composite-stat",  label: "Composite Stat",  category: "consumption",  shape: "stat-row",  catalogId: null,              authorable: true,  bestFor: "Credits, tokens and cost in one row." },
+  { id: "cost-kpi",        label: "Cost KPI",        icon: "DollarSign", category: "consumption",  shape: "cost-kpi",  catalogId: null,              authorable: true,  bestFor: "One spend figure with its unit." },
+  { id: "usage-heatmap",   label: "Usage Heatmap",   icon: "CalendarRange", category: "consumption",  shape: "heatmap",   catalogId: null,              authorable: true,  bestFor: "When consumption peaks across a period." },
+  { id: "spend-breakdown", label: "Spend Breakdown", icon: "ChartPie", category: "consumption",  shape: "donut",     catalogId: null,              authorable: true,  bestFor: "Where the budget actually goes." },
+  { id: "composite-stat",  label: "Composite Stat",  icon: "Sigma", category: "consumption",  shape: "stat-row",  catalogId: null,              authorable: true,  bestFor: "Credits, tokens and cost in one row." },
 
   // ── System — catalogued, never offered in the builder ─────────────────────
-  { id: "timeline",        label: "Timeline",           category: "system", shape: "timeline", catalogId: "timeline",        authorable: false, bestFor: "Colour-coded activity categories in a strip." },
-  { id: "notes",           label: "Notes",              category: "system", shape: "notes",    catalogId: "notes",           authorable: false, bestFor: "Free text someone on the team wrote." },
-  { id: "folder-nav",      label: "Folder Navigation",  category: "system", shape: "tree",     catalogId: "folder-nav",      authorable: false, bestFor: "Drilling into a hierarchy of documents." },
-  { id: "act-now-summary", label: "Act Now Summary",    category: "system", shape: "act-now",  catalogId: "act-now-summary", authorable: false, bestFor: "How many things are waiting on you, and which is worst." },
-  { id: "my-work",         label: "My Work",            category: "system", shape: "tasks",    catalogId: "my-work",         authorable: false, bestFor: "The current user's own assigned items." },
-  { id: "my-team",         label: "My Team",            category: "system", shape: "roster",   catalogId: "my-team",         authorable: false, bestFor: "Who is on the team and their status." },
-  { id: "workflows",       label: "Workflows",          category: "system", shape: "flow",     catalogId: "workflows",       authorable: false, bestFor: "Automated processes and where each one is." },
-  { id: "pending-outputs", label: "Pending Outputs",    category: "system", shape: "queue",    catalogId: "pending-outputs", authorable: false, bestFor: "Agent results queued for review." },
-  { id: "agent-catalog",   label: "Agent Catalog",      category: "system", shape: "agents",   catalogId: "agent-catalog",   authorable: false, bestFor: "Available agents and what each one does." },
+  { id: "timeline",        label: "Timeline",           icon: "GitCommitHorizontal", category: "system", shape: "timeline", catalogId: "timeline",        authorable: false, bestFor: "Colour-coded activity categories in a strip." },
+  { id: "notes",           label: "Notes",              icon: "StickyNote", category: "system", shape: "notes",    catalogId: "notes",           authorable: false, bestFor: "Free text someone on the team wrote." },
+  { id: "folder-nav",      label: "Folder Navigation",  icon: "FolderTree", category: "system", shape: "tree",     catalogId: "folder-nav",      authorable: false, bestFor: "Drilling into a hierarchy of documents." },
+  { id: "act-now-summary", label: "Act Now Summary",    icon: "Zap", category: "system", shape: "act-now",  catalogId: "act-now-summary", authorable: false, bestFor: "How many things are waiting on you, and which is worst." },
+  { id: "my-work",         label: "My Work",            icon: "ListChecks", category: "system", shape: "tasks",    catalogId: "my-work",         authorable: false, bestFor: "The current user's own assigned items." },
+  { id: "my-team",         label: "My Team",            icon: "Users", category: "system", shape: "roster",   catalogId: "my-team",         authorable: false, bestFor: "Who is on the team and their status." },
+  { id: "workflows",       label: "Workflows",          icon: "Workflow", category: "system", shape: "flow",     catalogId: "workflows",       authorable: false, bestFor: "Automated processes and where each one is." },
+  { id: "pending-outputs", label: "Pending Outputs",    icon: "Inbox", category: "system", shape: "queue",    catalogId: "pending-outputs", authorable: false, bestFor: "Agent results queued for review." },
+  { id: "agent-catalog",   label: "Agent Catalog",      icon: "Bot", category: "system", shape: "agents",   catalogId: "agent-catalog",   authorable: false, bestFor: "Available agents and what each one does." },
 ]
 
 /** The types the Widget Builder offers. System widgets are excluded by
