@@ -2208,6 +2208,7 @@ const ENTITY_HEADER_SPEC = {
     { name: "onInformationOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Information side panel: where the fields IN THIS HEADER came from — the title, the source, the state. Not the Overview, not the Knowledge tab. It explains what is on screen right now, nothing more. ONE SIDE PANEL AT A TIME: this panel and the Personal Assistant both open on the side, opening one closes the other, and the panel requested last wins — the component delegates both, so enforcing that is the host's job." },
     { name: "recordFields",   type: "Array",    values: ["RecordField[] — { label, icon, provenance, state, value, maskedValue?, hasDestination? }"], default: "undefined", note: "PASSED THROUGH, NOT RENDERED HERE — the Information panel that displays these is built by the host, so this component accepts the array and never reads it. A flat array the host builds directly; there is no per-entity-type field structure inside the component. `provenance` is mandatory on every field (Law 1: no code path renders a value without its origin). `state: \"hydrated\" | \"masked\"` is the SAME field in 2 entitlement states, not 2 field types — whoever renders them renders whichever state they are given and never resolves permissions (Law 4). `hasDestination: false` for a plain descriptive fact (a pure date, a pure figure) — static text, no chevron." },
     { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "\"You cannot act on or edit this entity.\" Shows a \"Locked\" Tag beside the title and disables secondaryAction plus the overflow's write actions, each with a Tooltip explaining why. `Ask` and the Information panel stay fully interactive — locked does not mean you cannot consult it. NOT the same thing as Figma's `Restricted`, which is \"you cannot see this value\" and lives on the field as RecordField.state === \"masked\". Both coexist." },
+    { name: "state",          type: "Variant",  values: ["default", "loading", "restricted"], default: '"default"', note: "Figma's `Property 1` axis. INDEPENDENT of the reflow — an entity can be loading on a tablet — and an enum rather than three booleans because the options are mutually exclusive. `loading` renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does), never an empty state: saying \"nothing here\" while data is in flight states something untrue. `restricted` renders the card at 50% opacity and nothing else, which is precisely what Figma's Restricted variant is — the viewer lacks entitlement to the values, and because the entity exists and is governed this must never read as an error. Figma's fourth named state, `Minimum`, needs no value here: \"only visual, title and state\" is what you get by passing only those props." },
     { name: "className",      type: "string",   values: ["any string"], default: "undefined", note: "Merged onto the CardContainer." },
     { name: "entityType",     type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED. In Figma the entity type is a classification TAG, not an icon-plus-label beside the name, and it only appears when the visual is an avatar. Figma's own icon examples (RO-48291, Customer Master) carry signals and no classification at all." },
     { name: "variant",        type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED. There were three (employee/customer/client) and Figma has none: one skeleton serves every entity type, including ones the DS has never heard of. An entity shape this file does not model is the normal case, not a gap — never flag a missing variant as a DS-GAP." },
@@ -2223,6 +2224,8 @@ const ENTITY_HEADER_SPEC = {
     { size: "Avatar / highlight icon", dimensions: "32×32px (AvatarCircle / HighlightIcon lg)", padding: "—", gap: "—" },
     { size: "Identity row — wide",    dimensions: "≥ 720px of card width", padding: "—", gap: "12px between title, source and tags" },
     { size: "Identity row — stacked", dimensions: "< 720px of card width", padding: "—", gap: "6px between the two rows — Figma's Size = Responsive. Title on row 1, source + tags on row 2, right cluster unchanged. Measured on the CARD with a ResizeObserver, not the viewport, because this header sits in panels and split views. 720 is a calibrated estimate — Figma models Responsive as a discrete variant with no px value." },
+    { size: "Loading skeleton — wide",    dimensions: "circle 32 · title 180×24 · source+tags 120×20 · actions 80×20 and 120×28 · description 420×16 · metadata 90/70/110/60/70 ×16", padding: "—", gap: "Read from Figma node 20134:314522" },
+    { size: "Loading skeleton — stacked", dimensions: "circle 32 · title 150×24 · actions 96/120/28 ×28 · source 110×16 · tags 92/72/36 ×20 · description 380×16 · metadata 86/62/100/58 ×16", padding: "—", gap: "Read from Figma node 20152:6818, with one deviation: source and tags share a row here, matching the stacked layout the skeleton is standing in for rather than Figma's own five-row skeleton" },
   ],
   typography: [
     { element: "Name",              family: "Inter", size: "18px", weight: "Semi Bold (600)", lineHeight: "1.3", variable: "--color-text-title" },
@@ -33593,6 +33596,40 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Loading — a skeleton, never an empty state</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Figma&rsquo;s <code>Property 1 = Loading</code>, as <code>state=&quot;loading&quot;</code>. Every width and height comes from Figma&rsquo;s own Loading variants, and the skeleton follows the CURRENT layout &mdash; it stacks below 720px exactly as the loaded card does, because a skeleton exists to hold the shape of the thing that replaces it. Figma&rsquo;s reason for a skeleton rather than an empty state: saying &ldquo;nothing here&rdquo; while data is in flight states something untrue. The right-hand cluster is skeletoned too; leaving it blank would make the card visibly reflow on arrival.
+            </p>
+            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} assignedAgent={null} state="loading" />
+            <div className="max-w-[560px] mt-[12px]">
+              <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} assignedAgent={null} state="loading" />
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Restricted — a governed state, not a failure</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Figma&rsquo;s <code>Property 1 = Restricted</code>, as <code>state=&quot;restricted&quot;</code>: the viewer lacks entitlement to the values. Read directly from the Figma variant, it is the default card at <strong>50% opacity and nothing else</strong> &mdash; no badge, no banner, no colour change, because the entity exists and is governed, so this must not read as an error. <strong>Figma&rsquo;s prose asks for &ldquo;calm and explanatory&rdquo; and its instance carries no explanatory element</strong>, so the explanation is screen-reader-only for now (<code>RECORD_HEADER_FALLBACKS.restrictedNote</code>). Making it visible &mdash; a <code>Restricted</code> tag beside the title, or a line under it &mdash; is a design decision, not an implementation one.
+            </p>
+            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
+              source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
+              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)} state="restricted"
+              showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
+              <strong><code>restricted</code> and <code>locked</code> are different things and can both be true.</strong> Locked is &ldquo;you cannot act on or edit this&rdquo;; restricted is &ldquo;you cannot see these values&rdquo;. And <code>RecordField.state === &quot;masked&quot;</code> is the same idea as restricted applied to one field instead of the whole card.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Minimum — nothing to implement</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Figma names <code>Minimum</code> as a state the header owns: <em>&ldquo;only visual, title and state. No description, no tags, no metadata. The header stays valid.&rdquo;</em> That is what you already get by passing only those props &mdash; there is no switch, and there is nothing to build. It is the proof of visibility priorities 1 to 3, which are never dropped at any width.
+            </p>
+            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} stateBadge={RH_STATE_BADGE.uep}
+              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)} />
+          </section>
+
+          <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer (example)</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
             <EntityHeader name={RH_UCP.name} visual={RH_VISUAL.ucp} tags={RH_TAGS.ucp} stateBadge={RH_STATE_BADGE.ucp}
@@ -34006,8 +34043,8 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               {[
                 ["Metadata tooltip", "On hover AND on focus, always — including when the text is not truncated. The tooltip names the field; the header only shows its value. The same pattern covers a truncated title.", "Implemented"],
                 ["Tag overflow", "The +N chip reveals the hidden tags, reachable by keyboard and screen reader, not only on hover. This is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.", "Implemented"],
-                ["Loading", "A skeleton for title, state and metadata, matching the arrangement of its size. NEVER an empty state — saying \"nothing here\" while data is in flight states something untrue.", "NOT implemented"],
-                ["Restricted", "The user lacks entitlement to a value. Calm and explanatory, visually distinct from an error: the field exists and is governed. This is a state, not a failure. The built variant renders the whole card muted.", "NOT implemented as a card state. The field-level half exists as RecordField.state === \"masked\""],
+                ["Loading", "A skeleton for title, state and metadata, matching the arrangement of its size. NEVER an empty state — saying \"nothing here\" while data is in flight states something untrue.", "Implemented — state=\"loading\". Geometry read from Figma's own Loading variants; the skeleton stacks below 720px exactly as the loaded card does"],
+                ["Restricted", "The user lacks entitlement to a value. Calm and explanatory, visually distinct from an error: the field exists and is governed. This is a state, not a failure. The built variant is the default card at 50% opacity and nothing else.", "Implemented — state=\"restricted\", the 50% opacity and no visible element, faithful to the variant. The explanatory half Figma's prose asks for is screen-reader-only; making it visible needs a design decision"],
                 ["Minimum", "Only visual, title and state. No description, no tags, no metadata — the header stays valid. This is what visibility priorities 1 to 3 guarantee.", "Nothing to implement — pass only name, visual, stateBadge and assignedAgent and this is what you get"],
                 ["No signals", "The tag group is REMOVED, not left empty.", "Implemented"],
                 ["Not found", "NOT THIS COMPONENT. When an entity ID resolves to nothing, the page handles it. There is no \"not found\" variant.", "Correctly absent"],
@@ -34099,7 +34136,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                 ["The secondary action", "RULES THAT ARE EASY TO MISS: \"Secondary action: icon only.\"", "It is a labelled button. The built Default variant renders it as a labelled \"Secondary CTA\" button, not an icon. The instance wins."],
                 ["Ask as a boolean", "COMPONENT PROPERTIES lists Primary CTA as a boolean, default TRUE — so Ask can be switched off.", "assignedAgent is REQUIRED as a prop and the button is always present; a null value renders it disabled with a tooltip. Michael's ruling: AIMS OS is agent-first, so every caller must decide, and a silently missing agent button is worse than a disabled one."],
                 ["Source's second item", "SPACE ALLOCATION says source \"yields its second item, then its first\", implying two. METADATA says \"one item, never two\".", "One item. METADATA is the rule and the instances follow it; TRUNCATION even hedges its own sentence — \"a second source item WOULD be dropped, if one existed\"."],
-                ["Restricted", "A whole-card variant on the Property 1 axis, described in prose as \"the user lacks entitlement to A VALUE\" — singular.", "Neither is implemented as a card state. `locked` is a different thing (\"you cannot edit\"), and the field-level half is RecordField.state === \"masked\" (\"you cannot see\"). The two coexist; the card-level muted treatment is a genuine gap."],
+                ["Restricted", "A whole-card variant on the Property 1 axis, and prose asking for something \"calm and EXPLANATORY\" — but the variant itself is only the default card at 50% opacity, with no explanatory element at all.", "The 50% opacity, faithfully. The explanation reaches assistive technology only, because adding a visible one is a design decision Figma has not made. `locked` remains a separate thing (\"you cannot edit\" vs \"you cannot see\") and so does RecordField.state === \"masked\", which is restricted applied to one field."],
                 ["The right-cluster order", "The prose fixes it as Information → state badge → secondary → Ask → Menu. The Responsive instance renders secondary → Ask → Information → badge → Menu.", "The documented order, in both layouts. This one is the exception to \"the instance wins\": the prose states an order explicitly and the Responsive instance's differs from the Default instance's, so one of the two instances is wrong regardless."],
               ].map(([pt, figma, repo], i) => (
                 <div key={pt} className="grid grid-cols-[190px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
@@ -34188,6 +34225,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                 ["8", "Pass assignedAgent always — the real agent, or null. Never omit it. Leave secondaryAction off unless this entity type genuinely has one, and put destructive actions in menuActions."],
                 ["9", "Render NextBestActionCard as the next sibling, in its own container. One recommendation, or none — never an array, never a placeholder."],
                 ["10", "Do not restate a value across slots. If it is in source, it is not also a tag or in the description."],
+                ["11", "While the entity's data is in flight, pass state=\"loading\" — never render an empty header and never withhold the card until data arrives. If the viewer lacks entitlement to the values, pass state=\"restricted\"; it is a governed state, so do not dress it as an error."],
               ].map(([n, step], i) => (
                 <div key={n} className="grid grid-cols-[40px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
                   <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{n}</div>

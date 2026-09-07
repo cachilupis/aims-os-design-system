@@ -3,6 +3,7 @@ import { Sparkle, MoreHorizontal, Lock, Info, Database, type LucideIcon } from "
 import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tag } from "@/components/ui/tag"
 import { Button } from "@/components/ui/button"
 import { Menu, MenuItem } from "@/components/ui/menu-item"
@@ -40,6 +41,13 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  * The right side is fixed and never compressed. The left side yields, in this
  * order: tags collapse to `+N`, then source, and only then does the title
  * truncate. Nothing wraps and nothing abbreviates.
+ *
+ * THREE STATES, ONE AXIS. `state` is Figma's `Property 1`: default, loading
+ * (a skeleton matching the current layout — never an empty state, because
+ * saying "nothing here" while data is in flight states something untrue) and
+ * restricted (50% opacity; the viewer lacks entitlement to the values, which
+ * is a governed state and never an error). Independent of the reflow below —
+ * an entity can be loading on a tablet.
  *
  * REFLOW BEFORE YIELDING. Below 720px of measured card width the identity row
  * stacks — title on its own row, source and tags together on the next, right
@@ -103,16 +111,29 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *     highlight icon already names the type.
  *   - `recordFields` is on the props interface but this component never reads
  *     it: the Information panel that explains those fields is host-rendered.
+ *   - `Minimum`, one of the states Figma names, needs no implementation. It
+ *     is "only visual, title and state" — which is what you already get by
+ *     passing only those props. Nothing to switch on.
+ *   - `restricted` renders at 50% opacity and adds no visible element. That
+ *     is exactly what Figma's own Restricted variant is.
  *
  * NOT IMPLEMENTED YET — do not mistake these for oversights
  *
- *   - `Loading` and `Minimum`, two of the states Figma says this component
- *     owns.
  *   - The 720px reflow threshold is a calibrated estimate, not a number
  *     Figma states. Figma models Responsive as a variant with no breakpoint
  *     attached; 720 is where the built wide instance stops fitting.
- *   - The pixel truncation ceilings, and the nine-stop focus order with
- *     roving tabindex.
+ *   - The pixel truncation ceilings — source at 160px, secondary metadata at
+ *     8/24 characters. The title's 540px ceiling IS implemented.
+ *   - The nine-stop focus order with roving tabindex. Tags and secondary
+ *     metadata are inert text today, so the header has fewer stops than
+ *     Figma specifies rather than more.
+ *   - Visibility priority: nothing is ever dropped. The card reflows and
+ *     yields, but at an extreme width it keeps description and metadata
+ *     instead of dropping them in Figma's documented order.
+ *   - The explanatory half of `restricted`. Figma's prose asks for "calm and
+ *     explanatory" and its instance carries no explanatory element, so the
+ *     explanation is screen-reader-only. Making it visible is a design
+ *     decision, not an implementation one.
  */
 
 // ── Field-level provenance (Law 1 + Law 2) ──────────────────────────────────
@@ -312,6 +333,9 @@ export const ENTITY_HEADER_TAGS_MAX = 6
 //
 // Never dropped, at any width. Never a focus stop: it is status, not a
 // control.
+/** Figma's `Property 1` axis. See EntityHeaderProps.state. */
+export type EntityHeaderState = "default" | "loading" | "restricted"
+
 export interface EntityStateBadge {
   /** Max ~19 characters. */
   label: string
@@ -481,6 +505,28 @@ export interface EntityHeaderProps {
    * cannot see".
    */
   locked?: boolean
+  /**
+   * Figma's `Property 1` axis (node 19895:11728): the three states this
+   * component owns. Independent of the reflow — an entity can be loading on
+   * a tablet — which is why it is an enum rather than a boolean: the three
+   * are mutually exclusive.
+   *
+   *   default     — all configured slots render.
+   *   loading     — a skeleton matching the arrangement of the current
+   *                 layout. NEVER an empty state: saying "nothing here"
+   *                 while data is in flight states something untrue.
+   *   restricted  — the viewer lacks entitlement to the values. The card
+   *                 renders at 50% opacity, exactly as Figma's own
+   *                 Restricted variant does. This is a governed STATE, not
+   *                 a failure: the entity exists and is governed, so it is
+   *                 never red and never an error.
+   *
+   * `restricted` and `locked` are different things and can both be true:
+   * locked is "you cannot act on or edit this", restricted is "you cannot
+   * see these values". So is `RecordField.state === "masked"`, which is the
+   * same idea applied to one field instead of the whole card.
+   */
+  state?: EntityHeaderState
   className?: string
 }
 
@@ -494,6 +540,15 @@ export const RECORD_HEADER_FALLBACKS = {
   lockedTagLabel: "Locked",
   /** Tooltip on the CTA/overflow trigger when `locked` is true. */
   lockedActionTooltip: "This record is locked — read-only",
+  /**
+   * Announced (screen-reader only) when `state === "restricted"`. Figma's
+   * prose asks this state to be "calm and explanatory", but its built
+   * variant is a 50%-opacity card with NO explanatory element — so the
+   * visual half is faithful to the instance and the explanation reaches
+   * assistive technology only. Adding a visible `Restricted` tag or a line
+   * under the title is a design decision, not an implementation one.
+   */
+  restrictedNote: "You do not have access to this entity's values. The entity exists and is governed.",
 }
 
 // ── Reflow threshold ──────────────────────────────────────────────────────
@@ -518,6 +573,69 @@ const REFLOW_WIDTH = 720
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+// ── Loading skeleton ────────────────────────────────────────────────────────
+// Every width and height below is read from Figma's own `Property 1=Loading`
+// variants (20134:314522 wide, 20152:6818 stacked) — not estimated, and not
+// derived from one another.
+//
+// ONE DEVIATION, ON PURPOSE. Figma's stacked skeleton has five rows: title,
+// then source, then tags, then description, then metadata. Its stacked
+// *rendered* variant has three, with source and tags sharing a row. A
+// skeleton exists to hold the shape of the thing that replaces it, so this
+// one follows the rendered layout: three rows, source and tags together. The
+// five-row skeleton would make the content jump the moment it arrived.
+//
+// The right-hand cluster is skeletoned too. Figma does that as well, and it
+// is the correct call for a side the loaded card never compresses — leaving
+// it blank would make the card visibly reflow on arrival.
+function EntityHeaderSkeleton({ stacked }: { stacked: boolean }) {
+  return (
+    <>
+      {/* Row 1 — visual + title, and the action cluster on the right. */}
+      <div className={cn("flex gap-[12px]", stacked ? "items-start" : "items-center")}>
+        <Skeleton shape="circle" width={32} height={32} className="shrink-0" />
+        <div className="flex-1 flex flex-col gap-[6px] min-w-0">
+          <div className={cn("flex gap-[12px]", stacked ? "flex-col items-start gap-[6px]" : "items-center")}>
+            <Skeleton shape="text" width={stacked ? 150 : 180} height={24} className="shrink-0" />
+            {/* Wide: source and tags sit on the title row, so their
+                placeholders do too. Stacked: they become row 2 below. */}
+            {!stacked && <Skeleton shape="text" width={120} height={20} className="shrink-0" />}
+          </div>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          {stacked
+            ? <><Skeleton shape="text" width={96} height={28} /><Skeleton shape="text" width={120} height={28} /><Skeleton shape="text" width={28} height={28} /></>
+            : <><Skeleton shape="text" width={80} height={20} /><Skeleton shape="text" width={120} height={28} /></>}
+        </div>
+      </div>
+
+      {/* Row 2, stacked only — source and tags, on one row, matching the
+          rendered stacked layout rather than Figma's two-row skeleton. */}
+      {stacked && (
+        <div className="flex items-center gap-[12px] flex-wrap">
+          <Skeleton shape="text" width={110} height={16} />
+          <Skeleton shape="text" width={92} height={20} />
+          <Skeleton shape="text" width={72} height={20} />
+          <Skeleton shape="text" width={36} height={20} />
+        </div>
+      )}
+
+      {/* Description. Skeletoned unconditionally: the point of a skeleton is
+          that the caller does not yet know which slots have content, so a
+          skeleton that only shows the slots it can already prove would need
+          the very data it is standing in for. */}
+      <Skeleton shape="text" width={stacked ? 380 : 420} height={16} />
+
+      {/* Metadata row — four items stacked, five wide. Figma's own counts. */}
+      <div className="flex items-center gap-[12px] flex-wrap">
+        {(stacked ? [86, 62, 100, 58] : [90, 70, 110, 60, 70]).map((w, i) => (
+          <Skeleton key={i} shape="text" width={w} height={16} />
+        ))}
+      </div>
+    </>
+  )
+}
+
 function EntityHeader({
   name,
   visual,
@@ -538,6 +656,7 @@ function EntityHeader({
   showInformation = false,
   onInformationOpen,
   locked = false,
+  state = "default",
   className,
 }: EntityHeaderProps) {
 
@@ -565,6 +684,21 @@ function EntityHeader({
   // glyph (avatar.tsx's existing avatarStyle="empty") instead of initials —
   // a single-character name already renders fine as one initial.
   const hasName = Boolean(name && name.trim())
+
+  // `visual` is required and has no default, because exactly one of the two
+  // must render — but "required" is only enforced by the type system, and
+  // this repo compiles without strictNullChecks or noUncheckedIndexedAccess.
+  // So a caller writing the normal thing —
+  //
+  //   const VISUALS: Record<EntityKind, EntityVisual> = { person: …, company: … }
+  //   <EntityHeader visual={VISUALS[kind]} … />
+  //
+  // — type-checks even for a `kind` the map has no entry for, and the card
+  // then throws on `visual.kind` and takes the whole page with it. That has
+  // already happened once in this repo. Falling back to the avatar renders a
+  // slightly generic header instead of a blank screen; it changes nothing for
+  // any caller that passes a real value.
+  const safeVisual: EntityVisual = visual ?? { kind: "avatar" }
 
   // ── Reflow — Figma's `Size = Responsive` variant ─────────────────────────
   // REFLOW BEFORE YIELDING, AND YIELDING BEFORE DROPPING. At narrower widths
@@ -599,9 +733,38 @@ function EntityHeader({
     return () => ro.disconnect()
   }, [])
 
+  // ── Loading ─────────────────────────────────────────────────────────────
+  // Returns early, but INSIDE the same CardContainer and with the same
+  // `rootRef`, so the measurement that decides `stacked` keeps running and
+  // the skeleton matches the layout the real card will land in. A skeleton
+  // whose shape does not match what replaces it is worse than none: the
+  // content appears to jump.
+  if (state === "loading") {
+    return (
+      <CardContainer size="default" variant="default" className={cn("w-full", className)}>
+        <div
+          ref={rootRef}
+          className="flex flex-col gap-[16px]"
+          role="status"
+          aria-busy="true"
+          aria-label={`Loading ${name || "entity"}`}
+        >
+          <EntityHeaderSkeleton stacked={stacked} />
+        </div>
+      </CardContainer>
+    )
+  }
+
   return (
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
-      <div ref={rootRef} className="flex flex-col gap-[16px]">
+      {/* Restricted — Figma's own Restricted variant is the default card at
+          50% opacity and nothing else: no badge, no banner, no colour change.
+          It is a governed STATE, not a failure, which is exactly why it must
+          not read as an error. The explanation Figma's prose asks for reaches
+          assistive technology through the note below; making it visible is a
+          design decision (see RECORD_HEADER_FALLBACKS.restrictedNote). */}
+      <div ref={rootRef} className={cn("flex flex-col gap-[16px]", state === "restricted" && "opacity-50")}>
+        {state === "restricted" && <span className="sr-only">{RECORD_HEADER_FALLBACKS.restrictedNote}</span>}
 
         {/* ── Identity row — visual · (title · source · tags) · right cluster.
             Cross-axis alignment follows the layout: centered while the left
@@ -612,13 +775,13 @@ function EntityHeader({
           {/* Visual identity — exactly one, never both. Avatar for people and
               brands, highlight icon for everything else. Decorative to the
               keyboard (never a focus stop), named to the screen reader. */}
-          {visual.kind === "avatar" ? (
+          {safeVisual.kind === "avatar" ? (
             <AvatarCircle name={name} sizeKey="lg" avatarStyle={hasName ? "text" : "empty"} />
           ) : (
             <HighlightIcon
               size="lg"
-              variant={visual.variant ?? "neutral"}
-              icon={<visual.icon size={16} strokeWidth={1.75} />}
+              variant={safeVisual.variant ?? "neutral"}
+              icon={<safeVisual.icon size={16} strokeWidth={1.75} />}
               className="shrink-0"
             />
           )}

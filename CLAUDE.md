@@ -169,6 +169,12 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 | `description?` | below Identity | `string` — durable context, **off unless passed** |
 | `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
 | `recordFields?` | — | `RecordField[]` — consumed by the host's Information panel, not rendered here |
+| `state?` | whole card | `"default" \| "loading" \| "restricted"` — Figma's `Property 1` axis |
+
+**`state` is Figma's `Property 1` axis, and it is independent of the reflow** — an entity can be loading on a tablet, which is why it is one enum and not three booleans.
+- **`loading`** renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does). Pass it while the entity's data is in flight — **never render an empty header, and never withhold the card until data arrives.** Figma's reason: saying "nothing here" while data is in flight states something untrue.
+- **`restricted`** renders the card at 50% opacity and nothing else — no badge, no banner, no colour change. The viewer lacks entitlement to the values; the entity exists and is governed, so **this must never read as an error.** It is a separate thing from `locked` ("you cannot edit" vs "you cannot see") and both can be true at once. `RecordField.state === "masked"` is the same idea applied to one field.
+- **`Minimum`, Figma's fourth named state, needs no value** — "only visual, title and state" is what you get by passing only those props.
 
 **The right-hand cluster has a fixed order:** ⓘ Information → state badge → secondary action → `Ask` → `···` menu. That side is fixed and never compressed; the left side is what yields.
 
