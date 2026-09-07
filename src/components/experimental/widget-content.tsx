@@ -36,8 +36,17 @@ export function KpiWidgetContent({ variant = 2 }: { variant?: 0 | 1 | 2 | 3 }) {
   const KpiHighlight = () => (
     <HighlightIcon size="lg" variant="informative" iconName="TrendingUp" />
   )
+  // The KPI's movement, which is half of what a KPI is. This read literally
+  // "Feedback text" — the component's own placeholder, shipped and never
+  // replaced, showing in the catalog and in the Widget Builder's live preview.
+  // The direction is coloured, the comparison is not: "+8.2%" is the finding,
+  // "vs last quarter" is the context.
   const FeedbackText = () => (
-    <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Feedback text</span>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12 }}>
+      <LucideIcons.TrendingUp size={12} style={{ color: "var(--color-surface-success-default)" }} />
+      <span style={{ color: "var(--color-surface-success-default)", fontWeight: 600 }}>+8.2%</span>
+      <span style={{ color: "var(--color-text-subtitle)" }}>vs last quarter</span>
+    </span>
   )
 
   if (variant === 0) return (

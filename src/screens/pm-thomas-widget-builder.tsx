@@ -5,13 +5,17 @@ import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
+import { WidgetFather } from "@/components/ui/widget-father"
 import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { WidgetShapePreview, seedFrom } from "@/components/experimental/widget-parts"
 import { WidgetContent } from "@/components/experimental/widget-content"
+import { CandidateWidgetContent, hasCandidateContent } from "@/components/experimental/widget-candidate-content"
+import { ChartModeContent, hasChartMode } from "@/components/experimental/widget-chart-content"
 import { AUTHORABLE_WIDGETS, AUTHORABLE_BY_CATEGORY, type WidgetCategory } from "@/lib/widget-catalog"
 import { Tag } from "@/components/ui/tag"
 import { Chip } from "@/components/ui/chip"
+import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select } from "@/components/ui/select"
 import { Menu, MenuItem, MenuDivider } from "@/components/ui/menu-item"
@@ -24,7 +28,7 @@ import { OptionCard } from "@/components/experimental/widget-screen-parts"
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type OpType  = "aggregate" | "record_set"
-type TabId   = "data" | "widget" | "appearance"
+type TabId   = "data" | "widget"
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 
@@ -36,14 +40,14 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 ]
 
 const ENTITY_SOURCES = [
-  { id: "contacts_hubspot",      label: "Contacts",       integration: "HubSpot",  governed: true,  hasPII: true },
-  { id: "companies_hubspot",     label: "Companies",      integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "deals_hubspot",         label: "Deals",          integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "tickets_zendesk",       label: "Tickets",        integration: "Zendesk",  governed: true,  hasPII: false },
-  { id: "conversations_zendesk", label: "Conversations",  integration: "Zendesk",  governed: false, hasPII: true },
-  { id: "employees_bamboohr",    label: "Employees",      integration: "BambooHR", governed: true,  hasPII: true },
-  { id: "workflows_aims",        label: "Workflows",      integration: "AIMS OS",  governed: true,  hasPII: false },
-  { id: "ai_workers_aims",       label: "AI Workers",     integration: "AIMS OS",  governed: true,  hasPII: false },
+  { id: "contacts_hubspot",      label: "Contacts",       icon: "Users", desc: "CRM contact profiles and relationship history", integration: "HubSpot",  governed: true,  hasPII: true },
+  { id: "companies_hubspot",     label: "Companies",      icon: "Building2", desc: "Organization records, domains, and account data", integration: "HubSpot",  governed: true,  hasPII: false },
+  { id: "deals_hubspot",         label: "Deals",          icon: "TrendingUp", desc: "Pipeline opportunities and deal stages", integration: "HubSpot",  governed: true,  hasPII: false },
+  { id: "tickets_zendesk",       label: "Tickets",        icon: "LifeBuoy", desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false },
+  { id: "conversations_zendesk", label: "Conversations",  icon: "MessageSquare", desc: "Chat and email threads with CSAT scores", integration: "Zendesk",  governed: false, hasPII: true },
+  { id: "employees_bamboohr",    label: "Employees",      icon: "UserCheck", desc: "HR records, roles, and people data", integration: "BambooHR", governed: true,  hasPII: true },
+  { id: "workflows_aims",        label: "Workflows",      icon: "GitBranch", desc: "Automated process definitions in AIMS OS", integration: "AIMS OS",  governed: true,  hasPII: false },
+  { id: "ai_workers_aims",       label: "AI Workers",     icon: "Bot", desc: "AI agent instances and performance metrics", integration: "AIMS OS",  governed: true,  hasPII: false },
 ]
 
 const PRESET_DATASETS = [
@@ -96,30 +100,7 @@ const WIDGET_SIZES = [
   { id: "lg", label: "L" },
 ]
 
-// DS-GAP: AccentColorPalette — widget accent swatches; hex values are product data (displayed to user), not CSS styling. Needs tokenization.
-// The swatches a user can tint a widget with. Same six hues the preview
-// renderer draws series in, so a widget the user accents blue matches the blue
-// of a chart's first series — these used to be hand-typed hex that happened to
-// sit a shade off the tokens.
-//
-// "Default" carries no colour at all. It used to be hex "transparent", which is
-// truthy: the preview took it for a real accent and painted every accented
-// shape invisible. Its swatch draws itself from `id`, not from `hex`.
-const ACCENT_COLORS = [
-  { id: "",       label: "Default", hex: "" },
-  { id: "blue",   label: "Blue",    hex: "var(--color-surface-primary-default)"    },
-  { id: "green",  label: "Green",   hex: "var(--color-surface-success-default)"    },
-  { id: "amber",  label: "Amber",   hex: "var(--color-surface-yellow-default)"     },
-  { id: "red",    label: "Red",     hex: "var(--color-surface-error-default)"      },
-  { id: "purple", label: "Purple",  hex: "var(--color-surface-purple-default)"     },
-]
 
-const STYLE_VARIANTS = [
-  { id: "",          label: "Default" },
-  { id: "compact",   label: "Compact" },
-  { id: "outlined",  label: "Outlined" },
-  { id: "minimal",   label: "Minimal" },
-]
 
 // ── DS-GAP Components ─────────────────────────────────────────────────────────
 
@@ -128,11 +109,17 @@ const STYLE_VARIANTS = [
 // A numbered step heading inside a stage. Deliberately NOT the SectionLabel the
 // other screens define — theirs is an uppercase caption with no number. Renamed
 // so the duplicate check stops pairing two unrelated components.
-function StepLabel({ n, children }: { n: number; children: React.ReactNode }) {
+function StepLabel({ children }: { n?: number; children: React.ReactNode }) {
+  // Caption S Bold from the DS type scale: 12px / 600 / uppercase with tracking.
+  // The numbered blue circle went with the redesign — the Stepper above already
+  // says which stage you are in, so numbering every section inside it was a
+  // second counter competing with the first.
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--primary)", color: "var(--canvas)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{n}</div>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{children}</span>
+    <div style={{
+      fontSize: 12, fontWeight: 600, textTransform: "uppercase" as const,
+      letterSpacing: "0.06em", color: "var(--color-text-label)", marginBottom: 8,
+    }}>
+      {children}
     </div>
   )
 }
@@ -142,17 +129,28 @@ function EntitySourceCard({ source, selected, onSelect }: { source: typeof ENTIT
   return (
     <div onClick={onSelect} style={{ cursor: "pointer" }}>
       <CardContainer selected={selected} size="sm" className="!p-0 h-full overflow-hidden">
-        <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{source.label}</span>
-            <span style={{ fontSize: 11, color: "var(--color-text-subtitle)", whiteSpace: "nowrap" as const }}>
-              · {(SOURCE_COLUMNS[source.id] ?? []).length} columns
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <Tag variant="informative" size="sm">{source.integration}</Tag>
-            {!source.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
-            {source.hasPII && <Tag variant="alert" size="sm">PII</Tag>}
+        <div style={{ padding: 12, display: "flex", gap: 10 }}>
+          {/* The entity's own icon, so the grid is scannable by shape before you
+              read a word. Same slot the dataset cards use, so the two modes read
+              as one family rather than two designs. */}
+          <HighlightIcon iconName={source.icon} variant={selected ? "informative" : "neutral"} size="sm" />
+          <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: selected ? "var(--primary)" : "var(--color-text-title)" }}>{source.label}</span>
+              <span style={{ fontSize: 11, color: "var(--color-text-subtitle)", whiteSpace: "nowrap" as const }}>
+                · {(SOURCE_COLUMNS[source.id] ?? []).length} columns
+              </span>
+            </div>
+            <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: 0, lineHeight: 1.4 }}>{source.desc}</p>
+            {/* Neutral, all of them. These are attributes of the source, not
+                states of it — colouring the integration blue and PII amber made
+                a grid of eight cards read as a warning board. Governance still
+                shows, it just stops shouting. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+              <Tag variant="neutral" size="sm">{source.integration}</Tag>
+              {!source.governed && <Tag variant="neutral" size="sm">Ungoverned</Tag>}
+              {source.hasPII && <Tag variant="neutral" size="sm">PII</Tag>}
+            </div>
           </div>
         </div>
       </CardContainer>
@@ -165,12 +163,19 @@ function DatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_D
   return (
     <div onClick={onSelect} style={{ cursor: "pointer" }}>
       <CardContainer selected={selected} size="sm" className="!p-0 h-full overflow-hidden">
-        <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{dataset.name}</div>
-          <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: 0, lineHeight: 1.4 }}>{dataset.description}</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Tag variant="informative" size="sm">{dataset.integration}</Tag>
-            <Tag variant="success" size="sm">Governed</Tag>
+        {/* Deliberately the same skeleton as EntitySourceCard — icon, title,
+            description, tags — so switching data source mode changes what you
+            are choosing between, not how the choosing looks. A dataset is a
+            saved query, so it gets one data glyph rather than a per-entity one. */}
+        <div style={{ padding: 12, display: "flex", gap: 10 }}>
+          <HighlightIcon iconName="Database" variant={selected ? "informative" : "neutral"} size="sm" />
+          <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: selected ? "var(--primary)" : "var(--color-text-title)" }}>{dataset.name}</span>
+            <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: 0, lineHeight: 1.4 }}>{dataset.description}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+              <Tag variant="neutral" size="sm">{dataset.integration}</Tag>
+              <Tag variant="neutral" size="sm">Governed</Tag>
+            </div>
           </div>
         </div>
       </CardContainer>
@@ -258,18 +263,18 @@ function TypeTile({ type, selected, onSelect }: { type: typeof AUTHORABLE_WIDGET
   return (
     <div onClick={onSelect} style={{ cursor: "pointer" }}>
       <CardContainer selected={selected} size="sm" className="!p-0 h-full overflow-hidden">
-        <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-          {/* The tile draws the widget it is offering, the way the catalog cards
-              do. It used to show a Lucide glyph — you were picking between
-              twelve icons rather than between twelve widgets. */}
-          <WidgetShapePreview
-            shape={type.shape}
-            height={54}
-            seed={seedFrom(type.id)}
-            accent={selected ? "var(--primary)" : undefined}
+        <div style={{ padding: "12px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          {/* An icon, not a miniature. Twenty-two 54px previews side by side
+              compete with each other and none of them reads — the grid became
+              noise. The icon names the type; the live preview on the right
+              shows the actual widget, which is where seeing it matters. */}
+          <HighlightIcon
+            iconName={type.icon}
+            variant={selected ? "informative" : "neutral"}
+            size="md"
           />
           <span style={{
-            fontSize: 11, fontWeight: 600, textAlign: "center" as const,
+            fontSize: 12, fontWeight: 500, textAlign: "center" as const, lineHeight: 1.3,
             color: selected ? "var(--primary)" : "var(--color-text-title)",
           }}>{type.label}</span>
         </div>
@@ -280,30 +285,39 @@ function TypeTile({ type, selected, onSelect }: { type: typeof AUTHORABLE_WIDGET
 
 // DS-GAP: SkeletonShape — CSS-only skeleton preview shape keyed by widget type. Closest DS component: none.
 // DS-GAP: WidgetPreviewPanel — sticky live preview panel with size switcher and widget info. Closest DS component: CardContainer.
-function WidgetPreviewPanel({ typeId, name, onNameChange, sourceId, freshness, accentColor, styleVariant, previewSize, setPreviewSize, saveHint }: {
-  typeId: string | null; name: string; onNameChange: (n: string) => void; sourceId: string | null; freshness: string; accentColor: string;
-  styleVariant: string; previewSize: string; setPreviewSize: (s: string) => void; saveHint: string
+function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilters, previewSize, setPreviewSize, saveHint }: {
+  typeId: string | null; name: string; sourceId: string | null; freshness: string
+  interactiveFilters: boolean; previewSize: string; setPreviewSize: (s: string) => void; saveHint: string
 }) {
   const entitySrc  = ENTITY_SOURCES.find(s => s.id === sourceId)
   const datasetSrc = PRESET_DATASETS.find(d => d.id === sourceId)
   const srcLabel   = entitySrc?.label ?? datasetSrc?.name ?? null
-  const typeInfo = AUTHORABLE_WIDGETS.find(t => t.id === typeId)
+  const typeInfo   = AUTHORABLE_WIDGETS.find(t => t.id === typeId)
   const maxW = previewSize === "sm" ? 240 : previewSize === "md" ? 420 : undefined
   const freshnessLabel = freshness === "realtime" ? "Live" : freshness === "15m" ? "15m" : freshness === "1h" ? "1h" : "24h"
 
-  // The Appearance step exists to answer "how will this look", and until now the
-  // style variant was captured and thrown away — you picked Minimal and nothing
-  // moved. Each variant is a different amount of chrome around the same shape.
-  const compact  = styleVariant === "compact"
-  const outlined = styleVariant === "outlined"
-  const minimal  = styleVariant === "minimal"
-  const showHeader = !minimal
-  const showFooter = !minimal && !compact
-  const pad = compact ? "6px 10px" : "10px 12px"
-
-  // "Gauge · Deals · HubSpot" — what this widget is, reading left to right. The
-  // prototype puts it under the title; without it the preview says only its name.
+  // "KPI · Deals · HubSpot" — what this widget is, reading left to right.
   const lineage = [typeInfo?.label, srcLabel, entitySrc?.integration].filter(Boolean).join(" · ")
+
+  // The body only. WidgetFather draws every piece of chrome around it.
+  const body = !typeInfo
+    ? <EmptyState compact icon={LucideIcons.Shapes} title="Nothing to preview yet" description={saveHint} />
+    // Three sources, in order of how specified the type is.
+    : hasChartMode(typeInfo.id)
+      // A chart mode. All twelve share catalogId "charts" and the DS's
+      // ChartsWidgetContent draws exactly one of them, so rendering that would
+      // show a line chart when you picked Pie.
+      ? <ChartModeContent id={typeInfo.id} />
+      : typeInfo.catalogId
+        // A type the DS documents — its REAL component, the same one the catalog
+        // page shows.
+        ? <WidgetContent id={typeInfo.catalogId} />
+        : hasCandidateContent(typeInfo.id)
+          // A candidate: no spec yet, so no catalogued component, but composed
+          // from DS parts so specifying it later is a move not a rewrite.
+          ? <CandidateWidgetContent id={typeInfo.id} />
+          : <WidgetShapePreview shape={typeInfo.shape} height={120} seed={seedFrom(typeInfo.id)} />
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -318,68 +332,61 @@ function WidgetPreviewPanel({ typeId, name, onNameChange, sourceId, freshness, a
           ))}
         </div>
       </div>
+
+      {/* The preview IS a widget, not a card imitating one.
+       *
+       *  It used to hand-roll its own header: a bare <input> for the title, its
+       *  own border, its own tag row. That got the typography wrong, had no
+       *  refresh or overflow control, and drifted from WidgetFather every time
+       *  either side changed. This is a create flow for widgets — what you are
+       *  looking at should be built the same way the thing you are about to save
+       *  will be. CardContainer + WidgetFather noCard is the same composition the
+       *  DS catalog and the Live Canvas both use.
+       *
+       *  The name is no longer editable here; it is the "Widget name" field in
+       *  Configure, which is one place instead of two. */}
       <div style={{ maxWidth: maxW, transition: "max-width 0.2s" }}>
-        <CardContainer variant={outlined ? "dashed" : "default"} className={minimal ? "!bg-transparent !border-transparent" : undefined}>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {showHeader && (
-            <div style={{ padding: pad, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, borderBottom: `1px solid var(--field-border)` }}>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <input
-                  value={name}
-                  onChange={e => onNameChange(e.target.value)}
-                  placeholder="Untitled widget"
-                  style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", background: "transparent", border: "none", outline: "none", width: "100%", minWidth: 0, cursor: "text" }}
-                />
-                {!compact && lineage && (
-                  <div style={{ fontSize: 11, color: "var(--color-text-subtitle)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                    {lineage}
-                  </div>
-                )}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                {entitySrc && !entitySrc.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
-                <Tag variant={freshness === "realtime" ? "success" : "informative"} size="sm">{freshnessLabel}</Tag>
-              </div>
+        <CardContainer size="lg" className="flex flex-col">
+          <WidgetFather
+            noCard
+            fillWidth
+            title={name || "Untitled widget"}
+            description={lineage || undefined}
+            showRefresh
+            showMenu
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* The filter row an end user would get. Only when "Let end users
+                  filter this widget" is on — the checkbox and this row are the
+                  same decision, and showing the consequence beside the control is
+                  what a live preview is for. Inert here on purpose. */}
+              {interactiveFilters && typeInfo && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                  {["Last 30 days", "Status", "Team"].map(f => (
+                    <Chip key={f} size="s" variant="secondary">{f}</Chip>
+                  ))}
+                </div>
+              )}
+              {body}
             </div>
-            )}
-            {typeInfo?.catalogId ? (
-              // A type the DS documents renders its REAL content — the same
-              // component the catalog page shows, not a drawing of it. This is
-              // the whole point of the live preview: you are looking at the
-              // widget you are about to save.
-              <div style={{ padding: "4px 12px 12px" }}>
-                <WidgetContent id={typeInfo.catalogId} />
-              </div>
-            ) : typeInfo ? (
-              // A candidate — real in this prototype, no DS spec yet, so there is
-              // no component to render. It falls back to the shape, which still
-              // says what kind of widget it is. These are the ten listed on DS
-              // Health under "Widget types awaiting a spec"; each one that gets
-              // specified drops out of this branch.
-              <WidgetShapePreview
-                shape={typeInfo.shape}
-                height={120}
-                accent={accentColor}
-                seed={seedFrom(typeInfo.id)}
-              />
-            ) : (
-              // No type picked yet — which is the whole of step 1, so this is the
-              // state this panel is in most of the time. It used to be a flat grey
-              // slab with the instruction stranded in small text underneath. The
-              // instruction belongs in the empty space it is explaining.
-              <EmptyState compact icon={LucideIcons.Shapes} title="Nothing to preview yet" description={saveHint} />
-            )}
-            {showFooter && (srcLabel || typeInfo) && (
-              <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid var(--field-border)" }}>
-                {srcLabel && <Tag variant="informative" size="sm">{srcLabel}</Tag>}
-                {typeInfo && <Tag variant="neutral" size="sm">{typeInfo.label}</Tag>}
-              </div>
-            )}
-          </div>
+          </WidgetFather>
         </CardContainer>
       </div>
+
+      {/* Configuration facts about the widget, not chrome it will render.
+       *  They sit outside the card because WidgetFather has no slot for them and
+       *  inventing one would put a tag in the header that the real widget will
+       *  never show. */}
       {typeInfo && (
-        <div style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid var(--field-border)", background: "color-mix(in srgb, var(--primary) 5%, transparent)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+          <Tag variant={freshness === "realtime" ? "success" : "informative"} size="sm">{freshnessLabel}</Tag>
+          {entitySrc && !entitySrc.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
+          {srcLabel && <Tag variant="neutral" size="sm">{srcLabel}</Tag>}
+        </div>
+      )}
+
+      {typeInfo && (
+        <div style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid var(--field-border)" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 4 }}>Best for</div>
           <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: 0 }}>{typeInfo.bestFor}</p>
         </div>
@@ -417,8 +424,6 @@ export default function PMThomasWidgetBuilderScreen() {
   const [interactiveFilters, setInteractiveFilters] = useState(true)
 
   // Appearance tab state
-  const [accentColor, setAccentColor]   = useState("")
-  const [styleVariant, setStyleVariant] = useState("")
 
   // UI state
   const [dataMode, setDataMode]         = useState<"entity" | "dataset">("entity")
@@ -447,11 +452,10 @@ export default function PMThomasWidgetBuilderScreen() {
   // definition — the moment one can be locked behind another it is a stage, and
   // stages are what Stepper is for. Its StepState covers every case the local
   // version drew by hand.
-  const STEP_ORDER: TabId[] = ["data", "widget", "appearance"]
+  const STEP_ORDER: TabId[] = ["data", "widget"]
   const NEXT_LABEL: Record<TabId, string> = {
-    data:       "Continue to Widget",
-    widget:     "Continue to Appearance",
-    appearance: "Save to catalog",
+    data:   "Continue to Widget",
+    widget: "Save to catalog",
   }
 
   const stepState = (id: TabId): StepState => {
@@ -464,12 +468,11 @@ export default function PMThomasWidgetBuilderScreen() {
   const wizardSteps: StepItem[] = [
     { label: "Data",       state: stepState("data")       },
     { label: "Widget",     state: stepState("widget"),     hint: stepState("widget")     === "locked" ? "Complete the Data step first"   : undefined },
-    { label: "Appearance", state: stepState("appearance"), hint: stepState("appearance") === "locked" ? "Complete the Widget step first" : undefined },
   ]
 
   // The footer's shape follows the stage: Cancel on the first, Back after that,
   // and the primary button becomes Save on the last one.
-  const isLast     = tab === "appearance"
+  const isLast     = tab === "widget"
   const stepIndex  = STEP_ORDER.indexOf(tab)
   const nextEnabled = tab === "data" ? dataComplete : tab === "widget" ? widgetComplete : canSave
 
@@ -482,8 +485,6 @@ export default function PMThomasWidgetBuilderScreen() {
     : !name.trim()
     ? "Give your widget a name on the Widget tab."
     : ""
-
-  const accentHex = ACCENT_COLORS.find(c => c.id === accentColor)?.hex ?? ""
 
   // ── Handlers ──
 
@@ -499,7 +500,6 @@ export default function PMThomasWidgetBuilderScreen() {
     setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setRecordColumns([])
     setCalcs([]); setGroupers([]); setDataFilters([]); setSrcFilter("all")
     setTypeId(null); setName(""); setSubtitle(""); setFreshness("15m"); setInteractiveFilters(true)
-    setAccentColor(""); setStyleVariant("")
   }
 
 
@@ -511,6 +511,8 @@ export default function PMThomasWidgetBuilderScreen() {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR_ITEMS}
       activeSidebarId="widget-library"
+      // This screen ends in a StepperNavFooter, not a floating Pagination.
+      stickyFooter
       header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}
@@ -539,14 +541,14 @@ export default function PMThomasWidgetBuilderScreen() {
             className="mb-5"
           />
 
-          <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+          <div className="flex flex-col md:flex-row gap-[24px] items-stretch md:items-start">
           {/* Left: build panel */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="flex-1 min-w-0 flex flex-col gap-[20px]">
             {/* DS-GAP: DescribeComposer — natural-language widget setup generator. Using simplified Input bar. */}
             <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--field-border)", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", gap: 8 }}>
                 <Input placeholder='Describe what you want to track, e.g. "Win Rate gauge by team"' value={describe} onChange={e => setDescribe(e.target.value)} />
-                <Button variant="secondary" size="sm" disabled={!describe.trim()}>Generate</Button>
+                <Button variant="secondary" size="sm">Generate</Button>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                 {DESCRIBE_SUGGESTIONS.map(x => (
@@ -605,8 +607,8 @@ export default function PMThomasWidgetBuilderScreen() {
 
                 {dataMode === "dataset" && (
                   <div>
-                    <StepLabel n={2}>Governed dataset</StepLabel>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <StepLabel>Governed dataset</StepLabel>
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
                       {PRESET_DATASETS.map(ds => (
                         <DatasetCard key={ds.id} dataset={ds} selected={sourceId === ds.id} onSelect={() => setSourceId(ds.id)} />
                       ))}
@@ -821,12 +823,14 @@ export default function PMThomasWidgetBuilderScreen() {
                       .map(c => (
                         <div key={c.id}>
                           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 1, color: "var(--color-text-subtitle)" }}>
+                            {/* Subtitle S — 14px / 600. A category is a heading
+                                over a group of tiles, not a field label. */}
+                            <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1, color: "var(--color-text-title)" }}>
                               {c.label}
                             </span>
-                            <span style={{ fontSize: 11, color: "var(--color-text-subtitle)", opacity: 0.7 }}>{c.blurb}</span>
+                            <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-subtitle)" }}>{c.blurb}</span>
                           </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8 }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(132px, 1fr))", gap: 8 }}>
                             {c.types.map(t => (
                               <TypeTile key={t.id} type={t} selected={typeId === t.id} onSelect={() => setTypeId(t.id)} />
                             ))}
@@ -853,6 +857,7 @@ export default function PMThomasWidgetBuilderScreen() {
                       checked={interactiveFilters}
                       onChange={setInteractiveFilters}
                     />
+
                     <div style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--field-border)", background: "var(--canvas)" }}>
                       <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: 0 }}>Need advanced transformations or custom SQL?{" "}
                         <a href="#" style={{ color: "var(--primary)", fontWeight: 600 }}>View in Metabase ↗</a>
@@ -864,44 +869,16 @@ export default function PMThomasWidgetBuilderScreen() {
               </div>
             )}
 
-            {/* ── Tab 3: Appearance ── */}
-            {tab === "appearance" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                <div>
-                  <StepLabel n={1}>Accent color</StepLabel>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
-                    {ACCENT_COLORS.map(c => (
-                      <button key={c.id} onClick={() => setAccentColor(c.id)} title={c.label} style={{
-                        width: 30, height: 30, borderRadius: "50%", border: `2px solid ${accentColor === c.id ? "var(--primary)" : "var(--field-border)"}`,
-                        background: c.hex || "var(--field-border)", cursor: "pointer",
-                      }} />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <StepLabel n={2}>Style variant</StepLabel>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
-                    {STYLE_VARIANTS.map(v => (
-                      <Chip key={v.id} size="s" variant={styleVariant === v.id ? "primary" : "secondary"} onClick={() => setStyleVariant(v.id)}>{v.label}</Chip>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-            )}
           </div>
 
           {/* Right: sticky preview */}
-          <div style={{ width: "44%", flexShrink: 0, position: "sticky", top: 0 }}>
+          <div className="w-full md:w-[44%] shrink-0 md:sticky md:top-0">
             <WidgetPreviewPanel
               typeId={typeId}
               name={name}
-              onNameChange={setName}
               sourceId={sourceId}
               freshness={freshness}
-              accentColor={accentHex}
-              styleVariant={styleVariant}
+              interactiveFilters={interactiveFilters}
               previewSize={previewSize}
               setPreviewSize={setPreviewSize}
               saveHint={saveHint}
@@ -911,9 +888,8 @@ export default function PMThomasWidgetBuilderScreen() {
 
         </div>
 
-      {/* StepperNavFooter is sticky, and it is 72px tall against ScreenLayout's
-          64px bottom padding — eight pixels short, so the last row of a stage
-          can sit under it mid-scroll. This spacer buys the clearance. */}
+      {/* Clearance so the last row of a stage is not left under the sticky
+          footer at the end of a scroll. */}
       <div style={{ height: 24 }} />
 
       {/* ── Wizard navigation ──────────────────────────────────────────────
@@ -921,8 +897,7 @@ export default function PMThomasWidgetBuilderScreen() {
           catalog in the Header, so Save has two entry points — his call, left
           as he built it. Flagged for Michael rather than removed a second
           time. */}
-      {(
-        <StepperNavFooter
+      <StepperNavFooter
           variant={tab === "data" ? "cancel-next" : "back-next"}
           onCancel={() => (hasUnsaved ? setShowLeave(true) : resetAll())}
           onBack={() => setTab(STEP_ORDER[Math.max(0, stepIndex - 1)])}
@@ -937,7 +912,6 @@ export default function PMThomasWidgetBuilderScreen() {
             setTab(STEP_ORDER[stepIndex + 1])
           }}
         />
-      )}
 
       {/* ── Leave confirmation modal ── */}
       <ModalDialog
