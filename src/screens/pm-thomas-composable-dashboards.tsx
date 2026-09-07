@@ -1338,7 +1338,10 @@ function WBPreviewPanel({ typeId, name, onNameChange, sourceId, freshness, accen
                 placeholder="Untitled widget"
                 style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", background: "transparent", border: "none", outline: "none", width: "100%", minWidth: 0, cursor: "text" }}
               />
-              <Tag variant={freshness === "realtime" ? "success" : "informative"}>{freshnessLabel}</Tag>
+              {srcLabel
+                ? <Tag variant={freshness === "realtime" ? "success" : "informative"} size="sm">{freshnessLabel}</Tag>
+                : <Tag variant="neutral" size="sm">Not configured</Tag>
+              }
             </div>
             {!typeId || !srcLabel ? (
               <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 24px", textAlign: "center" as const }}>
@@ -1353,12 +1356,12 @@ function WBPreviewPanel({ typeId, name, onNameChange, sourceId, freshness, accen
             )}
             <div style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 6, borderTop: "1px dashed var(--field-border)" }}>
               {srcLabel
-                ? <Tag variant="informative">{srcLabel}</Tag>
-                : <span style={{ fontSize: 11, color: "var(--field-supporting)", opacity: 0.45 }}>No source</span>
+                ? <Tag variant="informative" size="sm">{srcLabel}</Tag>
+                : <Tag variant="neutral" size="sm">No source</Tag>
               }
               {typeInfo
-                ? <Tag variant="neutral">{typeInfo.label}</Tag>
-                : <span style={{ fontSize: 11, color: "var(--field-supporting)", opacity: 0.45 }}>No type</span>
+                ? <Tag variant="neutral" size="sm">{typeInfo.label}</Tag>
+                : <Tag variant="neutral" size="sm">No type</Tag>
               }
             </div>
           </div>
