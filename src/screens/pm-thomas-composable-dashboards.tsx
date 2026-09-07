@@ -1401,7 +1401,7 @@ function WidgetBuilderOverlay({ onClose: _onClose, tab, setTab, onProgressChange
   initialWidget?: LibWidget | null
 }) {
   const initPresetId = initialWidget ? (sourceToPresetId(initialWidget.source) ?? null) : null
-  const [dataMode, setDataMode]     = useState<"source" | "preset">(initPresetId ? "preset" : "source")
+  const [dataMode, setDataMode]     = useState<"source" | "preset">("preset")
   const [opType, setOpType]         = useState<OpType>("aggregate")
   const [sourceId, setSourceId]     = useState<string | null>(initPresetId)
   const [metric, setMetric]         = useState(initialWidget ? initialWidget.name : "")
