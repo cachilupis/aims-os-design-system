@@ -15992,11 +15992,17 @@ const PG_CTX_POLICIES: EntityListItemData[] = [
   { id: "p5", title: "API Rate Limit Policy", iconVariant: "neutral", iconName: "ShieldCheck", state: { label: "Draft", variant: "neutral" }, timestamp: "Never published" },
   { id: "p6", title: "Third-Party Sharing Policy", iconVariant: "neutral", iconName: "ShieldCheck", state: { label: "Draft", variant: "neutral" }, timestamp: "Never published" },
 ]
+const PG_CTX_POLICIES_LANDING: EntityListItemData[] = [
+  { id: "p0", title: "Data Retention Policy", iconVariant: "yellow", iconName: "ShieldCheck", state: { label: "Pending review", variant: "alert" }, timestamp: "Submitted just now" },
+  ...PG_CTX_POLICIES,
+]
 
-const PG_CTX_TEMPLATES: { id: string; name: string; desc: string }[] = [
-  { id: "t1", name: "Lead follow-up", desc: "Sends a follow-up email 24h after a new lead is created." },
-  { id: "t2", name: "Invoice reminder", desc: "Notifies the account owner when an invoice is 7 days overdue." },
-  { id: "t3", name: "Weekly digest", desc: "Compiles workspace activity into a Friday summary email." },
+const PG_CTX_TEMPLATES: { id: string; name: string; desc: string; category: string }[] = [
+  { id: "t1", name: "Lead follow-up", desc: "Sends a follow-up email 24h after a new lead is created.", category: "Sales" },
+  { id: "t2", name: "Deal stage reminder", desc: "Pings the owner when a deal sits in one stage for 5+ days.", category: "Sales" },
+  { id: "t3", name: "Invoice reminder", desc: "Notifies the account owner when an invoice is 7 days overdue.", category: "Finance" },
+  { id: "t4", name: "Expense approval routing", desc: "Routes expense reports over $500 to a manager for sign-off.", category: "Finance" },
+  { id: "t5", name: "Weekly digest", desc: "Compiles workspace activity into a Friday summary email.", category: "Reporting" },
 ]
 
 const PG_CTX_API_KEYS: EntityListItemData[] = [
@@ -16155,6 +16161,65 @@ function PgInteractiveTagInput({ placeholder }: { placeholder?: string }) {
       onRemoveTag={t => setTags(ts => ts.filter(x => x !== t))}
       placeholder={placeholder}
     />
+  )
+}
+
+// A catalogue is browsed, not scanned top-to-bottom like a plain list — categories
+// on the left, search, cards on the right. This is a genuinely different shape
+// from the field-form modals (Scene B/B2), which is the point: a catalogue
+// SELECTS an object, it never IS the create form. Composed entirely from real DS
+// components (CardContainer, HighlightIcon, Tag, Input, Button) — no new file.
+function PgCatalogueBrowser({ items, onUse }: {
+  items: { id: string; name: string; desc: string; category: string }[]
+  onUse: () => void
+}) {
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+  const categories = Array.from(new Set(items.map(t => t.category)))
+  const visible = items.filter(t =>
+    (!activeCategory || t.category === activeCategory) &&
+    t.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const categoryButton = (label: string, count: number, isActive: boolean, onClick: () => void) => (
+    <button
+      key={label}
+      onClick={onClick}
+      className="flex items-center justify-between rounded-[8px] px-[10px] py-[8px] text-[13px] transition-colors"
+      style={{
+        background: isActive ? "var(--color-surface-primary-subtle)" : "transparent",
+        color: isActive ? "var(--primary)" : "var(--foreground)",
+        fontWeight: isActive ? 600 : 400,
+      }}
+    >
+      <span>{label}</span>
+      <span style={{ color: "var(--field-supporting)" }}>{count}</span>
+    </button>
+  )
+
+  return (
+    <div className="flex" style={{ height: 420 }}>
+      <div className="w-[180px] shrink-0 flex flex-col gap-[2px] pr-[16px]" style={{ borderRight: "0.5px solid var(--field-border)" }}>
+        {categoryButton("All templates", items.length, activeCategory === null, () => setActiveCategory(null))}
+        {categories.map(cat => categoryButton(cat, items.filter(t => t.category === cat).length, activeCategory === cat, () => setActiveCategory(cat)))}
+      </div>
+      <div className="flex-1 flex flex-col gap-[14px] pl-[20px] overflow-hidden">
+        <Input leftIcon={<LucideIcons.Search className="w-[14px] h-[14px]" />} placeholder="Search templates…" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-[12px] content-start">
+          {visible.map(t => (
+            <CardContainer key={t.id} size="sm">
+              <div className="flex flex-col gap-[8px]">
+                <HighlightIcon size="md" variant="informative" iconName="Zap" />
+                <span className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>{t.name}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{t.category}</span>
+                <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{t.desc}</p>
+                <Button variant="secondary" size="sm" onClick={onUse}>Use template</Button>
+              </div>
+            </CardContainer>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -16368,8 +16433,27 @@ function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose:
 
 // Section 3 · two or more stages, or any branching → Full-page wizard. Staged
 // flows never live in a panel — there is no Stepper inside a SlideOut.
-function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () => void, toast: ReturnType<typeof useToast>): PgTourStepDef[] {
   const draft = PG_CTX_POLICIES.filter(p => p.state?.label === "Draft").length
+
+  const wizardShell = (stageIndex: number, body: React.ReactNode, footer: React.ReactNode) => (
+    <PgCreateContextShell sidebarId="knowledge">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l" />
+        <div className="px-[24px] pt-[16px] shrink-0">
+          <Stepper steps={["Scope", "Rules", "Approvals", "Review"].map((label, idx) => ({
+            label,
+            state: idx < stageIndex ? "completed" : idx === stageIndex ? "active" : "default",
+          }))} />
+        </div>
+        <div className="flex-1 overflow-y-auto px-[24px] pt-[16px]">
+          <div className="max-w-[680px] flex flex-col gap-[16px]">{body}</div>
+        </div>
+        {footer}
+      </div>
+    </PgCreateContextShell>
+  )
+
   return [
     { label: "Trigger visible", note: "Two or more stages — a full-page wizard, not a SlideOut. Staged flows never live in a panel.", content: (
       <PgCreateContextShell sidebarId="knowledge">
@@ -16380,35 +16464,53 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
         </main>
       </PgCreateContextShell>
     ) },
-    { label: "Surface open", note: "Full-page wizard — Stepper + StepperNavFooter. The wizard never puts Cancel/Next in the Header; StepperNavFooter owns navigation.", content: (
-      <PgCreateContextShell sidebarId="knowledge">
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l" />
-          <div className="px-[24px] pt-[16px] shrink-0">
-            <Stepper steps={[
-              { label: "Scope", state: "active" },
-              { label: "Rules", state: "default" },
-              { label: "Approvals", state: "default" },
-              { label: "Review", state: "default" },
-            ]} />
-          </div>
-          <div className="flex-1 overflow-y-auto px-[24px] pt-[16px]">
-            <div className="max-w-[680px] flex flex-col gap-[16px]">
-              <Input placeholder="Policy name" />
-              <PgInteractiveSelect placeholder="Applies to" options={["All tenant workspaces", "This workspace only", "Selected teams"]} />
-            </div>
-          </div>
-          <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Next" onNext={next} />
-        </div>
-      </PgCreateContextShell>
+    { label: "Stage 1 of 4 — Scope", note: "Full-page wizard — Stepper + StepperNavFooter. The wizard never puts Cancel/Next in the Header; StepperNavFooter owns navigation.", content: wizardShell(0,
+      <>
+        <Input placeholder="Policy name" />
+        <PgInteractiveSelect placeholder="Applies to" options={["All tenant workspaces", "This workspace only", "Selected teams"]} />
+      </>,
+      <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Next" onNext={next} />
     ) },
-    { label: "Confirm", note: "The creation is irreversible and tenant-wide — this earns a confirmation, independent of which surface built it.", content: (
+    { label: "Stage 2 of 4 — Rules", note: "Next now advances the wizard's own stage, not just the tour — the Stepper moves from Scope to Rules.", content: wizardShell(1,
+      <>
+        <PgInteractiveSelect placeholder="Retention period" options={["30 days", "90 days", "1 year", "Indefinite"]} />
+        <Textarea placeholder="Describe what this policy restricts…" />
+      </>,
+      <StepperNavFooter variant="back-next" onBack={back} nextLabel="Next" onNext={next} />
+    ) },
+    { label: "Stage 3 of 4 — Approvals", note: "Same shape, third stage — this is what a 4-stage wizard actually looks like stepping through it, not a single screen standing in for four.", content: wizardShell(2,
+      <>
+        <PgInteractiveSelect placeholder="Approver" options={["Compliance Lead", "Legal", "CTO"]} />
+        <PgInteractiveSelect placeholder="Escalation path" options={["Slack channel", "Email", "Both"]} />
+      </>,
+      <StepperNavFooter variant="back-next" onBack={back} nextLabel="Next" onNext={next} />
+    ) },
+    { label: "Stage 4 of 4 — Review", note: "The last stage reviews what was entered, read-only, before the irreversible step. Next becomes Publish here, not before.", content: wizardShell(3,
+      <div className="rounded-[12px] p-[16px] flex flex-col gap-[10px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+        {[
+          ["Policy name", "Data Retention Policy"],
+          ["Applies to", "All tenant workspaces"],
+          ["Retention period", "1 year"],
+          ["Approver", "Compliance Lead"],
+        ].map(([label, value]) => (
+          <div key={label} className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{label}</span>
+            <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{value}</span>
+          </div>
+        ))}
+      </div>,
+      <StepperNavFooter variant="back-next" onBack={back} nextLabel="Publish" onNext={next} />
+    ) },
+    { label: "Confirm", note: "The creation is irreversible and tenant-wide — this earns a confirmation, independent of which surface built it. Publishing doesn't make the policy Active immediately — see the next step.", content: (
       <PgCreateContextShell sidebarId="knowledge"
         overlay={
           <ModalDialog isOpen onClose={back} variant="confirmation" tone="warning" iconName="AlertTriangle"
             title="Publish this policy?"
             description="This policy applies tenant-wide and cannot be undone once published."
-            ctaPrimary={{ label: "Publish", onClick: next }}
+            ctaPrimary={{ label: "Publish", onClick: () => {
+              toast.success("Policy submitted for Council review", { description: "You'll be notified once it's approved — nothing changed on this screen." })
+              next()
+            } }}
             ctaSecondary={{ label: "Cancel", onClick: back }}
           />
         }>
@@ -16425,18 +16527,12 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
         </div>
       </PgCreateContextShell>
     ) },
-    { label: "Landing", note: "Navigates to the created object.", content: (
+    { label: "Landing", note: "The result isn't visible yet — a governance policy is a governed action awaiting Council review, exactly §4b's invisible-result case. useToast() already fired when Publish was clicked; the user stays right where they were, on the list.", content: (
       <PgCreateContextShell sidebarId="knowledge">
         <main className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Data Retention Policy" description="Policy · Active" tag={<Tag variant="success" size="sm">Active</Tag>}
-            breadcrumb={<Breadcrumb depth={2} items={[{ label: "Policies", href: "policies" }, { label: "Data Retention Policy" }]} onNavigate={() => {}} />}
-            size="size-l" />
-          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
-            <div className="max-w-[680px] rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Scope</span>
-              <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Applies to all tenant workspaces. Requires approval before publishing.</p>
-            </div>
-          </div>
+          <Header title="Policies" description={`${PG_CTX_POLICIES_LANDING.length} policies · ${draft} draft`} size="size-l"
+            primaryAction={{ label: "New policy", onClick: () => {} }} />
+          <PgListViewBody searchPlaceholder="Search policies…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={PG_CTX_POLICIES_LANDING} />
         </main>
       </PgCreateContextShell>
     ) },
@@ -16460,17 +16556,10 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
   }
   return [
     { label: "Trigger visible", note: "Browsing a catalogue — templates, marketplace, starting points.", content: frame() },
-    { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. It never becomes the form. slotUnstyled: bare MenuItem rows directly on the modal, no gray wrapper card.", content: frame(
+    { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. It never becomes the form. Categories + search + a card per template — deliberately not the field-form modal's own shape, so the two read as different surfaces even from a glance, not just from reading the copy.", content: frame(
       <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
         title="Choose a template" description="Start from a template, or build from scratch."
-        slot={
-          <div className="flex flex-col">
-            {PG_CTX_TEMPLATES.map(t => (
-              <MenuItem key={t.id} label={t.name} subtext={t.desc}
-                trailingElement={<Button variant="secondary" size="sm" onClick={next}>Use template</Button>} />
-            ))}
-          </div>
-        }
+        slot={<PgCatalogueBrowser items={PG_CTX_TEMPLATES} onUse={next} />}
         ctaSecondary={{ label: "Cancel", onClick: back }}
       />
     ) },
@@ -16491,7 +16580,7 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
   ]
 }
 
-const PG_PREVIEW_SCENES: Record<PgPreviewCaseId, (next: () => void, back: () => void, onClose: () => void) => PgTourStepDef[]> = {
+const PG_PREVIEW_SCENES: Record<PgPreviewCaseId, (next: () => void, back: () => void, onClose: () => void, toast: ReturnType<typeof useToast>) => PgTourStepDef[]> = {
   "contextual-slideout": pgSceneContextualSlideout,
   "standalone-modal": pgSceneStandaloneModal,
   "standalone-modal-apikey": pgSceneStandaloneModalApiKey,
@@ -16517,7 +16606,8 @@ function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onC
   const [step, setStep] = useState(0)
   const next = () => setStep(s => s + 1)
   const back = () => setStep(s => Math.max(0, s - 1))
-  const steps = PG_PREVIEW_SCENES[caseId](next, back, onClose)
+  const toast = useToast()
+  const steps = PG_PREVIEW_SCENES[caseId](next, back, onClose, toast)
   const i = Math.min(step, steps.length - 1)
   const current = steps[i]
 
