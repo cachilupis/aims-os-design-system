@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect } from "react"
+import { useState, useRef, useLayoutEffect, type KeyboardEvent } from "react"
 import { Sparkle, MoreHorizontal, Lock, Info, Database, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
@@ -41,6 +41,14 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  * The right side is fixed and never compressed. The left side yields, in this
  * order: tags collapse to `+N`, then source, and only then does the title
  * truncate. Nothing wraps and nothing abbreviates.
+ *
+ * NINE TAB STOPS, SIX WHEN NOTHING IS TRUNCATED. Tags and secondary metadata
+ * are each ONE stop, not one per item: Tab enters the group, arrows move
+ * inside it, Tab leaves. Six tags plus six metadata items as individual stops
+ * would put twenty-five Tab presses between a keyboard user and the page,
+ * which is a barrier, not an inconvenience. The title and the description are
+ * stops only when they actually overflow — a value that fits has nothing to
+ * reveal.
  *
  * THREE STATES, ONE AXIS. `state` is Figma's `Property 1`: default, loading
  * (a skeleton matching the current layout — never an empty state, because
@@ -122,11 +130,9 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *   - The 720px reflow threshold is a calibrated estimate, not a number
  *     Figma states. Figma models Responsive as a variant with no breakpoint
  *     attached; 720 is where the built wide instance stops fitting.
- *   - The pixel truncation ceilings — source at 160px, secondary metadata at
- *     8/24 characters. The title's 540px ceiling IS implemented.
- *   - The nine-stop focus order with roving tabindex. Tags and secondary
- *     metadata are inert text today, so the header has fewer stops than
- *     Figma specifies rather than more.
+ *   - The industry ellipsis rule Figma cites from Carbon and PatternFly: an
+ *     ellipsis must hide at least three characters and leave at least four
+ *     visible. CSS truncation cannot express it.
  *   - Visibility priority: nothing is ever dropped. The card reflows and
  *     yields, but at an extreme width it keeps description and metadata
  *     instead of dropping them in Figma's documented order.
@@ -573,6 +579,72 @@ const REFLOW_WIDTH = 720
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+// ── Focus groups (Figma's FOCUS AND KEYBOARD frame) ────────────────────────
+// Nine tab stops, six when nothing is truncated. The reason it is nine and
+// not twenty-five is Figma's own: with six tags and six metadata items, one
+// stop per item means a keyboard user presses Tab twenty-five times to get
+// past the header and reach the page. That is not an inconvenience, it is a
+// barrier.
+//
+// So tags and secondary metadata are each ONE stop: Tab enters the group,
+// arrow keys move inside it, Tab leaves it. This is the WAI-ARIA composite
+// widget pattern — the same one a toolbar uses — implemented as a roving
+// tabindex: exactly one item in the group is tabbable at a time.
+//
+// Focus ring: `focus-visible` only, so a mouse user never sees it, and it
+// reuses the Button's own ring token rather than inventing a second one.
+const FOCUS_RING =
+  "outline-none rounded-[8px] focus-visible:ring-2 focus-visible:ring-offset-2 " +
+  "focus-visible:[ring-offset-color:var(--canvas)] focus-visible:ring-[var(--btn-secondary-ring)]"
+
+function useRovingIndex(count: number) {
+  const [active, setActive] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  // If the group shrinks (tags collapsing into +N, metadata capped), the
+  // remembered index can point past the end. Clamp rather than reset, so
+  // focus stays as close as possible to where the user left it.
+  const index = count === 0 ? 0 : Math.min(active, count - 1)
+
+  const move = (delta: number) => {
+    if (count === 0) return
+    const next = (index + delta + count) % count
+    setActive(next)
+    const items = ref.current?.querySelectorAll<HTMLElement>("[data-roving]")
+    items?.[next]?.focus()
+  }
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    // Only the four arrows plus Home/End. Everything else — Tab included —
+    // is left alone, which is what makes Tab still leave the group.
+    if (e.key === "ArrowRight" || e.key === "ArrowDown")     { e.preventDefault(); move(1) }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp")   { e.preventDefault(); move(-1) }
+    else if (e.key === "Home")                               { e.preventDefault(); move(-index) }
+    else if (e.key === "End")                                { e.preventDefault(); move(count - 1 - index) }
+  }
+
+  return { ref, index, onKeyDown }
+}
+
+// Stops 1 and 8 — the title and the description — exist ONLY when truncated.
+// A value that fits has nothing to reveal, and a focus stop that reveals
+// nothing is one more press between the reader and the page. Measured, not
+// guessed: a truncated element's scrollWidth exceeds its clientWidth.
+function useIsTruncated<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const [truncated, setTruncated] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => setTruncated(el.scrollWidth > el.clientWidth + 1)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
+  return { ref, truncated }
+}
+
 // ── Loading skeleton ────────────────────────────────────────────────────────
 // Every width and height below is read from Figma's own `Property 1=Loading`
 // variants (20134:314522 wide, 20152:6818 stacked) — not estimated, and not
@@ -700,6 +772,15 @@ function EntityHeader({
   // any caller that passes a real value.
   const safeVisual: EntityVisual = visual ?? { kind: "avatar" }
 
+  // Stops 3 and 9 — the two roving groups. Declared before the early
+  // `loading` return would be wrong (hooks must not be conditional), so
+  // they live here, above it.
+  const tagGroup  = useRovingIndex(visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) + (locked ? 1 : 0))
+  const metaGroup = useRovingIndex(visibleMetadata.length)
+  // Stops 1 and 8 — only when the value actually overflows.
+  const titleTrunc = useIsTruncated<HTMLSpanElement>()
+  const descTrunc  = useIsTruncated<HTMLSpanElement>()
+
   // ── Reflow — Figma's `Size = Responsive` variant ─────────────────────────
   // REFLOW BEFORE YIELDING, AND YIELDING BEFORE DROPPING. At narrower widths
   // this card does not compress a single row and it does not hide slots: it
@@ -809,15 +890,20 @@ function EntityHeader({
                     A title cut short with empty space beside it is a bug, not a
                     rule. Never wraps, at any width. Never dropped. */}
                 <Tooltip content={name} side="cursor" triggerClassName="block min-w-0 basis-auto grow-0 shrink max-w-[540px]">
-                  <span className="block truncate text-[18px] font-semibold leading-[1.3]" style={{ color: "var(--color-text-title)" }}>
+                  {/* STOP 1 — and only when truncated. `tabIndex={-1}` keeps
+                      it out of the tab order when the whole name fits, which
+                      is what turns nine stops into six. Focus bubbles up to
+                      the Tooltip's own span, so focusing it opens the tooltip
+                      without Tooltip needing to know about any of this. */}
+                  <span
+                    ref={titleTrunc.ref}
+                    tabIndex={titleTrunc.truncated ? 0 : -1}
+                    className={cn("block truncate text-[18px] font-semibold leading-[1.3]", FOCUS_RING)}
+                    style={{ color: "var(--color-text-title)" }}
+                  >
                     {name}
                   </span>
                 </Tooltip>
-                {locked && (
-                  <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
-                    {RECORD_HEADER_FALLBACKS.lockedTagLabel}
-                  </Tag>
-                )}
               </div>
 
               {/* Provenance group — source · │ · tags. Same order in both
@@ -847,7 +933,17 @@ function EntityHeader({
                         </span>
                       )}
                       <Tooltip content={`Source · ${source}`} side="cursor">
-                        <span className="inline-flex items-center gap-[4px] min-w-0">
+                        {/* STOP 2 — one stop for the whole source, never one
+                            per part. The 160px is Figma's own fixed ceiling
+                            for this slot (~22 characters); it truncates there
+                            even when the row has more to give, because source
+                            competes for the same row as the tags and the
+                            title, and the title is the one that yields last. */}
+                        <span
+                          data-roving
+                          tabIndex={0}
+                          className={cn("inline-flex items-center gap-[4px] min-w-0 max-w-[160px]", FOCUS_RING)}
+                        >
                           <Database size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />
                           <span className="block truncate text-[12px] font-medium" style={{ color: "var(--color-text-body)" }}>
                             {source}
@@ -872,29 +968,63 @@ function EntityHeader({
                       instead of overlapping.
                       Colour rule: only signals may be error/alert. Classification
                       is always neutral — enforced above, in orderedTags. */}
+                  {/* STOP 3 — ONE stop for the whole tag group. Tab enters it,
+                      arrows move inside it, Tab leaves. Six tags as six stops
+                      would put six presses between the reader and the page. */}
                   {visibleTags.length > 0 && (
-                    <div className="flex items-center gap-[6px] flex-wrap min-w-0">
+                    <div
+                      ref={tagGroup.ref}
+                      role="group"
+                      aria-label="Tags"
+                      onKeyDown={tagGroup.onKeyDown}
+                      className="flex items-center gap-[6px] flex-wrap min-w-0"
+                    >
                       {visibleTags.map((t, i) => (
-                        <Tag
+                        <span
                           key={`${t.role}-${t.label}-${i}`}
-                          variant={t.tone ?? "neutral"}
-                          size="sm"
-                          leadingIcon={t.icon ? <t.icon size={12} strokeWidth={1.75} /> : undefined}
-                          className="shrink-0"
+                          data-roving
+                          tabIndex={tagGroup.index === i ? 0 : -1}
+                          className={cn("inline-flex shrink-0", FOCUS_RING)}
                         >
-                          {t.label}
-                        </Tag>
+                          <Tag
+                            variant={t.tone ?? "neutral"}
+                            size="sm"
+                            leadingIcon={t.icon ? <t.icon size={12} strokeWidth={1.75} /> : undefined}
+                            className="shrink-0"
+                          >
+                            {t.label}
+                          </Tag>
+                        </span>
                       ))}
                       {/* +N — the hidden tags reach the keyboard and the screen
                           reader through the Tooltip's own content, not only on
                           hover. That is what makes it acceptable for tags to
-                          yield before the title: nothing is lost, only moved. */}
+                          yield before the title: nothing is lost, only moved.
+                          It is the last item INSIDE the group, not a stop of
+                          its own, so arrowing to the end reveals them. */}
                       {hiddenTags.length > 0 && (
                         <Tooltip content={hiddenTags.map(t => t.label).join(" · ")} side="cursor">
-                          <Tag variant="neutral" size="sm" className="shrink-0">
-                            {`+${hiddenTags.length}`}
-                          </Tag>
+                          <span
+                            data-roving
+                            tabIndex={tagGroup.index === visibleTags.length ? 0 : -1}
+                            className={cn("inline-flex shrink-0", FOCUS_RING)}
+                          >
+                            <Tag variant="neutral" size="sm" className="shrink-0">
+                              {`+${hiddenTags.length}`}
+                            </Tag>
+                          </span>
                         </Tooltip>
+                      )}
+                      {locked && (
+                        <span
+                          data-roving
+                          tabIndex={tagGroup.index === visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) ? 0 : -1}
+                          className={cn("inline-flex shrink-0", FOCUS_RING)}
+                        >
+                          <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
+                            {RECORD_HEADER_FALLBACKS.lockedTagLabel}
+                          </Tag>
+                        </span>
                       )}
                     </div>
                   )}
@@ -1024,9 +1154,18 @@ function EntityHeader({
             Medium, read from Figma. */}
         {description && (
           <Tooltip content={description} side="cursor" triggerClassName="block min-w-0">
-            <p className="truncate text-[14px] font-medium leading-[1.4]" style={{ color: "var(--color-text-body)" }}>
+            {/* STOP 8 — and only when truncated, same reasoning as the title.
+                It is elastic, not fixed: one line at container width, with no
+                ceiling of its own, so on a wide card it usually fits and
+                costs no stop at all. */}
+            <span
+              ref={descTrunc.ref}
+              tabIndex={descTrunc.truncated ? 0 : -1}
+              className={cn("block truncate text-[14px] font-medium leading-[1.4]", FOCUS_RING)}
+              style={{ color: "var(--color-text-body)" }}
+            >
               {description}
-            </p>
+            </span>
           </Tooltip>
         )}
 
@@ -1035,13 +1174,34 @@ function EntityHeader({
             this header does not — it has the width, and a bare symbol forces
             the user to interpret it. Tooltip is always present, even when the
             text is not truncated. */}
+        {/* STOP 9 — ONE stop for the whole row, arrows inside. Six metadata
+            items as six stops is the other half of the twenty-five-press
+            problem Figma's focus frame is written to avoid. */}
         {visibleMetadata.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-[16px] gap-y-[8px]">
+          <div
+            ref={metaGroup.ref}
+            role="group"
+            aria-label="Details"
+            onKeyDown={metaGroup.onKeyDown}
+            className="flex flex-wrap items-center gap-x-[16px] gap-y-[8px]"
+          >
             {visibleMetadata.map((item, i) => {
               const ItemIcon = item.icon
               return (
                 <Tooltip key={`${item.text}-${i}`} content={item.tooltip} side="cursor">
-                  <span className="inline-flex items-center gap-[4px] min-w-0">
+                  {/* Figma's ceiling for this slot is stated in characters —
+                      2 words / 8 for the short form, 24 for the long — so it
+                      is expressed in `ch`, which IS a character width in CSS,
+                      rather than converted to a px guess. It truncates with an
+                      ellipsis; it never abbreviates, because an abbreviation
+                      looks like the real value and misleads. The icon never
+                      appears alone: this row hides an item entirely before it
+                      strips the text off one. */}
+                  <span
+                    data-roving
+                    tabIndex={metaGroup.index === i ? 0 : -1}
+                    className={cn("inline-flex items-center gap-[4px] min-w-0 text-[12px] max-w-[24ch]", FOCUS_RING)}
+                  >
                     <ItemIcon size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />
                     <span className="block truncate text-[12px] font-medium" style={{ color: "var(--color-text-body)" }}>
                       {item.text}

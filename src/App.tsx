@@ -2243,6 +2243,7 @@ const ENTITY_HEADER_SPEC = {
     { size: "Avatar / highlight icon", dimensions: "32×32px (AvatarCircle / HighlightIcon lg)", padding: "—", gap: "—" },
     { size: "Identity row — wide",    dimensions: "≥ 720px of card width", padding: "—", gap: "12px between title, source and tags" },
     { size: "Identity row — stacked", dimensions: "< 720px of card width", padding: "—", gap: "6px between the two rows — Figma's Size = Responsive. Title on row 1, source + tags on row 2, right cluster unchanged. Measured on the CARD with a ResizeObserver, not the viewport, because this header sits in panels and split views. 720 is a calibrated estimate — Figma models Responsive as a discrete variant with no px value." },
+    { size: "Truncation ceilings", dimensions: "title 540px (protected) · source 160px · secondary metadata 24ch, short form 8 · description container width, one line", padding: "—", gap: "Figma's own numbers. Tag chip 160px and state badge 140px belong to the Tag component, and the action label's 180px to Button — setting them here would fix only this header" },
     { size: "Loading skeleton — wide",    dimensions: "circle 32 · title 180×24 · source+tags 120×20 · actions 80×20 and 120×28 · description 420×16 · metadata 90/70/110/60/70 ×16", padding: "—", gap: "Read from Figma node 20134:314522" },
     { size: "Loading skeleton — stacked", dimensions: "circle 32 · title 150×24 · actions 96/120/28 ×28 · source 110×16 · tags 92/72/36 ×20 · description 380×16 · metadata 86/62/100/58 ×16", padding: "—", gap: "Read from Figma node 20152:6818, with one deviation: source and tags share a row here, matching the stacked layout the skeleton is standing in for rather than Figma's own five-row skeleton" },
   ],
@@ -32522,7 +32523,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
             <div className="grid gap-[12px] md:grid-cols-3">
               {[
                 ["1 · Reflow — stack before you shrink", "Below 720px of CARD width the identity row breaks into stacked rows and keeps everything. On a narrower screen there is vertical space to spare, so stacking costs nothing and loses nothing. Figma's Size=Responsive variant documents this: it is not a smaller version of the desktop row, it is a different arrangement of the same slots.", "Implemented. Measured with a ResizeObserver on the card, never a media query — the header sits in panels and split views, where the viewport tells you nothing."],
-                ["2 · Space allocation — how a row shares its width", "The right side (state badge and actions) is fixed and never compressed. The left side yields in order of protection: visual identity never yields, the title is protected and truncates only after everything else has, source yields next, and TAGS YIELD FIRST — collapsing to +N one at a time.", "Implemented for tags (cap + N) and the title (flex 0 1 auto, min-width 0, 540px ceiling). Source has no 160px ceiling yet."],
+                ["2 · Space allocation — how a row shares its width", "The right side (state badge and actions) is fixed and never compressed. The left side yields in order of protection: visual identity never yields, the title is protected and truncates only after everything else has, source yields next, and TAGS YIELD FIRST — collapsing to +N one at a time.", "Implemented. Tags cap into +N, the title is flex 0 1 auto with min-width 0 and a 540px ceiling, and source and secondary metadata now carry their own ceilings too."],
                 ["3 · Visibility priority — what is dropped once reflow and yielding are exhausted", "Visual identity, then title, then state badge — priorities 1 to 3 are NEVER dropped at any width. Then tags (signals before classification), source, description, and secondary metadata last. Secondary metadata is hidden before it is stripped of text: a row of bare icons is worse than no row.", "NOT implemented. Nothing is dropped today — the card reflows and yields, and at extreme widths it would keep description and metadata rather than dropping them."],
               ].map(([title, body, status]) => (
                 <div key={title} className="rounded-[8px] p-[12px] flex flex-col gap-[6px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
@@ -32550,11 +32551,11 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               </div>
               {[
                 ["Title", "540 px", "Protected", "Implemented — max-w-[540px] plus min-w-0, so it takes what the row has left and truncates only there"],
-                ["Source", "160 px", "Fixed ceiling", "Not implemented — it truncates at the space available, not at 160px"],
+                ["Source", "160 px", "Fixed ceiling", "Implemented — max-w-[160px], so it truncates at its own ceiling even when the row has more to give"],
                 ["Tag chip", "160 px", "Fixed ceiling", "Belongs to the Tag component, not here. Setting it here would fix only this header"],
                 ["State badge", "140 px", "Fixed ceiling", "Belongs to the Tag component"],
                 ["Primary action label", "180 px", "Fixed ceiling", "Belongs to the Button component. Moot for Ask, which is one word"],
-                ["Secondary metadata", "8 / 24 char", "Fixed ceiling", "Not implemented — short form max 2 words / 8 chars, long form 24 chars"],
+                ["Secondary metadata", "8 / 24 char", "Fixed ceiling", "Implemented as max-w-[24ch] — a character width in CSS, so Figma's character limit is not converted into a px guess"],
                 ["Description", "container width", "Elastic", "Implemented — one line, truncated with a tooltip, never wrapped"],
               ].map(([el, ceil, kind, state], i) => (
                 <div key={el} className="grid grid-cols-[190px_110px_130px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
@@ -32612,7 +32613,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                 <strong style={{ color: "var(--foreground)" }}>Always true:</strong> focus order follows visual order and never jumps to the actions first · tooltips open on focus, not only on hover, and dismiss with Escape · the +N chip exposes its hidden tags inside the group, not only on hover · a truncated value exposes its full string to assistive technology · focus is always visible, never removed and never relying on colour alone.
               </p>
               <p className="text-[12px] leading-[1.7] mt-[6px]" style={{ color: "var(--primary)" }}>
-                <strong>State in this repo:</strong> the tooltip-on-focus behaviour and the +N tooltip content are implemented. The nine-stop order with roving tabindex is NOT — today every tag and metadata item is inert text, so the header has fewer stops than Figma specifies rather than more. Groups with arrow-key navigation are the missing piece.
+                <strong>State in this repo: implemented.</strong> Tags and secondary metadata are each one stop with a roving tabindex — arrows and Home/End move inside, Tab leaves. The <code>+N</code> chip and the <code>Locked</code> tag are items INSIDE the tag group, not stops of their own. The title and the description are stops only when they actually overflow, measured with a ResizeObserver rather than guessed, so an entity whose name fits costs no stop at all — which is what turns nine stops into six. Focus rings reuse the Button&rsquo;s own token and appear on <code>focus-visible</code> only, so a mouse user never sees them. Tooltips open on focus because focus bubbles to the Tooltip&rsquo;s own trigger.
               </p>
             </div>
           </section>
