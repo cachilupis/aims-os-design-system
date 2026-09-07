@@ -172,19 +172,28 @@ function PieChart({ donut = false }: { donut?: boolean }) {
   )
 }
 
-// A funnel stage is one metric shrinking through steps, not a category, so the
-// bar is the DS ProgressBar in a single style — the length carries the meaning.
-// Colour per stage would imply four different things being measured.
+// The funnel bars are the DS ProgressBar, not a hand-rolled track and fill.
+// One style per stage, drawn from the non-semantic four — success and error
+// are left out on purpose: a funnel stage is not a pass or a failure, and
+// those two hues would read as one.
+const FUNNEL_STYLES = ["primary", "purple", "light-blue", "yellow"] as const
+
 function FunnelChart() {
   const stages: [string, number, number][] = [
     ["Prospect", 1240, 100], ["Qualified", 780, 63], ["Proposal", 410, 33], ["Closed", 186, 15],
   ]
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {stages.map(([label, n, pct]) => (
+      {stages.map(([label, n, pct], i) => (
         <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 11, color: SUB, width: 62, flexShrink: 0 }}>{label}</span>
-          <ProgressBar className="flex-1 min-w-0" value={pct} style="primary" size="m" label={`${label} — ${n}`} />
+          <ProgressBar
+            className="flex-1 min-w-0"
+            value={pct}
+            style={FUNNEL_STYLES[i % FUNNEL_STYLES.length]}
+            size="m"
+            label={`${label} — ${n}`}
+          />
           <span style={{ fontSize: 11, fontWeight: 600, color: TXT, width: 38, textAlign: "right" as const }}>{n}</span>
         </div>
       ))}
