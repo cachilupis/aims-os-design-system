@@ -156,6 +156,7 @@ const PRESET_DATASETS = [
   { id: "ds-headcount",      name: "Headcount",         description: "Active employee count by department.",                   type: "GROUPED",      integration: "BambooHR" },
 ]
 const SOURCE_COLUMNS: Record<string, string[]> = {
+  // Entity sources
   contacts_hubspot:      ["Name", "Email", "Company", "Lifecycle Stage", "Owner", "Created At"],
   companies_hubspot:     ["Name", "Domain", "Industry", "Annual Revenue", "Employees", "Owner"],
   deals_hubspot:         ["Name", "Stage", "Amount", "Close Date", "Pipeline", "Owner"],
@@ -164,6 +165,14 @@ const SOURCE_COLUMNS: Record<string, string[]> = {
   employees_bamboohr:    ["Name", "Department", "Title", "Manager", "Start Date", "Status"],
   workflows_aims:        ["Name", "Status", "Run Count", "Success Rate", "Last Run", "Owner"],
   ai_workers_aims:       ["Name", "Category", "Status", "Tasks Today", "Accuracy", "Created At"],
+  // Preset datasets
+  "ds-contacts-tier":    ["Tier", "Contact Count", "Last Activity", "Owner"],
+  "ds-deals-pipeline":   ["Stage", "Deal Value", "Deal Count", "Close Date"],
+  "ds-total-mrr":        ["Month", "MRR", "ARR", "Growth Rate"],
+  "ds-all-contacts":     ["Name", "Email", "City", "Tier"],
+  "ds-ticket-volume":    ["Period", "Volume", "Category", "Priority"],
+  "ds-csat-score":       ["Period", "CSAT Score", "Rating", "Survey Count"],
+  "ds-headcount":        ["Department", "Headcount", "Role", "Location"],
 }
 const FRESHNESS_OPTIONS = [
   { value: "realtime", label: "Real-time (live)" },
@@ -1611,7 +1620,7 @@ function WidgetBuilderOverlay({ onClose: _onClose, tab, setTab, onProgressChange
             )}
 
             {/* Freshness */}
-            {metric && (
+            {dataComplete && (
               <div>
                 <WBSectionLabel>Refresh cadence</WBSectionLabel>
                 <div style={{ display: "flex", gap: 8 }}>
