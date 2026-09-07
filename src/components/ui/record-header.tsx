@@ -1,230 +1,145 @@
-import { useState, useRef, useLayoutEffect } from "react"
-import {
-  ChevronDown, ChevronUp, ChevronRight, ArrowUpRight, Sparkle, MoreHorizontal, Lock, Info, Workflow,
-  AlertTriangle, CheckCircle2, Database,
-  type LucideIcon,
-} from "lucide-react"
+import { useState, useRef, useLayoutEffect, type KeyboardEvent } from "react"
+import { Sparkle, MoreHorizontal, Lock, Info, Database, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tag } from "@/components/ui/tag"
 import { Button } from "@/components/ui/button"
 import { Menu, MenuItem } from "@/components/ui/menu-item"
 import { Tooltip } from "@/components/ui/tooltip"
-import { InformativeCard } from "@/components/ui/informative-card"
-import { HighlightIcon } from "@/components/ui/highlight-icon"
-import { Skeleton } from "@/components/ui/skeleton"
+import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highlight-icon"
 
 /**
- * Record Header — AIMS OS Design System
+ * Entity Header — AIMS OS Design System
  *
- * NOT YET IN FIGMA — this is a new component, not synced from an existing node.
+ * Source of truth: Figma `Design System - AIMS OS`, node 19815:101548. Every
+ * rule below is from that section — the Anatomy, Rules, Hierarchy, Focus
+ * order, TAG ROLES, TRUNCATION, THE THREE ACTIONS and BEHAVIOUR blocks. The
+ * file name stays `record-header.tsx` on purpose: the change spec forbids
+ * renaming it.
  *
- * ═══════════════════════════════════════════════════════════════════════════
- * REDESIGN PASS (this revision) — realigned to a validated visual redesign.
- * 5 changes, same underlying data model:
- *   1. The RECORD provenance trigger and entity type were already beside
- *      the name (left-aligned) from a prior correction pass — unchanged
- *      here, just confirmed as part of this redesign's own reference.
- *   2. Next Best Action is REINTRODUCED (`nextBestActions` prop) — but as a
- *      protagonist block, not the old Signal bar the history note below
- *      describes. Same block, repositioned: visible right under the
- *      identity tags while collapsed, and at the end of the expanded zones
- *      while expanded — never duplicated, never hidden in either state.
- *   3. Agentic System lost its section heading (the reference design shows
- *      Workflow/Agent as plain cards, no label above them) and the agent's
- *      signal color moved from purple to lime green — Workflow stays light
- *      blue. This is a deliberate, validated change to Law-adjacent color
- *      convention, not a bug: purple is no longer a signal color in this
- *      file at all.
- *   4. Your Intervention's pending items now trigger via a diagonal arrow
- *      (ArrowUpRight), never a labeled "Review" button — clicking one opens
- *      the real HTL view in a NEW TAB, never a same-page overlay, so the
- *      viewer never loses their place on this record. "Show N more" caps
- *      at 3 extra items inline; "View all" is the separate, always-present
- *      escape hatch to the full list (also a new tab). See OPEN_HTL_TOOLTIP
- *      and InterventionZoneContent's own doc comment.
- *   5. `EntityHeaderZoneLabels` lost `agenticSystem` (no heading left to
- *      translate) on top of `record` (already gone from the prior pass).
- *      Closing pass, later still: `intervention` — its last remaining
- *      entry — also lost its heading, so the whole `labels` prop/type is
- *      now gone; there was nothing left for a host to translate.
- * ═══════════════════════════════════════════════════════════════════════════
+ * WHAT IT IS
  *
- * ═══════════════════════════════════════════════════════════════════════════
- * AGNOSTICISM PASS (earlier revision) — the component previously modeled exactly
- * 3 closed entity variants (uep/ucp/uvp — Employee/Customer/Vendor), each with
- * its own fixed field-name interface (UEPRecord.manager, UCPRecord.renewalDate,
- * etc.) and an internal switch statement deriving the Identity type icon/label
- * and the RECORD field list from that variant. That's gone. This card now
- * serves ANY entity type on the platform, not just HR/CRM shapes:
- *   - `variant`/`data` (UEPRecord | UCPRecord | UVPRecord) → replaced by
- *     `name: string` + `entityType: { icon, label }` + `recordFields:
- *     RecordField[]` passed straight from the host. There is no internal
- *     switch on entity type anywhere in this file anymore — the type icon
- *     and the RECORD grid are both 100% data-driven. A host can pass
- *     `entityType={{ icon: Stethoscope, label: "Patient" }}` today with zero
- *     changes to this file.
- *   - Zone labels ("Agentic System"/"Your Intervention"/"Record") are
- *     configurable via the `labels` prop (i18n-ready) — default English
- *     copy applies when omitted.
- *   - Every zone already rendered conditionally (Agentic System/Your
- *     Intervention/Record all omit entirely when the host doesn't pass
- *     them) — that data-driven-presence rule is unchanged and now extends
- *     to the zones' own STATE unions (see AgenticSystemInfo/
- *     PendingIntervention below): passing the prop at all (even in an
- *     "empty"/"loading" status) means "render this zone"; omitting it
- *     entirely means "this entity type doesn't use this zone."
- *   - The 2 remaining signal colors (light blue = workflow, amber =
- *     intervention/HTL) encode SIGNAL TYPE, never a vertical — nothing in
- *     this file branches color by entity type. Confirmed by construction:
- *     there's no entity-type variable in scope anywhere near the color
- *     tokens below. Agent had its own lime-green signal color at one point
- *     (itself moved off purple by the redesign pass above) — closing pass,
- *     later still: the lime identity Tag it lived on is retired too (see
- *     AssignedAgent's own doc comment), so lime is no longer a live signal
- *     color anywhere in this file, only in this historical note.
- * ═══════════════════════════════════════════════════════════════════════════
+ * The identity card for a Unified Entity Profile. It identifies the entity
+ * you are looking at and surfaces what needs attention. It carries no detail
+ * — detail lives in the tabs below it. It answers four questions, in order:
+ * what is this, where did it come from, what needs attention, what can I do.
  *
- * ═══════════════════════════════════════════════════════════════════════════
- * MAJOR RESTRUCTURE (earlier revision, kept for history): this file used to
- * model a generic Employee/Customer/Client header with a Next Best Action
- * Signal bar and a variable secondary-actions list. Replaced end to end by
- * the governed-card product: Identity (fixed) + 3 expandable zones (Agentic
- * System / Your Intervention / Record). An interim revision added a
- * decorative `statusDot` next to the name in place of the Signal bar; that
- * was removed (this revision) — a colored dot with no label/tooltip/meaning
- * communicated nothing and was pure visual noise. If a glanceable status
- * indicator is wanted here in the future, it needs an explicit meaning and
- * a Tooltip, not a bare color.
- * ═══════════════════════════════════════════════════════════════════════════
+ * ONE SKELETON, EVERY ENTITY TYPE. There is no `variant` prop and no closed
+ * set of types. Employee, Customer, Vendor, Patient, Borrower, a repair
+ * order, a platform data entity — all the same shape. An entity type this
+ * file has never heard of is the normal case, not a gap.
  *
- * Governance canon (AIMS OS law, not preference — see the Reference tab's
- * own "Governance canon" section for the full, reader-facing version):
- *   Law 1 — Authority/origin of every field is ALWAYS visible. Every RECORD
- *     field carries a FieldProvenance and renders its origin-system badge
- *     inline — never a value floating with no traceable source.
+ * THE SLOTS
+ *
+ *   Row 1   visual · title · source · │ · tags        —  ⓘ · state badge ·
+ *                                                        secondary · Ask · ···
+ *   Row 2   description (off by default)
+ *   Row 3   secondary metadata, max 6
+ *
+ * The right side is fixed and never compressed. The left side yields, in this
+ * order: tags collapse to `+N`, then source, and only then does the title
+ * truncate. Nothing wraps and nothing abbreviates.
+ *
+ * NINE TAB STOPS, SIX WHEN NOTHING IS TRUNCATED. Tags and secondary metadata
+ * are each ONE stop, not one per item: Tab enters the group, arrows move
+ * inside it, Tab leaves. Six tags plus six metadata items as individual stops
+ * would put twenty-five Tab presses between a keyboard user and the page,
+ * which is a barrier, not an inconvenience. The title and the description are
+ * stops only when they actually overflow — a value that fits has nothing to
+ * reveal.
+ *
+ * THREE STATES, ONE AXIS. `state` is Figma's `Property 1`: default, loading
+ * (a skeleton matching the current layout — never an empty state, because
+ * saying "nothing here" while data is in flight states something untrue) and
+ * restricted (50% opacity; the viewer lacks entitlement to the values, which
+ * is a governed state and never an error). Independent of the reflow below —
+ * an entity can be loading on a tablet.
+ *
+ * REFLOW BEFORE YIELDING. Below 720px of measured card width the identity row
+ * stacks — title on its own row, source and tags together on the next, right
+ * cluster unchanged — which is Figma's `Size = Responsive`. The trigger is
+ * the CARD's own width, measured with a ResizeObserver, not the viewport: this
+ * header sits in panels and split views, so a wide screen tells you nothing
+ * about how much room it actually has.
+ *
+ * WHAT IT IS NOT
+ *
+ * NO INSIGHT SECTION. System interpretation reaches this card only as a tag
+ * with a tooltip — never a descriptive sentence, never a score with drivers,
+ * never an expandable analysis. Anything larger belongs to the Overview.
+ *
+ * NO DISCLOSURE. This is a fixed arrangement of slots, not a collapsible
+ * card. An earlier revision of this file had a chevron revealing two zones,
+ * AGENTIC SYSTEM and YOUR INTERVENTION; neither exists in the Figma and both
+ * are gone. Their content belongs to Overview widgets.
+ *
+ * NO NEXT BEST ACTION. The recommendation card is a separate component in
+ * its own Card Container — `NextBestActionCard` in
+ * @/components/experimental/next-best-action-card — rendered as a SIBLING
+ * below this one. Two records, two containers. Passing recommendations into
+ * the header is the single most common mistake with this card, so the prop
+ * does not exist to be misused.
+ *
+ * NOT A LIST ROW. An `EntityList` row navigates to the detail on click. This
+ * cannot — you are already in the detail. It also has no selection, no
+ * pinning, no hover-revealed affordances and no virtualization, none of which
+ * apply to a single instance. If the header looked like a row, the reader
+ * would lose the signal of where they are.
+ *
+ * GOVERNANCE CANON — AIMS OS law, not preference
+ *
+ *   Law 1 — Authority and origin of every field is ALWAYS visible. Every
+ *     RECORD field carries a FieldProvenance; no code path renders a value
+ *     without its source.
  *   Law 2 — Every governed answer carries provenance reachable WITHOUT
- *     leaving the view. The (i) icon sits directly beside the name
- *     (redesign pass) and opens the Data Provenance SlideOut (the host may
- *     title it "About this record") from right here — no navigating away
- *     first.
- *   Law 3 — HTL (human-in-the-loop) items are first-class states with their
- *     own calm, explanatory language — NEVER rendered as red errors. Every
- *     Your Intervention status (pending/empty/loading) renders calmly —
- *     "error" (red) is never used anywhere in this zone.
- *   Law 4 — PII resolves only at display-time, per viewer entitlements. A
- *     hydrated (real) field and a masked field are the SAME RecordField in
- *     2 states — see RecordField's own doc comment. This component renders
- *     whichever state it's given; it never resolves entitlements itself.
+ *     leaving the view. The ⓘ trigger opens the Information panel from right
+ *     here.
+ *   Law 3 — HTL items are first-class states with calm, explanatory
+ *     language, never red errors.
+ *   Law 4 — PII resolves only at display time, per viewer entitlement. A
+ *     hydrated field and a masked field are the SAME RecordField in two
+ *     states; this component renders whichever it is given and never
+ *     resolves entitlements itself.
  *
- * Structure — Identity (fixed) + NBA (protagonist, repositionable) + 2
- * expandable zones, one shared skeleton for any entity type — only the
- * zone CONTENT changes, never the skeleton:
- *   Identity (always visible) → avatar, name (truncates with a Tooltip —
- *     never stretches or wraps the row), the RECORD provenance trigger
- *     (icon-only Button, see below), entity-type icon + TEXT (both, not
- *     icon-only) — all left-aligned, beside the name — up to 2
- *     governance-state Tags (hidden once expanded: workflow, HTL — no
- *     assigned-agent tag, closing pass; see Block 2 note below for why),
- *     Locked state. Actions: AI agent trigger ("Ask about {firstName}") →
- *     optional primary CTA (actions[0], host-provided — omitted entirely if
- *     the host passes none) → "···" overflow (actions[1+]) → disclosure
- *     chevron. Clicking a compressed Tag expands the card and scrolls/
- *     highlights the zone that Tag summarizes.
- *   NEXT BEST ACTION (always visible, not gated by the disclosure — this
- *     redesign pass) → right under the identity tags while collapsed, at
- *     the end of the expanded zones while expanded. See NextBestAction's
- *     own doc comment and NextBestActionBlock.
- *   AGENTIC SYSTEM (expanded, no section heading — this redesign pass) →
- *     N workflows, most prioritized (workflows[0]) full-size + the same
- *     "Show N more"/"Show less"/"View all" disclosure Your Intervention
- *     and Next Best Action use (closing pass — one learnable pattern for
- *     every zone, not 3 bespoke ones). Each item is a CardContainer
- *     (size="sm") with a HighlightIcon (size="sm", light-blue) + a NEUTRAL
- *     tertiary Button — color lives in the icon, never in the button. Also
- *     renders "empty" (no workflow yet) and "loading" (Skeleton) states. No
- *     agent card here — see AgenticSystemInfo's own doc comment for why.
- *   YOUR INTERVENTION (expanded, only if `intervention` is set, no section
- *     heading — closing pass, matching Agentic System's own plain-card
- *     treatment) → renders one of 3 states, never red: pending (default,
- *     N items — most prioritized shown + a diagonal-arrow trigger that
- *     opens the real HTL view in a NEW TAB, never a same-page overlay;
- *     "Show N more" caps at 3 extra inline, revealed BELOW the primary
- *     item, with "View all" as the separate always-present escape hatch
- *     positioned after every item — see InterventionZoneContent's own doc
- *     comment) / empty / loading. See PendingIntervention's own doc
- *     comment.
- *   RECORD → no expandable zone at all (moved out in the prior correction
- *     pass) — its trigger is the icon-only Button beside the name
- *     (Identity, above), always visible, opening the Data Provenance
- *     SlideOut (Law 2) for every field at once — disabled + a Tooltip
- *     explaining why when the host hasn't wired onProvenanceOpen, never
- *     silently hidden.
+ * THINGS THAT LOOK LIKE BUGS AND ARE NOT
  *
- * Block 2 — clicking a compressed identity Tag (this revision): every tag
- *   (agent/workflow/HTL) is a single, consistent interaction — it expands
- *   the card (if collapsed) and scrolls/highlights the zone it summarizes.
- *   It NEVER opens a SlideOut/new-tab directly from the collapsed tag —
- *   the deep detail is reached from the expanded zone itself (its own
- *   Button, or the HTL item's own diagonal-arrow trigger), same "expand
- *   first, drill in second" flow for every tag, every time. See
- *   `focusZone()` below.
+ *   - `Ask` shares the Sparkle glyph with the Next Best Action card.
+ *     Deliberate (Michael, 2026-09-07): both are AI surfaces and the shared
+ *     mark is what says so — one converses, the other transacts. Figma's
+ *     prose argues they should differ; Figma's own component instances share
+ *     it. Do not "fix" this.
+ *   - `assignedAgent` is required but may be `null`. Null renders the same
+ *     button, disabled, with a Tooltip — never a silently missing button.
+ *   - `Ask` uses `variant="main"` inside a CardContainer. It is the one named
+ *     exception in the whole design system, confirmed by Michael. Do not
+ *     extend it to any other button.
+ *   - A classification tag appears only when the visual is an avatar. A
+ *     highlight icon already names the type.
+ *   - `recordFields` is on the props interface but this component never reads
+ *     it: the Information panel that explains those fields is host-rendered.
+ *   - `Minimum`, one of the states Figma names, needs no implementation. It
+ *     is "only visual, title and state" — which is what you already get by
+ *     passing only those props. Nothing to switch on.
+ *   - `restricted` renders at 50% opacity and adds no visible element. That
+ *     is exactly what Figma's own Restricted variant is.
  *
- * Composition — reuses existing DS atoms, no custom re-implementations:
- *   Card       → CardContainer (size="default", variant="default") for the
- *                whole header; CardContainer (size="sm") for each Agentic
- *                System item.
- *   Avatar     → AvatarCircle sizeKey="lg".
- *   Identity metadata → Tag (size="sm"), NOT Chip — Chip is the interactive
- *                filter-row control, Tag is the read-only display atom.
- *   AI agent trigger → Button icon+label, `Sparkle` glyph, variant="main" —
- *                the one confirmed, named exception to "never main in a
- *                card" (see CLAUDE.md's Button hierarchy rules). Don't
- *                extend it to any other button in this file.
- *   Overflow   → Menu/MenuItem (menu-item.tsx), anchored via captured
- *                getBoundingClientRect() on trigger click.
- *   Disclosure → local expanded state + max-height transition, also reused
- *                for the identity-tags hide-on-expand transition and for
- *                Block 2's "expand + scroll to zone" tag click behavior.
- *   Agentic System items → CardContainer (sm) + HighlightIcon (sm, colored)
- *                + Button variant="tertiary" (neutral, no color). RECORD
- *                trigger (beside the name, Identity) → a single icon-only
- *                Button variant="tertiary", opening Data Provenance for
- *                every field at once. Never a colored card for metadata,
- *                per explicit instruction — HighlightIcon's own tinted box
- *                is the one sanctioned exception (it's a dedicated
- *                colored-icon atom, not a colored metadata card).
- *   Next Best Action → a native `<button>` (not the Button component — the
- *                whole block, icon+text+chevron, is one clickable target,
- *                same "raw styled element for a custom shape" precedent as
- *                the collapsed identity tags), dark-purple surface
- *                (--color-surface-purple-darker, paired with the SAME
- *                constant-white text token Chip's purple-primary variant
- *                already uses — see NextBestActionBlock's own doc comment
- *                for why, never --color-text-purple).
- *   Your Intervention → InformativeCard (size="sm"), title in normal
- *                sentence case (not literal ALL CAPS), state="alert" for
- *                pending/error, state="neutral" for empty/resolved-
- *                elsewhere — never state="error" (red), regardless of
- *                intervention.severity or status. Pending items' trigger →
- *                InformativeCard's new `trailingIcon` prop (this redesign
- *                pass — an icon-only Button, ArrowUpRight, added
- *                additively to informative-card.tsx alongside the
- *                existing cta/ctaSecondary, default behavior unchanged).
- *   Loading states → Skeleton (skeleton.tsx) — no spinner-only dead air;
- *                shapes approximate the real content so layout doesn't jump
- *                when data arrives.
- *   Field origin badge → Tag (size="sm"), wrapped in Tooltip (side="cursor"
- *                — the only Tooltip mode that flips off a viewport edge
- *                instead of clipping) showing the fuller provenance.
- *   Governed SlideOuts/SidePanels (Workflow detail, Pending Decisions,
- *                Agent detail, Data Provenance, agent chat) → EntityHeader
- *                itself never renders any of them — every clickable
- *                surface exposes an `onOpen`/`onAction` callback, and the
- *                consuming screen (App.tsx's RecordHeaderPage demo) owns
- *                the actual overlay instance, composed per the "SlideOut/
- *                SidePanel — Content" pattern page.
+ * NOT IMPLEMENTED YET — do not mistake these for oversights
+ *
+ *   - The 720px reflow threshold is a calibrated estimate, not a number
+ *     Figma states. Figma models Responsive as a variant with no breakpoint
+ *     attached; 720 is where the built wide instance stops fitting.
+ *   - The industry ellipsis rule Figma cites from Carbon and PatternFly: an
+ *     ellipsis must hide at least three characters and leave at least four
+ *     visible. CSS truncation cannot express it.
+ *   - Visibility priority: nothing is ever dropped. The card reflows and
+ *     yields, but at an extreme width it keeps description and metadata
+ *     instead of dropping them in Figma's documented order.
+ *   - The explanatory half of `restricted`. Figma's prose asks for "calm and
+ *     explanatory" and its instance carries no explanatory element, so the
+ *     explanation is screen-reader-only. Making it visible is a design
+ *     decision, not an implementation one.
  */
 
 // ── Field-level provenance (Law 1 + Law 2) ──────────────────────────────────
@@ -280,113 +195,11 @@ export interface RecordField {
   hasDestination?: boolean
 }
 
-// ── A single active workflow (Zone: AGENTIC SYSTEM, "ready" status) ────────
-// Closing pass — a record can be impacted by N workflows at once, not just
-// 1 (same Block 3 reasoning as InterventionItem above). Each keeps its own
-// onOpen — opening one never affects the others.
-export interface WorkflowSummary {
-  id: string
-  name: string
-  onOpen?: () => void
-}
-
-// ── Agentic System (Zone: AGENTIC SYSTEM) ───────────────────────────────────
-// A discriminated union covering the full state coverage this component
-// supports:
-//   status omitted or "ready" → normal rendering, `workflows: WorkflowSummary[]`
-//     (status can be "ready" with an empty array, though "empty" below is
-//     the real way to express "genuinely nothing"). The most prioritized
-//     workflow (workflows[0], host-sorted) renders full-size; workflows[1:]
-//     collapse behind the SAME "Show N more" / "Show less" / "View all"
-//     disclosure Your Intervention and Next Best Action already use — one
-//     learnable pattern for every zone with N items, not a 3rd bespoke one.
-//     See AgenticSystemZoneContent's own doc comment for the exact layout.
-//   status "empty"  → this entity type uses the zone, but genuinely has no
-//     workflow right now (e.g. a freshly imported record) — renders a calm
-//     "nothing yet" message, not a broken gap.
-//   status "loading" → the workflow is still resolving — Skeleton rows,
-//     same footprint as the real content so layout doesn't jump.
-// Omitting the whole `agenticSystem` prop (undefined) still means "this
-// entity type doesn't use this zone at all" — the zone doesn't render,
-// full stop (Block 4's conditional-zone rule).
-//
-// Product decision (closing pass) — `lastAgent` is REMOVED. Agentic System
-// showed a second "Last Agent" card (session summary/finding/
-// recommendation) alongside the workflow; that value — where a
-// suggestion came from, and what to do about it — is now fully carried by
-// Next Best Action itself (its own "System-suggested" signal + "Assigned
-// to" field), so a separate agent card here was redundant with it, not
-// complementary. This also retires the recurring "Employee still shows an
-// agent" report at the root: there is no more agent slot in this zone for
-// any vertical to show. // TODO: descartado — valor absorbido en NBA. The
-// "Last Agent" SlideOut this used to open is gone from the demo too (see
-// App.tsx) — recoverable from git history if a future case needs it back.
-export type AgenticSystemInfo =
-  | { status?: "ready"; workflows: WorkflowSummary[]; onViewAll?: () => void }
-  | { status: "loading" }
-  | { status: "empty"; message?: string }
-
-// ── A single pending decision (Zone: YOUR INTERVENTION, "pending" status) ──
-// Block 3 (this pass) — a record can have N pending interventions, not just
-// 1. Each keeps its own severity and its own Review action — approving one
-// never bundles or blocks the others. The host is expected to pass `items`
-// already ordered by priority (most prioritized first — typically highest
-// severity, then oldest); this component is a dumb renderer, not a sorting
-// engine, so it never re-sorts what it's given.
-export interface InterventionItem {
-  id: string
-  description: string
-  severity: "high" | "medium" | "low"
-  onReview: () => void
-  /** Short category label ("Access", "Compliance", ...) — what area this
-   *  intervention is about, at a glance. One word or two, never a sentence.
-   *  Rendered as a neutral Tag beside the item's own text, never a signal
-   *  color (amber/red already mean severity elsewhere in this zone). Omit
-   *  when the host has no category to give. */
-  contextTag?: string
-}
-
-// ── Your Intervention (Zone: YOUR INTERVENTION, conditional) ───────────────
-// A first-class HTL state (Law 3) — a discriminated union covering every
-// state HTL can genuinely be in, never the red "error" state:
-//   status omitted or "pending" → `items: InterventionItem[]` (Block 3).
-//     The first item renders full-size and prioritized; items[1:] collapse
-//     behind a "+N more" disclosure — see InterventionZoneContent's own doc
-//     comment for why that's a disclosure and NOT a carousel. Exactly 1
-//     item renders with no counter at all — the counter only exists once
-//     there's something to count.
-//   "empty"             → genuinely nothing pending right now — a calm
-//     completion message, not an absent/broken zone.
-//   "loading"           → the NBA engine is still computing — Skeleton.
-// Closing pass — dropped "no-permission" / "error" / "resolved-elsewhere":
-// all 3 modeled an in-card approve/dismiss decision (a disabled "Review"
-// button, a "Retry" button, a resolved-inline confirmation) that no longer
-// exists now that every HTL item's only interaction is the diagonal arrow
-// opening the real HTL view in a NEW TAB — there is nothing left in this
-// card to approve, retry, or resolve. That governed decision now lives
-// entirely in the destination the arrow opens, not here. Recoverable from
-// git history if a future case needs this content model back.
-// Omitting the whole `intervention` prop (undefined) means this entity type
-// has genuinely nothing to show here right now — the zone omits entirely.
-export type PendingIntervention =
-  | { status?: "pending"; items: InterventionItem[]; onViewAll?: () => void }
-  | { status: "empty"; message?: string }
-  | { status: "loading" }
-
-// ── Next Best Action — REMOVED from this component ─────────────────────────
-// Section 11 of docs/patterns/entity-header-change-spec.md: "The card that
-// appears under the header is a separate component in its own Card Container,
-// not a second slot in the same one. Two records, two containers. Nothing
-// about it belongs in record-header.tsx."
-//
-// The Figma Entity Header section states the same rule from this side: "NO
-// INSIGHT SECTION — System interpretation reaches the header only as a tag
-// with a tooltip. No descriptive sentences, no scores with drivers, no
-// expandable analysis."
-//
-// The `NextBestAction` type and its rendering now live in
-// @/components/experimental/next-best-action-card. Render that card as a
-// SIBLING below this one; never pass its content in here.
+// The four zone types — WorkflowSummary, AgenticSystemInfo, InterventionItem
+// and PendingIntervention — lived here. The Figma Entity Header has no
+// AGENTIC SYSTEM and no YOUR INTERVENTION zone: that content lives in
+// Overview widgets, and the header reaches system interpretation only as a
+// tag with a tooltip ("NO INSIGHT SECTION").
 
 // ── Assigned AI agent (transversal across entity types) ─────────────────────
 // AIMS OS is agent-first: every record has one, regardless of entity type.
@@ -433,13 +246,107 @@ export interface RecordAction {
   disableWhenLocked?: boolean
 }
 
-// ── Entity type (Block 4 — data-driven, not a closed enum) ─────────────────
-// Whatever this record IS — Employee, Customer, Vendor, Patient, Citizen,
-// Student, anything the host platform defines tomorrow — comes from the
-// host as a plain icon + label. This file never enumerates entity types.
-export interface EntityHeaderEntityType {
-  icon: LucideIcon
+// ── Visual identity (Figma: "AVATAR OR HIGHLIGHT ICON") ───────────────────
+// One question decides it: does this entity have a real-world visual identity
+// — a face or a brand?
+//
+//   avatar  → natural persons, AND branded entities: companies, sites,
+//             tenants, suppliers, partners. Photo or logo, falling back to
+//             initials taken from `name`.
+//   icon    → everything else: objects, assets, processes, transactions,
+//             documents.
+//
+// EXACTLY ONE RENDERS. Never both, never neither — which is why this prop is
+// required and has no default.
+//
+// Rules that prevent drift, from the Figma block of the same name:
+//   - A site inherits its parent company's brand. It is not a separate mark.
+//   - Initials are NEVER derived from a code. `RO-48291` has no initials, so
+//     a code-titled record uses `kind: "icon"` by definition. The component
+//     cannot police this — a caller passing `avatar` with a code as the name
+//     gets nonsense initials, and that is the caller's bug.
+//   - The icon's colour is assigned per entity TYPE and stays the same
+//     everywhere in the product. Pass the same `variant` for the same type on
+//     every surface.
+//   - The rule is about the entity, not about whether the asset exists. A
+//     company with no logo still uses `avatar`, falling back to initials.
+export type EntityVisual =
+  | { kind: "avatar" }
+  | { kind: "icon"; icon: LucideIcon; variant?: HighlightIconVariant }
+
+// ── Tags: three roles, two colour rules ───────────────────────────────────
+// Figma's TAG ROLES block: three kinds of tag, one component. "The vocabulary
+// belongs to the tenant; the colour belongs to the platform."
+//
+// The third role — STATE — is not in this array. It has its own slot on the
+// right (`stateBadge`) because it is the only one there can be exactly one of,
+// and the only one that gets the full semantic colour range.
+//
+//   signal          Something that needs attention, bounded in time or in
+//                   condition. Zero or many. "Access review", "Renewal at
+//                   risk", "6d overdue", "Sync failing".
+//   classification  What kind of thing this is. ONLY when the visual is an
+//                   avatar — a highlight icon already says the type.
+//                   "Employee", "Customer", "Vendor", "Partner".
+export type EntityTagRole = "signal" | "classification"
+
+export interface EntityHeaderTag {
+  /** Max ~22 characters. The ceiling itself belongs to the Tag component. */
   label: string
+  role: EntityTagRole
+  /**
+   * COLOUR, RULE 2 OF 2 — left tags get two colours only:
+   *   error  blocking — something is broken or overdue
+   *   alert  needs review
+   *   (omit) everything else, including EVERY classification
+   *
+   * The test is not whether it is a signal or a classification. It is whether
+   * someone has to do something about it. If yes, colour. If no, neutral.
+   *
+   * CLASSIFICATION IS NEVER COLOURED, and the component enforces it: a tone
+   * passed on a classification tag is ignored. That is what makes the
+   * vocabulary scalable — a tenant can define a hundred classifications and
+   * none of them breaks the visual system, because none of them picks a
+   * colour.
+   *
+   * There can be six of these. If each picked its own semantic colour, a
+   * healthy header would light up in three shades and colour would stop
+   * meaning anything.
+   */
+  tone?: "error" | "alert"
+  icon?: LucideIcon
+}
+
+/**
+ * Six visible, then a `+N` chip. Enforced here rather than by trusting the
+ * caller, same as `secondaryMetadata`.
+ *
+ * Tags are the flexible element on the row: show fewer tags and a larger `+N`
+ * rather than truncating the title further. The identifier is what the user
+ * came to read — a tag can be recovered from the overflow, a cut-off name
+ * cannot.
+ */
+export const ENTITY_HEADER_TAGS_MAX = 6
+
+// ── State badge — its own slot, on the right ──────────────────────────────
+// COLOUR, RULE 1 OF 2 — full semantic range. There is exactly one, so colour
+// costs nothing and carries real meaning: Active reads success, Degraded reads
+// alert, Blocked reads error.
+//
+// If several statuses are true at once, THE MOST BLOCKING ONE WINS and the
+// rest become signal tags. The component cannot decide that for you — it
+// renders the one badge it is given.
+//
+// Never dropped, at any width. Never a focus stop: it is status, not a
+// control.
+/** Figma's `Property 1` axis. See EntityHeaderProps.state. */
+export type EntityHeaderState = "default" | "loading" | "restricted"
+
+export interface EntityStateBadge {
+  /** Max ~19 characters. */
+  label: string
+  variant: "success" | "informative" | "alert" | "error" | "neutral"
+  icon?: LucideIcon
 }
 
 // ── Secondary metadata (Entity Header change spec, section 3) ──────────────
@@ -480,22 +387,38 @@ export const SECONDARY_METADATA_MAX = 6
 export interface EntityHeaderProps {
   /** The record's display name — e.g. a person's name or an account name. */
   name: string
-  /** What kind of record this is — icon + label, entirely host-defined. */
-  entityType: EntityHeaderEntityType
   /**
-   * A visible, temporary status on the CONTACT itself — "On Leave · Returns
-   * Mar 15," a maternity/parental leave, anything that changes how the
-   * viewer should read this record right now without being an error or a
-   * governance state (those are Your Intervention's job). Renders as a
-   * single Tag right beside entityType, always visible (same row, never
-   * gated by the zones disclosure). Neutral/amber only — never `error`
-   * (red): this is a state, not a problem. Omit entirely when the contact
-   * has nothing like this to show — most records, most of the time.
+   * Avatar or highlight icon — exactly one, never neither. See EntityVisual's
+   * own doc comment for the rule that decides which, and for why a
+   * code-titled record can only ever be an icon.
+   *
+   * There is no `entityType` prop. What kind of thing this is arrives as a
+   * CLASSIFICATION tag in `tags`, and only when this is an avatar — a
+   * highlight icon already names the type.
    */
-  statusTag?: { label: string; icon?: LucideIcon }
+  visual: EntityVisual
+  /**
+   * Signal and classification tags, in one array. The component sorts them —
+   * signals first, coloured before uncoloured, then classification — and caps
+   * the visible set at ENTITY_HEADER_TAGS_MAX with a `+N` chip for the rest.
+   *
+   * Omit or pass an empty array for a record with no signals and no
+   * classification: the group is REMOVED, not left empty.
+   */
+  tags?: EntityHeaderTag[]
+  /**
+   * The entity's overall status — its own slot on the right, before the
+   * actions. Exactly one, full semantic colour range, never dropped.
+   *
+   * This replaces the old `statusTag`, which sat on the LEFT and whose doc
+   * said "never error". Both of those contradicted the Figma: the state badge
+   * is a right-hand slot, and `Blocked` and `Suspended` are precisely the
+   * cases that take `error`.
+   */
+  stateBadge?: EntityStateBadge
   /**
    * Which system this record came from — Workday, Salesforce, NetSuite, DMS,
-   * Helix Data Studio. Renders beside the entity type, always visible.
+   * Helix Data Studio. Renders beside the title, always visible.
    *
    * ONE ITEM, NEVER TWO. A source is a single fact: which system this record
    * comes from. Concatenating a second value breaks it — "Enterprise Account
@@ -538,28 +461,78 @@ export interface EntityHeaderProps {
    * never a silently missing button and never a broken one.
    */
   assignedAgent: AssignedAgent | null
-  /** actions[0] = an optional primary CTA (e.g. contact); actions[1+] = overflow menu items. Omit entirely for no CTA/overflow. */
-  actions?: RecordAction[]
-  /** Zone: AGENTIC SYSTEM. Omit entirely to skip the zone for this entity type. */
-  agenticSystem?: AgenticSystemInfo
-  /** Zone: YOUR INTERVENTION. Omit entirely to skip the zone for this entity type. */
-  intervention?: PendingIntervention
-  /** Opens the Data Provenance SlideOut for the whole RECORD zone (Law 2). */
-  onProvenanceOpen?: () => void
-  /** Uncontrolled initial state for the zones disclosure. Default: false (collapsed) — predictable header height. */
-  defaultExpanded?: boolean
   /**
-   * True → this record is read-only right now. The contact CTA and the
-   * overflow's write actions disable (with a Tooltip explaining why) — but
-   * the AI agent trigger, the Agentic System buttons, and every RECORD
-   * field's own provenance stay fully interactive/visible. DECISION
-   * FLAGGED — hypothesis, not explicitly confirmed: "locked" means you
-   * can't act on or edit this record, not that you can't consult it, so
-   * read-only surfaces (agent chat, Agentic System detail, provenance) are
-   * deliberately left active. // TODO: confirmar con Michael si "locked"
-   * debería restringir también estas superficies de solo lectura.
+   * The one optional secondary action, off by default — the vast majority of
+   * records do not have one. It exists for the edge case where a contextual
+   * CTA genuinely belongs in the header.
+   *
+   * There is no primary-CTA slot: `Ask` IS the primary CTA. The old
+   * `actions[0]` — "Message", "Export", "Contact account" — is gone. Anything
+   * that is not this one secondary action belongs in `menuActions`.
+   */
+  secondaryAction?: RecordAction
+  /**
+   * The "···" overflow. Destructive and secondary actions ONLY — never a
+   * visible button.
+   *
+   * The header does not define which actions exist; that is configured per
+   * entity in Helix Data Studio. The header owns exactly one rule: destructive
+   * actions live here.
+   */
+  menuActions?: RecordAction[]
+  /**
+   * Shows the Information (ⓘ) trigger. A boolean the caller owns, NOT derived
+   * from whether `recordFields` has anything in it — whether the panel is
+   * worth offering is a per-case decision, and the old behaviour made the
+   * control vanish whenever the field array happened to be empty.
+   */
+  showInformation?: boolean
+  /**
+   * Opens the Information side panel: where the fields IN THIS HEADER came
+   * from — the title, the source, the state. Not the Overview, not the
+   * Knowledge tab. It explains what is on screen right now, nothing more.
+   *
+   * ONE SIDE PANEL AT A TIME. This panel and the Personal Assistant both open
+   * on the side; opening one closes the other, and the panel requested last
+   * wins. The component delegates both, so enforcing that is the host's job.
+   */
+  onInformationOpen?: () => void
+  /**
+   * True → this record is read-only right now. The secondary action and
+   * the overflow's write actions disable, each with a Tooltip explaining
+   * why, and a `Locked` Tag appears beside the title. `Ask` and the
+   * Information panel stay fully interactive: locked means you cannot act
+   * on or edit this record, not that you cannot consult it.
+   *
+   * NOT the same thing as Figma's `Restricted` state, which is about the
+   * viewer lacking entitlement to a VALUE — that is `RecordField.state ===
+   * "masked"`. Michael confirmed (2026-09-07) the two coexist and both
+   * need their own example: one is "you cannot edit", the other is "you
+   * cannot see".
    */
   locked?: boolean
+  /**
+   * Figma's `Property 1` axis (node 19895:11728): the three states this
+   * component owns. Independent of the reflow — an entity can be loading on
+   * a tablet — which is why it is an enum rather than a boolean: the three
+   * are mutually exclusive.
+   *
+   *   default     — all configured slots render.
+   *   loading     — a skeleton matching the arrangement of the current
+   *                 layout. NEVER an empty state: saying "nothing here"
+   *                 while data is in flight states something untrue.
+   *   restricted  — the viewer lacks entitlement to the values. The card
+   *                 renders at 50% opacity, exactly as Figma's own
+   *                 Restricted variant does. This is a governed STATE, not
+   *                 a failure: the entity exists and is governed, so it is
+   *                 never red and never an error.
+   *
+   * `restricted` and `locked` are different things and can both be true:
+   * locked is "you cannot act on or edit this", restricted is "you cannot
+   * see these values". So is `RecordField.state === "masked"`, which is the
+   * same idea applied to one field instead of the whole card.
+   */
+  state?: EntityHeaderState
   className?: string
 }
 
@@ -567,422 +540,611 @@ export interface EntityHeaderProps {
 export const RECORD_HEADER_FALLBACKS = {
   /** Tooltip on the agent trigger when assignedAgent is null. */
   noAgentTooltip: "No agent assigned to this record",
+  /** Tooltip on Ask. The button's label is one word; this carries the rest. */
+  askTooltip: "Ask about this entity",
   /** The read-only Tag shown next to the type label when `locked` is true. */
   lockedTagLabel: "Locked",
   /** Tooltip on the CTA/overflow trigger when `locked` is true. */
   lockedActionTooltip: "This record is locked — read-only",
-  /** Default empty-state copy when AgenticSystemInfo/PendingIntervention omit `message`. */
-  agenticSystemEmpty: "No workflow or agent assigned yet",
-  /** Reads as completion, not absence — an empty queue is a good state, not a broken one. */
-  interventionEmpty: "No interventions pending — you're all caught up",
+  /**
+   * Announced (screen-reader only) when `state === "restricted"`. Figma's
+   * prose asks this state to be "calm and explanatory", but its built
+   * variant is a 50%-opacity card with NO explanatory element — so the
+   * visual half is faithful to the instance and the explanation reaches
+   * assistive technology only. Adding a visible `Restricted` tag or a line
+   * under the title is a design decision, not an implementation one.
+   */
+  restrictedNote: "You do not have access to this entity's values. The entity exists and is governed.",
 }
 
-// ── Desktop overflow — container-width collapse thresholds ─────────────────
-// Not viewport breakpoints: this card can sit in a narrower panel on an
-// otherwise-desktop screen, so width is measured on the card's own rendered
-// box via ResizeObserver, not read from Tailwind's sm:/md:. No Figma node
-// exists for this component yet, so these px values are calibrated
-// estimates, not a spec'd breakpoint. Below COLLAPSE_HIDE_TAGS_WIDTH,
-// identity tags hide completely; below the narrower
-// COLLAPSE_SHORTEN_ASSISTANT_WIDTH, "Ask about {name}" shortens to "Ask AI"
-// — the agent trigger and disclosure chevron are never sacrificed, only
-// their label content adapts.
-const COLLAPSE_HIDE_TAGS_WIDTH = 560
-const COLLAPSE_SHORTEN_ASSISTANT_WIDTH = 480
-// A long first name can overflow even at full width — this is a length
-// guard, not a replacement for the width measurement above; both apply.
-const ASSISTANT_LABEL_MAX_NAME_LENGTH = 12
-// How long the scrolled-to zone stays visually highlighted after a tag click.
-const ZONE_HIGHLIGHT_MS = 1400
-// Every HTL diagonal-arrow trigger carries this same Tooltip copy (this
-// redesign pass) — never a same-page SlideOut/Modal, always a fresh tab, so
-// the viewer never loses their place on this record.
-const OPEN_HTL_TOOLTIP = "Opens in a new tab"
+// ── Reflow threshold ──────────────────────────────────────────────────────
+// The width below which the identity row stacks (see the `stacked` measurement
+// in the component). Figma's identity row is 932px and it models Responsive as
+// a discrete variant with no px value, so this is a calibrated estimate — set
+// just under the point where the single row stops fitting, and documented as
+// an estimate rather than presented as a specification.
+const REFLOW_WIDTH = 720
 
-type ZoneKey = "agenticSystem" | "intervention"
+// ── Removed: the container-width collapse thresholds ──────────────────────
+// Three constants lived here (560px hide-tags, 480px shorten-assistant, and a
+// 12-character first-name guard) and their own comment admitted the problem:
+// "No Figma node exists for this component yet, so these px values are
+// calibrated estimates, not a spec'd breakpoint." The node exists now, and it
+// specifies something else entirely — reflow into stacked rows, then yield
+// (tags → +N, then the title), then drop, with a fixed visibility priority.
+// Hiding the tags wholesale is not in it. Reflow lands with the responsive
+// pass; until then this card has one arrangement.
+// Every HTL diagonal-arrow trigger carries this same Tooltip copy (this
+
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+// ── Focus groups (Figma's FOCUS AND KEYBOARD frame) ────────────────────────
+// Nine tab stops, six when nothing is truncated. The reason it is nine and
+// not twenty-five is Figma's own: with six tags and six metadata items, one
+// stop per item means a keyboard user presses Tab twenty-five times to get
+// past the header and reach the page. That is not an inconvenience, it is a
+// barrier.
+//
+// So tags and secondary metadata are each ONE stop: Tab enters the group,
+// arrow keys move inside it, Tab leaves it. This is the WAI-ARIA composite
+// widget pattern — the same one a toolbar uses — implemented as a roving
+// tabindex: exactly one item in the group is tabbable at a time.
+//
+// Focus ring: `focus-visible` only, so a mouse user never sees it, and it
+// reuses the Button's own ring token rather than inventing a second one.
+const FOCUS_RING =
+  "outline-none rounded-[8px] focus-visible:ring-2 focus-visible:ring-offset-2 " +
+  "focus-visible:[ring-offset-color:var(--canvas)] focus-visible:ring-[var(--btn-secondary-ring)]"
+
+function useRovingIndex(count: number) {
+  const [active, setActive] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  // If the group shrinks (tags collapsing into +N, metadata capped), the
+  // remembered index can point past the end. Clamp rather than reset, so
+  // focus stays as close as possible to where the user left it.
+  const index = count === 0 ? 0 : Math.min(active, count - 1)
+
+  const move = (delta: number) => {
+    if (count === 0) return
+    const next = (index + delta + count) % count
+    setActive(next)
+    const items = ref.current?.querySelectorAll<HTMLElement>("[data-roving]")
+    items?.[next]?.focus()
+  }
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    // Only the four arrows plus Home/End. Everything else — Tab included —
+    // is left alone, which is what makes Tab still leave the group.
+    if (e.key === "ArrowRight" || e.key === "ArrowDown")     { e.preventDefault(); move(1) }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp")   { e.preventDefault(); move(-1) }
+    else if (e.key === "Home")                               { e.preventDefault(); move(-index) }
+    else if (e.key === "End")                                { e.preventDefault(); move(count - 1 - index) }
+  }
+
+  return { ref, index, onKeyDown }
+}
+
+// Stops 1 and 8 — the title and the description — exist ONLY when truncated.
+// A value that fits has nothing to reveal, and a focus stop that reveals
+// nothing is one more press between the reader and the page. Measured, not
+// guessed: a truncated element's scrollWidth exceeds its clientWidth.
+function useIsTruncated<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const [truncated, setTruncated] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => setTruncated(el.scrollWidth > el.clientWidth + 1)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
+  return { ref, truncated }
+}
+
+// ── Loading skeleton ────────────────────────────────────────────────────────
+// Every width and height below is read from Figma's own `Property 1=Loading`
+// variants (20134:314522 wide, 20152:6818 stacked) — not estimated, and not
+// derived from one another.
+//
+// ONE DEVIATION, ON PURPOSE. Figma's stacked skeleton has five rows: title,
+// then source, then tags, then description, then metadata. Its stacked
+// *rendered* variant has three, with source and tags sharing a row. A
+// skeleton exists to hold the shape of the thing that replaces it, so this
+// one follows the rendered layout: three rows, source and tags together. The
+// five-row skeleton would make the content jump the moment it arrived.
+//
+// The right-hand cluster is skeletoned too. Figma does that as well, and it
+// is the correct call for a side the loaded card never compresses — leaving
+// it blank would make the card visibly reflow on arrival.
+function EntityHeaderSkeleton({ stacked }: { stacked: boolean }) {
+  return (
+    <>
+      {/* Row 1 — visual + title, and the action cluster on the right. */}
+      <div className={cn("flex gap-[12px]", stacked ? "items-start" : "items-center")}>
+        <Skeleton shape="circle" width={32} height={32} className="shrink-0" />
+        <div className="flex-1 flex flex-col gap-[6px] min-w-0">
+          <div className={cn("flex gap-[12px]", stacked ? "flex-col items-start gap-[6px]" : "items-center")}>
+            <Skeleton shape="text" width={stacked ? 150 : 180} height={24} className="shrink-0" />
+            {/* Wide: source and tags sit on the title row, so their
+                placeholders do too. Stacked: they become row 2 below. */}
+            {!stacked && <Skeleton shape="text" width={120} height={20} className="shrink-0" />}
+          </div>
+        </div>
+        <div className="flex items-center gap-[8px] shrink-0">
+          {stacked
+            ? <><Skeleton shape="text" width={96} height={28} /><Skeleton shape="text" width={120} height={28} /><Skeleton shape="text" width={28} height={28} /></>
+            : <><Skeleton shape="text" width={80} height={20} /><Skeleton shape="text" width={120} height={28} /></>}
+        </div>
+      </div>
+
+      {/* Row 2, stacked only — source and tags, on one row, matching the
+          rendered stacked layout rather than Figma's two-row skeleton. */}
+      {stacked && (
+        <div className="flex items-center gap-[12px] flex-wrap">
+          <Skeleton shape="text" width={110} height={16} />
+          <Skeleton shape="text" width={92} height={20} />
+          <Skeleton shape="text" width={72} height={20} />
+          <Skeleton shape="text" width={36} height={20} />
+        </div>
+      )}
+
+      {/* Description. Skeletoned unconditionally: the point of a skeleton is
+          that the caller does not yet know which slots have content, so a
+          skeleton that only shows the slots it can already prove would need
+          the very data it is standing in for. */}
+      <Skeleton shape="text" width={stacked ? 380 : 420} height={16} />
+
+      {/* Metadata row — four items stacked, five wide. Figma's own counts. */}
+      <div className="flex items-center gap-[12px] flex-wrap">
+        {(stacked ? [86, 62, 100, 58] : [90, 70, 110, 60, 70]).map((w, i) => (
+          <Skeleton key={i} shape="text" width={w} height={16} />
+        ))}
+      </div>
+    </>
+  )
+}
+
 function EntityHeader({
   name,
-  entityType,
-  statusTag,
+  visual,
+  tags = [],
+  stateBadge,
   source,
   description,
   secondaryMetadata = [],
-  recordFields = [],
+  // `recordFields` is intentionally NOT destructured. It stays on the props
+  // interface — every caller keeps passing it, so the contract lives in one
+  // place — but this component no longer renders it anywhere: the Figma
+  // Anatomy has no RECORD grid, and the Information panel that explains
+  // those fields is host-rendered through `onInformationOpen`. Reading it
+  // here would only invite a second render site for data the panel owns.
   assignedAgent,
-  actions = [],
-  agenticSystem,
-  intervention,
-  onProvenanceOpen,
-  defaultExpanded = false,
+  secondaryAction,
+  menuActions = [],
+  showInformation = false,
+  onInformationOpen,
   locked = false,
+  state = "default",
   className,
 }: EntityHeaderProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
-  const TypeIcon = entityType.icon
-  const [primaryAction, ...overflowActions] = actions
 
-  const agenticStatus = agenticSystem ? (agenticSystem.status ?? "ready") : undefined
-  const interventionStatus = intervention ? (intervention.status ?? "pending") : undefined
-  const hasAgenticSystem = agenticSystem !== undefined
-  const hasIntervention = intervention !== undefined
-  const hasRecordFields = recordFields.length > 0
+  // ── Tag order and cap ───────────────────────────────────────────────────
+  // Signals first, sorted by severity, then classification. Classification is
+  // stripped of any tone the caller passed: it is never coloured, and that is
+  // the rule that keeps a tenant's hundred classifications from breaking the
+  // visual system.
+  const TONE_RANK: Record<string, number> = { error: 0, alert: 1, none: 2 }
+  const orderedTags = [...tags]
+    .map(t => (t.role === "classification" ? { ...t, tone: undefined } : t))
+    .sort((a, b) => {
+      if (a.role !== b.role) return a.role === "signal" ? -1 : 1
+      return TONE_RANK[a.tone ?? "none"] - TONE_RANK[b.tone ?? "none"]
+    })
+  const visibleTags = orderedTags.slice(0, ENTITY_HEADER_TAGS_MAX)
+  const hiddenTags = orderedTags.slice(ENTITY_HEADER_TAGS_MAX)
+
   // Capped here rather than by trusting the caller — same reasoning as the
   // identity tags cap. Six is the maximum; the overflow goes to the Overview,
   // never to a `+N` chip.
   const visibleMetadata = secondaryMetadata.slice(0, SECONDARY_METADATA_MAX)
-  // RECORD is no longer one of the expandable zones (this correction pass —
-  // its provenance trigger moved up beside the name, always visible). Only
-  // Agentic System/Your Intervention still gate the disclosure chevron.
-  const hasAnyZone = hasAgenticSystem || hasIntervention
-
-  // Block 2 — clicking a compressed identity Tag expands the card and
-  // scrolls/highlights the zone it summarizes. Never opens a SlideOut
-  // directly — the deep detail lives one step further in, inside the
-  // expanded zone's own Button/Review CTA.
-  const agenticSystemZoneRef = useRef<HTMLDivElement>(null)
-  const interventionZoneRef = useRef<HTMLDivElement>(null)
-  const [highlightZone, setHighlightZone] = useState<ZoneKey | null>(null)
-  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  function focusZone(zone: ZoneKey) {
-    setExpanded(true)
-    setHighlightZone(zone)
-    if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current)
-    // Wait a frame so the expand region has started laying out before we
-    // scroll to it — scrollIntoView on a still-collapsed (max-height: 0)
-    // ancestor would compute the wrong position.
-    requestAnimationFrame(() => {
-      const ref = zone === "agenticSystem" ? agenticSystemZoneRef : interventionZoneRef
-      ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-    })
-    highlightTimeoutRef.current = setTimeout(() => {
-      setHighlightZone(prev => (prev === zone ? null : prev))
-    }, ZONE_HIGHLIGHT_MS)
-  }
 
   // Avatar fallback: only a genuinely blank name gets the DS's own "empty"
   // glyph (avatar.tsx's existing avatarStyle="empty") instead of initials —
   // a single-character name already renders fine as one initial.
   const hasName = Boolean(name && name.trim())
 
-  // Desktop overflow — width-driven, derived fresh on every measure (no
-  // "un-collapse" state to manage — it naturally reverses when the card
-  // grows back).
+  // `visual` is required and has no default, because exactly one of the two
+  // must render — but "required" is only enforced by the type system, and
+  // this repo compiles without strictNullChecks or noUncheckedIndexedAccess.
+  // So a caller writing the normal thing —
+  //
+  //   const VISUALS: Record<EntityKind, EntityVisual> = { person: …, company: … }
+  //   <EntityHeader visual={VISUALS[kind]} … />
+  //
+  // — type-checks even for a `kind` the map has no entry for, and the card
+  // then throws on `visual.kind` and takes the whole page with it. That has
+  // already happened once in this repo. Falling back to the avatar renders a
+  // slightly generic header instead of a blank screen; it changes nothing for
+  // any caller that passes a real value.
+  const safeVisual: EntityVisual = visual ?? { kind: "avatar" }
+
+  // Stops 3 and 9 — the two roving groups. Declared before the early
+  // `loading` return would be wrong (hooks must not be conditional), so
+  // they live here, above it.
+  const tagGroup  = useRovingIndex(visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) + (locked ? 1 : 0))
+  const metaGroup = useRovingIndex(visibleMetadata.length)
+  // Stops 1 and 8 — only when the value actually overflows.
+  const titleTrunc = useIsTruncated<HTMLSpanElement>()
+  const descTrunc  = useIsTruncated<HTMLSpanElement>()
+
+  // ── Reflow — Figma's `Size = Responsive` variant ─────────────────────────
+  // REFLOW BEFORE YIELDING, AND YIELDING BEFORE DROPPING. At narrower widths
+  // this card does not compress a single row and it does not hide slots: it
+  // breaks into stacked rows and keeps everything. On a tablet there is
+  // vertical space to spare, so stacking costs nothing and loses nothing.
+  //
+  //   wide      visual · title · source · │ · tags   —   ⓘ · badge · secondary · Ask · ···
+  //   stacked   visual · title                       —   ⓘ · badge · secondary · Ask · ···
+  //             source · tags
+  //
+  // Source and tags share the stacked row. Figma's BEHAVIOUR block describes
+  // them on separate rows, but its built Responsive instance (node
+  // 20150:8324) puts them together — the instance is what renders, so the
+  // instance wins.
+  //
+  // Measured on the CARD, not the viewport: this header can sit in a narrow
+  // panel on an otherwise-desktop screen, so a media query would get it
+  // wrong. The threshold is a calibrated estimate, not a spec'd breakpoint —
+  // Figma models this as a discrete variant and gives no px value. It is set
+  // just below the width the single row needs (Figma's identity row is
+  // 932px), so the switch happens when the row genuinely runs out.
   const rootRef = useRef<HTMLDivElement>(null)
-  const [tagsHidden, setTagsHidden] = useState(false)
-  const [assistantShortened, setAssistantShortened] = useState(false)
+  const [stacked, setStacked] = useState(false)
   useLayoutEffect(() => {
     const el = rootRef.current
     if (!el) return
-    const measure = () => {
-      setTagsHidden(el.clientWidth < COLLAPSE_HIDE_TAGS_WIDTH)
-      setAssistantShortened(el.clientWidth < COLLAPSE_SHORTEN_ASSISTANT_WIDTH)
-    }
+    const measure = () => setStacked(el.clientWidth < REFLOW_WIDTH)
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
 
-  // Collapsed identity tags — measured, not guessed (this correction). The
-  // row can hold up to 2 Tags (workflow/HTL) and wraps at
-  // intermediate widths (narrow enough that 3 don't fit on one line, but
-  // not narrow enough to trip COLLAPSE_HIDE_TAGS_WIDTH's full-hide
-  // fallback) — a fixed max-height tall enough for only 1 line clipped the
-  // wrapped 2nd line's tag almost entirely. Measuring the real content
-  // height via ResizeObserver (same pattern as the width measurements
-  // above) means the collapse animation always reserves exactly the room
-  // the tags actually need, 1 line or 2, without guessing a magic number
-  // or reserving dead space when there's nothing to wrap.
-  const tagsRowRef = useRef<HTMLDivElement>(null)
-  const [tagsRowHeight, setTagsRowHeight] = useState(0)
-  useLayoutEffect(() => {
-    const el = tagsRowRef.current
-    if (!el) { setTagsRowHeight(0); return }
-    const measure = () => setTagsRowHeight(el.scrollHeight)
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-    // Re-attach whenever the row's own mount condition (below) can flip —
-    // tagsHidden toggling, or a zone's presence/status changing, mounts or
-    // unmounts the ref target, and a plain [] effect would miss that.
-  }, [tagsHidden, agenticStatus, interventionStatus])
-
-  // AI Assistant CTA — "Ask about {firstName}" communicates this chat is
-  // scoped to THIS record, not a generic assistant entry point. Falls back
-  // to "Ask AI" (+ Tooltip carrying the same context) when the card is
-  // narrow OR the first name itself is long enough to risk breaking the
-  // action row — either condition alone is enough to trigger the fallback.
-  const assistantFirstName = name.trim().split(/\s+/)[0] ?? ""
-  const assistantUseFallback = assistantShortened || assistantFirstName.length > ASSISTANT_LABEL_MAX_NAME_LENGTH
-  const assistantLabel = assistantUseFallback ? "Ask AI" : `Ask about ${assistantFirstName}`
-  const assistantTooltip = `Ask the assistant with ${name}'s context`
+  // ── Loading ─────────────────────────────────────────────────────────────
+  // Returns early, but INSIDE the same CardContainer and with the same
+  // `rootRef`, so the measurement that decides `stacked` keeps running and
+  // the skeleton matches the layout the real card will land in. A skeleton
+  // whose shape does not match what replaces it is worse than none: the
+  // content appears to jump.
+  if (state === "loading") {
+    return (
+      <CardContainer size="default" variant="default" className={cn("w-full", className)}>
+        <div
+          ref={rootRef}
+          className="flex flex-col gap-[16px]"
+          role="status"
+          aria-busy="true"
+          aria-label={`Loading ${name || "entity"}`}
+        >
+          <EntityHeaderSkeleton stacked={stacked} />
+        </div>
+      </CardContainer>
+    )
+  }
 
   return (
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
-      <div ref={rootRef} className="flex flex-col gap-[16px]">
+      {/* Restricted — Figma's own Restricted variant is the default card at
+          50% opacity and nothing else: no badge, no banner, no colour change.
+          It is a governed STATE, not a failure, which is exactly why it must
+          not read as an error. The explanation Figma's prose asks for reaches
+          assistive technology through the note below; making it visible is a
+          design decision (see RECORD_HEADER_FALLBACKS.restrictedNote). */}
+      <div ref={rootRef} className={cn("flex flex-col gap-[16px]", state === "restricted" && "opacity-50")}>
+        {state === "restricted" && <span className="sr-only">{RECORD_HEADER_FALLBACKS.restrictedNote}</span>}
 
-        {/* ── Identity row (always visible, fixed) — avatar + name +
-            entity-type icon+text + up to 2 governance-state Tags + action row.
-            Cross-axis alignment is conditional: items-start while collapsed
-            (the tags row underneath makes this a 2-line block), items-center
-            once expanded (name row is the only line left, so it should sit
-            centered against the avatar, not pinned to its top edge). */}
-        <div className={cn("flex gap-[12px] flex-wrap", expanded ? "items-center" : "items-start")}>
-          <AvatarCircle name={name || entityType.label} sizeKey="lg" avatarStyle={hasName ? "text" : "empty"} />
+        {/* ── Identity row — visual · (title · source · tags) · right cluster.
+            Cross-axis alignment follows the layout: centered while the left
+            side is a single line, top-aligned once it reflows into two, so
+            the avatar and the right cluster sit against the title rather than
+            floating in the middle of a two-line block. */}
+        <div className={cn("flex gap-[12px] flex-wrap", stacked ? "items-start" : "items-center")}>
+          {/* Visual identity — exactly one, never both. Avatar for people and
+              brands, highlight icon for everything else. Decorative to the
+              keyboard (never a focus stop), named to the screen reader. */}
+          {safeVisual.kind === "avatar" ? (
+            <AvatarCircle name={name} sizeKey="lg" avatarStyle={hasName ? "text" : "empty"} />
+          ) : (
+            <HighlightIcon
+              size="lg"
+              variant={safeVisual.variant ?? "neutral"}
+              icon={<safeVisual.icon size={16} strokeWidth={1.75} />}
+              className="shrink-0"
+            />
+          )}
 
           <div className="flex-1 flex flex-col gap-[6px]">
-            <div className="flex items-center gap-[12px] min-w-0">
-              {/* Overflow — a long name truncates with an ellipsis instead of
-                  wrapping/stretching the row; a Tooltip on hover carries the
-                  full value. Sibling elements (entity type, Locked tag) are
-                  shrink-0 so the name is the only thing that ever gives up
-                  width. */}
-              <Tooltip content={name} side="cursor" triggerClassName="block min-w-0 flex-1">
-                <span className="block truncate text-[18px] font-semibold leading-[1.3]" style={{ color: "var(--color-text-title)" }}>
-                  {name}
-                </span>
-              </Tooltip>
-              {/* Entity type — icon AND text (not icon-only): "icons that
-                  communicate," but the label stays legible on its own too.
-                  Order (this Figma-fidelity pass): name → entity type → the
-                  RECORD provenance trigger, matching the reference design
-                  exactly — was name → trigger → entity type before. */}
-              <Tooltip content={entityType.label} side="cursor">
-                <span className="inline-flex items-center gap-[4px] shrink-0">
-                  <TypeIcon size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />
-                  <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)" }}>
-                    {entityType.label}
-                  </span>
-                </span>
-              </Tooltip>
-              {/* Source — which system this record came from. One item,
-                  always visible, separated from the entity type by the same
-                  bullet the reference design uses. Tokens read from Figma:
-                  the bullet is Surface/Neutral/Emphasis, the icon is
-                  Icon/Neutral/Dark, the value is Text/Body at 12px Medium. */}
-              {source && (
-                <span className="inline-flex items-center gap-[8px] shrink-0 min-w-0">
+            {/* Wide: one row — title · source · │ · tags.
+                Stacked: two — title, then source · tags together, matching
+                Figma's built Responsive instance. Same elements in the same
+                order either way; only the wrapping changes. Nothing is hidden
+                and nothing is dropped, which is the whole point of reflowing
+                before yielding. */}
+            <div className={cn("flex gap-[12px] min-w-0", stacked ? "flex-col items-start gap-[6px]" : "items-center")}>
+              {/* Identity group — title (+ `Locked`). Stays whole in both
+                  layouts; in the stacked layout it becomes row 1 on its own. */}
+              <div className={cn("flex items-center gap-[12px] min-w-0", stacked && "w-full")}>
+                {/* Title — PROTECTED, and it yields last.
+                    `flex: 0 1 auto` + `min-width: 0` + a 540px ceiling, exactly
+                    as the Figma truncation block specifies for code: the title
+                    takes whatever the row has left after visual, source,
+                    collapsed tags and actions, and truncates only there.
+                    It was `flex-1`, which made it GROW and shove the source out
+                    to the right edge — the bug visible in the prototype. The
+                    540px is Figma's own number: the identity row is 932px and
+                    visual + source + tags + gaps take roughly 395 of it.
+                    A title cut short with empty space beside it is a bug, not a
+                    rule. Never wraps, at any width. Never dropped. */}
+                <Tooltip content={name} side="cursor" triggerClassName="block min-w-0 basis-auto grow-0 shrink max-w-[540px]">
+                  {/* STOP 1 — and only when truncated. `tabIndex={-1}` keeps
+                      it out of the tab order when the whole name fits, which
+                      is what turns nine stops into six. Focus bubbles up to
+                      the Tooltip's own span, so focusing it opens the tooltip
+                      without Tooltip needing to know about any of this. */}
                   <span
-                    aria-hidden="true"
-                    className="text-[16px] leading-none"
-                    style={{ color: "var(--color-surface-neutral-emphasis)" }}
+                    ref={titleTrunc.ref}
+                    tabIndex={titleTrunc.truncated ? 0 : -1}
+                    className={cn("block truncate text-[18px] font-semibold leading-[1.3]", FOCUS_RING)}
+                    style={{ color: "var(--color-text-title)" }}
                   >
-                    •
+                    {name}
                   </span>
-                  <Tooltip content={`Source · ${source}`} side="cursor">
-                    <span className="inline-flex items-center gap-[4px] min-w-0">
-                      <Database size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />
-                      <span className="block truncate text-[12px] font-medium" style={{ color: "var(--color-text-body)" }}>
-                        {source}
-                      </span>
-                    </span>
-                  </Tooltip>
-                </span>
-              )}
-              {/* Contact status — beside entityType, per its own doc comment.
-                  Neutral Tag, never a signal color: a temporary state (on
-                  leave, parental/medical leave, ...), not an error and not a
-                  governance state. */}
-              {statusTag && (
-                <Tag
-                  variant="neutral"
-                  size="sm"
-                  leadingIcon={statusTag.icon ? <statusTag.icon size={12} strokeWidth={1.75} /> : undefined}
-                  className="shrink-0"
-                >
-                  {statusTag.label}
-                </Tag>
-              )}
-              {/* RECORD provenance trigger — lives beside the name, after
-                  entity type (Figma order), not gated behind expand/collapse:
-                  an icon-only Button variant="tertiary", same primitive
-                  every other secondary action in this file uses. Disabled +
-                  a Tooltip explaining why when the host hasn't wired
-                  onProvenanceOpen — never silently hidden (same rule as
-                  assignedAgent === null). */}
-              {hasRecordFields && (
-                <Tooltip
-                  content={onProvenanceOpen ? "View record details — data provenance for every field" : "No provenance view wired for this record yet"}
-                  side="cursor"
-                >
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    iconPosition="alone"
-                    icon={<Info size={14} strokeWidth={1.75} />}
-                    aria-label="View record details"
-                    disabled={!onProvenanceOpen}
-                    onClick={onProvenanceOpen}
-                    className="shrink-0"
-                  />
                 </Tooltip>
-              )}
-              {locked && (
-                <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
-                  {RECORD_HEADER_FALLBACKS.lockedTagLabel}
-                </Tag>
-              )}
-            </div>
+              </div>
 
-            {/* Identity tags hide once the card expands: the same facts they
-                summarize reappear in full detail in the zones below, so
-                keeping both visible is pure redundancy. max-height
-                transition (not a hard unmount) so the collapse is animated,
-                not an abrupt height jump.
-                Tag CONTENT — governance-state indicators: active workflow
-                (light blue, matches Active Workflow below), pending HTL
-                (amber, matches Your Intervention below). Closing pass — no
-                assigned-agent tag here anymore: the identity row's own
-                "Ask about {name}" button is already this record's one
-                persistent, always-visible agent signal, so a second lime
-                tag repeating "there's an agent" was pure redundancy, not a
-                complementary summary (unlike the workflow/HTL tags, which
-                each summarize a DIFFERENT zone the button doesn't cover).
-                Block 2 — every remaining tag is clickable: it expands the
-                card and scrolls/highlights the zone it summarizes (never
-                opens a SlideOut directly from here). Each only renders when
-                that signal is actually in its "there's something to
-                summarize" state — no tag for an empty/loading/error zone,
-                nothing pretending to summarize data that isn't really
-                there. */}
-            <div
-              style={{
-                maxHeight: expanded ? 0 : tagsRowHeight,
-                opacity: expanded ? 0 : 1,
-                overflow: "hidden",
-                transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1), opacity 200ms ease",
-              }}
-            >
-              {!tagsHidden && (agenticStatus === "ready" || interventionStatus === "pending") && (
-                <div ref={tagsRowRef} className="flex items-center gap-[6px] flex-wrap">
-                  {agenticStatus === "ready" && agenticSystem && "workflows" in agenticSystem && agenticSystem.workflows.length > 0 && (
-                    <Tooltip
-                      content={
-                        agenticSystem.workflows.length === 1
-                          ? `Active workflow: ${agenticSystem.workflows[0].name}`
-                          : `${agenticSystem.workflows.length} active workflows`
-                      }
-                      side="cursor"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => focusZone("agenticSystem")}
-                        className="cursor-pointer rounded-[8px]"
-                      >
-                        <Tag variant="lightBlue" size="sm" leadingIcon={<Workflow size={12} strokeWidth={1.75} />}>
-                          {agenticSystem.workflows.length === 1
-                            ? agenticSystem.workflows[0].name
-                            : `${agenticSystem.workflows.length} workflows`}
-                        </Tag>
-                      </button>
-                    </Tooltip>
+              {/* Provenance group — source · │ · tags. Same order in both
+                  layouts; in the stacked layout it becomes row 2, which is
+                  what Figma's built Responsive instance does (its BEHAVIOUR
+                  prose lists source and tags as two separate rows — the
+                  instance puts them on one, and the instance wins). */}
+              {(source || visibleTags.length > 0) && (
+                <div className={cn("flex items-center gap-[12px] min-w-0", stacked && "w-full")}>
+                  {/* Source — which system this record came from. One item,
+                      always visible, separated from the title by the same
+                      bullet the reference design uses. Tokens read from Figma:
+                      the bullet is Surface/Neutral/Emphasis, the icon is
+                      Icon/Neutral/Dark, the value is Text/Body at 12px Medium.
+                      The bullet is a SEPARATOR from the title, so it goes when
+                      the title moves to its own row — a row must not open on a
+                      dangling punctuation mark. */}
+                  {source && (
+                    <span className="inline-flex items-center gap-[8px] shrink-0 min-w-0">
+                      {!stacked && (
+                        <span
+                          aria-hidden="true"
+                          className="text-[16px] leading-none"
+                          style={{ color: "var(--color-surface-neutral-emphasis)" }}
+                        >
+                          •
+                        </span>
+                      )}
+                      <Tooltip content={`Source · ${source}`} side="cursor">
+                        {/* STOP 2 — one stop for the whole source, never one
+                            per part. The 160px is Figma's own fixed ceiling
+                            for this slot (~22 characters); it truncates there
+                            even when the row has more to give, because source
+                            competes for the same row as the tags and the
+                            title, and the title is the one that yields last. */}
+                        <span
+                          data-roving
+                          tabIndex={0}
+                          className={cn("inline-flex items-center gap-[4px] min-w-0 max-w-[160px]", FOCUS_RING)}
+                        >
+                          <Database size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />
+                          <span className="block truncate text-[12px] font-medium" style={{ color: "var(--color-text-body)" }}>
+                            {source}
+                          </span>
+                        </span>
+                      </Tooltip>
+                    </span>
                   )}
-                  {interventionStatus === "pending" && intervention && "items" in intervention && intervention.items.length > 0 && (
-                    <Tooltip content={intervention.items[0].description} side="cursor">
-                      <button
-                        type="button"
-                        onClick={() => focusZone("intervention")}
-                        className="cursor-pointer rounded-[8px]"
-                      >
-                        <Tag variant="alert" size="sm" leadingIcon={<AlertTriangle size={12} strokeWidth={1.75} />}>
-                          {intervention.items.length} pending
-                        </Tag>
-                      </button>
-                    </Tooltip>
+                  {/* Divider — separates identity from the tag group, per the
+                      Figma identity row (Identity · Divider · Tags, gap 8).
+                      Only when there is something on both sides of it. */}
+                  {source && visibleTags.length > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="shrink-0 self-center"
+                      style={{ width: 1, height: 16, background: "var(--color-border-neutral-lighter)" }}
+                    />
+                  )}
+                  {/* Tag group — signals first, then classification, capped at 6
+                      with a `+N` chip. Tags HUG and wrap: they never take a fixed
+                      width, so growth in the title or source makes them collapse
+                      instead of overlapping.
+                      Colour rule: only signals may be error/alert. Classification
+                      is always neutral — enforced above, in orderedTags. */}
+                  {/* STOP 3 — ONE stop for the whole tag group. Tab enters it,
+                      arrows move inside it, Tab leaves. Six tags as six stops
+                      would put six presses between the reader and the page. */}
+                  {visibleTags.length > 0 && (
+                    <div
+                      ref={tagGroup.ref}
+                      role="group"
+                      aria-label="Tags"
+                      onKeyDown={tagGroup.onKeyDown}
+                      className="flex items-center gap-[6px] flex-wrap min-w-0"
+                    >
+                      {visibleTags.map((t, i) => (
+                        <span
+                          key={`${t.role}-${t.label}-${i}`}
+                          data-roving
+                          tabIndex={tagGroup.index === i ? 0 : -1}
+                          className={cn("inline-flex shrink-0", FOCUS_RING)}
+                        >
+                          <Tag
+                            variant={t.tone ?? "neutral"}
+                            size="sm"
+                            leadingIcon={t.icon ? <t.icon size={12} strokeWidth={1.75} /> : undefined}
+                            className="shrink-0"
+                          >
+                            {t.label}
+                          </Tag>
+                        </span>
+                      ))}
+                      {/* +N — the hidden tags reach the keyboard and the screen
+                          reader through the Tooltip's own content, not only on
+                          hover. That is what makes it acceptable for tags to
+                          yield before the title: nothing is lost, only moved.
+                          It is the last item INSIDE the group, not a stop of
+                          its own, so arrowing to the end reveals them. */}
+                      {hiddenTags.length > 0 && (
+                        <Tooltip content={hiddenTags.map(t => t.label).join(" · ")} side="cursor">
+                          <span
+                            data-roving
+                            tabIndex={tagGroup.index === visibleTags.length ? 0 : -1}
+                            className={cn("inline-flex shrink-0", FOCUS_RING)}
+                          >
+                            <Tag variant="neutral" size="sm" className="shrink-0">
+                              {`+${hiddenTags.length}`}
+                            </Tag>
+                          </span>
+                        </Tooltip>
+                      )}
+                      {locked && (
+                        <span
+                          data-roving
+                          tabIndex={tagGroup.index === visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) ? 0 : -1}
+                          className={cn("inline-flex shrink-0", FOCUS_RING)}
+                        >
+                          <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
+                            {RECORD_HEADER_FALLBACKS.lockedTagLabel}
+                          </Tag>
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
             </div>
+
+            {/* The clickable zone-summary tags that used to sit here are
+                GONE, along with focusZone(). They were a second tag system
+                occupying the same visual slot the real `tags` array now
+                owns, and they summarised the two expandable zones — which
+                the Figma does not have. Their scroll-and-highlight
+                behaviour went with them: nothing in this header scrolls to
+                a zone any more. */}
           </div>
 
-          <div className="flex items-center gap-[6px] shrink-0 flex-wrap justify-end">
-            {/* variant="main" — deliberate, named exception, see file header. */}
-            {assignedAgent ? (
-              assistantUseFallback ? (
-                <Tooltip content={assistantTooltip} side="cursor">
-                  <Button
-                    variant="main"
-                    size="sm"
-                    icon={<Sparkle size={16} strokeWidth={1.75} />}
-                    aria-label={assistantTooltip}
-                    onClick={assignedAgent.onOpenChat}
-                  >
-                    {assistantLabel}
-                  </Button>
-                </Tooltip>
-              ) : (
+          {/* Right cluster — Figma's own order and gap: Information → State
+              badge → Secondary CTA → Ask → Menu, 8px apart. This side is
+              FIXED and never compressed; the left side is what yields. */}
+          <div className="flex items-center gap-[8px] shrink-0 flex-wrap justify-end">
+            {/* 1 · Information — where the fields IN THIS HEADER came from:
+                the title, the source, the state. Not the Overview, not the
+                Knowledge tab. A boolean the caller owns; it no longer
+                disappears just because `recordFields` happens to be empty. */}
+            {showInformation && (
+              <Tooltip
+                content={onInformationOpen ? "About this record — where the title, source and state came from" : "No information panel wired for this record yet"}
+                side="cursor"
+              >
                 <Button
-                  variant="main"
+                  variant="tertiary"
                   size="sm"
-                  icon={<Sparkle size={16} strokeWidth={1.75} />}
-                  aria-label={assistantTooltip}
-                  onClick={assignedAgent.onOpenChat}
-                >
-                  {assistantLabel}
-                </Button>
-              )
-            ) : (
-              <Tooltip content={RECORD_HEADER_FALLBACKS.noAgentTooltip} side="cursor">
-                <Button
-                  variant="main"
-                  size="sm"
-                  icon={<Sparkle size={16} strokeWidth={1.75} />}
-                  aria-label={RECORD_HEADER_FALLBACKS.noAgentTooltip}
-                  disabled
-                >
-                  {assistantLabel}
-                </Button>
+                  iconPosition="alone"
+                  icon={<Info size={14} strokeWidth={1.75} />}
+                  aria-label="About this record"
+                  disabled={!onInformationOpen}
+                  onClick={onInformationOpen}
+                  className="shrink-0"
+                />
               </Tooltip>
             )}
 
-            {primaryAction && (() => {
-              // Block 6 (this pass) — an action can be disabled for 2
-              // independent reasons: the record is `locked` (unless this
-              // action opted out via `disableWhenLocked: false`), or the
-              // action itself is explicitly disabled (no channel, no
-              // permission — see RecordAction's own doc comment). Never
-              // silently hide it either way — same rule as assignedAgent
-              // === null: disabled + a Tooltip explaining why, always.
-              const lockDisabled = locked && primaryAction.disableWhenLocked !== false
-              const disabled = lockDisabled || Boolean(primaryAction.disabled)
-              const tooltip = lockDisabled ? RECORD_HEADER_FALLBACKS.lockedActionTooltip : primaryAction.disabledTooltip
-              const button = (
+            {/* 2 · State badge — full semantic range, exactly one, never
+                dropped. Never a focus stop: it is status, not a control. */}
+            {stateBadge && (
+              <Tag
+                variant={stateBadge.variant}
+                size="sm"
+                leadingIcon={stateBadge.icon ? <stateBadge.icon size={12} strokeWidth={1.75} /> : undefined}
+                className="shrink-0"
+              >
+                {stateBadge.label}
+              </Tag>
+            )}
+
+            {/* 3 · Secondary action — optional, off by default. Most records
+                do not have one. */}
+            {secondaryAction && (() => {
+              const lockDisabled = locked && secondaryAction.disableWhenLocked !== false
+              const disabled = lockDisabled || Boolean(secondaryAction.disabled)
+              const tooltip = lockDisabled ? RECORD_HEADER_FALLBACKS.lockedActionTooltip : secondaryAction.disabledTooltip
+              const btn = (
                 <Button
-                  variant={primaryAction.variant ?? "secondary"}
+                  variant="secondary"
                   size="sm"
                   disabled={disabled}
-                  onClick={disabled ? undefined : primaryAction.onClick}
+                  onClick={disabled ? undefined : secondaryAction.onClick}
+                  className="shrink-0"
                 >
-                  {primaryAction.label}
+                  {secondaryAction.label}
                 </Button>
               )
-              return disabled && tooltip ? <Tooltip content={tooltip} side="cursor">{button}</Tooltip> : button
+              return disabled && tooltip
+                ? <Tooltip content={tooltip} side="cursor">{btn}</Tooltip>
+                : btn
             })()}
 
-            {overflowActions.length > 0 && (
+            {/* 4 · Ask — the primary CTA. variant="main" is the deliberate,
+                named exception (see file header).
+                It KEEPS the Sparkle, shared with the Next Best Action card.
+                Figma's prose says the two must not share a mark; Michael
+                overruled that deliberately (2026-09-07): both are AI
+                surfaces, and the shared glyph is what communicates that —
+                one converses, the other transacts. The Figma component
+                itself already shares it (both instance the same `IA-icon`),
+                so the file agrees with the decision and only its prose does
+                not. Do not "fix" this back. */}
+            {/* The label is ONE WORD on purpose. It was "Ask about {name}",
+                which grew with the entity name and consumed space the header
+                needs — the tooltip carries the rest. That is also what makes
+                the width-measuring machinery obsolete: there is no long label
+                left to shorten. */}
+            <Tooltip content={assignedAgent ? RECORD_HEADER_FALLBACKS.askTooltip : RECORD_HEADER_FALLBACKS.noAgentTooltip} side="cursor">
+              <Button
+                variant="main"
+                size="sm"
+                icon={<Sparkle size={16} strokeWidth={1.75} />}
+                aria-label={assignedAgent ? RECORD_HEADER_FALLBACKS.askTooltip : RECORD_HEADER_FALLBACKS.noAgentTooltip}
+                disabled={!assignedAgent}
+                onClick={assignedAgent ? assignedAgent.onOpenChat : undefined}
+              >
+                Ask
+              </Button>
+            </Tooltip>
+
+            {/* 5 · Menu — destructive and secondary actions only, never a
+                visible button. Which actions exist is configured per entity
+                in Helix Data Studio; the header owns one rule: destructive
+                lives here. */}
+            {menuActions.length > 0 && (
               <ActionOverflowMenu
-                items={overflowActions}
+                items={menuActions}
                 disabled={locked}
                 disabledTooltip={RECORD_HEADER_FALLBACKS.lockedActionTooltip}
               />
             )}
 
-            {hasAnyZone && (
-              <Button
-                variant="tertiary"
-                size="sm"
-                iconPosition="alone"
-                aria-expanded={expanded}
-                aria-label={expanded ? "Hide record detail" : "Show record detail"}
-                icon={expanded ? <ChevronUp size={16} strokeWidth={1.75} /> : <ChevronDown size={16} strokeWidth={1.75} />}
-                onClick={() => setExpanded(v => !v)}
-              />
-            )}
+            {/* The disclosure chevron was here. There is nothing left to
+                disclose: the Figma Entity Header is a fixed arrangement of
+                slots, not a collapsible card. */}
           </div>
         </div>
 
@@ -992,9 +1154,18 @@ function EntityHeader({
             Medium, read from Figma. */}
         {description && (
           <Tooltip content={description} side="cursor" triggerClassName="block min-w-0">
-            <p className="truncate text-[14px] font-medium leading-[1.4]" style={{ color: "var(--color-text-body)" }}>
+            {/* STOP 8 — and only when truncated, same reasoning as the title.
+                It is elastic, not fixed: one line at container width, with no
+                ceiling of its own, so on a wide card it usually fits and
+                costs no stop at all. */}
+            <span
+              ref={descTrunc.ref}
+              tabIndex={descTrunc.truncated ? 0 : -1}
+              className={cn("block truncate text-[14px] font-medium leading-[1.4]", FOCUS_RING)}
+              style={{ color: "var(--color-text-body)" }}
+            >
               {description}
-            </p>
+            </span>
           </Tooltip>
         )}
 
@@ -1003,13 +1174,34 @@ function EntityHeader({
             this header does not — it has the width, and a bare symbol forces
             the user to interpret it. Tooltip is always present, even when the
             text is not truncated. */}
+        {/* STOP 9 — ONE stop for the whole row, arrows inside. Six metadata
+            items as six stops is the other half of the twenty-five-press
+            problem Figma's focus frame is written to avoid. */}
         {visibleMetadata.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-[16px] gap-y-[8px]">
+          <div
+            ref={metaGroup.ref}
+            role="group"
+            aria-label="Details"
+            onKeyDown={metaGroup.onKeyDown}
+            className="flex flex-wrap items-center gap-x-[16px] gap-y-[8px]"
+          >
             {visibleMetadata.map((item, i) => {
               const ItemIcon = item.icon
               return (
                 <Tooltip key={`${item.text}-${i}`} content={item.tooltip} side="cursor">
-                  <span className="inline-flex items-center gap-[4px] min-w-0">
+                  {/* Figma's ceiling for this slot is stated in characters —
+                      2 words / 8 for the short form, 24 for the long — so it
+                      is expressed in `ch`, which IS a character width in CSS,
+                      rather than converted to a px guess. It truncates with an
+                      ellipsis; it never abbreviates, because an abbreviation
+                      looks like the real value and misleads. The icon never
+                      appears alone: this row hides an item entirely before it
+                      strips the text off one. */}
+                  <span
+                    data-roving
+                    tabIndex={metaGroup.index === i ? 0 : -1}
+                    className={cn("inline-flex items-center gap-[4px] min-w-0 text-[12px] max-w-[24ch]", FOCUS_RING)}
+                  >
                     <ItemIcon size={14} strokeWidth={1.75} style={{ color: "var(--color-icon-neutral-dark)" }} />
                     <span className="block truncate text-[12px] font-medium" style={{ color: "var(--color-text-body)" }}>
                       {item.text}
@@ -1021,370 +1213,18 @@ function EntityHeader({
           </div>
         )}
 
-        {/* ── Expandable zones — collapsed by default, predictable header height. */}
-        {hasAnyZone && (
-          <div
-            style={{
-              maxHeight: expanded ? 4000 : 0,
-              overflow: "hidden",
-              transition: "max-height 320ms cubic-bezier(0.4,0,0.2,1)",
-            }}
-          >
-            <div className="pt-[16px] flex flex-col gap-[16px]" style={{ borderTop: "0.5px solid var(--color-border-neutral-lighter)" }}>
-
-              {/* No section heading here (this redesign pass) — the reference
-                  design shows Workflow/Agent as plain context cards, no
-                  "Agentic System" label above them. */}
-              {hasAgenticSystem && agenticSystem && (
-                <div
-                  ref={agenticSystemZoneRef}
-                  className="flex flex-col gap-[8px] rounded-[8px] transition-shadow duration-500"
-                  style={{ boxShadow: highlightZone === "agenticSystem" ? "0 0 0 2px var(--primary)" : "0 0 0 0px transparent" }}
-                >
-                  <AgenticSystemZoneContent state={agenticSystem} />
-                </div>
-              )}
-
-              {/* No section heading here (closing pass) — the Figma design
-                  dropped "YOUR INTERVENTION" from above the HTL card,
-                  matching Agentic System's own plain-card treatment above. */}
-              {hasIntervention && intervention && (
-                <div
-                  ref={interventionZoneRef}
-                  className="flex flex-col gap-[8px] rounded-[8px] transition-shadow duration-500"
-                  style={{ boxShadow: highlightZone === "intervention" ? "0 0 0 2px var(--primary)" : "0 0 0 0px transparent" }}
-                >
-                  <InterventionZoneContent state={intervention} />
-                </div>
-              )}
-
-            </div>
-          </div>
-        )}
+        {/* The two expandable zones rendered here. Gone: the Figma Entity
+            Header has no AGENTIC SYSTEM and no YOUR INTERVENTION. That
+            content belongs to Overview widgets, and this card reaches
+            system interpretation only through a tag with a tooltip. */}
       </div>
     </CardContainer>
   )
 }
 
-// ── Agentic System zone content — ready / empty / loading ──────────────────
-// Task 3 (Block 1) — restructured as CardContainer(sm) + HighlightIcon(sm,
-// colored) + a NEUTRAL tertiary Button beside it. Color lives in the icon,
-// never in the button — this is the whole point of the change.
-//
-// Closing pass — N workflows use the SAME disclosure pattern as Your
-// Intervention and Next Best Action: workflows[0] always renders full-size;
-// workflows[1:] collapse behind "Show N more" / "Show less", capped at 3
-// revealed extras (never all of them at once). Button position — BELOW
-// every item, not between the primary and the extras — "Show N more"/
-// "Show less" and "View all" sit at OPPOSITE ends of that row
-// (justify-between), never stacked. One learnable disclosure pattern for
-// every zone in this card, not 3 bespoke ones.
-function AgenticSystemZoneContent({ state }: { state: AgenticSystemInfo }) {
-  const [showMore, setShowMore] = useState(false)
-  // Narrow on `state.status` directly (not a copied local) — TS control-flow
-  // narrowing for a discriminated union only tracks the actual property
-  // access expression, not a variable derived from it.
-  if (state.status === "loading") {
-    return (
-      <div className="flex flex-col gap-[8px]">
-        <Skeleton height={44} />
-        <Skeleton height={44} />
-      </div>
-    )
-  }
-
-  if (state.status === "empty") {
-    return (
-      <InformativeCard
-        state="neutral"
-        size="sm"
-        icon={<Info className="w-[24px] h-[24px]" />}
-        title={state.message ?? RECORD_HEADER_FALLBACKS.agenticSystemEmpty}
-      />
-    )
-  }
-
-  // "ready" with an empty array is the caller's way of saying "nothing to
-  // show yet" without going through the "empty" status — render nothing,
-  // same as before this pass (never an empty bordered shell).
-  if (state.workflows.length === 0) return null
-
-  const [primary, ...rest] = state.workflows
-  const visibleRest = rest.slice(0, 3)
-  return (
-    <div className="flex flex-col gap-[8px]">
-      <AgenticSystemItem
-        icon={<Workflow size={16} strokeWidth={1.75} />}
-        iconVariant="light-blue"
-        name={primary.name}
-        onOpen={primary.onOpen}
-        tooltip={`Open "${primary.name}" — steps, timeline, and who's running it`}
-      />
-      {showMore && visibleRest.map(wf => (
-        <AgenticSystemItem
-          key={wf.id}
-          icon={<Workflow size={16} strokeWidth={1.75} />}
-          iconVariant="light-blue"
-          name={wf.name}
-          onOpen={wf.onOpen}
-          tooltip={`Open "${wf.name}" — steps, timeline, and who's running it`}
-        />
-      ))}
-      {rest.length > 0 && (
-        <div className="flex items-center justify-between">
-          <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
-            {showMore ? "Show less" : `Show ${visibleRest.length} more`}
-            {showMore
-              ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
-              : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
-          </Button>
-          {state.onViewAll && (
-            <Button variant="tertiary" size="sm" onClick={state.onViewAll} className="self-start">
-              View all
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AgenticSystemItem({
-  icon,
-  iconVariant,
-  name,
-  onOpen,
-  tooltip,
-  className,
-}: {
-  icon: React.ReactNode
-  iconVariant: "light-blue"
-  name: string
-  onOpen?: () => void
-  tooltip: string
-  className?: string
-}) {
-  return (
-    // Task 2 (Block 1, this pass) — a plain card BORDER, not the
-    // CardContainer component: this item already lives inside the header's
-    // own CardContainer, so nesting a second one reads as card-in-card and
-    // wastes padding. Same visual result (border/radius/bg exactly match
-    // CardContainer's own "sm" size via its real tokens — nothing
-    // hardcoded), just not the component itself. Color still lives only in
-    // HighlightIcon; this border is neutral.
-    <div
-      className={cn("rounded-[8px] border-[0.5px] p-[12px] min-w-0", className)}
-      style={{ background: "var(--card-default-bg)", borderColor: "var(--card-default-border)" }}
-    >
-      <div className="flex items-center gap-[8px]">
-        <HighlightIcon size="sm" variant={iconVariant} icon={icon} />
-        {/* Overflow — long workflow/agent names truncate with their own
-            Tooltip carrying the full name, never a silent cutoff. */}
-        <Tooltip content={name} side="cursor" triggerClassName="flex-1 min-w-0 block">
-          <span className="block text-[13px] font-medium truncate" style={{ color: "var(--foreground)" }}>
-            {name}
-          </span>
-        </Tooltip>
-        {/* Bare chevron, no "View" label (Figma fidelity pass — the
-            reference design shows only a chevron here, no text). */}
-        <Tooltip content={tooltip} side="cursor">
-          <Button
-            variant="tertiary"
-            size="sm"
-            iconPosition="alone"
-            icon={<ChevronRight size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />}
-            aria-label={tooltip}
-            onClick={onOpen}
-            className="shrink-0"
-          />
-        </Tooltip>
-      </div>
-    </div>
-  )
-}
-
-// ── Your Intervention zone content — all 6 states ───────────────────────────
-// Every branch goes through InformativeCard (size="sm") — never a hand-
-// rolled container, never state="error" (red). Title case: normal sentence
-// case, not literal ALL CAPS (Block 1, task 2).
-//
-// Block 3 (this pass) — "pending" can carry N items. The most prioritized
-// (items[0], host-sorted) renders full-size with its own Review; the rest
-// collapse behind a "+N more" disclosure (Button variant="tertiary", the
-// same expand/collapse mechanism the card's own outer zones already use —
-// no new interaction pattern). Deliberately NOT a carousel: urgent
-// decisions must be visible at a glance — how many there are and that they
-// exist — not hidden behind a swipe gesture the viewer has to discover.
-// Each item, expanded or not, keeps its own individual Review action.
-function InterventionZoneContent({ state }: { state: PendingIntervention }) {
-  const [showMore, setShowMore] = useState(false)
-
-  // Narrow on `state.status` directly (not a copied local) — same reasoning
-  // as AgenticSystemZoneContent above.
-  if (state.status === "loading") {
-    return (
-      <div className="flex flex-col gap-[8px]">
-        <Skeleton height={20} width="60%" />
-        <Skeleton height={14} width="90%" />
-      </div>
-    )
-  }
-
-  if (state.status === "empty") {
-    return (
-      <InformativeCard
-        state="neutral"
-        size="sm"
-        icon={<CheckCircle2 className="w-[24px] h-[24px]" />}
-        title={state.message ?? RECORD_HEADER_FALLBACKS.interventionEmpty}
-      />
-    )
-  }
-
-  // "pending" (status omitted or explicitly "pending") — Block 3: N items,
-  // most-prioritized first (see InterventionItem's own doc comment on sort
-  // expectations). A "pending" status with an empty items array is a
-  // caller bug, not a real state — read it as "empty" rather than render a
-  // broken/blank alert card.
-  if (state.items.length === 0) {
-    return (
-      <InformativeCard
-        state="neutral"
-        size="sm"
-        icon={<CheckCircle2 className="w-[24px] h-[24px]" />}
-        title={RECORD_HEADER_FALLBACKS.interventionEmpty}
-      />
-    )
-  }
-
-  // Every HTL item (primary and extras alike) gets the SAME diagonal-arrow
-  // trailing action, never a "Review" label, never a same-page overlay: it
-  // ALWAYS opens the real HTL view in a NEW TAB — no exceptions, no
-  // slideout anywhere in this zone (a same-page overlay for a governed
-  // decision was a real contradiction fixed in the closing pass; the
-  // viewer keeps their place on this record either way), with a Tooltip
-  // saying so. "Show N more" caps at 3 extras inline (never all of them at
-  // once — see OPEN_HTL_TOOLTIP below); "View all" is the separate,
-  // always-available escape hatch to the full list, also a new tab.
-  const [primary, ...rest] = state.items
-  const visibleRest = rest.slice(0, 3)
-  return (
-    <div className="flex flex-col gap-[8px]">
-      {/* Figma fidelity (closing pass) — the primary item is the SAME
-          bordered "Action Card" pattern as Agentic System's own item and
-          the revealed extras below, not InformativeCard's tinted surface
-          (the actual Figma HTL card is a neutral border + HighlightIcon,
-          confirmed directly against the file's own node). Calmer too —
-          Law 3 wants HTL never alarming, and a neutral card with one
-          amber icon reads calmer than a fully amber-tinted surface. */}
-      <div
-        className="flex items-start gap-[8px] p-[12px] rounded-[8px] min-w-0"
-        style={{ background: "var(--card-default-bg)", border: "0.5px solid var(--card-default-border)" }}
-      >
-        <HighlightIcon size="sm" variant="alert" icon={<AlertTriangle size={16} strokeWidth={1.75} />} className="shrink-0" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-[6px] min-w-0">
-            <span className="flex-1 truncate text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
-              {state.items.length} {state.items.length === 1 ? "action" : "actions"} awaiting review
-            </span>
-            {/* One context Tag per intervention — same convention as Next
-                Best Action's own contextTag. Neutral, never a signal color:
-                amber here already means "needs review" (Law 3). */}
-            {primary.contextTag && (
-              <Tag variant="neutral" size="sm" className="shrink-0">{primary.contextTag}</Tag>
-            )}
-          </div>
-          <Tooltip content={primary.description} side="cursor" triggerClassName="block min-w-0">
-            <span className="block truncate text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>
-              {primary.description}
-            </span>
-          </Tooltip>
-        </div>
-        <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
-          <Button
-            variant="tertiary"
-            size="sm"
-            iconPosition="alone"
-            icon={<ArrowUpRight size={16} strokeWidth={1.75} />}
-            aria-label="Open in a new tab"
-            onClick={primary.onReview}
-            className="shrink-0"
-          />
-        </Tooltip>
-      </div>
-      {/* Figma fidelity pass — the 3 extra items shown here render as the
-          SAME bordered "Action Card" row AgenticSystemItem already uses
-          (border + --card-default-bg), not a compact severity-tag row —
-          the actual Figma node shows plain description text + arrow, no
-          visible severity badge. Severity stays reachable via Tooltip so
-          it isn't lost, just not rendered as a visible chip here. */}
-      {showMore && visibleRest.length > 0 && (
-        <div className="flex flex-col gap-[8px]">
-          {visibleRest.map(item => (
-            <div
-              key={item.id}
-              className="flex items-center gap-[8px] p-[12px] rounded-[8px] min-w-0"
-              style={{ background: "var(--card-default-bg)", border: "0.5px solid var(--card-default-border)" }}
-            >
-              <Tooltip content={`${item.severity.toUpperCase()} — ${item.description}`} side="cursor" triggerClassName="flex-1 min-w-0 block">
-                <span className="block truncate text-[13px] font-medium" style={{ color: "var(--foreground)" }}>
-                  {item.description}
-                </span>
-              </Tooltip>
-              {item.contextTag && (
-                <Tag variant="neutral" size="sm" className="shrink-0">{item.contextTag}</Tag>
-              )}
-              <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
-                <Button
-                  variant="tertiary"
-                  size="sm"
-                  iconPosition="alone"
-                  icon={<ArrowUpRight size={14} strokeWidth={1.75} />}
-                  aria-label="Open in a new tab"
-                  onClick={item.onReview}
-                  className="shrink-0"
-                />
-              </Tooltip>
-            </div>
-          ))}
-        </div>
-      )}
-      {/* Button position — BELOW every item, not between the primary and
-          the extras (closing pass, unifying with NextBestActionZone's own
-          layout — re-checked against the Figma node's expanded-state frame,
-          same reasoning as that zone's own "Button position" note). "Show
-          N more"/"Show less" and "View all" sit at OPPOSITE ends of the row
-          (justify-between), not stacked together. "View all" is a plain
-          text tertiary Button, no icon — the new-tab behavior is real on
-          click, it just isn't signaled visually here the way the per-item
-          arrows signal it (verified against the actual Figma node: "View
-          all" renders as bare text). Items beyond the 3-extra cap are
-          deliberately not rendered here — "View all" is the only way to
-          reach them. DECISION FLAGGED — hypothesis, not explicitly
-          confirmed: if a host has >4 items total and passes no onViewAll,
-          there's currently no way to reach the rest at all. // TODO:
-          confirmar con Michael — ¿debería onViewAll ser obligatorio cuando
-          items.length > 4? */}
-      {rest.length > 0 && (
-        <div className="flex items-center justify-between">
-          <Button variant="tertiary" size="sm" onClick={() => setShowMore(v => !v)} className="self-start">
-            {showMore ? "Show less" : `Show ${visibleRest.length} more`}
-            {showMore
-              ? <ChevronUp size={14} strokeWidth={1.75} className="ml-[2px]" />
-              : <ChevronDown size={14} strokeWidth={1.75} className="ml-[2px]" />}
-          </Button>
-          {state.onViewAll && (
-            <Tooltip content={OPEN_HTL_TOOLTIP} side="cursor">
-              <Button variant="tertiary" size="sm" onClick={state.onViewAll} className="self-start">
-                View all
-              </Button>
-            </Tooltip>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
+// AgenticSystemZoneContent, AgenticSystemItem and InterventionZoneContent
+// lived here — 6 states each, workflow cards, HTL rows, the Show-N-more
+// disclosures. All of it went with the zones.
 
 // ── Overflow menu — the repo's real Menu/MenuItem atom, anchored the same way
 // NotificationCenter's own filter dropdown already is (capture the trigger's

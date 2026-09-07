@@ -151,23 +151,60 @@ actions={[{ icon: "Eye", onClick: () => {} }]}
 ### Entity Header — entity profile header
 Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its old name on purpose; the change spec forbids renaming it) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; EntityHeader sits inside the content area, typically the Overview tab).
 
-**There are no variants.** The component models no entity types at all — Employee, Customer, Vendor, Patient, Borrower, anything the host defines tomorrow all use the same shape. `entityType` is a plain `{ icon, label }` the caller supplies. Never look for a `variant` prop, never flag a missing one as a DS-GAP: an entity type the DS has never heard of is the normal case, not a gap.
+**There are no variants.** The component models no entity types at all — Employee, Customer, Vendor, Patient, Borrower, anything the host defines tomorrow all use the same shape. Never look for a `variant` prop, never flag a missing one as a DS-GAP: an entity type the DS has never heard of is the normal case, not a gap.
 
-**One skeleton: an always-visible identity row plus 3 zones behind a chevron** (collapsed by default — predictable header height). Every zone prop is optional and **omitting it removes the zone entirely** for that entity type. Never fake a zone with placeholder content — an absent zone is a real, supported state.
+**There is no `entityType` prop either.** What kind of thing this is arrives as a **classification tag**, and only when the visual is an avatar — a highlight icon already names the type.
 
-| Prop | Zone | Shape |
+| Prop | Where | Shape |
 |---|---|---|
 | `name` | Identity | `string` — required |
-| `entityType` | Identity | `{ icon, label }` — required, host-defined |
-| `statusTag?` | Identity | `{ label, icon? }` — a temporary state on the contact ("On Leave · Returns Mar 15"). Neutral/amber only, never `error` |
+| `visual` | Identity | `{ kind: "avatar" }` or `{ kind: "icon", icon, variant? }` — **required, exactly one** |
 | `source?` | Identity | `string` — which system the record came from. **One item, never two** |
+| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **capped at 6 + `+N`** |
+| `stateBadge?` | Identity, right | `{ label, variant, icon? }` — **exactly one**, full semantic range |
+| `showInformation?` | Identity, right | `boolean` — shows the ⓘ trigger |
+| `secondaryAction?` | Identity, right | `RecordAction` — **off by default** |
+| `assignedAgent` | Identity, right | `AssignedAgent \| null` — required as a prop. This is `Ask` |
+| `menuActions?` | Identity, right | `RecordAction[]` — destructive and secondary only |
 | `description?` | below Identity | `string` — durable context, **off unless passed** |
 | `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
-| `recordFields?` | RECORD | `RecordField[]` |
-| `agenticSystem?` | AGENTIC SYSTEM | `AgenticSystemInfo` |
-| `intervention?` | YOUR INTERVENTION | `PendingIntervention` |
-| `assignedAgent` | Identity | `AssignedAgent \| null` — required as a prop |
-| `actions?` | Identity | `RecordAction[]` — `actions[0]` is the one CTA, `actions[1+]` go to the "···" overflow |
+| `recordFields?` | — | `RecordField[]` — consumed by the host's Information panel, not rendered here |
+| `state?` | whole card | `"default" \| "loading" \| "restricted"` — Figma's `Property 1` axis |
+
+**`state` is Figma's `Property 1` axis, and it is independent of the reflow** — an entity can be loading on a tablet, which is why it is one enum and not three booleans.
+- **`loading`** renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does). Pass it while the entity's data is in flight — **never render an empty header, and never withhold the card until data arrives.** Figma's reason: saying "nothing here" while data is in flight states something untrue.
+- **`restricted`** renders the card at 50% opacity and nothing else — no badge, no banner, no colour change. The viewer lacks entitlement to the values; the entity exists and is governed, so **this must never read as an error.** It is a separate thing from `locked` ("you cannot edit" vs "you cannot see") and both can be true at once. `RecordField.state === "masked"` is the same idea applied to one field.
+- **`Minimum`, Figma's fourth named state, needs no value** — "only visual, title and state" is what you get by passing only those props.
+
+**Nine tab stops, six when nothing is truncated.** Tags and secondary metadata are each **one** stop with a roving tabindex — Tab enters the group, arrows move inside, Tab leaves. Six tags plus six metadata items as individual stops would be twenty-five Tab presses to get past the header. The title and description are stops only when they overflow. This is inside the component; a caller cannot break it, but do not wrap its slots in your own focusable elements.
+
+**The right-hand cluster has a fixed order:** ⓘ Information → state badge → secondary action → `Ask` → `···` menu. That side is fixed and never compressed; the left side is what yields.
+
+**`visual` — avatar for companies, people and groups. Icon for everything else** (objects, assets, processes, transactions, documents). Exactly one renders, never both, never neither.
+- **Initials are never derived from a code.** `RO-48291` has no initials, so a code-titled record can only be an icon.
+- A site inherits its parent company's brand — it does not get its own mark.
+- The icon's colour is assigned per entity **type** and stays the same everywhere in the product.
+- The rule is about the entity, not about whether the asset exists: a company with no logo still uses an avatar, falling back to initials.
+
+**Three tag roles, two colour rules.** The vocabulary belongs to the tenant; the colour belongs to the platform.
+
+| Role | What it is | How many | Colour |
+|---|---|---|---|
+| **State** | The entity's overall status — `stateBadge`, its own slot on the right | Exactly one | **Full semantic range.** `Active` → success, `Degraded` → alert, `Blocked`/`Suspended` → **error** |
+| **Signal** | Needs attention, bounded in time or condition | Zero or many | **`error` or `alert` only** — or neutral |
+| **Classification** | What kind of thing this is. **Only when the visual is an avatar** | Zero or one | **Never coloured.** The component strips any tone you pass |
+
+- **The test for a left tag is not its role — it is whether someone has to do something about it.** If yes, colour. If no, neutral. `Renews in 52d` is a signal and stays neutral: 52 days out, nobody has to act.
+- **Order:** signals first, sorted by severity, then classification. The component does this — pass them in any order.
+- **Beyond six, a `+N` chip.** Its Tooltip carries the hidden labels, which is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.
+- **If several statuses are true at once, the most blocking one wins** and the rest become signals. The component renders the one badge it is given.
+- **Not a tag at all:** anything true of every entity in the platform — `Entity`, `Governed`, `Manufacturing`, `Automotive`. That is noise. It belongs in secondary metadata or nowhere.
+
+**The title yields last.** `flex: 0 1 auto` with `min-width: 0` and a 540px ceiling — it takes whatever the row has left after visual, source, collapsed tags and actions, and truncates only there. **A title cut short with empty space beside it is a bug, not a rule.** Order of yielding: tags collapse to `+N` first, then source, and only then does the title truncate. Nothing wraps and nothing abbreviates — an ellipsis tells the reader there is more, an abbreviation looks like the real value and misleads.
+
+**`Ask` is one word, and it is the primary CTA.** There is no second one — the labelled CTA that used to sit beside it is gone. It keeps the same Sparkle glyph as the Next Best Action card: **that sharing is deliberate** (Michael, 2026-09-07). Both are AI surfaces and the shared mark is what says so; one converses, the other transacts. Figma's prose argues they should differ, but Figma's own component instances share the glyph — do not "fix" this.
+
+**There is no disclosure and there are no zones.** `agenticSystem`, `intervention` and the chevron that revealed them are **gone** — none of them exists in the Figma Entity Header, and that content belongs to Overview widgets. This card is a fixed arrangement of slots. If you find yourself wanting to hide something behind a chevron here, it belongs on the page, not in the header.
 
 **`recordFields` is a flat array the caller builds — there is no per-entity field list inside the component.** Each `RecordField` is `{ label, icon, provenance, state, value, maskedValue?, hasDestination? }`:
 - `provenance` is mandatory on every field (`{ system, systemAbbr, modelVersion, syncedAgo }`) — a field with no visible origin is not renderable by design.
@@ -180,7 +217,15 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 
 **NO INSIGHT SECTION.** System interpretation reaches this header only as a tag with a tooltip — never a descriptive sentence, never a score with drivers, never an expandable analysis. Anything larger lives in the Overview, where the NBA widget carries recommendations and reasoning.
 
-**`NextBestActionCard` has no severity and no colors.** Each entry is `{ id, title, description, onOpen, contextTag? }` — no `severity`, no `dueContext`, no `aiGenerated`, no `actionLabel`. Timing and urgency live in the copy (`description`), not in a token. Pass an empty array or omit `items` for a record with genuinely nothing to recommend — the whole card disappears, which is the correct "all good" state; never synthesize a filler recommendation.
+**`NextBestActionCard` takes ONE recommendation, not an array.** The prop is `item?: NextBestAction` — `{ id, title, timeAgo?, description, onViewDetails, onAccept?, onDismiss? }`. Figma's rule 2 is *one at a time, it never stacks*: the engine has already prioritised, unified and discarded, so showing several is not trusting the engine. The prop is singular precisely so that rule is structural rather than a convention someone has to remember — an array plus a `.map` is how this card rendered two recommendations in one container for three separate passes.
+
+- **No `severity`, no `dueContext`, no `aiGenerated`, no `actionLabel`, no colours.** Timing and urgency live in the copy (`description`), never in a token — the Entity Header's state badge and signal tags are the platform's urgency channel, and a card that colours itself competes with them.
+- **Omit `item` (or pass `undefined`) for an entity with nothing to recommend.** Nothing renders at all — not an empty card, not a placeholder, not a "nothing to recommend" message. Never synthesize a filler recommendation.
+- **`onViewDetails` is the default path and always present.** The card cannot guarantee it showed everything, so the safe route is always the one that opens the record.
+- **`onAccept` is a reserved variant — leave it off.** Which actions qualify is not decided in Figma yet. When it is used: accepting **assigns to the agent, it never executes** (the agent executes, the human governs — never "Call now") and it still opens the detail first. There is no inline accept anywhere in this component.
+- **`onDismiss` resolves in place** — it hides the card for this session only, returns on reload, stores nothing and feeds nothing back to the engine. Wire it unless there is a reason not to; a card with no dismiss is one the user cannot get out of their way.
+
+Full rules, character limits and the four detail-panel action families: the Next Best Action Card spec (Entity Header page → Reference tab → *View DS spec*), sourced from Figma node `20206:316306`.
 
 **`source` answers one question: which system this record came from.** Workday, Salesforce, NetSuite, DMS, Helix Data Studio. **One item, never two** — a source is a single fact, and concatenating a second value breaks it: "Enterprise Account · Midwest Region" is a category next to a location, and neither is a source. A job title, a location, a region, a category or a parent company *describe* or *place* the entity; they do not say where the data came from, so they go in tags or `secondaryMetadata`, or nowhere. An entity created inside the platform itself reads "Helix Data Studio". An entity with no source **omits the prop** — the slot is removed, never filled with something else.
 
@@ -188,7 +233,7 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 
 1. Needs attention right now → signal tag
 2. What kind of thing this is → classification tag
-3. The current status → `statusTag`
+3. The current status → `stateBadge`
 4. A fact someone might act on → `secondaryMetadata`
 5. Durable context none of the above captured → `description`
 

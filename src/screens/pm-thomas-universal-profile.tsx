@@ -16,7 +16,7 @@ import { HighlightIcon }    from "@/components/ui/highlight-icon"
 import { CardContainer }    from "@/components/ui/card-container"
 import { ModalDialog }      from "@/components/ui/modal-dialog"
 import { EntityHeader }     from "@/components/ui/record-header"
-import type { EntityHeaderEntityType, SecondaryMetadataItem } from "@/components/ui/record-header"
+import type { EntityVisual, EntityHeaderTag, EntityStateBadge, SecondaryMetadataItem } from "@/components/ui/record-header"
 import { NextBestActionCard, type NextBestAction } from "@/components/experimental/next-best-action-card"
 import { SlideOut }         from "@/components/ui/slide-out"
 import { Input }            from "@/components/ui/input"
@@ -251,12 +251,6 @@ const PROFILE_NBAS: Record<string, NextBestAction[]> = {
     onAccept: () => {},
     onDismiss: () => {},
   }],
-}
-
-const ENTITY_TYPE_ICON: Record<EntityType, LucideIcon> = {
-  person:   LucideIcons.UserRound,
-  employee: LucideIcons.User,
-  company:  LucideIcons.Building2,
 }
 
 // `recordFields` is deliberately NOT passed to EntityHeader here. In the
@@ -553,10 +547,28 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
   }, [profile])
 
   // EntityHeader data
-  const rhEntityType: EntityHeaderEntityType = {
-    icon:  ENTITY_TYPE_ICON[profile.type],
-    label: TYPE_LABEL[profile.type],
-  }
+  // Visual — avatar for companies, people and groups. All three profiles here
+  // are one of those, so all three are avatars; the icon path is for objects,
+  // assets, processes, transactions and documents.
+  const rhVisual: EntityVisual = { kind: "avatar" }
+  // Tags — the entity type is a CLASSIFICATION tag now, not a label beside the
+  // name, and it is present because the visual is an avatar (a highlight icon
+  // would already name the type). Plus one signal per profile, coloured only
+  // when somebody actually has to do something about it.
+  const rhTags: EntityHeaderTag[] = [
+    ...(profile.governance === "error" || profile.connections === "error"
+      ? [{ role: "signal" as const, label: "Sync failing", tone: "error" as const }]
+      : []),
+    { role: "classification", label: TYPE_LABEL[profile.type] },
+  ]
+  // State badge — its own slot on the right, full semantic range. Derived from
+  // the status this screen already tracks: Archived is blocking, so it reads
+  // error; Inactive needs review; Active is the healthy case.
+  const rhStateBadge: EntityStateBadge = {
+    Active:   { label: "Active",   variant: "success"     as const },
+    Inactive: { label: "Inactive", variant: "informative" as const },
+    Archived: { label: "Archived", variant: "error"       as const },
+  }[profile.status]
   // Source — one item, the system this record came from. Uses the documented
   // per-entity-type mapping (Employee/Person → Workday, Company →
   // Salesforce), not a guess.
@@ -570,11 +582,13 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     { icon: LucideIcons.Flag,           text: "0 flags",  tooltip: "Open flags · nothing raised by the Risk study." },
     { icon: LucideIcons.ScanLine,       text: "Jul 27",   tooltip: "Last scan · Jul 27, 2026, from the Risk study." },
   ]
-  // An empty array is how the current component expresses "nothing to
-  // recommend right now" — the block disappears instead of rendering a
-  // placeholder, which is what the old neutral "No active recommendations"
-  // signal was standing in for.
-  const rhNextBestActions = PROFILE_NBAS[profile.id] ?? []
+  // The recommendation, and a real dismiss. `undefined` is how the card
+  // expresses "nothing to recommend right now" — it disappears rather than
+  // rendering a placeholder, which is also what dismissing has to produce:
+  // the ✕ was wired to a no-op, so it looked broken. One recommendation at a
+  // time, so dismissing the current one clears the card.
+  const [nbaDismissed, setNbaDismissed] = useState(false)
+  const rhNextBestAction = nbaDismissed ? undefined : PROFILE_NBAS[profile.id]?.[0]
 
   // Available entity type options for the "+" picker (filter already-added tabs)
   const availableOptions = (ENTITY_TYPE_OPTIONS[profile.type] ?? []).filter(
@@ -640,16 +654,25 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
              it. ── */}
       <EntityHeader
         name={profile.name}
-        entityType={rhEntityType}
+        visual={rhVisual}
+        tags={rhTags}
+        stateBadge={rhStateBadge}
         source={rhSource}
         secondaryMetadata={rhSecondaryMetadata}
-        actions={[
-          { label: "Export",  variant: "secondary", onClick: () => {} },
-          { label: profile.type === "company" ? "Contact account" : "Message", variant: "primary", onClick: () => {} },
+        /* No contextual CTA: `Ask` is the primary action. "Export" was one of
+           two primary CTAs competing with it, and this page already carries
+           Export in its own page Header above. It moves to the overflow, where
+           secondary and destructive actions belong. */
+        menuActions={[
+          { label: "Export",  onClick: () => {} },
+          { label: "Archive", onClick: () => {} },
         ]}
         assignedAgent={{ id: "agent-1", name: "AIMS Assistant", onOpenChat: () => {} }}
       />
-      <NextBestActionCard items={rhNextBestActions} className="mt-[12px] mb-[16px]" />
+      <NextBestActionCard
+        item={rhNextBestAction && { ...rhNextBestAction, onDismiss: () => setNbaDismissed(true) }}
+        className="mt-[12px] mb-[16px]"
+      />
 
       {/* ── Tabs row + "+" entity-type picker ── */}
       <div className="flex items-center gap-[8px] mb-[24px]">
@@ -885,7 +908,15 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
 // ── Main screen — profile selector ───────────────────────────────────────────
 
 export default function PMThomasUniversalProfileScreen() {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // `?profile=<id>` opens a record's detail directly, skipping the list. The
+  // Entity Header only exists on the detail view, so a link meant to show the
+  // header has to land there — arriving at the list and asking the reader to
+  // click a row first defeats the point.
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    const wanted = new URLSearchParams(window.location.search).get("profile")
+    return wanted && PROFILES.some(p => p.id === wanted) ? wanted : null
+  })
 
   const selected = PROFILES.find(p => p.id === selectedId)
 
