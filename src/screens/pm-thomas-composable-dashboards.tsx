@@ -1734,6 +1734,7 @@ export default function PMThomasComposableDashboardsScreen() {
   const [mainView, setMainView]       = useState<MainView>("dashboards")
   const [overlayView, setOverlay]     = useState<OverlayView>(null)
   const [canvasDash, setCanvasDash]   = useState<DashRecord | null>(null)
+  const [canvasIsNew, setCanvasIsNew] = useState(false)
 
   const [dashPage, setDashPage]   = useState(1)
   const [dashTotal, setDashTotal] = useState(DASHBOARDS.length)
@@ -1864,7 +1865,7 @@ export default function PMThomasComposableDashboardsScreen() {
   if (canvasDash) {
     return (
       <Suspense fallback={<div style={{ padding: 40, color: "var(--foreground)" }}>Loading canvas…</div>}>
-        <DashboardCanvasScreen dash={canvasDash} onBack={() => setCanvasDash(null)} />
+        <DashboardCanvasScreen dash={canvasDash} onBack={() => { setCanvasDash(null); setCanvasIsNew(false) }} isNew={canvasIsNew} />
       </Suspense>
     )
   }
@@ -1901,7 +1902,7 @@ export default function PMThomasComposableDashboardsScreen() {
       }
     >
       {overlayView === "new-dashboard" && (
-        <NewDashboardOverlay onClose={() => setOverlay(null)} onCreated={d => { setOverlay(null); setCanvasDash(d) }} />
+        <NewDashboardOverlay onClose={() => setOverlay(null)} onCreated={d => { setOverlay(null); setCanvasDash(d); setCanvasIsNew(true) }} />
       )}
       {overlayView === "builder" && (
         <WidgetBuilderOverlay
@@ -1915,7 +1916,7 @@ export default function PMThomasComposableDashboardsScreen() {
         />
       )}
       {!overlayView && mainView === "dashboards" && (
-        <DashboardsView onOpenCanvas={d => setCanvasDash(d)} page={dashPage} onPageChange={setDashPage} onTotalChange={setDashTotal} />
+        <DashboardsView onOpenCanvas={d => { setCanvasDash(d); setCanvasIsNew(false) }} page={dashPage} onPageChange={setDashPage} onTotalChange={setDashTotal} />
       )}
       {overlayView === "marketplace" && (
         <div>

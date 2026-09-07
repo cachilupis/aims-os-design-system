@@ -330,15 +330,16 @@ function WidgetTile({
 
 // ── Main canvas screen ─────────────────────────────────────────────────────────
 
-export default function DashboardCanvasScreen({ dash, onBack }: {
+export default function DashboardCanvasScreen({ dash, onBack, isNew }: {
   dash: CanvasDash
   onBack: () => void
+  isNew?: boolean
 }) {
   const seedKey = dash.entity as keyof typeof SEED_WIDGETS
   const seedData = SEED_WIDGETS[seedKey] ?? SEED_WIDGETS.Standalone
 
   const [widgets, setWidgets] = useState<PlacedWidget[]>(
-    () => seedData.map((w, i) => ({ ...w, uid: `w-${i}`, locked: false }))
+    () => isNew ? [] : seedData.map((w, i) => ({ ...w, uid: `w-${i}`, locked: false }))
   )
   const [dashName, setDashName]     = useState(dash.name)
   const [status, setStatus]         = useState<DashStatus>(dash.status)
@@ -457,8 +458,8 @@ export default function DashboardCanvasScreen({ dash, onBack }: {
         />
       )}
     >
-      {/* Tip bar */}
-      {!tipDismissed && (
+      {/* Tip bar — only when there are widgets to drag */}
+      {!tipDismissed && widgets.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8,
           background: "color-mix(in srgb, var(--primary) 6%, var(--surface))", border: "1px solid var(--field-border)", marginBottom: 16 }}> {/* audit-ignore: color-mix */}
           <LucideIcons.Info size={13} style={{ color: "var(--primary)", flexShrink: 0 }} />
@@ -482,30 +483,46 @@ export default function DashboardCanvasScreen({ dash, onBack }: {
       {/* Widget grid — 3 columns */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}
         onDragEnd={() => { dragIdx.current = null; setDragOverIdx(null) }}>
-        {widgets.map((w, i) => (
-          <WidgetTile
-            key={w.uid}
-            widget={w}
-            onSettings={() => setSettingsW(w)}
-            onDragStart={() => handleDragStart(i)}
-            onDragOver={e => handleDragOver(e, i)}
-            onDrop={() => handleDrop(i)}
-            isDragging={dragIdx.current === i}
-            isDragOver={dragOverIdx === i}
-          />
-        ))}
-
-        {/* Add widget card */}
-        <div>
-          <button onClick={() => setAddOpen(true)} style={{
-            width: "100%", minHeight: 120, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            gap: 8, padding: "20px 16px", borderRadius: 12, border: "2px dashed var(--field-border)",
-            background: "transparent", cursor: "pointer", color: "var(--field-supporting)",
-          }}>
-            <LucideIcons.Plus size={20} style={{ color: "var(--primary)" }} />
-            <span style={{ fontSize: 13, fontWeight: 500 }}>Add widget</span>
-          </button>
-        </div>
+        {widgets.length === 0 ? (
+          <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", gap: 16, minHeight: 280, borderRadius: 12,
+            border: "2px dashed var(--field-border)", padding: "48px 24px" }}>
+            <LucideIcons.LayoutGrid size={32} style={{ color: "var(--field-supporting)", opacity: 0.35 }} />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>Empty canvas</div>
+              <div style={{ fontSize: 13, color: "var(--field-supporting)", maxWidth: 300 }}>
+                Add widgets from the library to start building your dashboard.
+              </div>
+            </div>
+            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}>Add widget</Button>
+          </div>
+        ) : (
+          <>
+            {widgets.map((w, i) => (
+              <WidgetTile
+                key={w.uid}
+                widget={w}
+                onSettings={() => setSettingsW(w)}
+                onDragStart={() => handleDragStart(i)}
+                onDragOver={e => handleDragOver(e, i)}
+                onDrop={() => handleDrop(i)}
+                isDragging={dragIdx.current === i}
+                isDragOver={dragOverIdx === i}
+              />
+            ))}
+            {/* Add widget card */}
+            <div>
+              <button onClick={() => setAddOpen(true)} style={{
+                width: "100%", minHeight: 120, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                gap: 8, padding: "20px 16px", borderRadius: 12, border: "2px dashed var(--field-border)",
+                background: "transparent", cursor: "pointer", color: "var(--field-supporting)",
+              }}>
+                <LucideIcons.Plus size={20} style={{ color: "var(--primary)" }} />
+                <span style={{ fontSize: 13, fontWeight: 500 }}>Add widget</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Unpublished banner when published but dirty */}
