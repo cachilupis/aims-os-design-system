@@ -21,6 +21,8 @@
 //
 // Sample data is plausible, never live — same contract as widget-content.
 
+import { ProgressBar } from "@/components/ui/progress-bar"
+
 const TXT  = "var(--color-text-title)"
 const SUB  = "var(--color-text-subtitle)"
 const LINE = "var(--field-border)"
@@ -170,18 +172,19 @@ function PieChart({ donut = false }: { donut?: boolean }) {
   )
 }
 
+// A funnel stage is one metric shrinking through steps, not a category, so the
+// bar is the DS ProgressBar in a single style — the length carries the meaning.
+// Colour per stage would imply four different things being measured.
 function FunnelChart() {
   const stages: [string, number, number][] = [
     ["Prospect", 1240, 100], ["Qualified", 780, 63], ["Proposal", 410, 33], ["Closed", 186, 15],
   ]
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {stages.map(([label, n, pct], i) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {stages.map(([label, n, pct]) => (
         <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 11, color: SUB, width: 62, flexShrink: 0 }}>{label}</span>
-          <div style={{ flex: 1, height: 16, borderRadius: 3, background: LINE, overflow: "hidden" }}>
-            <div style={{ width: `${pct}%`, height: "100%", background: CAT[i], borderRadius: 3 }} />
-          </div>
+          <ProgressBar className="flex-1 min-w-0" value={pct} style="primary" size="m" label={`${label} — ${n}`} />
           <span style={{ fontSize: 11, fontWeight: 600, color: TXT, width: 38, textAlign: "right" as const }}>{n}</span>
         </div>
       ))}
