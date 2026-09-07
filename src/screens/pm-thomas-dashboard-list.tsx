@@ -2,7 +2,6 @@ import { useState } from "react"
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout }  from "@/components/layouts/screen-layout"
 import type { SidebarItem } from "@/components/ui/sidebar"
-import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
 import { Tag }           from "@/components/ui/tag"
@@ -11,6 +10,7 @@ import { EmptyState }    from "@/components/ui/empty-state"
 import { CardContainer } from "@/components/ui/card-container"
 import { ModalDialog }   from "@/components/ui/modal-dialog"
 import { SlideOut }      from "@/components/ui/slide-out"
+import { OverflowMenu, StudioWelcome } from "@/components/experimental/widget-screen-parts"
 
 type DashStatus = "published" | "draft" | "pending"
 type EntityKind = "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
@@ -56,32 +56,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "reports",    label: "Reports",    icon: "FileBarChart"     },
 ]
 
-// DS-GAP: StudioWelcome — contextual banner with count, tip, CTA. Closest DS: CardContainer.
-function StudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {
-  const [dismissed, setDismissed] = useState(false)
-  if (dismissed) return null
-  return (
-    <div style={{ marginBottom: 16 }}>
-    <CardContainer variant="default">
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
-        <HighlightIcon iconName="LayoutDashboard" variant="informative" size="lg" />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
-            {count} dashboard{count !== 1 ? "s" : ""} in your workspace
-          </p>
-          <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: "2px 0 0" }}>
-            Dashboards live on entity profiles or as standalone reports. Create one and choose where it appears.
-          </p>
-        </div>
-        <Button variant="secondary" size="sm" onClick={onCta}>Create dashboard</Button>
-        <button onClick={() => setDismissed(true)} aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: 4, flexShrink: 0, display: "flex" }}>
-          <LucideIcons.X size={14} />
-        </button>
-      </div>
-    </CardContainer>
-    </div>
-  )
-}
 
 // DS-GAP: FilterToolbar — search + dropdown + entity chips + owner + sort. Closest DS: Filters.
 type FTProps = {
@@ -162,24 +136,6 @@ function FilterToolbar({ search, onSearch, status, onStatus, entity, onEntity, o
 }
 
 // DS-GAP: OverflowMenu — anchored per-card ⋯ menu. Closest DS: Menu + MenuItem.
-type OItem = { label: string; icon: keyof typeof LucideIcons; danger?: boolean; onClick: () => void }
-function OverflowMenu({ items, onClose }: { items: OItem[]; onClose: () => void }) {
-  return (
-    <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
-      <div style={{ position: "absolute", top: "calc(100% + 2px)", right: 0, zIndex: 100, background: "var(--surface)", border: "1px solid var(--field-border)", borderRadius: 10, boxShadow: "var(--shadow-elevation-3)", minWidth: 148, padding: 4 }}>
-        {items.map(({ label, icon, danger, onClick }) => {
-          const Icon = LucideIcons[icon] as React.FC<{ size?: number }>
-          return (
-            <button key={label} onClick={e => { e.stopPropagation(); onClick(); onClose() }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", background: "none", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12, color: danger ? "var(--error)" : "var(--foreground)", textAlign: "left" }}>
-              <Icon size={13} />{label}
-            </button>
-          )
-        })}
-      </div>
-    </>
-  )
-}
 
 export default function PMThomasDashboardList() {
   const [search,   setSearch]   = useState("")
@@ -236,7 +192,13 @@ export default function PMThomasDashboardList() {
         />
       )}
     >
-      <StudioWelcome count={dbs.length} onCta={() => {}} />
+      <StudioWelcome
+        iconName="LayoutDashboard"
+        title={`${dbs.length} dashboards in this studio`}
+        description="Dashboards combine widgets into a view that lives on an entity profile or as a standalone report."
+        ctaLabel="Create dashboard"
+        onCta={() => {}}
+      />
 
       <FilterToolbar
         search={search}   onSearch={setSearch}

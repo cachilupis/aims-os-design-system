@@ -175,7 +175,7 @@ export type WidgetShape =
   | "kpi" | "cost-kpi" | "bars" | "funnel" | "pie" | "donut" | "gauge"
   | "feed" | "status" | "alerts" | "act-now" | "stat-row" | "timeline"
   | "line" | "heatmap" | "scatter" | "map"
-  | "table" | "notes" | "tree" | "roster" | "agents" | "tasks" | "flow" | "queue"
+  | "table" | "notes" | "tree" | "roster" | "agents" | "tasks" | "flow" | "queue" | "carousel"
 
 /** Builder vocabulary — the shape you pick when authoring a widget. */
 export const SHAPE_FOR_BUILDER_TYPE: Record<string, WidgetShape> = {
@@ -672,6 +672,27 @@ export function WidgetShapePreview({
           }}>
             <div style={{ width: big ? 6 : 4, height: big ? 12 : 8, borderRadius: 2, background: cat(4), flexShrink: 0 }} />
             <div style={{ height: big ? 6 : 4, width: `${64 - i * 10}%`, borderRadius: 3, background: SUNKEN }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // ── Cards that scroll sideways ────────────────────────────────────────────
+  // The cut-off third card is the whole point: it says "there is more to the
+  // right" without needing an arrow.
+  if (shape === "carousel") {
+    return (
+      <div {...a11y} style={{ ...box, gap: big ? 8 : 5, padding: `${pad - 2}px 0 ${pad - 2}px ${pad}px`, alignItems: "stretch" }}>
+        {[1, 0.85, 0.5].map((o, i) => (
+          <div key={i} style={{
+            flex: i === 2 ? "0 0 30%" : "1 1 0", minWidth: 0, borderRadius: 6,
+            background: LINE, opacity: o,
+            display: "flex", flexDirection: "column", justifyContent: "flex-end",
+            padding: big ? 8 : 5, gap: 4,
+          }}>
+            <div style={{ height: big ? 6 : 4, width: "70%", borderRadius: 2, background: cat(i) }} />
+            <div style={{ height: big ? 5 : 3, width: "45%", borderRadius: 2, background: SUNKEN }} />
           </div>
         ))}
       </div>
