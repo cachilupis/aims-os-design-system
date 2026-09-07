@@ -186,6 +186,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
   { id: "chip",            label: "Chip",              group: "Components",  description: "Pill-shaped selection control · 11 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · used in filter rows and Slide Out headers" },
   { id: "empty-state",     label: "Empty State",       group: "Components",  description: "Zero-content placeholder. Icon Highlight + title + description + 1–2 CTA buttons. Compact variant for Tables and Cards." },
+  { id: "record-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see experimental/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
   { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
   { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
   { id: "header",          label: "Header",            group: "Components",  description: "Page header · title + description + status tag + CTAs + optional back button · 3 sizes: Size L (24px), Size M (18px), Compress (scroll state)" },
@@ -201,7 +202,6 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "process-item",    label: "Process Item",      group: "Components",  description: "One step of a running process, with its state · 5 statuses (done/loading/error/pending/warning) · number-badge and expand variants · ProcessList wrapper adds the title, View all CTA, and empty/loading states" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
   { id: "radio",           label: "Radio",             group: "Components",  description: "Single choice from a mutually exclusive set · 3 sizes (S/M/L) · unselect / select / disabled · RadioGroup owns the fieldset, legend and arrow-key navigation — a radio is never used alone" },
-  { id: "record-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see experimental/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "side-panel",      label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 350px default, 450px + dynamic half-screen snap points · header + scrollable body + optional footer" },
@@ -32626,9 +32626,14 @@ const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
   borrower: [
     { role: "classification", label: "Borrower"                           },
   ],
+  // No classification tag, same as dataEntity: the wrench already names the
+  // type. `Service customer` used to sit here, left over from when this case
+  // was a person (Devon Marsh) rather than the repair order itself — it broke
+  // the rule this very file documents. The signal is Figma's own copy from
+  // its repair-order example: time pressure, not a restatement of the state
+  // badge, which already reads `Awaiting parts`.
   repairOrder: [
-    { role: "signal",         label: "Parts backorder",     tone: "alert" },
-    { role: "classification", label: "Service customer"                   },
+    { role: "signal",         label: "6d overdue",          tone: "alert" },
   ],
 }
 
@@ -32715,20 +32720,25 @@ const RH_BORROWER = {
   requestedAmount: { label: "Requested Amount",  icon: LucideIcons.DollarSign, value: "$45,000",  state: "hydrated", provenance: ncinoProv("2h ago"), hasDestination: false } satisfies RecordField,
 }
 
-// Service Customer (Automotive) — fourth agnosticism proof example,
-// EXAMPLE data, not confirmed AIMS OS content. AIMS OS's own central
-// vertical (brief's own words). CONTACT rule (this correction pass) — the
-// entity is the PERSON who owns the vehicle, never the repair order
-// itself: the old "Repair Order #48213 (non-person entity)" version
-// violated the same rule Claim did. The non-person-entity proof this
-// example used to make is retired along with it — Borrower (a person)
-// already covers that ground redundantly anyway; there's no loss of
-// coverage. The repair order now lives as a workflow in Agentic System
-// (RH_WORKFLOWS.repairOrder), not as this record's identity. Still 3
-// distinct sources: CDK Global (DMS), Carfax (vehicle history), and the
-// manufacturer's own warranty system.
+// Repair order (Automotive) — Figma's own process-entity example, EXAMPLE
+// data, not confirmed AIMS OS content. AIMS OS's central vertical.
+//
+// THE ENTITY IS THE ORDER, NOT THE CUSTOMER. An earlier pass had this as
+// "Devon Marsh, the person who owns the vehicle", on a rule that a record's
+// entity is always a person or an account and never a process. Figma
+// reversed that rule — its OPEN frame records Thom confirming it: "an
+// entity may be a process, which overrides the earlier rule that a contact
+// is never a process" — and its own example is the order: RO-48291, wrench
+// icon, code as title. The person version also left this page rendering two
+// different entities for one case, since the Preview already used RO-48291.
+//
+// `name` is the only place the title comes from now; RH_NAME reads it
+// instead of hard-coding a second copy. Record fields describe the ORDER
+// (who is working it, on what vehicle, under what warranty, for whom),
+// still across 3 distinct sources: CDK Global (DMS), Carfax (vehicle
+// history), and the manufacturer's own warranty system.
 const RH_REPAIR_ORDER = {
-  name: "Devon Marsh", vehicle: "2022 Ford F-150",
+  name: "RO-48291", vehicle: "2022 Ford F-150",
   serviceAdvisor:  { label: "Service Advisor",   icon: LucideIcons.User,          value: "Tyler Brooks",         state: "hydrated", provenance: cdkProv("15m ago") } satisfies RecordField,
   vehicleField:    { label: "Vehicle",           icon: LucideIcons.Car,           value: "2022 Ford F-150",      state: "hydrated", provenance: carfaxProv("1d ago"), hasDestination: false } satisfies RecordField,
   warrantyStatus:  { label: "Warranty Status",   icon: LucideIcons.ShieldCheck,   value: "Powertrain — Active",  state: "hydrated", provenance: oemProv("6h ago") } satisfies RecordField,
@@ -32830,18 +32840,19 @@ const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
     { icon: LucideIcons.Link2,          text: "BR-4471",   tooltip: "Bridge ID · BR-4471. The immutable link between this record's Truth facts and their source documents." },
   ],
   repairOrder: [
-    { icon: LucideIcons.CircleCheckBig, text: "5 facts",   tooltip: "Truth Plane facts · 5 attested facts on this customer." },
-    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 repair order currently in progress." },
+    { icon: LucideIcons.CircleCheckBig, text: "5 facts",   tooltip: "Truth Plane facts · 5 attested facts on this repair order." },
+    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 parts-procurement workflow currently touching this order." },
     { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent on warranty disputes." },
-    { icon: LucideIcons.CalendarClock,  text: "Since 2022", tooltip: "Customer since · August 2022." },
+    { icon: LucideIcons.DollarSign,     text: "$4,180",   tooltip: "Authorized amount · $4,180, insurance-approved. Figma's own value for this example." },
   ],
 }
 
 // Preview tab only — what each type's `description` would legitimately say IF
 // it qualified. Figma allows the slot only when the title is an opaque code,
-// and none of these seven titles is one, so the Preview keeps it off by
-// default; these strings exist so turning the toggle on shows real copy rather
-// than lorem. Each passes the durability test — it says what the entity IS,
+// and `RO-48291` is the ONE title here that is one — every other entity in
+// this demo is named, so its description is shown only because the Preview
+// toggle exists to demonstrate the slot, never because the case earns it.
+// Each string still passes the durability test: it says what the entity IS,
 // never what is happening to it.
 const RH_PREVIEW_DESCRIPTION: Record<RhDemoKey, string> = {
   dataEntity:  "Normalized customer entity, resolved from CRM, DMS and the enrichment provider.",
@@ -32867,12 +32878,14 @@ const RH_PREVIEW_MENU_ACTIONS: RecordAction[] = [
 ]
 
 // Display name per demo key — a lookup instead of a growing ternary chain
-// now that there are 7 variants across 2 groups (Work Surfaces + Other
-// Markets).
+// now that there are 8 cases across 3 groups (people · companies and sites ·
+// processes, assets and data). Every entry reads from the case's own mock, so
+// a title cannot drift between the Preview and Overview tabs the way the
+// repair order's did.
 const RH_NAME: Record<RhDemoKey, string> = {
   dataEntity: "Customer Master",
   uep: RH_UEP.name, ucp: RH_UCP.name, uvp: RH_UVP.name,
-  patient: RH_PATIENT.name, claim: RH_CLAIM.name, borrower: RH_BORROWER.name, repairOrder: "RO-48291",
+  patient: RH_PATIENT.name, claim: RH_CLAIM.name, borrower: RH_BORROWER.name, repairOrder: RH_REPAIR_ORDER.name,
 }
 
 // Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
@@ -33640,8 +33653,10 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor (example)</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content. No pending intervention here on purpose — the zone is fully omitted, not shown empty.</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor · a signal that stays neutral</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Mock data — not confirmed AIMS OS content. This is the case for the colour rule: <code>Renews in 52d</code> is a <strong>signal</strong> and it is still <strong>neutral</strong>, because the test for a left tag is not its role — it is whether someone has to do something about it. Fifty-two days out, nobody does. Colour it alert and a healthy header starts shouting; do that six times and colour stops meaning anything.
+            </p>
             <EntityHeader name={RH_UVP.name} visual={RH_VISUAL.uvp} tags={RH_TAGS.uvp} stateBadge={RH_STATE_BADGE.uvp}
               source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp}
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
@@ -33650,9 +33665,9 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Healthcare — Patient (agnosticism proof)</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Healthcare — Patient · an entity type the DS has never heard of</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the healthcare market: a patient, deliberately picked to be as unlike UEP/UCP/UVP as possible — a different entity type (<code>Patient</code>, <code>Stethoscope</code> icon), a completely different RECORD shape (Primary Physician/Insurance Plan/Blood Type/Admission Date, sourced from Epic — not Workday/Okta/Salesforce/NetSuite/Ariba). Same colors (light blue = workflow, amber = intervention), same skeleton, zero changes to record-header.tsx.
+              Mock data — not confirmed AIMS OS content. Picked to be as unlike the three above as possible: a different source (Epic), a different record shape entirely, and a classification the component has no knowledge of. <strong>Nothing changed in <code>record-header.tsx</code> to support it</strong> — that is the point of one skeleton with no <code>variant</code> prop, and an entity type this file has never heard of is the normal case, not a gap. It also carries Law 4: the <code>Restricted</code> access role in the metadata row is a value that resolves per viewer entitlement at display time, and this component renders whichever state it is handed without ever resolving one itself.
             </p>
             <EntityHeader name={RH_PATIENT.name} visual={RH_VISUAL.patient} tags={RH_TAGS.patient} stateBadge={RH_STATE_BADGE.patient}
               source={RH_SOURCE.patient} secondaryMetadata={RH_SECONDARY_METADATA.patient} recordFields={RH_RECORD_FIELDS.patient}
@@ -33662,9 +33677,9 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Insurance — Policyholder (agnosticism proof)</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Insurance — Policyholder · the one tag that earns a colour</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the insurance market: a policyholder, never the claim itself — the CONTACT rule this component enforces (the record's entity is always a person or account, never a process), so it's Diane Ostrowski and not her open claim. Her claim lives instead as a workflow in Agentic System ("Claims Adjudication"), where the calculated payout is held for supervisor sign-off. RECORD fields describe Diane's own standing relationship with the carrier — policy, coverage, agent, claims history — sourced from 2 systems: Duck Creek (policy admin) and Guidewire (claims core), both cited via Data Provenance. Also carries 2 pending interventions at once: the higher-severity payout approval renders full-size, the documentation follow-up collapses behind "+1 more" (never a carousel). This market can grow more contact types later — the carrier's own customer, an appointed adjuster/vendor firm — without touching this skeleton; only Policyholder is built today. Same skeleton, same colors, zero changes to record-header.tsx.
+              Mock data — not confirmed AIMS OS content. Two left tags, one coloured: <code>Claim denied</code> is blocking, so it reads <strong>error</strong>; <code>Policyholder</code> is a classification and stays neutral no matter what tone the caller passes — the component strips it. Note the state badge is <code>Under review</code> and not a second copy of the signal: the badge answers &ldquo;what is its current status&rdquo;, the signal answers &ldquo;what needs attention&rdquo;, and restating one in the other wastes the row.
             </p>
             <EntityHeader name={RH_CLAIM.name} visual={RH_VISUAL.claim} tags={RH_TAGS.claim} stateBadge={RH_STATE_BADGE.claim}
               source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim}
@@ -33674,9 +33689,9 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Banking — Personal Loan Applicant (agnosticism proof)</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Banking — Borrower · nothing needs attention, and that is the common case</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the banking market: an applicant, never the credit application itself — a fourth distinct entity type (<code>Personal Loan Applicant</code>, <code>Landmark</code> icon), a RECORD shape sourced from 3 distinct systems at once — Experian (credit bureau), nCino (loan origination), and FIS (core banking) — the kind of cross-system audit trail a real credit decision needs. A risk exception (debt-to-income above the automated threshold) is held for underwriter sign-off, the same Your Intervention zone as every other vertical. This market can grow more contact types later — an account holder/customer, a vendor relationship — without touching this skeleton; only the applicant is built today.
+              Mock data — not confirmed AIMS OS content. <strong>No signal at all</strong> — one classification tag and a healthy state badge. Most entities, most of the time, have nothing pressing, and inventing a signal to fill the slot is as wrong as omitting one that matters. It also shows the metadata row carrying a Bridge ID, which qualifies because governance requires it be visible, not because it is interesting.
             </p>
             <EntityHeader name={RH_BORROWER.name} visual={RH_VISUAL.borrower} tags={RH_TAGS.borrower} stateBadge={RH_STATE_BADGE.borrower}
               source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower}
@@ -33686,11 +33701,12 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Automotive — Service Customer (agnosticism proof)</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Automotive — Repair order · a process, and the only case that earns a description</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. This is what a CONTACT looks like in the automotive market: AIMS OS's own central vertical (its roots are in automotive dealership platforms), and the same CONTACT rule proof as the insurance example above — the entity is Devon Marsh, the customer who owns the vehicle (<code>Service Customer</code>, <code>Car</code> icon), never the repair order itself. The repair order now lives as a workflow in Agentic System ("Service / Repair"), tracking a live diagnostic → repair → QA process where additional scope found mid-service exceeds the customer's pre-authorized budget, held for sign-off in Your Intervention. RECORD fields describe Devon's own standing relationship with the dealership — service advisor, vehicle, warranty status, last service date — sourced from 3 distinct systems: CDK Global (DMS), Carfax (vehicle history), and an OEM warranty portal. This market can grow more contact types later — a fleet/vendor account — without touching this skeleton; only the service customer is built today.
+              Figma&rsquo;s own repair-order example. An entity does not have to be a person or an account: this one is a process, and three rules fall out of that. <strong>It can only be a highlight icon</strong> — initials are never derived from a code, so <code>RO-48291</code> has none. <strong>It carries no classification tag</strong> — the wrench already names the type, which is why classification is avatar-only. And <strong>it is the one case in this whole page where <code>description</code> is on</strong>: <code>RO-48291</code> alone means nothing, so the description says what the record concerns. Run the five-step ladder before reaching for it anywhere else. The signal is time pressure (<code>6d overdue</code>), not a second reading of the <code>Awaiting parts</code> badge.
             </p>
             <EntityHeader name={RH_REPAIR_ORDER.name} visual={RH_VISUAL.repairOrder} tags={RH_TAGS.repairOrder} stateBadge={RH_STATE_BADGE.repairOrder}
+              description={RH_PREVIEW_DESCRIPTION.repairOrder}
               source={RH_SOURCE.repairOrder} secondaryMetadata={RH_SECONDARY_METADATA.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder}
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
               showInformation onInformationOpen={() => rhOpenProvenance("repairOrder")} />
@@ -33717,21 +33733,21 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
             <div className="grid grid-cols-2 gap-[16px]">
               <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
-                <p className="text-[11px] font-semibold text-[#059669] uppercase tracking-widest">Use when</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--badge-success)" }}>Use when</p>
                 <ul className="flex flex-col gap-[6px]">
-                  {["Atop a Work Surface dashboard for a single UEP/UCP/UVP record", "The record is fed by AIMS OS's governed data model, so every field has a real, citable source", "There's an assigned agent and/or an agentic workflow to surface, not a generic entity with none"].map(t => (
+                  {["At the top of a Unified Entity Profile, for ANY entity type — Figma's own wording. A person, an account, a site, a repair order, a platform data entity, or a type this design system has never heard of", "The entity is fed by AIMS OS's governed data model, so every field has a real, citable source", "You are on that entity's own page. The header says where you are; it never navigates"].map(t => (
                     <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
-                      <span className="text-[#059669] shrink-0">✓</span>{t}
+                      <span className="shrink-0" style={{ color: "var(--badge-success)" }}>✓</span>{t}
                     </li>
                   ))}
                 </ul>
               </div>
               <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
-                <p className="text-[11px] font-semibold text-[#dc2626] uppercase tracking-widest">Don't use when</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--badge-error)" }}>Don't use when</p>
                 <ul className="flex flex-col gap-[6px]">
-                  {["Listing multiple records at once (use EntityList)", "Outside Work Surfaces — never replicate this card inside Governance/Data/Agentic Studio", "A field has no real system of record to cite — that's a data-model gap, not a reason to fake provenance"].map(t => (
+                  {["Listing several entities at once, or summarising a nested entity inside a tab — both are EntityList. Figma names both cases", "You need it to be clickable. A list row navigates to the detail; this cannot, because you are already there", "A field has no real system of record to cite — that is a data-model gap, not a reason to fake provenance", "You want to wrap it in your own CardContainer. It already is one; a second produces the box-within-a-box Figma forbids"].map(t => (
                     <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
-                      <span className="text-[#dc2626] shrink-0">✕</span>{t}
+                      <span className="shrink-0" style={{ color: "var(--badge-error)" }}>✕</span>{t}
                     </li>
                   ))}
                 </ul>
