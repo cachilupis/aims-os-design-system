@@ -140,13 +140,13 @@ function SectionLabel({ n, children }: { n: number; children: React.ReactNode })
 function EntitySourceCard({ source, selected, onSelect }: { source: typeof ENTITY_SOURCES[0]; selected: boolean; onSelect: () => void }) {
   return (
     <div onClick={onSelect} style={{ cursor: "pointer" }}>
-      <CardContainer selected={selected} className="h-full">
+      <CardContainer selected={selected} size="sm" className="!p-0 h-full overflow-hidden">
         <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{source.label}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <Tag variant="informative">{source.integration}</Tag>
-            {!source.governed && <Tag variant="alert">Ungoverned</Tag>}
-            {source.hasPII && <Tag variant="alert">PII</Tag>}
+            <Tag variant="informative" size="sm">{source.integration}</Tag>
+            {!source.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
+            {source.hasPII && <Tag variant="alert" size="sm">PII</Tag>}
           </div>
         </div>
       </CardContainer>
@@ -158,13 +158,13 @@ function EntitySourceCard({ source, selected, onSelect }: { source: typeof ENTIT
 function DatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_DATASETS[0]; selected: boolean; onSelect: () => void }) {
   return (
     <div onClick={onSelect} style={{ cursor: "pointer" }}>
-      <CardContainer selected={selected} className="h-full">
+      <CardContainer selected={selected} size="sm" className="!p-0 h-full overflow-hidden">
         <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{dataset.name}</div>
           <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: 0, lineHeight: 1.4 }}>{dataset.description}</p>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Tag variant="informative">{dataset.integration}</Tag>
-            <Tag variant="success">Governed</Tag>
+            <Tag variant="informative" size="sm">{dataset.integration}</Tag>
+            <Tag variant="success" size="sm">Governed</Tag>
           </div>
         </div>
       </CardContainer>
@@ -177,7 +177,7 @@ function TypeTile({ type, selected, onSelect }: { type: typeof WIDGET_TYPES[0]; 
   const Icon = (LucideIcons as Record<string, unknown>)[type.icon] as React.FC<{ size?: number; style?: React.CSSProperties }>
   return (
     <div onClick={onSelect} style={{ cursor: "pointer" }}>
-      <CardContainer selected={selected} className="h-full">
+      <CardContainer selected={selected} size="sm" className="!p-0 h-full overflow-hidden">
         <div style={{ padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" as const }}>
           <Icon size={18} style={{ color: selected ? "var(--primary)" : "var(--color-text-subtitle)" }} />
           <span style={{ fontSize: 11, fontWeight: 600, color: selected ? "var(--primary)" : "var(--color-text-title)" }}>{type.label}</span>
