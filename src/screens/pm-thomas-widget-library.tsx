@@ -2,7 +2,6 @@ import { useState } from "react"
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout }  from "@/components/layouts/screen-layout"
 import type { SidebarItem } from "@/components/ui/sidebar"
-import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
 import { Tag }           from "@/components/ui/tag"
@@ -12,6 +11,7 @@ import { CardContainer } from "@/components/ui/card-container"
 import { Filters } from "@/components/ui/filters"
 import { ModalDialog }   from "@/components/ui/modal-dialog"
 import { SlideOut }      from "@/components/ui/slide-out"
+import { OverflowMenu, StudioWelcome } from "@/components/experimental/widget-screen-parts"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -73,54 +73,9 @@ function HealthBadge({ health }: { health: Health }) {
   return <Tag variant="alert" size="sm">Needs remap</Tag>
 }
 
-// ── DS-GAP: MiniPreview — sunken widget preview surface. Closest DS: CardContainer (variant=sunken).
-// ── DS-GAP: StudioWelcome — contextual banner. Closest DS: CardContainer.
-function StudioWelcome({ count, onCta }: { count: number; onCta: () => void }) {
-  const [dismissed, setDismissed] = useState(false)
-  if (dismissed) return null
-  return (
-    <div style={{ marginBottom: 16 }}>
-    <CardContainer variant="default">
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
-        <HighlightIcon iconName="PieChart" variant="informative" size="lg" />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0 }}>
-            {count} widgets in your library
-          </p>
-          <p style={{ fontSize: 12, color: "var(--field-supporting)", margin: "2px 0 0" }}>
-            Widgets connect to your data sources and live inside dashboards on entity profiles or standalone reports.
-          </p>
-        </div>
-        <Button variant="secondary" size="sm" onClick={onCta}>Create widget</Button>
-        <button onClick={() => setDismissed(true)} aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: 4, flexShrink: 0, display: "flex" }}>
-          <LucideIcons.X size={14} />
-        </button>
-      </div>
-    </CardContainer>
-    </div>
-  )
-}
 
 // ── DS-GAP: FilterToolbar — 4-filter toolbar. Closest DS: Filters.
 // ── DS-GAP: OverflowMenu — per-card ⋯ actions. Closest DS: Menu + MenuItem.
-type OItem = { label: string; icon: keyof typeof LucideIcons; danger?: boolean; onClick: () => void }
-function OverflowMenu({ items, onClose }: { items: OItem[]; onClose: () => void }) {
-  return (
-    <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
-      <div style={{ position: "absolute", top: "calc(100% + 2px)", right: 0, zIndex: 100, background: "var(--surface)", border: "1px solid var(--field-border)", borderRadius: 10, boxShadow: "var(--shadow-elevation-3)", minWidth: 160, padding: 4 }}>
-        {items.map(({ label, icon, danger, onClick }) => {
-          const Icon = LucideIcons[icon] as React.FC<{ size?: number; style?: React.CSSProperties; className?: string }>
-          return (
-            <button key={label} onClick={e => { e.stopPropagation(); onClick(); onClose() }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", background: "none", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12, color: danger ? "var(--error)" : "var(--foreground)", textAlign: "left" }}>
-              <Icon size={13} />{label}
-            </button>
-          )
-        })}
-      </div>
-    </>
-  )
-}
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
@@ -178,7 +133,13 @@ export default function PMThomasWidgetLibrary() {
         />
       )}
     >
-      <StudioWelcome count={widgets.length} onCta={() => {}} />
+      <StudioWelcome
+        iconName="PieChart"
+        title={`${widgets.length} widgets in your library`}
+        description="Widgets connect to your data sources and live inside dashboards on entity profiles or standalone reports."
+        ctaLabel="Create widget"
+        onCta={() => {}}
+      />
 
       <Filters
         showSearch
