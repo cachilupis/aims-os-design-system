@@ -196,8 +196,10 @@ import MyScreen from "./screens/pm-[author]-[feature]"
 
 ```tsx
 // one new entry inside the PROTOTYPE_PAGES array
-{ id: "proto-[author]-[feature]", label: "[Human label] — [Author]", description: "[one sentence on what it demonstrates]", author: "[Author]", addedOn: "[today, YYYY-MM-DD]", component: MyScreen },
+{ id: "proto-[author]-[feature]", label: "[Human label] — [Author]", description: "[one sentence on what it demonstrates]", author: "[Author]", category: "[one of PROTOTYPE_CATEGORIES]", addedOn: "[today, YYYY-MM-DD]", component: MyScreen },
 ```
+
+`category` must be one of the values in `PROTOTYPE_CATEGORIES`, declared just above the registry in `App.tsx` — pick the closest existing area rather than inventing a seventh for a single screen. `tsc` rejects anything else. `addedOn` is today's date.
 
 `id` becomes the shareable link once deployed: `aims-os-design-system.vercel.app/?proto=proto-[author]-[feature]` — keep it a lowercase, hyphenated slug.
 

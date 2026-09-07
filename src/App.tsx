@@ -162,35 +162,53 @@ const ExternalIcon = () => (
 )
 
 // ── Prototype registry ────────────────────────────────────────────────────
+// The feature area a prototype belongs to. Declared here and nowhere else —
+// the gallery's Category filter reads this list, so renaming or regrouping an
+// area is an edit here plus the entries that named it, and tsc finds every one.
+// This is the tag shown on each gallery card; it used to be derived by splitting
+// the title on its em-dash, which produced a near-unique label per screen —
+// something that looked like a category but could not group anything.
+const PROTOTYPE_CATEGORIES = [
+  "Dashboards & Widgets",
+  "Workflows & Agents",
+  "Admin & Access",
+  "Channels",
+  "Work Queues",
+  "Records",
+] as const
+type PrototypeCategory = (typeof PROTOTYPE_CATEGORIES)[number]
+
 // PM prototypes are registered here by Claude. One entry per screen.
 // The screen component lives in src/screens/ — only this entry touches App.tsx.
 //
 // To add a prototype:
 //   1. Import the component:  import { MyScreen } from "./screens/my-screen"
-//   2. Add an entry below:    { id: "proto-my-screen", label: "My Screen", description: "...", author: "PM Name", addedOn: "YYYY-MM-DD", component: MyScreen }
+//   2. Add an entry below:    { id: "proto-my-screen", label: "My Screen", description: "...", author: "PM Name", category: "Workflows & Agents", addedOn: "YYYY-MM-DD", component: MyScreen }
+//      `category` must be one of PROTOTYPE_CATEGORIES above — pick the closest
+//      existing area rather than inventing a seventh for a single screen.
 //
 // `addedOn` is the date the screen was created — it drives "Newest first" in
 // the gallery, which is the default sort. Array order does not: the gallery
 // sorts, so a new entry can go anywhere in the array.
 //
-const PROTOTYPE_PAGES: { id: string; label: string; description: string; author: string; addedOn: string; component: React.FC }[] = [
-  { id: "proto-michael-test-v1",       label: "AI Workers — Test v1",          description: "Initial DS prototype test: Status/Category filters, Publish/Edit actions, Eye → SlideOut (Overview · Users · Logs), context menu, detail view, pagination", author: "Michael", addedOn: "2026-07-15", component: PMMichaelTestV1Screen },
-  { id: "proto-lex-htl-work-queue",    label: "HTL Work Queue",                description: "Human Touch Layer Work Queue — Act Now / Critical / Action / Heads-up severity tiers, multi-studio filter, event detail SlideOut with blast radius, Studio Health overview, activity log", author: "Lex", addedOn: "2026-07-15", component: PMLexHTLWorkQueueScreen },
-  { id: "proto-michael-attention-room",label: "Attention Room",                description: "Master-detail attention queue — Overdue/Today/Next groups, Approvals/Work/Tasks/Messages filter, search, EntityList queue (left) + decision detail panel (right) with blast radius, comment composer and Approve/Decline actions", author: "Michael", addedOn: "2026-07-28", component: PMMichaelAttentionRoomScreen },
-  { id: "proto-michael-login",         label: "Login View",                    description: "Sign-in screen — email/password with inline validation and show/hide toggle, Google one-click sign-in, Remember me, Forgot password SlideOut, and a signed-in confirmation state for both auth paths", author: "Michael", addedOn: "2026-08-14", component: PMMichaelLoginScreen },
-  { id: "proto-thomas-composable-dashboards", label: "Composable Dashboards — Thomas", description: "Unified studio combining Dashboard List, Widget Library, Marketplace, New Dashboard wizard, and Widget Builder into one screen with internal routing. Sidebar toggles between Dashboards and Widgets views; overlays replace content for wizard and builder flows.", author: "Thomas", addedOn: "2026-09-07", component: PMThomasComposableDashboardsScreen },
-  { id: "proto-thomas-dashboard-list",     label: "Dashboard List — Thomas",      description: "Dashboard catalog — filterable by status, entity type, and owner; staggered card grid with per-card ⋯ menu (Open/Edit/Duplicate/Delete); detail SlideOut; Delete confirm modal; Duplicate with rename; load-more pagination", author: "Thomas", addedOn: "2026-09-01", component: PMThomasDashboardListScreen },
-  { id: "proto-thomas-widget-library",    label: "Widget Library — Thomas",      description: "Widget catalog — filterable by category, profile type, skeleton type, freshness; grid with WidgetGlyph + mini preview + freshness badge + health badge; detail SlideOut; Delete modal with cascade warning", author: "Thomas", addedOn: "2026-09-01", component: PMThomasWidgetLibraryScreen },
-  { id: "proto-thomas-widget-marketplace",label: "Widget Marketplace — Thomas",  description: "Two-panel marketplace: left CategoryRail with business-function color dots, right FilterToolbar + widget card grid with category stripe, MiniPreview, View/Use actions, detail SlideOut, and Add-to-dashboard modal.", author: "Thomas", addedOn: "2026-09-01", component: PMThomasWidgetMarketplaceScreen },
-  { id: "proto-thomas-new-dashboard",     label: "New Dashboard — Thomas",       description: "Two-step wizard for creating a dashboard: Step 0 placement form (kind, profile type, surface, audience, name) + destination summary; Step 1 start-point picker (blank canvas or pre-built template). DS-GAP components: StepIndicator, SectionChip, OptionCard, FormSection, FieldLabel.", author: "Thomas", addedOn: "2026-09-01", component: PMThomasNewDashboardScreen },
-  { id: "proto-thomas-widget-builder",    label: "Widget Builder — Thomas",      description: "Three-tab builder (Data → Widget → Appearance) with sticky live preview. Data tab: entity source picker (8 sources), operation chips (Aggregate / Record set), calc + column or exposed columns. Widget tab: 12-type gallery, name/description/freshness/filter settings. Appearance tab: accent color swatches + style variants. DS-GAP: AccentColorPalette, BuilderTabNav, EntitySourceCard, TypeTile, SkeletonShape, WidgetPreviewPanel.", author: "Thomas", addedOn: "2026-09-01", component: PMThomasWidgetBuilderScreen },
-  { id: "proto-thomas-universal-profile", label: "Universal Profile — Thomas",   description: "Unified entity profile (Person, Employee, Company) aggregating Governance, Risk, and Connections studies — Overview canvas with adaptive study widgets (hidden when empty, error+retry when failed), Activity feed (last 20), paginated Logs, Edit + Export for all types, Archive for Person/Employee only", author: "Thomas", addedOn: "2026-08-14", component: PMThomasUniversalProfileScreen },
-  { id: "proto-chat-workflow-config",     label: "Chat Workflow Config",         description: "Conversational governance gates — 4-stage sequence (Intent → Classification → Data Sources → Systems) producing a governed workflow draft with node-vocabulary enforcement, SVG canvas view, and instrumentation panel", author: "Thomas", addedOn: "2026-08-27", component: ChatWorkflowConfigScreen },
-  { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", addedOn: "2026-08-27", component: WorkflowsListScreen },
-  { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", addedOn: "2026-08-27", component: PeopleAccessMembersScreen },
-  { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", addedOn: "2026-08-27", component: AdminConsoleScreen },
-  { id: "pm-chat-widget",              label: "Chat Widget Manager",          description: "Chat widget manager — widget list (Active/Draft/Inactive), detail view with 5 tabs (Overview, Appearance, Agentic Network, Preferences, Embed), browse-all modal with replacement warning, deploy flow with progress steps, bell notification panel", author: "Thomas", addedOn: "2026-08-31", component: PMChatWidgetScreen },
-  { id: "proto-voice-channel",         label: "Voice Channel",                description: "Faithful port of aims-voice-prototype: Numbers table (Agents · Distribution · HiL · Cost MTD) + Call History with Call Detail (Transcript / AI Summary / Metrics) + Workspace Voice Defaults + per-number sheet with 4 sub-tabs (Overview / Agents & Routing incl. HiL config / Business Hours / Call History) + Acquire Number 4-step wizard + Release confirmation with last-4-digit input + multi-select Add Agent modal. Only the visual layer is DS-native; every screen, flow, and mock data value is preserved from the source prototype.", author: "Thomas", addedOn: "2026-08-31", component: VoiceChannelScreen },
+const PROTOTYPE_PAGES: { id: string; label: string; description: string; author: string; category: PrototypeCategory; addedOn: string; component: React.FC }[] = [
+  { id: "proto-michael-test-v1",       label: "AI Workers — Test v1",          description: "Initial DS prototype test: Status/Category filters, Publish/Edit actions, Eye → SlideOut (Overview · Users · Logs), context menu, detail view, pagination", author: "Michael", category: "Workflows & Agents", addedOn: "2026-07-15", component: PMMichaelTestV1Screen },
+  { id: "proto-lex-htl-work-queue",    label: "HTL Work Queue",                description: "Human Touch Layer Work Queue — Act Now / Critical / Action / Heads-up severity tiers, multi-studio filter, event detail SlideOut with blast radius, Studio Health overview, activity log", author: "Lex", category: "Work Queues", addedOn: "2026-07-15", component: PMLexHTLWorkQueueScreen },
+  { id: "proto-michael-attention-room",label: "Attention Room",                description: "Master-detail attention queue — Overdue/Today/Next groups, Approvals/Work/Tasks/Messages filter, search, EntityList queue (left) + decision detail panel (right) with blast radius, comment composer and Approve/Decline actions", author: "Michael", category: "Work Queues", addedOn: "2026-07-28", component: PMMichaelAttentionRoomScreen },
+  { id: "proto-michael-login",         label: "Login View",                    description: "Sign-in screen — email/password with inline validation and show/hide toggle, Google one-click sign-in, Remember me, Forgot password SlideOut, and a signed-in confirmation state for both auth paths", author: "Michael", category: "Admin & Access", addedOn: "2026-08-14", component: PMMichaelLoginScreen },
+  { id: "proto-thomas-composable-dashboards", label: "Composable Dashboards — Thomas", description: "Unified studio combining Dashboard List, Widget Library, Marketplace, New Dashboard wizard, and Widget Builder into one screen with internal routing. Sidebar toggles between Dashboards and Widgets views; overlays replace content for wizard and builder flows.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-07", component: PMThomasComposableDashboardsScreen },
+  { id: "proto-thomas-dashboard-list",     label: "Dashboard List — Thomas",      description: "Dashboard catalog — filterable by status, entity type, and owner; staggered card grid with per-card ⋯ menu (Open/Edit/Duplicate/Delete); detail SlideOut; Delete confirm modal; Duplicate with rename; load-more pagination", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasDashboardListScreen },
+  { id: "proto-thomas-widget-library",    label: "Widget Library — Thomas",      description: "Widget catalog — filterable by category, profile type, skeleton type, freshness; grid with WidgetGlyph + mini preview + freshness badge + health badge; detail SlideOut; Delete modal with cascade warning", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasWidgetLibraryScreen },
+  { id: "proto-thomas-widget-marketplace",label: "Widget Marketplace — Thomas",  description: "Two-panel marketplace: left CategoryRail with business-function color dots, right FilterToolbar + widget card grid with category stripe, MiniPreview, View/Use actions, detail SlideOut, and Add-to-dashboard modal.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasWidgetMarketplaceScreen },
+  { id: "proto-thomas-new-dashboard",     label: "New Dashboard — Thomas",       description: "Two-step wizard for creating a dashboard: Step 0 placement form (kind, profile type, surface, audience, name) + destination summary; Step 1 start-point picker (blank canvas or pre-built template). DS-GAP components: StepIndicator, SectionChip, OptionCard, FormSection, FieldLabel.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasNewDashboardScreen },
+  { id: "proto-thomas-widget-builder",    label: "Widget Builder — Thomas",      description: "Three-tab builder (Data → Widget → Appearance) with sticky live preview. Data tab: entity source picker (8 sources), operation chips (Aggregate / Record set), calc + column or exposed columns. Widget tab: 12-type gallery, name/description/freshness/filter settings. Appearance tab: accent color swatches + style variants. DS-GAP: AccentColorPalette, BuilderTabNav, EntitySourceCard, TypeTile, SkeletonShape, WidgetPreviewPanel.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasWidgetBuilderScreen },
+  { id: "proto-thomas-universal-profile", label: "Universal Profile — Thomas",   description: "Unified entity profile (Person, Employee, Company) aggregating Governance, Risk, and Connections studies — Overview canvas with adaptive study widgets (hidden when empty, error+retry when failed), Activity feed (last 20), paginated Logs, Edit + Export for all types, Archive for Person/Employee only", author: "Thomas", category: "Records", addedOn: "2026-08-14", component: PMThomasUniversalProfileScreen },
+  { id: "proto-chat-workflow-config",     label: "Chat Workflow Config",         description: "Conversational governance gates — 4-stage sequence (Intent → Classification → Data Sources → Systems) producing a governed workflow draft with node-vocabulary enforcement, SVG canvas view, and instrumentation panel", author: "Thomas", category: "Workflows & Agents", addedOn: "2026-08-27", component: ChatWorkflowConfigScreen },
+  { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", category: "Workflows & Agents", addedOn: "2026-08-27", component: WorkflowsListScreen },
+  { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", category: "Admin & Access", addedOn: "2026-08-27", component: PeopleAccessMembersScreen },
+  { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", category: "Admin & Access", addedOn: "2026-08-27", component: AdminConsoleScreen },
+  { id: "pm-chat-widget",              label: "Chat Widget Manager",          description: "Chat widget manager — widget list (Active/Draft/Inactive), detail view with 5 tabs (Overview, Appearance, Agentic Network, Preferences, Embed), browse-all modal with replacement warning, deploy flow with progress steps, bell notification panel", author: "Thomas", category: "Channels", addedOn: "2026-08-31", component: PMChatWidgetScreen },
+  { id: "proto-voice-channel",         label: "Voice Channel",                description: "Faithful port of aims-voice-prototype: Numbers table (Agents · Distribution · HiL · Cost MTD) + Call History with Call Detail (Transcript / AI Summary / Metrics) + Workspace Voice Defaults + per-number sheet with 4 sub-tabs (Overview / Agents & Routing incl. HiL config / Business Hours / Call History) + Acquire Number 4-step wizard + Release confirmation with last-4-digit input + multi-select Add Agent modal. Only the visual layer is DS-native; every screen, flow, and mock data value is preserved from the source prototype.", author: "Thomas", category: "Channels", addedOn: "2026-08-31", component: VoiceChannelScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
@@ -41038,15 +41056,16 @@ const [open, setOpen] = useState(false)
 
 // ── Prototype Gallery ──────────────────────────────────────────────────────
 
-type PrototypeSort = "Date added" | "Name" | "Author"
+type PrototypeSort = "Date added" | "Name" | "Category" | "Author"
 
-const PROTOTYPE_SORTS: PrototypeSort[] = ["Date added", "Name", "Author"]
+const PROTOTYPE_SORTS: PrototypeSort[] = ["Date added", "Name", "Category", "Author"]
 
 function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
   const total = PROTOTYPE_PAGES.length
 
-  const [search,  setSearch]  = useState("")
-  const [author,  setAuthor]  = useState<string | undefined>(undefined)
+  const [search,   setSearch]   = useState("")
+  const [author,   setAuthor]   = useState<string | undefined>(undefined)
+  const [category, setCategory] = useState<PrototypeCategory | undefined>(undefined)
   const [sortBy,  setSortBy]  = useState<PrototypeSort>("Date added")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
 
@@ -41057,26 +41076,39 @@ function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
     []
   )
 
+  // Kept in PROTOTYPE_CATEGORIES order rather than alphabetised, and narrowed to
+  // the areas actually in use — a filter option that can only ever return zero
+  // results is worse than not offering it.
+  const categories = useMemo(() => {
+    const used = new Set(PROTOTYPE_PAGES.map(p => p.category))
+    return PROTOTYPE_CATEGORIES.filter(c => used.has(c))
+  }, [])
+
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase()
     const rows = PROTOTYPE_PAGES.filter(p =>
       (!author || p.author === author) &&
+      (!category || p.category === category) &&
       (!q ||
         p.label.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
-        p.author.toLowerCase().includes(q))
+        p.author.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q))
     )
     // addedOn is ISO (YYYY-MM-DD), so a plain string compare is a date compare.
     const key = (p: (typeof PROTOTYPE_PAGES)[number]) =>
-      sortBy === "Name" ? p.label : sortBy === "Author" ? p.author : p.addedOn
+      sortBy === "Name"     ? p.label
+      : sortBy === "Category" ? p.category
+      : sortBy === "Author"   ? p.author
+      : p.addedOn
     return [...rows].sort((a, b) => {
       const cmp = key(a).localeCompare(key(b))
       return sortDir === "desc" ? -cmp : cmp
     })
-  }, [search, author, sortBy, sortDir])
+  }, [search, author, category, sortBy, sortDir])
 
-  const isFiltered = Boolean(search.trim() || author)
-  const clearAll   = () => { setSearch(""); setAuthor(undefined) }
+  const isFiltered = Boolean(search.trim() || author || category)
+  const clearAll   = () => { setSearch(""); setAuthor(undefined); setCategory(undefined) }
 
   return (
     <div className="flex flex-col gap-[24px]">
@@ -41096,13 +41128,22 @@ function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
           searchPlaceholder="Search prototypes"
           searchValue={search}
           onSearchChange={setSearch}
-          slots={[{
-            placeholder: "Author",
-            value:       author,
-            options:     authors,
-            onSelect:    setAuthor,
-            onRemove:    () => setAuthor(undefined),
-          }]}
+          slots={[
+            {
+              placeholder: "Category",
+              value:       category,
+              options:     [...categories],
+              onSelect:    c => setCategory(c as PrototypeCategory),
+              onRemove:    () => setCategory(undefined),
+            },
+            {
+              placeholder: "Author",
+              value:       author,
+              options:     authors,
+              onSelect:    setAuthor,
+              onRemove:    () => setAuthor(undefined),
+            },
+          ]}
           showClearFilters={isFiltered}
           onClearFilters={clearAll}
           showAllFilters={false}
@@ -41125,17 +41166,15 @@ function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
         <EmptyState
           icon={LucideIcons.LayoutGrid}
           title="No prototypes found"
-          description="Try adjusting the author filter or the search term."
+          description="Try adjusting the category or author filter, or the search term."
           ctaLabel="Clear filters"
           onCta={clearAll}
         />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-          {visible.map(p => {
-            const category = p.label.includes(" — ") ? p.label.split(" — ")[0] : p.label
-            return (
+          {visible.map(p => (
               <CardContainer key={p.id} variant="default" size="lg" className="flex flex-col gap-[16px]">
-                <Tag variant="informative" size="sm" className="self-start">{category}</Tag>
+                <Tag variant="informative" size="sm" className="self-start">{p.category}</Tag>
                 <div className="flex flex-col gap-[6px] flex-1">
                   <p className="text-[14px] font-semibold leading-[1.3]" style={{ color: "var(--foreground)" }}>
                     {p.label}
@@ -41159,8 +41198,7 @@ function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
                   Open screen
                 </Button>
               </CardContainer>
-            )
-          })}
+          ))}
         </div>
       )}
     </div>
