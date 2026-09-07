@@ -3,7 +3,7 @@
 > Single source of truth for how any create action picks its surface in AIMS OS.
 > Everything else — the `CLAUDE.md` table, the `patterns-create` doc page, the playground screens — is derived from this file.
 >
-> Status: **draft v0.10 — pending validation**
+> Status: **draft v0.11 — pending validation**
 >
 > v0.2 — volume threshold removed; step 1 rewritten as a declared property rather than an enumerated list.
 > v0.3 — cascade rewritten as an explicit sequence; the two-stage flow named instead of falling through to the default.
@@ -14,6 +14,7 @@
 > v0.8 — staged flows never live in a panel (no Stepper in a SlideOut); page-level create completes in `StepperNavFooter`, not the Header; the trigger lives where the collection lives; §4b defines success feedback by visibility and names the missing Toast component.
 > v0.9 — §1b added: the pattern decides the container, never the fields; field count is an input to the cascade, not an output. DatePicker named as a second `DS-GAP`.
 > v0.10 — §5b added: focus trap, focus return, Esc-to-close, and CTA-disabled-until-valid while a create surface is open. Verified against the component source: `ModalDialog` has no Esc handler, and neither `ModalDialog` nor `SlideOut` trap or return focus — named as a third `DS-GAP`.
+> v0.11 — merged against `main`: the Toast `DS-GAP` in §4b is resolved (`useToast()` now exists as a floating placement of `AlertBanner`, not a second component) but isn't wired into any scene yet; the pattern's own worked examples (scenes A, C, D) had three entity-detail Headers still using `backButton` instead of the `breadcrumb` the navigation-depth rule now requires from L2 — corrected to match.
 
 ---
 
@@ -236,14 +237,14 @@ Separate from the confirmation *before* saving (§4), which is about risk. This 
 | Situation | Feedback |
 | --- | --- |
 | The created object lands somewhere visible — a list, a widget, the page you return to | **The object appearing is the confirmation.** Show it as the first row, briefly highlighted. No banner. |
-| The result is not visible — an asynchronous create, a governed action awaiting Council validation, a create the user navigates away from | A transient notice is needed. **No component exists for this** — see below. |
+| The result is not visible — an asynchronous create, a governed action awaiting Council validation, a create the user navigates away from | `useToast().success(...)` — a floating, auto-dismissing notice. See below. |
 | The create was irreversible | The confirmation modal before saving already carried the weight. The landing does the rest. |
 
-**`AlertBanner` is not the component for this.** Its spec defines it as a full-width notice for *system-level* feedback, and the Feedback pattern page assigns it to *persistent in-context state*. A success banner for a routine create occupies space until dismissed and says less than the object itself does.
+**In-flow `AlertBanner` is not the component for the invisible-result case.** Its spec defines it as a full-width notice for *system-level* feedback, and the Feedback pattern page assigns it to *persistent in-context state* — it occupies layout until dismissed and outlives the moment it was confirming.
+
+**Toast now exists — as a placement, not a second component.** `useToast()` (`src/components/ui/toast.tsx`) renders a real `AlertBanner`, floated top-right and auto-dismissed after 3500ms, so the DS keeps one feedback language with two placements: in-flow (persistent) and floating (transient). This resolves what used to be a `DS-GAP` here. It is not yet wired into any screen in this repo — including none of the scenes in this pattern — and needs its own `ToastProvider` wrapping the screen (not global yet), so a create whose result is invisible still needs that wiring done explicitly, not assumed.
 
 **`DS-GAP` — Date field.** There is no `DatePicker` or `Calendar` component in the repo. Any create whose object needs a date is under-specified until one exists. Do not improvise one.
-
-**`DS-GAP` — Toast / Snackbar.** The design system has no transient action-feedback component. Until it exists, the second row above cannot be built, and any create whose result is invisible is under-specified. Worth raising as its own ticket.
 
 ---
 

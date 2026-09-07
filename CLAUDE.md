@@ -593,12 +593,10 @@ Steps 4–5, stated as one rule: **contextual** (the new object hangs off someth
 | Situation | Feedback |
 | --- | --- |
 | The created object lands somewhere visible — a list, a widget, the page you return to | The object appearing is the confirmation. Show it as the first row, briefly highlighted. No banner. |
-| The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from | A transient notice is needed. No component exists for this. |
+| The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from | `useToast().success(...)` — floating, auto-dismissing. See below. |
 | The create was irreversible | The confirmation modal before saving already carried the weight. The landing does the rest. |
 
-`AlertBanner` is not the component for this — it's a full-width notice for system-level feedback, not "the thing you just asked for was created."
-
-**`DS-GAP` — Toast / Snackbar.** The design system has no transient action-feedback component. Any create whose result is invisible is under-specified until one exists.
+In-flow `AlertBanner` is not the component for the invisible-result case — it's a full-width notice for system-level feedback, not "the thing you just asked for was created." **`Toast` resolves this** (`src/components/ui/toast.tsx`, `useToast()`) — it's a floating placement of the same `AlertBanner`, not a second component, auto-dismissed after 3500ms. It needs its own `ToastProvider` wrapping the screen (not wired globally yet), and no screen in the repo uses it yet.
 
 **Third output — where the user lands afterwards.** Derived from the container, not a separate decision.
 

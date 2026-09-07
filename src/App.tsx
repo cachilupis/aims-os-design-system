@@ -16189,8 +16189,10 @@ function pgSceneContextualSlideout(next: () => void, back: () => void, _onClose:
   const frame = (overlay?: React.ReactNode, isLanding?: boolean) => (
     <PgCreateContextShell sidebarId="agents" overlay={overlay}>
       <main className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Data Sync Worker" description="Worker · Active" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l"
-          primaryAction={<Button variant="main" size="sm">Run now</Button>} />
+        <Header title="Data Sync Worker" description="Worker · Active" tag={<Tag variant="success" size="sm">Active</Tag>}
+          breadcrumb={<Breadcrumb depth={2} items={[{ label: "Workers", href: "workers" }, { label: "Data Sync Worker" }]} onNavigate={() => {}} />}
+          size="size-l"
+          primaryAction={{ label: "Run now" }} />
         <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
           <div className="grid grid-cols-[1fr_330px] gap-[20px] items-start max-w-[1040px]">
             <div className="flex flex-col gap-[12px]">
@@ -16248,7 +16250,7 @@ function pgSceneStandaloneModal(next: () => void, back: () => void, _onClose: ()
       <PgCreateContextShell sidebarId="agents" overlay={overlay}>
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="Workers" description={`${items.length} workers · ${active} active`} size="size-l"
-            primaryAction={<Button variant="main" size="sm" onClick={next}>New worker</Button>} />
+            primaryAction={{ label: "New worker", onClick: next }} />
           <PgListViewBody searchPlaceholder="Search workers…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Owner" }]} items={items} />
         </main>
       </PgCreateContextShell>
@@ -16284,7 +16286,7 @@ function pgSceneStandaloneModalApiKey(next: () => void, back: () => void, _onClo
       <PgCreateContextShell sidebarId="settings" overlay={overlay}>
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="API keys" description={`${items.length} keys · ${expiring} expiring`} size="size-l"
-            primaryAction={<Button variant="main" size="sm" onClick={next}>New key</Button>} />
+            primaryAction={{ label: "New key", onClick: next }} />
           <PgListViewBody searchPlaceholder="Search keys…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={items} />
         </main>
       </PgCreateContextShell>
@@ -16316,7 +16318,7 @@ function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose:
       <PgCreateContextShell sidebarId="contacts">
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="Users" description={`${PG_CTX_USERS.length} users · ${PG_CTX_USERS.filter(u => u.state?.label === "Invited").length} invited`} size="size-l"
-            primaryAction={<Button variant="main" size="sm" onClick={next}>New user</Button>} />
+            primaryAction={{ label: "New user", onClick: next }} />
           <PgListViewBody searchPlaceholder="Search users…" filterSlots={[{ placeholder: "Role" }, { placeholder: "Status" }]} items={PG_CTX_USERS} />
         </main>
       </PgCreateContextShell>
@@ -16349,7 +16351,9 @@ function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose:
     { label: "Landing", note: "Navigates to the created object.", content: (
       <PgCreateContextShell sidebarId="contacts">
         <main className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Alex Rivera" description="User · Editor" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l" />
+          <Header title="Alex Rivera" description="User · Editor" tag={<Tag variant="success" size="sm">Active</Tag>}
+            breadcrumb={<Breadcrumb depth={2} items={[{ label: "Users", href: "users" }, { label: "Alex Rivera" }]} onNavigate={() => {}} />}
+            size="size-l" />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
             <div className="max-w-[680px] rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
               <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
@@ -16371,7 +16375,7 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
       <PgCreateContextShell sidebarId="knowledge">
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="Policies" description={`${PG_CTX_POLICIES.length} policies · ${draft} draft`} size="size-l"
-            primaryAction={<Button variant="main" size="sm" onClick={next}>New policy</Button>} />
+            primaryAction={{ label: "New policy", onClick: next }} />
           <PgListViewBody searchPlaceholder="Search policies…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={PG_CTX_POLICIES} />
         </main>
       </PgCreateContextShell>
@@ -16424,7 +16428,9 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
     { label: "Landing", note: "Navigates to the created object.", content: (
       <PgCreateContextShell sidebarId="knowledge">
         <main className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Data Retention Policy" description="Policy · Active" tag={<Tag variant="success" size="sm">Active</Tag>} backButton size="size-l" />
+          <Header title="Data Retention Policy" description="Policy · Active" tag={<Tag variant="success" size="sm">Active</Tag>}
+            breadcrumb={<Breadcrumb depth={2} items={[{ label: "Policies", href: "policies" }, { label: "Data Retention Policy" }]} onNavigate={() => {}} />}
+            size="size-l" />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
             <div className="max-w-[680px] rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
               <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Scope</span>
@@ -16446,7 +16452,7 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
       <PgCreateContextShell sidebarId="automations" overlay={overlay}>
         <main className="flex-1 flex flex-col overflow-hidden">
           <Header title="Automations" description={`${items.length} automations · ${draft} draft`} size="size-l"
-            primaryAction={<Button variant="main" size="sm" onClick={next}>New automation</Button>} />
+            primaryAction={{ label: "New automation", onClick: next }} />
           <PgListViewBody searchPlaceholder="Search automations…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Category" }]} items={items} />
         </main>
       </PgCreateContextShell>
@@ -16905,7 +16911,7 @@ function PatternCreatePage() {
                 <tbody>
                   {[
                     ["The created object lands somewhere visible — a list, a widget, the page you return to", "The object appearing is the confirmation. Show it as the first row, briefly highlighted. No banner."],
-                    ["The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from", "A transient notice is needed. No component exists for this — see below."],
+                    ["The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from", "useToast().success(...) — floating, auto-dismissing. See below."],
                     ["The create was irreversible", "The confirmation modal before saving already carried the weight. The landing does the rest."],
                   ].map(([sit, feedback]) => (
                     <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
@@ -16917,13 +16923,13 @@ function PatternCreatePage() {
               </table>
             </div>
             <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
-              <strong style={{ color: "var(--foreground)" }}>AlertBanner is not the component for this.</strong> Its spec defines it as a full-width notice for system-level feedback, and the Feedback pattern page assigns it to persistent in-context state. A success banner for a routine create occupies space until dismissed and says less than the object itself does.
+              <strong style={{ color: "var(--foreground)" }}>In-flow AlertBanner is not the component for the invisible-result case.</strong> Its spec defines it as a full-width notice for system-level feedback, and the Feedback pattern page assigns it to persistent in-context state — it occupies layout until dismissed and outlives the moment it was confirming.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
+              <strong style={{ color: "var(--foreground)" }}>Toast resolves this — as a placement, not a second component.</strong> <code style={{ fontSize: 11 }}>useToast()</code> (<code style={{ fontSize: 11 }}>src/components/ui/toast.tsx</code>) renders a real <code style={{ fontSize: 11 }}>AlertBanner</code>, floated top-right and auto-dismissed after 3500ms. It needs its own <code style={{ fontSize: 11 }}>ToastProvider</code> wrapping the screen — not wired globally yet — and no screen in the repo uses it yet, including none of the scenes in this pattern.
             </p>
             <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
               <strong style={{ color: "var(--color-text-alert)" }}>DS-GAP — Date field.</strong> There is no <code style={{ fontSize: 11 }}>DatePicker</code> or <code style={{ fontSize: 11 }}>Calendar</code> component in the repo. Any create whose object needs a date is under-specified until one exists — do not improvise one.
-            </p>
-            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
-              <strong style={{ color: "var(--color-text-alert)" }}>DS-GAP — Toast / Snackbar.</strong> The design system has no transient action-feedback component. Until it exists, the second row above cannot be built, and any create whose result is invisible is under-specified.
             </p>
           </PatternCard>
 
