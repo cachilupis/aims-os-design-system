@@ -116,7 +116,7 @@ export interface ScreenLayoutProps {
    * The Header lives outside the scrollable area so it stays visible when the
    * list scrolls. This matches the canonical AIMS OS List View pattern.
    */
-  header: (isScrolled: boolean) => ReactNode
+  header?: (isScrolled: boolean) => ReactNode
   /**
    * Scrollable content: Filters + entity cards. No Pagination here.
    * Rendered with DS-spec L-desktop padding: 8px top · 32px sides · 64px bottom.
@@ -193,7 +193,7 @@ export function ScreenLayout({
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header zone — outside the scroll container, stays visible on scroll */}
           <div className="shrink-0 relative">
-            {header(isScrolled)}
+            {header?.(isScrolled)}
             {/* Gradient fade below compressed header — appears on scroll to signal content scrolling behind */}
             {isScrolled && (
               <div

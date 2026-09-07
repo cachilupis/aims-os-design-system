@@ -2538,12 +2538,18 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
 
 // ─── Role detail page ─────────────────────────────────────────────────────────
 
-function RoleDetailPage({ role, onBack, onEdit, onDelete }: {
+function RoleDetailPage({ role, onBack, onDelete }: {
   role: Role; onBack: () => void
-  onEdit?: () => void; onDelete?: () => void
+  onDelete?: () => void
 }) {
   const [activeTab, setActiveTab] = useState(0)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [draftName, setDraftName] = useState(role.label)
+  const [draftDesc, setDraftDesc] = useState(role.desc)
+  const [savedName, setSavedName] = useState(role.label)
+  const [savedDesc, setSavedDesc] = useState(role.desc)
   const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
 
@@ -2554,19 +2560,6 @@ function RoleDetailPage({ role, onBack, onEdit, onDelete }: {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={() => (
-        <Header
-          size="compress"
-          title={role.label}
-          description={role.desc}
-          primaryAction={!role.system ? (
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" size="sm" onClick={onEdit}>Edit role</Button>
-              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(true)}>Delete role</Button>
-            </div>
-          ) : undefined}
-        />
-      )}
     >
       <BackBreadcrumb onBack={onBack} />
 
@@ -2596,15 +2589,33 @@ function RoleDetailPage({ role, onBack, onEdit, onDelete }: {
         </div>
       )}
 
-      {/* Color accent + identity row */}
+      {/* Color accent + identity card */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 14, marginTop: 16, marginBottom: 24,
+        display: "flex", alignItems: "flex-start", gap: 14, marginTop: 16, marginBottom: 24,
         padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
         background: "var(--surface)", borderLeft: `4px solid ${role.color}`,
       }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Name row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            {editingName && !role.system ? (
+              <input
+                autoFocus
+                value={draftName}
+                onChange={e => setDraftName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") { setSavedName(draftName); setEditingName(false) }
+                  if (e.key === "Escape") { setDraftName(savedName); setEditingName(false) }
+                }}
+                style={{
+                  fontSize: 16, fontWeight: 700, color: "var(--foreground)",
+                  background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                  borderRadius: 6, padding: "2px 8px", outline: "none", flex: 1, maxWidth: 280,
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{savedName}</span>
+            )}
             <span style={{
               fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
               background: role.system ? "var(--surface-raised)" : `${role.color}22`,
@@ -2614,10 +2625,71 @@ function RoleDetailPage({ role, onBack, onEdit, onDelete }: {
             }}>
               {role.system ? "System" : "Custom"}
             </span>
+            {!role.system && !editingName && (
+              <button
+                onClick={() => { setDraftName(savedName); setEditingName(true) }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}
+                title="Edit name"
+              >
+                <Icons.Pencil size={13} />
+              </button>
+            )}
+            {editingName && !role.system && (
+              <div style={{ display: "flex", gap: 4 }}>
+                <button onClick={() => { setSavedName(draftName); setEditingName(false) }}
+                  style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>
+                  Save
+                </button>
+                <button onClick={() => { setDraftName(savedName); setEditingName(false) }}
+                  style={{ fontSize: 11, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
-          <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{role.desc}</p>
+          {/* Description row */}
+          {editingDesc && !role.system ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <textarea
+                autoFocus
+                value={draftDesc}
+                onChange={e => setDraftDesc(e.target.value)}
+                rows={2}
+                style={{
+                  fontSize: 13, color: "var(--foreground)", lineHeight: 1.5,
+                  background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                  borderRadius: 6, padding: "4px 8px", outline: "none", resize: "vertical",
+                  width: "100%", fontFamily: "inherit",
+                }}
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => { setSavedDesc(draftDesc); setEditingDesc(false) }}
+                  style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                  Save
+                </button>
+                <button onClick={() => { setDraftDesc(savedDesc); setEditingDesc(false) }}
+                  style={{ fontSize: 11, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+              <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{savedDesc}</p>
+              {!role.system && (
+                <button
+                  onClick={() => { setDraftDesc(savedDesc); setEditingDesc(true) }}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--muted-foreground)", display: "flex", alignItems: "center", flexShrink: 0, marginTop: 1 }}
+                  title="Edit description"
+                >
+                  <Icons.Pencil size={12} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
+        {/* Stats + delete */}
+        <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{members.length}</div>
             <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
@@ -2626,6 +2698,19 @@ function RoleDetailPage({ role, onBack, onEdit, onDelete }: {
             <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{perms.total}</div>
             <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>permissions</div>
           </div>
+          {!role.system && (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              style={{
+                background: "none", border: "1px solid var(--border)", borderRadius: 8,
+                padding: "6px 10px", cursor: "pointer", color: "var(--muted-foreground)",
+                display: "flex", alignItems: "center", gap: 5, fontSize: 12,
+              }}
+              title="Delete role"
+            >
+              <Icons.Trash2 size={13} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -4227,12 +4312,8 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         <RoleDetailPage
           role={dRole}
           onBack={() => setDetailView(null)}
-          onEdit={!dRole.system ? () => setRoleForm({ role: dRole }) : undefined}
           onDelete={!dRole.system ? () => { setRoles(prev => prev.filter(r => r.id !== dRole.id)); setDetailView(null) } : undefined}
         />
-        {roleForm !== null && (
-          <RoleFormModal role={roleForm.role} onSave={handleRoleSave} onClose={() => setRoleForm(null)} />
-        )}
       </>
     )
   }
