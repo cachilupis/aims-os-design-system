@@ -3,7 +3,7 @@
 > Single source of truth for how any create action picks its surface in AIMS OS.
 > Everything else — the `CLAUDE.md` table, the `patterns-create` doc page, the playground screens — is derived from this file.
 >
-> Status: **draft v0.12 — pending validation**
+> Status: **draft v0.13 — pending validation**
 >
 > v0.2 — volume threshold removed; step 1 rewritten as a declared property rather than an enumerated list.
 > v0.3 — cascade rewritten as an explicit sequence; the two-stage flow named instead of falling through to the default.
@@ -16,6 +16,7 @@
 > v0.10 — §5b added: focus trap, focus return, Esc-to-close, and CTA-disabled-until-valid while a create surface is open. Verified against the component source: `ModalDialog` has no Esc handler, and neither `ModalDialog` nor `SlideOut` trap or return focus — named as a third `DS-GAP`.
 > v0.11 — merged against `main`: the Toast `DS-GAP` in §4b is resolved (`useToast()` now exists as a floating placement of `AlertBanner`, not a second component) but isn't wired into any scene yet; the pattern's own worked examples (scenes A, C, D) had three entity-detail Headers still using `backButton` instead of the `breadcrumb` the navigation-depth rule now requires from L2 — corrected to match.
 > v0.12 — the invisible-result branch of §4b is demonstrated, not just described: a live `useToast()` call on the `patterns-create` doc page's Anatomy tab, wrapped in its own `ToastProvider`. Still no PM prototype screen in the repo wires this in — the doc page's demo is the pattern's own proof it works, not a claim that the wiring is now free.
+> v0.13 — the per-screen `ToastProvider` from v0.12 only reached content nested inside `ScreenLayout`'s own render tree, not a screen's top-level `useToast()` call — the natural place a screen would call it, since it renders `ScreenLayout` rather than being rendered by it. Verified live: a screen-level call returned no-ops until the provider moved to the true app root (`App()` in `src/App.tsx`). Corrected there instead — `useToast()` now works from any PM prototype screen with nothing to wire.
 
 ---
 
@@ -243,7 +244,7 @@ Separate from the confirmation *before* saving (§4), which is about risk. This 
 
 **In-flow `AlertBanner` is not the component for the invisible-result case.** Its spec defines it as a full-width notice for *system-level* feedback, and the Feedback pattern page assigns it to *persistent in-context state* — it occupies layout until dismissed and outlives the moment it was confirming.
 
-**Toast now exists — as a placement, not a second component.** `useToast()` (`src/components/ui/toast.tsx`) renders a real `AlertBanner`, floated top-right and auto-dismissed after 3500ms, so the DS keeps one feedback language with two placements: in-flow (persistent) and floating (transient). This resolves what used to be a `DS-GAP` here. It is not yet wired into any screen in this repo — including none of the scenes in this pattern — and needs its own `ToastProvider` wrapping the screen (not global yet), so a create whose result is invisible still needs that wiring done explicitly, not assumed.
+**Toast now exists — as a placement, not a second component.** `useToast()` (`src/components/ui/toast.tsx`) renders a real `AlertBanner`, floated top-right and auto-dismissed after 3500ms, so the DS keeps one feedback language with two placements: in-flow (persistent) and floating (transient). This resolves what used to be a `DS-GAP` here. `ToastProvider` wraps the whole app once, at the true root — a create whose result is invisible can call `useToast()` from any screen with nothing to wire first. No scene in this pattern's own examples uses it yet, but the doc page's own Anatomy tab does, as a live demo.
 
 **`DS-GAP` — Date field.** There is no `DatePicker` or `Calendar` component in the repo. Any create whose object needs a date is under-specified until one exists. Do not improvise one.
 

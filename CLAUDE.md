@@ -596,7 +596,7 @@ Steps 4–5, stated as one rule: **contextual** (the new object hangs off someth
 | The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from | `useToast().success(...)` — floating, auto-dismissing. See below. |
 | The create was irreversible | The confirmation modal before saving already carried the weight. The landing does the rest. |
 
-In-flow `AlertBanner` is not the component for the invisible-result case — it's a full-width notice for system-level feedback, not "the thing you just asked for was created." **`Toast` resolves this** (`src/components/ui/toast.tsx`, `useToast()`) — it's a floating placement of the same `AlertBanner`, not a second component, auto-dismissed after 3500ms. It needs its own `ToastProvider` wrapping the screen (not wired globally yet) — see the live demo on the `patterns-create` doc page's Anatomy tab. No PM prototype screen in the repo uses it yet.
+In-flow `AlertBanner` is not the component for the invisible-result case — it's a full-width notice for system-level feedback, not "the thing you just asked for was created." **`Toast` resolves this** (`src/components/ui/toast.tsx`, `useToast()`) — it's a floating placement of the same `AlertBanner`, not a second component, auto-dismissed after 3500ms. `ToastProvider` wraps the whole app once, at the true root (`App()` in `src/App.tsx`) — call `useToast()` from any PM prototype screen with nothing to wire; there is no per-screen `ToastProvider` to remember. See the live demo on the `patterns-create` doc page's Anatomy tab.
 
 **Third output — where the user lands afterwards.** Derived from the container, not a separate decision.
 

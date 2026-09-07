@@ -16548,7 +16548,7 @@ function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onC
   )
 }
 
-function PatternCreatePageInner() {
+function PatternCreatePage() {
   const [tab, setTab] = useState<string>("when-to-use")
   const [pgPreviewCase, setPgPreviewCase] = useState<PgPreviewCaseId | null>(null)
   const pgCreateToast = useToast()
@@ -16927,7 +16927,7 @@ function PatternCreatePageInner() {
               <strong style={{ color: "var(--foreground)" }}>In-flow AlertBanner is not the component for the invisible-result case.</strong> Its spec defines it as a full-width notice for system-level feedback, and the Feedback pattern page assigns it to persistent in-context state — it occupies layout until dismissed and outlives the moment it was confirming.
             </p>
             <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
-              <strong style={{ color: "var(--foreground)" }}>Toast resolves this — as a placement, not a second component.</strong> <code style={{ fontSize: 11 }}>useToast()</code> (<code style={{ fontSize: 11 }}>src/components/ui/toast.tsx</code>) renders a real <code style={{ fontSize: 11 }}>AlertBanner</code>, floated top-right and auto-dismissed after 3500ms. It needs its own <code style={{ fontSize: 11 }}>ToastProvider</code> wrapping the screen — not wired globally yet, so a create whose result is invisible still needs that wrapper added explicitly, not assumed.
+              <strong style={{ color: "var(--foreground)" }}>Toast resolves this — as a placement, not a second component.</strong> <code style={{ fontSize: 11 }}>useToast()</code> (<code style={{ fontSize: 11 }}>src/components/ui/toast.tsx</code>) renders a real <code style={{ fontSize: 11 }}>AlertBanner</code>, floated top-right and auto-dismissed after 3500ms. <code style={{ fontSize: 11 }}>ToastProvider</code> wraps the whole app once, at the true root — call <code style={{ fontSize: 11 }}>useToast()</code> from any PM prototype screen with nothing to wire first.
             </p>
             <div className="flex items-center gap-[12px] mt-[10px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
               <Button variant="secondary" size="sm" onClick={() => pgCreateToast.success("Automation submitted for approval", { description: "You'll be notified once Council reviews it — nothing changed on this screen." })}>Try it — the invisible-result case</Button>
@@ -17153,14 +17153,6 @@ LANDING (derived from container, not a separate decision)
         </div>
       )}
     </div>
-  )
-}
-
-function PatternCreatePage() {
-  return (
-    <ToastProvider>
-      <PatternCreatePageInner />
-    </ToastProvider>
   )
 }
 
@@ -42042,6 +42034,7 @@ export default function App() {
   const ActiveProtoComponent = activeProto?.component
 
   return (
+    <ToastProvider>
     <div className={`${theme} flex h-screen overflow-hidden text-[var(--foreground)]`} style={{ background: canvasBg }}>
       <AppNav
         active={active}
@@ -42171,5 +42164,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </ToastProvider>
   )
 }
