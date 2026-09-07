@@ -1193,7 +1193,7 @@ function WBBuilderTabNav({ tab, setTab, dataComplete, widgetComplete }: { tab: T
     { id: "appearance", label: "Appearance", done: false,          enabled: widgetComplete },
   ]
   return (
-    <div style={{ display: "flex", gap: 4, padding: 4, borderRadius: 12, background: "var(--field-border)", opacity: 0.9 }}>
+    <div style={{ display: "flex", gap: 4, padding: 4, borderRadius: 12, background: "var(--field-border)" }}>
       {tabs.map(t => (
         <button key={t.id} onClick={() => t.enabled && setTab(t.id)} disabled={!t.enabled} style={{
           flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "7px 4px",
@@ -1422,7 +1422,7 @@ function WidgetBuilderOverlay({ onClose: _onClose, tab, setTab, onProgressChange
   const [showSaveModal, setShowSaveModal] = useState(false)
 
   const accentHex  = ACCENT_COLORS.find(a => a.id === accentColor)?.hex ?? "var(--primary)"
-  const dataComplete   = !!(sourceId && metric)
+  const dataComplete   = dataMode === "preset" ? !!sourceId : !!(sourceId && metric)
   const widgetComplete = !!(typeId && widgetName)
 
   // Sync progress flags up to parent for header button state
@@ -1432,7 +1432,8 @@ function WidgetBuilderOverlay({ onClose: _onClose, tab, setTab, onProgressChange
     ? ENTITY_SOURCES.find(s => s.id === sourceId)?.label
     : PRESET_DATASETS.find(d => d.id === sourceId)?.name
 
-  const saveHint = !dataComplete   ? "Choose a governed dataset and metric to continue."
+  const saveHint = !dataComplete
+    ? (dataMode === "preset" ? "Choose a dataset to continue." : "Choose a data source and metric to continue.")
     : !widgetComplete ? "Choose a widget type and give it a name to save."
     : ""
 
@@ -1531,8 +1532,8 @@ function WidgetBuilderOverlay({ onClose: _onClose, tab, setTab, onProgressChange
               </div>
             )}
 
-            {/* Operation + metric */}
-            {sourceId && (
+            {/* Operation + metric (entity mode only — preset datasets have pre-built queries) */}
+            {sourceId && dataMode === "source" && (
               <div>
                 <WBSectionLabel>Operation & metric</WBSectionLabel>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
