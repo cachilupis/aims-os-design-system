@@ -176,6 +176,8 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 - **`restricted`** renders the card at 50% opacity and nothing else — no badge, no banner, no colour change. The viewer lacks entitlement to the values; the entity exists and is governed, so **this must never read as an error.** It is a separate thing from `locked` ("you cannot edit" vs "you cannot see") and both can be true at once. `RecordField.state === "masked"` is the same idea applied to one field.
 - **`Minimum`, Figma's fourth named state, needs no value** — "only visual, title and state" is what you get by passing only those props.
 
+**Dropping is the last resort, and only two slots ever get dropped** — the `description` below 420px of card width, then the `secondaryMetadata` row below 320px. `visual`, `name` and `stateBadge` are never dropped at any width. **The order is reversed from Figma deliberately** (Michael, 2026-09-07): metadata carries the facts someone might act on, the description is the edge case for extra granularity when metadata is not enough, so the description goes first.
+
 **Nine tab stops, six when nothing is truncated.** Tags and secondary metadata are each **one** stop with a roving tabindex — Tab enters the group, arrows move inside, Tab leaves. Six tags plus six metadata items as individual stops would be twenty-five Tab presses to get past the header. The title and description are stops only when they overflow. This is inside the component; a caller cannot break it, but do not wrap its slots in your own focusable elements.
 
 **The right-hand cluster has a fixed order:** ⓘ Information → state badge → secondary action → `Ask` → `···` menu. That side is fixed and never compressed; the left side is what yields.

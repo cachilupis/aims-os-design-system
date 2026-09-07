@@ -42,6 +42,14 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  * order: tags collapse to `+N`, then source, and only then does the title
  * truncate. Nothing wraps and nothing abbreviates.
  *
+ * DROPPING IS THE LAST RESORT, and only these two slots ever get dropped:
+ * the description below 420px of card width, then the secondary metadata row
+ * below 320px. Visual identity, title and state badge are never dropped at
+ * any width. Note the ORDER IS REVERSED from Figma's own priority list on
+ * Michael's call — metadata carries the facts someone might act on, the
+ * description is the edge case for extra granularity — so the description
+ * goes first and the metadata row survives longer.
+ *
  * NINE TAB STOPS, SIX WHEN NOTHING IS TRUNCATED. Tags and secondary metadata
  * are each ONE stop, not one per item: Tab enters the group, arrows move
  * inside it, Tab leaves. Six tags plus six metadata items as individual stops
@@ -77,7 +85,7 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *
  * NO NEXT BEST ACTION. The recommendation card is a separate component in
  * its own Card Container — `NextBestActionCard` in
- * @/components/experimental/next-best-action-card — rendered as a SIBLING
+ * @/components/ui/next-best-action-card — rendered as a SIBLING
  * below this one. Two records, two containers. Passing recommendations into
  * the header is the single most common mistake with this card, so the prop
  * does not exist to be misused.
@@ -133,9 +141,6 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *   - The industry ellipsis rule Figma cites from Carbon and PatternFly: an
  *     ellipsis must hide at least three characters and leave at least four
  *     visible. CSS truncation cannot express it.
- *   - Visibility priority: nothing is ever dropped. The card reflows and
- *     yields, but at an extreme width it keeps description and metadata
- *     instead of dropping them in Figma's documented order.
  *   - The explanatory half of `restricted`. Figma's prose asks for "calm and
  *     explanatory" and its instance carries no explanatory element, so the
  *     explanation is screen-reader-only. Making it visible is a design
@@ -565,6 +570,31 @@ export const RECORD_HEADER_FALLBACKS = {
 // an estimate rather than presented as a specification.
 const REFLOW_WIDTH = 720
 
+// ── Drop thresholds — the third mechanism ─────────────────────────────────
+// Figma's BEHAVIOUR frame lists three mechanisms IN ORDER and warns against
+// confusing them: reflow (stack), then yielding (truncate), then dropping.
+// Dropping is the last resort, once stacking and yielding have both run out.
+//
+// ORDER REVERSED FROM FIGMA, ON MICHAEL'S CALL (2026-09-07). Figma's
+// visibility priority puts description at 6 and secondary metadata at 7,
+// which drops METADATA first. Michael's ruling is the opposite: metadata is
+// what you reach for first and it carries the facts someone might act on;
+// description is the very edge case for extra granularity when metadata is
+// not enough. So the description goes first and the metadata row survives
+// longer. The remaining order is Figma's, untouched: source and tags yield
+// long before either of these, and visual identity, title and state badge
+// are NEVER dropped at any width.
+//
+// Both numbers are calibrated estimates, same as REFLOW_WIDTH — Figma states
+// the order but no breakpoint for it. 420 is where a one-line description
+// stops being able to hold a sentence worth reading (roughly 45 characters,
+// the bottom of the comfortable reading range). 320 is a SlideOut at its
+// narrowest snap minus padding: below that the metadata row cannot fit two
+// items without wrapping into a block, which is the point Figma says it
+// stops being a row.
+const DROP_DESCRIPTION_WIDTH = 420
+const DROP_METADATA_WIDTH = 320
+
 // ── Removed: the container-width collapse thresholds ──────────────────────
 // Three constants lived here (560px hide-tags, 480px shorten-assistant, and a
 // 12-character first-name guard) and their own comment admitted the problem:
@@ -804,10 +834,18 @@ function EntityHeader({
   // 932px), so the switch happens when the row genuinely runs out.
   const rootRef = useRef<HTMLDivElement>(null)
   const [stacked, setStacked] = useState(false)
+  const [dropped, setDropped] = useState({ description: false, metadata: false })
   useLayoutEffect(() => {
     const el = rootRef.current
     if (!el) return
-    const measure = () => setStacked(el.clientWidth < REFLOW_WIDTH)
+    const measure = () => {
+      const w = el.clientWidth
+      setStacked(w < REFLOW_WIDTH)
+      setDropped({
+        description: w < DROP_DESCRIPTION_WIDTH,
+        metadata: w < DROP_METADATA_WIDTH,
+      })
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
@@ -1152,7 +1190,7 @@ function EntityHeader({
             carrying the full sentence. Off unless the caller passes one:
             there is no default copy and no placeholder. Text/Body at 14px
             Medium, read from Figma. */}
-        {description && (
+        {description && !dropped.description && (
           <Tooltip content={description} side="cursor" triggerClassName="block min-w-0">
             {/* STOP 8 — and only when truncated, same reasoning as the title.
                 It is elastic, not fixed: one line at container width, with no
@@ -1177,7 +1215,7 @@ function EntityHeader({
         {/* STOP 9 — ONE stop for the whole row, arrows inside. Six metadata
             items as six stops is the other half of the twenty-five-press
             problem Figma's focus frame is written to avoid. */}
-        {visibleMetadata.length > 0 && (
+        {visibleMetadata.length > 0 && !dropped.metadata && (
           <div
             ref={metaGroup.ref}
             role="group"

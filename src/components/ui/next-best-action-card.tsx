@@ -1,32 +1,92 @@
-// DS-GAP: NextBestActionCard — the proactive AI recommendation card that sits
-// UNDER the Entity Header. Closest DS component: CardContainer (which it
-// composes). Its own container per section 11 of
-// docs/patterns/entity-header-change-spec.md: "The card that appears under the
-// header is a separate component in its own Card Container, not a second slot
-// in the same one. Two records, two containers. Nothing about it belongs in
-// record-header.tsx."
-//
-// Built from the Figma component set "Next Best Action Card Content"
-// (v6rmYKA2zmyXWOahlxLOeI, node 20206:316306) — structure, spacing, type
-// sizes/weights and every token read from the file, Light and Dark
-// independently. Two variants on one axis: Actions = "View details" |
-// "Accept / View details".
-//
-// This is NOT the block that used to live inside the header. That one was a
-// filled purple surface with a HighlightIcon box, a context Tag and a trailing
-// chevron. Figma has none of those: the card is a plain surface, the only
-// colour is the purple label and the bullet, and the actions are real buttons.
-//
-// Tokens (Figma → repo, all pre-existing, none invented):
-//   Text/Purple              → --color-text-purple      #2c075c / #d8b4fe
-//   Text/Subtitle            → --color-text-subtitle    #2a2a2a / rgba(255,255,255,0.6)
-//   Text/Body                → --color-text-body        #5c5c5c / rgba(255,255,255,0.6)
-//   Surface/Primary/Default  → the DS Button primary variant, not hand-styled
-//
-// Why experimental/ and not ui/: the change spec parks section 11 as "out of
-// scope" and never assigns it to a PR, so this card has no written spec of its
-// own — only the Figma node above. It stays a candidate until Michael promotes
-// it.
+/**
+ * Next Best Action Card — AIMS OS Design System
+ *
+ * Source of truth: Figma `Design System - AIMS OS`, node 20206:316306 (the
+ * "Next Best Action Card Content" component set), plus its two rules frames
+ * (20257:7761, 20258:7787) and the Slideout section (20009:12610). Structure,
+ * spacing, type sizes and every token were read from the file, Light and Dark
+ * independently.
+ *
+ * Promoted out of `experimental/` by Michael (2026-09-07): it will grow more
+ * variants and appear differently in different parts of the platform, which is
+ * a component's job and not a candidate's.
+ *
+ * WHAT IT IS
+ *
+ * The proactive recommendation. It sits in its OWN Card Container directly
+ * below the Entity Header — never inside it. The header identifies the
+ * entity; this proposes what to do about it. Two records, two containers.
+ * Sixteen products were reviewed for the Figma study and none of them puts
+ * the recommendation in the record header.
+ *
+ * THE RULES THAT ARE STRUCTURAL, NOT CONVENTIONS
+ *
+ *   ONE AT A TIME. The prop is `item?`, singular. The engine has already
+ *   prioritised, unified and discarded, so showing five is not trusting the
+ *   engine — and stacked cards push the real content below the fold. This was
+ *   `items: NextBestAction[]` with a `.map`, which is exactly how two
+ *   recommendations rendered inside one container for three separate passes.
+ *   The singular type is that rule made impossible to break.
+ *
+ *   NO RECOMMENDATION, NO CARD. `item` undefined renders NOTHING — not an
+ *   empty card, not a placeholder, not a "nothing to recommend" message. It
+ *   is not an empty state: there is nothing to say when there is nothing to
+ *   do.
+ *
+ *   THE TITLE IS THE ACTION, NOT THE ENGINE. "Next Best Action" names the
+ *   engine and already appears as the card's own label; repeating it in the
+ *   title wastes the one line that carries the instruction.
+ *
+ *   IT ALWAYS DECLARES WHEN AND WHY. Timestamp plus rationale. Without a
+ *   rationale it is an order, not a proposal.
+ *
+ *   NO ACCURACY DISCLAIMER. Other products hedge generated content with "may
+ *   be inaccurate". A recommendation reaching this surface has passed the
+ *   Council, so it declares its source instead of apologising.
+ *
+ *   ACCEPT ASSIGNS, IT NEVER EXECUTES. The agent executes, the human governs
+ *   — never "Call now". And accepting still opens the detail first, because
+ *   the card cannot guarantee it showed everything and committing without the
+ *   record is accepting blind. There is no inline accept anywhere here.
+ *
+ *   DISMISS RESOLVES IN PLACE. It commits the user to nothing, so it needs no
+ *   detail. The × hides the card for this session only and it returns on
+ *   reload; nothing is stored and nothing is fed back to the engine.
+ *
+ * This is NOT the block that used to live inside the header. That one was a
+ * filled purple surface with a HighlightIcon box, a context Tag and a
+ * trailing chevron. Figma has none of those: the card is a plain surface, the
+ * only colour is the purple label and the bullet, and the actions are real
+ * buttons.
+ *
+ * NO SEVERITY AND NO COLOURS. There is no `severity`, no `dueContext`, no
+ * `aiGenerated` and no `actionLabel`. Timing and urgency live in the COPY —
+ * the rationale — never in a token: a card that colours itself by urgency
+ * competes with the Entity Header's state badge and signal tags, which are
+ * the platform's actual urgency channel.
+ *
+ * Tokens (Figma → repo, all pre-existing, none invented):
+ *   Text/Purple              → --color-text-purple      #2c075c / #d8b4fe
+ *   Text/Subtitle            → --color-text-subtitle    #2a2a2a / rgba(255,255,255,0.6)
+ *   Text/Body                → --color-text-body        #5c5c5c / rgba(255,255,255,0.6)
+ *   Surface/Primary/Default  → the DS Button primary variant, not hand-styled
+ *
+ * ONE DIVERGENCE FROM FIGMA'S PROSE, RESOLVED IN FAVOUR OF ITS INSTANCE
+ *
+ * The rules frame says the rationale is "ONE LINE, ALWAYS" and truncates with
+ * a tooltip. The built instance sets that text node to auto-HEIGHT, which
+ * wraps. The instance is what renders, so it wraps here — the same way the
+ * instance settles source-and-tags on the Entity Header's stacked row.
+ *
+ * NOT IMPLEMENTED YET — do not mistake these for oversights
+ *
+ *   - The character limits are documented, not enforced: title 20/40/60,
+ *     rationale 60/90/150, action label max 25. What the card should do when
+ *     the engine returns less than the minimum is an open question with
+ *     Engineering in Figma's own frame — it cannot invent the consequence.
+ *   - The counter that leads to the list when more than one recommendation
+ *     exists. Figma names it; nothing renders it yet.
+ */
 
 import { X, Sparkle } from "lucide-react"
 import { cn } from "@/lib/utils"
