@@ -7,6 +7,7 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { Tag }          from "@/components/ui/tag"
+import { CardContainer } from "@/components/ui/card-container"
 import { Tabs }         from "@/components/ui/tabs"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
@@ -293,32 +294,6 @@ const STUDIO_META: Record<string, { label: string; color: string; icon: React.Re
   admin:      { label: "Admin Console",      color: "#6366f1", icon: <Icons.Settings size={16} />,     desc: "Platform settings, members, billing, and integrations" },       // audit-ignore
 }
 
-const GROUP_ACTIVITY: Record<string, Array<{ type: string; msg: string; time: string }>> = {
-  engineering: [
-    { type: "role",   msg: "Eduardo Suárez added to this group",         time: "Aug 9, 2026"  },
-    { type: "edit",   msg: "Studio access updated — removed \"admin\"",  time: "Aug 3, 2026"  },
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Mar 1, 2025"  },
-  ],
-  "ai-ops": [
-    { type: "role",   msg: "Diana Pérez added to this group",            time: "Aug 10, 2026" },
-    { type: "edit",   msg: "Studio access updated — added \"helix\"",    time: "Aug 5, 2026"  },
-    { type: "create", msg: "Group created by Maria García",              time: "Jun 15, 2025" },
-  ],
-  "data-team": [
-    { type: "role",   msg: "Maria García added to this group",           time: "Aug 5, 2026"  },
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Apr 2, 2025"  },
-  ],
-  leadership: [
-    { type: "edit",   msg: "Eduardo Suárez added to this group",         time: "Aug 1, 2026"  },
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jan 15, 2025" },
-  ],
-  compliance: [
-    { type: "create", msg: "Group created by Maria García",              time: "May 10, 2025" },
-  ],
-  external: [
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jul 22, 2025" },
-  ],
-}
 
 // ─── Display helpers ──────────────────────────────────────────────────────────
 
@@ -2537,9 +2512,10 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
 
 // ─── Role detail page ─────────────────────────────────────────────────────────
 
-function RoleDetailPage({ role, onBack, onDelete }: {
+function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
   role: Role; onBack: () => void
   onDelete?: () => void
+  onMemberClick?: (m: Member) => void
 }) {
   const [activeTab, setActiveTab] = useState(0)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -2588,132 +2564,125 @@ function RoleDetailPage({ role, onBack, onDelete }: {
         </div>
       )}
 
-      {/* Color accent + identity card */}
-      <div style={{
-        display: "flex", alignItems: "flex-start", gap: 14, marginTop: 16, marginBottom: 24,
-        padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
-        background: "var(--surface)", borderLeft: `4px solid ${role.color}`,
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Name row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            {editingName && !role.system ? (
-              <input
-                autoFocus
-                value={draftName}
-                onChange={e => setDraftName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === "Enter") { setSavedName(draftName); setEditingName(false) }
-                  if (e.key === "Escape") { setDraftName(savedName); setEditingName(false) }
-                }}
-                style={{
-                  fontSize: 16, fontWeight: 700, color: "var(--foreground)",
-                  background: "var(--surface-raised)", border: "1px solid var(--primary)",
-                  borderRadius: 6, padding: "2px 8px", outline: "none", flex: 1, maxWidth: 280,
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{savedName}</span>
-            )}
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-              background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-              color: role.system ? "var(--muted-foreground)" : role.color,
-              border: `1px solid ${role.system ? "var(--border)" : role.color + "55"}`,
-              textTransform: "uppercase", letterSpacing: "0.06em",
-            }}>
-              {role.system ? "System" : "Custom"}
-            </span>
-            {!role.system && !editingName && (
-              <button
-                onClick={() => { setDraftName(savedName); setEditingName(true) }}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}
-                title="Edit name"
-              >
-                <Icons.Pencil size={13} />
-              </button>
-            )}
-            {editingName && !role.system && (
-              <div style={{ display: "flex", gap: 4 }}>
-                <button onClick={() => { setSavedName(draftName); setEditingName(false) }}
-                  style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>
-                  Save
-                </button>
-                <button onClick={() => { setDraftName(savedName); setEditingName(false) }}
-                  style={{ fontSize: 11, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>
-                  Cancel
-                </button>
+      {/* Role identity card — DS composition: CardContainer + Tag + Button */}
+      <div style={{ marginTop: 16, marginBottom: 24 }}>
+        <div style={{ borderLeft: `4px solid ${role.color}`, borderRadius: 12, overflow: "hidden" }}>
+        <CardContainer size="default" variant="default">
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+
+              {/* Name row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                {editingName && !role.system ? (
+                  <input
+                    autoFocus
+                    value={draftName}
+                    onChange={e => setDraftName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") { setSavedName(draftName); setEditingName(false) }
+                      if (e.key === "Escape") { setDraftName(savedName); setEditingName(false) }
+                    }}
+                    style={{
+                      fontSize: 16, fontWeight: 700, color: "var(--foreground)",
+                      background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                      borderRadius: 6, padding: "2px 8px", outline: "none", flex: 1, maxWidth: 280,
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{savedName}</span>
+                )}
+                {/* System / Custom badge — read-only identity tag */}
+                <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                  {role.system ? "System" : "Custom"}
+                </Tag>
+                {!role.system && !editingName && (
+                  <Button
+                    variant="tertiary" size="sm" iconPosition="alone"
+                    icon={<Icons.Pencil size={13} />}
+                    aria-label="Edit name"
+                    onClick={() => { setDraftName(savedName); setEditingName(true) }}
+                  />
+                )}
+                {editingName && !role.system && (
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <Button variant="secondary" size="sm"
+                      onClick={() => { setSavedName(draftName); setEditingName(false) }}>
+                      Save
+                    </Button>
+                    <Button variant="tertiary" size="sm"
+                      onClick={() => { setDraftName(savedName); setEditingName(false) }}>
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          {/* Description row */}
-          {editingDesc && !role.system ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <textarea
-                autoFocus
-                value={draftDesc}
-                onChange={e => setDraftDesc(e.target.value)}
-                rows={2}
-                style={{
-                  fontSize: 13, color: "var(--foreground)", lineHeight: 1.5,
-                  background: "var(--surface-raised)", border: "1px solid var(--primary)",
-                  borderRadius: 6, padding: "4px 8px", outline: "none", resize: "vertical",
-                  width: "100%", fontFamily: "inherit",
-                }}
-              />
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => { setSavedDesc(draftDesc); setEditingDesc(false) }}
-                  style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                  Save
-                </button>
-                <button onClick={() => { setDraftDesc(savedDesc); setEditingDesc(false) }}
-                  style={{ fontSize: 11, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-              <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{savedDesc}</p>
-              {!role.system && (
-                <button
-                  onClick={() => { setDraftDesc(savedDesc); setEditingDesc(true) }}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--muted-foreground)", display: "flex", alignItems: "center", flexShrink: 0, marginTop: 1 }}
-                  title="Edit description"
-                >
-                  <Icons.Pencil size={12} />
-                </button>
+
+              {/* Description row */}
+              {editingDesc && !role.system ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <textarea
+                    autoFocus
+                    value={draftDesc}
+                    onChange={e => setDraftDesc(e.target.value)}
+                    rows={2}
+                    style={{
+                      fontSize: 13, color: "var(--foreground)", lineHeight: 1.5,
+                      background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                      borderRadius: 6, padding: "4px 8px", outline: "none", resize: "vertical",
+                      width: "100%", fontFamily: "inherit",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <Button variant="secondary" size="sm"
+                      onClick={() => { setSavedDesc(draftDesc); setEditingDesc(false) }}>
+                      Save
+                    </Button>
+                    <Button variant="tertiary" size="sm"
+                      onClick={() => { setDraftDesc(savedDesc); setEditingDesc(false) }}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                  <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{savedDesc}</p>
+                  {!role.system && (
+                    <Button
+                      variant="tertiary" size="sm" iconPosition="alone"
+                      icon={<Icons.Pencil size={12} />}
+                      aria-label="Edit description"
+                      onClick={() => { setDraftDesc(savedDesc); setEditingDesc(true) }}
+                    />
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
-        {/* Stats + delete */}
-        <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{members.length}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
+
+            {/* Stats + delete */}
+            <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{members.length}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{perms.total}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>permissions</div>
+              </div>
+              {!role.system && (
+                <Button
+                  variant="tertiary" size="sm" iconPosition="alone"
+                  icon={<Icons.Trash2 size={14} />}
+                  aria-label="Delete role"
+                  onClick={() => setConfirmDelete(true)}
+                />
+              )}
+            </div>
           </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{perms.total}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>permissions</div>
-          </div>
-          {!role.system && (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              style={{
-                background: "none", border: "1px solid var(--border)", borderRadius: 8,
-                padding: "6px 10px", cursor: "pointer", color: "var(--muted-foreground)",
-                display: "flex", alignItems: "center", gap: 5, fontSize: 12,
-              }}
-              title="Delete role"
-            >
-              <Icons.Trash2 size={13} />
-            </button>
-          )}
+        </CardContainer>
         </div>
       </div>
 
-      <DetailTabs tabs={["Members", "Permissions"]} active={activeTab} onChange={setActiveTab} />
+      <DetailTabs tabs={["Members", "Permissions", "Activity"]} active={activeTab} onChange={setActiveTab} />
 
       <div style={{ marginTop: 20 }}>
         {/* Members */}
@@ -2724,7 +2693,7 @@ function RoleDetailPage({ role, onBack, onDelete }: {
               background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
-                <b style={{ color: "var(--foreground)" }}>{members.length}</b> member{members.length !== 1 ? "s" : ""} assigned this role
+                <b style={{ color: "var(--foreground)" }}>{members.length}</b> member{members.length !== 1 ? "s" : ""}
               </span>
               {!role.system && (
                 <button style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
@@ -2738,28 +2707,113 @@ function RoleDetailPage({ role, onBack, onDelete }: {
                 <div style={{ fontSize: 14, fontWeight: 500 }}>No members assigned</div>
                 <div style={{ fontSize: 13, marginTop: 4 }}>Assign members to grant them this role's permissions</div>
               </div>
-            ) : members.map(m => (
-              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-                }}>{m.initials}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+            ) : members.map(m => {
+              const statusColor = STATUS_COLOR[m.status]
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => onMemberClick?.(m)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 14, padding: "10px 20px",
+                    borderBottom: "1px solid var(--border)",
+                    cursor: onMemberClick ? "pointer" : "default",
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
+                >
+                  {/* Avatar */}
+                  <div style={{
+                    width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                    background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, fontWeight: 700, color: "#fff",  // audit-ignore: white on colored avatar
+                  }}>{m.initials}</div>
+
+                  {/* Name + email */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+                  </div>
+
+                  {/* Department */}
+                  <div style={{ minWidth: 120, fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    {m.department}
+                  </div>
+
+                  {/* User type badge */}
+                  <div style={{
+                    minWidth: 72, textAlign: "center", flexShrink: 0,
+                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                    background: `${USER_TYPE_COLOR[m.role]}22`, color: USER_TYPE_COLOR[m.role],
+                    border: `1px solid ${USER_TYPE_COLOR[m.role]}44`,
+                  }}>
+                    {m.role}
+                  </div>
+
+                  {/* Last active */}
+                  <div style={{ minWidth: 88, textAlign: "right", flexShrink: 0 }}>
+                    {m.status === "invited" ? (
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Invite sent</div>
+                    ) : m.lastActive ? (
+                      <>
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginBottom: 1 }}>Last active</div>
+                        <div style={{ fontSize: 11, color: "var(--foreground)" }}>{formatRelative(m.lastActive)}</div>
+                      </>
+                    ) : null}
+                  </div>
+
+                  {/* MFA badge */}
+                  <div
+                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
+                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                      background: m.mfaEnabled
+                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
+                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
+                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
+                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
+                    }}
+                  >
+                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+                    MFA
+                  </div>
+
+                  {/* Status */}
+                  <div style={{
+                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                    background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
+                    minWidth: 76, textAlign: "center", flexShrink: 0,
+                  }}>
+                    {STATUS_LABEL[m.status]}
+                  </div>
+
+                  {/* Unassign button — system roles are read-only */}
+                  {!role.system ? (
+                    <button
+                      title="Unassign from role"
+                      onClick={e => e.stopPropagation()}
+                      style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+                    >
+                      <Icons.X size={14} />
+                    </button>
+                  ) : (
+                    <div style={{ width: 26, flexShrink: 0 }} />
+                  )}
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status] }}>
-                  {STATUS_LABEL[m.status]}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
         {/* Permissions */}
         {activeTab === 1 && <RolePermissionsPanel role={role} />}
+
+        {/* Activity */}
+        {activeTab === 2 && <ActivityPanel />}
       </div>
     </ScreenLayout>
   )
@@ -2767,22 +2821,17 @@ function RoleDetailPage({ role, onBack, onDelete }: {
 
 // ─── Group detail page ────────────────────────────────────────────────────────
 
-const ACTIVITY_TYPE_ICON_GROUP: Record<string, React.ReactNode> = {
-  role:   <Icons.UserPlus size={14} />,
-  edit:   <Icons.Settings size={14} />,
-  create: <Icons.PlusCircle size={14} />,
-  remove: <Icons.UserMinus size={14} />,
-}
-
-function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack: () => void }) {
+function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group: Group; onBack: () => void; onMemberClick?: (m: Member) => void }) {
   const [activeTab, setActiveTab] = useState(0)
   const [group, setGroup] = useState(initialGroup)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [draftName, setDraftName] = useState(initialGroup.name)
   const [savedName, setSavedName] = useState(initialGroup.name)
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [draftDesc, setDraftDesc] = useState(initialGroup.desc)
+  const [savedDesc, setSavedDesc] = useState(initialGroup.desc)
   const groupMembers = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
-  const log = GROUP_ACTIVITY[group.id] ?? []
   const allStudios = ["governance", "datastudio", "agentic", "admin"]
 
   function toggleStudio(s: string) {
@@ -2808,91 +2857,126 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
     >
       <BackBreadcrumb onBack={onBack} />
 
-      {/* Group identity bar */}
-      <div style={{
-        display: "flex", alignItems: "flex-start", gap: 16, marginTop: 16, marginBottom: 24,
-        padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
-        background: "var(--surface)", borderLeft: `4px solid ${group.color}`,
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Editable name row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            {editingName ? (
-              <input
-                autoFocus
-                value={draftName}
-                onChange={e => setDraftName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === "Enter") { setSavedName(draftName); setGroup(g => ({ ...g, name: draftName })); setEditingName(false) }
-                  if (e.key === "Escape") { setDraftName(savedName); setEditingName(false) }
-                }}
-                style={{
-                  fontSize: 16, fontWeight: 700, color: "var(--foreground)",
-                  background: "var(--surface-raised)", border: "1px solid var(--primary)",
-                  borderRadius: 6, padding: "2px 8px", outline: "none", flex: 1, maxWidth: 280,
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{savedName}</span>
-            )}
-            {!editingName && (
-              <button
-                onClick={() => { setDraftName(savedName); setEditingName(true) }}
-                style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}
-                title="Edit name"
-              >
-                <Icons.Pencil size={13} />
-              </button>
-            )}
-            {editingName && (
-              <div style={{ display: "flex", gap: 4 }}>
-                <button onClick={() => { setSavedName(draftName); setGroup(g => ({ ...g, name: draftName })); setEditingName(false) }}
-                  style={{ fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>
-                  Save
-                </button>
-                <button onClick={() => { setDraftName(savedName); setEditingName(false) }}
-                  style={{ fontSize: 11, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>
-                  Cancel
-                </button>
+      {/* Group identity card — DS composition: CardContainer + Tag + Button */}
+      <div style={{ marginTop: 16, marginBottom: 24 }}>
+        <div style={{ borderLeft: `4px solid ${group.color}`, borderRadius: 12, overflow: "hidden" }}>
+        <CardContainer size="default" variant="default">
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+
+              {/* Editable name row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                {editingName ? (
+                  <input
+                    autoFocus
+                    value={draftName}
+                    onChange={e => setDraftName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") { setSavedName(draftName); setGroup(g => ({ ...g, name: draftName })); setEditingName(false) }
+                      if (e.key === "Escape") { setDraftName(savedName); setEditingName(false) }
+                    }}
+                    style={{
+                      fontSize: 16, fontWeight: 700, color: "var(--foreground)",
+                      background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                      borderRadius: 6, padding: "2px 8px", outline: "none", flex: 1, maxWidth: 280,
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{savedName}</span>
+                )}
+                {!editingName && (
+                  <Button
+                    variant="tertiary" size="sm" iconPosition="alone"
+                    icon={<Icons.Pencil size={13} />}
+                    aria-label="Edit name"
+                    onClick={() => { setDraftName(savedName); setEditingName(true) }}
+                  />
+                )}
+                {editingName && (
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <Button variant="secondary" size="sm"
+                      onClick={() => { setSavedName(draftName); setGroup(g => ({ ...g, name: draftName })); setEditingName(false) }}>
+                      Save
+                    </Button>
+                    <Button variant="tertiary" size="sm"
+                      onClick={() => { setDraftName(savedName); setEditingName(false) }}>
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Editable description */}
+              <div style={{ marginBottom: 12 }}>
+                {editingDesc ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <textarea
+                      autoFocus
+                      value={draftDesc}
+                      onChange={e => setDraftDesc(e.target.value)}
+                      rows={2}
+                      style={{
+                        fontSize: 13, color: "var(--foreground)", lineHeight: 1.5,
+                        background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                        borderRadius: 6, padding: "4px 8px", outline: "none", resize: "vertical",
+                        width: "100%", fontFamily: "inherit",
+                      }}
+                    />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <Button variant="secondary" size="sm"
+                        onClick={() => { setSavedDesc(draftDesc); setEditingDesc(false) }}>
+                        Save
+                      </Button>
+                      <Button variant="tertiary" size="sm"
+                        onClick={() => { setDraftDesc(savedDesc); setEditingDesc(false) }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                    <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>
+                      {savedDesc || <span style={{ opacity: 0.5, fontStyle: "italic" }}>No description</span>}
+                    </p>
+                    <Button
+                      variant="tertiary" size="sm" iconPosition="alone"
+                      icon={<Icons.Pencil size={12} />}
+                      aria-label="Edit description"
+                      onClick={() => { setDraftDesc(savedDesc); setEditingDesc(true) }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Studio chips — Tag (read-only identity attribute, not Chip interactivo) */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {group.studios.length === 0 ? (
+                  <Tag variant="secondary" size="sm">No studios</Tag>
+                ) : group.studios.map(s => (
+                  <Tag key={s} variant="secondary" size="sm">{STUDIO_META[s].label}</Tag>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats + delete action */}
+            <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{groupMembers.length}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{group.studios.length}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>studios</div>
+              </div>
+              <Button
+                variant="tertiary" size="sm" iconPosition="alone"
+                icon={<Icons.Trash2 size={14} />}
+                aria-label="Delete group"
+                onClick={() => setConfirmDelete(true)}
+              />
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {group.studios.length === 0 ? (
-              <span style={{ fontSize: 12, color: "var(--muted-foreground)", opacity: 0.6 }}>No studios</span>
-            ) : group.studios.map(s => {
-              const meta = STUDIO_META[s]
-              return (
-                <span key={s} style={{
-                  fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
-                  background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
-                }}>
-                  {meta.label}
-                </span>
-              )
-            })}
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{groupMembers.length}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{group.studios.length}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>studios</div>
-          </div>
-          <button
-            onClick={() => setConfirmDelete(true)}
-            style={{
-              background: "none", border: "1px solid var(--border)", borderRadius: 8,
-              padding: "6px 10px", cursor: "pointer", color: "var(--muted-foreground)",
-              display: "flex", alignItems: "center", gap: 5, fontSize: 12,
-            }}
-            title="Delete group"
-          >
-            <Icons.Trash2 size={13} />
-          </button>
+        </CardContainer>
         </div>
       </div>
 
@@ -2945,34 +3029,101 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
                 <div style={{ fontSize: 14, fontWeight: 500 }}>No members yet</div>
                 <div style={{ fontSize: 13, marginTop: 4 }}>Add members to this group to grant them shared access</div>
               </div>
-            ) : groupMembers.map(m => (
-              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-                }}>{m.initials}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{m.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {m.title}{m.title && m.department ? " · " : ""}{m.department}
-                  </div>
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status], flexShrink: 0 }}>
-                  {STATUS_LABEL[m.status]}
-                </div>
-                <button
-                  onClick={() => removeMember(m.id)}
-                  title="Remove from group"
-                  style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6 }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+            ) : groupMembers.map(m => {
+              const statusColor = STATUS_COLOR[m.status]
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => onMemberClick?.(m)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 14, padding: "10px 20px",
+                    borderBottom: "1px solid var(--border)",
+                    cursor: onMemberClick ? "pointer" : "default",
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
                 >
-                  <Icons.X size={15} />
-                </button>
-              </div>
-            ))}
+                  {/* Avatar */}
+                  <div style={{
+                    width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                    background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, fontWeight: 700, color: "#fff",  // audit-ignore: white on colored avatar
+                  }}>{m.initials}</div>
+
+                  {/* Name + email */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+                  </div>
+
+                  {/* Department */}
+                  <div style={{ minWidth: 120, fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    {m.department}
+                  </div>
+
+                  {/* User type badge */}
+                  <div style={{
+                    minWidth: 72, textAlign: "center", flexShrink: 0,
+                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                    background: `${USER_TYPE_COLOR[m.role]}22`, color: USER_TYPE_COLOR[m.role],
+                    border: `1px solid ${USER_TYPE_COLOR[m.role]}44`,
+                  }}>
+                    {m.role}
+                  </div>
+
+                  {/* Last active */}
+                  <div style={{ minWidth: 88, textAlign: "right", flexShrink: 0 }}>
+                    {m.status === "invited" ? (
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Invite sent</div>
+                    ) : m.lastActive ? (
+                      <>
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginBottom: 1 }}>Last active</div>
+                        <div style={{ fontSize: 11, color: "var(--foreground)" }}>{formatRelative(m.lastActive)}</div>
+                      </>
+                    ) : null}
+                  </div>
+
+                  {/* MFA badge */}
+                  <div
+                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
+                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                      background: m.mfaEnabled
+                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
+                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
+                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
+                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
+                    }}
+                  >
+                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+                    MFA
+                  </div>
+
+                  {/* Status */}
+                  <div style={{
+                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                    background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
+                    minWidth: 76, textAlign: "center", flexShrink: 0,
+                  }}>
+                    {STATUS_LABEL[m.status]}
+                  </div>
+
+                  {/* Remove button */}
+                  <button
+                    onClick={e => { e.stopPropagation(); removeMember(m.id) }}
+                    title="Remove from group"
+                    style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+                  >
+                    <Icons.X size={14} />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -3043,31 +3194,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
         )}
 
         {/* Activity */}
-        {activeTab === 2 && (
-          log.length === 0 ? (
-            <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)", border: "1px solid var(--border)", borderRadius: 12 }}>
-              No activity yet
-            </div>
-          ) : (
-            <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-              {log.map((ev, i) => (
-                <div key={i} style={{ display: "flex", gap: 14, padding: "14px 20px", borderBottom: i < log.length - 1 ? "1px solid var(--border)" : "none", alignItems: "flex-start" }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                    background: "var(--surface-raised)", border: "1px solid var(--border)",
-                    display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)",
-                  }}>
-                    {ACTIVITY_TYPE_ICON_GROUP[ev.type] ?? <Icons.Circle size={14} />}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.4 }}>{ev.msg}</div>
-                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 3 }}>{ev.time}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        )}
+        {activeTab === 2 && <ActivityPanel />}
       </div>
     </ScreenLayout>
   )
@@ -3252,36 +3379,20 @@ function MemberRow({
 // ─── Role card ────────────────────────────────────────────────────────────────
 
 function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void }) {
-  const [hovered, setHovered] = useState(false)
   const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const visible = members.slice(0, 5)
   const overflow = members.length - visible.length
 
   return (
-    <div
-      onClick={() => onSelect(role)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
-        background: hovered ? "var(--accent)" : "var(--surface)",
-        cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
-        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",  // audit-ignore: prototype fixture data
-      }}
-    >
-      <div style={{ height: 5, background: role.color }} />
-      <div style={{ padding: "14px 16px" }}>
+    <div style={{ borderRadius: 12, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Color accent top bar */}
+      <div style={{ height: 4, background: role.color, flexShrink: 0 }} />
+      <CardContainer size="default" variant="default" onClick={() => onSelect(role)} className="flex-1 flex flex-col">
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-            color: role.system ? "var(--muted-foreground)" : role.color,
-            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
-            textTransform: "uppercase", letterSpacing: "0.06em",
-          }}>
+          <Tag variant={role.system ? "secondary" : "informative"} size="sm">
             {role.system ? "System" : "Custom"}
-          </span>
+          </Tag>
         </div>
         <p style={{
           fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.45, margin: "0 0 14px",
@@ -3289,6 +3400,7 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
         }}>
           {role.desc}
         </p>
+        <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             {visible.map((m, i) => (
@@ -3316,15 +3428,12 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
             {members.length} member{members.length !== 1 ? "s" : ""}
           </span>
           <div style={{ marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => onSelect(role)}
-              style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}
-            >
-              {role.system ? "View" : "Edit"}
-            </button>
+            <Button variant="secondary" size="sm" onClick={() => onSelect(role)}>
+              {role.system ? "View role" : "Edit role"}
+            </Button>
           </div>
         </div>
-      </div>
+      </CardContainer>
     </div>
   )
 }
@@ -3332,25 +3441,15 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
 // ─── Group card ───────────────────────────────────────────────────────────────
 
 function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => void }) {
-  const [hovered, setHovered] = useState(false)
   const members = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const visible = members.slice(0, 5)
   const overflow = members.length - visible.length
 
   return (
-    <div
-      onClick={() => onSelect(group)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden",
-        background: hovered ? "var(--accent)" : "var(--surface)",
-        cursor: "pointer", transition: "background 0.1s, box-shadow 0.1s",
-        boxShadow: hovered ? "0 2px 12px rgba(0,0,0,0.08)" : "none",  // audit-ignore: prototype fixture data
-      }}
-    >
-      <div style={{ height: 5, background: group.color }} />
-      <div style={{ padding: "14px 16px" }}>
+    <div style={{ borderRadius: 12, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Color accent top bar */}
+      <div style={{ height: 4, background: group.color, flexShrink: 0 }} />
+      <CardContainer size="default" variant="default" onClick={() => onSelect(group)} className="flex-1 flex flex-col">
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
         <p style={{
           fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.45, margin: "0 0 12px",
@@ -3358,21 +3457,15 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
         }}>
           {group.desc}
         </p>
+        {/* Studio chips — Tag DS (read-only identity attributes) */}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12, minHeight: 22 }}>
           {group.studios.length === 0 ? (
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)", opacity: 0.5 }}>No studios</span>
-          ) : group.studios.map(s => {
-            const meta = STUDIO_META[s]
-            return (
-              <span key={s} style={{
-                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
-              }}>
-                {meta.label}
-              </span>
-            )
-          })}
+            <Tag variant="secondary" size="sm">No studios</Tag>
+          ) : group.studios.map(s => (
+            <Tag key={s} variant="secondary" size="sm">{STUDIO_META[s].label}</Tag>
+          ))}
         </div>
+        <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             {visible.map((m, i) => (
@@ -3400,15 +3493,12 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
             {members.length} member{members.length !== 1 ? "s" : ""}
           </span>
           <div style={{ marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => onSelect(group)}
-              style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", cursor: "pointer" }}
-            >
-              Manage
-            </button>
+            <Button variant="secondary" size="sm" onClick={() => onSelect(group)}>
+              Manage group
+            </Button>
           </div>
         </div>
-      </div>
+      </CardContainer>
     </div>
   )
 }
@@ -3934,28 +4024,47 @@ function MemberPreview({
   )
 }
 
-function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void }) {
+function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFull: () => void; onMemberClick?: (m: Member) => void }) {
+  const [tab, setTab] = useState(0)
   const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
+
+  const permRows = [
+    { label: "Governance",  value: perms.governance, max: 10, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
+    { label: "Data Studio", value: perms.datastudio, max: 10, color: "#10b981" },  // audit-ignore: prototype fixture data
+    { label: "Agentic",     value: perms.agentic,    max: 10, color: "#f97316" },  // audit-ignore: prototype fixture data
+    { label: "Admin",       value: perms.admin,       max: 10, color: "#6366f1" },  // audit-ignore: prototype fixture data
+  ]
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ height: 4, background: role.color }} />
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-            color: role.system ? "var(--muted-foreground)" : role.color,
-            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
-            textTransform: "uppercase", letterSpacing: "0.06em",
+      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+            background: role.color,
+            display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            {role.system ? "System" : "Custom"}
-          </span>
+            <Icons.Shield size={22} style={{ color: "#fff" }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{role.label}</div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                {role.system ? "System" : "Custom"}
+              </Tag>
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100,
+                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                color: "var(--primary)",
+                border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+              }}>
+                {perms.total} permissions
+              </span>
+            </div>
+          </div>
         </div>
-        <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, margin: "0 0 12px" }}>{role.desc}</p>
         <button
           onClick={onViewFull}
           style={{
@@ -3970,83 +4079,122 @@ function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void 
         </button>
       </div>
 
-      {/* Permission stats */}
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-          Permissions · <span style={{ color: "var(--primary)" }}>{perms.total}</span> total
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          {([
-            { label: "Governance",  value: perms.governance, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
-            { label: "Data Studio", value: perms.datastudio, color: "#10b981" },  // audit-ignore: prototype fixture data
-            { label: "Agentic",     value: perms.agentic,    color: "#f97316" },  // audit-ignore: prototype fixture data
-            { label: "Admin",       value: perms.admin,      color: "#6366f1" },  // audit-ignore: prototype fixture data
-          ] as const).map(s => (
-            <div key={s.label} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color }} />
-                <span style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)" }}>{s.label}</span>
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: s.value > 0 ? "var(--foreground)" : "var(--muted-foreground)", opacity: s.value > 0 ? 1 : 0.35 }}>
-                {s.value}
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Tabs */}
+      <div style={{ padding: "0 20px", flexShrink: 0 }}>
+        <PreviewTabBar tabs={["Overview", "Members"]} active={tab} onChange={setTab} />
       </div>
 
-      {/* Members */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-          Members · {members.length}
-        </div>
-        {members.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
-            No members assigned to this role
-          </div>
-        ) : members.map(m => (
-          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-              background: m.status === "active" ? m.avatarColor : "var(--muted)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-            }}>{m.initials}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+        {tab === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.55, margin: 0 }}>{role.desc}</p>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 2 }}>
+              Permissions breakdown
             </div>
+            {permRows.map(s => (
+              <div key={s.label} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{s.label}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                    <span style={{ fontWeight: 700, color: s.value > 0 ? "var(--primary)" : "var(--muted-foreground)" }}>{s.value}</span>
+                  </span>
+                </div>
+                <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min((s.value / s.max) * 100, 100)}%`, background: s.value > 0 ? s.color : "transparent", borderRadius: 2, transition: "width 0.3s" }} />
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+
+        {tab === 1 && (
+          <div>
+            {members.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
+                No members assigned to this role
+              </div>
+            ) : members.map(m => (
+              <div
+                key={m.id}
+                onClick={() => onMemberClick?.(m)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+                  borderBottom: "1px solid var(--border)",
+                  cursor: onMemberClick ? "pointer" : "default",
+                  transition: "background 0.1s", borderRadius: 6,
+                }}
+                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
+              >
+                <div style={{
+                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
+                }}>{m.initials}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {m.title}{m.title && m.department ? " · " : ""}{m.department}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
+                  background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
+                  border: `1px solid ${STATUS_COLOR[m.status]}44`,
+                }}>
+                  {STATUS_LABEL[m.status]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => void }) {
+function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onViewFull: () => void; onMemberClick?: (m: Member) => void }) {
+  const [tab, setTab] = useState(0)
   const members = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ height: 4, background: group.color }} />
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
-        <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, margin: "0 0 10px" }}>{group.desc}</p>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
-          {group.studios.length === 0 ? (
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)", opacity: 0.5 }}>No studio access</span>
-          ) : group.studios.map(s => {
-            const meta = STUDIO_META[s]
-            return (
-              <span key={s} style={{
-                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
+      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+            background: group.color,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Icons.Users size={22} style={{ color: "#fff" }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{group.name}</div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100,
+                background: "color-mix(in srgb, var(--muted-foreground) 12%, transparent)",
+                color: "var(--muted-foreground)",
+                border: "1px solid color-mix(in srgb, var(--muted-foreground) 25%, transparent)",
               }}>
-                {meta.label}
+                {members.length} member{members.length !== 1 ? "s" : ""}
               </span>
-            )
-          })}
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100,
+                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                color: "var(--primary)",
+                border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+              }}>
+                {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
         </div>
         <button
           onClick={onViewFull}
@@ -4062,37 +4210,81 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
         </button>
       </div>
 
-      {/* Members */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-          Members · {members.length}
-        </div>
-        {members.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
-            No members in this group yet
-          </div>
-        ) : members.map(m => (
-          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-              background: m.status === "active" ? m.avatarColor : "var(--muted)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-            }}>{m.initials}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {m.title}{m.title && m.department ? " · " : ""}{m.department}
+      {/* Tabs */}
+      <div style={{ padding: "0 20px", flexShrink: 0 }}>
+        <PreviewTabBar tabs={["Overview", "Members"]} active={tab} onChange={setTab} />
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+        {tab === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.55, margin: 0 }}>{group.desc}</p>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>
+                Studio access
               </div>
+              {group.studios.length === 0 ? (
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>No studios assigned</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {group.studios.map(s => {
+                    const meta = STUDIO_META[s]
+                    return (
+                      <div key={s} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)" }}>
+                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-            <span style={{
-              fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
-              background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status], border: `1px solid ${STATUS_COLOR[m.status]}44`,
-            }}>
-              {STATUS_LABEL[m.status]}
-            </span>
           </div>
-        ))}
+        )}
+
+        {tab === 1 && (
+          <div>
+            {members.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
+                No members in this group yet
+              </div>
+            ) : members.map(m => (
+              <div
+                key={m.id}
+                onClick={() => onMemberClick?.(m)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+                  borderBottom: "1px solid var(--border)",
+                  cursor: onMemberClick ? "pointer" : "default",
+                  transition: "background 0.1s", borderRadius: 6,
+                }}
+                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
+              >
+                <div style={{
+                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
+                }}>{m.initials}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {m.title}{m.title && m.department ? " · " : ""}{m.department}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
+                  background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
+                  border: `1px solid ${STATUS_COLOR[m.status]}44`,
+                }}>
+                  {STATUS_LABEL[m.status]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -4380,12 +4572,13 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
           role={dRole}
           onBack={() => setDetailView(null)}
           onDelete={!dRole.system ? () => { setRoles(prev => prev.filter(r => r.id !== dRole.id)); setDetailView(null) } : undefined}
+          onMemberClick={m => setDetailView({ type: "member", member: m })}
         />
       </>
     )
   }
   if (detailView?.type === "group") {
-    return <GroupDetailPage group={detailView.group} onBack={() => setDetailView(null)} />
+    return <GroupDetailPage group={detailView.group} onBack={() => setDetailView(null)} onMemberClick={m => setDetailView({ type: "member", member: m })} />
   }
 
   // List screen
@@ -4604,12 +4797,14 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
           <RolePreview
             role={previewItem.role}
             onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
+            onMemberClick={m => { setPreviewItem(null); setDetailView({ type: "member", member: m }) }}
           />
         )}
         {previewItem?.type === "group" && (
           <GroupPreview
             group={previewItem.group}
             onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
+            onMemberClick={m => { setPreviewItem(null); setDetailView({ type: "member", member: m }) }}
           />
         )}
       </SlideOut>
