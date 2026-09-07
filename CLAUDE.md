@@ -151,23 +151,54 @@ actions={[{ icon: "Eye", onClick: () => {} }]}
 ### Entity Header — entity profile header
 Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its old name on purpose; the change spec forbids renaming it) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; EntityHeader sits inside the content area, typically the Overview tab).
 
-**There are no variants.** The component models no entity types at all — Employee, Customer, Vendor, Patient, Borrower, anything the host defines tomorrow all use the same shape. `entityType` is a plain `{ icon, label }` the caller supplies. Never look for a `variant` prop, never flag a missing one as a DS-GAP: an entity type the DS has never heard of is the normal case, not a gap.
+**There are no variants.** The component models no entity types at all — Employee, Customer, Vendor, Patient, Borrower, anything the host defines tomorrow all use the same shape. Never look for a `variant` prop, never flag a missing one as a DS-GAP: an entity type the DS has never heard of is the normal case, not a gap.
 
-**One skeleton: an always-visible identity row plus 3 zones behind a chevron** (collapsed by default — predictable header height). Every zone prop is optional and **omitting it removes the zone entirely** for that entity type. Never fake a zone with placeholder content — an absent zone is a real, supported state.
+**There is no `entityType` prop either.** What kind of thing this is arrives as a **classification tag**, and only when the visual is an avatar — a highlight icon already names the type.
 
-| Prop | Zone | Shape |
+| Prop | Where | Shape |
 |---|---|---|
 | `name` | Identity | `string` — required |
-| `entityType` | Identity | `{ icon, label }` — required, host-defined |
-| `statusTag?` | Identity | `{ label, icon? }` — a temporary state on the contact ("On Leave · Returns Mar 15"). Neutral/amber only, never `error` |
+| `visual` | Identity | `{ kind: "avatar" }` or `{ kind: "icon", icon, variant? }` — **required, exactly one** |
 | `source?` | Identity | `string` — which system the record came from. **One item, never two** |
+| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **capped at 6 + `+N`** |
+| `stateBadge?` | Identity, right | `{ label, variant, icon? }` — **exactly one**, full semantic range |
+| `showInformation?` | Identity, right | `boolean` — shows the ⓘ trigger |
+| `secondaryAction?` | Identity, right | `RecordAction` — **off by default** |
+| `assignedAgent` | Identity, right | `AssignedAgent \| null` — required as a prop. This is `Ask` |
+| `menuActions?` | Identity, right | `RecordAction[]` — destructive and secondary only |
 | `description?` | below Identity | `string` — durable context, **off unless passed** |
 | `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
-| `recordFields?` | RECORD | `RecordField[]` |
-| `agenticSystem?` | AGENTIC SYSTEM | `AgenticSystemInfo` |
-| `intervention?` | YOUR INTERVENTION | `PendingIntervention` |
-| `assignedAgent` | Identity | `AssignedAgent \| null` — required as a prop |
-| `actions?` | Identity | `RecordAction[]` — `actions[0]` is the one CTA, `actions[1+]` go to the "···" overflow |
+| `recordFields?` | — | `RecordField[]` — consumed by the host's Information panel, not rendered here |
+| `agenticSystem?` | AGENTIC SYSTEM | `AgenticSystemInfo` — **leaving**, see below |
+| `intervention?` | YOUR INTERVENTION | `PendingIntervention` — **leaving**, see below |
+
+**The right-hand cluster has a fixed order:** ⓘ Information → state badge → secondary action → `Ask` → `···` menu. That side is fixed and never compressed; the left side is what yields.
+
+**`visual` — avatar for companies, people and groups. Icon for everything else** (objects, assets, processes, transactions, documents). Exactly one renders, never both, never neither.
+- **Initials are never derived from a code.** `RO-48291` has no initials, so a code-titled record can only be an icon.
+- A site inherits its parent company's brand — it does not get its own mark.
+- The icon's colour is assigned per entity **type** and stays the same everywhere in the product.
+- The rule is about the entity, not about whether the asset exists: a company with no logo still uses an avatar, falling back to initials.
+
+**Three tag roles, two colour rules.** The vocabulary belongs to the tenant; the colour belongs to the platform.
+
+| Role | What it is | How many | Colour |
+|---|---|---|---|
+| **State** | The entity's overall status — `stateBadge`, its own slot on the right | Exactly one | **Full semantic range.** `Active` → success, `Degraded` → alert, `Blocked`/`Suspended` → **error** |
+| **Signal** | Needs attention, bounded in time or condition | Zero or many | **`error` or `alert` only** — or neutral |
+| **Classification** | What kind of thing this is. **Only when the visual is an avatar** | Zero or one | **Never coloured.** The component strips any tone you pass |
+
+- **The test for a left tag is not its role — it is whether someone has to do something about it.** If yes, colour. If no, neutral. `Renews in 52d` is a signal and stays neutral: 52 days out, nobody has to act.
+- **Order:** signals first, sorted by severity, then classification. The component does this — pass them in any order.
+- **Beyond six, a `+N` chip.** Its Tooltip carries the hidden labels, which is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.
+- **If several statuses are true at once, the most blocking one wins** and the rest become signals. The component renders the one badge it is given.
+- **Not a tag at all:** anything true of every entity in the platform — `Entity`, `Governed`, `Manufacturing`, `Automotive`. That is noise. It belongs in secondary metadata or nowhere.
+
+**The title yields last.** `flex: 0 1 auto` with `min-width: 0` and a 540px ceiling — it takes whatever the row has left after visual, source, collapsed tags and actions, and truncates only there. **A title cut short with empty space beside it is a bug, not a rule.** Order of yielding: tags collapse to `+N` first, then source, and only then does the title truncate. Nothing wraps and nothing abbreviates — an ellipsis tells the reader there is more, an abbreviation looks like the real value and misleads.
+
+**`Ask` is one word, and it is the primary CTA.** There is no second one — the labelled CTA that used to sit beside it is gone. It keeps the same Sparkle glyph as the Next Best Action card: **that sharing is deliberate** (Michael, 2026-09-07). Both are AI surfaces and the shared mark is what says so; one converses, the other transacts. Figma's prose argues they should differ, but Figma's own component instances share the glyph — do not "fix" this.
+
+**Two zones are on their way out.** `agenticSystem` and `intervention` — and the chevron that reveals them — **do not exist in the Figma Entity Header.** That content lives in Overview widgets. They are still here only because removing them is its own change; do not build anything new on them.
 
 **`recordFields` is a flat array the caller builds — there is no per-entity field list inside the component.** Each `RecordField` is `{ label, icon, provenance, state, value, maskedValue?, hasDestination? }`:
 - `provenance` is mandatory on every field (`{ system, systemAbbr, modelVersion, syncedAgo }`) — a field with no visible origin is not renderable by design.
@@ -188,7 +219,7 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 
 1. Needs attention right now → signal tag
 2. What kind of thing this is → classification tag
-3. The current status → `statusTag`
+3. The current status → `stateBadge`
 4. A fact someone might act on → `secondaryMetadata`
 5. Durable context none of the above captured → `description`
 

@@ -16,7 +16,7 @@ import { HighlightIcon }    from "@/components/ui/highlight-icon"
 import { CardContainer }    from "@/components/ui/card-container"
 import { ModalDialog }      from "@/components/ui/modal-dialog"
 import { EntityHeader }     from "@/components/ui/record-header"
-import type { EntityHeaderEntityType, SecondaryMetadataItem } from "@/components/ui/record-header"
+import type { EntityVisual, EntityHeaderTag, EntityStateBadge, SecondaryMetadataItem } from "@/components/ui/record-header"
 import { NextBestActionCard, type NextBestAction } from "@/components/experimental/next-best-action-card"
 import { SlideOut }         from "@/components/ui/slide-out"
 import { Input }            from "@/components/ui/input"
@@ -250,12 +250,6 @@ const PROFILE_NBAS: Record<string, NextBestAction[]> = {
     onAccept: () => {},
     onDismiss: () => {},
   }],
-}
-
-const ENTITY_TYPE_ICON: Record<EntityType, LucideIcon> = {
-  person:   LucideIcons.UserRound,
-  employee: LucideIcons.User,
-  company:  LucideIcons.Building2,
 }
 
 // `recordFields` is deliberately NOT passed to EntityHeader here. In the
@@ -551,10 +545,28 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
   }, [profile])
 
   // EntityHeader data
-  const rhEntityType: EntityHeaderEntityType = {
-    icon:  ENTITY_TYPE_ICON[profile.type],
-    label: TYPE_LABEL[profile.type],
-  }
+  // Visual — avatar for companies, people and groups. All three profiles here
+  // are one of those, so all three are avatars; the icon path is for objects,
+  // assets, processes, transactions and documents.
+  const rhVisual: EntityVisual = { kind: "avatar" }
+  // Tags — the entity type is a CLASSIFICATION tag now, not a label beside the
+  // name, and it is present because the visual is an avatar (a highlight icon
+  // would already name the type). Plus one signal per profile, coloured only
+  // when somebody actually has to do something about it.
+  const rhTags: EntityHeaderTag[] = [
+    ...(profile.governance === "error" || profile.connections === "error"
+      ? [{ role: "signal" as const, label: "Sync failing", tone: "error" as const }]
+      : []),
+    { role: "classification", label: TYPE_LABEL[profile.type] },
+  ]
+  // State badge — its own slot on the right, full semantic range. Derived from
+  // the status this screen already tracks: Archived is blocking, so it reads
+  // error; Inactive needs review; Active is the healthy case.
+  const rhStateBadge: EntityStateBadge = {
+    Active:   { label: "Active",   variant: "success"     as const },
+    Inactive: { label: "Inactive", variant: "informative" as const },
+    Archived: { label: "Archived", variant: "error"       as const },
+  }[profile.status]
   // Source — one item, the system this record came from. Uses the documented
   // per-entity-type mapping (Employee/Person → Workday, Company →
   // Salesforce), not a guess.
@@ -647,12 +659,18 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
              it. ── */}
       <EntityHeader
         name={profile.name}
-        entityType={rhEntityType}
+        visual={rhVisual}
+        tags={rhTags}
+        stateBadge={rhStateBadge}
         source={rhSource}
         secondaryMetadata={rhSecondaryMetadata}
-        actions={[
-          { label: "Export",  variant: "secondary", onClick: () => {} },
-          { label: profile.type === "company" ? "Contact account" : "Message", variant: "primary", onClick: () => {} },
+        /* No contextual CTA: `Ask` is the primary action. "Export" was one of
+           two primary CTAs competing with it, and this page already carries
+           Export in its own page Header above. It moves to the overflow, where
+           secondary and destructive actions belong. */
+        menuActions={[
+          { label: "Export",  onClick: () => {} },
+          { label: "Archive", onClick: () => {} },
         ]}
         assignedAgent={{ id: "agent-1", name: "AIMS Assistant", onOpenChat: () => {} }}
       />
