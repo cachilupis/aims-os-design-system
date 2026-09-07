@@ -1245,16 +1245,19 @@ function WBDatasetRow({ dataset, selected, onSelect, isLast }: { dataset: typeof
   const typeVariant = dataset.type === "GROUPED" ? "informative" : dataset.type === "SINGLE VALUE" ? "purple" : "neutral"
   return (
     <div onClick={onSelect} style={{
-      cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px",
+      cursor: "pointer", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
       borderBottom: isLast ? "none" : "1px solid var(--field-border)",
       background: selected ? "color-mix(in srgb, var(--primary) 8%, var(--surface))" : "transparent",
     }}>
-      <Db size={14} style={{ color: "var(--field-supporting)", marginTop: 2, flexShrink: 0 }} />
+      <Db size={14} style={{ color: selected ? "var(--primary)" : "var(--field-supporting)", flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{dataset.name}</div>
-        <div style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.4 }}>{dataset.description}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{dataset.name}</div>
+        <div style={{ fontSize: 11, color: "var(--field-supporting)", lineHeight: 1.4, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dataset.description}</div>
       </div>
-      <Tag variant={typeVariant}>{dataset.type}</Tag>
+      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+        <Tag variant="informative" size="sm">{dataset.integration}</Tag>
+        <Tag variant={typeVariant} size="sm">{dataset.type}</Tag>
+      </div>
     </div>
   )
 }
@@ -1518,16 +1521,9 @@ function WidgetBuilderOverlay({ onClose: _onClose, tab, setTab, onProgressChange
                   <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--primary)", fontWeight: 500, padding: 0 }}>All datasets →</button>
                 </div>
                 <div style={{ borderRadius: 10, border: "1px solid var(--field-border)", overflow: "hidden", background: "var(--surface)" }}>
-                  {PRESET_DATASETS.slice(0, 4).map((d) => (
-                    <WBDatasetRow key={d.id} dataset={d} selected={sourceId === d.id} onSelect={() => { setSourceId(d.id); setMetric("") }} isLast={false} />
+                  {PRESET_DATASETS.map((d, i) => (
+                    <WBDatasetRow key={d.id} dataset={d} selected={sourceId === d.id} onSelect={() => { setSourceId(d.id); setMetric("") }} isLast={i === PRESET_DATASETS.length - 1} />
                   ))}
-                  {(() => { const Ch = LucideIcons.ChevronRight as React.FC<{ size?: number; style?: React.CSSProperties }>; return (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "var(--field-supporting)", fontSize: 12, cursor: "pointer", borderTop: "1px solid var(--field-border)" }}>
-                      <span style={{ width: 14, height: 14, borderRadius: "50%", border: "1px solid var(--field-border)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>○</span>
-                      Browse {PRESET_DATASETS.length - 4} more datasets...
-                      <Ch size={12} style={{ marginLeft: "auto" }} />
-                    </div>
-                  )})()}
                 </div>
               </div>
             )}
