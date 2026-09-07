@@ -153,12 +153,6 @@ function scanHardcodedColors(file, { skipTokenDefLines, lineRange } = {}) {
   })
 }
 
-/** 1-indexed line number of the first line containing `marker`, or null. */
-function findMarkerLine(text, marker) {
-  const idx = text.indexOf(marker)
-  if (idx === -1) return null
-  return text.slice(0, idx).split("\n").length
-}
 
 // ── Check 1: components ─────────────────────────────────────────────────
 const componentFiles = [
@@ -186,25 +180,16 @@ screenFiles.forEach((f) => scanHardcodedColors(f))
 // so it keeps working as the file grows. This is the same gap that let 5
 // real hardcoded-color/composition bugs ship undetected in the widgets
 // during the 2026-08 audit — everything else in App.tsx is a known,
-// deliberate exclusion, not an oversight (see the audit's follow-up note:
-// moving widget content out of App.tsx into its own directory would let
-// this scan the normal way instead of by marker-slice).
+// deliberate exclusion, not an oversight.
+//
+// That audit's own follow-up said moving widget content out of App.tsx into its
+// own file would let this scan the normal way instead of slicing App.tsx between
+// two markers. That move happened on 2026-09-07, so the marker slice is gone and
+// the file is scanned like any other component.
 const appTsxPath = path.join(ROOT, "src/App.tsx")
-if (fs.existsSync(appTsxPath)) {
-  const appText = fs.readFileSync(appTsxPath, "utf8")
-  const widgetStart = findMarkerLine(appText, "function KpiWidgetContent(")
-  const widgetEnd = findMarkerLine(appText, "// ── Widget definitions")
-  if (widgetStart && widgetEnd) {
-    scanHardcodedColors(appTsxPath, { lineRange: [widgetStart, widgetEnd - 1] })
-  } else {
-    // Markers moved or got renamed — fail loudly rather than silently
-    // scanning 0 lines and looking clean by accident.
-    errors.push({
-      file: rel(appTsxPath),
-      line: 1,
-      snippet: "audit-tokens.cjs: widget content markers not found in App.tsx — update findMarkerLine() calls, this check is currently scanning nothing",
-    })
-  }
+const widgetContentPath = path.join(ROOT, "src/components/experimental/widget-content.tsx")
+if (fs.existsSync(widgetContentPath)) {
+  scanHardcodedColors(widgetContentPath)
 }
 
 // ── Check 2: index.css ──────────────────────────────────────────────────
@@ -332,15 +317,8 @@ componentFiles.forEach((file) => scanSpacing(file))
 // Same rationale as Check 1 above: real spacing in real screens/widgets,
 // not the reference tables and pitch content elsewhere in App.tsx.
 screenFiles.forEach((file) => scanSpacing(file))
-if (fs.existsSync(appTsxPath)) {
-  const appText = fs.readFileSync(appTsxPath, "utf8")
-  const widgetStart = findMarkerLine(appText, "function KpiWidgetContent(")
-  const widgetEnd = findMarkerLine(appText, "// ── Widget definitions")
-  if (widgetStart && widgetEnd) {
-    scanSpacing(appTsxPath, { lineRange: [widgetStart, widgetEnd - 1] })
-  }
-  // (Check 1's marker-not-found branch above already surfaces a loud error
-  // if these markers ever go missing — no need to duplicate that here.)
+if (fs.existsSync(widgetContentPath)) {
+  scanSpacing(widgetContentPath)
 }
 
 // ── Check 6: hand-rolled reimplementations of real DS components ───────────

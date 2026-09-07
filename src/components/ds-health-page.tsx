@@ -70,6 +70,10 @@ const findings = health.findings as Finding[]
 const totals   = health.totals as Record<string, number>
 const legend   = health.legend as Record<string, { label: string; blurb: string }>
 const stale    = (health.staleDecisions ?? []) as string[]
+// Widget types a prototype offers that WIDGET_DEFS does not document yet.
+// Not findings — nothing is wrong with them; they are simply unspecified, and
+// this is the queue specs get written from.
+const candidates = (health.widgetCandidates ?? []) as { id: string; label: string; category: string; bestFor: string }[]
 
 function Stat({ label, value, hint }: { label: string; value: number | string; hint?: string }) {
   return (
@@ -184,6 +188,7 @@ export function DsHealthPage() {
         <Stat label="To promote" value={totals.promote ?? 0} hint="Candidates for a component or variant" />
         <Stat label="Accepted" value={totals.accepted ?? 0} hint="False positives and exceptions" />
           <Stat label="Ready to promote" value={promotable.length} hint="Candidates used in 2+ screens" />
+        <Stat label="Widget types to spec" value={candidates.length} hint="Offered by a prototype, no spec yet" />
       </div>
 
         {/* ── Promotion queue ──────────────────────────────────────────────
@@ -221,6 +226,42 @@ export function DsHealthPage() {
             </CardContainer>
           </div>
         )}
+
+      {/* ── Widget types awaiting a spec ──────────────────────────────────
+          The widget vocabulary is a union: the DS's own 14 documented types
+          plus the 22 the widget-canvas prototype offers. Where the two agree,
+          a type carries its catalogId. Where they do not, it lands here.
+
+          These are deliberately NOT findings. A finding says a screen rebuilt
+          something the DS already has; this says a prototype needs something
+          the DS has not described yet. Opposite problems, and mixing them made
+          the widget mess unreadable for a month. */}
+      {candidates.length > 0 && (
+        <div className="flex flex-col gap-[10px]">
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>
+            Widget types awaiting a spec
+          </div>
+          <p style={{ fontSize: 13, color: "var(--color-text-subtitle)", lineHeight: 1.6, margin: 0, maxWidth: "68ch" }}>
+            Real in a prototype, not yet in the catalog. Each needs the same treatment the other 14 have —
+            size class, grid widths, states, content variants, and a dontUse list.
+          </p>
+          <CardContainer size="sm" className="!p-0 overflow-hidden">
+            <Table
+              size="sm"
+              columns={[
+                { key: "label",    header: "Widget type", width: "24%" },
+                { key: "category", header: "Category",    width: "20%" },
+                { key: "bestFor",  header: "Best for",    width: "56%" },
+              ] as TableColumn<{ label: string; category: string; bestFor: string }>[]}
+              data={candidates.map((c) => ({
+                label:    c.label,
+                category: c.category === "data-display" ? "Data display" : c.category[0].toUpperCase() + c.category.slice(1),
+                bestFor:  c.bestFor,
+              }))}
+            />
+          </CardContainer>
+        </div>
+      )}
 
       {findings.length === 0 ? (
         <EmptyState

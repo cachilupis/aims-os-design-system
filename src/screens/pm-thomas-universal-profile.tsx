@@ -21,6 +21,7 @@ import { NextBestActionCard, type NextBestAction } from "@/components/experiment
 import { SlideOut }         from "@/components/ui/slide-out"
 import { Input }            from "@/components/ui/input"
 import type { LucideIcon }  from "lucide-react"
+import { MenuItem } from "@/components/ui/menu-item"
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -328,7 +329,10 @@ function StudyWidget({ title, status, children }: { title: string; status: Study
 // corrected in the same change as this.)
 type MetricVariant = "success" | "alert" | "informative" | "neutral" | "error"
 
-function MetricRow({
+// A metric row inside a study widget: icon, truncating label, value. Not the
+// MetricRow in CallDetailPage, which is a plain label/value pair — renamed so
+// the duplicate check stops pairing two unrelated components.
+function StudyMetricRow({
   label, value, icon, variant, last = false,
 }: {
   label: string
@@ -375,7 +379,7 @@ function GovernanceContent() {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       {items.map((item, i) => (
-        <MetricRow key={item.label} {...item} last={i === items.length - 1} />
+        <StudyMetricRow key={item.label} {...item} last={i === items.length - 1} />
       ))}
     </div>
   )
@@ -393,7 +397,7 @@ function RiskContent() {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       {items.map((item, i) => (
-        <MetricRow key={item.label} {...item} last={i === items.length - 1} />
+        <StudyMetricRow key={item.label} {...item} last={i === items.length - 1} />
       ))}
     </div>
   )
@@ -418,9 +422,7 @@ function ConnectionsContent() {
           </div>
         </div>
       ))}
-      <button style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 500, color: "var(--primary)", border: "none", background: "none", cursor: "pointer", padding: 0, marginTop: 2 }}>
-        View all connections
-      </button>
+      <Button variant="tertiary" size="sm" className="self-start">View all connections</Button>
     </div>
   )
 }
@@ -596,21 +598,12 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
       activeSidebarId="data"
       header={(isScrolled) => (
         <div>
-          {!isScrolled && (
-            <button
-              onClick={onBack}
-              style={{
-                display: "flex", alignItems: "center", gap: 4,
-                border: "none", background: "none", cursor: "pointer",
-                padding: "0 0 6px 0", color: "var(--primary)",
-              }}
-            >
-              <LucideIcons.ChevronLeft size={13} />
-              <span style={{ fontSize: 12, fontWeight: 500 }}>Profiles</span>
-            </button>
-          )}
           <Header
             size={isScrolled ? "compress" : "size-l"}
+            // A profile is one step below the Profiles list, so L2 — the DS back
+            // button, not a hand-rolled chevron sitting above the Header.
+            backButton
+            onBack={onBack}
             title={profile.name}
             description={profile.subtitle}
             tag={<Tag variant={STATUS_TAG[profile.status]} size="sm">{profile.status}</Tag>}
@@ -697,28 +690,18 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
                 {availableOptions.map(opt => {
                   const Icon = (LucideIcons as Record<string, unknown>)[opt.iconName] as LucideIcon | undefined
                   return (
-                    <button
+                    <MenuItem
                       key={opt.label}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 10,
-                        width: "100%", padding: "8px 12px",
-                        background: "none", border: "none", cursor: "pointer",
-                        textAlign: "left",
-                      }}
+                      size="sm"
+                      label={opt.label}
+                      leadingIcon={Icon ? <Icon size={13} /> : undefined}
                       onClick={() => {
                         setUserTabs(t => [...t, opt.label])
                         setTab(opt.label)
                         setTabPickerOpen(false)
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "var(--hover)")}
-                      onMouseLeave={e => (e.currentTarget.style.background = "none")}
-                    >
-                      {Icon && <Icon size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />}
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{opt.label}</div>
-                        <div style={{ fontSize: 11, color: "var(--field-supporting)" }}>{opt.description}</div>
-                      </div>
-                    </button>
+                      subtext={opt.description}
+                    />
                   )
                 })}
               </div>
