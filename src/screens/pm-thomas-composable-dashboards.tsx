@@ -1177,12 +1177,19 @@ function NewDashboardOverlay({ onClose, onCreated }: { onClose: () => void; onCr
 // ── Widget Playground sub-components ─────────────────────────────────────────
 
 function WBSectionChip({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  const Sparkle = LucideIcons.Sparkles as React.FC<{ size?: number; style?: React.CSSProperties }>
   return (
     <button onClick={onClick} style={{
-      height: 28, padding: "0 12px", borderRadius: 14, border: "1px solid var(--field-border)",
-      background: "transparent", color: "var(--field-supporting)",
-      fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" as const, display: "inline-flex", alignItems: "center",
-    }}>{children}</button>
+      height: 26, padding: "0 10px 0 8px", borderRadius: 13, gap: 4,
+      border: "1px solid color-mix(in srgb, var(--primary) 25%, var(--field-border))", // audit-ignore: color-mix
+      background: "color-mix(in srgb, var(--primary) 5%, var(--surface))", // audit-ignore: color-mix
+      color: "var(--foreground)",
+      fontSize: 12, fontWeight: 400, cursor: "pointer", whiteSpace: "nowrap" as const,
+      display: "inline-flex", alignItems: "center",
+    }}>
+      <Sparkle size={10} style={{ color: "var(--primary)", flexShrink: 0 }} />
+      {children}
+    </button>
   )
 }
 
@@ -1477,7 +1484,7 @@ function WidgetBuilderOverlay({ onClose: _onClose, tab, setTab, onProgressChange
             <Button variant="secondary" size="sm">Generate</Button>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, alignItems: "center" }}>
-            <span style={{ fontSize: 11, color: "var(--field-supporting)", flexShrink: 0 }}>e.g.</span>
+            <span style={{ fontSize: 11, color: "var(--field-supporting)", flexShrink: 0 }}>Try:</span>
             {DESCRIBE_EXAMPLES.map(ex => (
               <WBSectionChip key={ex} onClick={() => setDescPr(ex)}>{ex}</WBSectionChip>
             ))}
