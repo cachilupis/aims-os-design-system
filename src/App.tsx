@@ -201,7 +201,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "process-item",    label: "Process Item",      group: "Components",  description: "One step of a running process, with its state · 5 statuses (done/loading/error/pending/warning) · number-badge and expand variants · ProcessList wrapper adds the title, View all CTA, and empty/loading states" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
   { id: "radio",           label: "Radio",             group: "Components",  description: "Single choice from a mutually exclusive set · 3 sizes (S/M/L) · unselect / select / disabled · RadioGroup owns the fieldset, legend and arrow-key navigation — a radio is never used alone" },
-  { id: "record-header",   label: "Entity Header",     group: "Components",  description: "Governed identity card for a single record on any Work Surface · title, source, tags, state badge and actions in one row, secondary metadata (max 6) in a second · expandable Agentic System / Your Intervention zones · every RECORD field carries an origin-system badge and reachable provenance · one shared skeleton for every entity type, no variants · the Next Best Action card is a SEPARATE component in its own container, not part of this one" },
+  { id: "record-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see experimental/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "side-panel",      label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 350px default, 450px + dynamic half-screen snap points · header + scrollable body + optional footer" },
@@ -2192,7 +2192,7 @@ const ENTITY_HEADER_SPEC = {
   name: "Entity Header",
   figmaNodeId: "19815:101548",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=19815-101548",
-  description: "Governed identity card for a single record on any AIMS OS Work Surface — Employee, Customer, Vendor, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type — there is no variant prop; only the content each caller passes changes. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip — no descriptive sentences, no scores with drivers, no expandable analysis. The Next Best Action card is a SEPARATE component in its own Card Container (see experimental/next-best-action-card), never a second slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces.",
+  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and NO DISCLOSURE — this is a fixed arrangement of slots, not a collapsible card. The chevron and the two expandable zones an earlier revision had are gone; that content belongs to Overview widgets. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip — no descriptive sentences, no scores with drivers, no expandable analysis. The Next Best Action card is a SEPARATE component in its own Card Container (see experimental/next-best-action-card), never a second slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces.",
   properties: [
     { name: "name",           type: "string",   values: ["The record's display name"], default: "required", note: "A person's name or an account name. The component has NO variant prop and no closed set of entity types — see entityType below." },
     { name: "visual",           type: "object",   values: ["{ kind: \"avatar\" }", "{ kind: \"icon\", icon: LucideIcon, variant?: HighlightIconVariant }"], default: "required", note: "Avatar for companies, people and groups. Highlight icon for everything else — objects, assets, processes, transactions, documents. EXACTLY ONE RENDERS: never both, never neither, which is why this is required and has no default. Initials are NEVER derived from a code, so a code-titled record (RO-48291) can only be an icon. A site inherits its parent company's brand rather than getting its own mark. The icon colour is assigned per entity TYPE and stays the same everywhere in the product." },
@@ -32493,7 +32493,14 @@ const oemProv = (syncedAgo: string): FieldProvenance => ({ system: "OEM Warranty
 // `RhDemoKey` is this DEMO PAGE's own bookkeeping key (App.tsx's problem),
 // not a prop the component reads — RecordHeader only ever sees `name` +
 // `entityType` + `recordFields`, built from these mocks below.
-type RhDemoKey = "uep" | "ucp" | "uvp" | "patient" | "claim" | "borrower" | "repairOrder"
+type RhDemoKey =
+  // People — an avatar, from a photo or initials
+  | "uep" | "patient" | "claim" | "borrower"
+  // Companies and sites — an avatar, from a brand
+  | "ucp" | "uvp"
+  // Processes, assets and data — a highlight icon, because there is no face
+  // and no brand to show
+  | "repairOrder" | "dataEntity"
 
 // ── Visual identity ───────────────────────────────────────────────────────
 // Avatar for companies, people and groups. Highlight icon for everything
@@ -32504,13 +32511,19 @@ type RhDemoKey = "uep" | "ucp" | "uvp" | "patient" | "claim" | "borrower" | "rep
 // Studio entity taken verbatim from Figma's edge case 5 — without it, no
 // example in this catalog would show a highlight icon at all.
 const RH_VISUAL: Record<RhDemoKey, EntityVisual> = {
+  // Figma's edge case 5 — "the header is not a CRM header". A platform data
+  // entity: no face, no brand, so a highlight icon by definition.
+  dataEntity:  { kind: "icon", icon: LucideIcons.Database, variant: "light-blue" },
   uep:         { kind: "avatar" },
   ucp:         { kind: "avatar" },
   uvp:         { kind: "avatar" },
   patient:     { kind: "avatar" },
   claim:       { kind: "avatar" },
   borrower:    { kind: "avatar" },
-  repairOrder: { kind: "avatar" },
+  // A repair order is a PROCESS, not a person. Figma's own example, and the
+  // reason the icon path exists: RO-48291 has no initials, so an avatar was
+  // never available to it.
+  repairOrder: { kind: "icon", icon: LucideIcons.Wrench, variant: "alert" },
 }
 
 // ── State badge — one per entity, full semantic range ─────────────────────
@@ -32520,6 +32533,7 @@ const RH_VISUAL: Record<RhDemoKey, EntityVisual> = {
 // `success`. The most blocking status wins; anything else it displaces
 // becomes a signal tag.
 const RH_STATE_BADGE: Record<RhDemoKey, EntityStateBadge> = {
+  dataEntity:  { label: "Degraded",      variant: "alert"       },
   // Was the old `statusTag` ("On Leave · Returns Mar 15", neutral, on the
   // left). Figma puts it on the right and colours it `informative`.
   uep:         { label: "On leave",       variant: "informative" },
@@ -32541,6 +32555,10 @@ const RH_STATE_BADGE: Record<RhDemoKey, EntityStateBadge> = {
 // "does someone have to do something about it". `Renews in 52d` is a signal
 // and stays neutral: 52 days out, nobody has to act yet.
 const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
+  // No classification tag: the highlight icon already names the type.
+  dataEntity: [
+    { role: "signal",         label: "Sync failing",         tone: "error" },
+  ],
   uep: [
     { role: "signal",         label: "Access review",       tone: "alert" },
     { role: "classification", label: "Employee"                           },
@@ -32673,10 +32691,23 @@ const RH_REPAIR_ORDER = {
   lastServiceDate: { label: "Last Service Date", icon: LucideIcons.CalendarClock, value: "Feb 3, 2026",          state: "hydrated", provenance: cdkProv("6h ago"), hasDestination: false } satisfies RecordField,
 }
 
+// Helix Data Studio entity — Figma's edge case 5, "the header is not a CRM
+// header". The same skeleton serving a platform data entity: no face, no
+// brand, so a highlight icon; and a source that is the platform itself rather
+// than a system of record.
+const hdsProv = (syncedAgo: string): FieldProvenance => ({ system: "Helix Data Studio", systemAbbr: "HDS", modelVersion: "Entity v2.0", syncedAgo })
+const RH_DATA_ENTITY = {
+  name: "Customer Master",
+  steward:  { label: "Data Steward", icon: LucideIcons.User,          value: "Priya Nair",   state: "hydrated", provenance: hdsProv("25m ago") } satisfies RecordField,
+  lastSync: { label: "Last Sync",    icon: LucideIcons.CalendarClock, value: "Failed 2h ago", state: "hydrated", provenance: hdsProv("2h ago"), hasDestination: false } satisfies RecordField,
+  rowCount: { label: "Rows",         icon: LucideIcons.Table,         value: "1.24M",        state: "hydrated", provenance: hdsProv("25m ago"), hasDestination: false } satisfies RecordField,
+}
+
 // Record zone — the RECORD grid is a plain RecordField[] the host builds
 // directly (Block 4: no fixed "employee field" structure inside the
 // component anymore).
 const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
+  dataEntity: [RH_DATA_ENTITY.steward, RH_DATA_ENTITY.lastSync, RH_DATA_ENTITY.rowCount],
   uep: [RH_UEP.manager, RH_UEP.accessRole, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate],
   ucp: [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr],
   uvp: [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd],
@@ -32694,6 +32725,7 @@ const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
 // itself would read "Helix Data Studio"; one with no source at all omits the
 // prop rather than filling the slot with a category or a location.
 const RH_SOURCE: Record<RhDemoKey, string> = {
+  dataEntity:  "Helix Data Studio",
   uep:         "Workday",
   ucp:         "Salesforce",
   uvp:         "NetSuite",
@@ -32711,6 +32743,11 @@ const RH_SOURCE: Record<RhDemoKey, string> = {
 // access role, and tenure. Nothing here is true of every entity of the same
 // type — that would be a label, not information.
 const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
+  dataEntity: [
+    { icon: LucideIcons.Table,          text: "38 tables", tooltip: "Normalized tables · 38 tables feeding this entity." },
+    { icon: LucideIcons.CircleCheckBig, text: "12 facts",  tooltip: "Truth Plane facts · 12 attested facts derived from this entity." },
+    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 ingestion workflows currently running." },
+  ],
   uep: [
     { icon: LucideIcons.CircleCheckBig, text: "9 facts",   tooltip: "Truth Plane facts · 9 attested facts on this record." },
     { icon: LucideIcons.FileText,       text: "3 docs",    tooltip: "Canon Plane documents · 3 long-form references. Counted separately from facts: TR outranks CR." },
@@ -32763,13 +32800,17 @@ const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
 // than lorem. Each passes the durability test — it says what the entity IS,
 // never what is happening to it.
 const RH_PREVIEW_DESCRIPTION: Record<RhDemoKey, string> = {
+  dataEntity:  "Normalized customer entity, resolved from CRM, DMS and the enrichment provider.",
   uep:         "Decision maker for infrastructure purchases across all sites.",
   ucp:         "Multi-site financial services account, contracted at the parent level.",
   uvp:         "Sole supplier for direct materials on the Midwest assembly lines.",
   patient:     "Long-term cardiology patient, managed jointly with an outside specialist.",
   claim:       "Commercial policyholder covering a fleet of 40 vehicles.",
   borrower:    "First-time commercial borrower, no prior facility with the bank.",
-  repairOrder: "Fleet owner whose vehicles are serviced under a single account.",
+  // The one case Figma says JUSTIFIES a description: the title is an opaque
+  // code. "RO-48291" alone means nothing, so the description says what the
+  // record concerns. Copy is Figma's own.
+  repairOrder: "Front collision, insurance-approved, parts on backorder from the manufacturer.",
 }
 
 // Preview tab only — there is NO contextual CTA any more: `Ask` is the primary
@@ -32785,8 +32826,9 @@ const RH_PREVIEW_MENU_ACTIONS: RecordAction[] = [
 // now that there are 7 variants across 2 groups (Work Surfaces + Other
 // Markets).
 const RH_NAME: Record<RhDemoKey, string> = {
+  dataEntity: "Customer Master",
   uep: RH_UEP.name, ucp: RH_UCP.name, uvp: RH_UVP.name,
-  patient: RH_PATIENT.name, claim: RH_CLAIM.name, borrower: RH_BORROWER.name, repairOrder: RH_REPAIR_ORDER.name,
+  patient: RH_PATIENT.name, claim: RH_CLAIM.name, borrower: RH_BORROWER.name, repairOrder: "RO-48291",
 }
 
 // Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
@@ -32813,6 +32855,7 @@ const RH_UEP_MASKED_FIELDS: RecordField[] = [RH_UEP.manager, RH_UEP_MASKED_ACCES
 // separate feature. A flat, generic name here is fully decoupled from
 // RH_WORKFLOWS' own `owner` field, so the two can never collide again.
 const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
+  dataEntity:  { id: "agent-assistant-dataEntity", name: "AI Assistant" },
   uep: { id: "agent-assistant-uep", name: "AI Assistant" },
   ucp: { id: "agent-assistant-ucp", name: "AI Assistant" },
   uvp: { id: "agent-assistant-uvp", name: "AI Assistant" },
@@ -32937,6 +32980,16 @@ type NbaMock = {
 }
 
 const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
+  dataEntity: [
+    {
+      id: "dataEntity-nba-1", title: "Re-run the failed CRM sync",
+      description: "The nightly CRM sync failed twice in a row, so 4 downstream workflows are reading yesterday's data. Re-running it now clears them.",
+      assignedTo: "Data Steward", assignedToKind: "person", dueDate: "Sep 8, 2026", status: "Not started",
+      task: { kind: "approval", whatChanges: "Re-run the CRM ingestion for Customer Master", context: "Two consecutive failures; 4 workflows are downstream of this entity." },
+      contextTag: "Sync",
+      timeAgo: "25m ago",
+    },
+  ],
   uep: [
     {
       id: "uep-nba-1", title: "Scope down Sarah's Admin access",
@@ -33123,13 +33176,6 @@ const NBA_TASK_LABEL: Record<NbaTaskKind, string> = {
   email: "Email",
 }
 // Playground's NBA-type selector points at one real, already-authored NBA
-// per type — never invented content just for the control.
-const PG_NBA_TYPE_SOURCE: Record<"approval" | "call" | "email" | "not-modeled", { v: RhDemoKey; id: string }> = {
-  approval: { v: "uep", id: "uep-nba-1" },
-  call: { v: "ucp", id: "ucp-nba-1" },
-  email: { v: "uvp", id: "uvp-nba-1" },
-  "not-modeled": { v: "repairOrder", id: "repairOrder-nba-1" },
-}
 // Closing pass — the closure banner shown once a Call/Email task's action
 // is taken, keyed by the task's own `outcome`. "executed" needs no further
 // gate; "in-review" still routes through governance before it actually
@@ -33146,7 +33192,7 @@ const NBA_RESULT_COPY: Record<"executed" | "in-review", { title: string; state: 
 const NbaSectionDivider = () => <div className="h-px" style={{ background: "var(--table-border)" }} />
 
 function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
-  const [tab, setTab] = useState<"preview" | "overview" | "playground" | "reference">("preview")
+  const [tab, setTab] = useState<"preview" | "overview" | "reference">("preview")
   // Preview tab — the component alone on a stage, with one control per
   // optional slot. Mirrors the Figma component set's own property panel (2
   // variant axes + 8 booleans) so "what can this card turn on and off" is
@@ -33170,13 +33216,11 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pvAgent,       setPvAgent]       = useState(true)
   const [pvLocked,      setPvLocked]      = useState(false)
   const [pvNba,         setPvNba]         = useState(true)
-  const [pgVariant, setPgVariant] = useState<RhDemoKey>("uep")
   // Closing pass — Playground's own NBA-type selector, decoupled from
   // pgVariant: picks which of the 3 modeled types (+ the 1 "not yet
   // modeled" example) shows on the live card below, by pointing at one
   // real NBA already authored in RH_NBA rather than inventing new content
   // just for this control.
-  const [pgNbaType, setPgNbaType] = useState<"approval" | "call" | "email" | "not-modeled">("approval")
 
   // Governed SlideOut state — one boolean per flow, reused across demo
   // entities (content keyed by whichever one was actually clicked).
@@ -33265,20 +33309,9 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
     }
   }
 
-  const pgName = RH_NAME[pgVariant]
-  const pgRecordFields = RH_RECORD_FIELDS[pgVariant]
   // Playground's NBA-type selector — decoupled from pgVariant on purpose,
   // so switching types doesn't require also switching to whichever
   // vertical happens to carry that type.
-  const pgNbaSource = PG_NBA_TYPE_SOURCE[pgNbaType]
-  const pgNbaMock = RH_NBA[pgNbaSource.v].find(n => n.id === pgNbaSource.id)!
-  const pgNextBestActions: NextBestAction[] = [{
-    id: pgNbaMock.id, title: pgNbaMock.title, timeAgo: pgNbaMock.timeAgo,
-    description: pgNbaMock.description,
-    onViewDetails: () => rhOpenNba(pgNbaSource.v, pgNbaMock.id),
-    onAccept: pgNbaMock.task ? () => rhOpenNba(pgNbaSource.v, pgNbaMock.id) : undefined,
-    onDismiss: () => {},
-  }]
   const openVariant = rhOpenVariant ?? "uep"
   const openRecordFields = RH_RECORD_FIELDS[openVariant]
   // Closing pass — "About this record"'s subtitle used to be one hardcoded
@@ -33323,14 +33356,29 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Entity Header</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[680px]">
-            Identity card for a Unified Entity Profile. It identifies the entity you are looking at and surfaces what needs attention — it carries no detail, which lives in the tabs below. Title, source, tags, state badge and actions in the first row; secondary metadata (max 6) in the second. Agentic System / Your Intervention collapsed by default, revealed by the chevron. One shared skeleton for every entity type — there is no variant prop. The Next Best Action card below is a <strong>separate component in its own container</strong>, not part of this one.
+            Identity card for a Unified Entity Profile. It identifies the entity you are looking at and surfaces what needs attention — it carries no detail, which lives in the tabs below. Title, source, tags and actions in the first row; secondary metadata (max 6) in the second. One shared skeleton for every entity type — there is no variant prop, and no disclosure: this is a fixed arrangement of slots, not a collapsible card. The Next Best Action card below is a <strong>separate component in its own container</strong>, not part of this one.
           </p>
         </div>
-        <SpecButton onClick={() => openSpec("record-header")} />
+        <div className="flex items-center gap-[8px] shrink-0">
+          {/* See it applied. Every example on this page is the component on a
+              stage; this opens the real UCP prototype — Thomas's Universal
+              Profile screen — where the header sits in a page with tabs,
+              widgets and the Next Best Action card as its own sibling. A new
+              tab, so the reader keeps their place in the docs. */}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<LucideIcons.ExternalLink size={14} strokeWidth={1.75} />}
+            onClick={() => window.open("?proto=proto-thomas-universal-profile", "_blank")}
+          >
+            Open the real UCP screen
+          </Button>
+          <SpecButton onClick={() => openSpec("record-header")} />
+        </div>
       </div>
 
       <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
-        {(["preview", "overview", "playground", "reference"] as const).map(t => (
+        {(["preview", "overview", "reference"] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -33377,18 +33425,39 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
           </div>
 
           <div className="flex flex-col gap-[12px]">
+            {/* Grouped by the question that actually decides the rendering —
+                does this entity have a real-world visual identity? — rather
+                than by market. "Work Surfaces / Other Markets" grouped by
+                which product line an example came from, which tells a reader
+                nothing about how the component behaves. These three groups
+                are the rule itself: a face, a brand, or neither. */}
             <CtrlGroup<RhDemoKey>
-              label="Entity type"
+              label="People — avatar from a photo or initials"
               value={pvKey}
               onChange={setPvKey}
               options={[
                 { value: "uep", label: "Employee" },
-                { value: "ucp", label: "Customer" },
-                { value: "uvp", label: "Vendor" },
                 { value: "patient", label: "Patient" },
                 { value: "claim", label: "Policyholder" },
                 { value: "borrower", label: "Borrower" },
-                { value: "repairOrder", label: "Service customer" },
+              ]}
+            />
+            <CtrlGroup<RhDemoKey>
+              label="Companies and sites — avatar from a brand"
+              value={pvKey}
+              onChange={setPvKey}
+              options={[
+                { value: "ucp", label: "Customer account" },
+                { value: "uvp", label: "Vendor" },
+              ]}
+            />
+            <CtrlGroup<RhDemoKey>
+              label="Processes, assets and data — a highlight icon, no face and no brand"
+              value={pvKey}
+              onChange={setPvKey}
+              options={[
+                { value: "repairOrder", label: "Repair order" },
+                { value: "dataEntity", label: "Platform data entity" },
               ]}
             />
             <div>
@@ -33579,97 +33648,10 @@ function EntityHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         </div>
       )}
 
-      {tab === "playground" && (
-        <div className="flex flex-col gap-[32px]">
-          <EntityHeader
-            name={pgName}
-            visual={RH_VISUAL[pgVariant]} tags={RH_TAGS[pgVariant]} stateBadge={RH_STATE_BADGE[pgVariant]}
-            source={RH_SOURCE[pgVariant]}
-            secondaryMetadata={RH_SECONDARY_METADATA[pgVariant]}
-            /* Description stays OFF here on purpose — none of these 7 titles
-               is an opaque code, so none of them qualifies. The one example
-               that does turn it on is the Repair Order edge case, where the
-               title is an identifier rather than a name. */
-            recordFields={pgRecordFields}
-            assignedAgent={rhAssignedAgent(pgVariant, pgName)}
-            showInformation onInformationOpen={() => rhOpenProvenance(pgVariant)}
-          />
-          <NextBestActionCard item={pgNextBestActions[0]} className="mt-[12px]" />
-
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Variant — same skeleton, only content changes</p>
-            {/* Two labeled groups (this pass), reusing the repo's own CtrlGroup
-                segmentation pattern (used across every other component's
-                Playground on this page) rather than inventing a new selector.
-                Both groups drive the SAME pgVariant state — separating them
-                is purely about what they mean: "Work Surfaces" are this
-                card's 3 native entity shapes; "Other Markets" exist ONLY to
-                prove the same skeleton tolerates genuinely different
-                verticals — not to suggest AIMS OS ships any of them as
-                additional native types. Labeled by MARKET (correction pass
-                — matches the group's own header and the Overview tab's own
-                "Market — Contact Type" titles), never by the process the
-                contact's workflow happens to be — a claim or a repair
-                order is a workflow inside the contact, never the
-                identifier for the example itself. */}
-            <div className="flex flex-col gap-[8px]">
-              <CtrlGroup<RhDemoKey>
-                label="Work Surfaces"
-                value={pgVariant}
-                onChange={setPgVariant}
-                options={[
-                  { value: "uep", label: "Employee" },
-                  { value: "ucp", label: "Customer" },
-                  { value: "uvp", label: "Vendor" },
-                ]}
-              />
-              <CtrlGroup<RhDemoKey>
-                label="Other Markets"
-                value={pgVariant}
-                onChange={setPgVariant}
-                options={[
-                  { value: "patient", label: "Healthcare" },
-                  { value: "claim", label: "Insurance" },
-                  { value: "borrower", label: "Banking" },
-                  { value: "repairOrder", label: "Automotive" },
-                ]}
-              />
-            </div>
-            <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
-              Click the chevron on the Identity row to expand/collapse Agentic System / Your Intervention / Record — real disclosure state, not a mock. Click Active Workflow, the Next Best Action block, or the (i) icon next to RECORD to open the real SlideOuts.
-            </p>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Next Best Action — type</p>
-            {/* Closing pass — a dedicated control so dev can compare the 3
-                modeled types (+ the 1 "not yet modeled" fallback) live,
-                independent of which vertical is selected above — each
-                option points at one real, already-authored NBA rather
-                than fabricating new content for this control. */}
-            <CtrlGroup<"approval" | "call" | "email" | "not-modeled">
-              label="Type"
-              value={pgNbaType}
-              onChange={setPgNbaType}
-              options={[
-                { value: "approval", label: "Approval" },
-                { value: "call", label: "Call" },
-                { value: "email", label: "Email" },
-                { value: "not-modeled", label: "Not yet modeled" },
-              ]}
-            />
-            <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
-              Decoupled from the vertical selector above on purpose — swaps ONLY the Next Best Action block, so you can compare types without also switching entity type. Click the task to open its real 3-layer detail SlideOut.
-            </p>
-          </div>
-
-          {/* Law 4 — PII masking toggle REMOVED from the Playground (closing
-              pass) — didn't carry enough standalone value here. Law 4 is
-              still fully documented and demonstrated live elsewhere: the
-              Overview tab's own dedicated masked example and the Reference
-              tab's "PII / masking" section. */}
-        </div>
-      )}
+      {/* The Playground tab lived here. It duplicated the Preview tab —
+          same live card, same entity selector — so it went and Preview
+          kept the job. One interactive surface, not two showing the same
+          thing with different controls. */}
 
       {tab === "reference" && (
         <div className="flex flex-col gap-[32px]">

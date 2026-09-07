@@ -169,8 +169,6 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 | `description?` | below Identity | `string` — durable context, **off unless passed** |
 | `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
 | `recordFields?` | — | `RecordField[]` — consumed by the host's Information panel, not rendered here |
-| `agenticSystem?` | AGENTIC SYSTEM | `AgenticSystemInfo` — **leaving**, see below |
-| `intervention?` | YOUR INTERVENTION | `PendingIntervention` — **leaving**, see below |
 
 **The right-hand cluster has a fixed order:** ⓘ Information → state badge → secondary action → `Ask` → `···` menu. That side is fixed and never compressed; the left side is what yields.
 
@@ -198,7 +196,7 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 
 **`Ask` is one word, and it is the primary CTA.** There is no second one — the labelled CTA that used to sit beside it is gone. It keeps the same Sparkle glyph as the Next Best Action card: **that sharing is deliberate** (Michael, 2026-09-07). Both are AI surfaces and the shared mark is what says so; one converses, the other transacts. Figma's prose argues they should differ, but Figma's own component instances share the glyph — do not "fix" this.
 
-**Two zones are on their way out.** `agenticSystem` and `intervention` — and the chevron that reveals them — **do not exist in the Figma Entity Header.** That content lives in Overview widgets. They are still here only because removing them is its own change; do not build anything new on them.
+**There is no disclosure and there are no zones.** `agenticSystem`, `intervention` and the chevron that revealed them are **gone** — none of them exists in the Figma Entity Header, and that content belongs to Overview widgets. This card is a fixed arrangement of slots. If you find yourself wanting to hide something behind a chevron here, it belongs on the page, not in the header.
 
 **`recordFields` is a flat array the caller builds — there is no per-entity field list inside the component.** Each `RecordField` is `{ label, icon, provenance, state, value, maskedValue?, hasDestination? }`:
 - `provenance` is mandatory on every field (`{ system, systemAbbr, modelVersion, syncedAgo }`) — a field with no visible origin is not renderable by design.

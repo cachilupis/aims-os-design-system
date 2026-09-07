@@ -10,215 +10,100 @@ import { Tooltip } from "@/components/ui/tooltip"
 import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highlight-icon"
 
 /**
- * Record Header — AIMS OS Design System
+ * Entity Header — AIMS OS Design System
  *
- * NOT YET IN FIGMA — this is a new component, not synced from an existing node.
+ * Source of truth: Figma `Design System - AIMS OS`, node 19815:101548. Every
+ * rule below is from that section — the Anatomy, Rules, Hierarchy, Focus
+ * order, TAG ROLES, TRUNCATION, THE THREE ACTIONS and BEHAVIOUR blocks. The
+ * file name stays `record-header.tsx` on purpose: the change spec forbids
+ * renaming it.
  *
- * ═══════════════════════════════════════════════════════════════════════════
- * REDESIGN PASS (this revision) — realigned to a validated visual redesign.
- * 5 changes, same underlying data model:
- *   1. The RECORD provenance trigger and entity type were already beside
- *      the name (left-aligned) from a prior correction pass — unchanged
- *      here, just confirmed as part of this redesign's own reference.
- *   2. Next Best Action is REINTRODUCED (`nextBestActions` prop) — but as a
- *      protagonist block, not the old Signal bar the history note below
- *      describes. Same block, repositioned: visible right under the
- *      identity tags while collapsed, and at the end of the expanded zones
- *      while expanded — never duplicated, never hidden in either state.
- *   3. Agentic System lost its section heading (the reference design shows
- *      Workflow/Agent as plain cards, no label above them) and the agent's
- *      signal color moved from purple to lime green — Workflow stays light
- *      blue. This is a deliberate, validated change to Law-adjacent color
- *      convention, not a bug: purple is no longer a signal color in this
- *      file at all.
- *   4. Your Intervention's pending items now trigger via a diagonal arrow
- *      (ArrowUpRight), never a labeled "Review" button — clicking one opens
- *      the real HTL view in a NEW TAB, never a same-page overlay, so the
- *      viewer never loses their place on this record. "Show N more" caps
- *      at 3 extra items inline; "View all" is the separate, always-present
- *      escape hatch to the full list (also a new tab). See OPEN_HTL_TOOLTIP
- *      and InterventionZoneContent's own doc comment.
- *   5. `EntityHeaderZoneLabels` lost `agenticSystem` (no heading left to
- *      translate) on top of `record` (already gone from the prior pass).
- *      Closing pass, later still: `intervention` — its last remaining
- *      entry — also lost its heading, so the whole `labels` prop/type is
- *      now gone; there was nothing left for a host to translate.
- * ═══════════════════════════════════════════════════════════════════════════
+ * WHAT IT IS
  *
- * ═══════════════════════════════════════════════════════════════════════════
- * AGNOSTICISM PASS (earlier revision) — the component previously modeled exactly
- * 3 closed entity variants (uep/ucp/uvp — Employee/Customer/Vendor), each with
- * its own fixed field-name interface (UEPRecord.manager, UCPRecord.renewalDate,
- * etc.) and an internal switch statement deriving the Identity type icon/label
- * and the RECORD field list from that variant. That's gone. This card now
- * serves ANY entity type on the platform, not just HR/CRM shapes:
- *   - `variant`/`data` (UEPRecord | UCPRecord | UVPRecord) → replaced by
- *     `name: string` + `entityType: { icon, label }` + `recordFields:
- *     RecordField[]` passed straight from the host. There is no internal
- *     switch on entity type anywhere in this file anymore — the type icon
- *     and the RECORD grid are both 100% data-driven. A host can pass
- *     `entityType={{ icon: Stethoscope, label: "Patient" }}` today with zero
- *     changes to this file.
- *   - Zone labels ("Agentic System"/"Your Intervention"/"Record") are
- *     configurable via the `labels` prop (i18n-ready) — default English
- *     copy applies when omitted.
- *   - Every zone already rendered conditionally (Agentic System/Your
- *     Intervention/Record all omit entirely when the host doesn't pass
- *     them) — that data-driven-presence rule is unchanged and now extends
- *     to the zones' own STATE unions (see AgenticSystemInfo/
- *     PendingIntervention below): passing the prop at all (even in an
- *     "empty"/"loading" status) means "render this zone"; omitting it
- *     entirely means "this entity type doesn't use this zone."
- *   - The 2 remaining signal colors (light blue = workflow, amber =
- *     intervention/HTL) encode SIGNAL TYPE, never a vertical — nothing in
- *     this file branches color by entity type. Confirmed by construction:
- *     there's no entity-type variable in scope anywhere near the color
- *     tokens below. Agent had its own lime-green signal color at one point
- *     (itself moved off purple by the redesign pass above) — closing pass,
- *     later still: the lime identity Tag it lived on is retired too (see
- *     AssignedAgent's own doc comment), so lime is no longer a live signal
- *     color anywhere in this file, only in this historical note.
- * ═══════════════════════════════════════════════════════════════════════════
+ * The identity card for a Unified Entity Profile. It identifies the entity
+ * you are looking at and surfaces what needs attention. It carries no detail
+ * — detail lives in the tabs below it. It answers four questions, in order:
+ * what is this, where did it come from, what needs attention, what can I do.
  *
- * ═══════════════════════════════════════════════════════════════════════════
- * MAJOR RESTRUCTURE (earlier revision, kept for history): this file used to
- * model a generic Employee/Customer/Client header with a Next Best Action
- * Signal bar and a variable secondary-actions list. Replaced end to end by
- * the governed-card product: Identity (fixed) + 3 expandable zones (Agentic
- * System / Your Intervention / Record). An interim revision added a
- * decorative `statusDot` next to the name in place of the Signal bar; that
- * was removed (this revision) — a colored dot with no label/tooltip/meaning
- * communicated nothing and was pure visual noise. If a glanceable status
- * indicator is wanted here in the future, it needs an explicit meaning and
- * a Tooltip, not a bare color.
- * ═══════════════════════════════════════════════════════════════════════════
+ * ONE SKELETON, EVERY ENTITY TYPE. There is no `variant` prop and no closed
+ * set of types. Employee, Customer, Vendor, Patient, Borrower, a repair
+ * order, a platform data entity — all the same shape. An entity type this
+ * file has never heard of is the normal case, not a gap.
  *
- * Governance canon (AIMS OS law, not preference — see the Reference tab's
- * own "Governance canon" section for the full, reader-facing version):
- *   Law 1 — Authority/origin of every field is ALWAYS visible. Every RECORD
- *     field carries a FieldProvenance and renders its origin-system badge
- *     inline — never a value floating with no traceable source.
+ * THE SLOTS
+ *
+ *   Row 1   visual · title · source · │ · tags        —  ⓘ · state badge ·
+ *                                                        secondary · Ask · ···
+ *   Row 2   description (off by default)
+ *   Row 3   secondary metadata, max 6
+ *
+ * The right side is fixed and never compressed. The left side yields, in this
+ * order: tags collapse to `+N`, then source, and only then does the title
+ * truncate. Nothing wraps and nothing abbreviates.
+ *
+ * WHAT IT IS NOT
+ *
+ * NO INSIGHT SECTION. System interpretation reaches this card only as a tag
+ * with a tooltip — never a descriptive sentence, never a score with drivers,
+ * never an expandable analysis. Anything larger belongs to the Overview.
+ *
+ * NO DISCLOSURE. This is a fixed arrangement of slots, not a collapsible
+ * card. An earlier revision of this file had a chevron revealing two zones,
+ * AGENTIC SYSTEM and YOUR INTERVENTION; neither exists in the Figma and both
+ * are gone. Their content belongs to Overview widgets.
+ *
+ * NO NEXT BEST ACTION. The recommendation card is a separate component in
+ * its own Card Container — `NextBestActionCard` in
+ * @/components/experimental/next-best-action-card — rendered as a SIBLING
+ * below this one. Two records, two containers. Passing recommendations into
+ * the header is the single most common mistake with this card, so the prop
+ * does not exist to be misused.
+ *
+ * NOT A LIST ROW. An `EntityList` row navigates to the detail on click. This
+ * cannot — you are already in the detail. It also has no selection, no
+ * pinning, no hover-revealed affordances and no virtualization, none of which
+ * apply to a single instance. If the header looked like a row, the reader
+ * would lose the signal of where they are.
+ *
+ * GOVERNANCE CANON — AIMS OS law, not preference
+ *
+ *   Law 1 — Authority and origin of every field is ALWAYS visible. Every
+ *     RECORD field carries a FieldProvenance; no code path renders a value
+ *     without its source.
  *   Law 2 — Every governed answer carries provenance reachable WITHOUT
- *     leaving the view. The (i) icon sits directly beside the name
- *     (redesign pass) and opens the Data Provenance SlideOut (the host may
- *     title it "About this record") from right here — no navigating away
- *     first.
- *   Law 3 — HTL (human-in-the-loop) items are first-class states with their
- *     own calm, explanatory language — NEVER rendered as red errors. Every
- *     Your Intervention status (pending/empty/loading) renders calmly —
- *     "error" (red) is never used anywhere in this zone.
- *   Law 4 — PII resolves only at display-time, per viewer entitlements. A
- *     hydrated (real) field and a masked field are the SAME RecordField in
- *     2 states — see RecordField's own doc comment. This component renders
- *     whichever state it's given; it never resolves entitlements itself.
+ *     leaving the view. The ⓘ trigger opens the Information panel from right
+ *     here.
+ *   Law 3 — HTL items are first-class states with calm, explanatory
+ *     language, never red errors.
+ *   Law 4 — PII resolves only at display time, per viewer entitlement. A
+ *     hydrated field and a masked field are the SAME RecordField in two
+ *     states; this component renders whichever it is given and never
+ *     resolves entitlements itself.
  *
- * Structure — Identity (fixed) + NBA (protagonist, repositionable) + 2
- * expandable zones, one shared skeleton for any entity type — only the
- * zone CONTENT changes, never the skeleton:
- *   Identity (always visible) → avatar, name (truncates with a Tooltip —
- *     never stretches or wraps the row), the RECORD provenance trigger
- *     (icon-only Button, see below), entity-type icon + TEXT (both, not
- *     icon-only) — all left-aligned, beside the name — up to 2
- *     governance-state Tags (hidden once expanded: workflow, HTL — no
- *     assigned-agent tag, closing pass; see Block 2 note below for why),
- *     Locked state. Actions: AI agent trigger ("Ask about {firstName}") →
- *     optional primary CTA (actions[0], host-provided — omitted entirely if
- *     the host passes none) → "···" overflow (actions[1+]) → disclosure
- *     chevron. Clicking a compressed Tag expands the card and scrolls/
- *     highlights the zone that Tag summarizes.
- *   NEXT BEST ACTION (always visible, not gated by the disclosure — this
- *     redesign pass) → right under the identity tags while collapsed, at
- *     the end of the expanded zones while expanded. See NextBestAction's
- *     own doc comment and NextBestActionBlock.
- *   AGENTIC SYSTEM (expanded, no section heading — this redesign pass) →
- *     N workflows, most prioritized (workflows[0]) full-size + the same
- *     "Show N more"/"Show less"/"View all" disclosure Your Intervention
- *     and Next Best Action use (closing pass — one learnable pattern for
- *     every zone, not 3 bespoke ones). Each item is a CardContainer
- *     (size="sm") with a HighlightIcon (size="sm", light-blue) + a NEUTRAL
- *     tertiary Button — color lives in the icon, never in the button. Also
- *     renders "empty" (no workflow yet) and "loading" (Skeleton) states. No
- *     agent card here — see AgenticSystemInfo's own doc comment for why.
- *   YOUR INTERVENTION (expanded, only if `intervention` is set, no section
- *     heading — closing pass, matching Agentic System's own plain-card
- *     treatment) → renders one of 3 states, never red: pending (default,
- *     N items — most prioritized shown + a diagonal-arrow trigger that
- *     opens the real HTL view in a NEW TAB, never a same-page overlay;
- *     "Show N more" caps at 3 extra inline, revealed BELOW the primary
- *     item, with "View all" as the separate always-present escape hatch
- *     positioned after every item — see InterventionZoneContent's own doc
- *     comment) / empty / loading. See PendingIntervention's own doc
- *     comment.
- *   RECORD → no expandable zone at all (moved out in the prior correction
- *     pass) — its trigger is the icon-only Button beside the name
- *     (Identity, above), always visible, opening the Data Provenance
- *     SlideOut (Law 2) for every field at once — disabled + a Tooltip
- *     explaining why when the host hasn't wired onProvenanceOpen, never
- *     silently hidden.
+ * THINGS THAT LOOK LIKE BUGS AND ARE NOT
  *
- * Block 2 — clicking a compressed identity Tag (this revision): every tag
- *   (agent/workflow/HTL) is a single, consistent interaction — it expands
- *   the card (if collapsed) and scrolls/highlights the zone it summarizes.
- *   It NEVER opens a SlideOut/new-tab directly from the collapsed tag —
- *   the deep detail is reached from the expanded zone itself (its own
- *   Button, or the HTL item's own diagonal-arrow trigger), same "expand
- *   first, drill in second" flow for every tag, every time. See
- *   `focusZone()` below.
+ *   - `Ask` shares the Sparkle glyph with the Next Best Action card.
+ *     Deliberate (Michael, 2026-09-07): both are AI surfaces and the shared
+ *     mark is what says so — one converses, the other transacts. Figma's
+ *     prose argues they should differ; Figma's own component instances share
+ *     it. Do not "fix" this.
+ *   - `assignedAgent` is required but may be `null`. Null renders the same
+ *     button, disabled, with a Tooltip — never a silently missing button.
+ *   - `Ask` uses `variant="main"` inside a CardContainer. It is the one named
+ *     exception in the whole design system, confirmed by Michael. Do not
+ *     extend it to any other button.
+ *   - A classification tag appears only when the visual is an avatar. A
+ *     highlight icon already names the type.
+ *   - `recordFields` is on the props interface but this component never reads
+ *     it: the Information panel that explains those fields is host-rendered.
  *
- * Composition — reuses existing DS atoms, no custom re-implementations:
- *   Card       → CardContainer (size="default", variant="default") for the
- *                whole header; CardContainer (size="sm") for each Agentic
- *                System item.
- *   Avatar     → AvatarCircle sizeKey="lg".
- *   Identity metadata → Tag (size="sm"), NOT Chip — Chip is the interactive
- *                filter-row control, Tag is the read-only display atom.
- *   AI agent trigger → Button icon+label, `Sparkle` glyph, variant="main" —
- *                the one confirmed, named exception to "never main in a
- *                card" (see CLAUDE.md's Button hierarchy rules). Don't
- *                extend it to any other button in this file.
- *   Overflow   → Menu/MenuItem (menu-item.tsx), anchored via captured
- *                getBoundingClientRect() on trigger click.
- *   Disclosure → local expanded state + max-height transition, also reused
- *                for the identity-tags hide-on-expand transition and for
- *                Block 2's "expand + scroll to zone" tag click behavior.
- *   Agentic System items → CardContainer (sm) + HighlightIcon (sm, colored)
- *                + Button variant="tertiary" (neutral, no color). RECORD
- *                trigger (beside the name, Identity) → a single icon-only
- *                Button variant="tertiary", opening Data Provenance for
- *                every field at once. Never a colored card for metadata,
- *                per explicit instruction — HighlightIcon's own tinted box
- *                is the one sanctioned exception (it's a dedicated
- *                colored-icon atom, not a colored metadata card).
- *   Next Best Action → a native `<button>` (not the Button component — the
- *                whole block, icon+text+chevron, is one clickable target,
- *                same "raw styled element for a custom shape" precedent as
- *                the collapsed identity tags), dark-purple surface
- *                (--color-surface-purple-darker, paired with the SAME
- *                constant-white text token Chip's purple-primary variant
- *                already uses — see NextBestActionBlock's own doc comment
- *                for why, never --color-text-purple).
- *   Your Intervention → InformativeCard (size="sm"), title in normal
- *                sentence case (not literal ALL CAPS), state="alert" for
- *                pending/error, state="neutral" for empty/resolved-
- *                elsewhere — never state="error" (red), regardless of
- *                intervention.severity or status. Pending items' trigger →
- *                InformativeCard's new `trailingIcon` prop (this redesign
- *                pass — an icon-only Button, ArrowUpRight, added
- *                additively to informative-card.tsx alongside the
- *                existing cta/ctaSecondary, default behavior unchanged).
- *   Loading states → Skeleton (skeleton.tsx) — no spinner-only dead air;
- *                shapes approximate the real content so layout doesn't jump
- *                when data arrives.
- *   Field origin badge → Tag (size="sm"), wrapped in Tooltip (side="cursor"
- *                — the only Tooltip mode that flips off a viewport edge
- *                instead of clipping) showing the fuller provenance.
- *   Governed SlideOuts/SidePanels (Workflow detail, Pending Decisions,
- *                Agent detail, Data Provenance, agent chat) → EntityHeader
- *                itself never renders any of them — every clickable
- *                surface exposes an `onOpen`/`onAction` callback, and the
- *                consuming screen (App.tsx's RecordHeaderPage demo) owns
- *                the actual overlay instance, composed per the "SlideOut/
- *                SidePanel — Content" pattern page.
+ * NOT IMPLEMENTED YET — do not mistake these for oversights
+ *
+ *   - `Loading` and `Minimum`, two of the states Figma says this component
+ *     owns.
+ *   - `Size = Responsive`: the reflow into stacked rows.
+ *   - The pixel truncation ceilings, and the nine-stop focus order with
+ *     roving tabindex.
  */
 
 // ── Field-level provenance (Law 1 + Law 2) ──────────────────────────────────
@@ -574,15 +459,17 @@ export interface EntityHeaderProps {
    */
   onInformationOpen?: () => void
   /**
-   * True → this record is read-only right now. The contact CTA and the
-   * overflow's write actions disable (with a Tooltip explaining why) — but
-   * the AI agent trigger, the Agentic System buttons, and every RECORD
-   * field's own provenance stay fully interactive/visible. DECISION
-   * FLAGGED — hypothesis, not explicitly confirmed: "locked" means you
-   * can't act on or edit this record, not that you can't consult it, so
-   * read-only surfaces (agent chat, Agentic System detail, provenance) are
-   * deliberately left active. // TODO: confirmar con Michael si "locked"
-   * debería restringir también estas superficies de solo lectura.
+   * True → this record is read-only right now. The secondary action and
+   * the overflow's write actions disable, each with a Tooltip explaining
+   * why, and a `Locked` Tag appears beside the title. `Ask` and the
+   * Information panel stay fully interactive: locked means you cannot act
+   * on or edit this record, not that you cannot consult it.
+   *
+   * NOT the same thing as Figma's `Restricted` state, which is about the
+   * viewer lacking entitlement to a VALUE — that is `RecordField.state ===
+   * "masked"`. Michael confirmed (2026-09-07) the two coexist and both
+   * need their own example: one is "you cannot edit", the other is "you
+   * cannot see".
    */
   locked?: boolean
   className?: string
