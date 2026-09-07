@@ -336,6 +336,11 @@ export default function PMThomasWidgetBuilderScreen() {
   // stages are what Stepper is for. Its StepState covers every case the local
   // version drew by hand.
   const STEP_ORDER: TabId[] = ["data", "widget", "appearance"]
+  const NEXT_LABEL: Record<TabId, string> = {
+    data:       "Continue to Widget",
+    widget:     "Continue to Appearance",
+    appearance: "Save to catalog",
+  }
 
   const stepState = (id: TabId): StepState => {
     if (id === tab) return "active"
@@ -599,7 +604,11 @@ export default function PMThomasWidgetBuilderScreen() {
           variant={tab === "data" ? "cancel-next" : "back-next"}
           onCancel={() => (hasUnsaved ? setShowLeave(true) : resetAll())}
           onBack={() => setTab(STEP_ORDER[Math.max(0, stepIndex - 1)])}
-          nextLabel={isLast ? "Save to catalog" : "Next"}
+          // Thom named each step's destination — "Continue to Widget", not
+          // "Next". Resolving the Stepper merge in main's favour flattened all
+          // three to "Next", which is a worse label: it drops the one piece of
+          // information the button had. His wording, restored.
+          nextLabel={NEXT_LABEL[tab]}
           nextDisabled={!nextEnabled}
           onNext={() => {
             if (isLast) { setSaved(true); return }

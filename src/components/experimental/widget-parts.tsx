@@ -284,6 +284,11 @@ export function WidgetShapePreview({
   const c    = tint || CAT[0]
   const cat  = (i: number) => (tint && i === 0 ? tint : CAT[i % CAT.length])
 
+  // Decorative in every caller: the sample values illustrate the shape, they are
+  // not data. Kept out of the accessible tree so a KPI tile is announced as
+  // "KPI" and not as "3.2K KPI".
+  const a11y = { "aria-hidden": true as const, role: "presentation" as const }
+
   const box: React.CSSProperties = {
     height, borderRadius: 8, background: SUNKEN, border: `1px solid ${LINE}`,
     overflow: "hidden", pointerEvents: "none", display: "flex", alignItems: "center",
@@ -292,7 +297,7 @@ export function WidgetShapePreview({
   const fs  = (small: number, large: number) => (big ? large : small)
 
   if (!shape) {
-    return <div style={{ ...box, background: LINE, opacity: 0.4, border: "none" }} />
+    return <div {...a11y} style={{ ...box, background: LINE, opacity: 0.4, border: "none" }} />
   }
 
   // ── One prominent number ──────────────────────────────────────────────────
@@ -302,7 +307,7 @@ export function WidgetShapePreview({
   if (shape === "kpi" || shape === "cost-kpi") {
     const money = shape === "cost-kpi"
     return (
-      <div style={{ ...box, flexDirection: "column", alignItems: "center", justifyContent: "center", gap: big ? 6 : 2 }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "center", justifyContent: "center", gap: big ? 6 : 2 }}>
         <span style={{ fontSize: fs(22, 38), fontWeight: 700, letterSpacing: "-0.5px", color: TXT, lineHeight: 1 }}>
           {pick(money ? COST_VALUES : KPI_VALUES, seed)}
         </span>
@@ -314,7 +319,7 @@ export function WidgetShapePreview({
   // ── Series of bars ────────────────────────────────────────────────────────
   if (shape === "bars") {
     return (
-      <div style={{ ...box, alignItems: "flex-end", justifyContent: "center", gap: big ? 8 : 4, padding: `${pad}px ${pad + 4}px` }}>
+      <div {...a11y} style={{ ...box, alignItems: "flex-end", justifyContent: "center", gap: big ? 8 : 4, padding: `${pad}px ${pad + 4}px` }}>
         {pick(BAR_SETS, seed).map((h, i) => (
           <div key={i} style={{ flex: 1, height: `${h}%`, borderRadius: "3px 3px 0 0", background: cat(i) }} />
         ))}
@@ -330,7 +335,7 @@ export function WidgetShapePreview({
     const w = 100, h = 100
     const d = pts.map((v, i) => `${(i / (pts.length - 1)) * w},${h - v}`).join(" L ")
     return (
-      <div style={{ ...box, padding: `${pad}px ${pad + 4}px` }}>
+      <div {...a11y} style={{ ...box, padding: `${pad}px ${pad + 4}px` }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ overflow: "visible" }}>
           <polyline points="" />
           <path d={`M ${d}`} fill="none" stroke={c} strokeWidth={big ? 4 : 5}
@@ -344,7 +349,7 @@ export function WidgetShapePreview({
   if (shape === "heatmap") {
     const cells = big ? CELLS : CELLS.slice(0, 18)
     return (
-      <div style={{ ...box, display: "grid", alignItems: "stretch", gridAutoRows: "1fr", gridTemplateColumns: "repeat(6, 1fr)", gap: big ? 4 : 3, padding: `${big ? 14 : 8}px ${pad}px` }}>
+      <div {...a11y} style={{ ...box, display: "grid", alignItems: "stretch", gridAutoRows: "1fr", gridTemplateColumns: "repeat(6, 1fr)", gap: big ? 4 : 3, padding: `${big ? 14 : 8}px ${pad}px` }}>
         {cells.map((o, i) => (
           <div key={i} style={{ borderRadius: 2, background: c, opacity: 0.15 + o * 0.85 }} />
         ))}
@@ -356,7 +361,7 @@ export function WidgetShapePreview({
   if (shape === "scatter") {
     const d = big ? 7 : 5
     return (
-      <div style={{ ...box, position: "relative", padding: pad }}>
+      <div {...a11y} style={{ ...box, position: "relative", padding: pad }}>
         <div style={{ position: "absolute", inset: pad }}>
           {DOTS.slice(0, big ? DOTS.length : 7).map(([x, y], i) => (
             <div key={i} style={{
@@ -374,7 +379,7 @@ export function WidgetShapePreview({
   // pretending to be a country nobody's data is in.
   if (shape === "map") {
     return (
-      <div style={{ ...box, justifyContent: "center", padding: `${big ? 10 : 6}px ${pad}px` }}>
+      <div {...a11y} style={{ ...box, justifyContent: "center", padding: `${big ? 10 : 6}px ${pad}px` }}>
         <svg width="100%" height="100%" viewBox="0 0 120 64" preserveAspectRatio="xMidYMid meet">
           <path d="M8 40 L18 22 L34 14 L52 20 L58 34 L48 50 L26 54 Z" fill={c} opacity={0.75} />
           <path d="M64 16 L84 10 L100 20 L96 34 L78 38 L66 30 Z"       fill={c} opacity={0.4} />
@@ -387,7 +392,7 @@ export function WidgetShapePreview({
   // ── Stages that narrow ────────────────────────────────────────────────────
   if (shape === "funnel") {
     return (
-      <div style={{ ...box, flexDirection: "column", justifyContent: "center", alignItems: "center", gap: big ? 6 : 3, padding: `${pad}px ${pad + 4}px` }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", justifyContent: "center", alignItems: "center", gap: big ? 6 : 3, padding: `${pad}px ${pad + 4}px` }}>
         {[96, 74, 52, 32].map((w, i) => (
           <div key={i} style={{ width: `${w}%`, height: big ? 14 : 8, borderRadius: 3, background: cat(i) }} />
         ))}
@@ -403,7 +408,7 @@ export function WidgetShapePreview({
     const r    = d / 2 - sw / 2
     const circ = 2 * Math.PI * r
     return (
-      <div style={{ ...box, justifyContent: "center" }}>
+      <div {...a11y} style={{ ...box, justifyContent: "center" }}>
         {shape === "pie" ? (
           <div style={{
             width: d, height: d, borderRadius: "50%",
@@ -431,7 +436,7 @@ export function WidgetShapePreview({
     const cy  = w / 2
     const d   = `M ${sw / 2} ${cy} A ${r} ${r} 0 0 1 ${w - sw / 2} ${cy}`
     return (
-      <div style={{ ...box, justifyContent: "center", alignItems: "flex-end", paddingBottom: big ? 22 : 10 }}>
+      <div {...a11y} style={{ ...box, justifyContent: "center", alignItems: "flex-end", paddingBottom: big ? 22 : 10 }}>
         <svg width={w} height={w / 2 + sw} viewBox={`0 0 ${w} ${w / 2 + sw}`}>
           <path d={d} fill="none" stroke={LINE} strokeWidth={sw} strokeLinecap="round" />
           <path d={d} fill="none" stroke={tint || OK} strokeWidth={sw} strokeLinecap="round"
@@ -444,7 +449,7 @@ export function WidgetShapePreview({
   // ── Things that happened, newest first ────────────────────────────────────
   if (shape === "feed") {
     return (
-      <div style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 9 : 5, padding: `${pad}px ${pad + 2}px` }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 9 : 5, padding: `${pad}px ${pad + 2}px` }}>
         {(big ? [92, 78, 88, 64, 74] : [90, 72, 58]).map((w, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: big ? 9 : 6 }}>
             <div style={{ width: big ? 7 : 5, height: big ? 7 : 5, borderRadius: "50%", background: cat(i), flexShrink: 0 }} />
@@ -459,7 +464,7 @@ export function WidgetShapePreview({
   if (shape === "status") {
     const rows: [string, string, number][] = [[OK, "Active", 3], [SUB, "Idle", 1], [WARN, "Paused", 1]]
     return (
-      <div style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 8 : 4, padding: `${pad - 2}px ${pad + 2}px` }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 8 : 4, padding: `${pad - 2}px ${pad + 2}px` }}>
         {rows.map(([col, label, n]) => (
           <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: big ? 8 : 5, minWidth: 0 }}>
@@ -481,7 +486,7 @@ export function WidgetShapePreview({
   if (shape === "alerts") {
     const rows: [string, string, number][] = [[BAD, "Critical", 2], [WARN, "Warning", 5], [CAT[0], "Info", 11]]
     return (
-      <div style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 8 : 4, padding: `${pad - 2}px ${pad + 2}px` }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 8 : 4, padding: `${pad - 2}px ${pad + 2}px` }}>
         {rows.map(([col, label, n]) => (
           <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: big ? 8 : 5, minWidth: 0 }}>
@@ -499,7 +504,7 @@ export function WidgetShapePreview({
   if (shape === "stat-row") {
     const cells: [string, string, string][] = [[OK, "412", "Normal"], [WARN, "17", "Warnings"], [BAD, "3", "Critical"]]
     return (
-      <div style={{ ...box, justifyContent: "space-around", padding: `0 ${pad}px` }}>
+      <div {...a11y} style={{ ...box, justifyContent: "space-around", padding: `0 ${pad}px` }}>
         {cells.map(([col, v, l]) => (
           <div key={l} style={{ textAlign: "center" }}>
             <div style={{ fontSize: fs(14, 22), fontWeight: 700, color: col, lineHeight: 1.1 }}>{v}</div>
@@ -514,7 +519,7 @@ export function WidgetShapePreview({
   if (shape === "timeline") {
     const cards: [string, string][] = [["12", "Calls"], ["8", "Emails"], ["3", "Visits"], ["5", "Notes"]]
     return (
-      <div style={{ ...box, gap: big ? 8 : 5, padding: `${pad - 2}px ${pad}px`, alignItems: "stretch" }}>
+      <div {...a11y} style={{ ...box, gap: big ? 8 : 5, padding: `${pad - 2}px ${pad}px`, alignItems: "stretch" }}>
         {(big ? cards : cards.slice(0, 3)).map(([v, l], i) => (
           <div key={l} style={{
             flex: 1, minWidth: 0, borderRadius: 6, background: LINE,
@@ -533,7 +538,7 @@ export function WidgetShapePreview({
   if (shape === "table") {
     const cols = [34, 26, 22, 18]
     return (
-      <div style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "flex-start", padding: 0 }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "flex-start", padding: 0 }}>
         <div style={{ display: "flex", gap: big ? 8 : 5, padding: `${big ? 9 : 6}px ${pad}px`, borderBottom: `1px solid ${LINE}` }}>
           {cols.map((w, i) => (
             <div key={i} style={{ width: `${w}%`, height: big ? 7 : 5, borderRadius: 2, background: cat(0), opacity: 0.7 }} />
@@ -555,7 +560,7 @@ export function WidgetShapePreview({
   // ── Free text someone typed ───────────────────────────────────────────────
   if (shape === "notes") {
     return (
-      <div style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 8 : 5, padding: `${pad}px ${pad + 2}px` }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 8 : 5, padding: `${pad}px ${pad + 2}px` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: big ? 4 : 3, height: big ? 12 : 8, borderRadius: 2, background: cat(4), flexShrink: 0 }} />
           <div style={{ height: big ? 8 : 6, width: "45%", borderRadius: 3, background: cat(0), opacity: 0.7 }} />
@@ -573,7 +578,7 @@ export function WidgetShapePreview({
       ? [[0, 52], [1, 44], [1, 38], [0, 46], [1, 34]]
       : [[0, 50], [1, 40], [1, 34]]
     return (
-      <div style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 8 : 5, padding: `${pad}px ${pad + 2}px` }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 8 : 5, padding: `${pad}px ${pad + 2}px` }}>
         {nodes.map(([depth, w], i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: big ? 8 : 5, paddingLeft: depth * (big ? 16 : 11) }}>
             <div style={{
@@ -595,7 +600,7 @@ export function WidgetShapePreview({
     const bot = shape === "agents"
     const d = big ? 18 : 12
     return (
-      <div style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 9 : 5, padding: `${pad - 2}px ${pad + 2}px` }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 9 : 5, padding: `${pad - 2}px ${pad + 2}px` }}>
         {(big ? [0, 1, 2, 3] : [0, 1, 2]).map(i => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: big ? 9 : 6 }}>
             <div style={{ width: d, height: d, borderRadius: bot ? 3 : "50%", background: cat(i), flexShrink: 0, opacity: 0.85 }} />
@@ -616,7 +621,7 @@ export function WidgetShapePreview({
   if (shape === "act-now") {
     const rows: [string, number][] = [[BAD, 2], [WARN, 3]]
     return (
-      <div style={{ ...box, gap: big ? 14 : 9, padding: `0 ${pad + 2}px` }}>
+      <div {...a11y} style={{ ...box, gap: big ? 14 : 9, padding: `0 ${pad + 2}px` }}>
         <span style={{ fontSize: fs(22, 34), fontWeight: 700, color: TXT, lineHeight: 1, flexShrink: 0 }}>5</span>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: big ? 8 : 5 }}>
           {rows.map(([col, n], i) => (
@@ -638,7 +643,7 @@ export function WidgetShapePreview({
     const nodes = big ? 4 : 3
     const d = big ? 16 : 11
     return (
-      <div style={{ ...box, justifyContent: "center", padding: `0 ${pad + 2}px` }}>
+      <div {...a11y} style={{ ...box, justifyContent: "center", padding: `0 ${pad + 2}px` }}>
         {Array.from({ length: nodes }).map((_, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", flex: i === nodes - 1 ? "0 0 auto" : 1 }}>
             <div style={{
@@ -658,7 +663,7 @@ export function WidgetShapePreview({
   // count is the point.
   if (shape === "queue") {
     return (
-      <div style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 7 : 4, padding: `${pad - 2}px ${pad + 2}px` }}>
+      <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 7 : 4, padding: `${pad - 2}px ${pad + 2}px` }}>
         {(big ? [0, 1, 2] : [0, 1]).map(i => (
           <div key={i} style={{
             display: "flex", alignItems: "center", gap: big ? 8 : 5,
@@ -678,7 +683,7 @@ export function WidgetShapePreview({
     ? [[OK, 82], [WARN, 68], [CAT[0], 90], [SUB, 60]]
     : [[OK, 80], [WARN, 66], [CAT[0], 88]]
   return (
-    <div style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 9 : 5, padding: `${pad}px ${pad + 2}px` }}>
+    <div {...a11y} style={{ ...box, flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: big ? 9 : 5, padding: `${pad}px ${pad + 2}px` }}>
       {items.map(([col, w], i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: big ? 9 : 6 }}>
           <div style={{ width: big ? 9 : 7, height: big ? 9 : 7, borderRadius: 2, border: `1.5px solid ${col}`, flexShrink: 0 }} />
