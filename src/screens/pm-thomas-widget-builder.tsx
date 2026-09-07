@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
 import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
-import { WidgetShapePreview, SHAPE_FOR_BUILDER_TYPE } from "@/components/experimental/widget-parts"
+import { WidgetShapePreview, SHAPE_FOR_BUILDER_TYPE, seedFrom } from "@/components/experimental/widget-parts"
 import { Tag } from "@/components/ui/tag"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ModalDialog } from "@/components/ui/modal-dialog"
@@ -174,13 +174,23 @@ function DatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_D
 
 // DS-GAP: TypeTile — widget type selector tile with icon and label. Closest DS component: CardContainer.
 function TypeTile({ type, selected, onSelect }: { type: typeof WIDGET_TYPES[0]; selected: boolean; onSelect: () => void }) {
-  const Icon = (LucideIcons as Record<string, unknown>)[type.icon] as React.FC<{ size?: number; style?: React.CSSProperties }>
   return (
     <div onClick={onSelect} style={{ cursor: "pointer" }}>
       <CardContainer selected={selected} size="sm" className="!p-0 h-full overflow-hidden">
-        <div style={{ padding: "10px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" as const }}>
-          <Icon size={18} style={{ color: selected ? "var(--primary)" : "var(--color-text-subtitle)" }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: selected ? "var(--primary)" : "var(--color-text-title)" }}>{type.label}</span>
+        <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+          {/* The tile draws the widget it is offering, the way the catalog cards
+              do. It used to show a Lucide glyph — you were picking between
+              twelve icons rather than between twelve widgets. */}
+          <WidgetShapePreview
+            shape={SHAPE_FOR_BUILDER_TYPE[type.id] ?? "bars"}
+            height={54}
+            seed={seedFrom(type.id)}
+            accent={selected ? "var(--primary)" : undefined}
+          />
+          <span style={{
+            fontSize: 11, fontWeight: 600, textAlign: "center" as const,
+            color: selected ? "var(--primary)" : "var(--color-text-title)",
+          }}>{type.label}</span>
         </div>
       </CardContainer>
     </div>

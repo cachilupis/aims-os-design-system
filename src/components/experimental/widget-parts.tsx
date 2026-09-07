@@ -174,16 +174,18 @@ const SUNKEN = "var(--canvas)"
 export type WidgetShape =
   | "kpi" | "cost-kpi" | "bars" | "funnel" | "pie" | "donut" | "gauge"
   | "feed" | "status" | "alerts" | "act-now" | "stat-row" | "timeline"
+  | "line" | "heatmap" | "scatter" | "map"
   | "table" | "notes" | "tree" | "roster" | "agents" | "tasks" | "flow" | "queue"
 
 /** Builder vocabulary — the shape you pick when authoring a widget. */
 export const SHAPE_FOR_BUILDER_TYPE: Record<string, WidgetShape> = {
-  kpi: "kpi", costkpi: "cost-kpi", summary: "kpi",
-  bar: "bars", line: "bars",
+  kpi: "kpi", costkpi: "cost-kpi",
+  summary: "notes",          // a summary is prose, not a chart
+  bar: "bars", line: "line",
   table: "table", list: "tasks", "record-card": "roster",
   pie: "pie",
   gauge: "gauge",
-  heatmap: "bars", scatter: "bars", map: "bars",
+  heatmap: "heatmap", scatter: "scatter", map: "map",
 }
 
 /** Catalog vocabulary — the identity a widget is filed under. Covers both the
@@ -247,6 +249,9 @@ const COST_VALUES = ["$13K", "$920K", "$0.08", "$4.2K", "$78K", "$1.6M"]
 const COST_LABELS = ["end of cycle", "projected spend", "per execution", "this month", "annualised", "run rate"]
 const KPI_LABELS = ["vs last 30 days", "this month", "end of cycle", "success rate", "total", "in queue", "projected", "avg. hours"]
 const BAR_SETS   = [[52, 78, 45, 90, 62], [70, 40, 85, 55, 75], [45, 60, 95, 50, 70], [80, 55, 65, 88, 42]]
+const LINE_SETS  = [[22, 38, 30, 52, 46, 70, 84], [60, 44, 66, 52, 78, 68, 88], [30, 34, 55, 48, 62, 80, 74]]
+const CELLS      = [0.8,0.2,0.5,0.9,0.3,0.6,0.1,0.7,0.4,0.8,0.6,0.2,0.9,0.5,0.3,0.7,0.1,0.8,0.4,0.6,0.2,0.9,0.5,0.3]
+const DOTS: [number, number][] = [[12,78],[26,62],[34,70],[45,44],[52,55],[61,30],[70,38],[78,20],[86,28],[20,50],[40,82],[68,60]]
 
 /**
  * Draws a widget's shape.
@@ -313,6 +318,68 @@ export function WidgetShapePreview({
         {pick(BAR_SETS, seed).map((h, i) => (
           <div key={i} style={{ flex: 1, height: `${h}%`, borderRadius: "3px 3px 0 0", background: cat(i) }} />
         ))}
+      </div>
+    )
+  }
+
+  // ── A trend over time ─────────────────────────────────────────────────────
+  // Bar and Line were the same drawing. They answer different questions —
+  // comparison versus momentum — and the shape is what carries that.
+  if (shape === "line") {
+    const pts = pick(LINE_SETS, seed)
+    const w = 100, h = 100
+    const d = pts.map((v, i) => `${(i / (pts.length - 1)) * w},${h - v}`).join(" L ")
+    return (
+      <div style={{ ...box, padding: `${pad}px ${pad + 4}px` }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ overflow: "visible" }}>
+          <polyline points="" />
+          <path d={`M ${d}`} fill="none" stroke={c} strokeWidth={big ? 4 : 5}
+            strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        </svg>
+      </div>
+    )
+  }
+
+  // ── Density across two dimensions ─────────────────────────────────────────
+  if (shape === "heatmap") {
+    const cells = big ? CELLS : CELLS.slice(0, 18)
+    return (
+      <div style={{ ...box, display: "grid", alignItems: "stretch", gridAutoRows: "1fr", gridTemplateColumns: "repeat(6, 1fr)", gap: big ? 4 : 3, padding: `${big ? 14 : 8}px ${pad}px` }}>
+        {cells.map((o, i) => (
+          <div key={i} style={{ borderRadius: 2, background: c, opacity: 0.15 + o * 0.85 }} />
+        ))}
+      </div>
+    )
+  }
+
+  // ── Correlation, one dot per record ───────────────────────────────────────
+  if (shape === "scatter") {
+    const d = big ? 7 : 5
+    return (
+      <div style={{ ...box, position: "relative", padding: pad }}>
+        <div style={{ position: "absolute", inset: pad }}>
+          {DOTS.slice(0, big ? DOTS.length : 7).map(([x, y], i) => (
+            <div key={i} style={{
+              position: "absolute", left: `${x}%`, top: `${y}%`, width: d, height: d,
+              borderRadius: "50%", background: cat(i % 3), opacity: 0.85, transform: "translate(-50%,-50%)",
+            }} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Geography ─────────────────────────────────────────────────────────────
+  // Abstract regions, not a real map: enough to say "this is spatial" without
+  // pretending to be a country nobody's data is in.
+  if (shape === "map") {
+    return (
+      <div style={{ ...box, justifyContent: "center", padding: `${big ? 10 : 6}px ${pad}px` }}>
+        <svg width="100%" height="100%" viewBox="0 0 120 64" preserveAspectRatio="xMidYMid meet">
+          <path d="M8 40 L18 22 L34 14 L52 20 L58 34 L48 50 L26 54 Z" fill={c} opacity={0.75} />
+          <path d="M64 16 L84 10 L100 20 L96 34 L78 38 L66 30 Z"       fill={c} opacity={0.4} />
+          <path d="M72 44 L94 42 L108 52 L88 58 L70 54 Z"              fill={c} opacity={0.22} />
+        </svg>
       </div>
     )
   }
