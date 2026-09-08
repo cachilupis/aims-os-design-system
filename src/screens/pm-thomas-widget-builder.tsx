@@ -61,12 +61,6 @@ const PRESET_DATASETS = [
  *  so adding an entity cannot leave the filter row behind. */
 const INTEGRATIONS: string[] = [...new Set(ENTITY_SOURCES.map(s => s.integration))]
 
-const DESCRIBE_SUGGESTIONS = [
-  "Win Rate gauge",
-  "Workflow Runs over time",
-  "Contacts as a donut",
-]
-
 const COUNT_FN   = "Count"
 const CALC_FNS   = [COUNT_FN, "Sum", "Average", "Min", "Max"]
 const FILTER_OPS = ["is", "is not", "contains", "is empty", "is not empty", "greater than", "less than"]
@@ -100,29 +94,6 @@ const WIDGET_SIZES = [
 
 // ── DS-GAP Components ─────────────────────────────────────────────────────────
 
-
-/**
- * Turn what someone typed into a widget name.
- *
- * "Win Rate gauge by team" → "Win Rate by Team". The chart word comes out
- * because the type picker in step 2 already says it, and a widget called
- * "Win Rate gauge" on a dashboard reads as a description of its own chrome.
- * Leading verbs go too — every widget shows something.
- */
-const CHART_WORDS = /\b(gauge|chart|graph|donut|pie|bar|line|area|funnel|heatmap|map|table|list|kpi|sparkline|trend)\b/gi
-const LEAD_VERBS  = /^(show me|show|track|display|give me|see|view|plot|chart)\s+/i
-const SMALL_WORDS = new Set(["by", "of", "per", "vs", "and", "or", "the", "a", "an", "in", "for", "to"])
-
-function widgetNameFrom(text: string): string {
-  const cleaned = text.trim().replace(LEAD_VERBS, "").replace(CHART_WORDS, " ").replace(/\s+/g, " ").trim()
-  if (!cleaned) return ""
-  return cleaned
-    .split(" ")
-    .map((w, i) => (i > 0 && SMALL_WORDS.has(w.toLowerCase())
-      ? w.toLowerCase()
-      : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(" ")
-}
 
 // DS-GAP: StepLabel — numbered section heading for builder form steps. Closest DS component: none.
 // A numbered step heading inside a stage. Deliberately NOT the SectionLabel the
@@ -422,7 +393,6 @@ export default function PMThomasWidgetBuilderScreen() {
   const [groupers, setGroupers]     = useState<{ id: string; column: string }[]>([])
   const [dataFilters, setDataFilters] = useState<{ id: string; column: string; op: string; value: string }[]>([])
   const [srcFilter, setSrcFilter]   = useState("all")
-  const [describe, setDescribe]     = useState("")
 
   // Configure tab state
   const [typeId, setTypeId]             = useState<string | null>(null)
@@ -556,28 +526,6 @@ export default function PMThomasWidgetBuilderScreen() {
           <div className="flex flex-col min-[1100px]:flex-row gap-[24px] items-stretch min-[1100px]:items-start">
           {/* Left: build panel */}
           <div className="flex-1 min-w-0 flex flex-col gap-[20px]">
-            {/* DS-GAP: DescribeComposer — natural-language widget setup generator. Using simplified Input bar. */}
-            <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--field-border)", display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Input placeholder='Describe what you want to track, e.g. "Win Rate gauge by team"' value={describe} onChange={e => setDescribe(e.target.value)} />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={!describe.trim()}
-                  onClick={() => setName(widgetNameFrom(describe))}
-                >
-                  Generate
-                </Button>
-              </div>
-              {/* One line, never two. A suggestion that does not fit is not
-                  worth a second row of vertical space above the form. */}
-              <div style={{ display: "flex", gap: 6, flexWrap: "nowrap" as const, overflow: "hidden" }}>
-                {DESCRIBE_SUGGESTIONS.map(x => (
-                  <Chip key={x} size="s" variant="secondary" onClick={() => setDescribe(x)}>{x}</Chip>
-                ))}
-              </div>
-            </div>
-
             {/* ── Tab 1: Data ── */}
             {tab === "data" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
