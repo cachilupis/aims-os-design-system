@@ -36,25 +36,25 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "marketplace",   label: "Marketplace",   icon: "Store" },
 ]
 
+// The three entities Thom's prototype offers, with his column counts. Ours
+// listed eight across four integrations, which reads as a fuller product than
+// the one being demoed — a prototype that promises more than it has is the
+// same defect as a button that does nothing.
 const ENTITY_SOURCES = [
-  { id: "contacts_hubspot",      label: "Contacts",       icon: "Users", desc: "CRM contact profiles and relationship history", integration: "HubSpot",  governed: true,  hasPII: true },
-  { id: "companies_hubspot",     label: "Companies",      icon: "Building2", desc: "Organization records, domains, and account data", integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "deals_hubspot",         label: "Deals",          icon: "TrendingUp", desc: "Pipeline opportunities and deal stages", integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "tickets_zendesk",       label: "Tickets",        icon: "LifeBuoy", desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false },
-  { id: "conversations_zendesk", label: "Conversations",  icon: "MessageSquare", desc: "Chat and email threads with CSAT scores", integration: "Zendesk",  governed: false, hasPII: true },
-  { id: "employees_bamboohr",    label: "Employees",      icon: "UserCheck", desc: "HR records, roles, and people data", integration: "BambooHR", governed: true,  hasPII: true },
-  { id: "workflows_aims",        label: "Workflows",      icon: "GitBranch", desc: "Automated process definitions in AIMS OS", integration: "AIMS OS",  governed: true,  hasPII: false },
-  { id: "ai_workers_aims",       label: "AI Workers",     icon: "Bot", desc: "AI agent instances and performance metrics", integration: "AIMS OS",  governed: true,  hasPII: false },
+  { id: "contacts_salesforce", label: "Contacts", icon: "Users",      desc: "CRM contact profiles and relationship history",   integration: "Salesforce", columns: 9, governed: true,  hasPII: true  },
+  { id: "accounts_salesforce", label: "Accounts", icon: "Building2",  desc: "Organization records, domains, and account data", integration: "Salesforce", columns: 7, governed: true,  hasPII: false },
+  { id: "deals_salesforce",    label: "Deals",    icon: "TrendingUp", desc: "Pipeline opportunities and deal stages",          integration: "Salesforce", columns: 7, governed: true,  hasPII: false },
 ]
 
+// Thom's four datasets. The `shape` is the part that matters: a dataset arrives
+// already aggregated, and its shape is what says whether it is one number, a
+// grouping, or raw rows — which is also why the dataset path never asks for a
+// calculation. That question was answered when the dataset was built.
 const PRESET_DATASETS = [
-  { id: "ds-total-mrr",         name: "Total MRR",              description: "Month-to-date closed revenue across all deals.", integration: "HubSpot",  governed: true },
-  { id: "ds-active-contacts",   name: "Active Contacts",        description: "Contacts with at least one interaction in the last 30 days.", integration: "HubSpot",  governed: true },
-  { id: "ds-open-deals",        name: "Open Deals",             description: "All deals currently in an open pipeline stage.", integration: "HubSpot",  governed: true },
-  { id: "ds-ticket-volume",     name: "Ticket Volume",          description: "Total support tickets opened in the current period.", integration: "Zendesk", governed: true },
-  { id: "ds-csat-score",        name: "CSAT Score",             description: "Average satisfaction rating across closed tickets.", integration: "Zendesk", governed: true },
-  { id: "ds-headcount",         name: "Headcount",              description: "Active employee count by department.", integration: "BambooHR", governed: true },
-  { id: "ds-workflow-success",  name: "Workflow Success Rate",   description: "Percentage of workflow runs completed without errors.", integration: "AIMS OS", governed: true },
+  { id: "ds-contacts-by-tier", name: "Contacts by Tier", description: "Count of contacts grouped by tier (Gold, Silver, Bronze)", shape: "Grouped",      integration: "Salesforce", governed: true },
+  { id: "ds-deals-pipeline",   name: "Deals Pipeline",   description: "Sum of deal value grouped by stage",                       shape: "Grouped",      integration: "Salesforce", governed: true },
+  { id: "ds-total-mrr",        name: "Total MRR",        description: "Sum of MRR across all active accounts",                    shape: "Single value", integration: "Salesforce", governed: true },
+  { id: "ds-all-contacts",     name: "All Contacts",     description: "Full contact record set — name, email, city, tier",        shape: "Record set",   integration: "Salesforce", governed: true },
 ]
 
 /** Every integration the entity list draws from, derived rather than typed out
@@ -66,14 +66,9 @@ const CALC_FNS   = [COUNT_FN, "Sum", "Average", "Min", "Max"]
 const FILTER_OPS = ["is", "is not", "contains", "is empty", "is not empty", "greater than", "less than"]
 
 const SOURCE_COLUMNS: Record<string, string[]> = {
-  contacts_hubspot:      ["Name", "Email", "Company", "Lifecycle Stage", "Owner", "Created At"],
-  companies_hubspot:     ["Name", "Domain", "Industry", "Annual Revenue", "Employees", "Owner"],
-  deals_hubspot:         ["Name", "Stage", "Amount", "Close Date", "Pipeline", "Owner"],
-  tickets_zendesk:       ["Title", "Status", "Priority", "Assignee", "Created At", "Updated At"],
-  conversations_zendesk: ["Subject", "Status", "Channel", "Agent", "CSAT Score", "Created At"],
-  employees_bamboohr:    ["Name", "Department", "Title", "Manager", "Start Date", "Status"],
-  workflows_aims:        ["Name", "Status", "Run Count", "Success Rate", "Last Run", "Owner"],
-  ai_workers_aims:       ["Name", "Category", "Status", "Tasks Today", "Accuracy", "Created At"],
+  contacts_salesforce: ["Name", "Email", "Account", "Title", "City", "Tier", "Lifecycle Stage", "Owner", "Created At"],
+  accounts_salesforce: ["Name", "Domain", "Industry", "Annual Revenue", "Employees", "MRR", "Owner"],
+  deals_salesforce:    ["Name", "Stage", "Amount", "Close Date", "Pipeline", "Account", "Owner"],
 }
 
 
@@ -163,8 +158,10 @@ function DatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_D
             <span style={{ fontSize: 13, fontWeight: 600, color: selected ? "var(--primary)" : "var(--color-text-title)" }}>{dataset.name}</span>
             <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: 0, lineHeight: 1.4 }}>{dataset.description}</p>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+              {/* The shape leads: it is what decides which widget types can
+                  draw this dataset, so it is the fact worth reading first. */}
+              <Tag variant="neutral" size="sm">{dataset.shape}</Tag>
               <Tag variant="neutral" size="sm">{dataset.integration}</Tag>
-              <Tag variant="neutral" size="sm">Governed</Tag>
             </div>
           </div>
         </div>
@@ -420,9 +417,13 @@ export default function PMThomasWidgetBuilderScreen() {
   const dataComplete = dataMode === "dataset"
     ? !!sourceId
     : !!sourceId && !!opType && (opType === "aggregate" ? calcsReady : recordColumns.length > 0)
-  const widgetComplete = dataComplete && !!typeId && name.trim().length > 0
+  // A widget IS its data and its type. The name is not part of that — the
+  // preview has been calling an unnamed one "Untitled widget" all along, so the
+  // screen already tolerates it, and requiring it only meant Save sat grey
+  // while everything that matters was decided.
+  const widgetComplete = dataComplete && !!typeId
   const canSave        = widgetComplete
-  const hasUnsaved     = !!(sourceId || typeId || name.trim())
+  const hasUnsaved     = !!(sourceId || typeId || name.trim() || subtitle.trim())
 
   // ── Wizard stages ─────────────────────────────────────────────────────────
   // These were a hand-rolled tab strip: numbered dots, a check when complete,
@@ -448,8 +449,6 @@ export default function PMThomasWidgetBuilderScreen() {
     ? "Finish configuring your data source on the Data tab."
     : !typeId
     ? "Choose a widget type on the Configure tab."
-    : !name.trim()
-    ? "Give your widget a name on the Configure tab."
     : ""
 
   // ── Handlers ──
@@ -769,7 +768,18 @@ export default function PMThomasWidgetBuilderScreen() {
             {tab === "configure" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
-                  <StepLabel n={1}>Widget type</StepLabel>
+                  <StepLabel n={1}>Name your widget</StepLabel>
+                  <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: "0 0 10px" }}>
+                    What it is called on the dashboard, and the line under it.
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <Input placeholder="Widget name, e.g. Pipeline by Stage" value={name} onChange={e => setName(e.target.value)} />
+                    <Input placeholder="Short description (optional, up to 120 characters)" value={subtitle} onChange={e => setSubtitle(e.target.value.slice(0, 120))} />
+                  </div>
+                </div>
+
+                <div>
+                  <StepLabel n={2}>Widget type</StepLabel>
                   <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: "0 0 10px" }}>
                     How to visualize the data.
                   </p>
@@ -810,10 +820,8 @@ export default function PMThomasWidgetBuilderScreen() {
                 </div>
 
                 <div>
-                  <StepLabel n={2}>Configure</StepLabel>
+                  <StepLabel n={3}>Settings</StepLabel>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <Input placeholder="Widget name, e.g. Pipeline by Stage" value={name} onChange={e => setName(e.target.value)} />
-                    <Input placeholder="Short description (optional, up to 120 characters)" value={subtitle} onChange={e => setSubtitle(e.target.value.slice(0, 120))} />
                     <OptionPicker
                       options={FRESHNESS_OPTIONS.map(o => o.label)}
                       value={FRESHNESS_OPTIONS.find(o => o.value === freshness)?.label ?? ""}

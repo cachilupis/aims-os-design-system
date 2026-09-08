@@ -9384,7 +9384,8 @@ function SelectPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <div className="rounded-[8px] border border-[var(--field-border)] p-[16px] flex flex-col gap-0 divide-y divide-[var(--field-border)]">
                 {[
                   { condition: "open = true",                          icon: "ChevronUp",   note: "Regardless of value" },
-                  { condition: "open = false · value exists",          icon: "X (clear)",   note: "Blue border — click to clear value" },
+                  { condition: "open = false · value exists · onClear", icon: "X (clear)",   note: "Blue border — click to clear value" },
+                  { condition: "open = false · value exists · no onClear", icon: "ChevronDown", note: "Blue border — a clear button with nothing to clear is not rendered" },
                   { condition: "open = false · no value · state=error",icon: "CircleAlert", note: "Red border" },
                   { condition: "open = false · no value · default",    icon: "ChevronDown", note: "Gray border" },
                 ].map(r => (
