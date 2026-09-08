@@ -146,25 +146,35 @@ function PieChart({ donut = false }: { donut?: boolean }) {
     return `${CAT[i]} ${from}deg ${to}deg`
   }).join(", ")
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-      <div style={{ position: "relative", width: 84, height: 84, flexShrink: 0 }}>
+    // 24px between the ring and the legend, not 16: at 16 the first swatch sits
+    // inside the ring's optical edge and the two read as one object. The legend
+    // also gets its own right inset so the percentages stop touching whatever
+    // bounds the widget.
+    <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+      <div style={{ position: "relative", width: 92, height: 92, flexShrink: 0 }}>
         <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: `conic-gradient(${stops})` }} />
         {donut && (
+          // inset 26 on 92 leaves a 40px hole. At inset 22 on 84 the "842" was
+          // 2px from the ring on every side and the word under it was clipped
+          // by the curve.
           <div style={{
-            position: "absolute", inset: 22, borderRadius: "50%", background: "var(--surface)",
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            position: "absolute", inset: 26, borderRadius: "50%", background: "var(--surface)",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
           }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: TXT, lineHeight: 1 }}>842</span>
-            <span style={{ fontSize: 9, color: SUB }}>total</span>
+            <span style={{ fontSize: 9, color: SUB, lineHeight: 1 }}>total</span>
           </div>
         )}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
         {parts.map(([label, pct], i) => (
-          <div key={label} style={{ display: "flex", alignItems: "center", gap: 7, padding: "3px 0" }}>
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: CAT[i], flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: SUB, flex: 1, minWidth: 0 }}>{label}</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: TXT }}>{pct}%</span>
+            <span style={{
+              fontSize: 11, color: SUB, flex: 1, minWidth: 0,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const,
+            }}>{label}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: TXT, flexShrink: 0 }}>{pct}%</span>
           </div>
         ))}
       </div>

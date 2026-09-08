@@ -412,7 +412,10 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
   const datasetSrc = PRESET_DATASETS.find(d => d.id === sourceId)
   const srcLabel   = entitySrc?.label ?? datasetSrc?.name ?? null
   const typeInfo   = AUTHORABLE_WIDGETS.find(t => t.id === typeId)
-  const maxW = previewSize === "sm" ? 240 : previewSize === "md" ? 420 : undefined
+  // Every size is a real number, including L. Transitioning to `undefined`
+  // does not animate — the card used to snap from 420 to full width and only
+  // the way back was smooth.
+  const maxW = previewSize === "sm" ? 240 : previewSize === "md" ? 420 : 640
   const freshnessLabel = freshness === "realtime" ? "Live" : freshness === "15m" ? "15m" : freshness === "1h" ? "1h" : "24h"
 
   // "KPI · Deals · HubSpot" — what this widget is, reading left to right.
@@ -463,7 +466,9 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
        *
        *  The name is no longer editable here; it is the "Widget name" field in
        *  Configure, which is one place instead of two. */}
-      <div style={{ maxWidth: maxW, transition: "max-width 0.2s" }}>
+      {/* 280ms on the same expo-out curve the DS modal uses, so a size change
+          eases rather than snaps. */}
+      <div style={{ maxWidth: maxW, transition: "max-width 280ms cubic-bezier(0.16, 1, 0.3, 1)" }}>
         <CardContainer size="lg" className="flex flex-col">
           <WidgetFather
             noCard
@@ -724,27 +729,33 @@ export default function PMThomasWidgetBuilderScreen() {
 
                 {dataMode === "entity" && (
                   <div>
-                    <StepLabel n={2}>Choose entity</StepLabel>
-                    {/* Filter by the system the entity comes from — with eight
-                        sources and more arriving per install, the integration is
-                        the axis people scan by. */}
-                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
+                    {/* The catalogue opens from the section heading, not from
+                        under the grid: it is an alternative to the four below,
+                        so it belongs where you decide, before you have scanned
+                        them — not after. */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <StepLabel>Choose entity</StepLabel>
+                      <div style={{ marginTop: -8 }}>
+                        <Button variant="tertiary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
+                          Browse all entities
+                        </Button>
+                      </div>
+                    </div>
+                    {/* The card's hover is a box-shadow, and a grid that clips
+                        would cut it at the edges. Padding gives the glow room;
+                        the negative margin keeps the cards on the same left
+                        edge as everything else in the step. */}
+                    <div style={{
+                      display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10,
+                      padding: 4, margin: -4,
+                    }}>
                       {FEATURED_ENTITIES.map(src => (
                         <EntitySourceCard key={src.id} source={src} selected={sourceId === src.id} onSelect={() => selectSource(src.id)} />
                       ))}
                     </div>
-                    {/* The four above are the common ones. The rest are behind a
-                        catalogue, the same shape as Choose columns — a grid of
-                        four plus a filter row was the whole list pretending to
-                        be a shortlist. */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 12 }}>
-                      <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>
-                        More entities available — install a model from the Models page to unlock them.
-                      </span>
-                      <Button variant="secondary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
-                        Browse all entities
-                      </Button>
-                    </div>
+                    <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: "12px 0 0" }}>
+                      More entities available — install a model from the Models page to unlock them.
+                    </p>
                   </div>
                 )}
 
@@ -1046,31 +1057,48 @@ export default function PMThomasWidgetBuilderScreen() {
               value={entQuery}
               onChange={e => setEntQuery(e.target.value)}
             />
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-              <Chip size="s" variant={srcFilter === "all" ? "primary" : "secondary"} onClick={() => setSrcFilter("all")}>All sources</Chip>
-              {INTEGRATIONS.map(i => (
-                <Chip key={i} size="s" variant={srcFilter === i ? "primary" : "secondary"} onClick={() => setSrcFilter(i)}>{i}</Chip>
-              ))}
-            </div>
-            <div style={{ height: 320, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
-              {visibleEntities.length === 0 ? (
-                <EmptyState
-                  compact icon={LucideIcons.SearchX}
-                  title="No entities found"
-                  description="Try a different search term or source."
-                />
-              ) : visibleEntities.map(src => (
-                <EntitySourceCard
-                  key={src.id}
-                  source={src}
-                  selected={sourceId === src.id}
-                  onSelect={() => { selectSource(src.id); setShowEntities(false) }}
-                />
-              ))}
+            {/* The source filter is a left rail, not a chip row. Four sources
+                fit on one line today; every install adds one, and a wrapping
+                row of twelve pushes the list off the bottom of the dialog. A
+                column grows downward, which the panel can scroll. */}
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+              <div style={{ width: 132, flexShrink: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+                <Chip size="s" variant={srcFilter === "all" ? "primary" : "secondary"} onClick={() => setSrcFilter("all")}>All sources</Chip>
+                {INTEGRATIONS.map(i => (
+                  <Chip key={i} size="s" variant={srcFilter === i ? "primary" : "secondary"} onClick={() => setSrcFilter(i)}>{i}</Chip>
+                ))}
+              </div>
+
+              {/* Two columns: the cards carry a description, and a single
+                  column of eight made the dialog taller than the viewport.
+                  Padding gives the hover shadow room inside the scroll box —
+                  without it the glow is sliced at the container's edge. */}
+              <div style={{
+                flex: 1, minWidth: 0, height: 340, overflowY: "auto",
+                padding: 4, margin: -4,
+              }}>
+                {visibleEntities.length === 0 ? (
+                  <EmptyState
+                    compact icon={LucideIcons.SearchX}
+                    title="No entities found"
+                    description="Try a different search term or source."
+                  />
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8 }}>
+                    {visibleEntities.map(src => (
+                      <EntitySourceCard
+                        key={src.id}
+                        source={src}
+                        selected={sourceId === src.id}
+                        onSelect={() => { selectSource(src.id); setShowEntities(false) }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         }
-        ctaSecondary={{ label: "Close", onClick: () => setShowEntities(false) }}
       />
 
       {/* ── Columns modal ── */}
