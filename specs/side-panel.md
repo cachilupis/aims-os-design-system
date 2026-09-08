@@ -8,14 +8,17 @@ Inline layout panel for persistent contextual content alongside the main view. N
 
 | Name | Type | Values | Default | Note |
 | --- | --- | --- | --- | --- |
-| open | boolean | — | false | Controls visibility. Width animates from 450px to 0 on close. |
+| open | boolean | — | false | Controls visibility. Width animates from defaultWidth to the collapsed strip (48px) on close. |
 | side | "left" | "right" | — | "right" | Which edge the panel attaches to. |
 | title | string | — | — | Panel heading. 18px SemiBold, letter-spacing 0.25px. |
 | description | string | — | — | Subtitle below title. 14px Medium. |
 | showSearch | boolean | — | false | Renders a search input below the title row. |
 | showMenu | boolean | — | false | Renders a menu icon button beside the close button. |
 | footer | ReactNode | — | — | Sticky footer. Typically primary + secondary action buttons. |
-| width | number | — | 450 | Panel open width in px. Use 300 on small screens. |
+| defaultWidth | number | — | 350 | Starting width in px. Use 350 (S) on small screens or multi-panel layouts. |
+| widthPresets | number[] | — | [350, 450] | Drag-to-resize snap points (S, M) — a dynamic half-screen snap is always added as the third point. |
+| onWidthChange | (width: number) => void | — | — | Called when width snaps to a new preset via drag. |
+| showCollapsedStrip | boolean | — | true | Show a 48px strip with nav icons when closed. Set false to fully collapse to 0. |
 | searchPlaceholder | string | — | "Search…" | Search input placeholder text. |
 | onClose | () => void | — | — | Called on close/collapse button click. |
 | children | ReactNode | — | — | Dynamic content slot. Scrollable. Supports any content. |
@@ -24,10 +27,10 @@ Inline layout panel for persistent contextual content alongside the main view. N
 
 | Name | Value |
 | --- | --- |
-| Default (1/3) | 450px |
-| Expanded (1/3) | 480px |
-| Expanded (1/2) | 704px |
-| Min (small screen) | 300px |
+| S (default) | 350px |
+| M | 450px |
+| Half-screen | 50vw (dynamic — always half the live window width) |
+| Collapsed | 48px (shown when closed, unless showCollapsedStrip={false}) |
 
 ## Typography
 
@@ -47,41 +50,44 @@ CSS prefix: `side-panel-surface`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | --side-panel-bg | Surface/Floating/Default | rgba(255,255,255,0.92) | rgba(16,22,40,0.92) |
-| Border | --side-panel-border | Border/Neutral/Subtle | #E4E4E7 | rgba(255,255,255,0.10) |
+| Background | --side-panel-bg |  | rgba(255,255,255,0.92) | rgba(16,22,40,0.92) |
+| Border | --side-panel-border |  | #E4E4E7 | rgba(255,255,255,0.10) |
 
 ### Text
 
-Title and body copy inside the panel
+Title and body copy inside the panel. Uses the same generic tokens as other surfaces, not dedicated side-panel-* text vars.
 
-CSS prefix: `side-panel-text`
-
-| Role | Token / Variable | Figma variable | Light | Dark |
-| --- | --- | --- | --- | --- |
-| Title | --side-panel-title | Text/Label | #2a2a2a | rgba(255,255,255,0.80) |
-| Description | --side-panel-description | Text/Body | #5C5C5C | #94A3B8 |
-
-### Icons
-
-Action icons and close button
-
-CSS prefix: `side-panel-icons`
+CSS prefix: `—`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Icon fill | --side-panel-icon | Icon/Neutral/Default | #52525B | #D1D5DB |
-| Icon hover BG | --side-panel-icon-hover-bg | Surface/Neutral/Default | rgba(0,0,0,0.05) | rgba(255,255,255,0.08) |
+| Title | --foreground |  | #1a1a1a | #ffffffcc |
+| Description | --field-supporting |  | #5C5C5C | rgba(255,255,255,0.60) |
 
-### Search field
+### Collapsed strip
 
-Optional search input below the header
+Vertical divider line + stacked dots shown when the panel is collapsed to its 48px strip.
 
-CSS prefix: `side-panel-search`
+CSS prefix: `—`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | --side-panel-search-bg | Surface/Neutral/White | #FFFFFF | rgba(255,255,255,0.10) |
-| Border | --side-panel-search-bd | Border/Neutral/Default | #5c5c5c | rgba(255,255,255,0.10) |
+| Divider / dots | --primary |  | #2173ff | #2b7fff |
+
+### Stale / unused tokens
+
+Defined in index.css but not referenced anywhere in side-panel.tsx — the menu/collapse icon buttons delegate to the Button atom (variant=tertiary, see Button spec) and the search input delegates entirely to the Input atom (see Text field spec). Kept here as a documented gap, not deleted from CSS, in case a future redesign wires them up.
+
+CSS prefix: `side-panel-*`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Title (unused) | --side-panel-title |  | #2a2a2a | rgba(255,255,255,0.80) |
+| Description (unused) | --side-panel-description |  | #5C5C5C | #94A3B8 |
+| Icon fill (unused) | --side-panel-icon |  | #52525B | #D1D5DB |
+| Icon hover BG (unused) | --side-panel-icon-hover-bg |  | rgba(0,0,0,0.05) | rgba(255,255,255,0.08) |
+| Search BG (unused) | --side-panel-search-bg |  | #FFFFFF | rgba(255,255,255,0.10) |
+| Search border (unused) | --side-panel-search-bd |  | #5c5c5c | rgba(255,255,255,0.10) |
 
 ## Additional data
 

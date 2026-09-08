@@ -45,8 +45,9 @@ CSS prefix: `snf-cancel`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Footer background | --step-nav-footer-bg | Surface (adaptive) | #FFFFFF | #0D1120 |
-| Top separator | --step-nav-footer-separator | Border/Neutral/Lighter | #E8E8E8 | rgba(255,255,255,0.08) |
+| Footer background | --step-nav-footer-bg |  | #FFFFFF | #0D1120 |
+| Top separator | --step-nav-footer-separator |  | #BABABA | rgba(255,255,255,0.08) |
+| Corner radius | --radius-m |  | 8px | 8px |
 
 ### Back / Next
 
@@ -56,8 +57,9 @@ CSS prefix: `snf-back`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Footer background | --step-nav-footer-bg | Surface (adaptive) | #FFFFFF | #0D1120 |
-| Top separator | --step-nav-footer-separator | Border/Neutral/Lighter | #E8E8E8 | rgba(255,255,255,0.08) |
+| Footer background (reused) | --step-nav-footer-bg |  | #FFFFFF | #0D1120 |
+| Top separator (reused) | --step-nav-footer-separator |  | #BABABA | rgba(255,255,255,0.08) |
+| Corner radius (reused) | --radius-m |  | 8px | 8px |
 
 ---
 

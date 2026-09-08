@@ -1,4 +1,4 @@
-import { type ReactNode } from "react"
+import { forwardRef, type ReactNode } from "react"
 import { ChevronDown, ChevronUp, X, CircleAlert } from "lucide-react"
 import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
@@ -95,7 +95,17 @@ const supportingCva = cva("text-xs font-medium leading-[1.5]", {
 
 // ── Component ─────────────────────────────────────────────────────────────
 
-function Select({
+/**
+ * The combobox row forwards its ref and any extra props.
+ *
+ * Select is a trigger with no list of its own — CLAUDE.md tells screens to pair
+ * it with a base-ui Popover for the options. That pairing could not actually be
+ * built: `Popover.Trigger render={<Select/>}` had nowhere to attach its ref or
+ * handlers, and anchoring a wrapper div instead made base-ui read the click as
+ * an outside click and dismiss the popup on the same tick. Forwarding the ref
+ * to the combobox element is what makes the documented composition work.
+ */
+const Select = forwardRef<HTMLDivElement, SelectProps & React.HTMLAttributes<HTMLDivElement>>(function Select({
   value,
   placeholder = "Select an option",
   state = "default",
@@ -107,7 +117,8 @@ function Select({
   onClick,
   onClear,
   className,
-}: SelectProps) {
+  ...rest
+}, ref) {
   const isDisabled = state === "disabled"
   const hasValue   = Boolean(value)
 
@@ -166,6 +177,8 @@ function Select({
 
       {/* Trigger */}
       <div
+        ref={ref}
+        {...rest}
         role="combobox"
         aria-expanded={open}
         aria-disabled={isDisabled}
@@ -227,6 +240,6 @@ function Select({
       )}
     </div>
   )
-}
+})
 
 export { Select }

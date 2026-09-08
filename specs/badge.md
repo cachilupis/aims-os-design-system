@@ -27,7 +27,7 @@ CSS prefix: `badge-error`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill | Badge/Error | — | #d32f2f | #ff6467 |
+| Fill | --badge-error | — | #d32f2f | #ff6467 |
 
 ### alert
 
@@ -37,7 +37,7 @@ CSS prefix: `badge-alert`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill | Badge/Alert | — | #ed6c02 | #fdc700 |
+| Fill | --badge-alert | — | #ed6c02 | #fdc700 |
 
 ### inProgress
 
@@ -47,7 +47,7 @@ CSS prefix: `badge-in-progress`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill | Badge/In Progress | — | #2173ff | #2b7fff |
+| Fill | --badge-in-progress | — | #2173ff | #2b7fff |
 
 ### success
 
@@ -57,7 +57,7 @@ CSS prefix: `badge-success`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill | Badge/Success | — | #00765f | #05df72 |
+| Fill | --badge-success | — | #00765f | #05df72 |
 
 ### neutral
 
@@ -67,7 +67,7 @@ CSS prefix: `badge-neutral`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill | Badge/Neutral | — | #bababa | rgba(255,255,255,0.50) |
+| Fill | --badge-neutral | — | #bababa | rgba(255,255,255,0.50) |
 
 ### lightBlue
 
@@ -77,7 +77,7 @@ CSS prefix: `badge-light-blue`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill | Badge/Light Blue | — | #00b5d9 | #51a2ff |
+| Fill | --badge-light-blue | — | #00b5d9 | #51a2ff |
 
 ### limeGreen
 
@@ -87,7 +87,7 @@ CSS prefix: `badge-lime-green`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill | Badge/Lime Green | — | #a0da1d | #bdee49 |
+| Fill | --badge-lime-green | — | #a0da1d | #bdee49 |
 
 ### yellow
 
@@ -97,7 +97,7 @@ CSS prefix: `badge-yellow`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill | Badge/Yellow | — | #ff9900 | #fdc700 |
+| Fill | --badge-yellow | — | #ff9900 | #fdc700 |
 
 ### purple
 
@@ -107,7 +107,7 @@ CSS prefix: `badge-purple`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Fill | Badge/Purple | — | #7b27ed | #ad46ff |
+| Fill | --badge-purple | — | #7b27ed | #ad46ff |
 
 ---
 

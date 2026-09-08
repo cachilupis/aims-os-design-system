@@ -38,7 +38,8 @@ Border width: `1px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Row bg | Surface/Neutral/White |  | #ffffff | rgba(255,255,255,0.10) |
+| Row bg | --table-bg |  | transparent | transparent |
+| Row border | --table-border |  | rgba(33,115,255,0.10) | rgba(255,255,255,0.15) |
 
 ### Row hover
 
@@ -46,7 +47,7 @@ Border width: `1px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Row bg | Surface/Neutral/Default |  | #f2f2f2 | rgba(255,255,255,0.08) |
+| Row bg | --table-row-hover-bg |  | #f2f2f2 | rgba(255,255,255,0.08) |
 
 ### Row selected
 
@@ -54,7 +55,7 @@ Border width: `1px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Row bg | Surface/Primary/More Subtle |  | rgba(246,249,255,1) | rgba(43,127,255,0.08) |
+| Row bg | --table-row-selected-bg |  | #f6f9ff | rgba(43,127,255,0.08) |
 
 ### Header
 
@@ -62,8 +63,24 @@ Border width: `1px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Header bg | Surface/Neutral/White |  | #ffffff | rgba(255,255,255,0.10) |
-| Text | Text/Subtitle |  | #2a2a2a | rgba(255,255,255,0.6) |
+| Header bg | --table-header-bg |  | #eef5ff | rgba(255,255,255,0.06) |
+| Text | --table-header-text |  | #2a2a2a | rgba(255,255,255,0.6) |
+
+### Cell helpers — TableCellAvatar / Link / AISuggest / Menu
+
+Border width: `0`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Avatar bg (reused, 7 of 10 colors) | --av-col-{color}-bg |  | see Avatar spec | see Avatar spec |
+| Avatar text | --primary-foreground |  | #ffffff | #ffffff |
+| Avatar ring | --topbar-avatar-ring |  | rgba(128,175,255,1) | rgba(43,127,255,0.30) |
+| Avatar-group ring offset | --background |  | #e4ecf7 | #0a0e1a |
+| Avatar-group +N bg | --tag-neutral-bg |  | #f2f2f2 | rgba(255,255,255,0.08) |
+| Avatar-group +N text | --tag-neutral-fg |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Link text | --primary |  | #2173ff | #2b7fff |
+| AI suggest bg | --color-surface-primary-default |  | #2173ff | #2b7fff |
+| AI suggest icon | --color-text-negative |  | #ffffff | #ffffff |
 
 ---
 

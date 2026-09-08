@@ -4,7 +4,6 @@ import { ScreenLayout }   from "@/components/layouts/screen-layout"
 import { ListViewSection } from "@/components/layouts/list-view-section"
 import type { SidebarItem } from "@/components/ui/sidebar"
 import { Header }         from "@/components/ui/header"
-import { Button }         from "@/components/ui/button"
 import { Tag }            from "@/components/ui/tag"
 import { Pagination }     from "@/components/ui/pagination"
 import { Tabs }           from "@/components/ui/tabs"
@@ -356,11 +355,7 @@ function WorkerDetailViewMichael({ worker, onBack }: { worker: Worker; onBack: (
             title={worker.name}
             description={`${worker.category} · Owner: ${worker.owner} · Last run: ${worker.lastRun === "—" ? "Never" : worker.lastRun}`}
             tag={<Tag variant={STATUS_TAG[worker.status]} size="sm">{worker.status}</Tag>}
-            primaryAction={
-              <Button variant="main" size="sm">
-                <LucideIcons.Pencil size={13} /> Edit
-              </Button>
-            }
+            primaryAction={{ label: "Edit", icon: LucideIcons.Pencil }}
           />
         </div>
       )}
@@ -558,11 +553,7 @@ export default function PMMichaelTestV1Screen() {
           title="AI Workers"
           description="Manage and monitor AI workers for this tenant."
           tag={<Tag variant="success" size="sm">{activeCount} Active</Tag>}
-          primaryAction={
-            <Button variant="main" size="sm" onClick={() => setShowCreate(true)}>
-              <LucideIcons.Plus size={13} /> New Worker
-            </Button>
-          }
+          primaryAction={{ label: "New Worker", icon: LucideIcons.Plus, onClick: () => setShowCreate(true) }}
         />
       )}
       pagination={

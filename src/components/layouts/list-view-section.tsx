@@ -31,6 +31,7 @@ import { CardContainer } from "@/components/ui/card-container"
 import { Chip } from "@/components/ui/chip"
 import { Menu, MenuItem, MenuSection, MenuDivider } from "@/components/ui/menu-item"
 import type { EntityListItemData } from "@/components/ui/entity-list"
+import { anchorFromEvent, useDropdownPosition, type DropdownAnchor } from "@/lib/dropdown-anchor"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -105,8 +106,10 @@ export function ListViewSection({
   const openSlot = controlledOpenSlot !== undefined ? controlledOpenSlot : internalOpenSlot
   const setSlot  = (s: string | null) => { setInternalOpenSlot(s); onOpenSlotChange?.(s) }
 
-  // Dropdown anchor — centered below the clicked filter button
-  const [dropdownAnchor, setDropdownAnchor] = useState<{ left: number; top: number } | null>(null)
+  // Dropdown anchor — left-aligned with the clicked filter button, flipping to
+  // right-aligned near the viewport edge. See src/lib/dropdown-anchor.ts.
+  const [dropdownAnchor, setDropdownAnchor] = useState<DropdownAnchor | null>(null)
+  const dropdown = useDropdownPosition(dropdownAnchor)
 
   // Built-in item preview SlideOut
   const [slideoutItemId, setSlideoutItemId] = useState<string | null>(null)
@@ -136,14 +139,7 @@ export function ListViewSection({
       <div
         ref={containerRef as React.RefObject<HTMLDivElement>}
         onClickCapture={(e: React.MouseEvent) => {
-          const btn  = (e.target as HTMLElement).closest("button")
-          const left = btn
-            ? btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2
-            : e.clientX
-          setDropdownAnchor({
-            left,
-            top: (e.currentTarget as HTMLElement).getBoundingClientRect().bottom,
-          })
+          setDropdownAnchor(anchorFromEvent(e))
         }}
       >
         <Filters
@@ -171,13 +167,8 @@ export function ListViewSection({
               onClick={() => setSlot(null)}
             />
             <div
-              style={{
-                position:  "fixed",
-                left:      dropdownAnchor.left,
-                top:       dropdownAnchor.top + 4,
-                transform: "translateX(-50%)",
-                zIndex:    10001,
-              }}
+              ref={dropdown.ref}
+              style={{ position: "fixed", zIndex: 10001, ...dropdown.style }}
             >
               <Menu className="w-auto min-w-[200px]">
                 <MenuSection label={openSlot} />

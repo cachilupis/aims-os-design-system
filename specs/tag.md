@@ -36,9 +36,9 @@ CSS prefix: `tag-success`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Success/More Subtle | 4465:2672 | #e5fdf8 | #0a1f1a |
-| Border | Border/Success/Lighter | 4465:4465 | #009978 | #34d399 |
-| Text | Text/Success | 4465:4505 | #003328 | #6ee7b7 |
+| Background | --tag-success-bg |  | #e5fdf8 | #0a1f1a |
+| Border | --tag-success-bd |  | #009978 | #34d399 |
+| Text | --tag-success-fg |  | #003328 | #6ee7b7 |
 
 ### error
 
@@ -48,9 +48,9 @@ CSS prefix: `tag-error`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Error/More Subtle | 4465:2662 | #fdeded | #2d1515 |
-| Border | Border/Error/Default | 4465:4456 | #992222 | #e05252 |
-| Text | Text/Error | 4465:4473 | #5f2120 | #ff6467 |
+| Background | --tag-error-bg |  | #fdeded | #2d1515 |
+| Border | --tag-error-bd |  | #992222 | #e05252 |
+| Text | --tag-error-fg |  | #5f2120 | #ff6467 |
 
 ### alert
 
@@ -60,9 +60,9 @@ CSS prefix: `tag-alert`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Alert/More Subtle | 4465:2666 | #ffeedb | #281e00 |
-| Border | Border/Alert/Lighter | 4465:4461 | #b25102 | #f59e0b |
-| Text | Text/Alert | 4465:4504 | #663c00 | #fcd34d |
+| Background | --tag-alert-bg |  | #ffeedb | #281e00 |
+| Border | --tag-alert-bd |  | #b25102 | #f59e0b |
+| Text | --tag-alert-fg |  | #663c00 | #fcd34d |
 
 ### informative
 
@@ -72,9 +72,9 @@ CSS prefix: `tag-informative`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Primary/Subtle | 4461:2592 | #e9f1ff | rgba(21,93,252,0.15) |
-| Border | Border/Primary/Default | 4465:4452 | #2173ff | #2b7fff |
-| Text | Text/Info | 4465:4506 | #001740 | rgba(255,255,255,0.8) |
+| Background | --tag-informative-bg |  | #e9f1ff | rgba(21,93,252,0.15) |
+| Border | --tag-informative-bd |  | #2173ff | #2b7fff |
+| Text | --tag-informative-fg |  | #001740 | rgba(255,255,255,0.8) |
 
 ### primary
 
@@ -84,9 +84,9 @@ CSS prefix: `tag-primary`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Primary/500 | 4461:2591 | #2173ff | #155dfc |
-| Border | transparent |  | none | none |
-| Text | Text/Negative | 4465:4471 | #ffffff | #ffffff |
+| Background | --tag-primary-bg |  | #2173ff | #155dfc |
+| Border | — |  | none | none |
+| Text | --tag-primary-fg |  | #ffffff | #ffffff |
 
 ### secondary
 
@@ -96,9 +96,57 @@ CSS prefix: `tag-secondary`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Gray/100 / White/10 | 4465:4591 | #ffffff | rgba(255,255,255,0.10) |
-| Border | Gray/600 / White/10 | 4465:4448 | #5c5c5c | rgba(255,255,255,0.10) |
-| Text | Text/Subtitle | 4465:4468 | #2a2a2a | rgba(255,255,255,0.60) |
+| Background | --tag-secondary-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Border | --tag-secondary-bd |  | #5c5c5c | rgba(255,255,255,0.10) |
+| Text | --tag-secondary-fg |  | #2a2a2a | rgba(255,255,255,0.60) |
+
+### limeGreen
+
+Categorical — extended palette
+
+CSS prefix: `tag-limegreen`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Background | --tag-limegreen-bg |  | #f9fee5 | #111a04 |
+| Border | --tag-limegreen-bd |  | #a0da1d | #84cc16 |
+| Text | --tag-limegreen-fg |  | #3e5c0a | #bdef49 |
+
+### yellow
+
+Categorical — extended palette
+
+CSS prefix: `tag-yellow`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Background | --tag-yellow-bg |  | #fffaf0 | #281e00 |
+| Border | --tag-yellow-bd |  | #ed6c02 | #fbbf24 |
+| Text | --tag-yellow-fg |  | #663c00 | #fcd34d |
+
+### purple
+
+Categorical — extended palette / AI contexts
+
+CSS prefix: `tag-purple`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Background | --tag-purple-bg |  | #f3e9fd | #120520 |
+| Border | --tag-purple-bd |  | #7b27ed | #a855f7 |
+| Text | --tag-purple-fg |  | #2c075c | #d8b4fe |
+
+### lightBlue
+
+Categorical — extended palette
+
+CSS prefix: `tag-lightblue`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Background | --tag-lightblue-bg |  | #e5f8ff | #071828 |
+| Border | --tag-lightblue-bd |  | #00b5d9 | #38bdf8 |
+| Text | --tag-lightblue-fg |  | #0c4a6e | #7dd3fc |
 
 ### neutral
 
@@ -108,9 +156,9 @@ CSS prefix: `tag-neutral`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Gray/300 / White/8 | 4465:2687 | #f2f2f2 | rgba(255,255,255,0.08) |
-| Border | Gray/600 / White/10 | 4465:4448 | #5c5c5c | rgba(255,255,255,0.10) |
-| Text | Text/Subtitle | 4465:4468 | #2a2a2a | rgba(255,255,255,0.60) |
+| Background | --tag-neutral-bg |  | #f2f2f2 | rgba(255,255,255,0.08) |
+| Border | --tag-neutral-bd |  | #5c5c5c | rgba(255,255,255,0.10) |
+| Text | --tag-neutral-fg |  | #2a2a2a | rgba(255,255,255,0.60) |
 
 ---
 

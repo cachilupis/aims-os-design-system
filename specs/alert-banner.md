@@ -2,13 +2,13 @@
 
 **Figma node:** [`119:5867`](https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=119-5867)
 
-Full-width contextual notice for system-level feedback. 3 semantic states — Error, Success, Alert — with optional CTA text button and dismiss (×) button.
+Contextual notice for system-level feedback. 4 semantic states — Error, Success, Alert, Info — with optional CTA text button and dismiss (×) button.
 
 ## Properties
 
 | Name | Type | Values | Default | Note |
 | --- | --- | --- | --- | --- |
-| state | Variant | error,success,alert | error | Sets background, icon, and text tokens |
+| state | Variant | error,success,alert,info | error | Sets background, icon, and text tokens |
 | title | Prop | string | required | 14px SemiBold — always required |
 | description | Prop | string,undefined | undefined | 14px Medium, same state color as title |
 | cta | Prop | string,undefined | undefined | CTA button label — shown when provided |
@@ -44,6 +44,7 @@ CSS prefix: `--ab-error-*`
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
 | Background | --ab-error-bg | — | #fdeded | #2d1515 |
+| Border | --ab-error-bd | — | rgba(153,34,34,0.25) | transparent |
 | Icon | --ab-error-icon | — | #992222 | #ff6467 |
 | Text | --ab-error-text | — | #5f2120 | #ff6467 |
 
@@ -56,6 +57,7 @@ CSS prefix: `--ab-success-*`
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
 | Background | --ab-success-bg | — | #e5fdf8 | #0a1f1a |
+| Border | --ab-success-bd | — | rgba(0,153,120,0.25) | transparent |
 | Icon | --ab-success-icon | — | #00a07e | #6ee7b7 |
 | Text | --ab-success-text | — | #003328 | #6ee7b7 |
 
@@ -68,6 +70,7 @@ CSS prefix: `--ab-alert-*`
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
 | Background | --ab-alert-bg | — | #ffeedb | #2d1a08 |
+| Border | --ab-alert-bd | — | rgba(180,83,9,0.25) | transparent |
 | Icon | --ab-alert-icon | — | #b45309 | #fcd34d |
 | Text | --ab-alert-text | — | #663c00 | #fcd34d |
 

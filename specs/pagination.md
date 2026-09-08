@@ -41,23 +41,28 @@ CSS prefix: `pagination`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Range text + row count | --color-text-label | Text/Label | #2a2a2a | rgba(255,255,255,0.80) |
-| "Rows per page:" caption | --color-text-subtitle | Text/Subtitle | #2a2a2a | rgba(255,255,255,0.60) |
-| Nav icons + chevron | --color-icon-neutral-dark | Icon/Neutral/Dark | rgba(92,92,92,1) | rgba(255,255,255,0.50) |
-| Nav button hover bg | --color-surface-neutral-default | Surface/Neutral/Default | #f2f2f2 | rgba(255,255,255,0.06) |
-| Inner container bg | --surface-floating-default | Surface/Floating/Default | rgba(255,255,255,0.92) | rgba(16,22,40,0.92) |
-| Inner container border | --color-border-neutral-default | Border/Neutral/Default | #5c5c5c | rgba(255,255,255,0.10) |
+| Range text + row count | --color-text-label |  | #2a2a2a | rgba(255,255,255,0.80) |
+| "Rows per page:" caption | --color-text-subtitle |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Nav icons + selector chevron | --color-icon-neutral-dark |  | rgba(92,92,92,1) | rgba(255,255,255,0.50) |
+| Inner container bg | --surface-floating-default |  | rgba(255,255,255,0.92) | rgba(16,22,40,0.92) |
+| Inner container border | --color-border-neutral-subtle |  | #e4e4e7 | rgba(255,255,255,0.10) |
+| Container shadow (reused) | --shadow-elevation-5 |  | see Elevation spec | see Elevation spec |
+| Selector button bg | --btn-secondary-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Selector button border | --btn-secondary-border |  | #5c5c5c | rgba(255,255,255,0.10) |
+| Selector button hover bg | --btn-secondary-hover-bg |  | #f2f2f2 | rgba(255,255,255,0.08) |
+| Dropdown selected text | --primary |  | #2173ff | #2b7fff |
+| Dropdown option hover/selected bg | --color-surface-neutral-default |  | #f2f2f2 | rgba(255,255,255,0.06) |
+| Nav buttons (bg/border/hover) | — |  | see Button spec — variant: secondary, size: sm | see Button spec — variant: secondary, size: sm |
 
 ### Multipage
 
-Middle or last page. Previous and/or next buttons change opacity when disabled (0.35). No new tokens — inherits all tokens from Default.
+Middle or last page. Previous and/or next buttons (Button atom, variant=secondary) change to their own disabled state when at a boundary. No new tokens — inherits all tokens from Default.
 
 CSS prefix: `pagination`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Disabled nav button opacity | opacity: 0.35 | — | 0.35 | 0.35 |
-| Range text + row count | --color-text-label | Text/Label | #2a2a2a | rgba(255,255,255,0.80) |
+| Range text + row count (reused) | --color-text-label |  | #2a2a2a | rgba(255,255,255,0.80) |
 
 ---
 

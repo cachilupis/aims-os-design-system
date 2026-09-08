@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import * as Icons from "lucide-react"
 import { ScreenLayout }        from "@/components/layouts/screen-layout"
 import { Header }              from "@/components/ui/header"
+import { HighlightCard } from "@/components/ui/highlight-card"
 import { Button }              from "@/components/ui/button"
 import { Tag }                 from "@/components/ui/tag"
 import { Tabs }                from "@/components/ui/tabs"
@@ -381,9 +382,7 @@ export default function PMChatWidgetScreen() {
             size={isScrolled ? "compress" : "size-l"}
             title="Chat Widgets"
             description="Embeddable AI chat widgets connected to your Agentic Workflows"
-            primaryAction={<Button variant="main" size="sm" onClick={() => { setCreateStep(0); setNewName(""); setNewDesc(""); setView("create") }}>
-              <Icons.Plus size={14} style={{ marginRight: 4 }} />New Widget
-            </Button>}
+            primaryAction={{ label: "New Widget", icon: Icons.Plus, onClick: () => { setCreateStep(0); setNewName(""); setNewDesc(""); setView("create") } }}
           />
         ) : view === "create" ? (
           <Header
@@ -399,49 +398,49 @@ export default function PMChatWidgetScreen() {
             description="Customer-facing support and lead qualification widget embedded on acme.com."
             tag={<Tag variant="success" size="sm">Active</Tag>}
             backButton
-            primaryAction={
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {/* Notifications bell — layered on top of ScreenLayout's own actions for prototype clarity */}
-                <div ref={notifRef} style={{ position: "relative" }}>
-                  <button onClick={() => setNotifPanelOpen(p => !p)}
-                    style={{ width: 32, height: 32, borderRadius: 8, background: "transparent", border: "1px solid var(--color-border-neutral-default)", color: "var(--color-text-subtitle)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                    <Icons.Bell size={15} />
-                    {notifs.length > 0 && (
-                      <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, background: "var(--destructive)", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}> {/* audit-ignore: #fff on destructive badge — no token for white-on-red contrast */}
-                        {notifs.length}
-                      </span>
-                    )}
-                  </button>
-                  {notifPanelOpen && (
-                    <CardContainer size="sm" className="!p-0 absolute top-[calc(100%+8px)] right-0 w-80 overflow-hidden z-[500] [box-shadow:0_16px_40px_rgba(0,0,0,0.6)]"> {/* audit-ignore: rgba shadow — no token */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px 10px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>Notifications</span>
-                        <button onClick={clearNotifs} style={{ background: "none", border: "none", fontSize: 11, color: "var(--color-text-disabled)", cursor: "pointer", fontFamily: "inherit" }}>Clear all</button>
+            primaryAction={{ label: "Deploy", icon: Icons.Send, onClick: handleDeploy }}
+              // A standing control, not an action: it is always there and it opens a
+              // panel rather than doing something. That is what aux is for.
+              aux={
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 32px 8px" }}>
+            {/* Notifications bell — layered on top of ScreenLayout's own actions for prototype clarity */}
+            <div ref={notifRef} style={{ position: "relative" }}>
+              <button onClick={() => setNotifPanelOpen(p => !p)}
+                style={{ width: 32, height: 32, borderRadius: 8, background: "transparent", border: "1px solid var(--color-border-neutral-default)", color: "var(--color-text-subtitle)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                <Icons.Bell size={15} />
+                {notifs.length > 0 && (
+                  <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, background: "var(--destructive)", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}> {/* audit-ignore: #fff on destructive badge — no token for white-on-red contrast */}
+                    {notifs.length}
+                  </span>
+                )}
+              </button>
+              {notifPanelOpen && (
+                <CardContainer size="sm" className="!p-0 absolute top-[calc(100%+8px)] right-0 w-80 overflow-hidden z-[500] [box-shadow:0_16px_40px_rgba(0,0,0,0.6)]"> {/* audit-ignore: rgba shadow — no token */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px 10px", borderBottom: "1px solid var(--color-border-neutral-default)" }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>Notifications</span>
+                    <button onClick={clearNotifs} style={{ background: "none", border: "none", fontSize: 11, color: "var(--color-text-disabled)", cursor: "pointer", fontFamily: "inherit" }}>Clear all</button>
+                  </div>
+                  <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                    {notifs.length === 0 ? (
+                      <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 12, color: "var(--color-text-disabled)" }}>No notifications yet</div>
+                    ) : notifs.map(n => (
+                      <div key={n.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 14px", borderBottom: "1px solid var(--color-border-neutral-default)", background: "var(--card-primary-bg)" }}>
+                        <span style={{ width: 28, height: 28, borderRadius: 8, background: "var(--card-primary-bg)", border: "1px solid var(--color-border-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Icons.Send size={12} color="var(--primary)" />
+                        </span>
+                        <span style={{ flex: 1 }}>
+                          <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1.35 }}>{n.title}</span>
+                          <span style={{ display: "block", fontSize: 11, color: "var(--color-text-subtitle)", marginTop: 2 }}>{n.sub}</span>
+                        </span>
+                        <span style={{ fontSize: 10, color: "var(--color-text-disabled)", whiteSpace: "nowrap", marginTop: 2 }}>{n.time}</span>
                       </div>
-                      <div style={{ maxHeight: 300, overflowY: "auto" }}>
-                        {notifs.length === 0 ? (
-                          <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 12, color: "var(--color-text-disabled)" }}>No notifications yet</div>
-                        ) : notifs.map(n => (
-                          <div key={n.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 14px", borderBottom: "1px solid var(--color-border-neutral-default)", background: "var(--card-primary-bg)" }}>
-                            <span style={{ width: 28, height: 28, borderRadius: 8, background: "var(--card-primary-bg)", border: "1px solid var(--color-border-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                              <Icons.Send size={12} color="var(--primary)" />
-                            </span>
-                            <span style={{ flex: 1 }}>
-                              <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1.35 }}>{n.title}</span>
-                              <span style={{ display: "block", fontSize: 11, color: "var(--color-text-subtitle)", marginTop: 2 }}>{n.sub}</span>
-                            </span>
-                            <span style={{ fontSize: 10, color: "var(--color-text-disabled)", whiteSpace: "nowrap", marginTop: 2 }}>{n.time}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContainer>
-                  )}
-                </div>
-                <Button variant="primary" size="sm" onClick={handleDeploy}>
-                  <Icons.Send size={13} style={{ marginRight: 4 }} />Deploy
-                </Button>
-              </div>
-            }
+                    ))}
+                  </div>
+                </CardContainer>
+              )}
+            </div>
+          </div>
+              }
           />
         )}
       >
@@ -504,36 +503,24 @@ export default function PMChatWidgetScreen() {
               {activeTab === "overview" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {/* Metrics row — 2x2 grid */}
-                  <CardContainer size="sm" className="!p-0 overflow-hidden">
-                    <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--color-border-neutral-default)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-disabled)" }}>Metrics</span>
-                      <Icons.RefreshCw size={12} color="var(--color-text-disabled)" style={{ cursor: "pointer" }} />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0" }}>
-                      {[
-                        { icon: "Activity",   label: "Success Rate",          value: "94.2%",  meta: "+2.1%",          ok: true  },
-                        { icon: "Shield",     label: "Autonomous Resolution",  value: "78.5%",  meta: "+5.3%",          ok: true  },
-                        { icon: "DollarSign", label: "Cost per Execution",    value: "$0.08",  meta: "No change",      ok: false },
-                        { icon: "Clock",      label: "Executions",            value: "1,240",  meta: "+142 this month", ok: true  },
-                      ].map((row, i) => {
-                        const Ic = (Icons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>)[row.icon]
-                        const borderRight = i % 2 === 0 ? "1px solid var(--color-border-neutral-default)" : "none"
-                        const borderBottom = i < 2 ? "1px solid var(--color-border-neutral-default)" : "none"
-                        return (
-                          <div key={row.label} style={{ padding: "14px 16px", borderRight, borderBottom }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
-                              <span style={{ width: 24, height: 24, borderRadius: 6, background: "var(--color-surface-neutral-default)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <Ic size={11} color="var(--color-text-subtitle)" />
-                              </span>
-                              <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{row.label}</span>
-                            </div>
-                            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-title)", lineHeight: 1, marginBottom: 4 }}>{row.value}</div>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: row.ok ? "var(--color-text-success)" : "var(--color-text-disabled)" }}>{row.meta}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </CardContainer>
+                  {/* HighlightCard, the DS's KPI card. This was a hand-drawn 2×2
+                      grid of divs — icon chip, label, big number, delta — which is
+                      exactly HighlightCard's anatomy. One of fourteen screens that
+                      each drew their own while the component sat catalogued.
+
+                      Laid out 2×2 by hand rather than through AdaptiveMetricGrid:
+                      that grid is built for three cards and degrades to 2+1, so
+                      four of them in this half-width column came out 4-across and
+                      truncated every label to "Succ", "Auto", "Cost". The card is
+                      the right component; the grid is for a different card count. */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {[
+                      { iconName: "Activity",   label: "Success Rate",          value: "94.2%", feedback: "+2.1%",           feedbackType: "positive" as const },
+                      { iconName: "Shield",     label: "Autonomous Resolution", value: "78.5%", feedback: "+5.3%",           feedbackType: "positive" as const },
+                      { iconName: "DollarSign", label: "Cost per Execution",    value: "$0.08", feedback: "No change",       feedbackType: "neutral"  as const },
+                      { iconName: "Clock",      label: "Executions",            value: "1,240", feedback: "+142 this month", feedbackType: "positive" as const },
+                    ].map(m => <HighlightCard key={m.label} {...m} />)}
+                  </div>
 
                   {/* Details + Assigned side by side */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>

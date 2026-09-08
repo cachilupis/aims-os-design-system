@@ -46,39 +46,48 @@ Frosted-glass overlay panel from the right. Two types: With variants (full heade
 
 ### Surface tokens
 
-Panel frosted glass surface, icon highlight, status tag, and chip backgrounds.
+Panel frosted glass surface, icon highlight, and status tag backgrounds — tokens actually read directly by slide-out.tsx.
 
-CSS prefix: `--surface`
+CSS prefix: `--slide-out-*`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Panel BG (Floating/Default) | --slide-out-bg | Surface/Floating/Default | rgba(255,255,255,0.92) | rgba(16,22,40,0.92) |
-| Icon highlight (Purple) | --color-surface-purple-more-subtle | Surface/Purple/More Subtle | #f3e9fd | rgba(139,92,246,0.12) |
-| Status tag BG (Success) | --color-surface-success-more-subtle | Surface/Success/More Subtle | #e5fdf8 | rgba(110,231,183,0.10) |
-| Active chip BG / Primary | --primary | Surface/Primary/Default | #2173ff | #2b7fff |
-| Inactive chip / search BG | --color-surface-neutral-white | Surface/Neutral/White | #ffffff | #ffffff |
-| Secondary CTA bg | --slide-out-btn-secondary-bg | — | #ffffff | rgba(255,255,255,0.08) |
+| Panel BG | --slide-out-bg |  | rgba(255,255,255,0.92) | rgba(16,22,40,0.92) |
+| Panel shadow | --slide-out-shadow |  | -24px -24px 60px 0px rgba(0,0,0,0.08) | -24px -24px 60px 0px rgba(0,0,0,0.08) |
+| Icon highlight (Purple) | --color-surface-purple-more-subtle |  | #f3e9fd | rgba(139,92,246,0.12) |
+| Status tag BG (Success) | --color-surface-success-more-subtle |  | #e5fdf8 | rgba(110,231,183,0.10) |
+| Resize handle / active tab (reused) | --primary |  | #2173ff | #2b7fff |
 
 ### Text & border tokens
 
-Title, body, label, link, success, disabled, and border tokens.
+Title, body, success, and border tokens actually read directly by slide-out.tsx.
 
-CSS prefix: `--color`
+CSS prefix: `--slide-out-* / --color-*`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Title | --color-text-title | Text/Title | #000000 | rgba(255,255,255,0.80) |
-| Body / subtitle | --slide-out-body | Text/Body | #5c5c5c | #94A3B8 |
-| Tab/chip label (inactive) | --color-text-subtitle | Text/Subtitle | #2a2a2a | rgba(255,255,255,0.60) |
-| Active tab / link | --primary | Text/Link | #2173ff | #2b7fff |
-| Status tag text | --color-text-success | Text/Success | #003328 | #6ee7b7 |
-| Search placeholder | --color-text-disabled | Text/Disabled | #bababa | rgba(255,255,255,0.30) |
-| Primary btn text | --color-text-negative | Text/Negative | #ffffff | #ffffff |
-| Secondary CTA text | --slide-out-btn-secondary-text | — | #2a2a2a | rgba(255,255,255,0.80) |
-| Dashed slot border | --color-border-primary-lighter | Border/Primary/Lighter | #80afff | #80afff |
-| Status tag border | --color-border-success-lighter | Border/Success/Lighter | #009978 | #009978 |
-| Search/chip border | --color-border-neutral-default | Border/Neutral/Default | #5c5c5c | rgba(255,255,255,0.10) |
-| Backdrop / overlay | --slide-out-overlay | Overlay/Scrim/Default | rgba(0,0,0,0.30) | rgba(0,0,0,0.30) |
+| Title | --color-text-title |  | #000000 | rgba(255,255,255,0.80) |
+| Body / subtitle | --slide-out-body |  | #5c5c5c | #94A3B8 |
+| Status tag text | --color-text-success |  | #003328 | #6ee7b7 |
+| Dashed slot border | --color-border-primary-lighter |  | #80afff | #80afff |
+| Status tag border | --color-border-success-lighter |  | #009978 | #009978 |
+| Backdrop / overlay | --slide-out-overlay |  | rgba(0,0,0,0.30) | rgba(0,0,0,0.30) |
+
+### Delegated to nested atoms (not read directly)
+
+slide-out.tsx composes the real Tabs, Input, Button, and Chip atoms for its tab row, search bar, and CTA buttons instead of styling them inline — so these Figma-catalog tokens are never actually referenced in slide-out.tsx itself. The real colors come from each atom's own spec (Tabs, Input, Button, Chip).
+
+CSS prefix: `—`
+
+| Role | Token / Variable | Figma variable | Light | Dark |
+| --- | --- | --- | --- | --- |
+| Inactive chip / search BG (→ Input/Chip spec) | --color-surface-neutral-white |  | #ffffff | #ffffff |
+| Secondary CTA bg (→ Button spec) | --slide-out-btn-secondary-bg |  | #ffffff | rgba(255,255,255,0.08) |
+| Tab/chip label inactive (→ Tabs/Chip spec) | --color-text-subtitle |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Search placeholder (→ Input spec) | --color-text-disabled |  | #bababa | rgba(255,255,255,0.30) |
+| Primary btn text (→ Button spec) | --color-text-negative |  | #ffffff | #ffffff |
+| Secondary CTA text (→ Button spec) | --slide-out-btn-secondary-text |  | #2a2a2a | rgba(255,255,255,0.80) |
+| Search/chip border (→ Input/Chip spec) | --color-border-neutral-default |  | #5c5c5c | rgba(255,255,255,0.10) |
 
 ## Additional data
 

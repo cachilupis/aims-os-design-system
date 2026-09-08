@@ -89,8 +89,8 @@ export function SidePanelExampleScreen(_props: Props) {
             description="Workflow builder — click a node to configure it"
             backButton
             size="size-l"
-            primaryAction={<Button variant="main" size="sm">Save workflow</Button>}
-            secondaryAction={<Button variant="secondary" size="sm">Discard</Button>}
+            primaryAction={{ label: "Save workflow" }}
+            secondaryAction={{ label: "Discard" }}
           />
 
           <div className="flex flex-1 overflow-hidden">

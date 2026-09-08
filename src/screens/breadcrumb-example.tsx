@@ -1,4 +1,4 @@
-import { Sparkles, Bell, Settings, ChevronDown, User } from "lucide-react"
+import { Sparkles, Bell, Settings, User } from "lucide-react"
 import { AppBackground }    from "@/components/ui/app-background"
 import { Topbar }           from "@/components/ui/topbar"
 import { Sidebar }          from "@/components/ui/sidebar"
@@ -6,7 +6,6 @@ import { Header }           from "@/components/ui/header"
 import { Tabs }             from "@/components/ui/tabs"
 import { Pagination }       from "@/components/ui/pagination"
 import { Tag }              from "@/components/ui/tag"
-import { Button }           from "@/components/ui/button"
 import { Breadcrumb }       from "@/components/ui/breadcrumb"
 import { ListViewSection }  from "@/components/layouts/list-view-section"
 import type { EntityListItemData } from "@/components/ui/entity-list"
@@ -126,32 +125,33 @@ export function BreadcrumbExampleScreen({ showBreadcrumb }: { showBreadcrumb: bo
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-          {/* Fixed zone: breadcrumb (L3+) + Header */}
+          {/* Fixed zone: Header with the breadcrumb inside it. The trail used to
+              sit in its own div above the Header, with a backButton beside the
+              title — the pattern this replaces. From L2 the breadcrumb lives in
+              Header.breadcrumb and there is no back arrow: the first crumb is
+              the way back. */}
           <div style={{ flexShrink: 0 }}>
-            {showBreadcrumb && (
-              <div style={{ padding: "6px 24px" }}>
-                <Breadcrumb
-                  depth={3}
-                  items={[
-                    { label: "Home",                    href: "/"           },
-                    { label: "AI Workers",              href: "/ai-workers" },
-                    { label: "Churn Risk Intervention"                      },
-                  ]}
-                  onNavigate={() => {}}
-                />
-              </div>
-            )}
             <Header
               title="Title section"
               description="Securely store, manage, and organize your documents and folders"
               size="size-l"
-              backButton
+              breadcrumb={showBreadcrumb ? (
+                <Breadcrumb
+                  depth={2}
+                  items={[
+                    { label: "AI Workers", href: "/ai-workers" },
+                    { label: "Churn Risk Intervention"          },
+                  ]}
+                  onNavigate={() => {}}
+                />
+              ) : undefined}
               tag={<Tag variant="informative" size="sm">Status</Tag>}
-              primaryAction={
-                <Button variant="main" size="sm" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  CTA <ChevronDown size={12} />
-                </Button>
-              }
+              // The chevron this example used to carry sat AFTER the label — a CTA that
+              // opens a menu. HeaderAction has no trailing-icon option on purpose: a menu
+              // trigger is a different control from an action button, and the DS has no
+              // such component yet. This example only needs a generic CTA.
+              // DS-GAP: Header has no menu-trigger action.
+              primaryAction={{ label: "CTA" }}
             />
           </div>
 
