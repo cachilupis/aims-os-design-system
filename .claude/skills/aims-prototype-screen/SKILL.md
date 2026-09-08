@@ -128,8 +128,10 @@ Introduce Round 2 with:
 > *Mi recomendación: Pagination con page size 10 si puede superar 20 registros. ¿Hay un límite real del backend que debamos reflejar en el prototipo?*
 
 > **Q10 — Creation flow**
-> "Cuando el usuario hace clic en 'New [Entidad]', ¿adónde va — un modal, una pantalla nueva, un slide-out?"
-> *Mi recomendación: Modal inline si el formulario tiene 6 campos o menos; pantalla separada si es más complejo. ¿Cuántos campos tiene la creación?*
+> "Cuando el usuario hace clic en 'New [Entidad]': ¿[Entidad] tiene su propia sección de construcción (builder/canvas, como un workflow)? Si no, ¿el nuevo [Entidad] cuelga de algo que ya está en pantalla (un registro padre, una colección dentro de él) o es standalone (nada en pantalla es su padre)? Y el flujo, ¿es de una sola pantalla o tiene 2+ etapas / se ramifica?"
+> *Mi recomendación — corro el cascade del patrón Create (`CLAUDE.md` → "Create pattern — surface selection", `docs/patterns/create.md` es la fuente completa): si tiene builder propio → hand-off, no se especifica más aquí; si son 2+ etapas o rama → wizard de página completa (`Stepper` + `StepperNavFooter`), nunca un `SlideOut`; si cuelga de algo en pantalla → `SlideOut type="full-slot"` (sin importar cuántos campos — un `SlideOut` crece, no necesita el umbral de 5); si es standalone → `ModalDialog variant="content"` con 5 campos o menos, pantalla completa por encima de 5. ¿Cuál de estos casos aplica?*
+>
+> También preguntar, sin bloquear el flujo si la respuesta es obvia: **¿la creación necesita confirmación antes de guardar?** (solo si es irreversible o de alcance tenant-wide — `ModalDialog variant="confirmation"`) y **¿el resultado queda visible de inmediato?** (si no — una creación async, una acción gobernada esperando aprobación — usar `useToast().success(...)`, ya disponible en toda la app vía `ToastProvider` en la raíz; si sí, el objeto apareciendo en la lista ya es la confirmación, sin banner).
 
 ### Part C — Structured spec before Phase 1
 
