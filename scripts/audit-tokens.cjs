@@ -576,6 +576,120 @@ screenFiles
     })
   })
 
+// ── Checks 12-14: the three primitives screens keep drawing by hand ───────
+// Why these exist, and why they are three checks and not a rule in CLAUDE.md:
+// CLAUDE.md has said "use Tag, use AvatarCircle, use Button" since it was
+// written. On 2026-09-08 one screen — PeopleAccessMembers.tsx — was measured
+// at 19 hand-rolled badges, 24 hand-rolled avatars and 40 raw <button>
+// elements, with ZERO Tag, ZERO AvatarCircle and no shortage of good faith.
+//
+// Nobody ignored the rule. Writing a <div> is simply cheaper than finding the
+// component, and a written rule loses to an effort gap every time. Checks 1,
+// 6, 7 and 8 already close that gap for colours, name-collisions, variant
+// overuse and cards. These close it for the three that were left, which are
+// exactly the three that had to be migrated by hand.
+//
+// All three are WARNINGS, not errors. The ratchet is what holds the line: the
+// existing count becomes the baseline and CI blocks anything that adds to it,
+// so old screens are not retroactively broken and new ones cannot regress.
+
+// Check 12 — a pill-shaped badge drawn inline. Tag is the component.
+// Matched on the shape Tag has and little else does: a fully-rounded radius
+// (100/999/9999px) on an element that also sets a font size. A radius alone is
+// too common — avatars, toggles and progress tracks all use one — so the font
+// size is what says "this is a label in a pill", not a dot or a track.
+const BADGE_RADIUS_RE = /borderRadius:\s*(?:100|999|9999)\b/
+const BADGE_FONT_RE   = /fontSize:\s*\d+/
+
+screenFiles.forEach((file) => {
+  const lines = stripComments(fs.readFileSync(file, "utf8"))
+  const hits = []
+  lines.forEach(({ code }, idx) => {
+    // The style object is often wrapped, so look at a small window.
+    const window = lines.slice(idx, idx + 4).map((l) => l.code).join(" ")
+    if (BADGE_RADIUS_RE.test(code) && BADGE_FONT_RE.test(window)) hits.push(idx + 1)
+  })
+  if (hits.length > 0) {
+    warnings.push({
+      type: "hand-rolled-badge",
+      file: rel(file),
+      line: hits[0],
+      count: hits.length,
+      lines: hits,
+      message:
+        `${hits.length} pill-shaped badge${hits.length === 1 ? "" : "s"} drawn inline ` +
+        `(line${hits.length === 1 ? "" : "s"} ${hits.slice(0, 6).join(", ")}${hits.length > 6 ? ", …" : ""}) — ` +
+        `that is Tag. It carries the radius, the sizes and the semantic variants, ` +
+        `so a status never has to be a hex with an alpha suffix`,
+    })
+  }
+})
+
+// Check 13 — a circular avatar drawn inline. AvatarCircle is the component.
+// Matched on a 50% radius at a size AvatarCircle actually models (16-64px);
+// anything smaller is a status dot, which is a legitimate inline shape and is
+// deliberately not flagged.
+const AVATAR_RE = /width:\s*(\d+),\s*height:\s*\1,[\s\S]{0,80}?borderRadius:\s*["']50%["']/
+
+screenFiles.forEach((file) => {
+  const lines = stripComments(fs.readFileSync(file, "utf8"))
+  const hits = []
+  lines.forEach((_, idx) => {
+    const window = lines.slice(idx, idx + 3).map((l) => l.code).join(" ")
+    const m = window.match(AVATAR_RE)
+    if (m && Number(m[1]) >= 16 && Number(m[1]) <= 64) hits.push(idx + 1)
+  })
+  // A window of 3 lines can match the same element twice; keep the first line
+  // of each run rather than reporting a 24px circle three times.
+  const runs = hits.filter((l, i) => i === 0 || l - hits[i - 1] > 2)
+  if (runs.length > 0) {
+    warnings.push({
+      type: "hand-rolled-avatar",
+      file: rel(file),
+      line: runs[0],
+      count: runs.length,
+      lines: runs,
+      message:
+        `${runs.length} circular avatar${runs.length === 1 ? "" : "s"} drawn inline ` +
+        `(line${runs.length === 1 ? "" : "s"} ${runs.slice(0, 6).join(", ")}${runs.length > 6 ? ", …" : ""}) — ` +
+        `that is AvatarCircle. It sizes the initials, hashes a stable colour from ` +
+        `the name, and has an "empty" style for a person who is not active`,
+    })
+  }
+})
+
+// Check 14 — a raw <button> wearing button styling. Button is the component.
+// Only flagged when the element sets BOTH padding and a border or background:
+// that is someone rebuilding the component's surface. A bare <button> around
+// an icon, a tab, a colour swatch or a menu row is a real use of the element
+// and is left alone — Button does not model any of those.
+const RAW_BUTTON_PAD_RE    = /padding:\s*["'\d]/
+const RAW_BUTTON_SURFACE_RE = /border:\s*["'`]|background:\s*["'`]/
+
+screenFiles.forEach((file) => {
+  const lines = stripComments(fs.readFileSync(file, "utf8"))
+  const hits = []
+  lines.forEach(({ code }, idx) => {
+    if (!/<button\b/.test(code)) return
+    const window = lines.slice(idx, idx + 8).map((l) => l.code).join(" ")
+    if (RAW_BUTTON_PAD_RE.test(window) && RAW_BUTTON_SURFACE_RE.test(window)) hits.push(idx + 1)
+  })
+  if (hits.length > 0) {
+    warnings.push({
+      type: "raw-button",
+      file: rel(file),
+      line: hits[0],
+      count: hits.length,
+      lines: hits,
+      message:
+        `${hits.length} raw <button>${hits.length === 1 ? "" : "s"} with its own padding and surface ` +
+        `(line${hits.length === 1 ? "" : "s"} ${hits.slice(0, 6).join(", ")}${hits.length > 6 ? ", …" : ""}) — ` +
+        `that is Button, which owns the variants, the sizes and every state. ` +
+        `An icon-only trigger, a tab or a swatch is a real <button> and is not counted`,
+    })
+  }
+})
+
 function printSection(title, items, formatter) {
   if (items.length === 0) return
   console.log(`\n${title} (${items.length})`)
@@ -632,6 +746,9 @@ const mainOveruseWarnings = warnings.filter((w) => w.type === "main-overuse")
 const cardReimplWarnings = warnings.filter((w) => w.type === "possible-card-reimpl")
 const duplicateWarnings = warnings.filter((w) => w.type === "duplicate-component")
 const widgetVocabWarnings = warnings.filter((w) => w.type === "widget-vocab")
+const badgeWarnings  = warnings.filter((w) => w.type === "hand-rolled-badge")
+const avatarWarnings = warnings.filter((w) => w.type === "hand-rolled-avatar")
+const rawBtnWarnings = warnings.filter((w) => w.type === "raw-button")
 
 // Accepted findings still print — with a marker — so a waiver stays visible
 // instead of quietly disappearing from the report.
@@ -650,6 +767,9 @@ printSection("⚠️  WARNING — variant=\"main\" in a screen file (Header appl
 printSection("⚠️  WARNING — possible hand-rolled CardContainer reimplementation", cardReimplWarnings, fmt)
 printSection("⚠️  WARNING — same component defined in two screens", duplicateWarnings, fmt)
 printSection("⚠️  WARNING — a second widget vocabulary (the catalog is WIDGET_DEFS)", widgetVocabWarnings, fmt)
+printSection("⚠️  WARNING — pill-shaped badges drawn inline (that is Tag)", badgeWarnings, fmt)
+printSection("⚠️  WARNING — circular avatars drawn inline (that is AvatarCircle)", avatarWarnings, fmt)
+printSection("⚠️  WARNING — raw <button> with its own padding and surface (that is Button)", rawBtnWarnings, fmt)
 
 // The ratchet reads these. Accepted findings are subtracted here and nowhere
 // else: they stay in the report above, and in the DS Health page, but they no
@@ -661,6 +781,15 @@ const openMainOveruse = open(mainOveruseWarnings)
 const openCardReimpl = open(cardReimplWarnings)
 const openDuplicate = open(duplicateWarnings)
 const openWidgetVocab = open(widgetVocabWarnings)
+const openBadge  = open(badgeWarnings)
+const openAvatar = open(avatarWarnings)
+const openRawBtn = open(rawBtnWarnings)
+
+// These three report once per file with a `count`, so the ratchet must compare
+// INSTANCES. Counting findings would mean a file already on the list could
+// absorb fifty new badges without the number moving — which is precisely the
+// regression the checks exist to catch.
+const instances = (ws) => ws.reduce((n, w) => n + (w.count ?? 1), 0)
 const acceptedCount =
   (orphanWarnings.length - openOrphan.length) +
   (shadowWarnings.length - openShadow.length) +
@@ -693,12 +822,12 @@ const acceptedCount =
 // to the line below and the matching LABELS entries in audit-ratchet.cjs.
 if (process.argv.includes("--counts")) {
   console.log(
-    `AUDIT_COUNTS errors=${errors.length} orphan=${openOrphan.length} shadow=${openShadow.length} main_overuse=${openMainOveruse.length} card_reimpl=${openCardReimpl.length}`
+    `AUDIT_COUNTS errors=${errors.length} orphan=${openOrphan.length} shadow=${openShadow.length} main_overuse=${openMainOveruse.length} card_reimpl=${openCardReimpl.length} badge=${instances(openBadge)} avatar=${instances(openAvatar)} raw_button=${instances(openRawBtn)}`
   )
 }
 
 console.log(
-  `\nSummary: ${errors.length + navConflicts.length} error(s), ${openOrphan.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${openShadow.length} shadow-component warning(s), ${openMainOveruse.length} main-overuse warning(s), ${openCardReimpl.length} possible-card-reimpl warning(s), ${openDuplicate.length} duplicate-component warning(s), ${openWidgetVocab.length} widget-vocab warning(s)` +
+  `\nSummary: ${errors.length + navConflicts.length} error(s), ${openOrphan.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${openShadow.length} shadow-component warning(s), ${openMainOveruse.length} main-overuse warning(s), ${openCardReimpl.length} possible-card-reimpl warning(s), ${openDuplicate.length} duplicate-component warning(s), ${openWidgetVocab.length} widget-vocab warning(s), ${openBadge.length} hand-rolled-badge, ${openAvatar.length} hand-rolled-avatar, ${openRawBtn.length} raw-button` +
     (acceptedCount > 0
       ? `\n         plus ${acceptedCount} accepted and waived in ds-decisions.json — shown above marked [accepted], not counted here.`
       : ".")

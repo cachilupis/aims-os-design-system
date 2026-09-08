@@ -140,6 +140,9 @@ const LABELS = {
   shadow:       "hand-rolled DS component shadows",
   main_overuse: 'variant="main" overuse',
   card_reimpl:  "hand-rolled cards",
+  badge:        "hand-rolled badges (that is Tag)",
+  avatar:       "hand-rolled avatars (that is AvatarCircle)",
+  raw_button:   "raw <button> with padding + surface (that is Button)",
 }
 
 const worse = Object.keys(head).filter((k) => head[k] > (base[k] ?? 0))
