@@ -649,7 +649,7 @@ function PermissionsTab({ studio }: { studio: Studio }) {
 
           {dirty && (
             <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-              <Button variant="main" size="sm" onClick={() => setDirty(false)}>Save changes</Button>
+              <Button variant="primary" size="sm" onClick={() => setDirty(false)}>Save changes</Button>
               <Button variant="secondary" size="sm" onClick={() => { setGroups(studio.groups); setDirty(false) }}>Discard</Button>
             </div>
           )}
@@ -734,7 +734,7 @@ function SettingsTab({ studio }: { studio: Studio }) {
         ))}
       </CardContainer>
       <div style={{ marginTop: 12 }}>
-        <Button variant="main" size="sm">Save settings</Button>
+        <Button variant="primary" size="sm">Save settings</Button>
       </div>
     </div>
   )
