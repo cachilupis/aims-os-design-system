@@ -348,15 +348,16 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 1, color: "var(--color-text-subtitle)" }}>Live preview</span>
-        <div style={{ display: "flex", border: "1px solid var(--field-border)", borderRadius: 6, overflow: "hidden" }}>
-          {WIDGET_SIZES.map(s => (
-            <button key={s.id} onClick={() => setPreviewSize(s.id)} style={{
-              padding: "4px 10px", border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
-              background: previewSize === s.id ? "var(--primary)" : "transparent",
-              color: previewSize === s.id ? "var(--canvas)" : "var(--color-text-subtitle)",
-            }}>{s.label}</button>
-          ))}
-        </div>
+        {/* A segmented switcher, drawn by hand: three buttons in a bordered
+            box, one painted with --primary. That is SwitchTab, which the
+            screen already imports for its own stages. */}
+        <SwitchTab
+          items={WIDGET_SIZES}
+          value={previewSize}
+          onChange={setPreviewSize}
+          size="s"
+          aria-label="Preview size"
+        />
       </div>
 
       {/* The preview IS a widget, not a card imitating one.
@@ -964,26 +965,28 @@ export default function PMThomasWidgetBuilderScreen() {
                 <div
                   key={c.key}
                   style={{
-                    display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 4px",
+                    display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12,
+                    padding: "12px 4px",
                     borderBottom: i < visibleColumns.length - 1 ? "1px solid var(--field-border)" : "none",
                   }}
                 >
-                  <div style={{ paddingTop: 2 }}>
-                    <Checkbox
-                      checked={colDraft.includes(c.label)}
-                      onChange={on => setColDraft(prev => on ? [...prev, c.label] : prev.filter(x => x !== c.label))}
-                    />
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{c.label}</span>
-                      <Tag variant="neutral" size="sm">{c.type}</Tag>
-                    </div>
-                    <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: "2px 0 0", lineHeight: 1.4 }}>{c.desc}</p>
-                    {/* The key is what someone would search for, and what an
-                        engineer would ask them to name. Monospace so it reads
-                        as a value rather than more prose. */}
-                    <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--color-text-subtitle)" }}>{c.key}</span>
+                  {/* Checkbox already models a title with a description under
+                      it, at the right sizes and colours — and as a <label>, so
+                      the whole thing is the hit target. The hand-rolled version
+                      this replaces only responded to a click on the box. */}
+                  <Checkbox
+                    label={c.label}
+                    description={c.desc}
+                    checked={colDraft.includes(c.label)}
+                    onChange={on => setColDraft(prev => on ? [...prev, c.label] : prev.filter(x => x !== c.label))}
+                    className="min-w-0 flex-1"
+                  />
+                  {/* Type and key sit on the right: both are facts ABOUT the
+                      field rather than part of what it means. The key is what
+                      someone who knows the data will search for. */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, paddingTop: 4 }}>
+                    <Tag variant="neutral" size="sm">{c.type}</Tag>
+                    <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{c.key}</span>
                   </div>
                 </div>
               ))}
