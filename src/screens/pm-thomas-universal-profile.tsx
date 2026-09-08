@@ -3,6 +3,7 @@ import * as LucideIcons from "lucide-react"
 import { ScreenLayout }     from "@/components/layouts/screen-layout"
 import { WidgetCanvasView } from "@/components/layouts/widget-canvas-view"
 import type { CanvasSlot }  from "@/components/layouts/widget-canvas-view"
+import { WidgetPreview } from "@/components/experimental/widget-preview"
 import type { SidebarItem } from "@/components/ui/sidebar"
 import { Header }           from "@/components/ui/header"
 import { Button }           from "@/components/ui/button"
@@ -542,6 +543,20 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
         ),
       })
     }
+
+    // Two catalogued widgets, drawn by the same renderer the Widget Builder,
+    // the Library and the Marketplace use — so a Trend here is the same Trend
+    // there. The three study widgets above are deliberately NOT swapped for
+    // these: they carry this profile's own values, and replacing them with
+    // catalog fixtures would trade real information for consistency.
+    slots.push({
+      uid: "engagement-trend", title: "Engagement Trend", colSpan: 2, rowSpan: 4,
+      content: <WidgetPreview typeId="line" />,
+    })
+    slots.push({
+      uid: "activity-alerts", title: "Alerts", colSpan: 1, rowSpan: 4,
+      content: <WidgetPreview typeId="alerts" />,
+    })
 
     return slots
   }, [profile])

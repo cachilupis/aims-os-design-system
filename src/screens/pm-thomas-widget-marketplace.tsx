@@ -4,7 +4,10 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Tag } from "@/components/ui/tag"
-import { WidgetGlyph, WidgetFreshnessBadge, WidgetMiniPreview } from "@/components/experimental/widget-parts"
+import { WidgetGlyph, WidgetFreshnessBadge } from "@/components/experimental/widget-parts"
+import { WidgetFather } from "@/components/ui/widget-father"
+import { WidgetPreview } from "@/components/experimental/widget-preview"
+import { typeIdForSkeleton, type LibrarySkeleton } from "@/lib/widget-catalog"
 import { CardContainer } from "@/components/ui/card-container"
 import { Filters } from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
@@ -15,7 +18,6 @@ import type { SidebarItem } from "@/components/ui/sidebar"
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type BizCat = "all" | "aims-os" | "sales" | "finance" | "customer-service" | "hr" | "marketing" | "operations"
-type Skeleton = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel" | "Stat Row" | "Alerts" | "Cost KPI"
 type Freshness = "live" | "fresh" | "stale"
 type Complexity = "Simple" | "Intermediate" | "Advanced"
 type SortKey = "usage" | "name" | "type"
@@ -27,7 +29,7 @@ interface MarketplaceWidget {
   id: string
   name: string
   source: string
-  skeleton: Skeleton
+  skeleton: LibrarySkeleton
   freshness: Freshness
   description: string
   businessCategory: Exclude<BizCat, "all">
@@ -102,21 +104,20 @@ function MarketplaceCard({ widget, onView, onUse }: {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ padding: 12, flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <WidgetGlyph skeleton={widget.skeleton} size="sm" />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {widget.name}
-            </div>
-            <div style={{ fontSize: 11, color: "var(--color-text-subtitle)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {widget.source}
-            </div>
+        {/* WidgetFather draws the header, so a listing reads with the same title
+            type and the same ⋯ as the widget will once it is on a dashboard.
+            Refresh is off — a marketplace listing is not live. */}
+        <WidgetFather
+          noCard
+          fillWidth
+          title={widget.name}
+          description={widget.source}
+          showRefresh={false}
+        >
+          <div style={{ borderRadius: 6, background: "var(--canvas)", border: "1px solid var(--field-border)", overflow: "hidden" }}>
+            <WidgetPreview typeId={typeIdForSkeleton(widget.skeleton)} fallbackHeight={72} clipTo={88} />
           </div>
-          <WidgetFreshnessBadge status={widget.freshness} />
-        </div>
-        <div style={{ borderRadius: 6, background: "var(--canvas)", border: "1px solid var(--field-border)", overflow: "hidden" }}>
-          <WidgetMiniPreview skeleton={widget.skeleton} />
-        </div>
+        </WidgetFather>
         <p style={{
           fontSize: 12, color: "var(--color-text-subtitle)", lineHeight: 1.5, margin: 0,
           display: "-webkit-box" as const, WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
@@ -125,6 +126,7 @@ function MarketplaceCard({ widget, onView, onUse }: {
         </p>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
           <Tag variant="neutral" size="sm">{widget.skeleton}</Tag>
+          <WidgetFreshnessBadge status={widget.freshness} />
           <span style={{ fontSize: 11, fontWeight: 500, padding: "1px 6px", borderRadius: 4, border: "1px solid var(--field-border)", color: complexityColor }}>
             {widget.complexity}
           </span>

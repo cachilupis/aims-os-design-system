@@ -3,11 +3,15 @@ const DashboardCanvasScreen = lazy(() => import("./pm-thomas-dashboard-canvas"))
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header, type HeaderAction } from "@/components/ui/header"
-import { WidgetMiniPreview } from "@/components/experimental/widget-parts"
+import { WidgetFather } from "@/components/ui/widget-father"
+import { WidgetPreview } from "@/components/experimental/widget-preview"
+import { typeIdForSkeleton, type LibrarySkeleton } from "@/lib/widget-catalog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
 import { Tag } from "@/components/ui/tag"
+import { Chip } from "@/components/ui/chip"
+import { Filters } from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Pagination } from "@/components/ui/pagination"
@@ -25,7 +29,6 @@ type DashStatus  = "published" | "draft" | "pending"
 type EntityKind  = "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
 type Freshness   = "live" | "fresh" | "stale"
 type BizCat      = "all" | "aims-os" | "sales" | "finance" | "customer-service" | "hr" | "marketing"
-type Skeleton    = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel" | "Stat Row" | "Alerts" | "Cost KPI"
 type TabId       = "data" | "widget" | "appearance"
 type OpType      = "aggregate" | "record_set"
 // Widget library types
@@ -33,7 +36,7 @@ type LibHealth   = "active" | "inactive" | "unused" | "review"
 type LibCategory = "AIMS OS" | "Operational" | "Engagement" | "Intelligence"
 type LibProfile  = "All" | "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
 type LibWidget   = {
-  id: string; name: string; source: string; skeleton: Skeleton
+  id: string; name: string; source: string; skeleton: LibrarySkeleton
   category: LibCategory; health: LibHealth; freshness: Freshness
   governed: boolean; system: boolean; usedIn: number
   placement: LibProfile; description: string
@@ -96,7 +99,7 @@ const LIB_WIDGETS: LibWidget[] = [
 ]
 
 const LIB_CATEGORIES: LibCategory[] = ["AIMS OS", "Operational", "Engagement", "Intelligence"]
-const LIB_SKELETONS: Skeleton[]     = ["KPI", "Chart", "Feed", "Gauge", "Donut", "Board", "Funnel", "Stat Row", "Alerts", "Cost KPI"]
+const LIB_SKELETONS: LibrarySkeleton[]     = ["KPI", "Chart", "Feed", "Gauge", "Donut", "Board", "Funnel", "Stat Row", "Alerts", "Cost KPI"]
 const LIB_FRESHNESS: Freshness[]    = ["live", "fresh", "stale"]
 const LIB_PROFILES: LibProfile[]    = ["All", "Company", "Contact", "Employee", "Deal", "Standalone"]
 const LIB_GOVERNED_COUNT            = LIB_WIDGETS.filter(w => w.governed).length
@@ -216,64 +219,6 @@ const ACCENT_COLORS = [
 
 // ── Shared micro-components ───────────────────────────────────────────────────
 
-function Pill({ label, value, options, onSelect }: { label: string; value: string; options: string[]; onSelect: (v: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
-  }, [])
-  const active = value !== "All" && value !== ""
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6,
-          fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap",
-          background: active ? "var(--primary)" : "var(--surface)",
-          color: active ? "var(--on-primary)" : "var(--field-supporting)",
-          border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}` }}
-      >
-        {active ? value : label}
-        <LucideIcons.ChevronDown size={12} />
-      </button>
-      {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 199,
-          boxShadow: "var(--shadow-elevation-3)", minWidth: 160 }}>
-          <CardContainer size="sm" className="!p-1">
-            {options.map(opt => (
-              <button key={opt} onClick={() => { onSelect(opt); setOpen(false) }}
-                style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 10px",
-                  fontSize: 12, cursor: "pointer", borderRadius: 4,
-                  background: value === opt ? "var(--surface-raised)" : "transparent",
-                  color: "var(--foreground)" }}>
-                {opt}
-              </button>
-            ))}
-          </CardContainer>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function FilterBar({ search, onSearch, pills }: {
-  search: string; onSearch: (v: string) => void
-  pills: { label: string; value: string; options: string[]; onSelect: (v: string) => void }[]
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-      <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
-        <LucideIcons.Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)" }} />
-        <Input value={search} onChange={e => onSearch(e.target.value)} placeholder="Search…"
-          style={{ paddingLeft: 32, height: 32, fontSize: 13 }} />
-      </div>
-      {pills.map((p, i) => <Pill key={i} {...p} />)}
-    </div>
-  )
-}
-
 function StatusBadge({ status }: { status: DashStatus }) {
   const map: Record<DashStatus, { label: string; variant: "success" | "informative" | "alert" }> = {
     published: { label: "Published", variant: "success" },
@@ -301,7 +246,7 @@ const SKELETON_COLORS: Record<string, string> = {
   Board:"#EC4899", Funnel:"#F97316", "Stat Row":"#14B8A6", Alerts:"#EF4444", "Cost KPI":"#10B981", // audit-ignore: skeleton palette has no DS token
 }
 
-function WidgetGlyph({ skeleton, source }: { skeleton: Skeleton; source: string }) {
+function WidgetGlyph({ skeleton, source }: { skeleton: LibrarySkeleton; source: string }) {
   const lsrc = source.toLowerCase()
   const SZ = 28
   const circle: React.CSSProperties = { width: SZ, height: SZ, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }
@@ -324,7 +269,7 @@ function WidgetGlyph({ skeleton, source }: { skeleton: Skeleton; source: string 
     )
   }
 
-  // Skeleton-type fallback: 2-char abbrev on skeleton colour
+  // LibrarySkeleton-type fallback: 2-char abbrev on skeleton colour
   const abbr = skeleton.replace(/\s+/g,"").slice(0,2).toUpperCase()
   const bg = SKELETON_COLORS[skeleton] ?? "#6B7280" // audit-ignore: skeleton fallback grey
   return (
@@ -521,6 +466,8 @@ const WIDG_PAGE_SIZE = 12
 
 type DashRecord = typeof DASHBOARDS[0]
 
+const DASHBOARD_ENTITIES = ["All", "Company", "Contact", "Employee", "Deal", "Standalone"] as const
+
 function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
   onOpenCanvas: (d: DashRecord) => void
   page: number
@@ -531,6 +478,7 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
   const [statusFilter, setStatus]   = useState("All")
   const [entityFilter, setEntity]   = useState("All")
   const [sortBy, setSortBy]         = useState<"name" | "updated">("name")
+  const [sortDir, setSortDir]       = useState<"asc" | "desc">("asc")
   const [detail, setDetail]         = useState<DashRecord | null>(null)
   const [deleteTarget, setDelete]   = useState<DashRecord | null>(null)
   const [dupTarget, setDupTarget]   = useState<DashRecord | null>(null)
@@ -573,14 +521,42 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
         </CardContainer>
       )}
 
-      <FilterBar
-        search={search} onSearch={v => setSearch(v)}
-        pills={[
-          { label: "Status", value: statusFilter, options: ["All", "Published", "Draft", "Pending"], onSelect: v => setStatus(v) },
-          { label: "Entity", value: entityFilter, options: ["All", "Company", "Contact", "Employee", "Deal", "Standalone"], onSelect: v => setEntity(v) },
-          { label: "Sort", value: sortBy === "name" ? "Name" : "Updated", options: ["Name", "Updated"], onSelect: v => setSortBy(v === "Name" ? "name" : "updated") },
-        ]}
+      {/* The DS Filters bar, which renders and positions its own menus. Entity
+          is NOT a slot here: it is the one filter someone flips constantly while
+          scanning the list, and the DS filter pattern puts that layer below the
+          bar as chips — visible at a glance, one click to change, no menu. */}
+      <Filters
+        showSearch
+        searchPlaceholder="Search dashboards…"
+        searchValue={search}
+        onSearchChange={setSearch}
+        slots={[{
+          placeholder: "Status",
+          value: statusFilter !== "All" ? statusFilter : undefined,
+          options: ["All", "Published", "Draft", "Pending"],
+          onSelect: setStatus,
+          onRemove: () => setStatus("All"),
+        }]}
+        showSort
+        sortLabel={sortBy === "name" ? "Name" : "Updated"}
+        sortOptions={["Name", "Updated"]}
+        onSortSelect={v => setSortBy(v === "Name" ? "name" : "updated")}
+        sortDirection={sortDir}
+        onSortDirectionChange={setSortDir}
       />
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 24, marginBottom: 24 }}>
+        {DASHBOARD_ENTITIES.map(e => (
+          <Chip
+            key={e}
+            size="s"
+            variant={entityFilter === e ? "primary" : "secondary"}
+            onClick={() => setEntity(e)}
+          >
+            {e === "All" ? "All entities" : e}
+          </Chip>
+        ))}
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12, marginBottom: 16 }}>
         {paged.map(d => {
@@ -589,12 +565,13 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
             <div key={d.id} style={{ position: "relative" }} onClick={() => { if (!cardMenu) setDetail(d) }}>
               <CardContainer size="sm" className="flex flex-col gap-2 cursor-pointer">
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: "var(--foreground)", lineHeight: 1.3, marginBottom: 2 }}>{d.name}</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                      <Tag variant={isProfile ? "informative" : "neutral"} size="sm">{isProfile ? "Profile" : "Standalone"}</Tag>
-                      <StatusBadge status={d.status} />
-                    </div>
+                  {/* Tags ride on the title's own line. Stacked under it they
+                      read as a second row of content and pull the eye down
+                      before it has finished the name. */}
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, flex: 1, minWidth: 0 }}>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: "var(--foreground)", lineHeight: 1.3 }}>{d.name}</span>
+                    <Tag variant={isProfile ? "informative" : "neutral"} size="sm">{isProfile ? "Profile" : "Standalone"}</Tag>
+                    <StatusBadge status={d.status} />
                   </div>
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <button onClick={e => { e.stopPropagation(); setCardMenu(cardMenu === d.id ? null : d.id) }}
@@ -743,49 +720,45 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget, page, onPageChange, o
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(200px,100%), 1fr))", gap: 12 }}>
             {pageWidgets.map(w => {
-              const seed = parseInt(w.id.replace(/\D/g,"")) || 0
               return (
               <div key={w.id} style={{ position: "relative" }}>
                 <CardContainer
                   onClick={e => { if (!(e.target as HTMLElement).closest("button")) setDetailW(w) }}
                   className="flex flex-col gap-[8px] cursor-pointer h-full"
                 >
-                  {/* Header row: glyph + name/source + health + ⋯ */}
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                    <WidgetGlyph skeleton={w.skeleton} source={w.source} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.name}</p>
-                      <p style={{ fontSize: 10, color: "var(--field-supporting)", margin: "1px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.source}</p>
-                    </div>
-                    <HealthBadge health={w.health} />
-                    <div style={{ position: "relative", flexShrink: 0 }}>
-                      <button
-                        onClick={e => { e.stopPropagation(); setMenuId(menuId === w.id ? null : w.id) }}
-                        aria-label={`Actions for ${w.name}`}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: "1px 2px", borderRadius: 6, display: "flex" }}
-                      >
-                        <LucideIcons.MoreHorizontal size={14} />
-                      </button>
-                      {menuId === w.id && (
-                        <LibOverflowMenu onClose={() => setMenuId(null)} items={[
-                          { label: "Open",             icon: "Eye",       onClick: () => setDetailW(w) },
-                          { label: "Add to dashboard", icon: "Plus",      onClick: () => {} },
-                          ...(!w.system ? [{ label: "Edit",  icon: "Pencil" as keyof typeof LucideIcons, onClick: () => { setMenuId(null); onEditWidget(w) } }] : []),
-                          ...(!w.system ? [{ label: "Delete", icon: "Trash2" as keyof typeof LucideIcons, danger: true, onClick: () => setDeleteW(w) }] : []),
-                        ]} />
-                      )}
-                    </div>
-                  </div>
+                  {/* WidgetFather draws the header — same title type, same ⋯
+                      as the widget will have on a dashboard. Refresh is off:
+                      a library entry is not live. */}
+                  <WidgetFather
+                    noCard
+                    fillWidth
+                    title={w.name}
+                    description={w.source}
+                    showRefresh={false}
+                    onMenuClick={() => setMenuId(menuId === w.id ? null : w.id)}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        <Tag variant="neutral" size="sm">{w.skeleton}</Tag>
+                        {!w.governed && <Tag variant="alert"   size="sm">Ungoverned</Tag>}
+                        {w.system    && <Tag variant="neutral" size="sm">System</Tag>}
+                        <HealthBadge health={w.health} />
+                      </div>
 
-                  {/* Tags: skeleton type + governance exception */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                    <Tag variant="neutral" size="sm">{w.skeleton}</Tag>
-                    {!w.governed && <Tag variant="alert"   size="sm">Ungoverned</Tag>}
-                    {w.system    && <Tag variant="neutral" size="sm">System</Tag>}
-                  </div>
+                      <WidgetPreview typeId={typeIdForSkeleton(w.skeleton)} fallbackHeight={72} clipTo={88} />
+                    </div>
+                  </WidgetFather>
 
-                  {/* Mini preview — real visual */}
-                  <WidgetMiniPreview skeleton={w.skeleton} seed={seed} />
+                  {menuId === w.id && (
+                    <div style={{ position: "absolute", top: 30, right: 10, zIndex: 2 }}>
+                      <LibOverflowMenu onClose={() => setMenuId(null)} items={[
+                        { label: "Open",             icon: "Eye",       onClick: () => setDetailW(w) },
+                        { label: "Add to dashboard", icon: "Plus",      onClick: () => {} },
+                        ...(!w.system ? [{ label: "Edit",  icon: "Pencil" as keyof typeof LucideIcons, onClick: () => { setMenuId(null); onEditWidget(w) } }] : []),
+                        ...(!w.system ? [{ label: "Delete", icon: "Trash2" as keyof typeof LucideIcons, danger: true, onClick: () => setDeleteW(w) }] : []),
+                      ]} />
+                    </div>
+                  )}
 
                   {/* Footer */}
                   <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 8 }}>
@@ -838,11 +811,7 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget, page, onPageChange, o
             </div>
 
             {/* Medium preview */}
-            <WidgetMiniPreview
-              skeleton={detailW.skeleton}
-              seed={parseInt(detailW.id.replace(/\D/g, "")) || 0}
-              height={120}
-            />
+            <WidgetPreview typeId={typeIdForSkeleton(detailW.skeleton)} fallbackHeight={120} />
 
             {/* About */}
             {detailW.description && (
