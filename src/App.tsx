@@ -16556,24 +16556,10 @@ function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => vo
   }
   return [
     { label: "Trigger visible", note: "Browsing a catalogue — templates, marketplace, starting points.", content: frame() },
-    { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. It never becomes the form. Categories + search + a card per template — deliberately not the field-form modal's own shape, so the two read as different surfaces even from a glance, not just from reading the copy.", content: frame(
+    { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. Categories + search + a card per template — deliberately not the field-form modal's own shape, so the two read as different surfaces even from a glance. Gate 1: the template already fully defines the automation, so \"Use template\" creates it directly — no second, pre-filled form to click through. The X is the only dismiss; a redundant Cancel button next to it was removed.", content: frame(
       <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
         title="Choose a template" description="Start from a template, or build from scratch."
         slot={<PgCatalogueBrowser items={PG_CTX_TEMPLATES} onUse={next} />}
-        ctaSecondary={{ label: "Cancel", onClick: back }}
-      />
-    ) },
-    { label: "Pre-filled form", note: "A list of the same object type on screen isn't a parent — this is standalone, same as the Worker case. Fields remain after selection, so the cascade resolves at step 5: ModalDialog, pre-filled. The two modals are sequential, never both open at once — the catalogue closes before this one opens.", content: frame(
-      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
-        title="New Automation" description='Pre-filled from the "Lead follow-up" template.'
-        slot={
-          <div className="flex flex-col gap-[16px]">
-            <Input defaultValue="Lead follow-up" />
-            <Textarea defaultValue="Sends a follow-up email 24h after a new lead is created." />
-          </div>
-        }
-        ctaPrimary={{ label: "Create", onClick: next }}
-        ctaSecondary={{ label: "Back", onClick: back }}
       />
     ) },
     { label: "Landing", note: "Closes. The user returns to the list; the new automation appears there.", content: frame(undefined, PG_CTX_AUTOMATIONS_LANDING) },
