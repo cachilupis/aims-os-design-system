@@ -10,6 +10,8 @@ import { Tag }          from "@/components/ui/tag"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
+import { Tooltip }      from "@/components/ui/tooltip"
+import { AlertBanner }  from "@/components/ui/alert-banner"
 import { Tabs }         from "@/components/ui/tabs"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
@@ -18,7 +20,6 @@ import { Chip }        from "@/components/ui/chip"
 import { Toggle }      from "@/components/ui/toggle"
 import { Stepper, type StepItem } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
-import { SwitchTab, type SwitchTabItem } from "@/components/ui/switch-tab"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -429,7 +430,7 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
           cursor: hasChildren ? "pointer" : "default",
           background: "transparent",
         }}
-        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
       >
         <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -443,13 +444,9 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
             {node.role && (
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
-              }}>
-                via {node.role}
-              </span>
+              <Tooltip side="cursor" content={`Inherited from the ${node.role} role, not granted directly`}>
+                <Tag variant="neutral" size="sm">via {node.role}</Tag>
+              </Tooltip>
             )}
             {node.scope && (
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
@@ -501,6 +498,7 @@ function RolePermissionsPanel({ role }: { role: Role }) {
   const [overrides, setOverrides] = useState<PermOverrides>({})
   const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
+  const [savedSummary, setSavedSummary] = useState<{ total: number; pinned: number; added: number; removed: number } | null>(null)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
   const [saveStep, setSaveStep] = useState<null | 0 | 1>(null)
 
@@ -547,8 +545,10 @@ function RolePermissionsPanel({ role }: { role: Role }) {
     setShowDiscardModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(false)
   }
   function confirmSave() {
+    // Counts are captured BEFORE the reset — after it there is nothing to count,
+    // and a confirmation that cannot say what changed is not a confirmation.
+    setSavedSummary({ total: changedNodes.length, pinned: 0, added: addedNodes.length, removed: removedNodes.length })
     setSaveStep(null); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
   }
 
   const allNodes   = nodes.flatMap(n => [n, ...(n.children ?? [])])
@@ -589,12 +589,23 @@ function RolePermissionsPanel({ role }: { role: Role }) {
             <Icons.Lock size={11} /> System role · read only
           </span>
         )}
-        {mode === "edit" && saveStep === null && saved && (
-          <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
-            <Icons.CheckCircle size={13} /> Saved
-          </span>
-        )}
       </div>
+
+      {/* Applying permissions is a governed write, so it is confirmed
+          explicitly and the confirmation stays until it is dismissed. */}
+      {saved && savedSummary && (
+        <div style={{ marginBottom: 16 }}>
+          <AlertBanner
+            state="success"
+            title={`${savedSummary.total} permission${savedSummary.total === 1 ? "" : "s"} updated`}
+            description={[
+              savedSummary.added   > 0 ? `${savedSummary.added} granted`   : null,
+              savedSummary.removed > 0 ? `${savedSummary.removed} revoked` : null,
+            ].filter(Boolean).join(" · ") + ". Takes effect on the next action in this role."}
+            onClose={() => { setSaved(false); setSavedSummary(null) }}
+          />
+        </div>
+      )}
 
       {/* Stats row — only in tree view */}
       {saveStep === null && (
@@ -630,7 +641,7 @@ function RolePermissionsPanel({ role }: { role: Role }) {
       {saveStep !== null && (() => {
         const effectiveScope = (n: PermNode) => scopeOverrides[n.id] ?? n.scope ?? "Own"
         function renderDiffSection(
-          items: PermNode[], header: string, accentColor: string, bgMix: string, icon: ReactElement
+          items: PermNode[], header: string, bgMix: string, icon: ReactElement
         ) {
           if (items.length === 0) return null
           const itemIds = new Set(items.map(n => n.id))
@@ -643,8 +654,12 @@ function RolePermissionsPanel({ role }: { role: Role }) {
           }
           return (
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>
-                {header} · {items.length}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                {icon}
+                <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-title)", textTransform: "uppercase", letterSpacing: 0.6 }}>
+                  {header}
+                </span>
+                <Tag variant="neutral" size="sm">{items.length}</Tag>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {groups.map(({ parent, parentInItems, children }) => (
@@ -679,8 +694,8 @@ function RolePermissionsPanel({ role }: { role: Role }) {
             <div style={{ marginBottom: 20 }}><Stepper steps={saveSteps} /></div>
             {saveStep === 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {renderDiffSection(addedNodes, "New access", "var(--color-text-success, #22c55e)" /* audit-ignore */, "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
-                {renderDiffSection(removedNodes, "Access removed", "var(--error, #ef4444)" /* audit-ignore */, "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
+                {renderDiffSection(addedNodes, "New access", "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
+                {renderDiffSection(removedNodes, "Access removed", "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
                 {changedNodes.length === 0 && (
                   <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>No changes to review.</div>
                 )}
@@ -974,20 +989,45 @@ function ActivityPanel() {
 
   return (
     <div>
-      {/* Toolbar */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search events, resources…"
-          style={{ flex: 1, minWidth: 160, padding: "5px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)" }} />
-        <select value={actionFilter} onChange={e => setActionFilter(e.target.value as AuditAction | "All")}
-          style={{ padding: "5px 8px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", cursor: "pointer" }}>
-          {ACTION_FILTERS.map(f => <option key={f} value={f}>{f === "All" ? "Action: All" : f}</option>)}
-        </select>
-        <select value={resultFilter} onChange={e => setResultFilter(e.target.value as AuditResult | "All")}
-          style={{ padding: "5px 8px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", cursor: "pointer" }}>
-          {RESULT_FILTERS.map(f => <option key={f} value={f}>{f === "All" ? "Result: All" : f}</option>)}
-        </select>
+      {/* Toolbar — Filters owns the search, the two slots and their menus.
+          The two raw <select>s this replaces are exactly what the component
+          exists to stop: a select is three lines and works, which is why
+          screens keep reaching for it. */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Filters
+            showSearch
+            searchPlaceholder="Search events, resources…"
+            searchValue={search}
+            onSearchChange={setSearch}
+            slots={[
+              {
+                placeholder: "Action",
+                value:   actionFilter === "All" ? undefined : actionFilter,
+                options: ACTION_FILTERS as string[],
+                onSelect: v => setActionFilter(v as AuditAction | "All"),
+                onRemove: actionFilter === "All" ? undefined : () => setActionFilter("All"),
+              },
+              {
+                placeholder: "Result",
+                value:   resultFilter === "All" ? undefined : resultFilter,
+                options: RESULT_FILTERS as string[],
+                onSelect: v => setResultFilter(v as AuditResult | "All"),
+                onRemove: resultFilter === "All" ? undefined : () => setResultFilter("All"),
+              },
+            ]}
+            showClearFilters={actionFilter !== "All" || resultFilter !== "All" || search !== ""}
+            onClearFilters={() => { setActionFilter("All"); setResultFilter("All"); setSearch("") }}
+            // An audit log is chronological and has one view. Filters turns
+            // these on by default; leaving them would put three controls in the
+            // bar that do nothing.
+            showAllFilters={false}
+            showSort={false}
+            showViewToggle={false}
+          />
+        </div>
         <span style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap" }}>{filtered.length} event{filtered.length !== 1 ? "s" : ""}</span>
-        <Button variant="secondary" size="sm"><Icons.Download size={12} />Export</Button>
+        <Button variant="secondary" size="default"><Icons.Download size={13} />Export</Button>
       </div>
 
       {/* Table */}
@@ -1144,17 +1184,17 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
               key={s.id}
               style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 24px", borderBottom: i < sessions.length - 1 ? "1px solid var(--border)" : "none" }}
             >
-              <div style={{
-                width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-                background: "var(--surface-raised)", border: "1px solid var(--border)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)",
-              }}>
-                {s.device.toLowerCase().includes("iphone") || s.device.toLowerCase().includes("ipad")
-                  ? <Icons.Smartphone size={16} />
-                  : s.device.toLowerCase().includes("macbook") || s.device.toLowerCase().includes("laptop")
-                    ? <Icons.Laptop size={16} />
-                    : <Icons.Monitor size={16} />}
-              </div>
+              <HighlightIcon
+                size="md"
+                variant="neutral"
+                icon={
+                  s.device.toLowerCase().includes("iphone") || s.device.toLowerCase().includes("ipad")
+                    ? <Icons.Smartphone size={16} />
+                    : s.device.toLowerCase().includes("macbook") || s.device.toLowerCase().includes("laptop")
+                      ? <Icons.Laptop size={16} />
+                      : <Icons.Monitor size={16} />
+                }
+              />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{s.device}</span>
@@ -1208,8 +1248,9 @@ function MemberDetailPage({
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, marginTop: 16, alignItems: "start" }}>
 
-        {/* Left: identity card */}
-        <CardContainer className="!p-0 overflow-hidden">
+        {/* Left: identity card — sticky so it stays readable while the
+            right-hand column scrolls. top = header zone + breathing room. */}
+        <CardContainer className="!p-0 overflow-hidden sticky top-[16px] self-start">
           {/* Avatar + name */}
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
@@ -1323,19 +1364,11 @@ function StudioPermissionsView({ studioId, onBack }: { studioId: string; onBack:
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <button onClick={onBack} style={{
-          display: "flex", alignItems: "center", gap: 4, padding: "5px 10px",
-          fontSize: 12, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 7,
-          background: "var(--surface)", color: "var(--muted-foreground)", cursor: "pointer",
-        }}>
+        <Button variant="secondary" size="sm" onClick={onBack}>
           <Icons.ChevronLeft size={13} /> Apps
-        </button>
+        </Button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-            background: "var(--surface-raised)", border: "1px solid var(--border)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
-          }}>{meta?.icon}</div>
+          <HighlightIcon size="sm" variant={STUDIO_HI[studioId] ?? "neutral"} icon={meta?.icon} />
           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{meta?.label} — Permissions</span>
         </div>
       </div>
@@ -1494,37 +1527,35 @@ function AppsPanel({ member }: { member: Member }) {
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{meta.desc}</div>
               </div>
               <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
-                <Chip variant="success-secondary" size="s">Active</Chip>
+                <Tooltip side="cursor" content={`${member.name} has active access to ${meta.label}`}>
+                  <Tag variant="success" size="sm">Active</Tag>
+                </Tooltip>
                 {via.length > 0 && (
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  <div style={{ display: "flex", gap: "8px 4px", flexWrap: "wrap", justifyContent: "flex-end" }}>
                     {via.slice(0, 2).map(v => (
-                      <Chip key={v} variant="secondary" size="s">via {v}</Chip>
+                      <Tooltip key={v} side="cursor" content={`Access granted through the ${v} group, not directly`}>
+                        <Tag variant="neutral" size="sm">via {v}</Tag>
+                      </Tooltip>
                     ))}
-                    {via.length > 2 && <Chip variant="secondary" size="s">+{via.length - 2} more</Chip>}
+                    {via.length > 2 && (
+                      <Tooltip side="cursor" content={via.slice(2).join(" · ")}>
+                        <Tag variant="neutral" size="sm">+{via.length - 2} more</Tag>
+                      </Tooltip>
+                    )}
                   </div>
                 )}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 12 }}>
-                <button
-                  onClick={e => { e.stopPropagation(); setRemovingStudio(s) }}
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)",
-                    background: "var(--surface-raised)", color: "var(--muted-foreground)", cursor: "pointer",
-                    opacity: 0.7,
-                  }}
-                  title="Remove studio access"
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.color = "var(--badge-error)"
-                    ;(e.currentTarget as HTMLElement).style.opacity = "1"
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.color = "var(--muted-foreground)"
-                    ;(e.currentTarget as HTMLElement).style.opacity = "0.7"
-                  }}
-                >
-                  <Icons.Trash2 size={12} />
-                </button>
+                <Tooltip side="cursor" content={`Remove access to ${meta.label}`}>
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    onClick={e => { e.stopPropagation(); setRemovingStudio(s) }}
+                    aria-label={`Remove access to ${meta.label}`}
+                  >
+                    <Icons.Trash2 size={12} />
+                  </Button>
+                </Tooltip>
                 <Icons.ChevronRight size={14} style={{ color: "var(--muted-foreground)" }} />
               </div>
             </CardContainer>
@@ -1629,7 +1660,7 @@ function MemberGroupsPanel({ member }: { member: Member }) {
 // ─── Permissions tab (dual-mode: Audit / Edit) ───────────────────────────────
 
 const GRANTED_STATES: PermState[] = ["g-direct", "g-inh"]
-const SCOPE_ITEMS: SwitchTabItem[] = [
+const SCOPE_ITEMS: Array<{ id: string; label: string }> = [
   { id: "Own",    label: "Own" },
   { id: "Team",   label: "Team" },
   { id: "Tenant", label: "Tenant" },
@@ -1697,11 +1728,9 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
             {node.role && (
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
-              }}>via {node.role}</span>
+              <Tooltip side="cursor" content={`Inherited from the ${node.role} role, not granted directly`}>
+                <Tag variant="neutral" size="sm">via {node.role}</Tag>
+              </Tooltip>
             )}
             {/* Static scope badge — audit mode only; edit mode shows SwitchTab below */}
             {node.scope && mode !== "edit" && (
@@ -1726,13 +1755,21 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
               style={{ marginTop: 6, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }}
               onClick={e => e.stopPropagation()}
             >
-              <SwitchTab
-                size="s"
-                items={SCOPE_ITEMS}
-                value={scopeOverrides[node.id] ?? node.scope ?? "Own"}
-                onChange={scope => onScopeChange(node.id, scope)}
-                aria-label={`Scope for ${node.label}`}
-              />
+              <div role="group" aria-label={`Scope for ${node.label}`} style={{ display: "flex", gap: 4 }}>
+                {SCOPE_ITEMS.map(item => {
+                  const active = (scopeOverrides[node.id] ?? node.scope ?? "Own") === item.id
+                  return (
+                    <Chip
+                      key={item.id}
+                      size="s"
+                      variant={active ? "primary" : "secondary"}
+                      onClick={() => onScopeChange(node.id, item.id)}
+                    >
+                      {item.label}
+                    </Chip>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -1763,6 +1800,7 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   const [overrides, setOverrides] = useState<PermOverrides>({})
   const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
+  const [savedSummary, setSavedSummary] = useState<{ total: number; pinned: number; added: number; removed: number } | null>(null)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
   const [saveStep, setSaveStep] = useState<null | 0 | 1>(null)
 
@@ -1819,8 +1857,10 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
     setShowDiscardModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(false)
   }
   function confirmSave() {
+    // Counts are captured BEFORE the reset — after it there is nothing to count,
+    // and a confirmation that cannot say what changed is not a confirmation.
+    setSavedSummary({ total: changedNodes.length, pinned: pinnedNodes.length, added: addedNodes.length, removed: removedNodes.length })
     setSaveStep(null); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
   }
 
   // Compute changed permissions for the Review step
@@ -1864,12 +1904,24 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
             Edit permissions
           </Button>
         )}
-        {mode === "edit" && saveStep === null && saved && (
-          <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
-            <Icons.CheckCircle size={13} /> Saved
-          </span>
-        )}
       </div>
+
+      {/* Applying permissions is a governed write, so it is confirmed
+          explicitly and the confirmation stays until it is dismissed. */}
+      {saved && savedSummary && (
+        <div style={{ marginBottom: 16 }}>
+          <AlertBanner
+            state="success"
+            title={`${savedSummary.total} permission${savedSummary.total === 1 ? "" : "s"} updated`}
+            description={[
+              savedSummary.added   > 0 ? `${savedSummary.added} granted`   : null,
+              savedSummary.removed > 0 ? `${savedSummary.removed} revoked` : null,
+              savedSummary.pinned  > 0 ? `${savedSummary.pinned} pinned`   : null,
+            ].filter(Boolean).join(" · ") + ". Takes effect on the member's next action."}
+            onClose={() => { setSaved(false); setSavedSummary(null) }}
+          />
+        </div>
+      )}
 
       {/* Lightweight stats row — only in tree view */}
       {saveStep === null && (
@@ -1906,7 +1958,6 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
         function renderDiffSection(
           items: PermNode[],
           header: string,
-          accentColor: string,
           bgMix: string,
           icon: ReactElement
         ) {
@@ -1921,8 +1972,12 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
           }
           return (
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>
-                {header} · {items.length}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                {icon}
+                <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-title)", textTransform: "uppercase", letterSpacing: 0.6 }}>
+                  {header}
+                </span>
+                <Tag variant="neutral" size="sm">{items.length}</Tag>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {groups.map(({ parent, parentInItems, children }) => (
@@ -1964,9 +2019,9 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
             {/* Step 0: Review diff */}
             {saveStep === 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {renderDiffSection(pinnedNodes, "Pinned — stays if role is removed", "var(--primary)", "color-mix(in srgb, var(--primary) 8%, transparent)", <Icons.Pin size={11} color="var(--primary)" />)}
-                {renderDiffSection(addedNodes, "New access", "var(--color-text-success, #22c55e)" /* audit-ignore */, "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
-                {renderDiffSection(removedNodes, "Access removed", "var(--error, #ef4444)" /* audit-ignore */, "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
+                {renderDiffSection(pinnedNodes, "Pinned — stays if role is removed", "color-mix(in srgb, var(--primary) 8%, transparent)", <Icons.Pin size={11} color="var(--primary)" />)}
+                {renderDiffSection(addedNodes, "New access", "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
+                {renderDiffSection(removedNodes, "Access removed", "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
                 {changedNodes.length === 0 && (
                   <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>
                     No changes to review.
@@ -2207,7 +2262,7 @@ function RemoveAccessModal({
         </div>
 
         {/* Resource card */}
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>
               {RESOURCE_TYPE_ICON[resource.type] ?? <Icons.Layers size={16} />}
@@ -2610,7 +2665,7 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
           <CardContainer className="!p-0 overflow-hidden">
             <div style={{
               padding: "12px 24px", borderBottom: "1px solid var(--border)",
-              background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
                 <b style={{ color: "var(--foreground)" }}>{members.length}</b> member{members.length !== 1 ? "s" : ""}
@@ -2918,7 +2973,7 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
           <CardContainer className="!p-0 overflow-hidden">
             <div style={{
               padding: "12px 24px", borderBottom: "1px solid var(--border)",
-              background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
                 <b style={{ color: "var(--foreground)" }}>{groupMembers.length}</b> member{groupMembers.length !== 1 ? "s" : ""}
@@ -3225,7 +3280,7 @@ function MemberRow({
                 cursor: "pointer", fontSize: 12, fontWeight: 500, textAlign: "left",
                 color: danger ? "var(--badge-error)" : "var(--foreground)",
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none" }}
               >
                 <Icon size={13} />
@@ -3460,13 +3515,7 @@ function InviteModal({ onClose, onSend }: {
       }}>
         {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12, position: "sticky", top: 0, background: "var(--surface)", zIndex: 1 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
-          }}>
-            <Icons.UserPlus size={17} />
-          </div>
+          <HighlightIcon size="md" variant="informative" iconName="UserPlus" />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Invite to Avance Financial</div>
             <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Invitations are sent by email and expire after 7 days.</div>
@@ -3863,13 +3912,7 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
       {/* Identity header */}
       <div style={{ padding: "0 0 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-            background: role.color,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Icons.Shield size={22} style={{ color: "#fff" }} /* audit-ignore: icon on colored bg, always white */ />
-          </div>
+          <HighlightIcon size="lg" variant={ROLE_HI[role.id] ?? "neutral"} iconName="Shield" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{role.label}</div>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -3969,13 +4012,7 @@ function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onVi
       {/* Identity header */}
       <div style={{ padding: "0 0 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-            background: group.color,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Icons.Users size={22} style={{ color: "#fff" }} /* audit-ignore: icon on colored bg, always white */ />
-          </div>
+          <HighlightIcon size="lg" variant="informative" iconName="Users" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{group.name}</div>
             <div style={{ display: "flex", gap: "8px 5px", flexWrap: "wrap" }}>
