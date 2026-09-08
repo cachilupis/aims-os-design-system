@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
 import { WidgetFather } from "@/components/ui/widget-father"
-import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
+import { SwitchTab } from "@/components/ui/switch-tab"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { WidgetPreview } from "@/components/experimental/widget-preview"
 import { AUTHORABLE_WIDGETS, AUTHORABLE_BY_CATEGORY, type WidgetCategory } from "@/lib/widget-catalog"
@@ -25,7 +25,7 @@ import { OptionCard } from "@/components/experimental/widget-screen-parts"
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type OpType  = "aggregate" | "record_set"
-type TabId   = "data" | "widget"
+type TabId   = "data" | "configure"
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 
@@ -101,6 +101,29 @@ const WIDGET_SIZES = [
 
 // ── DS-GAP Components ─────────────────────────────────────────────────────────
 
+
+/**
+ * Turn what someone typed into a widget name.
+ *
+ * "Win Rate gauge by team" → "Win Rate by Team". The chart word comes out
+ * because the type picker in step 2 already says it, and a widget called
+ * "Win Rate gauge" on a dashboard reads as a description of its own chrome.
+ * Leading verbs go too — every widget shows something.
+ */
+const CHART_WORDS = /\b(gauge|chart|graph|donut|pie|bar|line|area|funnel|heatmap|map|table|list|kpi|sparkline|trend)\b/gi
+const LEAD_VERBS  = /^(show me|show|track|display|give me|see|view|plot|chart)\s+/i
+const SMALL_WORDS = new Set(["by", "of", "per", "vs", "and", "or", "the", "a", "an", "in", "for", "to"])
+
+function widgetNameFrom(text: string): string {
+  const cleaned = text.trim().replace(LEAD_VERBS, "").replace(CHART_WORDS, " ").replace(/\s+/g, " ").trim()
+  if (!cleaned) return ""
+  return cleaned
+    .split(" ")
+    .map((w, i) => (i > 0 && SMALL_WORDS.has(w.toLowerCase())
+      ? w.toLowerCase()
+      : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ")
+}
 
 // DS-GAP: StepLabel — numbered section heading for builder form steps. Closest DS component: none.
 // A numbered step heading inside a stage. Deliberately NOT the SectionLabel the
@@ -402,7 +425,7 @@ export default function PMThomasWidgetBuilderScreen() {
   const [srcFilter, setSrcFilter]   = useState("all")
   const [describe, setDescribe]     = useState("")
 
-  // Widget tab state
+  // Configure tab state
   const [typeId, setTypeId]             = useState<string | null>(null)
   const [name, setName]                 = useState("")
   const [subtitle, setSubtitle]         = useState("")
@@ -438,38 +461,26 @@ export default function PMThomasWidgetBuilderScreen() {
   // definition — the moment one can be locked behind another it is a stage, and
   // stages are what Stepper is for. Its StepState covers every case the local
   // version drew by hand.
-  const STEP_ORDER: TabId[] = ["data", "widget"]
+  const STEP_ORDER: TabId[] = ["data", "configure"]
   const NEXT_LABEL: Record<TabId, string> = {
-    data:   "Continue to Widget",
-    widget: "Save to catalog",
+    data:      "Continue to Configure",
+    configure: "Save to catalog",
   }
-
-  const stepState = (id: TabId): StepState => {
-    if (id === tab) return "active"
-    if (id === "data")   return dataComplete   ? "completed" : "default"
-    if (id === "widget") return widgetComplete ? "completed" : dataComplete   ? "default" : "locked"
-    return widgetComplete ? "default" : "locked"
-  }
-
-  const wizardSteps: StepItem[] = [
-    { label: "Data",       state: stepState("data")       },
-    { label: "Widget",     state: stepState("widget"),     hint: stepState("widget")     === "locked" ? "Complete the Data step first"   : undefined },
-  ]
 
   // The footer's shape follows the stage: Cancel on the first, Back after that,
   // and the primary button becomes Save on the last one.
-  const isLast     = tab === "widget"
+  const isLast     = tab === "configure"
   const stepIndex  = STEP_ORDER.indexOf(tab)
-  const nextEnabled = tab === "data" ? dataComplete : tab === "widget" ? widgetComplete : canSave
+  const nextEnabled = tab === "data" ? dataComplete : tab === "configure" ? widgetComplete : canSave
 
   const saveHint = !sourceId
     ? (dataMode === "dataset" ? "Choose a governed dataset on the Data tab to get started." : "Choose an entity source on the Data tab to get started.")
     : !dataComplete
     ? "Finish configuring your data source on the Data tab."
     : !typeId
-    ? "Choose a widget type on the Widget tab."
+    ? "Choose a widget type on the Configure tab."
     : !name.trim()
-    ? "Give your widget a name on the Widget tab."
+    ? "Give your widget a name on the Configure tab."
     : ""
 
   // ── Handlers ──
@@ -504,7 +515,6 @@ export default function PMThomasWidgetBuilderScreen() {
           size={isScrolled ? "compress" : "size-l"}
           title="Widget Builder"
           description="Connect a data source, pick a chart type, and preview your widget live."
-          secondaryAction={{ label: "Cancel", onClick: () => { if (hasUnsaved) setShowLeave(true) } }}
           primaryAction={{
             label: "Save to catalog",
             icon: LucideIcons.Check,
@@ -516,25 +526,49 @@ export default function PMThomasWidgetBuilderScreen() {
     >
       {/* ── Builder ── */}
       <div style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 160px)" }}>
-          {/* Step progress indicator */}
-          <Stepper
-            steps={wizardSteps}
-            onStepClick={(i) => {
-              // Only backwards, and only into a stage that is already reachable.
-              const target = STEP_ORDER[i]
-              if (STEP_ORDER.indexOf(tab) > i || stepState(target) !== "locked") setTab(target)
-            }}
-            className="mb-5"
+          {/* Two stages read as a wizard when the top carries a Stepper AND
+              the bottom carries StepperNavFooter — two progress bars for one
+              two-step flow. The footer is the one that moves you forward, so
+              the top is navigation: a SwitchTab.
+
+              A SwitchTab has no locked state, and that is the trade: you can
+              look at Configure before the data is finished. Nothing can be
+              saved early — the footer's Next and Save are still gated on
+              dataComplete and canSave — so the cost is a peek, and the gain is
+              that the two halves stop competing. */}
+          <SwitchTab
+            items={[
+              { id: "data",      label: "Data"      },
+              { id: "configure", label: "Configure" },
+            ]}
+            value={tab}
+            onChange={id => setTab(id as TabId)}
+            size="s"
+            aria-label="Builder stage"
+            className="mb-5 self-start"
           />
 
-          <div className="flex flex-col md:flex-row gap-[24px] items-stretch md:items-start">
+          {/* The preview is the point of this screen, so it sits beside the
+              form rather than under it. The split fires at 1100 — an arbitrary
+              value on purpose: the repo's breakpoint table comes straight from
+              Figma (600 · 1280 · 1440 · 1920) and has no rung between 600 and
+              1280, so at md the preview dropped below the fold on any laptop
+              narrower than 1280, which is most of them. */}
+          <div className="flex flex-col min-[1100px]:flex-row gap-[24px] items-stretch min-[1100px]:items-start">
           {/* Left: build panel */}
           <div className="flex-1 min-w-0 flex flex-col gap-[20px]">
             {/* DS-GAP: DescribeComposer — natural-language widget setup generator. Using simplified Input bar. */}
             <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--field-border)", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", gap: 8 }}>
                 <Input placeholder='Describe what you want to track, e.g. "Win Rate gauge by team"' value={describe} onChange={e => setDescribe(e.target.value)} />
-                <Button variant="secondary" size="sm">Generate</Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={!describe.trim()}
+                  onClick={() => setName(widgetNameFrom(describe))}
+                >
+                  Generate
+                </Button>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                 {DESCRIBE_SUGGESTIONS.map(x => (
@@ -783,7 +817,7 @@ export default function PMThomasWidgetBuilderScreen() {
             )}
 
             {/* ── Tab 2: Widget ── */}
-            {tab === "widget" && (
+            {tab === "configure" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
                   <StepLabel n={1}>Widget type</StepLabel>
@@ -858,7 +892,7 @@ export default function PMThomasWidgetBuilderScreen() {
           </div>
 
           {/* Right: sticky preview */}
-          <div className="w-full md:w-[44%] shrink-0 md:sticky md:top-0">
+          <div className="w-full min-[1100px]:w-[44%] shrink-0 min-[1100px]:sticky min-[1100px]:top-0">
             <WidgetPreviewPanel
               typeId={typeId}
               name={name}

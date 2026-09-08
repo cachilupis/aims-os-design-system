@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
 import { Tag } from "@/components/ui/tag"
+import { Chip } from "@/components/ui/chip"
+import { Filters } from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Pagination } from "@/components/ui/pagination"
@@ -216,64 +218,6 @@ const ACCENT_COLORS = [
 ]
 
 // ── Shared micro-components ───────────────────────────────────────────────────
-
-function Pill({ label, value, options, onSelect }: { label: string; value: string; options: string[]; onSelect: (v: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
-  }, [])
-  const active = value !== "All" && value !== ""
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6,
-          fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap",
-          background: active ? "var(--primary)" : "var(--surface)",
-          color: active ? "var(--on-primary)" : "var(--field-supporting)",
-          border: `1px solid ${active ? "var(--primary)" : "var(--field-border)"}` }}
-      >
-        {active ? value : label}
-        <LucideIcons.ChevronDown size={12} />
-      </button>
-      {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 199,
-          boxShadow: "var(--shadow-elevation-3)", minWidth: 160 }}>
-          <CardContainer size="sm" className="!p-1">
-            {options.map(opt => (
-              <button key={opt} onClick={() => { onSelect(opt); setOpen(false) }}
-                style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 10px",
-                  fontSize: 12, cursor: "pointer", borderRadius: 4,
-                  background: value === opt ? "var(--surface-raised)" : "transparent",
-                  color: "var(--foreground)" }}>
-                {opt}
-              </button>
-            ))}
-          </CardContainer>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function FilterBar({ search, onSearch, pills }: {
-  search: string; onSearch: (v: string) => void
-  pills: { label: string; value: string; options: string[]; onSelect: (v: string) => void }[]
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-      <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
-        <LucideIcons.Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--field-supporting)" }} />
-        <Input value={search} onChange={e => onSearch(e.target.value)} placeholder="Search…"
-          style={{ paddingLeft: 32, height: 32, fontSize: 13 }} />
-      </div>
-      {pills.map((p, i) => <Pill key={i} {...p} />)}
-    </div>
-  )
-}
 
 function StatusBadge({ status }: { status: DashStatus }) {
   const map: Record<DashStatus, { label: string; variant: "success" | "informative" | "alert" }> = {
@@ -522,6 +466,8 @@ const WIDG_PAGE_SIZE = 12
 
 type DashRecord = typeof DASHBOARDS[0]
 
+const DASHBOARD_ENTITIES = ["All", "Company", "Contact", "Employee", "Deal", "Standalone"] as const
+
 function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
   onOpenCanvas: (d: DashRecord) => void
   page: number
@@ -532,6 +478,7 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
   const [statusFilter, setStatus]   = useState("All")
   const [entityFilter, setEntity]   = useState("All")
   const [sortBy, setSortBy]         = useState<"name" | "updated">("name")
+  const [sortDir, setSortDir]       = useState<"asc" | "desc">("asc")
   const [detail, setDetail]         = useState<DashRecord | null>(null)
   const [deleteTarget, setDelete]   = useState<DashRecord | null>(null)
   const [dupTarget, setDupTarget]   = useState<DashRecord | null>(null)
@@ -574,14 +521,42 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
         </CardContainer>
       )}
 
-      <FilterBar
-        search={search} onSearch={v => setSearch(v)}
-        pills={[
-          { label: "Status", value: statusFilter, options: ["All", "Published", "Draft", "Pending"], onSelect: v => setStatus(v) },
-          { label: "Entity", value: entityFilter, options: ["All", "Company", "Contact", "Employee", "Deal", "Standalone"], onSelect: v => setEntity(v) },
-          { label: "Sort", value: sortBy === "name" ? "Name" : "Updated", options: ["Name", "Updated"], onSelect: v => setSortBy(v === "Name" ? "name" : "updated") },
-        ]}
+      {/* The DS Filters bar, which renders and positions its own menus. Entity
+          is NOT a slot here: it is the one filter someone flips constantly while
+          scanning the list, and the DS filter pattern puts that layer below the
+          bar as chips — visible at a glance, one click to change, no menu. */}
+      <Filters
+        showSearch
+        searchPlaceholder="Search dashboards…"
+        searchValue={search}
+        onSearchChange={setSearch}
+        slots={[{
+          placeholder: "Status",
+          value: statusFilter !== "All" ? statusFilter : undefined,
+          options: ["All", "Published", "Draft", "Pending"],
+          onSelect: setStatus,
+          onRemove: () => setStatus("All"),
+        }]}
+        showSort
+        sortLabel={sortBy === "name" ? "Name" : "Updated"}
+        sortOptions={["Name", "Updated"]}
+        onSortSelect={v => setSortBy(v === "Name" ? "name" : "updated")}
+        sortDirection={sortDir}
+        onSortDirectionChange={setSortDir}
       />
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 24, marginBottom: 24 }}>
+        {DASHBOARD_ENTITIES.map(e => (
+          <Chip
+            key={e}
+            size="s"
+            variant={entityFilter === e ? "primary" : "secondary"}
+            onClick={() => setEntity(e)}
+          >
+            {e === "All" ? "All entities" : e}
+          </Chip>
+        ))}
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12, marginBottom: 16 }}>
         {paged.map(d => {
@@ -590,12 +565,13 @@ function DashboardsView({ onOpenCanvas, page, onPageChange, onTotalChange }: {
             <div key={d.id} style={{ position: "relative" }} onClick={() => { if (!cardMenu) setDetail(d) }}>
               <CardContainer size="sm" className="flex flex-col gap-2 cursor-pointer">
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: "var(--foreground)", lineHeight: 1.3, marginBottom: 2 }}>{d.name}</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                      <Tag variant={isProfile ? "informative" : "neutral"} size="sm">{isProfile ? "Profile" : "Standalone"}</Tag>
-                      <StatusBadge status={d.status} />
-                    </div>
+                  {/* Tags ride on the title's own line. Stacked under it they
+                      read as a second row of content and pull the eye down
+                      before it has finished the name. */}
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, flex: 1, minWidth: 0 }}>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: "var(--foreground)", lineHeight: 1.3 }}>{d.name}</span>
+                    <Tag variant={isProfile ? "informative" : "neutral"} size="sm">{isProfile ? "Profile" : "Standalone"}</Tag>
+                    <StatusBadge status={d.status} />
                   </div>
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <button onClick={e => { e.stopPropagation(); setCardMenu(cardMenu === d.id ? null : d.id) }}
