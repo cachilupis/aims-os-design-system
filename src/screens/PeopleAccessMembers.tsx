@@ -4193,8 +4193,8 @@ function InvitePermRow({
             {accessMode === "custom" ? (
               <Toggle size="sm" checked={isGranted} onChange={() => onToggle(node.id, node.scope ?? "Own")} />
             ) : (
-              <div style={{ width: 26, height: 16, borderRadius: 999, flexShrink: 0, background: isGranted ? "var(--primary)" : "rgba(242,242,242,1)", border: isGranted ? "none" : "2px solid rgba(92,92,92,0.5)", boxSizing: "border-box", position: "relative" }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: isGranted ? "#fff" : "rgba(42,42,42,1)", position: "absolute", top: "50%", left: 4, transform: `translate(${isGranted ? 10 : 0}px, -50%)` }} />
+              <div style={{ width: 26, height: 16, borderRadius: 999, flexShrink: 0, background: isGranted ? "var(--primary)" : "var(--surface-raised)", border: isGranted ? "none" : "2px solid var(--border)", boxSizing: "border-box", position: "relative" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: isGranted ? "var(--primary-foreground)" : "var(--muted-foreground)", position: "absolute", top: "50%", left: 4, transform: `translate(${isGranted ? 10 : 0}px, -50%)` }} />
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
