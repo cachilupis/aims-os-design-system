@@ -955,6 +955,12 @@ Never in `ui/`. File must:
 **Status: partially built and running automatically.** `scripts/audit-tokens.cjs` (`npm run audit:tokens`) covers items 1, 5, and 7 below and runs on every PR and push to `main` via `.github/workflows/design-system-checks.yml` (added 2026-08-04) — a PR with a hardcoded hex/rgba, an orphaned component, or a build/type error fails CI automatically. `/ds-health` as a slash command still does not exist — items 2, 3, 4, and 6 need semantic checks the script doesn't do (parsing JSX for raw elements, cross-referencing DS-GAP comments, registry lookups) and haven't been built. This section documents the full intended scope so whoever builds the rest doesn't have to guess:
 
 1. **Token compliance** (no hardcoded hex/rgba in `.tsx`/`.css` files) — ✅ automated, `audit-tokens.cjs`
+1b. **The three primitives screens keep drawing by hand** — ✅ automated (2026-09-08), checks 12-14:
+   a pill-shaped badge is `Tag`, a circular avatar 16-64px is `AvatarCircle`, and a `<button>` that
+   sets its own padding AND a border or background is `Button`. Warnings, not errors — the ratchet
+   holds the line at the count it inherits, measured in INSTANCES so a file already on the list
+   cannot absorb new ones. An icon-only trigger, a tab, a colour swatch and a status dot under 16px
+   are real uses of the raw element and are not counted.
 2. Raw HTML elements inside pattern previews — not automated
 3. Experimental component integrity (DS-GAP comment present) — not automated
 4. PM screens registered in `PROTOTYPE_PAGES` — not automated
