@@ -149,7 +149,7 @@ actions={[{ icon: "Eye", onClick: () => {} }]}
 ```
 
 ### Entity Header — entity profile header
-Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its old name on purpose; the change spec forbids renaming it) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; EntityHeader sits inside the content area, typically the Overview tab).
+Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; EntityHeader sits inside the content area, typically the Overview tab).
 
 **There are no variants.** The component models no entity types at all — Employee, Customer, Vendor, Patient, Borrower, anything the host defines tomorrow all use the same shape. Never look for a `variant` prop, never flag a missing one as a DS-GAP: an entity type the DS has never heard of is the normal case, not a gap.
 
@@ -163,9 +163,9 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 | `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **capped at 6 + `+N`** |
 | `stateBadge?` | Identity, right | `{ label, variant, icon? }` — **exactly one**, full semantic range |
 | `showInformation?` | Identity, right | `boolean` — shows the ⓘ trigger |
-| `secondaryAction?` | Identity, right | `RecordAction` — **off by default** |
+| `secondaryAction?` | Identity, right | `EntityHeaderAction` — **off by default** |
 | `assignedAgent` | Identity, right | `AssignedAgent \| null` — required as a prop. This is `Ask` |
-| `menuActions?` | Identity, right | `RecordAction[]` — destructive and secondary only |
+| `menuActions?` | Identity, right | `EntityHeaderAction[]` — destructive and secondary only |
 | `description?` | below Identity | `string` — durable context, **off unless passed** |
 | `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
 | `recordFields?` | — | `RecordField[]` — consumed by the host's Information panel, not rendered here |
@@ -251,7 +251,7 @@ The one case that justifies it is **an opaque code as the title**: `RO-48291` al
 
 **Never repeat a value across slots.** If it appears in `source`, it does not also appear in `description` or as a tag.
 
-**Fallback copy comes from `RECORD_HEADER_FALLBACKS`** — never write fallback strings inline at the call site.
+**Fallback copy comes from `ENTITY_HEADER_FALLBACKS`** — never write fallback strings inline at the call site.
 
 **Zone click destinations** — same framework as Entity click behavior above:
 - Several items to review one by one before deciding → `SlideOut`
