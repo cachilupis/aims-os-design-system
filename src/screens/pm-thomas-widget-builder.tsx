@@ -18,6 +18,7 @@ import { Select } from "@/components/ui/select"
 import { Menu, MenuItem, MenuDivider } from "@/components/ui/menu-item"
 import { anchorFromEvent, useDropdownPosition, type DropdownAnchor } from "@/lib/dropdown-anchor"
 import { EmptyState } from "@/components/ui/empty-state"
+import { Tooltip } from "@/components/ui/tooltip"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import type { SidebarItem } from "@/components/ui/sidebar"
 import { OptionCard } from "@/components/experimental/widget-screen-parts"
@@ -36,15 +37,32 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "marketplace",   label: "Marketplace",   icon: "Store" },
 ]
 
-// The three entities Thom's prototype offers, with his column counts. Ours
-// listed eight across four integrations, which reads as a fuller product than
-// the one being demoed — a prototype that promises more than it has is the
-// same defect as a button that does nothing.
+/**
+ * Thom's entities, from the two places he keeps them.
+ *
+ * His published prototype shows three Salesforce entities with column counts
+ * and per-column definitions. His own screen in this repo
+ * (pm-thomas-composable-dashboards.tsx) carries five more across Zendesk,
+ * BambooHR and AIMS OS, with the integrations each one can also come from.
+ * Both are his and neither is complete on its own, so both are here: the three
+ * with column definitions are the ones the page features, and the rest live
+ * behind Browse all entities.
+ *
+ * `featured` is what the page shows. Everything else is one click away rather
+ * than absent — which is also what his "More entities available" note meant.
+ */
 const ENTITY_SOURCES = [
-  { id: "contacts_salesforce", label: "Contacts", icon: "Users",      desc: "CRM contact profiles and relationship history",   integration: "Salesforce", columns: 9, governed: true,  hasPII: true  },
-  { id: "accounts_salesforce", label: "Accounts", icon: "Building2",  desc: "Organization records, domains, and account data", integration: "Salesforce", columns: 7, governed: true,  hasPII: false },
-  { id: "deals_salesforce",    label: "Deals",    icon: "TrendingUp", desc: "Pipeline opportunities and deal stages",          integration: "Salesforce", columns: 7, governed: true,  hasPII: false },
+  { id: "contacts_salesforce",   label: "Contacts",      icon: "Users",         desc: "CRM contact profiles and relationship history",    integration: "Salesforce", also: ["HubSpot", "Pipedrive"], columns: 9, governed: true,  hasPII: true,  featured: true },
+  { id: "accounts_salesforce",   label: "Accounts",      icon: "Building2",     desc: "Organization records, domains, and account data",  integration: "Salesforce", also: ["HubSpot"],              columns: 7, governed: true,  hasPII: false, featured: true },
+  { id: "deals_salesforce",      label: "Deals",         icon: "TrendingUp",    desc: "Pipeline opportunities and deal stages",           integration: "Salesforce", also: ["HubSpot", "Close"],     columns: 7, governed: true,  hasPII: false, featured: true },
+  { id: "tickets_zendesk",       label: "Tickets",       icon: "HelpCircle",    desc: "Customer support requests and resolution history", integration: "Zendesk",    also: ["Intercom"],             columns: 6, governed: true,  hasPII: false, featured: true },
+  { id: "conversations_zendesk", label: "Conversations", icon: "MessageSquare", desc: "Chat and email threads with CSAT scores",          integration: "Zendesk",    also: [],                       columns: 6, governed: false, hasPII: true,  featured: false },
+  { id: "employees_bamboohr",    label: "Employees",     icon: "UserCheck",     desc: "HR records, roles, and people data",               integration: "BambooHR",   also: ["Rippling", "Workday"],  columns: 6, governed: true,  hasPII: true,  featured: false },
+  { id: "workflows_aims",        label: "Workflows",     icon: "GitBranch",     desc: "Automated process definitions in AIMS OS",         integration: "AIMS OS",    also: [],                       columns: 6, governed: true,  hasPII: false, featured: false },
+  { id: "ai_workers_aims",       label: "AI Workers",    icon: "Bot",           desc: "AI agent instances and performance metrics",       integration: "AIMS OS",    also: [],                       columns: 6, governed: true,  hasPII: false, featured: false },
 ]
+
+const FEATURED_ENTITIES = ENTITY_SOURCES.filter(e => e.featured)
 
 // Thom's four datasets. The `shape` is the part that matters: a dataset arrives
 // already aggregated, and its shape is what says whether it is one number, a
@@ -114,6 +132,51 @@ const SOURCE_COLUMN_DEFS: Record<string, ColumnDef[]> = {
     { label: "Account",    type: "Text",   desc: "Reference to the associated account",     key: "account_id" },
     { label: "Created At", type: "Date",   desc: "Date and time the record was created",    key: "created_at" },
   ],
+  // The five below are NOT from Thom — his prototype defines columns only for
+  // the three Salesforce entities. They are written to the same rule (say what
+  // the field holds, not what it is called) so the modal never dead-ends on an
+  // entity with nothing to pick, and they are the first thing to replace when
+  // his own definitions exist.
+  tickets_zendesk: [
+    { label: "Subject",    type: "Text",   desc: "What the ticket is about",                   key: "subject" },
+    { label: "Status",     type: "Text",   desc: "Open, pending, solved or closed",            key: "status" },
+    { label: "Priority",   type: "Text",   desc: "Urgency assigned to the ticket",             key: "priority" },
+    { label: "Assignee",   type: "Text",   desc: "Agent currently responsible",                key: "assignee" },
+    { label: "Requester",  type: "Text",   desc: "Person who opened the ticket",               key: "requester" },
+    { label: "Created At", type: "Date",   desc: "Date and time the record was created",       key: "created_at" },
+  ],
+  conversations_zendesk: [
+    { label: "Subject",    type: "Text",   desc: "Thread subject or first message",            key: "subject" },
+    { label: "Channel",    type: "Text",   desc: "Chat, email or web form",                    key: "channel" },
+    { label: "Agent",      type: "Text",   desc: "Agent who handled the thread",               key: "agent" },
+    { label: "CSAT Score", type: "Number", desc: "Satisfaction rating given, 1 to 5",          key: "csat_score" },
+    { label: "Messages",   type: "Number", desc: "How many messages the thread holds",         key: "message_count" },
+    { label: "Created At", type: "Date",   desc: "Date and time the record was created",       key: "created_at" },
+  ],
+  employees_bamboohr: [
+    { label: "Name",       type: "Text",   desc: "Full name of the record",                    key: "name" },
+    { label: "Department", type: "Text",   desc: "Department the person belongs to",           key: "department" },
+    { label: "Title",      type: "Text",   desc: "Job title as recorded in HR",                key: "title" },
+    { label: "Manager",    type: "Text",   desc: "Who this person reports to",                 key: "manager" },
+    { label: "Start Date", type: "Date",   desc: "First day of employment",                    key: "start_date" },
+    { label: "Status",     type: "Text",   desc: "Active, on leave or departed",               key: "status" },
+  ],
+  workflows_aims: [
+    { label: "Name",         type: "Text",   desc: "Full name of the record",                  key: "name" },
+    { label: "Status",       type: "Text",   desc: "Running, paused or draft",                 key: "status" },
+    { label: "Run Count",    type: "Number", desc: "Times the workflow has executed",          key: "run_count" },
+    { label: "Success Rate", type: "Number", desc: "Share of runs that finished without error", key: "success_rate" },
+    { label: "Last Run",     type: "Date",   desc: "When it last executed",                    key: "last_run" },
+    { label: "Owner",        type: "Text",   desc: "Team member responsible for this record",  key: "owner" },
+  ],
+  ai_workers_aims: [
+    { label: "Name",        type: "Text",   desc: "Full name of the record",                   key: "name" },
+    { label: "Category",    type: "Text",   desc: "What kind of work the agent does",          key: "category" },
+    { label: "Status",      type: "Text",   desc: "Running, idle, paused or error",            key: "status" },
+    { label: "Tasks Today", type: "Number", desc: "Tasks completed since midnight",            key: "tasks_today" },
+    { label: "Accuracy",    type: "Number", desc: "Share of outputs accepted without edits",   key: "accuracy" },
+    { label: "Created At",  type: "Date",   desc: "Date and time the record was created",      key: "created_at" },
+  ],
 }
 
 /** Labels only — what the filter pickers and the calc column list read. */
@@ -127,6 +190,21 @@ const FRESHNESS_OPTIONS = [
   { value: "15m",      label: "Every 15 minutes" },
   { value: "1h",       label: "Every hour" },
   { value: "24h",      label: "Every 24 hours" },
+]
+
+/**
+ * The filter row an end user would get, and what each one narrows.
+ *
+ * Inert chips taught nothing: a preview whose controls do not respond is a
+ * screenshot. Clicking one now selects it, names itself in the widget's own
+ * subtitle, and re-runs the entry animation — so the preview visibly answers.
+ * The numbers are fixtures and do not recompute; the tooltip says what the
+ * filter WOULD narrow, which is the honest version of a live preview.
+ */
+const PREVIEW_FILTERS = [
+  { label: "Last 30 days", hint: "Narrows to records created or updated in the last 30 days." },
+  { label: "Status",       hint: "Splits the widget by each record's current status." },
+  { label: "Team",         hint: "Narrows to the viewer's own team." },
 ]
 
 const WIDGET_SIZES = [
@@ -171,7 +249,7 @@ function EntitySourceCard({ source, selected, onSelect }: { source: typeof ENTIT
           <HighlightIcon iconName={source.icon} variant={selected ? "informative" : "neutral"} size="sm" />
           <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: selected ? "var(--primary)" : "var(--color-text-title)" }}>{source.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{source.label}</span>
               <span style={{ fontSize: 11, color: "var(--color-text-subtitle)", whiteSpace: "nowrap" as const }}>
                 · {(SOURCE_COLUMNS[source.id] ?? []).length} columns
               </span>
@@ -205,7 +283,7 @@ function DatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_D
         <div style={{ padding: 12, display: "flex", gap: 10 }}>
           <HighlightIcon iconName="Database" variant={selected ? "informative" : "neutral"} size="sm" />
           <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: selected ? "var(--primary)" : "var(--color-text-title)" }}>{dataset.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{dataset.name}</span>
             <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: 0, lineHeight: 1.4 }}>{dataset.description}</p>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
               {/* The shape leads: it is what decides which widget types can
@@ -312,7 +390,7 @@ function TypeTile({ type, selected, onSelect }: { type: typeof AUTHORABLE_WIDGET
           />
           <span style={{
             fontSize: 12, fontWeight: 500, textAlign: "center" as const, lineHeight: 1.3,
-            color: selected ? "var(--primary)" : "var(--color-text-title)",
+            color: "var(--color-text-title)",
           }}>{type.label}</span>
         </div>
       </CardContainer>
@@ -326,6 +404,10 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
   typeId: string | null; name: string; sourceId: string | null; freshness: string
   interactiveFilters: boolean; previewSize: string; setPreviewSize: (s: string) => void; saveHint: string
 }) {
+  // The applied preview filter lives here, not in the builder: it is a property
+  // of looking at the widget, not of the widget being built. Nothing it does
+  // reaches what gets saved.
+  const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const entitySrc  = ENTITY_SOURCES.find(s => s.id === sourceId)
   const datasetSrc = PRESET_DATASETS.find(d => d.id === sourceId)
   const srcLabel   = entitySrc?.label ?? datasetSrc?.name ?? null
@@ -334,15 +416,24 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
   const freshnessLabel = freshness === "realtime" ? "Live" : freshness === "15m" ? "15m" : freshness === "1h" ? "1h" : "24h"
 
   // "KPI · Deals · HubSpot" — what this widget is, reading left to right.
-  const lineage = [typeInfo?.label, srcLabel, entitySrc?.integration].filter(Boolean).join(" · ")
+  const lineage = [typeInfo?.label, srcLabel, entitySrc?.integration, activeFilter]
+    .filter(Boolean).join(" · ")
 
   // The body only. WidgetFather draws every piece of chrome around it.
   // WidgetPreview owns the resolution chain — the same one the Widget Library,
   // the Marketplace and the Universal Profile now call, so a Donut is the same
   // Donut in all four.
+  // The `key` is what makes this animate: React remounts on a type change, so
+  // the entry animation runs again instead of only on first paint. Utilities
+  // from tw-animate-css, already a dependency — 200ms and a 1px rise, enough to
+  // say "this is new" without making someone wait to read it.
   const body = !typeInfo
     ? <EmptyState compact icon={LucideIcons.Shapes} title="Nothing to preview yet" description={saveHint} />
-    : <WidgetPreview typeId={typeInfo.id} />
+    : (
+      <div key={`${typeInfo.id}:${activeFilter ?? ""}`} className="animate-in fade-in slide-in-from-bottom-1 duration-200 ease-out">
+        <WidgetPreview typeId={typeInfo.id} />
+      </div>
+    )
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -389,8 +480,16 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
                   what a live preview is for. Inert here on purpose. */}
               {interactiveFilters && typeInfo && (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                  {["Last 30 days", "Status", "Team"].map(f => (
-                    <Chip key={f} size="s" variant="secondary">{f}</Chip>
+                  {PREVIEW_FILTERS.map(f => (
+                    <Tooltip key={f.label} content={f.hint} side="cursor">
+                      <Chip
+                        size="s"
+                        variant={activeFilter === f.label ? "primary" : "secondary"}
+                        onClick={() => setActiveFilter(activeFilter === f.label ? null : f.label)}
+                      >
+                        {f.label}
+                      </Chip>
+                    </Tooltip>
                   ))}
                 </div>
               )}
@@ -462,10 +561,18 @@ export default function PMThomasWidgetBuilderScreen() {
   const [colDraft, setColDraft]       = useState<string[]>([])
   const [colQuery, setColQuery]       = useState("")
   const [colType, setColType]         = useState<ColumnType | "All">("All")
+  const [showEntities, setShowEntities] = useState(false)
+  const [entQuery, setEntQuery]         = useState("")
 
   // Search matches the label, the description AND the key — the key is there
   // because someone who knows the data will type `lead_source`, not "Channel
   // where the lead originated".
+  const visibleEntities = ENTITY_SOURCES.filter(e => {
+    if (srcFilter !== "all" && e.integration !== srcFilter) return false
+    const q = entQuery.trim().toLowerCase()
+    return !q || e.label.toLowerCase().includes(q) || e.desc.toLowerCase().includes(q)
+  })
+
   const visibleColumns = (SOURCE_COLUMN_DEFS[sourceId ?? ""] ?? []).filter(c => {
     if (colType !== "All" && c.type !== colType) return false
     const q = colQuery.trim().toLowerCase()
@@ -621,20 +728,23 @@ export default function PMThomasWidgetBuilderScreen() {
                     {/* Filter by the system the entity comes from — with eight
                         sources and more arriving per install, the integration is
                         the axis people scan by. */}
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 10 }}>
-                      <Chip size="s" variant={srcFilter === "all" ? "primary" : "secondary"} onClick={() => setSrcFilter("all")}>Browse all</Chip>
-                      {INTEGRATIONS.map(i => (
-                        <Chip key={i} size="s" variant={srcFilter === i ? "primary" : "secondary"} onClick={() => setSrcFilter(i)}>{i}</Chip>
-                      ))}
-                    </div>
                     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
-                      {ENTITY_SOURCES.filter(src => srcFilter === "all" || src.integration === srcFilter).map(src => (
+                      {FEATURED_ENTITIES.map(src => (
                         <EntitySourceCard key={src.id} source={src} selected={sourceId === src.id} onSelect={() => selectSource(src.id)} />
                       ))}
                     </div>
-                    <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: "10px 0 0" }}>
-                      More entities available — install a model from the Models page to unlock them.
-                    </p>
+                    {/* The four above are the common ones. The rest are behind a
+                        catalogue, the same shape as Choose columns — a grid of
+                        four plus a filter row was the whole list pretending to
+                        be a shortlist. */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 12 }}>
+                      <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>
+                        More entities available — install a model from the Models page to unlock them.
+                      </span>
+                      <Button variant="secondary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
+                        Browse all entities
+                      </Button>
+                    </div>
                   </div>
                 )}
 
@@ -916,6 +1026,53 @@ export default function PMThomasWidgetBuilderScreen() {
           }}
         />
 
+      {/* ── Browse all entities ── */}
+      {/* Same catalogue shape as Choose columns: search, a filter row, a list
+          that explains each item. Picking one selects it and closes — a
+          catalogue's job ends at the choice. */}
+      <ModalDialog
+        isOpen={showEntities}
+        onClose={() => setShowEntities(false)}
+        variant="content"
+        showIcon={false}
+        title="Browse all entities"
+        description="Every entity your workspace can read from today."
+        slotUnstyled
+        slot={
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Input
+              size="sm"
+              placeholder="Search entities…"
+              value={entQuery}
+              onChange={e => setEntQuery(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+              <Chip size="s" variant={srcFilter === "all" ? "primary" : "secondary"} onClick={() => setSrcFilter("all")}>All sources</Chip>
+              {INTEGRATIONS.map(i => (
+                <Chip key={i} size="s" variant={srcFilter === i ? "primary" : "secondary"} onClick={() => setSrcFilter(i)}>{i}</Chip>
+              ))}
+            </div>
+            <div style={{ height: 320, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+              {visibleEntities.length === 0 ? (
+                <EmptyState
+                  compact icon={LucideIcons.SearchX}
+                  title="No entities found"
+                  description="Try a different search term or source."
+                />
+              ) : visibleEntities.map(src => (
+                <EntitySourceCard
+                  key={src.id}
+                  source={src}
+                  selected={sourceId === src.id}
+                  onSelect={() => { selectSource(src.id); setShowEntities(false) }}
+                />
+              ))}
+            </div>
+          </div>
+        }
+        ctaSecondary={{ label: "Close", onClick: () => setShowEntities(false) }}
+      />
+
       {/* ── Columns modal ── */}
       {/* A picker, not a confirmation: variant="content" with slotUnstyled, so
           the list sits directly on the modal instead of inside a grey card.
@@ -954,7 +1111,7 @@ export default function PMThomasWidgetBuilderScreen() {
               </div>
             </div>
 
-            <div style={{ maxHeight: 320, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+            <div style={{ height: 320, overflowY: "auto", display: "flex", flexDirection: "column" }}>
               {visibleColumns.length === 0 ? (
                 <EmptyState
                   compact icon={LucideIcons.SearchX}
