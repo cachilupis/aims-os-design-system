@@ -61,8 +61,6 @@ const PRESET_DATASETS = [
  *  so adding an entity cannot leave the filter row behind. */
 const INTEGRATIONS: string[] = [...new Set(ENTITY_SOURCES.map(s => s.integration))]
 
-const COUNT_FN   = "Count"
-const CALC_FNS   = [COUNT_FN, "Sum", "Average", "Min", "Max"]
 const FILTER_OPS = ["is", "is not", "contains", "is empty", "is not empty", "greater than", "less than"]
 
 /**
@@ -77,8 +75,9 @@ const FILTER_OPS = ["is", "is not", "contains", "is empty", "is not empty", "gre
  * So every column carries four facts: the label a person reads, its `type`
  * (which is also what the type filter sorts on), a sentence saying what it
  * holds, and the `key` the data actually uses — the one you would search for.
- * Thom's prototype established this shape and the Contacts copy; Accounts and
- * Deals follow it.
+ * Every label, type, sentence and key here is read off Thom's prototype rather
+ * than written fresh — the copy is already validated, and two descriptions for
+ * the same field is exactly the drift this table exists to prevent.
  */
 type ColumnType = "Text" | "Number" | "Date"
 type ColumnDef  = { label: string; type: ColumnType; desc: string; key: string }
@@ -98,22 +97,22 @@ const SOURCE_COLUMN_DEFS: Record<string, ColumnDef[]> = {
     { label: "Created At",     type: "Date",   desc: "Date and time the record was created",           key: "created_at" },
   ],
   accounts_salesforce: [
-    { label: "Name",           type: "Text",   desc: "Registered company name",                        key: "name" },
-    { label: "Domain",         type: "Text",   desc: "Primary web domain, used for matching",          key: "domain" },
-    { label: "Industry",       type: "Text",   desc: "Industry classification",                        key: "industry" },
-    { label: "Annual Revenue", type: "Number", desc: "Reported yearly revenue, in USD",                key: "annual_revenue" },
-    { label: "Employees",      type: "Number", desc: "Headcount as last reported",                     key: "employees" },
-    { label: "MRR",            type: "Number", desc: "Monthly recurring revenue from active contracts", key: "mrr" },
-    { label: "Owner",          type: "Text",   desc: "Account executive who owns the relationship",    key: "owner" },
+    { label: "Name",       type: "Text",   desc: "Full name of the record",                        key: "name" },
+    { label: "Industry",   type: "Text",   desc: "Industry vertical of the account",               key: "industry" },
+    { label: "Employees",  type: "Number", desc: "Headcount of the company",                       key: "employees" },
+    { label: "MRR",        type: "Number", desc: "Monthly Recurring Revenue in USD",               key: "mrr" },
+    { label: "Tier",       type: "Text",   desc: "Account or contact tier (Gold, Silver, Bronze)", key: "tier" },
+    { label: "Owner",      type: "Text",   desc: "Team member responsible for this record",        key: "owner" },
+    { label: "Created At", type: "Date",   desc: "Date and time the record was created",           key: "created_at" },
   ],
   deals_salesforce: [
-    { label: "Name",       type: "Text",   desc: "Opportunity name",                                   key: "name" },
-    { label: "Stage",      type: "Text",   desc: "Current pipeline stage",                             key: "stage" },
-    { label: "Amount",     type: "Number", desc: "Deal value, in USD",                                 key: "amount" },
-    { label: "Close Date", type: "Date",   desc: "Expected or actual close date",                      key: "close_date" },
-    { label: "Pipeline",   type: "Text",   desc: "Which pipeline the deal runs in",                    key: "pipeline" },
-    { label: "Account",    type: "Text",   desc: "Account the opportunity belongs to",                 key: "account" },
-    { label: "Owner",      type: "Text",   desc: "Sales rep who owns the deal",                        key: "owner" },
+    { label: "Name",       type: "Text",   desc: "Full name of the record",                 key: "name" },
+    { label: "Stage",      type: "Text",   desc: "Current pipeline stage",                  key: "stage" },
+    { label: "Amount",     type: "Number", desc: "Deal value in USD",                       key: "amount" },
+    { label: "Close Date", type: "Date",   desc: "Expected or actual deal close date",      key: "close_date" },
+    { label: "Owner",      type: "Text",   desc: "Team member responsible for this record", key: "owner" },
+    { label: "Account",    type: "Text",   desc: "Reference to the associated account",     key: "account_id" },
+    { label: "Created At", type: "Date",   desc: "Date and time the record was created",    key: "created_at" },
   ],
 }
 
@@ -437,7 +436,6 @@ export default function PMThomasWidgetBuilderScreen() {
   // Thom's prototype builds a query, not a single metric: several calculations,
   // several groupers, several filters. The old single calcFn/calcColumn pair
   // could express exactly one aggregate with no grouping.
-  const [calcs, setCalcs]           = useState<{ id: string; fn: string; column: string }[]>([])
   const [groupers, setGroupers]     = useState<{ id: string; column: string }[]>([])
   const [dataFilters, setDataFilters] = useState<{ id: string; column: string; op: string; value: string }[]>([])
   const [srcFilter, setSrcFilter]   = useState("all")
@@ -479,10 +477,12 @@ export default function PMThomasWidgetBuilderScreen() {
   // per-row rather than "has a column".
   // Count needs no column; every other function does. Compared against the same
   // constant the picker offers, so the two cannot drift out of case again.
-  const calcsReady = calcs.length > 0 && calcs.every(c => c.fn === COUNT_FN || !!c.column)
+  // Summarize no longer asks WHICH calculation — it counts. Count is the one
+  // aggregation that needs no column, so the step is complete the moment an
+  // entity is chosen, and Group by is what shapes the result from there.
   const dataComplete = dataMode === "dataset"
     ? !!sourceId
-    : !!sourceId && !!opType && (opType === "aggregate" ? calcsReady : recordColumns.length > 0)
+    : !!sourceId && !!opType && (opType === "aggregate" ? true : recordColumns.length > 0)
   // A widget IS its data and its type. The name is not part of that — the
   // preview has been calling an unnamed one "Untitled widget" all along, so the
   // screen already tolerates it, and requiring it only meant Save sat grey
@@ -522,14 +522,12 @@ export default function PMThomasWidgetBuilderScreen() {
   function selectSource(id: string) {
     if (id === sourceId) return
     setSourceId(id)
-    setOpType(null)
-    setCalcs([]); setGroupers([]); setDataFilters([])
+    setOpType(null); setGroupers([]); setDataFilters([])
     setRecordColumns([])
   }
 
   function resetAll() {
-    setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setRecordColumns([])
-    setCalcs([]); setGroupers([]); setDataFilters([]); setSrcFilter("all")
+    setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setRecordColumns([]); setGroupers([]); setDataFilters([]); setSrcFilter("all")
     setTypeId(null); setName(""); setSubtitle(""); setFreshness("15m"); setInteractiveFilters(true)
   }
 
@@ -605,13 +603,13 @@ export default function PMThomasWidgetBuilderScreen() {
                       icon="Database" title="Existing dataset"
                       description="Use a pre-built, governed query as your starting point."
                       selected={dataMode === "dataset"}
-                      onSelect={() => { setDataMode("dataset"); setSourceId(null); setOpType(null); setCalcs([]); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
+                      onSelect={() => { setDataMode("dataset"); setSourceId(null); setOpType(null); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
                     />
                     <OptionCard
                       icon="Boxes" title="Entity"
                       description="Start from a raw entity and configure it from scratch."
                       selected={dataMode === "entity"}
-                      onSelect={() => { setDataMode("entity"); setSourceId(null); setOpType(null); setCalcs([]); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
+                      onSelect={() => { setDataMode("entity"); setSourceId(null); setOpType(null); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
                     />
                   </div>
                 </div>
@@ -706,7 +704,7 @@ export default function PMThomasWidgetBuilderScreen() {
                     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
                       <OptionCard
                         icon="Sigma" title="Summarize"
-                        description="Aggregate values — count, sum, average — and optionally group them."
+                        description="Count the records, and optionally group them."
                         selected={opType === "aggregate"}
                         onSelect={() => { setOpType("aggregate"); setRecordColumns([]) }}
                       />
@@ -714,7 +712,7 @@ export default function PMThomasWidgetBuilderScreen() {
                         icon="Rows3" title="Record set"
                         description="Show raw records — choose which columns to expose."
                         selected={opType === "record_set"}
-                        onSelect={() => { setOpType("record_set"); setCalcs([]); setGroupers([]) }}
+                        onSelect={() => { setOpType("record_set"); setGroupers([]) }}
                       />
                     </div>
                   </div>
@@ -722,60 +720,7 @@ export default function PMThomasWidgetBuilderScreen() {
 
                 {sourceId && dataMode === "entity" && opType === "aggregate" && (
                   <div>
-                    <StepLabel n={5}>Calculations</StepLabel>
-                    {calcs.length === 0 ? (
-                      <EmptyState
-                        compact icon={LucideIcons.Sigma}
-                        title="No calculations yet"
-                        description="Add at least one to continue."
-                        ctaLabel="Add calculation"
-                        onCta={() => setCalcs([{ id: `c-${Date.now()}`, fn: COUNT_FN, column: "" }])}
-                      />
-                    ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {calcs.map(c => (
-                          <div key={c.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                            <div style={{ width: 130, flexShrink: 0 }}>
-                              <OptionPicker
-                                options={CALC_FNS}
-                                value={c.fn}
-                                searchable={false}
-                                placeholder="Function…"
-                                onChange={fn => setCalcs(prev => prev.map(x => x.id === c.id ? { ...x, fn, column: fn === COUNT_FN ? "" : x.column } : x))}
-                              />
-                            </div>
-                            {/* Count needs no column — the prototype hides the
-                                picker rather than showing one that does nothing. */}
-                            {c.fn !== COUNT_FN ? (
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <OptionPicker
-                                  options={SOURCE_COLUMNS[sourceId] ?? []}
-                                  value={c.column}
-                                  placeholder="of column…"
-                                  onChange={col => setCalcs(prev => prev.map(x => x.id === c.id ? { ...x, column: col } : x))}
-                                />
-                              </div>
-                            ) : (
-                              <span style={{ flex: 1, fontSize: 12, color: "var(--color-text-subtitle)" }}>of all records</span>
-                            )}
-                            <Button variant="tertiary" size="sm" aria-label="Remove calculation" onClick={() => setCalcs(prev => prev.filter(x => x.id !== c.id))}>
-                              <LucideIcons.X size={14} />
-                            </Button>
-                          </div>
-                        ))}
-                        <div>
-                          <Button variant="secondary" size="sm" onClick={() => setCalcs(prev => [...prev, { id: `c-${Date.now()}`, fn: COUNT_FN, column: "" }])}>
-                            <LucideIcons.Plus size={14} />Add calculation
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {sourceId && dataMode === "entity" && opType === "aggregate" && (
-                  <div>
-                    <StepLabel n={6}>Group by</StepLabel>
+                    <StepLabel n={5}>Group by</StepLabel>
                     {groupers.length === 0 ? (
                       <EmptyState
                         compact icon={LucideIcons.Group}
@@ -1076,8 +1021,12 @@ export default function PMThomasWidgetBuilderScreen() {
         iconName="BookMarked"
         title="Save to catalog?"
         description={`"${name || "Untitled widget"}" will be added to the widget library and available across all dashboards.`}
-        ctaPrimary={{ label: "Save to catalog", onClick: () => { resetAll(); setShowSaveModal(false) } }}
+        /* Three genuinely different outcomes, which is the only reason a third
+           CTA earns its place: save and stay with the widget, save and start a
+           fresh one, or go back without saving. */
+        ctaPrimary={{ label: "Save to catalog", onClick: () => setShowSaveModal(false) }}
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowSaveModal(false) }}
+        ctaTertiary={{ label: "Create new widget", onClick: () => { resetAll(); setShowSaveModal(false) } }}
       />
     </ScreenLayout>
   )

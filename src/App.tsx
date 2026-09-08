@@ -2090,6 +2090,7 @@ const MODAL_DIALOG_SPEC = {
     { name: "infoCardState", type: "Variant", values: ["informative","alert","error","success","neutral"], default: "from tone",     note: "Overrides tone for the InformativeCard" },
     { name: "ctaPrimary",    type: "object",  values: ["{ label, destructive?, onClick? }"],               default: "undefined" },
     { name: "ctaSecondary",  type: "object",  values: ["{ label, onClick? }"],                             default: "undefined" },
+    { name: "ctaTertiary",   type: "object",  values: ["{ label, onClick? }"],                             default: "undefined" },
     { name: "showClose",     type: "Boolean", values: ["true","false"],                                     default: "true" },
     { name: "embedded",      type: "Boolean", values: ["true","false"],                                     default: "false",         note: "Renders inline without overlay — used in docs previews" },
   ],
