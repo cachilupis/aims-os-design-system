@@ -3794,7 +3794,7 @@ function InviteModal({ onClose, onSend }: {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-            <Button variant="main" size="sm" onClick={submit} >
+            <Button variant="primary" size="sm" onClick={submit} >
               Send {inviteeCount > 1 ? `${inviteeCount} invitations` : "invitation"}
             </Button>
           </div>
@@ -4455,7 +4455,7 @@ function RoleFormModal({ role, onSave, onClose }: {
             }}>
               <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
               <Button
-                variant="main" size="sm"
+                variant="primary" size="sm"
                 onClick={handleSave}
                 disabled={!name.trim()}
               >
@@ -4599,23 +4599,15 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             : mainTab === "roles"  ? `${roles.length} roles · ${roles.filter(r => !r.system).length} custom`
             : `${GROUPS.length} groups · manage shared access across the workspace`
           }
+          // primaryAction takes an action object since #85 — Header picks the
+          // variant itself, which is why no screen writes variant="main" any
+          // more. Same three actions, same handlers.
           primaryAction={
-            mainTab === "members" ? (
-              <Button variant="main" size="sm" onClick={() => setShowInvite(true)}>
-                <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
-                Invite member
-              </Button>
-            ) : mainTab === "roles" ? (
-              <Button variant="primary" size="sm" onClick={() => setRoleForm({ role: null })}>
-                <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
-                New role
-              </Button>
-            ) : (
-              <Button variant="primary" size="sm">
-                <Icons.FolderPlus size={14} style={{ marginRight: 4 }} />
-                New group
-              </Button>
-            )
+            mainTab === "members"
+              ? { label: "Invite member", icon: Icons.UserPlus,  onClick: () => setShowInvite(true) }
+              : mainTab === "roles"
+              ? { label: "New role",      icon: Icons.ShieldPlus, onClick: () => setRoleForm({ role: null }) }
+              : { label: "New group",     icon: Icons.FolderPlus }
           }
         />
       )}
