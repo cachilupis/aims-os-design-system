@@ -3,7 +3,8 @@ const DashboardCanvasScreen = lazy(() => import("./pm-thomas-dashboard-canvas"))
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header, type HeaderAction } from "@/components/ui/header"
-import { WidgetMiniPreview } from "@/components/experimental/widget-parts"
+import { WidgetPreview } from "@/components/experimental/widget-preview"
+import { typeIdForSkeleton, type LibrarySkeleton } from "@/lib/widget-catalog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContainer } from "@/components/ui/card-container"
@@ -25,7 +26,6 @@ type DashStatus  = "published" | "draft" | "pending"
 type EntityKind  = "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
 type Freshness   = "live" | "fresh" | "stale"
 type BizCat      = "all" | "aims-os" | "sales" | "finance" | "customer-service" | "hr" | "marketing"
-type Skeleton    = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel" | "Stat Row" | "Alerts" | "Cost KPI"
 type TabId       = "data" | "widget" | "appearance"
 type OpType      = "aggregate" | "record_set"
 // Widget library types
@@ -33,7 +33,7 @@ type LibHealth   = "active" | "inactive" | "unused" | "review"
 type LibCategory = "AIMS OS" | "Operational" | "Engagement" | "Intelligence"
 type LibProfile  = "All" | "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
 type LibWidget   = {
-  id: string; name: string; source: string; skeleton: Skeleton
+  id: string; name: string; source: string; skeleton: LibrarySkeleton
   category: LibCategory; health: LibHealth; freshness: Freshness
   governed: boolean; system: boolean; usedIn: number
   placement: LibProfile; description: string
@@ -96,7 +96,7 @@ const LIB_WIDGETS: LibWidget[] = [
 ]
 
 const LIB_CATEGORIES: LibCategory[] = ["AIMS OS", "Operational", "Engagement", "Intelligence"]
-const LIB_SKELETONS: Skeleton[]     = ["KPI", "Chart", "Feed", "Gauge", "Donut", "Board", "Funnel", "Stat Row", "Alerts", "Cost KPI"]
+const LIB_SKELETONS: LibrarySkeleton[]     = ["KPI", "Chart", "Feed", "Gauge", "Donut", "Board", "Funnel", "Stat Row", "Alerts", "Cost KPI"]
 const LIB_FRESHNESS: Freshness[]    = ["live", "fresh", "stale"]
 const LIB_PROFILES: LibProfile[]    = ["All", "Company", "Contact", "Employee", "Deal", "Standalone"]
 const LIB_GOVERNED_COUNT            = LIB_WIDGETS.filter(w => w.governed).length
@@ -301,7 +301,7 @@ const SKELETON_COLORS: Record<string, string> = {
   Board:"#EC4899", Funnel:"#F97316", "Stat Row":"#14B8A6", Alerts:"#EF4444", "Cost KPI":"#10B981", // audit-ignore: skeleton palette has no DS token
 }
 
-function WidgetGlyph({ skeleton, source }: { skeleton: Skeleton; source: string }) {
+function WidgetGlyph({ skeleton, source }: { skeleton: LibrarySkeleton; source: string }) {
   const lsrc = source.toLowerCase()
   const SZ = 28
   const circle: React.CSSProperties = { width: SZ, height: SZ, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }
@@ -324,7 +324,7 @@ function WidgetGlyph({ skeleton, source }: { skeleton: Skeleton; source: string 
     )
   }
 
-  // Skeleton-type fallback: 2-char abbrev on skeleton colour
+  // LibrarySkeleton-type fallback: 2-char abbrev on skeleton colour
   const abbr = skeleton.replace(/\s+/g,"").slice(0,2).toUpperCase()
   const bg = SKELETON_COLORS[skeleton] ?? "#6B7280" // audit-ignore: skeleton fallback grey
   return (
@@ -743,7 +743,6 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget, page, onPageChange, o
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(200px,100%), 1fr))", gap: 12 }}>
             {pageWidgets.map(w => {
-              const seed = parseInt(w.id.replace(/\D/g,"")) || 0
               return (
               <div key={w.id} style={{ position: "relative" }}>
                 <CardContainer
@@ -785,7 +784,7 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget, page, onPageChange, o
                   </div>
 
                   {/* Mini preview — real visual */}
-                  <WidgetMiniPreview skeleton={w.skeleton} seed={seed} />
+                  <WidgetPreview typeId={typeIdForSkeleton(w.skeleton)} fallbackHeight={72} clipTo={88} />
 
                   {/* Footer */}
                   <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 8 }}>
@@ -838,11 +837,7 @@ function WidgetLibraryView({ onCreateWidget, onEditWidget, page, onPageChange, o
             </div>
 
             {/* Medium preview */}
-            <WidgetMiniPreview
-              skeleton={detailW.skeleton}
-              seed={parseInt(detailW.id.replace(/\D/g, "")) || 0}
-              height={120}
-            />
+            <WidgetPreview typeId={typeIdForSkeleton(detailW.skeleton)} fallbackHeight={120} />
 
             {/* About */}
             {detailW.description && (

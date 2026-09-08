@@ -8,10 +8,7 @@ import { CardContainer } from "@/components/ui/card-container"
 import { WidgetFather } from "@/components/ui/widget-father"
 import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
-import { WidgetShapePreview, seedFrom } from "@/components/experimental/widget-parts"
-import { WidgetContent } from "@/components/experimental/widget-content"
-import { CandidateWidgetContent, hasCandidateContent } from "@/components/experimental/widget-candidate-content"
-import { ChartModeContent, hasChartMode } from "@/components/experimental/widget-chart-content"
+import { WidgetPreview } from "@/components/experimental/widget-preview"
 import { AUTHORABLE_WIDGETS, AUTHORABLE_BY_CATEGORY, type WidgetCategory } from "@/lib/widget-catalog"
 import { Tag } from "@/components/ui/tag"
 import { Chip } from "@/components/ui/chip"
@@ -300,23 +297,12 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
   const lineage = [typeInfo?.label, srcLabel, entitySrc?.integration].filter(Boolean).join(" · ")
 
   // The body only. WidgetFather draws every piece of chrome around it.
+  // WidgetPreview owns the resolution chain — the same one the Widget Library,
+  // the Marketplace and the Universal Profile now call, so a Donut is the same
+  // Donut in all four.
   const body = !typeInfo
     ? <EmptyState compact icon={LucideIcons.Shapes} title="Nothing to preview yet" description={saveHint} />
-    // Three sources, in order of how specified the type is.
-    : hasChartMode(typeInfo.id)
-      // A chart mode. All twelve share catalogId "charts" and the DS's
-      // ChartsWidgetContent draws exactly one of them, so rendering that would
-      // show a line chart when you picked Pie.
-      ? <ChartModeContent id={typeInfo.id} />
-      : typeInfo.catalogId
-        // A type the DS documents — its REAL component, the same one the catalog
-        // page shows.
-        ? <WidgetContent id={typeInfo.catalogId} />
-        : hasCandidateContent(typeInfo.id)
-          // A candidate: no spec yet, so no catalogued component, but composed
-          // from DS parts so specifying it later is a move not a rewrite.
-          ? <CandidateWidgetContent id={typeInfo.id} />
-          : <WidgetShapePreview shape={typeInfo.shape} height={120} seed={seedFrom(typeInfo.id)} />
+    : <WidgetPreview typeId={typeInfo.id} />
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

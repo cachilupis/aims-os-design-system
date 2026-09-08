@@ -4,7 +4,9 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
 import { Tag } from "@/components/ui/tag"
-import { WidgetGlyph, WidgetFreshnessBadge, WidgetMiniPreview } from "@/components/experimental/widget-parts"
+import { WidgetGlyph, WidgetFreshnessBadge } from "@/components/experimental/widget-parts"
+import { WidgetPreview } from "@/components/experimental/widget-preview"
+import { typeIdForSkeleton, type LibrarySkeleton } from "@/lib/widget-catalog"
 import { CardContainer } from "@/components/ui/card-container"
 import { Filters } from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
@@ -15,7 +17,6 @@ import type { SidebarItem } from "@/components/ui/sidebar"
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type BizCat = "all" | "aims-os" | "sales" | "finance" | "customer-service" | "hr" | "marketing" | "operations"
-type Skeleton = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel" | "Stat Row" | "Alerts" | "Cost KPI"
 type Freshness = "live" | "fresh" | "stale"
 type Complexity = "Simple" | "Intermediate" | "Advanced"
 type SortKey = "usage" | "name" | "type"
@@ -27,7 +28,7 @@ interface MarketplaceWidget {
   id: string
   name: string
   source: string
-  skeleton: Skeleton
+  skeleton: LibrarySkeleton
   freshness: Freshness
   description: string
   businessCategory: Exclude<BizCat, "all">
@@ -115,7 +116,7 @@ function MarketplaceCard({ widget, onView, onUse }: {
           <WidgetFreshnessBadge status={widget.freshness} />
         </div>
         <div style={{ borderRadius: 6, background: "var(--canvas)", border: "1px solid var(--field-border)", overflow: "hidden" }}>
-          <WidgetMiniPreview skeleton={widget.skeleton} />
+          <WidgetPreview typeId={typeIdForSkeleton(widget.skeleton)} fallbackHeight={72} clipTo={88} />
         </div>
         <p style={{
           fontSize: 12, color: "var(--color-text-subtitle)", lineHeight: 1.5, margin: 0,

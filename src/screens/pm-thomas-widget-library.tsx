@@ -5,7 +5,9 @@ import type { SidebarItem } from "@/components/ui/sidebar"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
 import { Tag }           from "@/components/ui/tag"
-import { WidgetGlyph, WidgetFreshnessBadge, WidgetMiniPreview } from "@/components/experimental/widget-parts"
+import { WidgetGlyph, WidgetFreshnessBadge } from "@/components/experimental/widget-parts"
+import { WidgetPreview } from "@/components/experimental/widget-preview"
+import { LIBRARY_SKELETONS, typeIdForSkeleton, type LibrarySkeleton } from "@/lib/widget-catalog"
 import { EmptyState }    from "@/components/ui/empty-state"
 import { CardContainer } from "@/components/ui/card-container"
 import { Filters } from "@/components/ui/filters"
@@ -15,14 +17,13 @@ import { OverflowMenu, StudioWelcome } from "@/components/experimental/widget-sc
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type Skeleton   = "KPI" | "Chart" | "Feed" | "Gauge" | "Donut" | "Board" | "Funnel" | "Stat Row" | "Alerts" | "Cost KPI"
 type Health     = "active" | "review"
 type Freshness  = "live" | "fresh" | "stale"
 type Category   = "AIMS OS" | "Operational" | "Engagement" | "Intelligence"
 type Profile    = "All" | "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
 
 type Widget = {
-  id: string; name: string; source: string; skeleton: Skeleton
+  id: string; name: string; source: string; skeleton: LibrarySkeleton
   category: Category; health: Health; freshness: Freshness
   governed: boolean; system: boolean; usedIn: number
   placement: Profile; description: string
@@ -56,7 +57,6 @@ const WIDGETS: Widget[] = [
 ]
 
 const CATEGORIES: Category[] = ["AIMS OS", "Operational", "Engagement", "Intelligence"]
-const SKELETONS: Skeleton[]   = ["KPI", "Chart", "Feed", "Gauge", "Donut", "Board", "Funnel", "Stat Row", "Alerts", "Cost KPI"]
 const FRESHNESS_OPTIONS: Freshness[] = ["live", "fresh", "stale"]
 const PAGE_SIZE = 18
 
@@ -172,8 +172,8 @@ export default function PMThomasWidgetLibrary() {
           {
             placeholder: "Type",
             value: skeleton === "All" ? undefined : skeleton,
-            options: [...SKELETONS],
-            onSelect: v => { setSkeleton(v as Skeleton); setShown(PAGE_SIZE) },
+            options: [...LIBRARY_SKELETONS],
+            onSelect: v => { setSkeleton(v as LibrarySkeleton); setShown(PAGE_SIZE) },
             onRemove: () => { setSkeleton("All"); setShown(PAGE_SIZE) },
           },
           {
@@ -236,7 +236,7 @@ export default function PMThomasWidgetLibrary() {
                 </div>
 
                 {/* Mini preview */}
-                <WidgetMiniPreview skeleton={w.skeleton} />
+                <WidgetPreview typeId={typeIdForSkeleton(w.skeleton)} fallbackHeight={72} clipTo={88} />
 
                 {/* Footer */}
                 <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 10 }}>

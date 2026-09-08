@@ -132,3 +132,38 @@ export const AUTHORABLE_BY_CATEGORY = WIDGET_CATEGORIES
 export const WIDGET_CANDIDATES = WIDGET_CATALOG.filter(w => w.catalogId === null)
 
 export const widgetType = (id: string) => WIDGET_CATALOG.find(w => w.id === id)
+
+// ── The library's display vocabulary ────────────────────────────────────────
+//
+// The Widget Library and the Marketplace filter by a coarser set of ten names
+// than the builder's twenty-six types — "Chart" covers every chart, and a
+// catalog you browse does not want twelve chart filters. That coarseness is a
+// real product decision, so it stays.
+//
+// What was NOT a decision is that both screens declared the ten names locally,
+// as their own union, with no way back to a catalog id. Two screens, two copies,
+// and neither could render the real widget because it had nothing to look up.
+// They live here now, and each one names the type it stands for.
+
+export const LIBRARY_SKELETONS = [
+  "KPI", "Chart", "Feed", "Gauge", "Donut", "Board", "Funnel", "Stat Row", "Alerts", "Cost KPI",
+] as const
+
+export type LibrarySkeleton = (typeof LIBRARY_SKELETONS)[number]
+
+/** Which catalog type a library skeleton stands for. "Chart" resolves to the
+ *  line chart — the one the DS's own Charts widget draws. */
+const SKELETON_TYPE: Record<LibrarySkeleton, string> = {
+  "KPI":      "kpi",
+  "Chart":    "line",
+  "Feed":     "feed",
+  "Gauge":    "gauge",
+  "Donut":    "donut",
+  "Board":    "board",
+  "Funnel":   "funnel",
+  "Stat Row": "stat-row",
+  "Alerts":   "alerts",
+  "Cost KPI": "cost-kpi",
+}
+
+export const typeIdForSkeleton = (s: LibrarySkeleton): string => SKELETON_TYPE[s]
