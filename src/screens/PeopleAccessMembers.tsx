@@ -1083,12 +1083,7 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{s.device}</span>
                   {s.current && (
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-                      background: "color-mix(in srgb, var(--badge-success) 15%, transparent)",
-                      color: "var(--badge-success)", border: "1px solid color-mix(in srgb, var(--badge-success) 30%, transparent)",
-                      textTransform: "uppercase", letterSpacing: "0.04em",
-                    }}>Current</span>
+                    <Tag variant="success" size="sm">Current</Tag>
                   )}
                 </div>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
@@ -1340,20 +1335,14 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
       <div style={{
         display: "flex", alignItems: "center", gap: 14, marginTop: 16, marginBottom: 24,
         padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
-        background: "var(--surface)", borderLeft: `4px solid ${role.color}`,
+        background: "var(--surface)",
       }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-              background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-              color: role.system ? "var(--muted-foreground)" : role.color,
-              border: `1px solid ${role.system ? "var(--border)" : role.color + "55"}`,
-              textTransform: "uppercase", letterSpacing: "0.06em",
-            }}>
+            <Tag variant={role.system ? "neutral" : "purple"} size="sm">
               {role.system ? "System" : "Custom"}
-            </span>
+            </Tag>
           </div>
           <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{role.desc}</p>
         </div>
@@ -1499,7 +1488,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
       <div style={{
         display: "flex", alignItems: "center", gap: 16, marginTop: 16, marginBottom: 24,
         padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
-        background: "var(--surface)", borderLeft: `4px solid ${group.color}`,
+        background: "var(--surface)",
       }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
@@ -1719,23 +1708,14 @@ function MemberRow({ member, onSelect }: { member: Member; onSelect: (m: Member)
       </div>
 
       {/* MFA badge */}
-      <div
-        title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
-        style={{
-          display: "flex", alignItems: "center", gap: 4,
-          padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 600, flexShrink: 0,
-          background: member.mfaEnabled
-            ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-            : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-          color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-          border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-        }}
+      <Tag
+        variant={member.mfaEnabled ? "success" : "alert"}
+        size="sm"
+        className="shrink-0"
+        leadingIcon={member.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
       >
-        {member.mfaEnabled
-          ? <Icons.ShieldCheck size={11} />
-          : <Icons.ShieldAlert size={11} />}
         MFA
-      </div>
+      </Tag>
 
       <Tag variant={STATUS_TAG[member.status]} size="sm" className="shrink-0">{STATUS_LABEL[member.status]}</Tag>
 
@@ -1755,19 +1735,12 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
 
   return (
     <CardContainer size="sm" className="!p-0 overflow-hidden" onClick={() => onSelect(role)}>
-      <div style={{ height: 5, background: role.color }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-            color: role.system ? "var(--muted-foreground)" : role.color,
-            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
-            textTransform: "uppercase", letterSpacing: "0.06em",
-          }}>
+          <Tag variant={role.system ? "neutral" : "purple"} size="sm">
             {role.system ? "System" : "Custom"}
-          </span>
+          </Tag>
         </div>
         <p style={{
           fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.45, margin: "0 0 14px",
@@ -1824,7 +1797,6 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
 
   return (
     <CardContainer size="sm" className="!p-0 overflow-hidden" onClick={() => onSelect(group)}>
-      <div style={{ height: 5, background: group.color }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
         <p style={{
@@ -2400,17 +2372,15 @@ function MemberPreview({
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
-            background: isActive ? member.avatarColor : "var(--muted)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 17, fontWeight: 700,
-            color: isActive ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-            opacity: member.status === "suspended" ? 0.55 : 1,
-          }}>
-            {member.initials}
+          <div style={{ flexShrink: 0, opacity: member.status === "suspended" ? 0.55 : 1 }}>
+            <AvatarCircle
+              name={member.name}
+              initials={member.initials}
+              sizeKey="xxl"
+              avatarStyle={isActive ? "text" : "empty"}
+            />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 2 }}>{member.name}</div>
@@ -2541,19 +2511,12 @@ function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ height: 4, background: role.color }} />
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-            color: role.system ? "var(--muted-foreground)" : role.color,
-            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
-            textTransform: "uppercase", letterSpacing: "0.06em",
-          }}>
+          <Tag variant={role.system ? "neutral" : "purple"} size="sm">
             {role.system ? "System" : "Custom"}
-          </span>
+          </Tag>
         </div>
         <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, margin: "0 0 12px" }}>{role.desc}</p>
         <Button variant="secondary" size="sm" onClick={onViewFull}><Icons.ExternalLink size={12} />
@@ -2561,7 +2524,7 @@ function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void 
       </div>
 
       {/* Permission stats */}
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
           Permissions · <span style={{ color: "var(--primary)" }}>{perms.total}</span> total
         </div>
@@ -2586,7 +2549,7 @@ function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void 
       </div>
 
       {/* Members */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
           Members · {members.length}
         </div>
@@ -2619,8 +2582,7 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ height: 4, background: group.color }} />
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
         <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, margin: "0 0 10px" }}>{group.desc}</p>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
@@ -2643,7 +2605,7 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
       </div>
 
       {/* Members */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
           Members · {members.length}
         </div>
@@ -3088,7 +3050,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
                 {/* Preview */}
                 <div style={{
                   padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)",
-                  background: "var(--surface-raised)", borderLeft: `4px solid ${createColor}`,
+                  background: "var(--surface-raised)",
                   display: "flex", alignItems: "center", gap: 10,
                 }}>
                   <div>
@@ -3099,12 +3061,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
                       <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{createDesc.trim()}</div>
                     )}
                   </div>
-                  <span style={{
-                    marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-                    background: `${createColor}22`, color: createColor,
-                    border: `1px solid ${createColor}55`,
-                    textTransform: "uppercase" as const, letterSpacing: "0.06em", flexShrink: 0,
-                  }}>Custom</span>
+                  <Tag variant="purple" size="sm" className="ml-auto shrink-0">Custom</Tag>
                 </div>
               </div>
             }
