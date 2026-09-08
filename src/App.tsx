@@ -31111,27 +31111,6 @@ const oktaProv = (syncedAgo: string): FieldProvenance => ({ system: "Okta", syst
 const sfProv = (syncedAgo: string): FieldProvenance => ({ system: "Salesforce", systemAbbr: "SF", modelVersion: "Account v1.8", syncedAgo })
 const nsProv = (syncedAgo: string): FieldProvenance => ({ system: "NetSuite", systemAbbr: "NS", modelVersion: "Customer v4.0", syncedAgo })
 const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba", systemAbbr: "AR", modelVersion: "Supplier v1.2", syncedAgo })
-// Epic (EHR) — the healthcare-vertical proof example (Block 3, this pass).
-// Deliberately a DIFFERENT source system + model name than UEP/UCP/UVP: if
-// this still renders through the exact same component with zero changes to
-// entity-header.tsx, that's the agnosticism claim demonstrated, not asserted.
-const epicProv = (syncedAgo: string): FieldProvenance => ({ system: "Epic", systemAbbr: "EP", modelVersion: "Chart v4.1", syncedAgo })
-// Insurance vertical (this correction pass) — a claim genuinely spans 2
-// systems of record at once: the claims core (Guidewire) and the policy
-// admin system (Duck Creek). Modeling both, on the SAME record, is the
-// multi-source provenance proof this pass asks for — not just "a new
-// vertical" but "a vertical where Data Provenance has to hold up across
-// more than one source."
-const gwProv = (syncedAgo: string): FieldProvenance => ({ system: "Guidewire", systemAbbr: "GW", modelVersion: "ClaimsCenter v9.0", syncedAgo })
-const dcProv = (syncedAgo: string): FieldProvenance => ({ system: "Duck Creek", systemAbbr: "DC", modelVersion: "Policy v7.2", syncedAgo })
-// Banking vertical (this correction pass) — 3 systems on one borrower: the
-// credit bureau (Experian), the loan origination system (nCino), and core
-// banking (FIS). This is the audit-trail case the brief calls for: every
-// figure a risk exception decision leans on has to be traceable back to
-// which system actually produced it.
-const experianProv = (syncedAgo: string): FieldProvenance => ({ system: "Experian", systemAbbr: "EXP", modelVersion: "Credit v5.0", syncedAgo })
-const ncinoProv = (syncedAgo: string): FieldProvenance => ({ system: "nCino", systemAbbr: "NC", modelVersion: "LOS v3.4", syncedAgo })
-const fisProv = (syncedAgo: string): FieldProvenance => ({ system: "FIS", systemAbbr: "FIS", modelVersion: "Core v2.1", syncedAgo })
 // Automotive vertical (this correction pass) — AIMS OS's own central
 // vertical, per the brief ("raíces en plataformas automotrices, clientes
 // reales del sector"). A repair order draws from the dealer's DMS (CDK
@@ -31143,21 +31122,28 @@ const carfaxProv = (syncedAgo: string): FieldProvenance => ({ system: "Carfax", 
 const oemProv = (syncedAgo: string): FieldProvenance => ({ system: "OEM Warranty Portal", systemAbbr: "OEM", modelVersion: "Warranty v2.0", syncedAgo })
 
 // This demo page's own scope note (not a component doc — EntityHeader
-// itself never enumerates entity types): UEP/UCP/UVP are the 3 native
-// Work Surfaces entity shapes this card actually ships for. Patient,
-// Claim, Borrower, and Repair Order exist ONLY to prove agnosticism across
-// genuinely different verticals — all 4 chosen for the same profile AIMS
-// OS actually targets: entity + workflow + human intervention + governed
-// multi-source data (healthcare, insurance, banking, and automotive,
-// AIMS OS's own central vertical) — they are demonstration examples, not
-// additional native types, which is why the Playground groups them
-// separately (see the "Work Surfaces" vs. "Other Markets" CtrlGroups).
+// itself never enumerates entity types): the five examples are the ones
+// Figma validates, and they are chosen to demonstrate agnosticism rather
+// than assert it. An entity type only reads once you see its SOURCE beside
+// it — Employee·Workday, Customer·Salesforce, Repair Order·DMS,
+// Vendor·NetSuite, platform entity·Helix Data Studio — which is why every
+// example carries that pairing and why the three invented verticals that
+// used to sit here (a patient, a policyholder, a loan applicant) were
+// removed: they named a type with no system beside it, so they proved
+// nothing.
 // `RhDemoKey` is this DEMO PAGE's own bookkeeping key (App.tsx's problem),
 // not a prop the component reads — EntityHeader only ever sees `name` +
 // `entityType` + `recordFields`, built from these mocks below.
+// The five examples Figma validates, and only those. An earlier pass added
+// three more — a patient, a policyholder and a loan applicant — to argue the
+// component was market-agnostic. They were invented here, they exist nowhere
+// in the Figma file, and they did not make the argument: `Borrower` on its
+// own says neither which industry nor which kind of record, because an entity
+// type only reads once you see its SOURCE beside it. The five below carry
+// that pairing, which is what actually demonstrates agnosticism.
 type RhDemoKey =
   // People — an avatar, from a photo or initials
-  | "uep" | "patient" | "claim" | "borrower"
+  | "uep"
   // Companies and sites — an avatar, from a brand
   | "ucp" | "uvp"
   // Processes, assets and data — a highlight icon, because there is no face
@@ -31179,9 +31165,6 @@ const RH_VISUAL: Record<RhDemoKey, EntityVisual> = {
   uep:         { kind: "avatar" },
   ucp:         { kind: "avatar" },
   uvp:         { kind: "avatar" },
-  patient:     { kind: "avatar" },
-  claim:       { kind: "avatar" },
-  borrower:    { kind: "avatar" },
   // A repair order is a PROCESS, not a person. Figma's own example, and the
   // reason the icon path exists: RO-48291 has no initials, so an avatar was
   // never available to it.
@@ -31199,11 +31182,13 @@ const RH_STATE_BADGE: Record<RhDemoKey, EntityStateBadge> = {
   // Was the old `statusTag` ("On Leave · Returns Mar 15", neutral, on the
   // left). Figma puts it on the right and colours it `informative`.
   uep:         { label: "On leave",       variant: "informative" },
-  ucp:         { label: "Under review",   variant: "informative" },
-  uvp:         { label: "Active",         variant: "success"     },
-  patient:     { label: "Under review",   variant: "informative" },
-  claim:       { label: "Under review",   variant: "informative" },
-  borrower:    { label: "Active",         variant: "success"     },
+  // NOTE: Figma writes `On leave` on BOTH of these — on a customer account
+  // and on a supplier. It is almost certainly the component's default value
+  // left unchanged when the instance was duplicated, the same class of slip
+  // as the `SC` avatar on Kestrel Dynamics. Taken verbatim because the brief
+  // was to take Figma's states exactly; flagged for Michael to confirm.
+  ucp:         { label: "On leave",       variant: "informative" },
+  uvp:         { label: "On leave",       variant: "informative" },
   repairOrder: { label: "Awaiting parts", variant: "informative" },
 }
 
@@ -31225,24 +31210,22 @@ const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
     { role: "signal",         label: "Access review",       tone: "alert" },
     { role: "classification", label: "Employee"                           },
   ],
+  // `Renews in 52d` is a SIGNAL and it stays NEUTRAL — Figma's own example,
+  // and the clearest reading of the colour rule: the test is not the tag's
+  // role, it is whether someone has to do something about it. Fifty-two days
+  // out, nobody does.
   ucp: [
-    { role: "signal",         label: "Renewal at risk",     tone: "alert" },
+    { role: "signal",         label: "Renews in 52d"                      },
     { role: "classification", label: "Customer"                           },
   ],
+  // Figma's long-tag example. The vocabulary is configured per entity in
+  // Helix Data Studio, so a tag can exceed the two-word guideline — it
+  // truncates inside the chip and the full text lives in the tooltip. The
+  // guideline is for whoever configures it, not something the component can
+  // enforce.
   uvp: [
-    { role: "signal",         label: "Renews in 52d"                      },
+    { role: "signal",         label: "Pending compliance recertification" },
     { role: "classification", label: "Vendor"                             },
-  ],
-  patient: [
-    { role: "signal",         label: "Lab result pending",  tone: "alert" },
-    { role: "classification", label: "Patient"                            },
-  ],
-  claim: [
-    { role: "signal",         label: "Claim denied",        tone: "error" },
-    { role: "classification", label: "Policyholder"                       },
-  ],
-  borrower: [
-    { role: "classification", label: "Borrower"                           },
   ],
   // No classification tag, same as dataEntity: the wrench already names the
   // type. `Service customer` used to sit here, left over from when this case
@@ -31280,7 +31263,7 @@ const RH_UEP = {
 // pass — renamed from the generic placeholder "Acme Corp" to a more
 // realistic-sounding customer name.
 const RH_UCP = {
-  name: "Kestrel Systems", segment: "Enterprise", tier: "Tier 1", accountType: "Direct",
+  name: "Kestrel Dynamics", segment: "Enterprise", tier: "Tier 1", accountType: "Direct",
   owner:       { label: "Owner",        icon: LucideIcons.User,          value: "Jamie Rivera", state: "hydrated", provenance: sfProv("30m ago") } satisfies RecordField,
   renewalDate: { label: "Renewal Date", icon: LucideIcons.CalendarClock, value: "Sep 2, 2026",  state: "hydrated", provenance: sfProv("30m ago"), hasDestination: false } satisfies RecordField,
   arr:         { label: "ARR",          icon: LucideIcons.DollarSign,    value: "$220,800",     state: "hydrated", provenance: nsProv("6h ago"), hasDestination: false } satisfies RecordField,
@@ -31288,54 +31271,10 @@ const RH_UCP = {
 
 // UVP (Vendor) — EXAMPLE data, not confirmed AIMS OS content.
 const RH_UVP = {
-  name: "Meridian Logistics", vendorType: "Logistics", contractStatus: "Active", category: "Strategic",
+  name: "Meridian Supplies", vendorType: "Logistics", contractStatus: "Active", category: "Strategic",
   procurementOwner: { label: "Procurement Owner", icon: LucideIcons.User,         value: "Alex Torres",   state: "hydrated", provenance: aribaProv("4h ago") } satisfies RecordField,
   contractEndDate:  { label: "Contract End",      icon: LucideIcons.CalendarDays, value: "Dec 31, 2026",  state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false } satisfies RecordField,
   spendYtd:         { label: "Spend YTD",         icon: LucideIcons.DollarSign,   value: "$1.2M",         state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false } satisfies RecordField,
-}
-
-// Patient (Healthcare) — Block 3 agnosticism proof, EXAMPLE data, not
-// confirmed AIMS OS content. Physician/Insurance are governed facts with a
-// destination (Data Provenance); Blood Type/Admission Date are plain
-// descriptive facts, same "hasDestination: false" rule as any other
-// vertical — nothing about that rule is HR-specific either.
-const RH_PATIENT = {
-  name: "Elena Vasquez", room: "4B-112", careTeam: "Internal Medicine",
-  primaryPhysician: { label: "Primary Physician", icon: LucideIcons.Stethoscope, value: "Dr. Amara Osei", state: "hydrated", provenance: epicProv("20m ago") } satisfies RecordField,
-  insurancePlan:    { label: "Insurance Plan",     icon: LucideIcons.ShieldCheck, value: "BlueCross PPO",  state: "hydrated", provenance: epicProv("1h ago") } satisfies RecordField,
-  bloodType:        { label: "Blood Type",         icon: LucideIcons.Droplet,    value: "O+",             state: "hydrated", provenance: epicProv("6h ago"), hasDestination: false } satisfies RecordField,
-  admissionDate:    { label: "Admission Date",     icon: LucideIcons.CalendarClock, value: "Aug 14, 2026", state: "hydrated", provenance: epicProv("6h ago"), hasDestination: false } satisfies RecordField,
-}
-
-// Policyholder (Insurance) — second agnosticism proof example, EXAMPLE
-// data, not confirmed AIMS OS content. CONTACT rule (this correction
-// pass) — the entity is the PERSON who holds the policy, never the claim
-// itself. Record fields describe the policyholder's own standing
-// relationship with the carrier (policy, coverage, agent, claims
-// history), never the currently-active claim's own transient facts
-// (those — adjuster, payout amount, date of loss — now live on the
-// Claims Adjudication workflow, see RH_WORKFLOWS.claim /
-// RH_INTERVENTIONS.claim). Still 2 distinct source systems on one
-// record: Duck Creek (policy admin) and Guidewire (claims core, for the
-// person's claims HISTORY, not their one open claim).
-const RH_CLAIM = {
-  name: "Diane Ostrowski", policyType: "Auto — Comprehensive",
-  policyNumber:   { label: "Policy Number",   icon: LucideIcons.FileText,      value: "POL-77-4821",                   state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
-  insuranceAgent: { label: "Insurance Agent", icon: LucideIcons.User,          value: "Marcus Feldman",                state: "hydrated", provenance: dcProv("1h ago") } satisfies RecordField,
-  coverageType:   { label: "Coverage Type",   icon: LucideIcons.ShieldCheck,   value: "Comprehensive",                 state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
-  claimsHistory:  { label: "Claims History",  icon: LucideIcons.History,       value: "1 claim in the past 12 months", state: "hydrated", provenance: gwProv("25m ago"), hasDestination: false } satisfies RecordField,
-}
-
-// Borrower / Account (Banking) — third agnosticism proof example, EXAMPLE
-// data, not confirmed AIMS OS content. 3 distinct source systems on one
-// record: Experian (credit bureau), nCino (loan origination), FIS (core
-// banking) — the audit-trail case the brief calls for explicitly.
-const RH_BORROWER = {
-  name: "Jordan Ellis", accountType: "Personal Loan Applicant",
-  creditScore:     { label: "Credit Score",      icon: LucideIcons.Gauge,      value: "712",      state: "hydrated", provenance: experianProv("1d ago"), hasDestination: false } satisfies RecordField,
-  loanOfficer:     { label: "Loan Officer",      icon: LucideIcons.User,       value: "Morgan Blake", state: "hydrated", provenance: ncinoProv("2h ago") } satisfies RecordField,
-  accountNumber:   { label: "Account Number",    icon: LucideIcons.CreditCard, value: "····4821", state: "hydrated", provenance: fisProv("30m ago"), hasDestination: false } satisfies RecordField,
-  requestedAmount: { label: "Requested Amount",  icon: LucideIcons.DollarSign, value: "$45,000",  state: "hydrated", provenance: ncinoProv("2h ago"), hasDestination: false } satisfies RecordField,
 }
 
 // Repair order (Automotive) — Figma's own process-entity example, EXAMPLE
@@ -31383,9 +31322,6 @@ const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
   uep: [RH_UEP.manager, RH_UEP.accessRole, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate],
   ucp: [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr],
   uvp: [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd],
-  patient: [RH_PATIENT.primaryPhysician, RH_PATIENT.insurancePlan, RH_PATIENT.bloodType, RH_PATIENT.admissionDate],
-  claim: [RH_CLAIM.policyNumber, RH_CLAIM.insuranceAgent, RH_CLAIM.coverageType, RH_CLAIM.claimsHistory],
-  borrower: [RH_BORROWER.creditScore, RH_BORROWER.loanOfficer, RH_BORROWER.accountNumber, RH_BORROWER.requestedAmount],
   repairOrder: [RH_REPAIR_ORDER.serviceAdvisor, RH_REPAIR_ORDER.vehicleField, RH_REPAIR_ORDER.warrantyStatus, RH_REPAIR_ORDER.lastServiceDate],
 }
 
@@ -31401,9 +31337,6 @@ const RH_SOURCE: Record<RhDemoKey, string> = {
   uep:         "Workday",
   ucp:         "Salesforce",
   uvp:         "NetSuite",
-  patient:     "Epic",
-  claim:       "Guidewire",
-  borrower:    "nCino",
   repairOrder: "DMS",
 }
 
@@ -31415,53 +31348,32 @@ const RH_SOURCE: Record<RhDemoKey, string> = {
 // access role, and tenure. Nothing here is true of every entity of the same
 // type — that would be a label, not information.
 const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
+  // Option B: only the values Figma actually fills in. Its instances carry a
+  // mix of real data and unreplaced template placeholders — `{User-Name}`,
+  // `{Owner-Name}`, `70%`, `4 mins`, a bare `2` — repeated identically across
+  // five different entities. Those come from hidden slots inherited from
+  // Entity List and are not a source of truth, so they are dropped rather
+  // than copied. Rows of two or three are correct: the rule says aim for
+  // four, not fill six.
   dataEntity: [
-    { icon: LucideIcons.Table,          text: "38 tables", tooltip: "Normalized tables · 38 tables feeding this entity." },
-    { icon: LucideIcons.CircleCheckBig, text: "12 facts",  tooltip: "Truth Plane facts · 12 attested facts derived from this entity." },
-    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 ingestion workflows currently running." },
+    { icon: LucideIcons.Table,          text: "38 tables",   tooltip: "Normalized tables · 38 tables feeding this entity." },
+    { icon: LucideIcons.TriangleAlert,  text: "3 failures",  tooltip: "Sync failures · 3 failed ingestion runs in the last 24 hours." },
   ],
   uep: [
-    { icon: LucideIcons.CircleCheckBig, text: "9 facts",   tooltip: "Truth Plane facts · 9 attested facts on this record." },
-    { icon: LucideIcons.FileText,       text: "3 docs",    tooltip: "Canon Plane documents · 3 long-form references. Counted separately from facts: TR outranks CR." },
-    { icon: LucideIcons.Workflow,       text: "3 open",    tooltip: "Open workflows · 3 agentic workflows currently touching this record." },
-    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent when Council confidence drops below 0.65." },
-    { icon: LucideIcons.ShieldCheck,    text: "Admin",     tooltip: "Access role · Admin. Granted through Okta, last reviewed Mar 2026." },
+    { icon: LucideIcons.CircleCheckBig, text: "9 facts",     tooltip: "Truth Plane facts · 9 attested facts on this record." },
+    { icon: LucideIcons.Workflow,       text: "3 open",      tooltip: "Open workflows · 3 agentic workflows currently touching this record." },
   ],
   ucp: [
-    { icon: LucideIcons.CircleCheckBig, text: "14 facts",  tooltip: "Truth Plane facts · 14 attested facts on this account." },
-    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 agentic workflows currently touching this account." },
-    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Handling this account since Mar 3." },
-    { icon: LucideIcons.CalendarClock,  text: "Since 2021", tooltip: "Customer since · March 2021." },
+    { icon: LucideIcons.FileText,       text: "12 documents", tooltip: "Canon Plane documents · 12 contracts and amendments on file. Counted separately from facts: TR outranks CR." },
+    { icon: LucideIcons.Workflow,       text: "4 open",      tooltip: "Open workflows · 4 agentic workflows currently touching this account." },
   ],
   uvp: [
-    { icon: LucideIcons.CircleCheckBig, text: "6 facts",   tooltip: "Truth Plane facts · 6 attested facts on this supplier." },
-    { icon: LucideIcons.FileText,       text: "5 docs",    tooltip: "Canon Plane documents · 5 contracts and policies on file." },
-    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 agentic workflow currently touching this supplier." },
-    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Owns procurement escalations for this supplier." },
-  ],
-  patient: [
-    { icon: LucideIcons.CircleCheckBig, text: "22 facts",  tooltip: "Truth Plane facts · 22 attested facts on this chart." },
-    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 agentic workflows currently touching this chart." },
-    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent for anything clinical." },
-    { icon: LucideIcons.ShieldCheck,    text: "Restricted", tooltip: "Access role · Restricted. PHI fields resolve per viewer entitlement at display time." },
-  ],
-  claim: [
-    { icon: LucideIcons.CircleCheckBig, text: "11 facts",  tooltip: "Truth Plane facts · 11 attested facts on this policyholder." },
-    { icon: LucideIcons.FileText,       text: "8 docs",    tooltip: "Canon Plane documents · 8 policy documents and endorsements on file." },
-    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 claim workflow currently touching this policyholder." },
-    { icon: LucideIcons.CalendarClock,  text: "Since 2019", tooltip: "Policyholder since · June 2019." },
-  ],
-  borrower: [
-    { icon: LucideIcons.CircleCheckBig, text: "7 facts",   tooltip: "Truth Plane facts · 7 attested facts on this applicant." },
-    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 credit application currently in progress." },
-    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Credit decisions route to the Council." },
-    { icon: LucideIcons.Link2,          text: "BR-4471",   tooltip: "Bridge ID · BR-4471. The immutable link between this record's Truth facts and their source documents." },
+    { icon: LucideIcons.FileText,       text: "9 documents", tooltip: "Canon Plane documents · 9 contracts and policies on file." },
+    { icon: LucideIcons.Workflow,       text: "2 open",      tooltip: "Open workflows · 2 agentic workflows currently touching this supplier." },
   ],
   repairOrder: [
-    { icon: LucideIcons.CircleCheckBig, text: "5 facts",   tooltip: "Truth Plane facts · 5 attested facts on this repair order." },
-    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 parts-procurement workflow currently touching this order." },
-    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent on warranty disputes." },
-    { icon: LucideIcons.DollarSign,     text: "$4,180",   tooltip: "Authorized amount · $4,180, insurance-approved. Figma's own value for this example." },
+    { icon: LucideIcons.DollarSign,     text: "$4,180",      tooltip: "Authorized amount · $4,180, insurance-approved." },
+    { icon: LucideIcons.Wrench,         text: "7 parts",     tooltip: "Parts on this order · 7, of which 3 are on backorder from the manufacturer." },
   ],
 }
 
@@ -31475,11 +31387,8 @@ const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
 const RH_PREVIEW_DESCRIPTION: Record<RhDemoKey, string> = {
   dataEntity:  "Normalized customer entity, resolved from CRM, DMS and the enrichment provider.",
   uep:         "Decision maker for infrastructure purchases across all sites.",
-  ucp:         "Multi-site financial services account, contracted at the parent level.",
+  ucp:         "Five sites across the Midwest, contracted under a single master agreement.",
   uvp:         "Sole supplier for direct materials on the Midwest assembly lines.",
-  patient:     "Long-term cardiology patient, managed jointly with an outside specialist.",
-  claim:       "Commercial policyholder covering a fleet of 40 vehicles.",
-  borrower:    "First-time commercial borrower, no prior facility with the bank.",
   // The one case Figma says JUSTIFIES a description: the title is an opaque
   // code. "RO-48291" alone means nothing, so the description says what the
   // record concerns. Copy is Figma's own.
@@ -31503,7 +31412,7 @@ const RH_PREVIEW_MENU_ACTIONS: EntityHeaderAction[] = [
 const RH_NAME: Record<RhDemoKey, string> = {
   dataEntity: "Customer Master",
   uep: RH_UEP.name, ucp: RH_UCP.name, uvp: RH_UVP.name,
-  patient: RH_PATIENT.name, claim: RH_CLAIM.name, borrower: RH_BORROWER.name, repairOrder: RH_REPAIR_ORDER.name,
+  repairOrder: RH_REPAIR_ORDER.name,
 }
 
 // Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
@@ -31534,9 +31443,6 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
   uep: { id: "agent-assistant-uep", name: "AI Assistant" },
   ucp: { id: "agent-assistant-ucp", name: "AI Assistant" },
   uvp: { id: "agent-assistant-uvp", name: "AI Assistant" },
-  patient: { id: "agent-assistant-patient", name: "AI Assistant" },
-  claim: { id: "agent-assistant-claim", name: "AI Assistant" },
-  borrower: { id: "agent-assistant-borrower", name: "AI Assistant" },
   repairOrder: { id: "agent-assistant-repairOrder", name: "AI Assistant" },
 }
 
@@ -31691,7 +31597,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       id: "ucp-nba-1", title: "Assign a proactive check-in call to the agent",
       description: "Usage dipped 12% this month with no support tickets filed — the agent can place a check-in call before renewal season to catch friction early.",
       assignedTo: "Renewal Copilot", assignedToKind: "agent", dueDate: "Aug 25, 2026", status: "Not started",
-      task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Kestrel Systems", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season.", outcome: "immediate" },
+      task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Kestrel Dynamics", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season.", outcome: "immediate" },
       dynamicInputs: [
         { label: "Call date & time", kind: "text", placeholder: "e.g. Thu, Aug 28 at 10am" },
         { label: "Notes for the agent", kind: "text", placeholder: "e.g. Also mention the upcoming product launch" },
@@ -31712,39 +31618,6 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       ],
       contextTag: "Coverage",
       timeAgo: "6h ago",
-    },
-  ],
-  patient: [
-    {
-      id: "patient-nba-1", title: "Schedule a follow-up coagulation panel",
-      description: "Given the flagged Warfarin/Aspirin interaction, a follow-up panel within 48 hours is recommended before discharge.",
-      assignedTo: "Care Coordinator AI", assignedToKind: "agent", dueDate: "Aug 16, 2026", status: "In progress",
-      task: { kind: "call", contactName: "Inpatient Lab Services", contactRole: "4B-112 · Internal Medicine", suggestedNote: "Schedule a follow-up coagulation panel for Elena Vasquez within 48 hours, per the flagged Warfarin/Aspirin interaction — before the next dose if possible.", outcome: "immediate" },
-      dynamicInputs: [{ label: "Priority", kind: "select", placeholder: "Select a priority", options: ["Routine", "Urgent", "STAT"] }],
-      contextTag: "Clinical",
-      timeAgo: "30m ago",
-    },
-  ],
-  claim: [
-    {
-      id: "claim-nba-1", title: "Request the missing parts invoice now",
-      description: "Closing this documentation gap early could shave 3-5 days off the payout timeline once supervisor sign-off clears.",
-      assignedTo: "Claims Copilot AI", assignedToKind: "agent", dueDate: "Aug 6, 2026", status: "Not started",
-      task: { kind: "email", subject: "Missing parts invoice — Claim CLM-48821", bodyPreview: "Hi team,\n\nWe're finishing adjudication on Claim CLM-48821 and the itemized parts-sourcing breakdown from your last estimate is still missing. Could you send that over so we can close out the payout?\n\nThanks,", outcome: "governed" },
-      dynamicInputs: [{ label: "Follow-up reminder", kind: "date", placeholder: "If no response by this date" }],
-      contextTag: "Claims",
-      timeAgo: "2d ago",
-    },
-  ],
-  borrower: [
-    {
-      id: "borrower-nba-1", title: "Assign a co-signer conversation to the agent",
-      description: "Applicants with a similar debt-to-income profile who added a co-signer saw approval odds increase by roughly 30% — the agent can raise it with Jordan directly.",
-      assignedTo: "Underwriting Copilot", assignedToKind: "agent", dueDate: "Aug 14, 2026", status: "Not started",
-      task: { kind: "call", contactName: "Jordan Ellis", contactRole: "Personal Loan Applicant", suggestedNote: "DTI is above the automated approval line — applicants with a similar profile who added a co-signer saw approval odds increase by roughly 30%. Worth raising as an option before the underwriter review.", outcome: "immediate" },
-      dynamicInputs: [{ label: "Best time to reach", kind: "select", placeholder: "Select a time of day", options: ["Morning", "Afternoon", "Evening"] }],
-      contextTag: "Credit",
-      timeAgo: "3h ago",
     },
   ],
   repairOrder: [
@@ -32331,9 +32204,6 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               onChange={setPvKey}
               options={[
                 { value: "uep", label: "Employee" },
-                { value: "patient", label: "Patient" },
-                { value: "claim", label: "Policyholder" },
-                { value: "borrower", label: "Borrower" },
               ]}
             />
             <CtrlGroup<RhDemoKey>
@@ -32496,8 +32366,10 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer (example)</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer · a signal that stays neutral</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Figma&rsquo;s own customer example, and the clearest reading of the colour rule: <code>Renews in 52d</code> is a <strong>signal</strong> and it is still <strong>neutral</strong>, because the test for a left tag is not its role — it is whether someone has to do something about it. Fifty-two days out, nobody does. Colour it alert and a healthy header starts shouting; do that six times and colour stops meaning anything.
+            </p>
             <EntityHeader name={RH_UCP.name} visual={RH_VISUAL.ucp} tags={RH_TAGS.ucp} stateBadge={RH_STATE_BADGE.ucp}
               source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={RH_RECORD_FIELDS.ucp}
               assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
@@ -32506,51 +32378,15 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor · a signal that stays neutral</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor · and Figma&rsquo;s long-tag edge case</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. This is the case for the colour rule: <code>Renews in 52d</code> is a <strong>signal</strong> and it is still <strong>neutral</strong>, because the test for a left tag is not its role — it is whether someone has to do something about it. Fifty-two days out, nobody does. Colour it alert and a healthy header starts shouting; do that six times and colour stops meaning anything.
+              Figma&rsquo;s own vendor example, which doubles as its <strong>long tag</strong> edge case. The tag vocabulary is configured per entity in Helix Data Studio, so a tag can exceed the two-word guideline: <code>Pending compliance recertification</code> truncates inside the chip and the full text lives in the tooltip. <strong>The guideline is for whoever configures the vocabulary, not something the component can enforce</strong> — which is why it truncates gracefully instead of rejecting the value.
             </p>
             <EntityHeader name={RH_UVP.name} visual={RH_VISUAL.uvp} tags={RH_TAGS.uvp} stateBadge={RH_STATE_BADGE.uvp}
               source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp}
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
               showInformation onInformationOpen={() => rhOpenProvenance("uvp")} />
             <NextBestActionCard item={rhNextBestActions("uvp")[0]} className="mt-[12px]" />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Healthcare — Patient · an entity type the DS has never heard of</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. Picked to be as unlike the three above as possible: a different source (Epic), a different record shape entirely, and a classification the component has no knowledge of. <strong>Nothing changed in <code>entity-header.tsx</code> to support it</strong> — that is the point of one skeleton with no <code>variant</code> prop, and an entity type this file has never heard of is the normal case, not a gap. It also carries Law 4: the <code>Restricted</code> access role in the metadata row is a value that resolves per viewer entitlement at display time, and this component renders whichever state it is handed without ever resolving one itself.
-            </p>
-            <EntityHeader name={RH_PATIENT.name} visual={RH_VISUAL.patient} tags={RH_TAGS.patient} stateBadge={RH_STATE_BADGE.patient}
-              source={RH_SOURCE.patient} secondaryMetadata={RH_SECONDARY_METADATA.patient} recordFields={RH_RECORD_FIELDS.patient}
-              assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
-              showInformation onInformationOpen={() => rhOpenProvenance("patient")} />
-            <NextBestActionCard item={rhNextBestActions("patient")[0]} className="mt-[12px]" />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Insurance — Policyholder · the one tag that earns a colour</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. Two left tags, one coloured: <code>Claim denied</code> is blocking, so it reads <strong>error</strong>; <code>Policyholder</code> is a classification and stays neutral no matter what tone the caller passes — the component strips it. Note the state badge is <code>Under review</code> and not a second copy of the signal: the badge answers &ldquo;what is its current status&rdquo;, the signal answers &ldquo;what needs attention&rdquo;, and restating one in the other wastes the row.
-            </p>
-            <EntityHeader name={RH_CLAIM.name} visual={RH_VISUAL.claim} tags={RH_TAGS.claim} stateBadge={RH_STATE_BADGE.claim}
-              source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim}
-              assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
-              showInformation onInformationOpen={() => rhOpenProvenance("claim")} />
-            <NextBestActionCard item={rhNextBestActions("claim")[0]} className="mt-[12px]" />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Banking — Borrower · nothing needs attention, and that is the common case</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. <strong>No signal at all</strong> — one classification tag and a healthy state badge. Most entities, most of the time, have nothing pressing, and inventing a signal to fill the slot is as wrong as omitting one that matters. It also shows the metadata row carrying a Bridge ID, which qualifies because governance requires it be visible, not because it is interesting.
-            </p>
-            <EntityHeader name={RH_BORROWER.name} visual={RH_VISUAL.borrower} tags={RH_TAGS.borrower} stateBadge={RH_STATE_BADGE.borrower}
-              source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower}
-              assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
-              showInformation onInformationOpen={() => rhOpenProvenance("borrower")} />
-            <NextBestActionCard item={rhNextBestActions("borrower")[0]} className="mt-[12px]" />
           </section>
 
           <section>
@@ -32564,6 +32400,113 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
               showInformation onInformationOpen={() => rhOpenProvenance("repairOrder")} />
             <NextBestActionCard item={rhNextBestActions("repairOrder")[0]} className="mt-[12px]" />
+          </section>
+
+          {/* ── The edge cases Figma documents ────────────────────────────
+              Five of the ten in `Edge cases` (20115:5664) had no example
+              here, and they are exactly the ones that show the rules under
+              pressure rather than at rest. The clearest symptom: with only
+              two tags per entity, the `+N` overflow chip never rendered
+              anywhere on this page — the documentation described a behaviour
+              the page could not show. Content is Figma's own, verbatim. */}
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · Maximum content — every ceiling reached</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              A long title and more tags than fit, shown so nobody has to guess where the component gives way. <strong>The title wins</strong>: it grows to its ceiling and then truncates with a tooltip, and it is never cut further to make room for tags. The tags are what yield — they collapse into <code>+N</code>, and the hidden ones are reachable from the overflow chip on hover and on focus. The identifier is what the user came to read; a tag can be recovered from the overflow, a cut-off name cannot.
+            </p>
+            <EntityHeader
+              name="Northwind Alliance Industrial Manufacturing Division"
+              visual={{ kind: "avatar" }}
+              source="Salesforce"
+              tags={[
+                { role: "signal",         label: "Renewal at risk",     tone: "alert" },
+                { role: "signal",         label: "Compliance overdue",  tone: "error" },
+                { role: "signal",         label: "Sync failing",        tone: "error" },
+                { role: "signal",         label: "Access review"                      },
+                { role: "signal",         label: "Renews in 52d"                      },
+                { role: "signal",         label: "Contract expiring"                  },
+                { role: "signal",         label: "Pending recertification"            },
+                { role: "classification", label: "Partner"                            },
+              ]}
+              stateBadge={{ label: "Under review", variant: "informative" }}
+              secondaryMetadata={[
+                { icon: LucideIcons.CircleCheckBig, text: "12 facts", tooltip: "Truth Plane facts · 12 attested facts on this account." },
+                { icon: LucideIcons.Workflow,       text: "9 open",   tooltip: "Open workflows · 9 agentic workflows currently touching this account." },
+              ]}
+              assignedAgent={rhAssignedAgent("ucp", "Northwind Alliance")}
+              showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
+              <strong>This example exposes a real gap, which is why it is here.</strong> Figma&rsquo;s instance shows two tags and a <code>+6</code>, because there the tags collapse by the room the row actually has. This component collapses only at the hard cap of six, so eight tags render as six plus <code>+2</code> &mdash; and with six chips holding their width, <strong>the title is what gives way</strong>. Look at it: the name truncates while every tag stays whole, which is the exact inversion of the documented order (tags to <code>+N</code> first, then source, and only then the title) and the exact thing Figma&rsquo;s DO/DON&rsquo;T frame warns against &mdash; <em>&ldquo;don&rsquo;t truncate the title further to keep all tags visible; the identifier is what the user came to read.&rdquo;</em> Width-driven collapsing is not implemented, and until it is, a dense header sacrifices the wrong element.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · Root entity — nothing above it</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              A tenant or a top-level company does not sit inside anything, so there is no system it was pulled from to name. <strong>Source is off and the slot is removed</strong>, not left as an empty container — and the header stays valid without it. This is the case that proves omitting a prop is a real answer, not a degraded one.
+            </p>
+            <EntityHeader
+              name="Northgate Holdings"
+              visual={{ kind: "avatar" }}
+              tags={[{ role: "classification", label: "Customer" }]}
+              stateBadge={{ label: "On leave", variant: "informative" }}
+              secondaryMetadata={[
+                { icon: LucideIcons.Building2, text: "14 companies", tooltip: "Companies under this holding · 14 subsidiaries roll up to this entity." },
+                { icon: LucideIcons.Workflow,  text: "6 open",       tooltip: "Open workflows · 6 agentic workflows currently touching this group." },
+              ]}
+              assignedAgent={rhAssignedAgent("ucp", "Northgate Holdings")}
+              showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · All signals, no classification</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Every tag is something that needs attention. The sort rule says signals come first &mdash; here there is nothing to come after, and no classification because the highlight icon already names the type. The header still reads, and <strong>the density itself is the message</strong>. It also shows the same gap as the maximum-content case above: six chips hold their width, so <code>RO-51730</code> truncates to make room for them when the order says the title should have been the last thing to yield.
+            </p>
+            <EntityHeader
+              name="RO-51730"
+              visual={{ kind: "icon", icon: LucideIcons.Wrench, variant: "error" }}
+              source="DMS"
+              tags={[
+                { role: "signal", label: "Claim denied",     tone: "error" },
+                { role: "signal", label: "54d overdue",      tone: "error" },
+                { role: "signal", label: "Parts backorder",  tone: "alert" },
+                { role: "signal", label: "Warranty expired", tone: "alert" },
+                { role: "signal", label: "Awaiting approval"               },
+                { role: "signal", label: "Reinspection due"                },
+              ]}
+              stateBadge={{ label: "Blocked", variant: "error" }}
+              secondaryMetadata={[
+                { icon: LucideIcons.DollarSign, text: "$7,240",   tooltip: "Authorized amount · $7,240, pending re-approval after the denial." },
+                { icon: LucideIcons.Wrench,     text: "11 parts", tooltip: "Parts on this order · 11, of which 6 are on backorder." },
+              ]}
+              assignedAgent={rhAssignedAgent("repairOrder", "RO-51730")}
+              showInformation onInformationOpen={() => rhOpenProvenance("repairOrder")} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · Long labels — where each element truncates</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Tenants write their own entity names and tag vocabulary, so long strings are not an edge case &mdash; eventually they are the norm. Each element truncates at its own ceiling and hands the full text to a tooltip. <strong>Nothing wraps and nothing abbreviates:</strong> an ellipsis tells the reader there is more, an abbreviation looks like the real value and misleads. Hover the title to see the full identifier.
+            </p>
+            <EntityHeader
+              name="Northgate Automotive Group Southeast Region Holdings"
+              visual={{ kind: "avatar" }}
+              source="Salesforce"
+              tags={[{ role: "signal", label: "Compliance overdue", tone: "error" }]}
+              stateBadge={{ label: "Under review", variant: "informative" }}
+              secondaryMetadata={[
+                { icon: LucideIcons.Workflow,      text: "3 workflows",    tooltip: "Open workflows · 3 agentic workflows currently touching this group." },
+                { icon: LucideIcons.CalendarClock, text: "Since Feb 2017", tooltip: "Customer since · February 2017." },
+                { icon: LucideIcons.ShieldCheck,   text: "Tier 2",         tooltip: "Promotion tier · Tier 2, reviewed annually." },
+                { icon: LucideIcons.Sparkle,       text: "Manager Agent",  tooltip: "Assigned agent tier · Manager Agent. Escalates to Director Agent on contract changes." },
+              ]}
+              assignedAgent={rhAssignedAgent("ucp", "Northgate Automotive Group")}
+              showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
+              This is also the one example whose metadata row Figma fills in completely, with four real values and no placeholders &mdash; which is what &ldquo;aim for four&rdquo; looks like in practice.
+            </p>
           </section>
 
           {/* Law 4 — PII masking. The States gallery item that used to
