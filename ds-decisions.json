@@ -21,5 +21,12 @@
     "Every entry needs a `why`. A verdict with no reasoning is how the next person ends up",
     "reversing a decision that was right."
   ],
-  "decisions": {}
+  "decisions": {
+    "possible-card-reimpl:src/screens/PeopleAccessMembers.tsx:StudioPermissionsView": {
+      "verdict": "accepted",
+      "date": "2026-09-08",
+      "by": "Michael",
+      "note": "False positive, and the cause is exact: the check looks for the word \"children\" in a function's first five lines to decide it takes a children prop. StudioPermissionsView's fifth line reads `granted.flatMap(n => [n, ...(n.children ?? [])])` — that is the permission tree's own data shape, not React children. The component takes { studioId, onBack } and renders a whole view: a back button, a header row, a stats strip and the permission tree. The two divs inside it that WERE card-shaped are CardContainer now."
+    }
+  }
 }

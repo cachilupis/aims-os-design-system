@@ -1369,22 +1369,22 @@ function StudioPermissionsView({ studioId, onBack }: { studioId: string; onBack:
           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{meta?.label} — Permissions</span>
         </div>
       </div>
-      <div style={{
-        display: "flex", gap: 16, padding: "10px 16px", background: "var(--surface)",
-        border: "1px solid var(--border)", borderRadius: 8, marginBottom: 14,
-        fontSize: 12, color: "var(--muted-foreground)",
-      }}>
-        <span><strong style={{ color: "var(--foreground)" }}>{directCount}</strong> direct</span>
-        <span><strong style={{ color: "var(--foreground)" }}>{inhCount}</strong> via role</span>
-      </div>
+      <CardContainer size="sm" className="flex gap-[16px] mb-[14px]">
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+          <strong style={{ color: "var(--foreground)" }}>{directCount}</strong> direct
+        </span>
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+          <strong style={{ color: "var(--foreground)" }}>{inhCount}</strong> via role
+        </span>
+      </CardContainer>
       {granted.length === 0 ? (
         <div style={{ padding: "24px 0", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
           No permissions granted in this studio.
         </div>
       ) : (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+        <CardContainer className="!p-0 overflow-hidden">
           {granted.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)}
-        </div>
+        </CardContainer>
       )}
     </div>
   )
