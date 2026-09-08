@@ -18,6 +18,8 @@ export interface HeaderProps {
   tag?: React.ReactNode
   /** Shows an ArrowLeft back-navigation button. Hidden in compress. */
   backButton?: boolean
+  /** onClick handler for the back button. */
+  onBackButtonClick?: () => void
   /** Optional Lucide icon shown in a HighlightIcon (size sm). Hidden in compress. */
   icon?: LucideIcon
   /** HighlightIcon color variant for the icon slot. Defaults to "informative". */
@@ -54,6 +56,7 @@ export function Header({
   size = "size-l",
   tag,
   backButton = false,
+  onBackButtonClick,
   icon: Icon,
   iconVariant = "informative",
   primaryAction,
@@ -82,6 +85,7 @@ export function Header({
               aria-label="Back"
               className="mt-[3px]"
               icon={<ArrowLeft size={16} strokeWidth={1.75} style={{ color: "var(--header-back-icon)" }} />}
+              onClick={onBackButtonClick}
             />
           )}
           {!isCompress && Icon && (
