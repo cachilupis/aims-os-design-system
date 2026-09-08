@@ -4060,30 +4060,40 @@ function InviteStepAccess({
       </div>
 
       {accessMode === "role" && (
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 8 }}>Select role</label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {ROLES.map(role => {
-              const sel = selectedRoleId === role.id
-              const counts = ROLE_PERM_COUNTS[role.id]
-              return (
-                <button key={role.id} onClick={() => setSelectedRoleId(role.id)} style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-                  border: `1px solid ${sel ? "var(--primary)" : "var(--border)"}`,
-                  borderRadius: 8, cursor: "pointer", textAlign: "left",
-                  background: sel ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "var(--surface)",
-                }}>
-                  <div style={{ width: 16, height: 16, borderRadius: "50%", flexShrink: 0, border: `2px solid ${sel ? "var(--primary)" : "var(--border)"}`, background: sel ? "var(--primary)" : "transparent" }} />
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: role.color, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: sel ? "var(--primary)" : "var(--foreground)" }}>{role.label}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1, lineHeight: 1.4 }}>{role.desc}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {ROLES.map(role => {
+            const sel = selectedRoleId === role.id
+            const counts = ROLE_PERM_COUNTS[role.id]
+            return (
+              <CardContainer
+                key={role.id}
+                variant="default"
+                size="default"
+                onClick={() => setSelectedRoleId(role.id)}
+                className="flex flex-col cursor-pointer"
+                style={{
+                  border: `1.5px solid ${sel ? "var(--primary)" : "var(--border)"}`,
+                  background: sel ? "color-mix(in srgb, var(--primary) 6%, var(--surface))" : undefined,
+                  transition: "border-color 0.15s",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: sel ? "var(--primary)" : "var(--foreground)", flex: 1, minWidth: 0 }}>{role.label}</span>
+                  <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                    {role.system ? "System" : "Custom"}
+                  </Tag>
+                </div>
+                <p style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-body)", lineHeight: "18px", margin: "0 0 10px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                  {role.desc}
+                </p>
+                {counts && (
+                  <div style={{ fontSize: 11, fontWeight: 500, color: sel ? "var(--primary)" : "var(--muted-foreground)", marginTop: "auto" }}>
+                    {counts.total} permissions
                   </div>
-                  {counts && <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 500, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)", flexShrink: 0 }}>{counts.total} perms</span>}
-                </button>
-              )
-            })}
-          </div>
+                )}
+              </CardContainer>
+            )
+          })}
         </div>
       )}
 
@@ -4106,26 +4116,29 @@ function InviteStepAccess({
         const studioColors: Record<string, string> = {
           governance: "#10b981", datastudio: "#8b5cf6", agentic: "#06b6d4", admin: "#f97316"
         }
+        const totalGranted = studiosWithPerms.reduce((sum, s) => sum + s.granted.length, 0)
         return (
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 8 }}>
-              Permissions included per studio
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>Permissions included</span>
+              <span style={{ fontSize: 11, fontWeight: 500, padding: "1px 8px", borderRadius: 999, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>{totalGranted} total</span>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {studiosWithPerms.map(studio => {
                 const color = studioColors[studio.id] ?? "var(--primary)"
                 return (
-                  <div key={studio.id} style={{ borderRadius: 8, border: "1px solid var(--border)", overflow: "hidden" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
+                  <div key={studio.id} style={{ borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid var(--border)" }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{studio.label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", flex: 1 }}>{studio.label}</span>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{studio.granted.length} perms</span>
                     </div>
-                    <div style={{ padding: "8px 12px", display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    <div style={{ padding: "8px 12px", display: "flex", flexWrap: "wrap", gap: 5 }}>
                       {studio.granted.map(p => (
                         <span key={p.id} style={{
-                          display: "inline-flex", alignItems: "center", padding: "2px 8px",
-                          borderRadius: 999, fontSize: 11, fontWeight: 500,
-                          background: `${color}18`, border: `1px solid ${color}40`, color,
+                          display: "inline-flex", alignItems: "center", padding: "3px 8px",
+                          borderRadius: 6, fontSize: 11, fontWeight: 500,
+                          background: `${color}14`, border: `1px solid ${color}35`, color,
                         }}>{p.label}</span>
                       ))}
                     </div>
@@ -4181,8 +4194,7 @@ function InvitePermRow({
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: `5px 0 5px ${indent}px`, opacity: accessMode === "role" && !rolePerms[node.id] ? 0.4 : 1 }}>
-        {depth > 0 && <Icons.CornerDownRight size={10} color="var(--muted-foreground)" style={{ flexShrink: 0, marginTop: 3 }} />}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: `6px 0 6px ${indent}px`, opacity: accessMode === "role" && !rolePerms[node.id] ? 0.4 : 1, borderBottom: "1px solid var(--border)" }}>
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, gap: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {accessMode === "custom" ? (
@@ -4275,7 +4287,7 @@ function InviteStepStudios({
         return (
           <div key={studio.id} style={{ border: `1px solid ${enabled ? "var(--primary)" : "var(--border)"}`, borderRadius: 10, overflow: "hidden", background: enabled ? "color-mix(in srgb, var(--primary) 4%, transparent)" : "var(--surface)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
-              <Toggle checked={enabled} onChange={() => toggleStudio(studio.id)} size="sm" />
+              <Toggle checked={enabled} onChange={() => toggleStudio(studio.id)} />
               <div style={{ width: 30, height: 30, borderRadius: 8, background: enabled ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "center", color: enabled ? "var(--primary)" : "var(--muted-foreground)", flexShrink: 0 }}>
                 {studio.icon}
               </div>
@@ -4290,7 +4302,7 @@ function InviteStepStudios({
               )}
             </div>
             {isExpanded && (
-              <div style={{ borderTop: "1px solid var(--border)", padding: "10px 14px", display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ borderTop: "1px solid var(--border)", padding: "0 14px", display: "flex", flexDirection: "column" }}>
                 {nodes.map(parent => (
                   <InvitePermRow key={parent.id} node={parent} depth={0} accessMode={accessMode} rolePerms={rolePerms} customPerms={customPerms} customScopes={customScopes} onToggle={togglePerm} onScopeChange={onScopeChange} />
                 ))}
