@@ -65,11 +65,62 @@ const COUNT_FN   = "Count"
 const CALC_FNS   = [COUNT_FN, "Sum", "Average", "Min", "Max"]
 const FILTER_OPS = ["is", "is not", "contains", "is empty", "is not empty", "greater than", "less than"]
 
-const SOURCE_COLUMNS: Record<string, string[]> = {
-  contacts_salesforce: ["Name", "Email", "Account", "Title", "City", "Tier", "Lifecycle Stage", "Owner", "Created At"],
-  accounts_salesforce: ["Name", "Domain", "Industry", "Annual Revenue", "Employees", "MRR", "Owner"],
-  deals_salesforce:    ["Name", "Stage", "Amount", "Close Date", "Pipeline", "Account", "Owner"],
+/**
+ * A column is not just a name.
+ *
+ * The picker used to be a list of nine checkboxes reading "Name, Email, Phone,
+ * City…" — enough to recognise a field you already knew and useless for one you
+ * did not. `Tier` means nothing until something says it is Gold/Silver/Bronze,
+ * and `state` and `State / Region` are the same field under two names, which is
+ * the kind of thing that sends someone to ask an engineer.
+ *
+ * So every column carries four facts: the label a person reads, its `type`
+ * (which is also what the type filter sorts on), a sentence saying what it
+ * holds, and the `key` the data actually uses — the one you would search for.
+ * Thom's prototype established this shape and the Contacts copy; Accounts and
+ * Deals follow it.
+ */
+type ColumnType = "Text" | "Number" | "Date"
+type ColumnDef  = { label: string; type: ColumnType; desc: string; key: string }
+
+const COLUMN_TYPES: ColumnType[] = ["Text", "Number", "Date"]
+
+const SOURCE_COLUMN_DEFS: Record<string, ColumnDef[]> = {
+  contacts_salesforce: [
+    { label: "Name",           type: "Text",   desc: "Full name of the record",                        key: "name" },
+    { label: "Email",          type: "Text",   desc: "Primary email address",                          key: "email" },
+    { label: "Phone",          type: "Text",   desc: "Primary phone number",                           key: "phone" },
+    { label: "City",           type: "Text",   desc: "City from the billing or main address",          key: "city" },
+    { label: "State / Region", type: "Text",   desc: "State or region",                                key: "state" },
+    { label: "Tier",           type: "Text",   desc: "Account or contact tier (Gold, Silver, Bronze)", key: "tier" },
+    { label: "Score",          type: "Number", desc: "Lead or engagement score (0–100)",               key: "score" },
+    { label: "Lead Source",    type: "Text",   desc: "Channel where the lead originated",              key: "lead_source" },
+    { label: "Created At",     type: "Date",   desc: "Date and time the record was created",           key: "created_at" },
+  ],
+  accounts_salesforce: [
+    { label: "Name",           type: "Text",   desc: "Registered company name",                        key: "name" },
+    { label: "Domain",         type: "Text",   desc: "Primary web domain, used for matching",          key: "domain" },
+    { label: "Industry",       type: "Text",   desc: "Industry classification",                        key: "industry" },
+    { label: "Annual Revenue", type: "Number", desc: "Reported yearly revenue, in USD",                key: "annual_revenue" },
+    { label: "Employees",      type: "Number", desc: "Headcount as last reported",                     key: "employees" },
+    { label: "MRR",            type: "Number", desc: "Monthly recurring revenue from active contracts", key: "mrr" },
+    { label: "Owner",          type: "Text",   desc: "Account executive who owns the relationship",    key: "owner" },
+  ],
+  deals_salesforce: [
+    { label: "Name",       type: "Text",   desc: "Opportunity name",                                   key: "name" },
+    { label: "Stage",      type: "Text",   desc: "Current pipeline stage",                             key: "stage" },
+    { label: "Amount",     type: "Number", desc: "Deal value, in USD",                                 key: "amount" },
+    { label: "Close Date", type: "Date",   desc: "Expected or actual close date",                      key: "close_date" },
+    { label: "Pipeline",   type: "Text",   desc: "Which pipeline the deal runs in",                    key: "pipeline" },
+    { label: "Account",    type: "Text",   desc: "Account the opportunity belongs to",                 key: "account" },
+    { label: "Owner",      type: "Text",   desc: "Sales rep who owns the deal",                        key: "owner" },
+  ],
 }
+
+/** Labels only — what the filter pickers and the calc column list read. */
+const SOURCE_COLUMNS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(SOURCE_COLUMN_DEFS).map(([id, cols]) => [id, cols.map(c => c.label)]),
+)
 
 
 const FRESHNESS_OPTIONS = [
@@ -406,6 +457,21 @@ export default function PMThomasWidgetBuilderScreen() {
   const [showLeave, setShowLeave]       = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [typeCat, setTypeCat] = useState<WidgetCategory | "all">("all")
+  // The columns modal edits a DRAFT, so Cancel means cancel. Committing on each
+  // checkbox would leave a half-made selection behind when someone backs out.
+  const [showColumns, setShowColumns] = useState(false)
+  const [colDraft, setColDraft]       = useState<string[]>([])
+  const [colQuery, setColQuery]       = useState("")
+  const [colType, setColType]         = useState<ColumnType | "All">("All")
+
+  // Search matches the label, the description AND the key — the key is there
+  // because someone who knows the data will type `lead_source`, not "Channel
+  // where the lead originated".
+  const visibleColumns = (SOURCE_COLUMN_DEFS[sourceId ?? ""] ?? []).filter(c => {
+    if (colType !== "All" && c.type !== colType) return false
+    const q = colQuery.trim().toLowerCase()
+    return !q || c.label.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q) || c.key.includes(q)
+  })
 
   // ── Derived ──
 
@@ -748,16 +814,30 @@ export default function PMThomasWidgetBuilderScreen() {
                 {sourceId && dataMode === "entity" && opType === "record_set" && (
                   <div>
                     <StepLabel n={5}>Columns to expose</StepLabel>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {(SOURCE_COLUMNS[sourceId] ?? []).map(col => (
-                        <Checkbox
-                          key={col}
-                          label={col}
-                          checked={recordColumns.includes(col)}
-                          onChange={on => setRecordColumns(prev => on ? [...prev, col] : prev.filter(c => c !== col))}
-                        />
-                      ))}
-                    </div>
+                    {/* A summary, not the picker. Nine checkboxes inline made
+                        the step scroll and still said nothing about what each
+                        field holds — the explaining happens in the modal. */}
+                    {recordColumns.length === 0 ? (
+                      <EmptyState
+                        compact icon={LucideIcons.Columns3}
+                        title="No columns selected"
+                        description="Pick the fields this widget will show."
+                        ctaLabel="Choose columns"
+                        onCta={() => { setColDraft(recordColumns); setShowColumns(true) }}
+                      />
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                        {recordColumns.slice(0, 4).map(c => (
+                          <Tag key={c} variant="neutral" size="sm">{c}</Tag>
+                        ))}
+                        {recordColumns.length > 4 && (
+                          <Tag variant="neutral" size="sm">+{recordColumns.length - 4} more</Tag>
+                        )}
+                        <Button variant="secondary" size="sm" onClick={() => { setColDraft(recordColumns); setShowColumns(true) }}>
+                          Edit columns
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -889,6 +969,93 @@ export default function PMThomasWidgetBuilderScreen() {
             setTab(STEP_ORDER[stepIndex + 1])
           }}
         />
+
+      {/* ── Columns modal ── */}
+      {/* A picker, not a confirmation: variant="content" with slotUnstyled, so
+          the list sits directly on the modal instead of inside a grey card.
+          Each row explains its field, which is the whole reason this stopped
+          being an inline checkbox list. */}
+      <ModalDialog
+        isOpen={showColumns}
+        onClose={() => setShowColumns(false)}
+        variant="content"
+        showIcon={false}
+        title="Columns to expose"
+        description="Choose which fields are available in this dataset."
+        slotUnstyled
+        slot={
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Input
+              size="sm"
+              placeholder="Search by name, description, or field key…"
+              value={colQuery}
+              onChange={e => setColQuery(e.target.value)}
+            />
+
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+              <Chip size="s" variant={colType === "All" ? "primary" : "secondary"} onClick={() => setColType("All")}>All</Chip>
+              {COLUMN_TYPES.map(t => (
+                <Chip key={t} size="s" variant={colType === t ? "primary" : "secondary"} onClick={() => setColType(t)}>{t}</Chip>
+              ))}
+              <div style={{ marginLeft: "auto" }}>
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  onClick={() => setColDraft(colDraft.length === 0 ? (SOURCE_COLUMNS[sourceId ?? ""] ?? []) : [])}
+                >
+                  {colDraft.length === 0 ? "Select all" : "Deselect all"}
+                </Button>
+              </div>
+            </div>
+
+            <div style={{ maxHeight: 320, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+              {visibleColumns.length === 0 ? (
+                <EmptyState
+                  compact icon={LucideIcons.SearchX}
+                  title="No columns found"
+                  description="Try a different search term or type."
+                />
+              ) : visibleColumns.map((c, i) => (
+                <div
+                  key={c.key}
+                  style={{
+                    display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 4px",
+                    borderBottom: i < visibleColumns.length - 1 ? "1px solid var(--field-border)" : "none",
+                  }}
+                >
+                  <div style={{ paddingTop: 2 }}>
+                    <Checkbox
+                      checked={colDraft.includes(c.label)}
+                      onChange={on => setColDraft(prev => on ? [...prev, c.label] : prev.filter(x => x !== c.label))}
+                    />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{c.label}</span>
+                      <Tag variant="neutral" size="sm">{c.type}</Tag>
+                    </div>
+                    <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: "2px 0 0", lineHeight: 1.4 }}>{c.desc}</p>
+                    {/* The key is what someone would search for, and what an
+                        engineer would ask them to name. Monospace so it reads
+                        as a value rather than more prose. */}
+                    <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--color-text-subtitle)" }}>{c.key}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>
+              {colDraft.length} of {(SOURCE_COLUMNS[sourceId ?? ""] ?? []).length} selected
+            </span>
+          </div>
+        }
+        ctaPrimary={{
+          label: "Done",
+          disabled: colDraft.length === 0,
+          onClick: () => { setRecordColumns(colDraft); setShowColumns(false) },
+        }}
+        ctaSecondary={{ label: "Cancel", onClick: () => setShowColumns(false) }}
+      />
 
       {/* ── Leave confirmation modal ── */}
       <ModalDialog
