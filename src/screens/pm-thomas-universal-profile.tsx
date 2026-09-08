@@ -632,7 +632,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
             // A profile is one step below the Profiles list, so L2 — the DS back
             // button, not a hand-rolled chevron sitting above the Header.
             backButton
-            onBack={onBack}
+            onBackButtonClick={onBack}
             title={profile.name}
             description={profile.subtitle}
             tag={<Tag variant={STATUS_TAG[profile.status]} size="sm">{profile.status}</Tag>}

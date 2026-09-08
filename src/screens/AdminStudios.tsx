@@ -29,6 +29,8 @@ interface EntityItem {
   meta: string; date: string
 }
 
+interface ConfigItem { type: string; id: string; label: string; description: string; value: boolean | number | string; min?: number; max?: number; options?: string[] }
+
 interface Studio {
   id: string; name: string; icon: string; accentColor: string
   description: string; status: "active" | "disabled"
@@ -39,6 +41,7 @@ interface Studio {
   roles: RoleAccess[]
   settings: StudioToggle[]
   entityTabs?: EntityTab[]
+  config?: { general?: ConfigItem[]; policies?: ConfigItem[]; compliance?: { items: ConfigItem[]; exportLabel?: string } }
 }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -203,6 +206,7 @@ const STUDIOS: Studio[] = [
       { id: "r4", name: "Viewer",        access: "none"    },
       { id: "r5", name: "Billing Admin", access: "none"    },
     ],
+    settings: [],
     config: {
       general: [
         { type: "toggle",  id: "hitl-highrisk",    label: "HITL required for high-risk decisions", description: "Workers flagged as high-risk must pause and request a human decision before continuing.", value: true  },
@@ -797,21 +801,7 @@ function StudiosListScreen({
       sidebarItems={SIDEBAR}
       activeSidebarId="studios"
       onSidebarItemClick={onNavigate}
-      header={(isScrolled) => detailView ? (
-        <Header
-          size={isScrolled ? "compress" : "size-m"}
-          title={detailView.name}
-          description="Studios"
-          onBack={() => setDetailView(null)}
-          secondaryAction={{ label: "Configure", icon: Icons.Settings }}
-          primaryAction={{
-            label: detailView.status === "active" ? "Disable studio" : "Enable studio",
-            onClick: () => toggleStatus(detailView.id),
-            // Disabling is not the action the page is for; enabling is.
-            priority: detailView.status === "active" ? "secondary" : "primary",
-          }}
-        />
-      ) : (
+      header={(isScrolled) => (
         <Header
           size={isScrolled ? "compress" : "size-l"}
           title="Studios"

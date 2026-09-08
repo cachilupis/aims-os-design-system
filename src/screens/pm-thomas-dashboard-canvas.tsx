@@ -421,7 +421,7 @@ export default function DashboardCanvasScreen({ dash, onBack, isNew }: {
           tag={<StatusBadge status={status} />}
           backButton
           showBackInCompress
-          onBack={onBack}
+          onBackButtonClick={onBack}
           // Inline rename and the saved-at indicator are not actions — they are
           // state the canvas reports and a field it lets you edit in place.
           aux={
