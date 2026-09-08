@@ -16227,14 +16227,14 @@ function PgCatalogueBrowser({ items, onUse }: {
 // own composition exactly. `overlay` renders after the row so ModalDialog/
 // SlideOut (both position:fixed, SlideOut also portal-based) stack correctly
 // regardless of nesting — confirmed against modal-dialog.tsx / slide-out.tsx.
-function PgCreateContextShell({ sidebarId, overlay, children }: { sidebarId: string; overlay?: React.ReactNode; children: React.ReactNode }) {
+function PgCreateContextShell({ sidebarId, overlay, hideSidebar, children }: { sidebarId: string; overlay?: React.ReactNode; hideSidebar?: boolean; children: React.ReactNode }) {
   const [activeSidebar, setActiveSidebar] = useState(sidebarId)
   return (
     <div className="flex flex-col h-full">
       <AppBackground />
       <Topbar workspaceName="Ops Team" companyName="AIMS OS" actions={PG_CTX_TOPBAR_ACTIONS} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId={activeSidebar} onItemClick={setActiveSidebar} />
+        {!hideSidebar && <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId={activeSidebar} onItemClick={setActiveSidebar} />}
         {children}
       </div>
       {overlay}
@@ -16388,8 +16388,8 @@ function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose:
         </main>
       </PgCreateContextShell>
     ) },
-    { label: "Surface open", note: "A create page has no create CTA in its Header — title and backButton only. The action completes in StepperNavFooter at the bottom, the only place the flow can be finished.", content: (
-      <PgCreateContextShell sidebarId="contacts">
+    { label: "Surface open", note: "A create page has no create CTA in its Header — title and backButton only. The action completes in StepperNavFooter at the bottom, the only place the flow can be finished. The Sidebar is gone too, for the same reason: this form only exists as a full page because it earned it by being long — exactly the case where an accidental nav click costs the most.", content: (
+      <PgCreateContextShell sidebarId="contacts" hideSidebar>
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header title="New User" description="Add a teammate to this workspace" backButton size="size-l" />
           <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
@@ -16437,7 +16437,7 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
   const draft = PG_CTX_POLICIES.filter(p => p.state?.label === "Draft").length
 
   const wizardShell = (stageIndex: number, body: React.ReactNode, footer: React.ReactNode) => (
-    <PgCreateContextShell sidebarId="knowledge">
+    <PgCreateContextShell sidebarId="knowledge" hideSidebar>
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l" />
         <div className="px-[24px] pt-[16px] shrink-0">
@@ -16464,7 +16464,7 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
         </main>
       </PgCreateContextShell>
     ) },
-    { label: "Stage 1 of 4 — Scope", note: "Full-page wizard — Stepper + StepperNavFooter. The wizard never puts Cancel/Next in the Header; StepperNavFooter owns navigation.", content: wizardShell(0,
+    { label: "Stage 1 of 4 — Scope", note: "Full-page wizard — Stepper + StepperNavFooter. The wizard never puts Cancel/Next in the Header; StepperNavFooter owns navigation. The app's Sidebar is gone for the duration — a stray click into Automations or Contacts would silently discard whatever stage the user is on, and this is the surface with the most stages to lose.", content: wizardShell(0,
       <>
         <Input placeholder="Policy name" />
         <PgInteractiveSelect placeholder="Applies to" options={["All tenant workspaces", "This workspace only", "Selected teams"]} />
@@ -16502,7 +16502,7 @@ function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () =>
       <StepperNavFooter variant="back-next" onBack={back} nextLabel="Publish" onNext={next} />
     ) },
     { label: "Confirm", note: "The creation is irreversible and tenant-wide — this earns a confirmation, independent of which surface built it. Publishing doesn't make the policy Active immediately — see the next step.", content: (
-      <PgCreateContextShell sidebarId="knowledge"
+      <PgCreateContextShell sidebarId="knowledge" hideSidebar
         overlay={
           <ModalDialog isOpen onClose={back} variant="confirmation" tone="warning" iconName="AlertTriangle"
             title="Publish this policy?"
