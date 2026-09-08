@@ -64,8 +64,7 @@ const INTEGRATIONS: string[] = [...new Set(ENTITY_SOURCES.map(s => s.integration
 const DESCRIBE_SUGGESTIONS = [
   "Win Rate gauge",
   "Workflow Runs over time",
-  "Human-in-the-Loops by team",
-  "Contacts by status as a donut",
+  "Contacts as a donut",
 ]
 
 const COUNT_FN   = "Count"
@@ -570,7 +569,9 @@ export default function PMThomasWidgetBuilderScreen() {
                   Generate
                 </Button>
               </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+              {/* One line, never two. A suggestion that does not fit is not
+                  worth a second row of vertical space above the form. */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "nowrap" as const, overflow: "hidden" }}>
                 {DESCRIBE_SUGGESTIONS.map(x => (
                   <Chip key={x} size="s" variant="secondary" onClick={() => setDescribe(x)}>{x}</Chip>
                 ))}
