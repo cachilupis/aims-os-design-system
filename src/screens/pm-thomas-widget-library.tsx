@@ -5,7 +5,8 @@ import type { SidebarItem } from "@/components/ui/sidebar"
 import { Header }        from "@/components/ui/header"
 import { Button }        from "@/components/ui/button"
 import { Tag }           from "@/components/ui/tag"
-import { WidgetGlyph, WidgetFreshnessBadge } from "@/components/experimental/widget-parts"
+import { WidgetFreshnessBadge } from "@/components/experimental/widget-parts"
+import { WidgetFather } from "@/components/ui/widget-father"
 import { WidgetPreview } from "@/components/experimental/widget-preview"
 import { LIBRARY_SKELETONS, typeIdForSkeleton, type LibrarySkeleton } from "@/lib/widget-catalog"
 import { EmptyState }    from "@/components/ui/empty-state"
@@ -197,46 +198,42 @@ export default function PMThomasWidgetLibrary() {
                 onClick={e => { if (!(e.target as HTMLElement).closest("button")) setDetailW(w) }}
                 className="flex flex-col gap-[10px] cursor-pointer h-full"
               >
-                {/* Top-right: health badge + ⋯ menu */}
-                <div style={{ position: "absolute", top: 12, right: 12, display: "flex", alignItems: "center", gap: 6, zIndex: 1 }}>
-                  <HealthBadge health={w.health} />
-                  <div style={{ position: "relative" }}>
-                    <button
-                      onClick={e => { e.stopPropagation(); setMenuId(menuId === w.id ? null : w.id) }}
-                      aria-label={`Actions for ${w.name}`}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--field-supporting)", padding: "2px 4px", borderRadius: 6, display: "flex" }}
-                    >
-                      <LucideIcons.MoreHorizontal size={15} />
-                    </button>
-                    {menuId === w.id && (
-                      <OverflowMenu onClose={() => setMenuId(null)} items={[
-                        { label: "Open",             icon: "Eye",       onClick: () => setDetailW(w) },
-                        { label: "Add to dashboard", icon: "Plus",      onClick: () => {} },
-                        ...(!w.system ? [{ label: "Edit",  icon: "Pencil" as keyof typeof LucideIcons, onClick: () => {} }] : []),
-                        ...(!w.system ? [{ label: "Delete", icon: "Trash2" as keyof typeof LucideIcons, danger: true, onClick: () => setDeleteW(w) }] : []),
-                      ]} />
-                    )}
+                {/* The card IS a widget. WidgetFather draws the header — its own
+                    title type, its own subtitle, its own ⋯ on the right — so a
+                    widget in the library reads exactly as it will on a
+                    dashboard. Refresh is off: nothing here is live. */}
+                <WidgetFather
+                  noCard
+                  fillWidth
+                  title={w.name}
+                  description={w.source}
+                  showRefresh={false}
+                  onMenuClick={() => setMenuId(menuId === w.id ? null : w.id)}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {/* Tags — health lives here now that the widget's own menu
+                        owns the top-right corner. */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      <Tag variant="neutral" size="sm">{w.skeleton}</Tag>
+                      {!w.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
+                      {w.system  && <Tag variant="informative" size="sm">System</Tag>}
+                      <HealthBadge health={w.health} />
+                    </div>
+
+                    <WidgetPreview typeId={typeIdForSkeleton(w.skeleton)} fallbackHeight={72} clipTo={88} />
                   </div>
-                </div>
+                </WidgetFather>
 
-                {/* Name + source */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, paddingRight: w.health === "review" ? 110 : 68 }}>
-                  <WidgetGlyph skeleton={w.skeleton} />
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.name}</p>
-                    <p style={{ fontSize: 11, color: "var(--field-supporting)", margin: "1px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.source}</p>
+                {menuId === w.id && (
+                  <div style={{ position: "absolute", top: 34, right: 12, zIndex: 2 }}>
+                    <OverflowMenu onClose={() => setMenuId(null)} items={[
+                      { label: "Open",             icon: "Eye",       onClick: () => setDetailW(w) },
+                      { label: "Add to dashboard", icon: "Plus",      onClick: () => {} },
+                      ...(!w.system ? [{ label: "Edit",  icon: "Pencil" as keyof typeof LucideIcons, onClick: () => {} }] : []),
+                      ...(!w.system ? [{ label: "Delete", icon: "Trash2" as keyof typeof LucideIcons, danger: true, onClick: () => setDeleteW(w) }] : []),
+                    ]} />
                   </div>
-                </div>
-
-                {/* Tags */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  <Tag variant="neutral" size="sm">{w.skeleton}</Tag>
-                  {!w.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
-                  {w.system  && <Tag variant="informative" size="sm">System</Tag>}
-                </div>
-
-                {/* Mini preview */}
-                <WidgetPreview typeId={typeIdForSkeleton(w.skeleton)} fallbackHeight={72} clipTo={88} />
+                )}
 
                 {/* Footer */}
                 <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 10 }}>
