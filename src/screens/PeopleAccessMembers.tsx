@@ -4113,36 +4113,31 @@ function InviteStepAccess({
         }).filter(s => s.granted.length > 0)
 
         if (studiosWithPerms.length === 0) return null
-        const studioColors: Record<string, string> = {
-          governance: "#10b981", datastudio: "#8b5cf6", agentic: "#06b6d4", admin: "#f97316"
+        const studioTagVariant: Record<string, "purple" | "success" | "lightBlue" | "alert" | "secondary"> = {
+          governance: "purple", datastudio: "success", agentic: "lightBlue", admin: "alert"
         }
         const totalGranted = studiosWithPerms.reduce((sum, s) => sum + s.granted.length, 0)
         return (
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>Permissions included</span>
-              <span style={{ fontSize: 11, fontWeight: 500, padding: "1px 8px", borderRadius: 999, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>{totalGranted} total</span>
+              <Tag variant="secondary" size="sm">{totalGranted} total</Tag>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {studiosWithPerms.map(studio => {
-                const color = studioColors[studio.id] ?? "var(--primary)"
+                const tagVariant = studioTagVariant[studio.id] ?? "secondary"
                 return (
-                  <div key={studio.id} style={{ borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", overflow: "hidden" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid var(--border)" }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                  <CardContainer key={studio.id} variant="default" size="default" className="flex flex-col gap-3">
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", flex: 1 }}>{studio.label}</span>
-                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{studio.granted.length} perms</span>
+                      <Tag variant={tagVariant} size="sm">{studio.granted.length} perms</Tag>
                     </div>
-                    <div style={{ padding: "8px 12px", display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                       {studio.granted.map(p => (
-                        <span key={p.id} style={{
-                          display: "inline-flex", alignItems: "center", padding: "3px 8px",
-                          borderRadius: 6, fontSize: 11, fontWeight: 500,
-                          background: `${color}14`, border: `1px solid ${color}35`, color,
-                        }}>{p.label}</span>
+                        <Tag key={p.id} variant={tagVariant} size="sm">{p.label}</Tag>
                       ))}
                     </div>
-                  </div>
+                  </CardContainer>
                 )
               })}
             </div>
